@@ -1,0 +1,48 @@
+{
+  "generated_at": "<TS>",
+  "filters": {
+    "scope": "all",
+    "template": "default"
+  },
+  "tasks": [
+    {
+      "id": "a-overdue",
+      "user_id": "u-golden",
+      "entity_version": 1,
+      "row_version": 1,
+      "title": "Overdue Task",
+      "status": "open",
+      "project": "work",
+      "priority": "P1",
+      "due_at": "2000-01-01T09:00:00Z",
+      "source": "manual",
+      "created_at": "<TS>",
+      "updated_at": "<TS>"
+    },
+    {
+      "id": "b-inbox",
+      "user_id": "u-golden",
+      "entity_version": 1,
+      "row_version": 1,
+      "title": "Inbox Task",
+      "status": "open",
+      "priority": "P3",
+      "source": "manual",
+      "created_at": "<TS>",
+      "updated_at": "<TS>"
+    },
+    {
+      "id": "c-done",
+      "user_id": "u-golden",
+      "entity_version": 1,
+      "row_version": 1,
+      "title": "Done Task",
+      "status": "done",
+      "project": "work",
+      "priority": "P4",
+      "source": "manual",
+      "created_at": "<TS>",
+      "updated_at": "<TS>"
+    }
+  ]
+}
