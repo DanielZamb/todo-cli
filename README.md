@@ -71,7 +71,7 @@ VERSION=v0.1.0 REPO=zambamon/todo-cli ./scripts/install.sh
 ./bin/todo --db /tmp/todo.db init --username alice --password secret
 
 # 2) login
-printf 'secret\n' | ./bin/todo --db /tmp/todo.db login --username alice
+printf 'secret\n' | ./bin/todo --db /tmp/todo.db login --username alice --password-stdin
 
 # 3) create task
 ./bin/todo --db /tmp/todo.db add "Pay rent" --priority P1 --due 2026-02-20T10:00:00Z

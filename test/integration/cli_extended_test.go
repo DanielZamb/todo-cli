@@ -531,6 +531,29 @@ func TestLoginFailuresAndMalformedSession(t *testing.T) {
 	}
 }
 
+func TestLoginWithPasswordStdinFlag(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	db := filepath.Join(t.TempDir(), "todo.db")
+
+	code, _, stderr := runCmd(t, "", "--db", db, "init", "--username", "alex", "--password", "secret")
+	if code != 0 {
+		t.Fatalf("init failed: %d %s", code, stderr)
+	}
+	code, out, stderr := runCmd(t, "secret\n", "--db", db, "login", "--username", "alex", "--password-stdin")
+	if code != 0 {
+		t.Fatalf("login --password-stdin failed: %d %s", code, stderr)
+	}
+	if !strings.Contains(out, "logged in as alex") {
+		t.Fatalf("unexpected login output: %s", out)
+	}
+
+	code, _, stderr = runCmd(t, "", "--db", db, "list")
+	if code != 0 {
+		t.Fatalf("expected authenticated list after password-stdin login, got %d err=%s", code, stderr)
+	}
+}
+
 func TestEditClearSemantics(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)

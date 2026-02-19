@@ -134,7 +134,7 @@ func newRootCmd(cfg *runtimeConfig) *cobra.Command {
 		Use:           "todo",
 		Short:         "Track tasks with markdown-first output",
 		Long:          "Todo CLI: local-first task tracking with OCC, auth, and markdown-first output.",
-		Example:       "  todo init --username alice --password secret\n  todo login --username alice\n  todo add \"Pay rent\" --priority P1 --due 2026-02-20T10:00:00Z\n  todo list --format md",
+		Example:       "  todo init --username alice --password secret\n  printf 'secret\\n' | todo login --username alice --password-stdin\n  todo add \"Pay rent\" --priority P1 --due 2026-02-20T10:00:00Z\n  todo list --format md",
 		SilenceErrors: true,
 		SilenceUsage:  true,
 	}
@@ -283,6 +283,21 @@ func readPassword(prompt string, in io.Reader) (string, error) {
 	return strings.TrimSpace(s.Text()), nil
 }
 
+func readPasswordFromStdin(in io.Reader) (string, error) {
+	s := bufio.NewScanner(in)
+	if !s.Scan() {
+		if err := s.Err(); err != nil {
+			return "", err
+		}
+		return "", fmt.Errorf("no password provided on stdin")
+	}
+	p := strings.TrimSpace(s.Text())
+	if p == "" {
+		return "", fmt.Errorf("empty password from stdin")
+	}
+	return p, nil
+}
+
 func parseOptTime(v string) (*time.Time, error) {
 	v = strings.TrimSpace(v)
 	if v == "" {
@@ -362,13 +377,23 @@ func newInitCmd(cfg *runtimeConfig) *cobra.Command {
 
 func newLoginCmd(cfg *runtimeConfig) *cobra.Command {
 	var username string
+	var passwordStdin bool
 	cmd := &cobra.Command{Use: "login", Short: "Authenticate and create local session", RunE: func(cmd *cobra.Command, args []string) error {
 		if strings.TrimSpace(username) == "" {
 			return &cliError{Exit: 2, Code: "invalid_args", Msg: "--username is required"}
 		}
-		password, err := readPassword("Password: ", cfg.In)
-		if err != nil {
-			return &cliError{Exit: 1, Code: "password_read_failed", Msg: err.Error()}
+		var password string
+		var err error
+		if passwordStdin {
+			password, err = readPasswordFromStdin(cfg.In)
+			if err != nil {
+				return &cliError{Exit: 2, Code: "invalid_args", Msg: err.Error()}
+			}
+		} else {
+			password, err = readPassword("Password: ", cfg.In)
+			if err != nil {
+				return &cliError{Exit: 1, Code: "password_read_failed", Msg: err.Error()}
+			}
 		}
 		ctx := cmd.Context()
 		return withStore(ctx, cfg, func(s *sqlite.Store) error {
@@ -395,6 +420,7 @@ func newLoginCmd(cfg *runtimeConfig) *cobra.Command {
 		})
 	}}
 	cmd.Flags().StringVar(&username, "username", "", "username")
+	cmd.Flags().BoolVar(&passwordStdin, "password-stdin", false, "read password from stdin (non-interactive)")
 	return cmd
 }
 

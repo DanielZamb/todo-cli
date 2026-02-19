@@ -65,15 +65,16 @@ Not required.
 
 ## Synopsis
 
-todo login --username <name>
+todo login --username <name> [--password-stdin]
 
 ## Detailed behavior
 
-Prompts for password and stores local profile session token.
+Prompts for password by default, or reads from stdin when --password-stdin is set.
 
 ## Flags
 
 - --username
+- --password-stdin
 
 ## Output contracts
 
@@ -89,7 +90,8 @@ Not required.
 
 ## Practical examples
 
-- todo login --username alice`,
+- todo login --username alice
+- printf 'secret\n' | todo login --username alice --password-stdin`,
 
 	"logout": `# todo man logout
 
