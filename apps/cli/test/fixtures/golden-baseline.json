@@ -1,0 +1,30 @@
+{
+  "base": "e659af06d7742b73975448ada250fb3e0bcdc00b",
+  "files": [
+    {
+      "name": "export_default_json.golden",
+      "sha256": "f2b2f4db465a8f321c0819c543c4b3caf6e1342057b0475a32cad09be050f5fa",
+      "bytes": 1026
+    },
+    {
+      "name": "export_default_md.golden",
+      "sha256": "5b87187918ef703140e431c12d99a55f0e80dce994320621023e62989009b645",
+      "bytes": 161
+    },
+    {
+      "name": "export_jira_md.golden",
+      "sha256": "b109d2c411b3cfbac560b5f54a7fc21e7c48f9eed5ed9d0a3a42bde4c0ba7c70",
+      "bytes": 292
+    },
+    {
+      "name": "review_daily.golden",
+      "sha256": "659fa53f916959696922018ad88c3a61ca2db4263cd5dd441c6ebc2eef266f6a",
+      "bytes": 158
+    },
+    {
+      "name": "review_weekly.golden",
+      "sha256": "47b50a4e0a9d0cd7e87f7ed0576f7e0447c4cae1f648172639cc49a72239f4af",
+      "bytes": 193
+    }
+  ]
+}

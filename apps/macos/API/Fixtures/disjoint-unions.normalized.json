@@ -1,0 +1,342 @@
+{
+  "openapi": "3.0.3",
+  "components": {
+    "schemas": {
+      "Events": {
+        "description": "Two exclusive event kinds",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/SwiftTagged_Created_44c587fda6519da7"
+          },
+          {
+            "$ref": "#/components/schemas/SwiftTagged_Deleted_9a7b1b1d7b550466"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "Created": "#/components/schemas/SwiftTagged_Created_44c587fda6519da7",
+            "Deleted": "#/components/schemas/SwiftTagged_Deleted_9a7b1b1d7b550466"
+          }
+        }
+      },
+      "Outcomes": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/SwiftTagged_committed_518d40008831e825"
+          },
+          {
+            "$ref": "#/components/schemas/SwiftTagged_rejected_85641940d91a0948"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "outcome",
+          "mapping": {
+            "committed": "#/components/schemas/SwiftTagged_committed_518d40008831e825",
+            "rejected": "#/components/schemas/SwiftTagged_rejected_85641940d91a0948"
+          }
+        }
+      },
+      "Overlapping": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "Same"
+              }
+            },
+            "required": ["kind"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "Same"
+              },
+              "extra": {
+                "type": "string"
+              }
+            },
+            "required": ["kind", "extra"]
+          }
+        ]
+      },
+      "OptionalKind": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "First"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "Second"
+              }
+            },
+            "required": ["kind"]
+          }
+        ]
+      },
+      "Untagged": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "integer"
+          }
+        ]
+      },
+      "ConstrainedBranch": {
+        "anyOf": [
+          {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "minProperties": 1
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "Third"
+              }
+            },
+            "required": ["kind"]
+          }
+        ]
+      },
+      "SiblingCompositions": {
+        "anyOf": [
+          {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "First"
+                  },
+                  "child": {
+                    "oneOf": [
+                      {
+                        "$ref": "#/components/schemas/SwiftTagged_ChildA_92d0bbe64ca8447a"
+                      },
+                      {
+                        "$ref": "#/components/schemas/SwiftTagged_ChildB_06ad5bd3c98ca6eb"
+                      }
+                    ],
+                    "discriminator": {
+                      "propertyName": "kind",
+                      "mapping": {
+                        "ChildA": "#/components/schemas/SwiftTagged_ChildA_92d0bbe64ca8447a",
+                        "ChildB": "#/components/schemas/SwiftTagged_ChildB_06ad5bd3c98ca6eb"
+                      }
+                    }
+                  }
+                },
+                "required": ["kind"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "Second"
+                  }
+                },
+                "required": ["kind"]
+              }
+            ],
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "First"
+                  },
+                  "child": {
+                    "oneOf": [
+                      {
+                        "$ref": "#/components/schemas/SwiftTagged_ChildA_92d0bbe64ca8447a"
+                      },
+                      {
+                        "$ref": "#/components/schemas/SwiftTagged_ChildB_06ad5bd3c98ca6eb"
+                      }
+                    ],
+                    "discriminator": {
+                      "propertyName": "kind",
+                      "mapping": {
+                        "ChildA": "#/components/schemas/SwiftTagged_ChildA_92d0bbe64ca8447a",
+                        "ChildB": "#/components/schemas/SwiftTagged_ChildB_06ad5bd3c98ca6eb"
+                      }
+                    }
+                  }
+                },
+                "required": ["kind"]
+              }
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "Third"
+              }
+            },
+            "required": ["kind"]
+          }
+        ]
+      },
+      "ForwardParent": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/SwiftTagged_First_9c76c8c1d2ceda5d"
+          },
+          {
+            "$ref": "#/components/schemas/SwiftTagged_Second_4d04d90ebcc869ad"
+          },
+          {
+            "$ref": "#/components/schemas/SwiftTagged_Third_4fb983a78b20cefe"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "First": "#/components/schemas/SwiftTagged_First_9c76c8c1d2ceda5d",
+            "Second": "#/components/schemas/SwiftTagged_Second_4d04d90ebcc869ad",
+            "Third": "#/components/schemas/SwiftTagged_Third_4fb983a78b20cefe"
+          }
+        }
+      },
+      "ForwardGroup": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/SwiftTagged_First_9c76c8c1d2ceda5d"
+          },
+          {
+            "$ref": "#/components/schemas/SwiftTagged_Second_4d04d90ebcc869ad"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "First": "#/components/schemas/SwiftTagged_First_9c76c8c1d2ceda5d",
+            "Second": "#/components/schemas/SwiftTagged_Second_4d04d90ebcc869ad"
+          }
+        }
+      },
+      "SwiftTagged_Created_44c587fda6519da7": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "const": "Created"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": ["kind", "value"]
+      },
+      "SwiftTagged_Deleted_9a7b1b1d7b550466": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": ["Deleted"]
+          }
+        },
+        "required": ["kind"]
+      },
+      "SwiftTagged_committed_518d40008831e825": {
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "const": "committed"
+          }
+        },
+        "required": ["outcome"]
+      },
+      "SwiftTagged_rejected_85641940d91a0948": {
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "const": "rejected"
+          }
+        },
+        "required": ["outcome"]
+      },
+      "SwiftTagged_ChildA_92d0bbe64ca8447a": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "const": "ChildA"
+          }
+        },
+        "required": ["kind"]
+      },
+      "SwiftTagged_ChildB_06ad5bd3c98ca6eb": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "const": "ChildB"
+          }
+        },
+        "required": ["kind"]
+      },
+      "SwiftTagged_First_9c76c8c1d2ceda5d": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "const": "First"
+          },
+          "child": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SwiftTagged_ChildA_92d0bbe64ca8447a"
+              },
+              {
+                "$ref": "#/components/schemas/SwiftTagged_ChildB_06ad5bd3c98ca6eb"
+              }
+            ],
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "ChildA": "#/components/schemas/SwiftTagged_ChildA_92d0bbe64ca8447a",
+                "ChildB": "#/components/schemas/SwiftTagged_ChildB_06ad5bd3c98ca6eb"
+              }
+            }
+          }
+        },
+        "required": ["kind"]
+      },
+      "SwiftTagged_Second_4d04d90ebcc869ad": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "const": "Second"
+          }
+        },
+        "required": ["kind"]
+      },
+      "SwiftTagged_Third_4fb983a78b20cefe": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "const": "Third"
+          }
+        },
+        "required": ["kind"]
+      }
+    }
+  },
+  "paths": {}
+}

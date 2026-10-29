@@ -1,0 +1,2 @@
+docs/evidence/p01/**/*.log -whitespace
+docs/evidence/p01/**/*.sse -whitespace

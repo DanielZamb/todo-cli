@@ -1,0 +1,183 @@
+.attachments-section {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  min-width: 0;
+}
+.attachment-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.attachment-heading h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.attachment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+}
+.attachment-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.attachment-preview {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  color: var(--muted-foreground);
+  background: var(--muted);
+}
+.attachment-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.attachment-preview svg {
+  width: 16px;
+  height: 16px;
+}
+.attachment-details {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.attachment-title-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.attachment-name {
+  text-align: left;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  min-width: 0;
+  min-height: 32px;
+}
+.attachment-name:hover {
+  text-decoration: underline;
+}
+.attachment-name:disabled {
+  cursor: default;
+  color: var(--muted-foreground);
+}
+.attachment-path {
+  display: flex;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  white-space: nowrap;
+  min-width: 0;
+}
+.attachment-path-prefix {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.attachment-path-name {
+  display: flex;
+  min-width: 0;
+  flex-shrink: 0;
+  max-width: 85%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.attachment-missing {
+  color: var(--destructive);
+  font-size: 12px;
+  margin: 0;
+}
+.attachment-hint {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  padding: 12px 0 4px;
+  margin: 0;
+}
+.attachment-row-actions {
+  display: flex;
+  gap: 0;
+  flex-shrink: 0;
+}
+.attachment-row-actions button {
+  min-width: 32px;
+  min-height: 32px;
+}
+.attachment-row-actions button[aria-label^="Remove attachment"] {
+  color: var(--muted-foreground);
+}
+.attachment-link-form,
+.attachment-label-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+}
+.attachment-link-form > div {
+  display: flex;
+  gap: 8px;
+}
+.jira-marker {
+  font-size: 10px;
+  line-height: 16px;
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  color: var(--muted-foreground);
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 1;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.task-jira-marker {
+  display: inline-flex;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.attachment-menu [role="menuitem"] {
+  min-height: 32px;
+}
+
+.attachment-heading h3 svg {
+  width: 16px;
+  height: 16px;
+  color: var(--muted-foreground);
+}
+
+.attachment-heading button {
+  min-height: 32px;
+  min-width: 32px;
+}
+
+.attachment-filename-prefix {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.attachment-filename-tail {
+  flex-shrink: 0;
+}

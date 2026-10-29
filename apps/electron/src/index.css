@@ -1,0 +1,224 @@
+@import "tailwindcss" source("./");
+@import "tw-animate-css";
+@import "./vendor/shadcn.css";
+@custom-variant dark (&:is(.dark *));
+@custom-variant hover {
+  @media (hover: hover) {
+    &:hover {
+      @slot;
+    }
+  }
+  &[data-preview~="hover"] {
+    @slot;
+  }
+}
+@custom-variant focus-visible (&:focus-visible, &[data-preview~="focus"]);
+@custom-variant active (&:active, &[data-preview~="active"]);
+:root {
+  --background: #f7f8f5;
+  --foreground: #161d19;
+  --card: #ffffff;
+  --card-foreground: #161d19;
+  --popover: #ffffff;
+  --popover-foreground: #161d19;
+  --primary: #285d46;
+  --primary-foreground: #ffffff;
+  --secondary: #e8ede7;
+  --secondary-foreground: #263c2f;
+  --muted: #edf0eb;
+  --muted-foreground: #546359;
+  --accent: #e0ede3;
+  --accent-foreground: #244e37;
+  --selection: #f3f7f3;
+  --selection-foreground: #161d19;
+  --destructive: #af302d;
+  --destructive-foreground: #ffffff;
+  --success: #286341;
+  --success-foreground: #ffffff;
+  --warning: #76550b;
+  --warning-foreground: #ffffff;
+  --border: #d7ded5;
+  --input: #7b897e;
+  --ring: #285d46;
+  --primary-active: #1d4935;
+  --font-sans: system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, monospace;
+  --radius: 8px;
+  --priority-1: var(--destructive);
+  --priority-2: var(--warning);
+  --priority-3: var(--muted-foreground);
+  --priority-4: var(--muted-foreground);
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+  --chart-1: var(--primary);
+  --chart-2: var(--warning);
+  --chart-3: var(--destructive);
+  --chart-4: var(--muted-foreground);
+  --chart-5: var(--foreground);
+}
+.dark {
+  --background: #171d19;
+  --foreground: #f0f3ef;
+  --card: #1d2620;
+  --card-foreground: #f0f3ef;
+  --popover: #242f27;
+  --popover-foreground: #f0f3ef;
+  --primary: #a6d7b8;
+  --primary-foreground: #122219;
+  --secondary: #2c3b30;
+  --secondary-foreground: #e0ebdd;
+  --muted: #253029;
+  --muted-foreground: #afbdb1;
+  --accent: #324b3a;
+  --accent-foreground: #dbf1df;
+  --selection: #222e25;
+  --selection-foreground: #f0f3ef;
+  --destructive: #ffb4aa;
+  --destructive-foreground: #4e1716;
+  --success: #a6d7b8;
+  --success-foreground: #122219;
+  --warning: #ebcb83;
+  --warning-foreground: #302405;
+  --border: #405045;
+  --input: #82978a;
+  --ring: #a6d7b8;
+  --primary-active: #c1e7ce;
+}
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-selection: var(--selection);
+  --color-selection-foreground: var(--selection-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary-active: var(--primary-active);
+  --color-priority-1: var(--priority-1);
+  --color-priority-2: var(--priority-2);
+  --color-priority-3: var(--priority-3);
+  --color-priority-4: var(--priority-4);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --font-sans: system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, monospace;
+  --font-heading: var(--font-sans);
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 16px;
+  --radius-4xl: 9999px;
+}
+@theme {
+  --shadow-xs: 0 0 #0000;
+  --shadow-sm: 0 4px 16px rgb(22 29 25 / 0.1);
+  --shadow-lg: 0 16px 48px rgb(22 29 25 / 0.18);
+}
+@utility type-display {
+  font-size: clamp(28px, 3vw, 36px);
+  line-height: 40px;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+@utility type-title {
+  font-size: 24px;
+  line-height: 30px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+@utility type-heading {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+@utility type-body {
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 400;
+}
+@utility type-caption {
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 400;
+}
+@utility type-code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 400;
+}
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans type-body;
+    margin: 0;
+  }
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+}
+:is(
+  button,
+  a[href],
+  input,
+  textarea,
+  select,
+  [role="radio"],
+  [role="checkbox"],
+  [role="tab"],
+  [role="switch"]
+):is(:focus-visible, [data-preview~="focus"]) {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  --tw-ring-shadow: 0 0 #0000;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none;
+    transition: none;
+    scroll-behavior: auto;
+  }
+}

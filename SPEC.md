@@ -1,6 +1,10 @@
-# Todo CLI Specification v1.1
+# Todo CLI v0.1 specification (historical)
 
-Status: Draft
+This document describes the retired Go v0.1 CLI. It is a historical behavior
+reference for the Effect port. The accepted decisions in [docs/adr](docs/adr/)
+take precedence wherever they disagree with this specification. Current domain
+terms are defined in [CONTEXT.md](CONTEXT.md). The CLI acceptance files live in
+[apps/cli/test/golden](apps/cli/test/golden/).
 
 ## 1. Product Goals
 

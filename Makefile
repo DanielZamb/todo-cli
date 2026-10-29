@@ -1,57 +1,37 @@
-BINARY := todo
-CMD := ./cmd/todo
-BUILD_DIR := ./bin
-COVER_FILE := /tmp/todo-cli.cover
-GOCACHE_DIR := /tmp/go-build-cache
-USE_TMP_GOCACHE ?= 1
+INSTALL_DIR ?= $(HOME)/.local/bin
+-include signing.local.mk
+export TODO_SIGNING_TEAM TODO_SIGNING_IDENTITY
 
-ifeq ($(USE_TMP_GOCACHE),1)
-GOENV := GOCACHE=$(GOCACHE_DIR)
-else
-GOENV :=
-endif
-
-.PHONY: all build run test test-integration cover fmt tidy clean install-local release-check
+.PHONY: all build install install-local check test clean check-signing-config sign-desktop
 
 all: build
 
 build:
-	mkdir -p $(BUILD_DIR)
-	$(GOENV) go build -o $(BUILD_DIR)/$(BINARY) $(CMD)
+	pnpm --filter @todo/cli --filter @todo/server build
 
-run:
-	$(GOENV) go run $(CMD) --help
+install install-local:
+	./scripts/install.sh --install-dir "$(INSTALL_DIR)"
+
+check:
+	pnpm check
 
 test:
-	$(GOENV) go test ./...
-
-test-integration:
-	$(GOENV) go test ./test/integration
-
-cover:
-	$(GOENV) go test -cover ./...
-
-fmt:
-	gofmt -w $(shell find . -name '*.go' -type f)
-
-tidy:
-	$(GOENV) go mod tidy
+	pnpm test
 
 clean:
-	rm -rf $(BUILD_DIR)
-	rm -f $(COVER_FILE)
+	rm -rf apps/cli/dist apps/server/dist
 
-install-local: build
-	./scripts/install.sh --from-local $(BUILD_DIR)/$(BINARY)
+check-signing-config:
+	@test -n "$$TODO_SIGNING_TEAM" || { echo 'Set TODO_SIGNING_TEAM in signing.local.mk or the environment.' >&2; exit 2; }
+	@test -n "$$TODO_SIGNING_IDENTITY" || { echo 'Set TODO_SIGNING_IDENTITY in signing.local.mk or the environment.' >&2; exit 2; }
 
-release-check: build test
-	@echo "Release artifact checks"
-	@ls -lh $(BUILD_DIR)/$(BINARY)
-	@shasum -a 256 $(BUILD_DIR)/$(BINARY)
-	@echo "Installer smoke test (local mode)"
-	@rm -rf /tmp/todo-install-smoke
-	@mkdir -p /tmp/todo-install-smoke/bin /tmp/todo-install-smoke/home
-	@HOME=/tmp/todo-install-smoke/home ./scripts/install.sh --from-local $(BUILD_DIR)/$(BINARY) --install-dir /tmp/todo-install-smoke/bin
-	@HOME=/tmp/todo-install-smoke/home /tmp/todo-install-smoke/bin/todo --help-human-flag >/tmp/todo-install-smoke/help.txt
-	@grep -q "Human Onboarding" /tmp/todo-install-smoke/help.txt
-	@echo "release-check OK"
+sign-desktop: check-signing-config
+	bun scripts/check-package-age.ts 7
+	"$(CURDIR)/scripts/disk-guard.sh"
+	rm -f dist/signed.noindex/signing-receipt.json
+	mkdir -p dist/signed.noindex/macos dist/signed.noindex/electron
+	xcodebuild -project apps/macos/Todo.xcodeproj -scheme Todo -configuration Release -destination platform=macOS -derivedDataPath "$(CURDIR)/dist/signed.noindex/DerivedData" CONFIGURATION_BUILD_DIR="$(CURDIR)/dist/signed.noindex/macos" DEVELOPMENT_TEAM="$$TODO_SIGNING_TEAM" CODE_SIGN_STYLE=Automatic CODE_SIGN_IDENTITY="Apple Development" CODE_SIGNING_ALLOWED=YES CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO OTHER_CODE_SIGN_FLAGS="--timestamp=none" build
+	"$(CURDIR)/scripts/disk-guard.sh"
+	pnpm --filter @todo/electron build --sign --output "$(CURDIR)/dist/signed.noindex/electron/Todo.app"
+	python3 scripts/signing-receipt.py "$(CURDIR)/dist/signed.noindex"
+	python3 scripts/unregister-desktop-builds.py "$(CURDIR)/dist/signed.noindex"

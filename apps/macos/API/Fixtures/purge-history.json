@@ -1,0 +1,117 @@
+[
+  {
+    "seq": 31,
+    "actor": "8f9415983e60ada5ceede88f34c11462",
+    "profile": "work",
+    "from_version": null,
+    "event": {
+      "entity_version": 1,
+      "occurred_at": "2026-10-27T21:34:03.508Z",
+      "kind": "TaskHistoryRedacted",
+      "original_kind": "TaskCreated",
+      "attempted_kind": null,
+      "task_ids": ["039c8355-be6c-4292-bd96-362545c6374e"],
+      "replay": {
+        "tasks": [],
+        "series": [],
+        "projects": [],
+        "tags": [],
+        "versions": [
+          {
+            "id": "039c8355-be6c-4292-bd96-362545c6374e",
+            "version": 1
+          }
+        ],
+        "series_versions": []
+      }
+    },
+    "to_version": 1,
+    "outcome": "committed",
+    "reason": null
+  },
+  {
+    "seq": 32,
+    "actor": "8f9415983e60ada5ceede88f34c11462",
+    "profile": "work",
+    "from_version": 9,
+    "event": {
+      "entity_version": 1,
+      "occurred_at": "2026-10-27T21:34:03.519Z",
+      "kind": "TaskHistoryRedacted",
+      "original_kind": "TaskAttemptRejected",
+      "attempted_kind": "TaskEdited",
+      "task_ids": ["039c8355-be6c-4292-bd96-362545c6374e"],
+      "replay": {
+        "tasks": [],
+        "series": [],
+        "projects": [],
+        "tags": [],
+        "versions": [],
+        "series_versions": []
+      }
+    },
+    "to_version": null,
+    "outcome": "rejected",
+    "reason": "conflict"
+  },
+  {
+    "seq": 33,
+    "actor": "8f9415983e60ada5ceede88f34c11462",
+    "profile": "work",
+    "from_version": 1,
+    "event": {
+      "entity_version": 1,
+      "occurred_at": "2026-10-27T21:34:03.528Z",
+      "kind": "TaskHistoryRedacted",
+      "original_kind": "TaskDeleted",
+      "attempted_kind": null,
+      "task_ids": ["039c8355-be6c-4292-bd96-362545c6374e"],
+      "replay": {
+        "tasks": [],
+        "series": [],
+        "projects": [],
+        "tags": [],
+        "versions": [
+          {
+            "id": "039c8355-be6c-4292-bd96-362545c6374e",
+            "version": 2
+          }
+        ],
+        "series_versions": []
+      }
+    },
+    "to_version": 2,
+    "outcome": "committed",
+    "reason": null
+  },
+  {
+    "seq": 35,
+    "actor": "91846841c08141da4692e1f5f0277d24",
+    "profile": "work",
+    "from_version": 2,
+    "event": {
+      "entity_version": 1,
+      "occurred_at": "2026-10-27T16:00:00Z",
+      "kind": "TaskHistoryRedacted",
+      "original_kind": "TaskPurged",
+      "attempted_kind": null,
+      "task_ids": ["039c8355-be6c-4292-bd96-362545c6374e"],
+      "replay": {
+        "tasks": [],
+        "series": [],
+        "projects": [],
+        "tags": [],
+        "versions": [
+          {
+            "id": "039c8355-be6c-4292-bd96-362545c6374e",
+            "version": 2
+          }
+        ],
+        "series_versions": []
+      }
+    },
+    "to_version": null,
+    "outcome": "committed",
+    "reason": null
+  }
+]

@@ -1,0 +1,126 @@
+[
+  {
+    "external_id": "launch-01",
+    "title": "Confirm enterprise renewal",
+    "project_name": "Client Launch",
+    "tag_names": ["revenue", "enterprise"],
+    "priority": "P1",
+    "energy": 3,
+    "estimate_min": 45
+  },
+  {
+    "external_id": "launch-02",
+    "title": "Approve partner pricing",
+    "project_name": "Client Launch",
+    "tag_names": ["revenue"],
+    "priority": "P1",
+    "energy": 2,
+    "estimate_min": 30
+  },
+  {
+    "external_id": "launch-03",
+    "title": "Review upsell proposal",
+    "project_name": "Client Launch",
+    "tag_names": ["revenue", "enterprise"],
+    "priority": "P2",
+    "estimate_min": 60
+  },
+  {
+    "external_id": "launch-04",
+    "title": "Polish launch email",
+    "project_name": "Client Launch",
+    "tag_names": ["revenue", "marketing"],
+    "priority": "P3",
+    "estimate_min": 25
+  },
+  {
+    "external_id": "launch-05",
+    "title": "Resolve billing blocker",
+    "project_name": "Client Launch",
+    "tag_names": ["revenue", "blocked"],
+    "priority": "P2",
+    "estimate_min": 90
+  },
+  {
+    "external_id": "launch-06",
+    "title": "Send renewal offer",
+    "project_name": "Client Launch",
+    "tag_names": ["revenue"],
+    "priority": "P2",
+    "estimate_min": 40,
+    "scheduled_at": { "kind": "date", "date": "2030-11-02" }
+  },
+  {
+    "external_id": "launch-07",
+    "title": "Finalize launch contract",
+    "project_name": "Client Launch",
+    "tag_names": ["revenue", "legal"],
+    "priority": "P1",
+    "estimate_min": 120,
+    "due_at": { "kind": "date", "date": "2030-11-01" }
+  },
+  {
+    "external_id": "launch-08",
+    "title": "Agree launch discount",
+    "project_name": "Client Launch",
+    "tag_names": ["revenue"],
+    "priority": "P2",
+    "estimate_min": 20,
+    "status": "done"
+  },
+  {
+    "external_id": "launch-09",
+    "title": "Retire old rate card",
+    "project_name": "Client Launch",
+    "tag_names": ["revenue"],
+    "priority": "P3",
+    "estimate_min": 15,
+    "status": "cancelled"
+  },
+  {
+    "external_id": "launch-10",
+    "title": "Complete compliance review",
+    "project_name": "Client Launch",
+    "tag_names": ["compliance"],
+    "priority": "P1",
+    "estimate_min": 75
+  },
+  {
+    "external_id": "launch-11",
+    "title": "Write launch retrospective",
+    "project_name": "Client Launch",
+    "priority": "P3",
+    "estimate_min": 30
+  },
+  {
+    "external_id": "ops-01",
+    "title": "Collect overdue invoice",
+    "project_name": "Operations",
+    "tag_names": ["revenue"],
+    "priority": "P1",
+    "estimate_min": 45
+  },
+  {
+    "external_id": "ops-02",
+    "title": "Update Operations handbook",
+    "project_name": "Operations",
+    "tag_names": ["admin"],
+    "priority": "P3",
+    "estimate_min": 20
+  },
+  {
+    "external_id": "growth-01",
+    "title": "Review acquisition spend",
+    "project_name": "Growth",
+    "tag_names": ["revenue", "marketing"],
+    "priority": "P2",
+    "estimate_min": 60
+  },
+  {
+    "external_id": "unassigned-01",
+    "title": "Triage unassigned sales request",
+    "tag_names": ["revenue"],
+    "priority": "P2",
+    "estimate_min": 10
+  }
+]

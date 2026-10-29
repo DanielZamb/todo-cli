@@ -1,0 +1,21 @@
+{
+  "name": "@todo/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "bun --bun ../../node_modules/typescript/bin/tsc --noEmit",
+    "openapi": "bun scripts/openapi.ts && pnpm exec biome format --write openapi.json"
+  },
+  "dependencies": {
+    "@todo/domain": "workspace:*",
+    "effect": "4.0.5"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.3"
+  },
+  "license": "MIT"
+}

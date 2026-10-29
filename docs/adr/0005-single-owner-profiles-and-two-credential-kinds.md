@@ -1,0 +1,3 @@
+# Single owner, profiles instead of users, two credential kinds
+
+The database belongs to one person. Multiple users are removed. Tasks are partitioned by **Profile** (for example work or personal) and grouped by **Project** inside a profile. Signing in with the owner's passphrase (Argon2id) creates a **Session**, used by the CLI, SwiftUI and Electron. A session has a fixed lifetime with no sliding renewal: we chose to sign in again now and then over long-lived credentials that are worth stealing. Agents and other services use a separate **Access Token**, issued explicitly, optionally limited to one profile with a read-only or read-write scope, and revocable by name. Both travel in the `Authorization` header, told apart by the `ses_` and `tok_` prefixes.

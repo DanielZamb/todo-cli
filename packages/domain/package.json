@@ -1,0 +1,31 @@
+{
+  "name": "@todo/domain",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./store": "./src/store/store.ts",
+    "./import": "./src/import-tasks.ts",
+    "./commands": "./src/commands.ts",
+    "./attachments": "./src/attachment-commands.ts",
+    "./attachment-store": "./src/attachment-store.ts",
+    "./presentation": "./src/presentation.ts"
+  },
+  "scripts": {
+    "typecheck": "bun --bun ../../node_modules/typescript/bin/tsc --noEmit",
+    "test": "bun --bun ./node_modules/vitest/vitest.mjs run"
+  },
+  "dependencies": {
+    "effect": "4.0.5",
+    "rrule-temporal": "2.2.8",
+    "temporal-polyfill": "1.0.1"
+  },
+  "devDependencies": {
+    "@effect/vitest": "4.0.5",
+    "@types/bun": "1.4.3",
+    "rrule": "2.8.1",
+    "vitest": "5.0.5"
+  },
+  "license": "MIT"
+}

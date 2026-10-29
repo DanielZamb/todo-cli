@@ -1,0 +1,286 @@
+{
+  "openapi": "3.0.3",
+  "components": {
+    "schemas": {
+      "Events": {
+        "description": "Two exclusive event kinds",
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "Created"
+              },
+              "value": {
+                "type": "string"
+              }
+            },
+            "required": ["kind", "value"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "enum": ["Deleted"]
+              }
+            },
+            "required": ["kind"]
+          }
+        ]
+      },
+      "Outcomes": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "outcome": {
+                "const": "committed"
+              }
+            },
+            "required": ["outcome"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "outcome": {
+                "const": "rejected"
+              }
+            },
+            "required": ["outcome"]
+          }
+        ]
+      },
+      "Overlapping": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "Same"
+              }
+            },
+            "required": ["kind"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "Same"
+              },
+              "extra": {
+                "type": "string"
+              }
+            },
+            "required": ["kind", "extra"]
+          }
+        ]
+      },
+      "OptionalKind": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "First"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "Second"
+              }
+            },
+            "required": ["kind"]
+          }
+        ]
+      },
+      "Untagged": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "integer"
+          }
+        ]
+      },
+      "ConstrainedBranch": {
+        "anyOf": [
+          {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "minProperties": 1
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "Third"
+              }
+            },
+            "required": ["kind"]
+          }
+        ]
+      },
+      "SiblingCompositions": {
+        "anyOf": [
+          {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "First"
+                  },
+                  "child": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "ChildA"
+                          }
+                        },
+                        "required": ["kind"]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "ChildB"
+                          }
+                        },
+                        "required": ["kind"]
+                      }
+                    ]
+                  }
+                },
+                "required": ["kind"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "Second"
+                  }
+                },
+                "required": ["kind"]
+              }
+            ],
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "const": "First"
+                  },
+                  "child": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "ChildA"
+                          }
+                        },
+                        "required": ["kind"]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "const": "ChildB"
+                          }
+                        },
+                        "required": ["kind"]
+                      }
+                    ]
+                  }
+                },
+                "required": ["kind"]
+              }
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "Third"
+              }
+            },
+            "required": ["kind"]
+          }
+        ]
+      },
+      "ForwardParent": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/ForwardGroup"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "Third"
+              }
+            },
+            "required": ["kind"]
+          }
+        ]
+      },
+      "ForwardGroup": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "First"
+              },
+              "child": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "ChildA"
+                      }
+                    },
+                    "required": ["kind"]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "ChildB"
+                      }
+                    },
+                    "required": ["kind"]
+                  }
+                ]
+              }
+            },
+            "required": ["kind"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "Second"
+              }
+            },
+            "required": ["kind"]
+          }
+        ]
+      }
+    }
+  },
+  "paths": {}
+}

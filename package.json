@@ -1,0 +1,23 @@
+{
+  "name": "todo",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.30.1",
+  "engines": {
+    "node": ">=22.12.0",
+    "bun": ">=1.4.4"
+  },
+  "scripts": {
+    "check": "pnpm typecheck && pnpm lint && pnpm test",
+    "typecheck": "pnpm -r typecheck && bun --bun node_modules/typescript/bin/tsc -p tsconfig.scripts.json",
+    "lint": "biome check .",
+    "test": "pnpm -r test"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/node": "26.6.5",
+    "effect": "4.0.5",
+    "typescript": "7.0.2"
+  },
+  "license": "MIT"
+}

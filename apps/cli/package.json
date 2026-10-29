@@ -1,0 +1,22 @@
+{
+  "name": "@todo/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "mkdir -p dist && cd dist && bun build --compile ../src/main.ts --outfile todo",
+    "typecheck": "bun --bun ../../node_modules/typescript/bin/tsc --noEmit",
+    "test": "bun --bun ./node_modules/vitest/vitest.mjs run --testTimeout 60000"
+  },
+  "dependencies": {
+    "@effect/platform-bun": "4.0.5",
+    "@todo/domain": "workspace:*",
+    "effect": "4.0.5"
+  },
+  "devDependencies": {
+    "@effect/vitest": "4.0.5",
+    "@types/bun": "1.4.3",
+    "vitest": "5.0.5"
+  },
+  "license": "MIT"
+}

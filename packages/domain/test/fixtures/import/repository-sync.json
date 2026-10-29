@@ -1,0 +1,20 @@
+[
+  {
+    "external_id": "repository:arg-weekly-export",
+    "title": "Enable and verify weekly telemetry export",
+    "project_name": "ARG",
+    "description": "After access is granted, configure Monday 17:00 UTC.\n\nFile: /scratch/repository/work/requests/weekly-export.md",
+    "tag_names": ["telemetry", "scheduler", "waiting"],
+    "source": "agent",
+    "status": "open"
+  },
+  {
+    "external_id": "repository:jira-etl-follow-up",
+    "title": "Jira: draft the ETL failure follow-up",
+    "project_name": "Data lake operations",
+    "description": "Confirm job retirement and monitoring cleanup.\n\nFile: /scratch/repository/work/requests/etl-follow-up.md",
+    "tag_names": ["jira", "etl"],
+    "source": "agent",
+    "status": "done"
+  }
+]

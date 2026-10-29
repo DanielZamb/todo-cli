@@ -1,0 +1,12 @@
+{
+  "extends": ["../../biome.json"],
+  "root": false,
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
+  "files": {
+    "includes": ["**", "!dist", "!evidence", "!src/vendor/shadcn.css"]
+  }
+}

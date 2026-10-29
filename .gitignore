@@ -1,0 +1,55 @@
+.orchestrator/
+node_modules/
+dist/
+.DS_Store
+*.db
+*.db-wal
+*.db-shm
+DerivedData/
+.build/
+coverage/
+*.tsbuildinfo
+__pycache__/
+
+# Generated verification output
+/docs/evidence/
+/apps/*/evidence/
+/design/*/evidence/
+*.log
+*.xcresult/
+xcuserdata/
+*.xcuserstate
+.pnpm-store/
+
+# Historical port records. Keep the current delivery status.
+/docs/orchestration/*
+!/docs/orchestration/REMAINING.md
+
+# General agent workflows. Keep project verification tools.
+/.agents/skills/*
+!/.agents/skills/verify-*/
+/.claude/settings.local.json
+/.claude/worktrees/
+
+# Standalone prototypes. Keep shared assets and design specifications.
+/design/electron/*
+!/design/electron/DESIGN.md
+!/design/electron/TOKENS.md
+!/design/electron/STATES.md
+/design/macos/*
+!/design/macos/Assets.xcassets/
+!/design/macos/DESIGN.md
+!/design/macos/TOKEN-MAPPING.md
+
+/.scratch/
+
+# Local signing configuration and runtime artifacts
+/signing.local.mk
+.env
+.env.*
+!.env.example
+/.*.bun-build
+*.p12
+*.pfx
+*.key
+*.pem

@@ -1,0 +1,66 @@
+{
+  "generated_at": "2026-10-29T04:00:00.000Z",
+  "poll_interval_ms": 1000,
+  "runtime": {
+    "version": "0.1.0",
+    "started_at": "2026-10-29T03:59:00.000Z",
+    "uptime_seconds": 60,
+    "memory_bytes": 1048576
+  },
+  "profiles": [
+    {
+      "id": "work",
+      "name": "Work"
+    }
+  ],
+  "storage": {
+    "database_bytes": 4096,
+    "wal_bytes": 8192,
+    "snapshot_bytes": 0,
+    "last_snapshot": null,
+    "tables": [
+      {
+        "name": "tasks",
+        "count": 0
+      }
+    ],
+    "entities": [
+      {
+        "profile": "work",
+        "tasks": 0,
+        "projects": 0,
+        "tags": 0,
+        "series": 0,
+        "occurrences": 0
+      }
+    ],
+    "restore_generation": "initial",
+    "external_id_tasks": 0,
+    "attachments": 0,
+    "attachment_store_bytes": 0
+  },
+  "operations": {
+    "total": 0,
+    "committed": 0,
+    "rejected": 0,
+    "window_seconds": 60,
+    "per_second": 0,
+    "samples": [],
+    "recent": []
+  },
+  "clients": [],
+  "credentials": [],
+  "errors": [],
+  "latency": {
+    "window_seconds": 300,
+    "capacity": 2048,
+    "routes": [],
+    "samples": []
+  },
+  "scheduler": {
+    "next_wake_at": null,
+    "pending_reminders": 0,
+    "last_reminder_fired": null
+  },
+  "deleted_profiles": []
+}
