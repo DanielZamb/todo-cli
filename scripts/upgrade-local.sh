@@ -27,7 +27,20 @@ if [ -f "$database" ]; then
   echo "Backed up $database to $backup."
 fi
 
+pnpm install --frozen-lockfile
+
+restart_on_failure() {
+  status=$?
+  if [ "$status" -ne 0 ] && [ -f "$agent" ] &&
+    ! launchctl print "$domain/$label" >/dev/null 2>&1; then
+    launchctl bootstrap "$domain" "$agent" &&
+      echo "Upgrade failed; restarted the previous Todo server." >&2
+  fi
+  exit "$status"
+}
+
 if launchctl print "$domain/$label" >/dev/null 2>&1; then
+  trap restart_on_failure EXIT
   launchctl bootout "$domain/$label"
   echo "Stopped the Todo server."
 fi
@@ -39,6 +52,11 @@ if [ -f "$agent" ]; then
   mkdir -p "$server_dir"
   install -m 755 /Applications/Todo.app/Contents/Resources/Server/todo-server "$server_dir/todo-server"
   launchctl bootstrap "$domain" "$agent"
+  port=$(/usr/libexec/PlistBuddy -c 'Print :EnvironmentVariables:TODO_PORT' "$agent" 2>/dev/null || echo 4310)
+  for _ in $(seq 1 50); do
+    curl -fsS "http://127.0.0.1:$port/health" >/dev/null 2>&1 && break
+    sleep 0.2
+  done
   echo "Restarted the Todo server from $(git rev-parse --short HEAD)."
 fi
 
