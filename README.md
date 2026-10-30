@@ -148,8 +148,8 @@ server and defaults to `http://127.0.0.1:4310`.
 
 The [macOS 26 SwiftUI client](apps/macos/README.md) lives in
 `apps/macos/Todo.xcodeproj`. It uses a generated Swift HttpApi client and
-stores Sessions in Keychain. Settings installs and supervises its bundled
-server.
+stores Sessions in Keychain. Settings installs, supervises, and updates its
+bundled server.
 
 There are no prebuilt releases yet. Both apps build unsigned by default. To
 sign them with your own Apple Development certificate, copy
@@ -164,6 +164,50 @@ The target checks package age and free disk before building, prints strict
 signature checks, and writes `dist/signed.noindex/signing-receipt.json`.
 `signing.local.mk` is ignored by Git. Run signing in your own Terminal, since
 macOS may ask for your login keychain password.
+
+## Keep an install on one build
+
+The CLI, the server, and both apps must speak the same API. Each binary
+carries a build id (the git commit) and a contract id (the sha256 of
+[packages/api/openapi.json](packages/api/openapi.json)):
+
+```sh
+todo --version          # todo 0.1.0 build=8dcb2930 contract=5835fbd0…
+todo-server --version
+curl -s http://127.0.0.1:4310/health
+```
+
+Both desktop clients compare the server's contract with their own when they
+connect, after sign-in, and when live updates reconnect. A mismatch shows
+"Todo server is out of date" and the client sends no Task requests until the
+server is updated. The server answers query parameters it does not declare
+with 400, so an older client cannot silently get unfiltered results either.
+
+To move everything to the checkout's build, quit both apps and run:
+
+```sh
+scripts/upgrade-local.sh
+```
+
+It backs up `~/.todo-cli/todo.db`, installs the CLI and server, signs and
+installs both apps, replaces the managed server with the one bundled in
+`Todo.app`, restarts it, and waits for `/health`. If any step fails after the
+server stops, it restarts the previous server. On macOS, Settings → Update
+server replaces only the managed server and keeps its database and port.
+
+Every installer ends with a headless check that never launches an app:
+
+```sh
+scripts/check-installed.sh                          # every installed component must match
+scripts/check-installed.sh --require cli,server-bin # these must exist and match
+```
+
+It prints one row per component (`cli`, `server-bin`, `managed-server`,
+`macos-app`, `electron-app`) with its build and contract. A component that is
+not installed is reported, not failed. A required component that is missing or
+mismatched exits nonzero; other mismatches print a WARNING naming
+`scripts/upgrade-local.sh`. `install.sh` requires the two binaries and
+`sign-and-install.sh` requires both apps. Run with `--help` for path overrides.
 
 ## Verify a change
 
