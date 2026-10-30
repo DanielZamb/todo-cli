@@ -25,13 +25,13 @@ struct LifecycleDriver {
             guard args.count == 7, let port = Int(args[6]) else { throw ServerLifecycle.Failure("database and port required") }
             let database = try scope.owned(args[5])
             result = try await lifecycle.install(database: database.path, port: port)
-        case "repair":
+        case "repair", "update":
             let current = try await lifecycle.status()
             if let configuration = current.configuration {
                 _ = try scope.owned(configuration.database)
                 _ = try scope.owned(configuration.executable)
             }
-            result = try await lifecycle.repair()
+            result = args[4] == "update" ? try await lifecycle.update() : try await lifecycle.repair()
         case "uninstall": result = try await lifecycle.uninstall()
         default: throw ServerLifecycle.Failure("Unknown lifecycle action")
         }

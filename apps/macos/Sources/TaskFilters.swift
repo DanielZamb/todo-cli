@@ -33,6 +33,7 @@ struct TaskListFilters: Equatable {
 struct TaskFilterView: View {
     @State var draft: TaskListFilters
     var compact = false
+    var planning = false
     var apply: (TaskListFilters) -> Void
     var close: () -> Void
 
@@ -45,6 +46,9 @@ struct TaskFilterView: View {
                     Text("Any").tag("")
                     ForEach(["open", "closed", "done", "cancelled", "snoozed"], id: \.self) { Text($0.capitalized).tag($0) }
                 }.accessibilityIdentifier("filter-status")
+                    .disabled(planning)
+                    .accessibilityHint(planning ? "Planning views show open Tasks only." : "")
+                if planning { Text("Planning views show open Tasks only.").font(.caption).foregroundStyle(.secondary) }
                 Picker("Priority", selection: $draft.priority) {
                     Text("Any").tag("")
                     ForEach(["P1", "P2", "P3", "P4"], id: \.self) { Text($0).tag($0) }
@@ -67,7 +71,7 @@ struct TaskFilterView: View {
                 Button("Clear all") { draft = .init() }
                 Spacer()
                 Button("Cancel", action: close).keyboardShortcut(.cancelAction)
-                Button("Apply filters") { apply(draft); close() }.keyboardShortcut(.defaultAction).disabled(!draft.isValid)
+                Button("Apply filters") { var value = draft; if planning { value.status = "" }; apply(value); close() }.keyboardShortcut(.defaultAction).disabled(!draft.isValid)
                     .accessibilityIdentifier("apply-task-filters")
             }
         }.padding(16).frame(width: compact ? 360 : 460, height: compact ? 390 : 540)

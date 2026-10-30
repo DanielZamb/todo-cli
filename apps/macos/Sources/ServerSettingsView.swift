@@ -13,6 +13,8 @@ struct ServerSettingsView: View {
     var body: some View {
         Section("Managed local server") {
             LabeledContent("Status", value: status?.displayStatus ?? "Status unavailable")
+            LabeledContent("Installed server build", value: status?.installedIdentity?.build ?? "Not installed / unknown")
+            LabeledContent("Bundled server build", value: status?.bundledIdentity?.build ?? "Unknown")
             if let configuration = status?.configuration {
                 LabeledContent("Database", value: configuration.database).textSelection(.enabled)
                 LabeledContent("Executable", value: configuration.executable).textSelection(.enabled)
@@ -33,7 +35,11 @@ struct ServerSettingsView: View {
             HStack {
                 Button("Refresh status") { run { try await lifecycle.status() } }
                 if status?.installed == true {
-                    Button("Restart server") { run { try await lifecycle.repair() } }
+                    if status?.needsUpdate == true {
+                        Button("Update server") { run { try await lifecycle.update() } }
+                            .accessibilityIdentifier("server-update")
+                    }
+                    Button("Repair / restart") { run { try await lifecycle.repair() } }
                         .accessibilityIdentifier("server-repair")
                         .help("Repair the LaunchAgent using its saved configuration and restart the server.")
                 } else {

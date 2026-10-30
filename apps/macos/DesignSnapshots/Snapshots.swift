@@ -244,6 +244,13 @@ struct Snapshots {
             model.parsedTask = ParsedTask(title: "Ship", due_at: TaskTime(kind: "date", date: "2026-10-29"), priority: "P1", tags: ["focus", "planning"], project: "Client")
             try await render("compact-quick-add-short", QuickAddView(model: model, floating: true, compact: true, referenceDate: referenceDate).content, width: 393, height: 426)
             if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" { continue }
+            for compact in [true, false] {
+                let size: (CGFloat, CGFloat) = compact ? (393, 426) : (1100, 720)
+                let stale = fixture()
+                stale.outdatedServerBuild = "verify-old"
+                try await render("outdated-\(compact ? "compact" : "full")", OutdatedServerView(model: stale, serverBuild: "verify-old", compact: compact), width: size.0, height: size.1)
+                try await render("planning-status-\(compact ? "compact" : "full")", TaskFilterView(draft: .init(), compact: compact, planning: true, apply: { _ in }, close: {}).background(.background), width: size.0, height: size.1)
+            }
             let filteredModel = fixture()
             filteredModel.projects.append(DiscoveryEntry(id: "other", name: "Operations", open_task_count: 1, inbox_task_count: nil))
             let unplanned = task(id: "filter-inbox", title: "Review launch revenue", priority: "P1", tags: ["design", "review"], hasDates: false)
@@ -731,7 +738,7 @@ struct Snapshots {
         try JSONEncoder().encode(importLayouts).write(to: directory.appendingPathComponent("import-layout.json"))
         try JSONEncoder().encode(transferLayouts).write(to: directory.appendingPathComponent("transfer-layout.json"))
         try JSONSerialization.data(withJSONObject: compactLayouts, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("compact-layout.json"))
-        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : 270))
+        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : 278))
     }
 
     private func fixture() -> TodoModel {

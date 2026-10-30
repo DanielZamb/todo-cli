@@ -38,7 +38,7 @@ assert (resources / 'Assets.car').is_file(), 'actool did not compile the product
 environment = dict(os.environ, TODO_SNAPSHOT_DIR=str(evidence))
 run(['swift', 'test', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--skip-build', '--filter', 'Snapshots'], 'render.log', environment)
 manifest = json.loads((evidence / 'manifest.json').read_text())
-assert len(manifest['files']) == (2 if os.environ.get('TODO_SNAPSHOT_QUICK_ONLY') == '1' else 270)
+assert len(manifest['files']) == (2 if os.environ.get('TODO_SNAPSHOT_QUICK_ONLY') == '1' else 278)
 assert all((evidence / name).is_file() for name in manifest['files'])
 (evidence / 'result.json').write_text(json.dumps({'status': 'PASS', 'pngs': len(manifest['files']), 'appLaunched': False, 'signed': False, 'keychainAccess': False, 'nativeGlassVerified': False}, indent=2) + '\n')
 print(f"PASS: {len(manifest['files'])} offscreen PNGs in {evidence}")

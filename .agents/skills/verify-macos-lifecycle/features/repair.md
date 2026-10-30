@@ -2,8 +2,8 @@
 
 ## Sub-features
 
-Restart an installed server, bootstrap an unloaded installation, reuse its
-executable/database/port, recover from server death through launchd KeepAlive.
+Restart an installed server, bootstrap an unloaded installation, preserve its
+executable path, database and port, recover from server death through launchd KeepAlive.
 
 ## How to get to it (user POV)
 
@@ -24,5 +24,9 @@ the unrelated listener remains reachable.
 
 Loaded means registered with launchd, not proof of HTTP health. The proof checks
 health separately. Missing executables and malformed/foreign plists are errors;
-repair never silently substitutes a bundled binary or database. Port zero
+repair refreshes a differing server executable from the bundle and never substitutes a database. Port zero
 installations retain their dynamic port; Settings points to the server log.
+
+## Version guardrails
+
+Status reads the installed and bundled server identities through --version. Settings offers Update server when either build or contract differs. Update and Repair / restart atomically copy the bundle over a differing executable before the saved configuration restarts the agent. The headless drive installs a separately compiled verify-stale build twice. It exercises Update and Repair, asserts different executable hashes and process IDs, unchanged executable/database/port configuration, matching installed and bundled identities, and matching live health contract. upgrades.json records both cases. Repair also replaces the pinned legacy helper while preserving its older JSON compatibility. Symbolic executable paths are refused before version execution.

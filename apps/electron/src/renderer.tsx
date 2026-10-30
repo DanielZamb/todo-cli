@@ -223,6 +223,10 @@ type WriteIntent =
   | { kind: "editSeries"; recurrence: Recurrence }
   | { kind: "skipOccurrence" };
 function App() {
+  const [outdated, setOutdated] = useState<Extract<
+    Reply,
+    { _tag: "outdatedServer" }
+  > | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [compact, setCompact] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
@@ -374,6 +378,12 @@ function App() {
         const reply = Schema.decodeUnknownSync(Reply)(
           await window.desktop.request(request),
         );
+        if (reply._tag === "outdatedServer") setOutdated(reply);
+        else if (
+          reply._tag === "signedIn" ||
+          (request._tag === "restore" && reply._tag === "signedOut")
+        )
+          setOutdated(null);
         if (reply._tag === "signedIn" || reply._tag === "tasks")
           for (const entry of reply.profiles)
             profileNames.current.set(entry.id, entry.name);
@@ -458,6 +468,7 @@ function App() {
       if (reply._tag === "windowMode") setCompact(reply.compact);
     });
     return window.desktop.subscribe((notice) => {
+      if (notice._tag === "outdatedServer") setOutdated(notice);
       if (notice._tag === "windowMode") setCompact(notice.compact);
       if (notice._tag === "settings") setSettingsOpen(true);
       if (notice._tag === "toggleTheme") setDark((value) => !value);
@@ -1042,6 +1053,52 @@ function App() {
     month: "long",
     day: "numeric",
   });
+  if (outdated)
+    return (
+      <main className={cn("sign-in", "outdated-server", compact && "compact")}>
+        <div className="sign-in-window-mode">
+          <Button
+            variant="ghost"
+            aria-label={dark ? "Light appearance" : "Dark appearance"}
+            onClick={() => setDark(!dark)}
+          >
+            {dark ? <Sun /> : <Moon />}
+          </Button>
+          <WindowModeButton compact={compact} onToggle={toggleCompact} />
+        </div>
+        <section role="alert" aria-labelledby="outdated-title">
+          <h1 id="outdated-title">Todo server is out of date</h1>
+          <p>Update the server to continue using Tasks.</p>
+          <dl>
+            <div>
+              <dt>Server build</dt>
+              <dd>{outdated.serverBuild}</dd>
+            </div>
+            <div>
+              <dt>App build</dt>
+              <dd>{outdated.appBuild}</dd>
+            </div>
+          </dl>
+          <p>
+            On macOS, open Todo Settings → Update server, or run{" "}
+            <code>scripts/upgrade-local.sh</code>.
+          </p>
+          <Button
+            onClick={() => {
+              setSignedIn(false);
+              void request({ _tag: "restore" }).then((reply) => {
+                if (reply._tag === "signedIn") {
+                  setSignedIn(true);
+                  setRestored(true);
+                }
+              });
+            }}
+          >
+            Check again
+          </Button>
+        </section>
+      </main>
+    );
   if (!restored)
     return (
       <main className={cn("sign-in", compact && "compact")}>
@@ -1105,6 +1162,7 @@ function App() {
     >
       {filtersOpen && (
         <TaskFilterDialog
+          planning={view !== "tasks"}
           filters={advancedFilters}
           onClose={() => setFiltersOpen(false)}
           onApply={(value) => {

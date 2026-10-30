@@ -1,8 +1,9 @@
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdirSync, rmSync } from "node:fs";
+import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { sign } from "@electron/osx-sign";
+import { CONTRACT_ID } from "@todo/api";
 
 const {
   values: { sign: signed, output },
@@ -30,11 +31,28 @@ execFileSync(resolve(import.meta.dirname, "../../../scripts/disk-guard.sh"), {
   stdio: "inherit",
 });
 mkdirSync("dist", { recursive: true });
+let build = process.env.TODO_BUILD_ID;
+if (!build) {
+  try {
+    build = execFileSync("git", ["rev-parse", "--short", "HEAD"], {
+      encoding: "utf8",
+    }).trim();
+  } catch {
+    build = "dev";
+  }
+}
+const buildDefinition = `TODO_BUILD_ID=${JSON.stringify(build)}`;
+writeFileSync(
+  "dist/identity.json",
+  `${JSON.stringify({ build, contract: CONTRACT_ID })}\n`,
+);
 execFileSync(
   "bun",
   [
     "build",
     "src/main.ts",
+    "--define",
+    buildDefinition,
     "--target=node",
     "--format=cjs",
     "--external=electron",
@@ -62,6 +80,8 @@ if (process.env.TODO_ELECTRON_VERIFY_HOST === "1") {
     [
       "build",
       "scripts/write-host.ts",
+      "--define",
+      buildDefinition,
       "--target=node",
       "--format=esm",
       "--external=electron",
@@ -88,6 +108,7 @@ if (
   for (const file of ["main.cjs", "preload.cjs", "renderer"])
     cpSync(`dist/${file}`, `${resources}/dist/${file}`, { recursive: true });
   cpSync("package.json", `${resources}/package.json`);
+  cpSync("dist/identity.json", `${resources}/identity.json`);
   for (const { source, destination } of [
     { source: "LICENSE", destination: "LICENSE.electron" },
     { source: "LICENSES.chromium.html", destination: "LICENSES.chromium.html" },

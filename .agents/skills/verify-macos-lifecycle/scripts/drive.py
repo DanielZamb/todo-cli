@@ -30,7 +30,7 @@ env.update(HOME=str(home), TODO_SERVICE_LABEL=label)
 
 
 def run(args, expected=0, environment=None):
-    if any(str(arg) in ("install", "repair") for arg in args):
+    if any(str(arg) in ("install", "repair", "update") for arg in args):
         root = Path(__file__).resolve().parents[4]
         run([root / "scripts/disk-guard.sh"])
     try:
@@ -56,7 +56,10 @@ def health(port):
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     with opener.open(f"http://127.0.0.1:{port}/health", timeout=1) as response:
         assert response.status == 200
-        assert json.load(response) == {"service": "todo-server"}
+        value = json.load(response)
+        root = Path(__file__).resolve().parents[4]
+        contract = re.search(r'CONTRACT_ID\s*=\s*"([a-f0-9]+)"', (root / 'packages/api/src/contract.ts').read_text())[1]
+        assert value == {"service": "todo-server", "contract": contract, "build": value['build']}
     return True
 
 
@@ -209,12 +212,43 @@ try:
     assert driver("status")["configuration"] == expected
     assert driver("repair")["configuration"] == expected
     wait(lambda: health(existing_port))
-    assert hashlib.sha256(existing.read_bytes()).hexdigest() == old_hash
+    assert hashlib.sha256(existing.read_bytes()).hexdigest() != old_hash
+    assert existing.read_bytes() == binary.read_bytes()
     assert not (home / "must-not-create.db").exists()
-    (evidence / "preserved.json").write_text(json.dumps(dict(configuration=expected, executableUnchanged=True, legacyS03JSON=True)))
+    (evidence / "preserved.json").write_text(json.dumps(dict(configuration=expected, executableReplaced=True, legacyS03JSON=True)))
     assert driver("uninstall")["installed"] is False
     assert driver("uninstall")["loaded"] is False
     assert existing_database.is_file()
+    assert driver("uninstall")["installed"] is False
+    wait(lambda: stopped(existing_port))
+    shutil.copy2(scratch / "stale-server", scratch / "stale-original")
+    upgrade_receipts = []
+    for action in ["update", "repair"]:
+        stale = scratch / "stale-server"
+        stale_env = dict(env, TODO_DB=str(existing_database), TODO_PORT=str(existing_port))
+        run([stale, "install"], environment=stale_env)
+        wait(lambda: health(existing_port))
+        stale_config = dict(executable=str(stale), database=str(existing_database), port=existing_port)
+        before_pid = pid(stale)
+        before_hash = hashlib.sha256(stale.read_bytes()).hexdigest()
+        before_status = driver("status")
+        assert before_status['installedIdentity']['build'] == 'verify-stale'
+        assert before_status['bundledIdentity']['build'] != 'verify-stale'
+        updated = driver(action)
+        assert updated['configuration'] == stale_config
+        assert updated['installedIdentity'] == updated['bundledIdentity']
+        after_pid = wait(lambda: (value if (value := pid(stale)) != before_pid else False))
+        wait(lambda: health(existing_port))
+        assert hashlib.sha256(stale.read_bytes()).hexdigest() != before_hash
+        assert stale.read_bytes() == binary.read_bytes()
+        upgrade_receipts.append(dict(action=action, beforePid=before_pid, afterPid=after_pid, configuration=stale_config, identity=updated['installedIdentity']))
+        assert driver("uninstall")["installed"] is False
+        wait(lambda: stopped(existing_port))
+        # Restore the independently compiled older build for the second action.
+        if action == 'update':
+            stale.unlink()
+            shutil.copy2(scratch / 'stale-original', stale)
+    (evidence / 'upgrades.json').write_text(json.dumps(upgrade_receipts, indent=2) + '\n')
     passed = True
 finally:
     try:

@@ -2,6 +2,8 @@ import { BunHttpServer } from "@effect/platform-bun";
 import {
   Authorization,
   BearerCredential,
+  BUILD_ID,
+  CONTRACT_ID,
   Conflict,
   InternalError,
   InvalidTask,
@@ -42,7 +44,7 @@ import {
   HttpEffect,
   HttpRouter,
   HttpServerRequest,
-  type HttpServerResponse,
+  HttpServerResponse,
 } from "effect/http";
 import {
   HttpApiBuilder,
@@ -80,6 +82,61 @@ const knownRoutes = Object.keys(OpenApi.fromApi(TodoApi).paths ?? {}).map(
     pattern: new RegExp(`^${path.replace(/\{[^}]+\}/g, "[^/]+")}$`),
   }),
 );
+const queryRoutes = Object.entries(OpenApi.fromApi(TodoApi).paths).flatMap(
+  ([path, methods]) =>
+    (
+      [
+        "get",
+        "post",
+        "put",
+        "patch",
+        "delete",
+        "head",
+        "options",
+        "trace",
+      ] as const
+    ).flatMap((method) => {
+      const operation = methods[method];
+      return operation
+        ? [
+            {
+              method: method.toUpperCase(),
+              pattern: new RegExp(`^${path.replace(/\{[^}]+\}/g, "[^/]+")}$`),
+              parameters: new Set(
+                operation.parameters
+                  ?.filter((parameter) => parameter.in === "query")
+                  .map((parameter) => parameter.name) ?? [],
+              ),
+            },
+          ]
+        : [];
+    }),
+);
+export const rejectUnknownQuery = <E, R>(
+  httpEffect: Effect.Effect<HttpServerResponse.HttpServerResponse, E, R>,
+) =>
+  Effect.flatMap(HttpServerRequest.HttpServerRequest, (request) => {
+    const url = new URL(request.url, "http://127.0.0.1");
+    const route = queryRoutes.find(
+      (route) =>
+        route.method === request.method && route.pattern.test(url.pathname),
+    );
+    const unknown = [...new Set(url.searchParams.keys())].filter(
+      (name) => !route?.parameters.has(name),
+    );
+    return unknown.length
+      ? Effect.succeed(
+          HttpServerResponse.jsonUnsafe(
+            {
+              generated_at: new Date().toISOString(),
+              code: "invalid_query",
+              message: `Unknown query parameter${unknown.length === 1 ? "" : "s"}: ${unknown.join(", ")}`,
+            },
+            { status: 400 },
+          ),
+        )
+      : httpEffect;
+  });
 export const diagnosticsMiddleware =
   (diagnostics: OperationStore["diagnostics"]) =>
   <E, R>(
@@ -565,7 +622,12 @@ export const serverLayer = (options: {
       ).pipe(Layer.provide(AuthorizationLive));
       const SystemLive = HttpApiBuilder.group(TodoApi, "system", (handlers) =>
         handlers.handleAll({
-          health: () => Effect.succeed({ service: "todo-server" }),
+          health: () =>
+            Effect.succeed({
+              service: "todo-server",
+              contract: CONTRACT_ID,
+              build: BUILD_ID,
+            }),
         }),
       );
       const snapshotOwner = <A>(
@@ -625,7 +687,8 @@ export const serverLayer = (options: {
         ]),
       );
       return HttpRouter.serve(routes, {
-        middleware: diagnosticsMiddleware(diagnostics),
+        middleware: (effect) =>
+          diagnosticsMiddleware(diagnostics)(rejectUnknownQuery(effect)),
       }).pipe(
         Layer.provideMerge(
           BunHttpServer.layer({

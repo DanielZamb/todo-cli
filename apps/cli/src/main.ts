@@ -19,6 +19,7 @@ import {
   sep,
 } from "node:path";
 import { BunServices } from "@effect/platform-bun";
+import { BUILD_ID, CONTRACT_ID } from "@todo/api";
 import {
   ClientReads,
   filterTaskRecords,
@@ -1453,6 +1454,12 @@ const follow = args.some(
 );
 const jsonOutput = format === "json" || (follow && !process.stdout.isTTY);
 const program = Effect.gen(function* () {
+  if (args.length === 1 && (args[0] === "--version" || args[0] === "-v")) {
+    process.stdout.write(
+      `todo 0.1.0 build=${BUILD_ID} contract=${CONTRACT_ID}\n`,
+    );
+    return;
+  }
   if (formatValues.length > 1)
     return yield* Effect.fail(
       new CommandError(2, "invalid_args", "--format can be supplied only once"),
@@ -1521,7 +1528,7 @@ const program = Effect.gen(function* () {
     );
   }
   const command = Command.runWith(app, {
-    version: "0.1.0",
+    version: `0.1.0 build=${BUILD_ID} contract=${CONTRACT_ID}`,
     renderErrors: false,
   })(args.length ? args : ["--help"]);
   if (jsonOutput) {

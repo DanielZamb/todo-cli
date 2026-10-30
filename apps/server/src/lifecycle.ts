@@ -8,6 +8,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { isAbsolute, join } from "node:path";
+import { BUILD_ID, CONTRACT_ID } from "@todo/api";
 import { Effect, Schedule, Schema } from "effect";
 
 const managedPlist = Schema.Struct({
@@ -113,6 +114,8 @@ export const lifecycle = (options: {
     Effect.gen(function* () {
       const present = yield* io(installed);
       return {
+        build: BUILD_ID,
+        contract: CONTRACT_ID,
         label: options.label,
         path,
         installed: present,

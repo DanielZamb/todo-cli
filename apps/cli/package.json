@@ -4,14 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "mkdir -p dist && cd dist && bun build --compile ../src/main.ts --outfile todo",
+    "build": "bun ../../scripts/compile.ts src/main.ts dist/todo",
     "typecheck": "bun --bun ../../node_modules/typescript/bin/tsc --noEmit",
     "test": "bun --bun ./node_modules/vitest/vitest.mjs run --testTimeout 60000"
   },
   "dependencies": {
     "@effect/platform-bun": "4.0.5",
     "@todo/domain": "workspace:*",
-    "effect": "4.0.5"
+    "effect": "4.0.5",
+    "@todo/api": "workspace:*"
   },
   "devDependencies": {
     "@effect/vitest": "4.0.5",

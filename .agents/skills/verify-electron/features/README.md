@@ -22,3 +22,5 @@ profile-delete-tasks in light and dark. Native storage remains on HOLD.
 The final confirmation explains recovery through Settings > Snapshots. Named
 notices identify the deleted Profile. Open the Profile button, then select
 `Delete "<name>"…`; it is unavailable in the last Profile, offline or editing.
+
+Version guardrails are covered in [sessions](<sessions.md>).

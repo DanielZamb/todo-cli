@@ -24,3 +24,4 @@ lsregister=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchSe
 "$lsregister" -f /Applications/Todo.app "/Applications/Todo Electron.app"
 
 echo "Installed /Applications/Todo.app and /Applications/Todo Electron.app from $(git rev-parse --short HEAD)."
+"$root/scripts/check-installed.sh" --require macos-app,electron-app

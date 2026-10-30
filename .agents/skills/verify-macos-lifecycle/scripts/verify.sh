@@ -30,6 +30,8 @@ trap 'if [ ! -e "$scratch/launchd-active" ] && [ ! -e "$scratch/command-unsafe" 
     "$root/scripts/disk-guard.sh"
     python3 "$root/.agents/skills/verify-macos-lifecycle/scripts/legacy-source.py" "$root" "$scratch" "$evidence"
     (cd "$scratch" && bun build --compile "$scratch/legacy-main.ts" --outfile "$scratch/legacy-server")
+    "$root/scripts/disk-guard.sh"
+    TODO_BUILD_ID=verify-stale bun "$root/scripts/compile.ts" "$root/apps/server/src/main.ts" "$scratch/stale-server"
     python3 "$root/.agents/skills/verify-macos-lifecycle/scripts/test_headless_safety.py" -v
     python3 "$root/.agents/skills/verify-macos-lifecycle/scripts/drive.py" "$scratch" "$evidence"
 } > "$evidence/commands.log" 2>&1

@@ -446,7 +446,11 @@ const Diagnostics = HttpApiGroup.make("diagnostics")
   .middleware(Authorization);
 const System = HttpApiGroup.make("system").add(
   HttpApiEndpoint.get("health", "/health", {
-    success: Schema.Struct({ service: Schema.Literal("todo-server") }),
+    success: Schema.Struct({
+      service: Schema.Literal("todo-server"),
+      contract: Schema.String,
+      build: Schema.String,
+    }),
   }),
 );
 const Snapshots = HttpApiGroup.make("snapshots")
@@ -492,3 +496,6 @@ export class TodoApi extends HttpApi.make("todo-api")
   .annotateMerge(
     OpenApi.annotations({ title: "Todo local API", version: "0.1.0" }),
   ) {}
+
+export { CONTRACT_ID } from "./contract.ts";
+export { BUILD_ID } from "./identity.ts";

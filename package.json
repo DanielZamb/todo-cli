@@ -8,7 +8,7 @@
     "bun": ">=1.4.4"
   },
   "scripts": {
-    "check": "pnpm typecheck && pnpm lint && pnpm test",
+    "check": "bun packages/api/scripts/openapi.ts --check && pnpm typecheck && pnpm lint && pnpm test",
     "typecheck": "pnpm -r typecheck && bun --bun node_modules/typescript/bin/tsc -p tsconfig.scripts.json",
     "lint": "biome check .",
     "test": "pnpm -r test"

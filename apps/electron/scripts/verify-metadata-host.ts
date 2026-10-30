@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { _electron, type ElectronApplication, expect } from "@playwright/test";
+import { CONTRACT_ID } from "@todo/api";
 import { Schema } from "effect";
 import { verifyCompact } from "./verify-compact.ts";
 import { verifyMetadata } from "./verify-metadata.ts";
@@ -66,6 +67,8 @@ try {
   if (!serverURL) throw new Error("Scratch server did not become ready");
   expect(await (await fetch(`${serverURL}/health`)).json()).toEqual({
     service: "todo-server",
+    contract: CONTRACT_ID,
+    build: expect.any(String),
   });
   const signedIn = await fetch(`${serverURL}/auth/sessions`, {
     method: "POST",

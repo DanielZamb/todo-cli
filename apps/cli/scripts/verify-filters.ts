@@ -14,6 +14,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
+import { CONTRACT_ID } from "@todo/api";
 import { Task } from "@todo/domain";
 import { TaskResponse, TasksResponse } from "@todo/domain/presentation";
 import { Schema } from "effect";
@@ -147,7 +148,27 @@ try {
     assert.equal(response.status, expected, text);
     return body;
   };
-  assert.deepEqual(await request("/health"), { service: "todo-server" });
+  assert.deepEqual(await request("/health"), {
+    service: "todo-server",
+    contract: CONTRACT_ID,
+    build: "dev",
+  });
+  assert.deepEqual(
+    Schema.decodeUnknownSync(
+      Schema.Struct({ code: Schema.String, message: Schema.String }),
+    )(
+      await request(
+        "/profiles/work/tasks?unkown_status=closed",
+        "GET",
+        undefined,
+        400,
+      ),
+    ),
+    {
+      code: "invalid_query",
+      message: "Unknown query parameter: unkown_status",
+    },
+  );
   const contract = Schema.decodeUnknownSync(
     Schema.Struct({
       paths: Schema.Struct({
@@ -216,6 +237,26 @@ try {
     },
   );
   const cases: Array<{ filters: Record<string, string>; titles: string[] }> = [
+    {
+      filters: { status: "open" },
+      titles: [
+        "Approve partner pricing",
+        "Collect overdue invoice",
+        "Complete compliance review",
+        "Confirm enterprise renewal",
+        "Finalize launch contract",
+        "Polish launch email",
+        "Resolve billing blocker",
+        "Review acquisition spend",
+        "Review upsell proposal",
+        "Send renewal offer",
+        "Task without estimate",
+        "Triage unassigned sales request",
+        "Update Operations handbook",
+        "Write launch retrospective",
+        "Zoned contract",
+      ],
+    },
     {
       filters: {
         project: "Client Launch",

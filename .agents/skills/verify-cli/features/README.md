@@ -19,3 +19,5 @@ the compiled CLI. It includes Purge redaction and invalid-copy refusal.
 Move and Copy use the compiled CLI cases in `apps/cli/test/cli.test.ts` and
 `contract.test.ts`. They check filtered selection, dry-run, metadata and timestamps,
 completed status, per-Task Conflict reports, source isolation, and both schemas.
+
+Version guardrails are covered in [agent-contract](<agent-contract.md>).

@@ -32,10 +32,10 @@ a separate unproven check. It compiles
 `ServerLifecycle.swift` and `TaskSnapshot.swift` with Foundation-only drivers.
 No native app is built by verify.sh. The recipe also compiles the pre-W02 S03 lifecycle
 source from commit `7cfb2418351446119c992c6a257238114f9ec101`, relocating only
-imports to installed dependencies and the current unchanged server. This proves
-repair accepts its older JSON response without upgrading that executable.
+imports to installed dependencies and the current server. This proves
+repair accepts its older JSON response and replaces that executable with the bundle.
 Readiness is the real loopback `/health` returning exactly
-`{"service":"todo-server"}`. Exit 0 and `PASS; headless lifecycle only; evidence
+`{service:"todo-server",contract,build}`. Exit 0 and `PASS; headless lifecycle only; evidence
 survived cleanup` finish the proof.
 The configuration driver includes the production `ClientReads.swift`,
 `Recurrence.swift` and `AttachmentSnapshot.swift` dependencies of `TaskSnapshot.swift`. The unsigned
@@ -79,7 +79,7 @@ run-owned service target proves KeepAlive recovery without a PID reuse race. Rep
 configuration, including after a manual bootout. Repeated uninstall removes
 the job and plist while retaining the database. A separately installed server
 with another executable, database and port proves existing configuration and
-binary bytes survive repair. Read `actions.json` for exact commands and exits.
+configuration survives repair while the executable refreshes. Read `actions.json` for exact commands and exits.
 
 ## Evidence
 
@@ -133,3 +133,7 @@ never use the default agent, owner HOME/database or kill by process name.
   with `database port` for Install. Its scratch, resolved path and label guards apply before mutation.
 
 Use `/maintain-verification-skill` when lifecycle behavior changes.
+
+## Version guardrails
+
+The isolated launchd drive compiles a different build, then proves Update and Repair replace it, preserve configuration and restart the agent. See [the feature recipe](features/repair.md) for commands and expected evidence.

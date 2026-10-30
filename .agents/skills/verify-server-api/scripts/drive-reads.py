@@ -47,7 +47,11 @@ with (evidence / 'server.log').open('w') as log:
             assert int(code) == status, (path, code, value)
             return value
 
-        assert request('GET', '/health', 200) == {'service': 'todo-server'}
+        health_identity = request('GET', '/health', 200)
+        expected_contract = re.search(r'CONTRACT_ID\s*=\s*"([a-f0-9]+)"', Path('packages/api/src/contract.ts').read_text())[1]
+        assert health_identity == {'service': 'todo-server', 'contract': expected_contract, 'build': health_identity['build']}
+        assert health_identity['build']
+        assert request('GET', '/health?unknown=value', 400)['message'] == 'Unknown query parameter: unknown'
         session = request('POST', '/auth/sessions', 200, {'passphrase': 'scratch verification passphrase'})['credential']
         reader = request('POST', '/auth/tokens', 200, {'name': 's04-reader', 'profile': 'work', 'scope': 'read-only'}, session)['credential']
         writer = request('POST', '/auth/tokens', 200, {'name': 's04-writer', 'profile': 'work', 'scope': 'read-write'}, session)['credential']

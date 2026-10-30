@@ -106,3 +106,7 @@ It verifies signatures and matching icon assets for installed and staged apps,
 then requires LaunchServices and Spotlight to list exactly `/Applications/Todo.app`
 and `/Applications/Todo Electron.app`. It never launches an app or accesses Keychain.
 It retains `commands.log`, the raw registration lists and `result.json`.
+
+## Version guardrails
+
+The scratch drive checks identity drift, CLI-only installs, every installed-component table row, required failures and optional warnings. See [the feature recipe](features/installed-behavior.md) for commands and expected evidence.

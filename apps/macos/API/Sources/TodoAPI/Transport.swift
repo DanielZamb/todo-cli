@@ -16,7 +16,14 @@ public struct BearerMiddleware: ClientMiddleware {
     ) async throws -> (HTTPResponse, HTTPBody?) {
         var request = request
         if !credential.isEmpty { request.headerFields[.authorization] = "Bearer \(credential)" }
-        let (response, responseBody) = try await next(request, body, baseURL)
+        let (response, originalBody) = try await next(request, body, baseURL)
+        var responseBody = originalBody
+        if operationID == "system.health", response.status == .ok, let originalBody {
+            let data = try await Data(collecting: originalBody, upTo: 65_536)
+            let health = try JSONDecoder().decode(ServerHealth.self, from: data)
+            guard health.contract == TodoContract.id else { throw OutdatedServer(serverBuild: health.build ?? "unknown") }
+            responseBody = HTTPBody(data)
+        }
         let status = response.status.code
         if status >= 400 && status != 409 {
             var data: Data?
@@ -26,6 +33,12 @@ public struct BearerMiddleware: ClientMiddleware {
         }
         return (response, responseBody)
     }
+}
+
+private struct ServerHealth: Decodable { let contract: String?; let build: String? }
+public struct OutdatedServer: Error, Sendable {
+    public let serverBuild: String
+    public init(serverBuild: String) { self.serverBuild = serverBuild }
 }
 
 public func todoClient(server: URL, credential: String) -> Client {

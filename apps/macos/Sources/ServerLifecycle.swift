@@ -1,6 +1,24 @@
 import Foundation
 import Darwin
 
+struct ServerIdentity: Codable, Equatable, Sendable {
+    let build: String
+    let contract: String
+
+    init?(version: String) {
+        let fields = version.split(whereSeparator: \.isWhitespace)
+        guard let build = fields.first(where: { $0.hasPrefix("build=") }),
+              let contract = fields.first(where: { $0.hasPrefix("contract=") }) else { return nil }
+        self.build = String(build.dropFirst(6))
+        self.contract = String(contract.dropFirst(9))
+    }
+    static var appBuild: String {
+        guard let path = Bundle.main.url(forResource: "identity", withExtension: "txt", subdirectory: "Server"),
+              let version = try? String(contentsOf: path, encoding: .utf8) else { return "dev" }
+        return Self(version: version)?.build ?? "dev"
+    }
+}
+
 struct ManagedServerConfiguration: Codable, Equatable, Sendable {
     let executable: String
     let database: String
@@ -17,6 +35,9 @@ struct ManagedServerStatus: Codable, Sendable {
     let installed: Bool
     let loaded: Bool
     let configuration: ManagedServerConfiguration?
+    var installedIdentity: ServerIdentity? = nil
+    var bundledIdentity: ServerIdentity? = nil
+    var needsUpdate: Bool { installed && (installedIdentity == nil || installedIdentity != bundledIdentity) }
 }
 
 struct ServerLifecycle: Sendable {
@@ -30,7 +51,12 @@ struct ServerLifecycle: Sendable {
     }
 
     func status() async throws -> ManagedServerStatus {
-        try await command("status", executable: bundledServer)
+        var result = try await command("status", executable: bundledServer)
+        result.bundledIdentity = try? await identity(executable: bundledServer)
+        if let configuration = result.configuration {
+            result.installedIdentity = try? await identity(executable: URL(fileURLWithPath: configuration.executable))
+        }
+        return result
     }
 
     func install(database: String, port: Int) async throws -> ManagedServerStatus {
@@ -45,7 +71,16 @@ struct ServerLifecycle: Sendable {
         let directory = home.appendingPathComponent("Library/Application Support/Todo/Server")
         let destination = directory.appendingPathComponent("todo-server")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let temporary = directory.appendingPathComponent(UUID().uuidString)
+        try replaceExecutable(at: destination)
+        return try await command("install", executable: destination,
+                                 configuration: ManagedServerConfiguration(executable: destination.path, database: database, port: port))
+    }
+
+    private func replaceExecutable(at destination: URL) throws {
+        if (try? destination.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) == true {
+            throw Failure("Refusing to replace a server executable through a symbolic link.")
+        }
+        let temporary = destination.deletingLastPathComponent().appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: temporary) }
         try FileManager.default.copyItem(at: bundledServer, to: temporary)
         if FileManager.default.fileExists(atPath: destination.path) {
@@ -53,8 +88,6 @@ struct ServerLifecycle: Sendable {
         } else {
             try FileManager.default.moveItem(at: temporary, to: destination)
         }
-        return try await command("install", executable: destination,
-                                 configuration: ManagedServerConfiguration(executable: destination.path, database: database, port: port))
     }
 
     func repair() async throws -> ManagedServerStatus {
@@ -63,7 +96,34 @@ struct ServerLifecycle: Sendable {
             throw Failure("No managed configuration to repair. Choose Install after entering a database path.")
         }
         if !current.loaded { try await requireAvailable(port: configuration.port) }
+        if current.needsUpdate { try replaceExecutable(at: URL(fileURLWithPath: configuration.executable)) }
         return try await command("install", executable: URL(fileURLWithPath: configuration.executable), configuration: configuration)
+    }
+
+    func update() async throws -> ManagedServerStatus { try await repair() }
+
+    private func identity(executable: URL) async throws -> ServerIdentity {
+        try await Task.detached {
+            guard executable.resolvingSymlinksInPath().standardizedFileURL == executable.standardizedFileURL else {
+                throw Failure("Refusing to read a server build through a symbolic link.")
+            }
+            let process = Process()
+            process.executableURL = executable
+            process.arguments = ["--version"]
+            var environment = ProcessInfo.processInfo.environment.filter { !$0.key.hasPrefix("TODO_") }
+            environment["HOME"] = home.path
+            process.environment = environment
+            let output = Pipe()
+            process.standardOutput = output
+            process.standardError = output
+            try process.run()
+            let data = output.fileHandleForReading.readDataToEndOfFile()
+            process.waitUntilExit()
+            guard process.terminationStatus == 0, let identity = ServerIdentity(version: String(decoding: data, as: UTF8.self)) else {
+                throw Failure("Server build is unknown.")
+            }
+            return identity
+        }.value
     }
 
     private func requireAvailable(port: Int) async throws {

@@ -26,6 +26,9 @@ importers:
       '@effect/platform-bun':
         specifier: 4.0.5
         version: 4.0.5(effect@4.0.5)
+      '@todo/api':
+        specifier: workspace:*
+        version: link:../../packages/api
       '@todo/domain':
         specifier: workspace:*
         version: link:../../packages/domain

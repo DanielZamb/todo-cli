@@ -37,3 +37,5 @@ second-client SSE, offscreen sheets and unsigned build.
 
 [Profile deletion](profiles.md) has headless HTTP, generated contract, offscreen
 full and Compact appearance, and unsigned compilation checks during HOLD.
+
+Version guardrails are covered in [session](<session.md>).

@@ -67,6 +67,7 @@ final class TodoModel {
     var busy = false
     var loading = false
     var connection = Connection.connecting
+    var outdatedServerBuild: String?
     var message: String?
     var taskLoadError: String?
     var quickAdd = false
@@ -105,7 +106,7 @@ final class TodoModel {
     var client: Client { clientFactory(configuration.server, credential) }
     private var cursorKey: String { "cursor.\(configuration.vaultService).\(configuration.server.absoluteString).\(profile)" }
     private var restoreCursorKey: String { "restore-cursor.\(configuration.server.absoluteString)" }
-    var canWrite: Bool { signedIn && connection == .live && !busy }
+    var canWrite: Bool { signedIn && connection == .live && !busy && outdatedServerBuild == nil }
 
     init(configuration: ClientConfiguration, clientFactory: @escaping (URL, String) -> Client = todoClient) {
         self.configuration = configuration
@@ -169,6 +170,7 @@ final class TodoModel {
         defer { busy = false }
         restored = true
         do {
+            guard try await checkServerContract() else { return }
             if let value = try vault.load() {
                 credential = value
                 try await discoverProfiles()
@@ -191,8 +193,10 @@ final class TodoModel {
         busy = true
         defer { busy = false }
         do {
+            guard try await checkServerContract() else { return false }
             let response = try await client.signIn_period_signIn(body: .json(.init(passphrase: passphrase)))
             let session = try response.ok.body.json
+            guard try await checkServerContract() else { return false }
             try vault.save(session.credential)
             credential = session.credential
             message = nil
@@ -324,6 +328,7 @@ final class TodoModel {
     }
 
     private func refresh(generation run: Int) async throws {
+        guard outdatedServerBuild == nil else { return }
         refreshGeneration += 1
         let request = refreshGeneration
         let requestedProfile = profile
@@ -377,6 +382,7 @@ final class TodoModel {
         var attempt = 0
         while !Task.isCancelled && generation == run {
             do {
+                guard try await checkServerContract(), generation == run, !Task.isCancelled else { loading = false; return }
                 let response = try await client.changes_period_stream(path: .init(profile: profile), headers: .init(last_hyphen_event_hyphen_id: lastSequence, x_hyphen_todo_hyphen_client: .swiftui, x_hyphen_todo_hyphen_generation: restoreGeneration))
                 guard generation == run, !Task.isCancelled else { return }
                 resumeSequence = lastSequence
@@ -527,6 +533,7 @@ final class TodoModel {
     }
 
     func refreshConflictDefinitions() async {
+        guard outdatedServerBuild == nil else { return }
         let requestedProfile = profile
         do {
             let projectValues = try await client.reads_period_projects(path: .init(profile: requestedProfile)).ok.body.json
@@ -815,6 +822,7 @@ final class TodoModel {
     }
 
     func openSeries(presenting: Bool = true) async {
+        guard outdatedServerBuild == nil else { return }
         guard canWrite, let draft = editor else { return }
         seriesGeneration += 1
         let request = seriesGeneration
@@ -931,6 +939,7 @@ final class TodoModel {
     }
 
     func parseDraft() async {
+        guard outdatedServerBuild == nil else { return }
         parseGeneration += 1
         let run = parseGeneration
         let text = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -957,6 +966,7 @@ final class TodoModel {
     }
 
     func loadDiagnostics() async {
+        guard outdatedServerBuild == nil else { return }
         guard !diagnosticsLoading else { return }
         guard signedIn else {
             diagnostics = nil
@@ -980,6 +990,7 @@ final class TodoModel {
     }
 
     func loadHistory() async {
+        guard outdatedServerBuild == nil else { return }
         guard let task = editor else { return }
         historyGeneration += 1
         let request = historyGeneration
@@ -1001,6 +1012,7 @@ final class TodoModel {
     }
 
     func loadSnapshots() async {
+        guard outdatedServerBuild == nil else { return }
         snapshotError = nil
         do {
             let wire = try await client.snapshots_period_list().ok.body.json
@@ -1049,6 +1061,31 @@ final class TodoModel {
         credential = ""
         tasks = []
         message = "Your Session ended. Sign in again."
+    }
+
+    func checkServerContract() async throws -> Bool {
+        do {
+            let health = try await client.system_period_health().ok.body.json
+            guard health.contract == TodoContract.id else { throw OutdatedServer(serverBuild: health.build) }
+            outdatedServerBuild = nil
+            return true
+        } catch {
+            if let outdated = (error as? OutdatedServer) ?? (error as? ClientError)?.underlyingError as? OutdatedServer {
+                outdatedServerBuild = outdated.serverBuild
+                connection = .offline
+                loading = false
+                return false
+            }
+            throw error
+        }
+    }
+
+    func reconnectAfterUpdate() async {
+        do {
+            guard try await checkServerContract() else { return }
+            if signedIn { connect() }
+            else { restored = false; await restore() }
+        } catch { message = describe(error) }
     }
 
     func handleAuthorization(_ error: Error) { if failure(error)?.status == 401 { expireSession() } }

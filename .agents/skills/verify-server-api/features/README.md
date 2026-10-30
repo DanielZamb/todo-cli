@@ -13,3 +13,5 @@ HTTP contract suite adds malformed requests, recurrence and durable History.
 Owner-only Snapshot create/list/show/restore/prune routes are covered by the
 compiled [Snapshot drive](../../verify-snapshots/SKILL.md). It checks Session
 access, Token refusal, dry-run counts, Restore, SSE reload and reminder recovery.
+
+Version guardrails are covered in [contract](<contract.md>).

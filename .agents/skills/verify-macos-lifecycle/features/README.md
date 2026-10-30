@@ -8,3 +8,5 @@
 
 All are driven by the [headless recipe](../SKILL.md). Settings presentation,
 real user interaction and signed app delivery still require an authorized native proof.
+
+Version guardrails are covered in [repair](<repair.md>).
