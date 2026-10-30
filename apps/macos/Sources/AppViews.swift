@@ -949,8 +949,15 @@ struct OutdatedServerView: View {
                 GridRow { Text("Server build").foregroundStyle(.secondary); Text(serverBuild).textSelection(.enabled) }
                 GridRow { Text("App build").foregroundStyle(.secondary); Text(ServerIdentity.appBuild).textSelection(.enabled) }
             }
-            Text("Open Settings → Update server, or run scripts/upgrade-local.sh.")
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Open Settings → Update server, or run:")
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(verbatim: "scripts/upgrade-local.sh")
+                    .font(.body.monospaced())
+                    .lineLimit(1)
+                    .fixedSize()
+                    .textSelection(.enabled)
+            }
             HStack {
                 Button("Settings") { openSettings() }.buttonStyle(.borderedProminent)
                 Button("Check again") { Task { await model.reconnectAfterUpdate() } }
