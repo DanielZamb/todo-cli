@@ -5,10 +5,12 @@ locked dependencies with `pnpm install --frozen-lockfile`, then run `pnpm check`
 macOS client development also requires macOS 26 and Xcode 26. Swift dependencies
 are pinned in `apps/macos/API/Package.resolved`.
 
-Read [CONTEXT.md](CONTEXT.md) for domain terms and [docs/adr](docs/adr/) for binding
-decisions. Share Task behavior through `packages/domain` and expose human-client
-operations through the authenticated HTTP contract. Regenerate the Swift API
-after contract changes with `apps/macos/scripts/generate-api.sh`.
+Read [CONTEXT.md](CONTEXT.md) for domain terms,
+[docs/architecture.md](docs/architecture.md) for how the packages fit, and
+[docs/adr](docs/adr/README.md) for binding decisions. Share Task behavior
+through `packages/domain` and expose human-client operations through the
+authenticated HTTP contract. Regenerate the Swift API after contract changes
+with `apps/macos/scripts/generate-api.sh`.
 
 ## Verify a change
 
