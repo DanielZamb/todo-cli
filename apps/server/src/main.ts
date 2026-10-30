@@ -1,12 +1,19 @@
 import { homedir } from "node:os";
 import { isAbsolute } from "node:path";
 import { BunRuntime } from "@effect/platform-bun";
+import { BUILD_ID, CONTRACT_ID } from "@todo/api";
 import { Config, Effect, Layer } from "effect";
 import { lifecycle, serviceLabel } from "./lifecycle.ts";
 import { serverLayer } from "./server.ts";
 
 Effect.gen(function* () {
   const command = process.argv[2];
+  if (command === "--version" && process.argv.length === 3) {
+    process.stdout.write(
+      `todo-server build=${BUILD_ID} contract=${CONTRACT_ID}\n`,
+    );
+    return;
+  }
   if (
     command !== undefined &&
     !["install", "uninstall", "status"].includes(command)

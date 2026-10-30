@@ -64,3 +64,7 @@ preserves evidence on success and failure.
 
 Executable `scripts/verify.sh <fresh-absolute-evidence-directory>` resolves the
 checkout and runs the TypeScript driver through pnpm. No server stays running.
+
+## Version guardrails
+
+The compiled CLI and HTTP drive asserts exact Open and Closed Task titles and rejects an unknown HTTP filter name. See [the feature recipe](features/tasks.md) for commands and expected evidence.

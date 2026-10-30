@@ -40,3 +40,4 @@ mkdir -p "$install_dir"
 install -m 755 apps/cli/dist/todo "$install_dir/todo"
 install -m 755 apps/server/dist/todo-server "$install_dir/todo-server"
 printf 'Installed: %s/todo\nInstalled: %s/todo-server\n' "$install_dir" "$install_dir"
+"$root/scripts/check-installed.sh" --install-dir "$install_dir" --require cli,server-bin

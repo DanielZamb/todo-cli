@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "@effect/vitest";
-import { Conflict, TodoApi } from "@todo/api";
+import { BUILD_ID, CONTRACT_ID, Conflict, TodoApi } from "@todo/api";
 import {
   ImportReport,
   OccurrenceId,
@@ -187,6 +187,25 @@ describe("Todo HTTP contract", () => {
       Effect.scoped(
         Effect.gen(function* () {
           const { request, credential, store } = yield* fixture;
+          for (const [method, path] of [
+            ["GET", "/health"],
+            ["GET", "/profiles"],
+            ["GET", "/profiles/work/tasks"],
+            ["POST", "/auth/sessions"],
+            ["GET", "/openapi.json"],
+          ] as const) {
+            const rejected = yield* request(
+              method,
+              path + "?unknown=closed",
+              undefined,
+              credential,
+            );
+            expect(rejected.status).toBe(400);
+            expect(rejected.body).toMatchObject({
+              code: "invalid_query",
+              message: "Unknown query parameter: unknown",
+            });
+          }
           const created = yield* request(
             "POST",
             "/profiles/work/tasks",
@@ -279,7 +298,11 @@ describe("Todo HTTP contract", () => {
           expect(base).toMatch(/^http:\/\/127\.0\.0\.1:/);
           expect(yield* request("GET", "/health")).toEqual({
             status: 200,
-            body: { service: "todo-server" },
+            body: {
+              service: "todo-server",
+              contract: CONTRACT_ID,
+              build: BUILD_ID,
+            },
           });
           const created = yield* request(
             "POST",

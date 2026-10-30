@@ -3,5 +3,9 @@
   "compilerOptions": {
     "types": ["node"]
   },
-  "include": ["scripts/third-party-notices.ts"]
+  "include": [
+    "scripts/third-party-notices.ts",
+    "scripts/compile.ts",
+    "scripts/check-installed.ts"
+  ]
 }

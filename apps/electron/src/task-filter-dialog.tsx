@@ -55,7 +55,9 @@ export function TaskFilterDialog({
   filters,
   onApply,
   onClose,
+  planning = false,
 }: {
+  planning?: boolean;
   filters: TaskFilters;
   onApply: (filters: TaskFilters) => void;
   onClose: () => void;
@@ -81,6 +83,10 @@ export function TaskFilterDialog({
         value={draft[field] ?? ""}
         onChange={(event) => change(field, event.target.value)}
         className="w-full"
+        disabled={field === "status" && planning}
+        aria-describedby={
+          field === "status" && planning ? "planning-status-help" : undefined
+        }
       >
         <option value="">Any</option>
         {options.map(([value, text]) => (
@@ -89,6 +95,11 @@ export function TaskFilterDialog({
           </option>
         ))}
       </NativeSelect>
+      {field === "status" && planning && (
+        <p id="planning-status-help" className="quiet">
+          Planning views show open Tasks only.
+        </p>
+      )}
     </Field>
   );
   const date = (field: "due" | "scheduled", label: string) => {
@@ -169,7 +180,10 @@ export function TaskFilterDialog({
                 ...Object.fromEntries(
                   Object.entries(draft).filter(
                     ([field, value]) =>
-                      field !== "due" && field !== "scheduled" && value !== "",
+                      field !== "due" &&
+                      field !== "scheduled" &&
+                      !(field === "status" && planning) &&
+                      value !== "",
                   ),
                 ),
                 ...(dates.due.kind === "any"

@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { _electron, type ElectronApplication, expect } from "@playwright/test";
+import { CONTRACT_ID } from "@todo/api";
 import { OpLogEntry, Task } from "@todo/domain";
 import { Schema } from "effect";
 import { openProfileDeletion, selectProfile } from "./profile-menu.ts";
@@ -188,6 +189,8 @@ try {
   upstream = log.match(/Listening on (http:\/\/127\.0\.0\.1:\d+)/)?.[1] ?? "";
   expect(await (await fetch(`${upstream}/health`)).json()).toEqual({
     service: "todo-server",
+    contract: CONTRACT_ID,
+    build: expect.any(String),
   });
   credential = (
     await api("/auth/sessions", "POST", {

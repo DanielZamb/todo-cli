@@ -42,7 +42,7 @@ verification run at the owner's real database.
 Run `bun --version`, `command -v curl`, `command -v sqlite3`,
 `command -v python3`, and `command -v lsof`. Bun 1.4.4 or newer and pnpm-installed
 dependencies are required. Run `pnpm typecheck` before driving a changed build.
-The helper checks `GET /health` returns exactly `{"service":"todo-server"}`.
+The helper checks `GET /health` returns `{service:"todo-server",contract,build}` with the generated contract identity.
 It retains `lsof` output for its own process and requires a loopback-only listener.
 When anything fails, inspect the selected `commands.log` and `server.log`.
 
@@ -140,3 +140,7 @@ Use `/maintain-verification-skill` when routes or task behavior change.
 `scripts/drive-writes.py <scratch> <evidence>` and the compiled provisioning
 driver's replay mode after server shutdown. Scratch and credentials remain
 isolated exactly as in the original helper.
+
+## Version guardrails
+
+The compiled HTTP recipes compare health with CONTRACT_ID and reject unknown query names with HTTP 400. See [the feature recipe](features/contract.md) for commands and expected evidence.

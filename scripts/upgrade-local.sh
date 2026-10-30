@@ -43,3 +43,4 @@ if [ -f "$agent" ]; then
 fi
 
 "$HOME/.local/bin/todo-server" status
+"$root/scripts/check-installed.sh" --require cli,server-bin --require-present

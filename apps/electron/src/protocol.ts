@@ -37,6 +37,7 @@ import {
   UploadAttachment,
 } from "@todo/domain";
 import { Schema } from "effect";
+import { OutdatedServer } from "./server-compatibility.ts";
 
 export const ViewName = Schema.Union([
   Schema.Literal("tasks"),
@@ -156,6 +157,7 @@ export const Request = Schema.Union([
 ]);
 export type Request = typeof Request.Type;
 export const Reply = Schema.Union([
+  OutdatedServer,
   Schema.TaggedStruct("diagnostics", { snapshot: DiagnosticsSnapshot }),
   Schema.TaggedStruct("snapshots", SnapshotList.fields),
   Schema.TaggedStruct("snapshot", { snapshot: SnapshotManifest }),
@@ -197,6 +199,7 @@ export const Reply = Schema.Union([
 ]);
 export type Reply = typeof Reply.Type;
 export const Notice = Schema.Union([
+  OutdatedServer,
   Schema.TaggedStruct("settings", {}),
   Schema.TaggedStruct("toggleTheme", {}),
   Schema.TaggedStruct("signedIn", {}),

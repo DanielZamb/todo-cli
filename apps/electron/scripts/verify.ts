@@ -8,6 +8,7 @@ import {
   expect,
   type Page,
 } from "@playwright/test";
+import { CONTRACT_ID } from "@todo/api";
 import { selectProfile } from "./profile-menu.ts";
 
 if (
@@ -217,6 +218,8 @@ try {
   const base = proxy.url.origin;
   expect(await (await fetch(`${base}/health`)).json()).toEqual({
     service: "todo-server",
+    contract: CONTRACT_ID,
+    build: expect.any(String),
   });
   cli("login", "--password-stdin");
   cli(

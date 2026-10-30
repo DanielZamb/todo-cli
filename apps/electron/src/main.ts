@@ -29,6 +29,7 @@ import {
 } from "./attachment-native.ts";
 import { createDiagnosticsWindow } from "./diagnostics-window.ts";
 import { type Notice, Reply, Request } from "./protocol.ts";
+import { serverCompatibility } from "./server-compatibility.ts";
 import {
   restoreStreamState,
   StreamState,
@@ -48,6 +49,7 @@ if (
   server.pathname !== "/"
 )
   throw new Error("Expected a loopback Todo server URL");
+const compatibility = serverCompatibility(server.origin);
 let credential: string | undefined;
 let window: BrowserWindow;
 let layout: ReturnType<typeof createWindowLayout>;
@@ -106,6 +108,11 @@ const watch = (profile: typeof Request.Type & { _tag: "watch" }) => {
       send({ _tag: "connection", state: "reconnecting" });
       const result = yield* Effect.exit(
         Effect.gen(function* () {
+          const outdated = yield* compatibility.check();
+          if (outdated) {
+            send(outdated);
+            return;
+          }
           yield* Effect.logInfo("Todo stream connecting", {
             profile: profile.profile,
             cursor: streamHeaders(state, profile.profile)["last-event-id"],
@@ -186,7 +193,7 @@ const watch = (profile: typeof Request.Type & { _tag: "watch" }) => {
           );
         }),
       );
-      if (current !== generation) return;
+      if (current !== generation || compatibility.outdated) return;
       send({ _tag: "connection", state: "offline" });
       if (result._tag === "Failure")
         yield* Effect.logWarning("Todo stream disconnected");
@@ -199,6 +206,21 @@ const handle = (
   request: typeof Request.Type,
 ): Effect.Effect<Reply, unknown, HttpClient.HttpClient> =>
   Effect.gen(function* () {
+    if (
+      compatibility.outdated &&
+      !["windowMode", "setWindowMode", "draft", "restore", "signIn"].includes(
+        request._tag,
+      )
+    )
+      return compatibility.outdated;
+    if (!["windowMode", "setWindowMode", "draft"].includes(request._tag)) {
+      const outdated = yield* compatibility.check();
+      if (outdated) {
+        stopStream();
+        send(outdated);
+        return outdated;
+      }
+    }
     if (isNativeAttachmentRequest(request))
       return yield* Effect.tryPromise(() => nativeAttachmentRequest(request));
     const http = yield* client();
@@ -244,6 +266,11 @@ const handle = (
           writeFileSync(sessionFile, encrypted, { mode: 0o600 });
         });
         credential = session.credential;
+        const outdated = yield* compatibility.check();
+        if (outdated) {
+          send(outdated);
+          return outdated;
+        }
         send({ _tag: "signedIn" });
         return { _tag: "signedIn", profiles: yield* http.reads.profiles() };
       }

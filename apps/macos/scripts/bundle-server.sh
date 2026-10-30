@@ -11,11 +11,12 @@ if [ "${CODE_SIGNING_ALLOWED:-YES}" = NO ] && [ -n "${TODO_SERVER_BINARY:-}" ]; 
     test -x "$TODO_SERVER_BINARY"
     cp "$TODO_SERVER_BINARY" "$staging/todo-server"
 else
-    (cd "$staging" && bun build --compile "$root/apps/server/src/main.ts" --outfile "$staging/todo-server")
+    bun "$root/scripts/compile.ts" "$root/apps/server/src/main.ts" "$staging/todo-server"
 fi
 if [ "${CODE_SIGNING_ALLOWED:-YES}" != NO ] && [ -n "${EXPANDED_CODE_SIGN_IDENTITY:-}" ]; then
     /usr/bin/codesign --force --identifier local.todo.server --entitlements "$root/apps/macos/BunServer.entitlements" --options runtime --timestamp=none --sign "$EXPANDED_CODE_SIGN_IDENTITY" "$staging/todo-server"
 fi
 cp "$staging/todo-server" "$output/todo-server"
 chmod 755 "$output/todo-server"
+"$output/todo-server" --version > "$output/identity.txt"
 (cd "$root" && bun scripts/third-party-notices.ts "$output/THIRD_PARTY_NOTICES.txt")

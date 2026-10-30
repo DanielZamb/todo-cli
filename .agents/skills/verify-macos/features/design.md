@@ -23,7 +23,7 @@ The Conflict uses native radioGroup Pickers. Their radio outlines flatten in the
 offscreen cache. The supervised checklist must check unselected, selected and
 keyboard-operated Conflict choices in both appearances.
 
-Require `result.json`, `manifest.json`, `accessibility.json`, all 270 PNGs and exit 0
+Require `result.json`, `manifest.json`, `accessibility.json`, all 278 PNGs and exit 0
 in `commands.json`. The identifier check reads the W08 base a19f207 source and
 accepts formatter-inserted whitespace around the existing string expressions.
 Read the PNGs before claiming visual proof. PresentationTests checks literal row
@@ -79,3 +79,5 @@ U02 adds 14 Compact captures for the five planning views, error and Settings
 entry. The integrated manifest has 220 images. `compact-layout.json` records
 production geometry; the state helper retains `u02-formatting-http.json` and
 checks the durable Version separately from the images.
+
+Version guardrails add outdated-server and disabled planning Status captures in both layouts and appearances.

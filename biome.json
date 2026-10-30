@@ -12,7 +12,9 @@
       "apps/**",
       "*.json",
       "scripts/third-party-notices.ts",
-      "!apps/electron/src/vendor/shadcn.css"
+      "!apps/electron/src/vendor/shadcn.css",
+      "scripts/compile.ts",
+      "scripts/check-installed.ts"
     ]
   },
   "formatter": {

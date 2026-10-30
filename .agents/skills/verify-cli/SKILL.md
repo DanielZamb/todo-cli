@@ -123,3 +123,7 @@ text uses the shared JSON error and exit 2. Quoted names use `#"deep focus"` and
 Move and Copy also run through this compiled drive. The batch cases check named
 Project and Tag resolution, dry-run, completed status, unchanged unrelated Tasks,
 current Versions on Conflicts, one JSON object, and `todo schema move` and `copy`.
+
+## Version guardrails
+
+The install verifier requires --version to report build and contract without changing the database directory. See [the feature recipe](features/agent-contract.md) for commands and expected evidence.

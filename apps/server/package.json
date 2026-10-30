@@ -7,7 +7,7 @@
     "typecheck": "bun --bun ../../node_modules/typescript/bin/tsc --noEmit",
     "test": "bun --bun ./node_modules/vitest/vitest.mjs run",
     "start": "bun src/main.ts",
-    "build": "mkdir -p dist && cd dist && bun build --compile ../src/main.ts --outfile todo-server"
+    "build": "bun ../../scripts/compile.ts src/main.ts dist/todo-server"
   },
   "dependencies": {
     "@effect/platform-bun": "4.0.5",

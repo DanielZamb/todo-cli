@@ -10,3 +10,5 @@
 The parent skill's launch command drives the CLI and server recipes with real
 binaries and checks the signing dry run. The separate read-only desktop command
 checks existing installed and staged apps.
+
+Version guardrails are covered in [installed-behavior](<installed-behavior.md>).

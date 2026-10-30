@@ -127,7 +127,9 @@ with scratch_directory() as temporary:
             if not url:
                 raise RuntimeError('Scratch server readiness timed out')
         with urllib.request.urlopen(url + '/health', timeout=3) as response:
-            assert json.load(response) == {'service': 'todo-server'}
+            health = json.load(response)
+            contract = re.search(r'CONTRACT_ID\s*=\s*"([a-f0-9]+)"', (root / 'packages/api/src/contract.ts').read_text())[1]
+            assert health == {'service': 'todo-server', 'contract': contract, 'build': health['build']}
         test_env = dict(env, TODO_DB=str(scratch / "scratch.db"), TODO_F10_CLI=str(scratch / "todo"), TODO_W06_SERVER=url, TODO_W06_RECEIPT=str(evidence / 'http-receipt.json'), TODO_W06_PROVISIONER=str(scratch / 'seed'), TODO_W06_SCRATCH=str(scratch))
         if snapshots_only:
             test_env['TODO_F13_SNAPSHOTS'] = '1'

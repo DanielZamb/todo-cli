@@ -44,3 +44,7 @@ Use that same schema with `encodeResponse` from `@todo/domain/presentation`.
 Write the encoded response string directly to process.stdout.
 Derive response types from `typeof ResponseSchema.Type`. Add fields to the schema
 when adding fields to the response, since Struct encoders retain modeled fields.
+
+## Version guardrails
+
+todo --version and -v print the build and generated API contract. This path performs no filesystem writes, including the first-run marker. The install verifier executes the compiled binaries in a scratch HOME with a sentinel database and requires its directory to remain unchanged.

@@ -66,7 +66,7 @@ native delivery as blocked. Do not relaunch or ask for repeated passwords.
 Run `bun --version`, `pnpm --filter @todo/electron typecheck` and
 `codesign --verify --deep --strict dist/signed.noindex/electron/Todo.app`.
 The helper requires the server's literal `/health` response
-`{"service":"todo-server"}` and the child Electron window's Todo title.
+`{service:"todo-server",contract,build}` and the child Electron window's Todo title.
 Use `commands.log`, `server.log` and `electron.log` to distinguish a build failure,
 keychain gate, rejected API write or stream disconnect. Only drive the app instance
 started by this helper. Each run owns its server port and userData.
@@ -229,3 +229,9 @@ write assertions. A passing report requires every scenario to pass.
 U02's [Compact presentation](features/compact.md#u02-compact-presentation) adds
 per-view bounds, count, target, metadata and sticky-header assertions. Its
 appearance helper opens Settings, then Appearance, from Compact navigation.
+
+## Version guardrails
+
+The focused compiled host proves old-health and fake-contract blocking, exact Status membership and disabled planning Status, with Compact-first captures. See [the feature recipe](features/sessions.md) for commands and expected evidence.
+
+Run `TODO_ELECTRON_VERIFY_HOST=1 TODO_VERIFY_VERSION_GUARDRAILS=1 .agents/skills/verify-electron/scripts/verify.sh "$PWD/docs/evidence/version-guardrails/electron-new"`. Never wrap this helper in the Electron build lock. Native and Keychain verification remain on HOLD.

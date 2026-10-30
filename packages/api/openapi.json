@@ -22,9 +22,15 @@
                     "service": {
                       "type": "string",
                       "enum": ["todo-server"]
+                    },
+                    "contract": {
+                      "type": "string"
+                    },
+                    "build": {
+                      "type": "string"
                     }
                   },
-                  "required": ["service"],
+                  "required": ["service", "contract", "build"],
                   "additionalProperties": false
                 }
               }

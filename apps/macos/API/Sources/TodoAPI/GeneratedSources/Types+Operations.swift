@@ -44,15 +44,29 @@ public enum Operations {
                         }
                         /// - Remark: Generated from `#/paths/health/GET/responses/200/content/json/service`.
                         public var service: Operations.system_period_health.Output.Ok.Body.jsonPayload.servicePayload
+                        /// - Remark: Generated from `#/paths/health/GET/responses/200/content/json/contract`.
+                        public var contract: Swift.String
+                        /// - Remark: Generated from `#/paths/health/GET/responses/200/content/json/build`.
+                        public var build: Swift.String
                         /// Creates a new `jsonPayload`.
                         ///
                         /// - Parameters:
                         ///   - service:
-                        public init(service: Operations.system_period_health.Output.Ok.Body.jsonPayload.servicePayload) {
+                        ///   - contract:
+                        ///   - build:
+                        public init(
+                            service: Operations.system_period_health.Output.Ok.Body.jsonPayload.servicePayload,
+                            contract: Swift.String,
+                            build: Swift.String
+                        ) {
                             self.service = service
+                            self.contract = contract
+                            self.build = build
                         }
                         public enum CodingKeys: String, CodingKey {
                             case service
+                            case contract
+                            case build
                         }
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -61,14 +75,26 @@ public enum Operations {
                                 Operations.system_period_health.Output.Ok.Body.jsonPayload.servicePayload.self,
                                 forKey: .service
                             )
+                            self.contract = try container.decode(
+                                Swift.String.self,
+                                forKey: .contract
+                            )
+                            self.build = try container.decode(
+                                Swift.String.self,
+                                forKey: .build
+                            )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
-                                "service"
+                                "service",
+                                "contract",
+                                "build"
                             ])
                         }
 
                         public func encode(to encoder: any Swift.Encoder) throws {
                             var container = encoder.container(keyedBy: CodingKeys.self)
                             try container.encode(self.service, forKey: .service)
+                            try container.encode(self.contract, forKey: .contract)
+                            try container.encode(self.build, forKey: .build)
                         }
                     }
                     /// - Remark: Generated from `#/paths/health/GET/responses/200/content/application\/json`.

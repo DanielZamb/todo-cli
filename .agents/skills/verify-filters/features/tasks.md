@@ -27,3 +27,7 @@ Inbox continues to mean open Tasks without Due or Scheduled dates. Filtering
 never widens a planning view or changes a Task. Attachment search reads metadata
 only; it never opens referenced files or follows URLs. Empty CLI results retain
 the existing contract that omits `tasks`.
+
+## Version guardrails
+
+The compiled CLI and HTTP cases assert Status open alone returns the literal open Task titles, excluding both done and cancelled Tasks. Status closed alone returns exactly Agree launch discount and Retire old rate card. A misspelled HTTP filter name returns HTTP 400 with its name in the message. Both desktop planning filters disable Status and show "Planning views show open Tasks only." All tasks retains the active control.

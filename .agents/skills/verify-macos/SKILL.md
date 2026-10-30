@@ -78,7 +78,7 @@ or re-signs that app. It launches that exact artifact and prints
 loopback URL and isolated service names, without credentials.
 
 Check build and server logs on failure. Health must be exactly
-`{"service":"todo-server"}`. `listener.txt` must show only the owned loopback
+`{service:"todo-server",contract,build}`. `listener.txt` must show only the owned loopback
 listener. Do not concurrently drive this bundle ID. Stop at the first
 Keychain block, cancellation or unavailable interaction. Do not relaunch.
 
@@ -315,3 +315,7 @@ for each completed or failed attempt.
 U02's [Compact presentation](features/compact.md#u02-compact-presentation) adds
 measured offscreen bounds for the shared editor header, whole row metadata and
 recovery controls, plus production TodoModel formatting proof after reload.
+
+## Version guardrails
+
+Headless StateTests prove stale-health blocking, exact Status membership and the enabled states of the five native filter controls. The offscreen recipe captures both new states in both layouts and appearances. See [the feature recipe](features/session.md) for commands and expected evidence.

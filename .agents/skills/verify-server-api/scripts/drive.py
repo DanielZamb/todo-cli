@@ -48,7 +48,11 @@ with (evidence / 'server.log').open('w') as log:
             assert int(code) == status, (method, path, code, status, value)
             return value
 
-        assert request('GET', '/health', 200) == {'service': 'todo-server'}
+        health_identity = request('GET', '/health', 200)
+        expected_contract = re.search(r'CONTRACT_ID\s*=\s*"([a-f0-9]+)"', Path('packages/api/src/contract.ts').read_text())[1]
+        assert health_identity == {'service': 'todo-server', 'contract': expected_contract, 'build': health_identity['build']}
+        assert health_identity['build']
+        assert request('GET', '/health?unknown=value', 400)['message'] == 'Unknown query parameter: unknown'
         request('GET', '/profiles/work/tasks', 401)
         request('POST', '/auth/sessions', 401, {'passphrase': 'wrong'})
         session = request('POST', '/auth/sessions', 200, {'passphrase': 'scratch verification passphrase'})['credential']

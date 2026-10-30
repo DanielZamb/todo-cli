@@ -91,6 +91,12 @@ struct TaskFilterTests {
             let payload = try JSONDecoder().decode(Operations.tasks_period_create.Input.Body.jsonPayload.self, from: Data(json.utf8))
             created.append(try await TaskSnapshot.decode(client.tasks_period_create(path: .init(profile: "work"), body: .json(payload)).ok.body.json))
         }
+        for (title, action) in [("Native filter done", "complete"), ("Native filter cancelled", "cancel")] {
+            let payload = try JSONDecoder().decode(Operations.tasks_period_create.Input.Body.jsonPayload.self, from: Data(#"{"title":"\#(title)","project_name":"Native filter Project","tag_names":["revenue"]}"#.utf8))
+            let task = try await TaskSnapshot.decode(client.tasks_period_create(path: .init(profile: "work"), body: .json(payload)).ok.body.json)
+            let transition = try JSONDecoder().decode(Operations.tasks_period_transition.Input.Body.jsonPayload.self, from: Data(#"{"from_version":1,"action":"\#(action)"}"#.utf8))
+            created.append(try await TaskSnapshot.decode(client.tasks_period_transition(path: .init(profile: "work", task: task.id), body: .json(transition)).ok.body.json))
+        }
         let primary = try #require(created.first)
         let attachment = try JSONDecoder().decode(Operations.tasks_period_attach.Input.Body.jsonPayload.self, from: Data(#"{"from_version":1,"location":{"kind":"link","url":"https://example.test/enterprise/contract"},"label":"Enterprise agreement"}"#.utf8))
         _ = try await client.tasks_period_attach(path: .init(profile: "work", task: primary.id), body: .json(attachment)).ok
@@ -115,11 +121,14 @@ struct TaskFilterTests {
         #expect(TaskListView(model: model).visibleTasks.map(\.title) == ["Native filter dated"])
         model.applyTaskFilters(.init(status: "closed"))
         try await waitForFilters()
-        #expect(TaskListView(model: model).visibleTasks.isEmpty)
+        #expect(TaskListView(model: model).visibleTasks.map(\.title).sorted() == ["Native filter cancelled", "Native filter done"])
+        model.applyTaskFilters(.init(status: "open"))
+        try await waitForFilters()
+        #expect(TaskListView(model: model).visibleTasks.map(\.title).sorted() == ["Native filter dated", "Native filter revenue"])
         model.applyTaskFilters(.init())
         try await waitForFilters()
         #expect(model.matchingTaskIDs == nil)
-        #expect(TaskListView(model: model).visibleTasks.map(\.title).sorted() == ["Native filter dated", "Native filter revenue"])
+        #expect(TaskListView(model: model).visibleTasks.map(\.title).sorted() == ["Native filter cancelled", "Native filter dated", "Native filter done", "Native filter revenue"])
         model.applyTaskFilters(.init(status: "open"))
         try await waitForFilters()
         #expect(model.taskFilters.status == "open")
@@ -131,7 +140,7 @@ struct TaskFilterTests {
         #expect(model.taskLoadError == "Could not apply filters. Your previous filters are still active.")
         #expect(TaskListView(model: model).visibleTasks.map(\.title).sorted() == ["Native filter dated", "Native filter revenue"])
         model.applyTaskFilters(.init())
-        #expect(TaskListView(model: model).visibleTasks.map(\.title).sorted() == ["Native filter dated", "Native filter revenue"])
+        #expect(TaskListView(model: model).visibleTasks.map(\.title).sorted() == ["Native filter cancelled", "Native filter dated", "Native filter done", "Native filter revenue"])
         for original in created {
             let latest = try await client.tasks_period_show(path: .init(profile: "work", task: original.id)).ok.body.json
             _ = try await client.tasks_period_delete(path: .init(profile: "work", task: original.id), query: .init(from_version: String(latest.row_version))).ok

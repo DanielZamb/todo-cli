@@ -12,6 +12,7 @@ import {
 } from "../src/attachment-native.ts";
 import { createDiagnosticsWindow } from "../src/diagnostics-window.ts";
 import { Reply, Request } from "../src/protocol.ts";
+import { serverCompatibility } from "../src/server-compatibility.ts";
 import {
   restoreStreamState,
   type StreamState,
@@ -28,6 +29,7 @@ if (
 const url = new URL(process.env.TODO_SERVER_URL ?? "");
 if (url.protocol !== "http:" || url.hostname !== "127.0.0.1")
   throw new Error("Loopback server required");
+const compatibility = serverCompatibility(url.origin);
 app.setPath("userData", process.env.TODO_ELECTRON_DATA);
 async function boot() {
   await app.whenReady();
@@ -43,13 +45,14 @@ async function boot() {
         ),
     }),
   );
-  credential = (
-    await run(
-      client.signIn.signIn({
-        payload: { passphrase: "scratch verification passphrase" },
-      }),
-    )
-  ).credential;
+  if (!(await run(compatibility.check())))
+    credential = (
+      await run(
+        client.signIn.signIn({
+          payload: { passphrase: "scratch verification passphrase" },
+        }),
+      )
+    ).credential;
   const page = join(import.meta.dirname, "../renderer/index.html");
   const diagnosticsWindow = createDiagnosticsWindow(
     page,
@@ -110,6 +113,11 @@ async function boot() {
     };
     stream = Effect.runFork(
       Effect.gen(function* () {
+        const outdated = yield* compatibility.check();
+        if (outdated) {
+          window.webContents.send("todo:notice", outdated);
+          return;
+        }
         const response = yield* client.changes.stream({
           params: { profile },
           headers: { ...headers, "x-todo-client": "electron" },
@@ -183,6 +191,20 @@ async function boot() {
       const request = Schema.decodeUnknownSync(Request)(input);
       if (diagnosticsWindow.accepts(event) && request._tag !== "diagnostics")
         return { _tag: "error", message: "Diagnostics is read only" };
+      if (
+        compatibility.outdated &&
+        !["windowMode", "setWindowMode", "draft", "restore", "signIn"].includes(
+          request._tag,
+        )
+      )
+        return compatibility.outdated;
+      if (!["windowMode", "setWindowMode", "draft"].includes(request._tag)) {
+        const outdated = await run(compatibility.check());
+        if (outdated) {
+          stopStream();
+          return outdated;
+        }
+      }
       if (request._tag === "list" && failNextList) {
         failNextList = false;
         return { _tag: "error", message: "Scratch list read failed." };
@@ -225,7 +247,7 @@ async function boot() {
           credential = "";
           authentication("signedOut");
           return { _tag: "signedOut" };
-        case "signIn":
+        case "signIn": {
           credential = (
             await run(
               client.signIn.signIn({
@@ -233,11 +255,14 @@ async function boot() {
               }),
             )
           ).credential;
+          const outdated = await run(compatibility.check());
+          if (outdated) return outdated;
           authentication("signedIn");
           return {
             _tag: "signedIn",
             profiles: await run(client.reads.profiles()),
           };
+        }
         default:
           return run(
             taskRequest(client, request).pipe(

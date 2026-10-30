@@ -8,7 +8,9 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if model.signedIn {
+            if let build = model.outdatedServerBuild {
+                OutdatedServerView(model: model, serverBuild: build, compact: compactMode)
+            } else if model.signedIn {
                 TaskListView(model: model, compactMode: compactMode)
             } else {
                 SignInView(model: model, compact: compactMode)
@@ -206,7 +208,7 @@ struct TaskListView: View {
         }
         .sheet(isPresented: $model.showingImport) { ImportView(model: model, compact: compactMode).interactiveDismissDisabled(model.busy) }
         .sheet(isPresented: $showingTaskFilters) {
-            TaskFilterView(draft: model.taskFilters, compact: compactMode, apply: model.applyTaskFilters, close: { showingTaskFilters = false })
+            TaskFilterView(draft: model.taskFilters, compact: compactMode, planning: model.selectedView != "all", apply: model.applyTaskFilters, close: { showingTaskFilters = false })
         }
         .confirmationDialog(
             "Delete this task?", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
@@ -928,5 +930,37 @@ struct DraftNavigationPrompt: View {
                 DraftNavigationActions(model: model, target: target, saveFirst: false)
             }.buttonStyle(.bordered)
         }.padding(24).frame(width: 520)
+    }
+}
+
+struct OutdatedServerView: View {
+    let model: TodoModel
+    let serverBuild: String
+    var compact = false
+    @Environment(\.openSettings) private var openSettings
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: compact ? 12 : 16) {
+            Label("Todo server is out of date", systemImage: "arrow.triangle.2.circlepath")
+                .font(compact ? .title2.bold() : .title.bold())
+                .accessibilityAddTraits(.isHeader)
+            Text("Update the server to continue using Tasks.")
+            Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
+                GridRow { Text("Server build").foregroundStyle(.secondary); Text(serverBuild).textSelection(.enabled) }
+                GridRow { Text("App build").foregroundStyle(.secondary); Text(ServerIdentity.appBuild).textSelection(.enabled) }
+            }
+            Text("Open Settings → Update server, or run scripts/upgrade-local.sh.")
+                .fixedSize(horizontal: false, vertical: true)
+            HStack {
+                Button("Settings") { openSettings() }.buttonStyle(.borderedProminent)
+                Button("Check again") { Task { await model.reconnectAfterUpdate() } }
+            }.controlSize(.large)
+        }
+        .padding(compact ? 20 : 32)
+        .frame(maxWidth: 480, maxHeight: .infinity, alignment: .center)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Todo server is out of date")
+        .accessibilityIdentifier("outdated-server")
     }
 }

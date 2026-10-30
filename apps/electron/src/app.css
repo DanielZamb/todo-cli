@@ -1349,3 +1349,39 @@ nav {
 .compact .project-name-field:focus-within .project-value {
   visibility: hidden;
 }
+
+.outdated-server section {
+  width: min(100%, 440px);
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+  text-align: left;
+}
+.outdated-server h1 {
+  font-size: 24px;
+  line-height: 1.2;
+}
+.outdated-server dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+.outdated-server dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.outdated-server dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.outdated-server code {
+  overflow-wrap: anywhere;
+}
+.outdated-server.compact section {
+  padding: 16px;
+  gap: 12px;
+}
+.outdated-server.compact h1 {
+  font-size: 22px;
+}
