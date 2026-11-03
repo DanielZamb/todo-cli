@@ -1,0 +1,11 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["bun"],
+    "typeRoots": [
+      "../../../packages/domain/node_modules/@types",
+      "../../../node_modules/@types"
+    ]
+  },
+  "include": ["./*.ts", "../../../packages/domain/src/**/*.ts"]
+}
