@@ -1,11 +1,19 @@
 import { Clock, Effect, Schema } from "effect";
 import {
+  sameAttachment,
+  validateAttachmentInputs,
+} from "./attachment-input.ts";
+import {
   decodeImage,
   readManagedImage,
   removeWrittenImage,
   writeImage,
 } from "./attachment-store.ts";
 import {
+  AttachManyItem,
+  type AttachManyReport,
+  type AttachManyRequest,
+  type AttachManyRow,
   Attachment,
   AttachTask,
   DetachTask,
@@ -15,7 +23,7 @@ import {
 import type { AccessRequest } from "./auth/model.ts";
 import { type TaskCommandResult, TaskCommands } from "./commands.ts";
 import { Task } from "./entities.ts";
-import { AttachmentId, type TaskId } from "./ids.ts";
+import { AttachmentId, TaskId, Version } from "./ids.ts";
 import { StoreError } from "./store/error.ts";
 import type { OperationStore } from "./store/store.ts";
 import { Instant } from "./time.ts";
@@ -110,6 +118,7 @@ export class AttachmentCommands {
                   attachment ??
                     Schema.decodeUnknownSync(Attachment)({
                       ...input.location,
+                      ...(input.name === undefined ? {} : { name: input.name }),
                       id: crypto.randomUUID(),
                       added_at: time,
                       ...(input.label === undefined
@@ -231,6 +240,198 @@ export class AttachmentCommands {
       return result;
     });
 
+  readonly attachMany = (request: AccessRequest, input: AttachManyRequest) =>
+    input.dry_run
+      ? Effect.acquireUseRelease(
+          this.store.fork(),
+          (copy) => new AttachmentCommands(copy).executeMany(request, input),
+          (copy) => Effect.orDie(copy.close()),
+        )
+      : this.executeMany(request, input);
+
+  private executeMany(request: AccessRequest, input: AttachManyRequest) {
+    return Effect.gen({ self: this }, function* () {
+      yield* this.store.auth.authenticate({ ...request, access: "write" });
+      const rows: AttachManyRow[] = [];
+      for (const raw of input.items) {
+        const decoded = Schema.decodeUnknownExit(AttachManyItem, {
+          onExcessProperty: "error",
+        })(raw);
+        if (decoded._tag === "Failure") {
+          const target = Schema.decodeUnknownExit(
+            Schema.Struct({ task_id: TaskId }),
+          )(raw);
+          const expected = Schema.decodeUnknownExit(
+            Schema.Struct({ from_version: Version }),
+          )(raw);
+          const task_id =
+            target._tag === "Success" ? target.value.task_id : null;
+          const from_version =
+            expected._tag === "Success" ? expected.value.from_version : null;
+          const current =
+            task_id === null
+              ? null
+              : yield* new TaskCommands(this.store).get({
+                  ...request,
+                  task_id,
+                });
+          yield* this.store.auth.mutate(request, (identity) =>
+            this.store.reject({
+              ...identity,
+              reason: "validation",
+              ...(from_version === null ? {} : { from_version }),
+              event: {
+                kind: "AttachmentAdded",
+                occurred_at: new Date().toISOString(),
+                input: raw,
+                ...(task_id === null ? {} : { task_id }),
+              },
+            }),
+          );
+          rows.push({
+            task_id,
+            from_version,
+            current_version: current?.row_version ?? null,
+            outcome: "rejected",
+            attached: 0,
+            error: {
+              code: "invalid_args",
+              message:
+                "Invalid Attachment input. Check todo schema attach-many-input.",
+            },
+          });
+          continue;
+        }
+        const item = decoded.value;
+        const target = { ...request, task_id: item.task_id };
+        const base = { task_id: item.task_id, from_version: item.from_version };
+        const result = yield* this.store.auth
+          .mutate(request, () =>
+            Effect.gen({ self: this }, function* () {
+              const before = yield* new TaskCommands(this.store).get(target);
+              if (!before)
+                return yield* Effect.fail(
+                  new AttachManyFailure({ outcome: "not-found" }),
+                );
+              let task: Task = before;
+              if (task.row_version !== item.from_version)
+                return yield* Effect.fail(
+                  new AttachManyFailure({
+                    outcome: "rejected",
+                    reason: "conflict",
+                    latest: task,
+                  }),
+                );
+              yield* Effect.try({
+                try: () => validateAttachmentInputs(item.attachments),
+                catch: () =>
+                  new AttachManyFailure({
+                    outcome: "rejected",
+                    reason: "validation",
+                    latest: task,
+                  }),
+              });
+              let attached = 0;
+              for (const attachment of item.attachments) {
+                if (
+                  task.attachments?.some((value) =>
+                    sameAttachment(value, attachment),
+                  )
+                )
+                  continue;
+                const { label, name, ...location } = attachment;
+                const change: TaskCommandResult = yield* this.attach(target, {
+                  from_version: task.row_version,
+                  location,
+                  ...(name === undefined ? {} : { name }),
+                  ...(label === undefined ? {} : { label }),
+                });
+                if (change.outcome !== "committed")
+                  return yield* Effect.fail(new AttachManyFailure(change));
+                task = change.task;
+                attached++;
+              }
+              return {
+                ...base,
+                current_version: task.row_version,
+                outcome: attached ? "attached" : "unchanged",
+                attached,
+              } satisfies AttachManyRow;
+            }),
+          )
+          .pipe(
+            Effect.catchTag("StoreError", (error) => {
+              const failure =
+                error instanceof AttachManyFailure
+                  ? error
+                  : error.cause instanceof AttachManyFailure
+                    ? error.cause
+                    : null;
+              if (!failure) return Effect.fail(error);
+              const result = failure.result;
+              const current =
+                result.outcome === "rejected" ? result.latest : null;
+              const reason =
+                result.outcome === "rejected" ? result.reason : "not_found";
+              return this.store.auth
+                .mutate(request, (identity) =>
+                  this.store.reject({
+                    ...identity,
+                    reason,
+                    from_version: item.from_version,
+                    event: {
+                      kind: "AttachmentAdded",
+                      task_id: item.task_id,
+                      occurred_at: new Date().toISOString(),
+                      input: raw,
+                    },
+                  }),
+                )
+                .pipe(
+                  Effect.map(
+                    () =>
+                      ({
+                        ...base,
+                        current_version: current?.row_version ?? null,
+                        outcome: "rejected",
+                        attached: 0,
+                        error: {
+                          code:
+                            reason === "conflict"
+                              ? "occ_conflict"
+                              : reason === "not_found"
+                                ? "not_found"
+                                : "invalid_args",
+                          message:
+                            reason === "conflict"
+                              ? "Task changed. Read its current Version and retry."
+                              : reason === "not_found"
+                                ? "Task not found in this Profile."
+                                : "Invalid Attachment URI or file path. Check every Attachment and retry.",
+                          details: {
+                            current_version: current?.row_version ?? null,
+                          },
+                        },
+                      }) satisfies AttachManyRow,
+                  ),
+                );
+            }),
+          );
+        rows.push(result);
+      }
+      const totals = { attached: 0, unchanged: 0, rejected: 0 };
+      for (const row of rows) totals[row.outcome]++;
+      return {
+        generated_at: Schema.decodeUnknownSync(Instant)(
+          new Date().toISOString(),
+        ),
+        dry_run: input.dry_run ?? false,
+        items: rows,
+        totals,
+      } satisfies AttachManyReport;
+    });
+  }
+
   readonly image = (request: Target, id: AttachmentId) =>
     Effect.gen({ self: this }, function* () {
       const task = yield* new TaskCommands(this.store).get(request);
@@ -245,4 +446,10 @@ export class AttachmentCommands {
             ),
           ).pipe(Effect.catch(() => Effect.succeed(null)));
     });
+}
+
+class AttachManyFailure extends StoreError {
+  constructor(readonly result: TaskCommandResult) {
+    super(result);
+  }
 }

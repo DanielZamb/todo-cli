@@ -88,3 +88,9 @@ match the report commit's source state. Keep Swift and Electron builds behind
 the run's shared slot and lock wrappers.
 
 The compiled driver also proves that Purge redacts rejected imports attributed through a deleted external id, combined Tag ids and names remain unchanged on repeat, and rejected History records the supplied expected Version.
+
+## Adoption and Attachment inputs
+
+Import items accept the same `attachments` array as Task creation. Each reference has `kind`, `path` or `url`, and optional `label` and `name`. Omitted Attachments stay attached. Invalid URIs or missing paths reject that item before its Task changes commit. Repeated references do not duplicate Attachments.
+
+An unlinked existing Task is adopted by `task_id`, `from_version` and a free `external_id`. Omitted fields stay unchanged. A stale adoption reports that the Task has no external id yet. A later import matches that external id normally. The shared CLI01 compiled drive in verify-attachments proves these cases through CLI and HTTP; `packages/domain/test/import.test.ts` also checks replay and first-Occurrence-only references.

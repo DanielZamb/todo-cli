@@ -1,4 +1,6 @@
 import {
+  AttachManyReport,
+  AttachManyRequest,
   AttachmentId,
   AttachTask,
   CreateSeries,
@@ -130,6 +132,12 @@ const taskErrors = [
 ];
 const Tasks = HttpApiGroup.make("tasks")
   .add(
+    HttpApiEndpoint.post("attachMany", "/profiles/:profile/attachments/batch", {
+      params: profile,
+      payload: AttachManyRequest,
+      success: AttachManyReport,
+      error: taskErrors,
+    }),
     HttpApiEndpoint.post(
       "attach",
       "/profiles/:profile/tasks/:task/attachments",

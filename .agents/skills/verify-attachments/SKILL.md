@@ -28,7 +28,7 @@ native app, sign code, invoke Keychain, install a service or use the real HOME.
 ## Doctor
 
 Run `bun --version`, `command -v curl`, and `pnpm typecheck`.
-The helper requires `GET /health` to equal `{"service":"todo-server"}` and
+The helper requires `GET /health` to equal `{"service":"todo-server","contract":CONTRACT_ID,"build":BUILD_ID}` and
 waits for its own server's `Listening on http://127.0.0.1:<port>` output.
 Read `provenance.json`, `compile-todo.json`, `compile-server.json` and
 `server.log` on failure.
@@ -74,3 +74,9 @@ The final assertions confirm scratch is gone and the evidence still exists.
 Run it using Bun as shown above. `.claude/skills/verify-attachments` is a relative
 link to this directory. Check it with `realpath`. Fresh Claude discovery is a
 separate coordinator check, not proven by filesystem resolution.
+
+## Creation, URI links and bulk references
+
+After the normal drive, run `bun .agents/skills/verify-attachments/scripts/cli01.ts <fresh-absolute-evidence-directory>`. It reuses the same source-hash binaries and drives creation with repeatable `--attach` and `--link`, failed-path atomicity, any-URI links, import adoption and `attach-many` through both the compiled CLI and curl. Its scratch server PID is recorded in `server.json` and stopped before cleanup. `result.json` exists only after all assertions pass.
+
+The domain behavior suite covers Task-group atomicity, duplicate reference idempotence, dry-run History isolation, stale Versions, adoption preserving omitted metadata and replay. Both desktop multi-file pickers use the batch HTTP command. URI storage does not broaden the allowed link-opening schemes.

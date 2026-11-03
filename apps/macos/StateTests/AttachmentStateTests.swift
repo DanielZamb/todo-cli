@@ -245,3 +245,63 @@ func liveAttachmentLabelsKeepIdentityAndRevert() async throws {
   let response = try await client.tasks_period_attachmentImage(path: .init(profile: "personal", task: copy.id, attachment: copiedImage.id)).ok.body.json
   #expect(response.data == png.base64EncodedString())
 }
+
+@Test func attachmentURIDecodingKeepsOpaqueLinksWithoutOpeningThem() throws {
+  for uri in ["t3-thread://v2/host/thread", "mailto:owner@example.com", "urn:todo:task", "javascript:alert(1)"] {
+    let data = try JSONSerialization.data(withJSONObject: ["id": "uri", "kind": "link", "url": uri, "added_at": "2026-11-03T00:00:00Z"])
+    let value = try JSONDecoder().decode(AttachmentSnapshot.self, from: data)
+    #expect(value.displayPath == uri)
+    #expect(!value.title.isEmpty)
+    #expect(AttachmentOpening.allowedURL(value) == nil)
+  }
+}
+
+@Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_W06_SERVER"] != nil)) @MainActor
+func liveCLI01URIAndImportAdoptionSurviveReload() async throws {
+  let server = try #require(ProcessInfo.processInfo.environment["TODO_W06_SERVER"].flatMap(URL.init(string:)))
+  let session = try await todoClient(server: server, credential: "").signIn_period_signIn(body: .json(.init(passphrase: "scratch verification passphrase"))).ok.body.json
+  let client = todoClient(server: server, credential: session.credential)
+  let created = try await client.tasks_period_create(path: .init(profile: "work"), body: .json(.init(title: "CLI01 Swift original"))).ok.body.json
+  let model = TodoModel(configuration: .init(server: server, initialProfile: "work", vaultService: "never-used-cli01"), clientFactory: { _, _ in todoClient(server: server, credential: session.credential) })
+  model.signedIn = true
+  model.connection = .live
+  model.beginEditing(try TaskSnapshot.decode(created))
+  await model.attachLink("t3-thread://v2/swift/thread")
+  #expect(model.editorError == nil)
+  #expect(model.editor?.base.row_version == 2)
+  #expect(model.editor?.base.attachments?.first?.displayPath == "t3-thread://v2/swift/thread")
+  let item: [String: Any] = ["external_id": "cli01:swift:adopt", "task_id": created.id, "from_version": 1, "title": "CLI01 Swift adopted", "attachments": [["kind": "link", "url": "mailto:swift@example.com"]]]
+  model.loadImport(data: try JSONSerialization.data(withJSONObject: [item]), name: "adopt.json")
+  await model.previewImport()
+  #expect(model.importReport?.items.first?.error?.code == "occ_conflict")
+  #expect(model.importReport?.items.first?.error?.message.contains("no external id yet") == true)
+  var current = item
+  current["from_version"] = 2
+  model.loadImport(data: try JSONSerialization.data(withJSONObject: [current]), name: "adopt.json")
+  await model.previewImport()
+  #expect(model.importReport?.totals == .init(created: 0, updated: 1, unchanged: 0, rejected: 0))
+  await model.applyImport()
+  #expect(model.importReport?.totals == .init(created: 0, updated: 1, unchanged: 0, rejected: 0))
+  let reload = try TaskSnapshot.decode(try await client.tasks_period_show(path: .init(profile: "work", task: created.id)).ok.body.json)
+  #expect(reload.title == "CLI01 Swift adopted")
+  #expect(reload.external_id == "cli01:swift:adopt")
+  #expect(reload.row_version == 4)
+  #expect(reload.attachments?.map(\.displayPath) == ["t3-thread://v2/swift/thread", "mailto:swift@example.com"])
+  let batchTask = try await client.tasks_period_create(path: .init(profile: "work"), body: .json(.init(title: "CLI01 Swift batch"))).ok.body.json
+  model.beginEditing(try TaskSnapshot.decode(batchTask))
+  let scratch = URL(fileURLWithPath: try #require(ProcessInfo.processInfo.environment["TODO_W06_SCRATCH"]))
+  let first = scratch.appendingPathComponent("cli01-first.md")
+  let second = scratch.appendingPathComponent("cli01-second.md")
+  try Data("First".utf8).write(to: first)
+  try Data("Second".utf8).write(to: second)
+  await model.attachPaths([first.path, scratch.appendingPathComponent("cli01-missing.md").path])
+  #expect(model.editorError != nil)
+  #expect(model.editor?.base.row_version == 1)
+  await model.attachPaths([first.path, second.path])
+  #expect(model.editorError == nil)
+  #expect(model.editor?.base.row_version == 3)
+  await model.attachPaths([first.path, second.path])
+  #expect(model.editor?.base.row_version == 3)
+  let batchReload = try TaskSnapshot.decode(try await client.tasks_period_show(path: .init(profile: "work", task: batchTask.id)).ok.body.json)
+  #expect(batchReload.attachments?.map(\.displayPath) == [first.path, second.path])
+}

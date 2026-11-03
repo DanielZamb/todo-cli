@@ -1,9 +1,11 @@
 import { Schema } from "effect";
+import { AttachmentInput } from "./attachments.ts";
 import { TagId, TaskId, Version } from "./ids.ts";
 import { TaskPatch } from "./task-commands.ts";
 import { Instant } from "./time.ts";
 
 export const ImportItem = Schema.Struct({
+  attachments: Schema.optionalKey(Schema.Array(AttachmentInput)),
   ...TaskPatch.fields,
   external_id: Schema.NonEmptyString.check(Schema.isPattern(/\S/)),
   project_name: Schema.optionalKey(Schema.NullOr(Schema.String)),

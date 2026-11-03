@@ -138,10 +138,8 @@ struct AttachmentsSection: View {
       guard response == .OK else { return }
       let paths = panel.urls.map(\.path)
       Task { @MainActor in
-        for path in paths {
-          guard model.editor?.id == expectedTask, model.profile == expectedProfile else { return }
-          await model.attachPath(path, label: nil)
-        }
+        guard model.editor?.id == expectedTask, model.profile == expectedProfile else { return }
+        await model.attachPaths(paths, label: nil)
       }
     }
   }

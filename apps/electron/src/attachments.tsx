@@ -1,8 +1,10 @@
 import {
   type Attachment,
+  AttachmentLocation,
   attachmentLimit,
   ImageMime,
   type Task,
+  validAttachmentLocation,
 } from "@todo/domain";
 import { Schema } from "effect";
 import {
@@ -82,7 +84,7 @@ function AttachmentRow({
   const title =
     attachment.name ??
     (attachment.kind === "link"
-      ? new URL(attachment.url).hostname
+      ? new URL(attachment.url).hostname || attachment.url
       : attachment.path.split("/").pop()) ??
     "Attachment";
   const location =
@@ -316,6 +318,22 @@ export function AttachmentsSection({
           : { kind: "file", path: value },
       },
     }));
+  const paths = (values: readonly string[]) =>
+    values.length === 0
+      ? Promise.resolve(true)
+      : perform((task) => ({
+          _tag: "attachMany",
+          profile: task.profile_id,
+          payload: {
+            task_id: task.id,
+            from_version: task.row_version,
+            attachments: values.map((value) =>
+              /\.(png|jpe?g|gif|webp)$/i.test(value)
+                ? { kind: "image", path: value }
+                : { kind: "file", path: value },
+            ),
+          },
+        }));
   const upload = (
     mime: typeof ImageMime.Type,
     data: string,
@@ -371,16 +389,21 @@ export function AttachmentsSection({
   };
   const saveLink = () => {
     void action(async () => {
-      const url = new URL(link);
-      if (!["https:", "http:"].includes(url.protocol))
-        throw new Error("Use an HTTP/HTTPS link");
+      const location = Schema.decodeUnknownSync(AttachmentLocation)({
+        kind: "link",
+        url: link,
+      });
+      if (!validAttachmentLocation(location))
+        throw new Error(
+          "Use an absolute URI. HTTP(S) links need a host and no credentials.",
+        );
       if (
         await perform((task) => ({
           _tag: "attach",
           ...target(task),
           payload: {
             from_version: task.row_version,
-            location: { kind: "link", url: url.href },
+            location,
           },
         }))
       ) {
@@ -436,9 +459,7 @@ export function AttachmentsSection({
                 void action(async () => {
                   const reply = await request({ _tag: "pickAttachment" });
                   if (reply._tag === "attachmentPaths")
-                    for (const value of reply.paths) {
-                      if (!(await path(value))) break;
-                    }
+                    await paths(reply.paths);
                 })
               }
             >

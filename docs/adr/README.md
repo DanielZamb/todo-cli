@@ -104,13 +104,15 @@ reminders, snooze, and credential cleanup.
 
 [ADR-0006. Time model and RFC 5545 recurrence](0006-time-model-and-rfc5545-recurrence.md)
 
-An Attachment is a file path, a copied image, or an HTTP(S) link. Ordinary files
+An Attachment is a file path, a copied image, or an absolute URI link. Ordinary files
 stay where they are. Pasted images are copied under
 `~/.todo-cli/attachments/…`. The server will serve those copied bytes after
 authorization. It will not read an arbitrary local path. Purge erases copied
 images and redacts paths from History. External files are never deleted.
 
 [ADR-0011. Attachments reference local files and links](0011-attachments-reference-local-files-and-links.md)
+
+[ADR-0013. Attachment URI links and atomic input groups](0013-attachment-uri-and-atomic-inputs.md)
 
 ## Index
 
@@ -127,6 +129,7 @@ images and redacts paths from History. External files are never deleted.
 | [0009](0009-every-capability-is-native-to-agents-and-humans.md) | Every capability is native to agents and humans | accepted |
 | [0010](0010-profile-deletion.md) | Profile deletion preserves History and reserves IDs | accepted |
 | [0011](0011-attachments-reference-local-files-and-links.md) | Attachments reference local files and links | accepted |
+| [0013](0013-attachment-uri-and-atomic-inputs.md) | Attachment URI links and atomic input groups | accepted |
 | [0012](0012-owner-snapshots.md) | Owner Snapshots | accepted |
 
 Track notes under [docs/decisions/](../decisions/) record how a port unit

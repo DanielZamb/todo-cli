@@ -319,3 +319,11 @@ recovery controls, plus production TodoModel formatting proof after reload.
 ## Version guardrails
 
 Headless StateTests prove stale-health blocking, exact Status membership and the enabled states of the five native filter controls. The offscreen recipe captures both new states in both layouts and appearances. See [the feature recipe](features/session.md) for commands and expected evidence.
+
+CLI01 adds a headless URI and import-adoption case in `AttachmentStateTests`.
+It attaches `t3-thread://`, checks a stale adoption, applies the current Version,
+and reloads the same Task with both URI references. It also drives multi-file
+Attachment groups through `TodoModel.attachPaths`, including invalid-path rollback
+and unchanged repeats. The native file picker uses this same batch command.
+Generated contract checks cover creation reference arrays and batch requests and
+reports. URI decoding does not expand the allowed opening schemes.

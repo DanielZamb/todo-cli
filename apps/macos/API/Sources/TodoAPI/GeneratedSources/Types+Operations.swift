@@ -2749,6 +2749,990 @@ public enum Operations {
             }
         }
     }
+    /// - Remark: HTTP `POST /profiles/{profile}/attachments/batch`.
+    /// - Remark: Generated from `#/paths//profiles/{profile}/attachments/batch/post(tasks.attachMany)`.
+    public enum tasks_period_attachMany {
+        public static let id: Swift.String = "tasks.attachMany"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/path`.
+            public struct Path: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/path/profile`.
+                public var profile: Swift.String
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - profile:
+                public init(profile: Swift.String) {
+                    self.profile = profile
+                }
+            }
+            public var path: Operations.tasks_period_attachMany.Input.Path
+            /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.tasks_period_attachMany.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.tasks_period_attachMany.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.tasks_period_attachMany.Input.Headers
+            /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/requestBody`.
+            @frozen public enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/requestBody/json`.
+                public struct jsonPayload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/requestBody/json/items`.
+                    public var items: OpenAPIRuntime.OpenAPIArrayContainer
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/requestBody/json/dry_run`.
+                    public var dry_run: Swift.Bool?
+                    /// Creates a new `jsonPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - items:
+                    ///   - dry_run:
+                    public init(
+                        items: OpenAPIRuntime.OpenAPIArrayContainer,
+                        dry_run: Swift.Bool? = nil
+                    ) {
+                        self.items = items
+                        self.dry_run = dry_run
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case items
+                        case dry_run
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.items = try container.decode(
+                            OpenAPIRuntime.OpenAPIArrayContainer.self,
+                            forKey: .items
+                        )
+                        self.dry_run = try container.decodeIfPresent(
+                            Swift.Bool.self,
+                            forKey: .dry_run
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "items",
+                            "dry_run"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.items, forKey: .items)
+                        if self.dry_run == nil && _explicitNullKeys.contains(CodingKeys.dry_run.stringValue) {
+                            try container.encodeNil(forKey: .dry_run)
+                        } else {
+                            try container.encodeIfPresent(self.dry_run, forKey: .dry_run)
+                        }
+                    }
+                }
+                /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/requestBody/content/application\/json`.
+                case json(Operations.tasks_period_attachMany.Input.Body.jsonPayload)
+            }
+            public var body: Operations.tasks_period_attachMany.Input.Body
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            ///   - body:
+            public init(
+                path: Operations.tasks_period_attachMany.Input.Path,
+                headers: Operations.tasks_period_attachMany.Input.Headers = .init(),
+                body: Operations.tasks_period_attachMany.Input.Body
+            ) {
+                self.path = path
+                self.headers = headers
+                self.body = body
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json`.
+                    public struct jsonPayload: Codable, Hashable, Sendable {
+                        private var _explicitNullKeys: Set<String> = []
+
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/generated_at`.
+                        public var generated_at: Swift.String
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/dry_run`.
+                        public var dry_run: Swift.Bool
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload`.
+                        public struct itemsPayloadPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/task_id`.
+                            public var task_id: Swift.String?
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/from_version`.
+                            public var from_version: Swift.Int?
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/current_version`.
+                            public var current_version: Swift.Int?
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/outcome`.
+                            @frozen public enum outcomePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case attached = "attached"
+                                case unchanged = "unchanged"
+                                case rejected = "rejected"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/outcome`.
+                            public var outcome: Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.itemsPayloadPayload.outcomePayload
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/attached`.
+                            public var attached: Swift.Int
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/error`.
+                            public struct errorPayload: Codable, Hashable, Sendable {
+                                private var _explicitNullKeys: Set<String> = []
+
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/error/code`.
+                                public var code: Swift.String
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/error/message`.
+                                public var message: Swift.String
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/error/details`.
+                                public struct detailsPayload: Codable, Hashable, Sendable {
+                                    private var _explicitNullKeys: Set<String> = []
+
+                                    /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/error/details/current_version`.
+                                    public var current_version: Swift.Int?
+                                    /// Creates a new `detailsPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - current_version:
+                                    public init(current_version: Swift.Int? = nil) {
+                                        self.current_version = current_version
+                                    }
+                                    public enum CodingKeys: String, CodingKey {
+                                        case current_version
+                                    }
+                                    public init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                        self.current_version = try container.decodeIfPresent(
+                                            Swift.Int.self,
+                                            forKey: .current_version
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "current_version"
+                                        ])
+                                    }
+
+                                    public func encode(to encoder: any Swift.Encoder) throws {
+                                        var container = encoder.container(keyedBy: CodingKeys.self)
+                                        if self.current_version == nil && _explicitNullKeys.contains(CodingKeys.current_version.stringValue) {
+                                            try container.encodeNil(forKey: .current_version)
+                                        } else {
+                                            try container.encodeIfPresent(self.current_version, forKey: .current_version)
+                                        }
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/error/details`.
+                                public var details: Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.detailsPayload?
+                                /// Creates a new `errorPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - code:
+                                ///   - message:
+                                ///   - details:
+                                public init(
+                                    code: Swift.String,
+                                    message: Swift.String,
+                                    details: Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.detailsPayload? = nil
+                                ) {
+                                    self.code = code
+                                    self.message = message
+                                    self.details = details
+                                }
+                                public enum CodingKeys: String, CodingKey {
+                                    case code
+                                    case message
+                                    case details
+                                }
+                                public init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.code = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .code
+                                    )
+                                    self.message = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .message
+                                    )
+                                    self.details = try container.decodeIfPresent(
+                                        Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.detailsPayload.self,
+                                        forKey: .details
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "code",
+                                        "message",
+                                        "details"
+                                    ])
+                                }
+
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    var container = encoder.container(keyedBy: CodingKeys.self)
+                                    try container.encode(self.code, forKey: .code)
+                                    try container.encode(self.message, forKey: .message)
+                                    if self.details == nil && _explicitNullKeys.contains(CodingKeys.details.stringValue) {
+                                        try container.encodeNil(forKey: .details)
+                                    } else {
+                                        try container.encodeIfPresent(self.details, forKey: .details)
+                                    }
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/error`.
+                            public var error: Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload?
+                            /// Creates a new `itemsPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - task_id:
+                            ///   - from_version:
+                            ///   - current_version:
+                            ///   - outcome:
+                            ///   - attached:
+                            ///   - error:
+                            public init(
+                                task_id: Swift.String? = nil,
+                                from_version: Swift.Int? = nil,
+                                current_version: Swift.Int? = nil,
+                                outcome: Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.itemsPayloadPayload.outcomePayload,
+                                attached: Swift.Int,
+                                error: Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload? = nil
+                            ) {
+                                self.task_id = task_id
+                                self.from_version = from_version
+                                self.current_version = current_version
+                                self.outcome = outcome
+                                self.attached = attached
+                                self.error = error
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case task_id
+                                case from_version
+                                case current_version
+                                case outcome
+                                case attached
+                                case error
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.task_id = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .task_id
+                                )
+                                self.from_version = try container.decodeIfPresent(
+                                    Swift.Int.self,
+                                    forKey: .from_version
+                                )
+                                self.current_version = try container.decodeIfPresent(
+                                    Swift.Int.self,
+                                    forKey: .current_version
+                                )
+                                self.outcome = try container.decode(
+                                    Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.itemsPayloadPayload.outcomePayload.self,
+                                    forKey: .outcome
+                                )
+                                self.attached = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .attached
+                                )
+                                self.error = try container.decodeIfPresent(
+                                    Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.self,
+                                    forKey: .error
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "task_id",
+                                    "from_version",
+                                    "current_version",
+                                    "outcome",
+                                    "attached",
+                                    "error"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                if self.task_id == nil && _explicitNullKeys.contains(CodingKeys.task_id.stringValue) {
+                                    try container.encodeNil(forKey: .task_id)
+                                } else {
+                                    try container.encodeIfPresent(self.task_id, forKey: .task_id)
+                                }
+                                if self.from_version == nil && _explicitNullKeys.contains(CodingKeys.from_version.stringValue) {
+                                    try container.encodeNil(forKey: .from_version)
+                                } else {
+                                    try container.encodeIfPresent(self.from_version, forKey: .from_version)
+                                }
+                                if self.current_version == nil && _explicitNullKeys.contains(CodingKeys.current_version.stringValue) {
+                                    try container.encodeNil(forKey: .current_version)
+                                } else {
+                                    try container.encodeIfPresent(self.current_version, forKey: .current_version)
+                                }
+                                try container.encode(self.outcome, forKey: .outcome)
+                                try container.encode(self.attached, forKey: .attached)
+                                if self.error == nil && _explicitNullKeys.contains(CodingKeys.error.stringValue) {
+                                    try container.encodeNil(forKey: .error)
+                                } else {
+                                    try container.encodeIfPresent(self.error, forKey: .error)
+                                }
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/items`.
+                        public typealias itemsPayload = [Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.itemsPayloadPayload]
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/items`.
+                        public var items: Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.itemsPayload
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/totals`.
+                        public struct totalsPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/totals/attached`.
+                            public var attached: Swift.Int
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/totals/unchanged`.
+                            public var unchanged: Swift.Int
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/totals/rejected`.
+                            public var rejected: Swift.Int
+                            /// Creates a new `totalsPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - attached:
+                            ///   - unchanged:
+                            ///   - rejected:
+                            public init(
+                                attached: Swift.Int,
+                                unchanged: Swift.Int,
+                                rejected: Swift.Int
+                            ) {
+                                self.attached = attached
+                                self.unchanged = unchanged
+                                self.rejected = rejected
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case attached
+                                case unchanged
+                                case rejected
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.attached = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .attached
+                                )
+                                self.unchanged = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .unchanged
+                                )
+                                self.rejected = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .rejected
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "attached",
+                                    "unchanged",
+                                    "rejected"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.attached, forKey: .attached)
+                                try container.encode(self.unchanged, forKey: .unchanged)
+                                try container.encode(self.rejected, forKey: .rejected)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/totals`.
+                        public var totals: Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.totalsPayload
+                        /// Creates a new `jsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - generated_at:
+                        ///   - dry_run:
+                        ///   - items:
+                        ///   - totals:
+                        public init(
+                            generated_at: Swift.String,
+                            dry_run: Swift.Bool,
+                            items: Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.itemsPayload,
+                            totals: Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.totalsPayload
+                        ) {
+                            self.generated_at = generated_at
+                            self.dry_run = dry_run
+                            self.items = items
+                            self.totals = totals
+                        }
+                        public enum CodingKeys: String, CodingKey {
+                            case generated_at
+                            case dry_run
+                            case items
+                            case totals
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.generated_at = try container.decode(
+                                Swift.String.self,
+                                forKey: .generated_at
+                            )
+                            self.dry_run = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .dry_run
+                            )
+                            self.items = try container.decode(
+                                Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.itemsPayload.self,
+                                forKey: .items
+                            )
+                            self.totals = try container.decode(
+                                Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.totalsPayload.self,
+                                forKey: .totals
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "generated_at",
+                                "dry_run",
+                                "items",
+                                "totals"
+                            ])
+                        }
+
+                        public func encode(to encoder: any Swift.Encoder) throws {
+                            var container = encoder.container(keyedBy: CodingKeys.self)
+                            try container.encode(self.generated_at, forKey: .generated_at)
+                            try container.encode(self.dry_run, forKey: .dry_run)
+                            try container.encode(self.items, forKey: .items)
+                            try container.encode(self.totals, forKey: .totals)
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/application\/json`.
+                    case json(Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_attachMany.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_attachMany.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Success
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/attachments/batch/post(tasks.attachMany)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.tasks_period_attachMany.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.tasks_period_attachMany.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct BadRequest: Sendable, Hashable {
+                /// Creates a new `BadRequest`.
+                public init() {}
+            }
+            /// BadRequest
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/attachments/batch/post(tasks.attachMany)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.tasks_period_attachMany.Output.BadRequest)
+            /// BadRequest
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/attachments/batch/post(tasks.attachMany)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            public static var badRequest: Self {
+                .badRequest(.init())
+            }
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            public var badRequest: Operations.tasks_period_attachMany.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/401/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/401/content/application\/json`.
+                    case json(Components.Schemas.UnauthorizedEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.UnauthorizedEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_attachMany.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_attachMany.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// Unauthorized
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/attachments/batch/post(tasks.attachMany)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.tasks_period_attachMany.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            public var unauthorized: Operations.tasks_period_attachMany.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/403/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/403/content/application\/json`.
+                    case json(Components.Schemas.ForbiddenEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.ForbiddenEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_attachMany.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_attachMany.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// Forbidden
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/attachments/batch/post(tasks.attachMany)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.tasks_period_attachMany.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            public var forbidden: Operations.tasks_period_attachMany.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct NotFound: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/404/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/404/content/json`.
+                    public struct jsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/404/content/json/value1`.
+                        public struct Value1Payload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/404/content/json/value1/generated_at`.
+                            public var generated_at: Swift.String
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/404/content/json/value1/code`.
+                            @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_found = "not_found"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/404/content/json/value1/code`.
+                            public var code: Operations.tasks_period_attachMany.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/404/content/json/value1/message`.
+                            public var message: Swift.String
+                            /// Creates a new `Value1Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - generated_at:
+                            ///   - code:
+                            ///   - message:
+                            public init(
+                                generated_at: Swift.String,
+                                code: Operations.tasks_period_attachMany.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
+                                message: Swift.String
+                            ) {
+                                self.generated_at = generated_at
+                                self.code = code
+                                self.message = message
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case generated_at
+                                case code
+                                case message
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.generated_at = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .generated_at
+                                )
+                                self.code = try container.decode(
+                                    Operations.tasks_period_attachMany.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "generated_at",
+                                    "code",
+                                    "message"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.generated_at, forKey: .generated_at)
+                                try container.encode(self.code, forKey: .code)
+                                try container.encode(self.message, forKey: .message)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/404/content/json/value1`.
+                        public var value1: Operations.tasks_period_attachMany.Output.NotFound.Body.jsonPayload.Value1Payload?
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/404/content/json/value2`.
+                        public var value2: Components.Schemas.NotFoundEncoded?
+                        /// Creates a new `jsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - value1:
+                        ///   - value2:
+                        public init(
+                            value1: Operations.tasks_period_attachMany.Output.NotFound.Body.jsonPayload.Value1Payload? = nil,
+                            value2: Components.Schemas.NotFoundEncoded? = nil
+                        ) {
+                            self.value1 = value1
+                            self.value2 = value2
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self.value1 = try .init(from: decoder)
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self.value2 = try .init(from: decoder)
+                            } catch {
+                                errors.append(error)
+                            }
+                            try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                [
+                                    self.value1,
+                                    self.value2
+                                ],
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
+                            )
+                        }
+                        public func encode(to encoder: any Swift.Encoder) throws {
+                            try self.value1?.encode(to: encoder)
+                            try self.value2?.encode(to: encoder)
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/404/content/application\/json`.
+                    case json(Operations.tasks_period_attachMany.Output.NotFound.Body.jsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Operations.tasks_period_attachMany.Output.NotFound.Body.jsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_attachMany.Output.NotFound.Body
+                /// Creates a new `NotFound`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_attachMany.Output.NotFound.Body) {
+                    self.body = body
+                }
+            }
+            /// NotFound
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/attachments/batch/post(tasks.attachMany)/responses/404`.
+            ///
+            /// HTTP response code: `404 notFound`.
+            case notFound(Operations.tasks_period_attachMany.Output.NotFound)
+            /// The associated value of the enum case if `self` is `.notFound`.
+            ///
+            /// - Throws: An error if `self` is not `.notFound`.
+            /// - SeeAlso: `.notFound`.
+            public var notFound: Operations.tasks_period_attachMany.Output.NotFound {
+                get throws {
+                    switch self {
+                    case let .notFound(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "notFound",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct Conflict: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/409/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/409/content/application\/json`.
+                    case json(Components.Schemas.ConflictEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.ConflictEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_attachMany.Output.Conflict.Body
+                /// Creates a new `Conflict`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_attachMany.Output.Conflict.Body) {
+                    self.body = body
+                }
+            }
+            /// Conflict
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/attachments/batch/post(tasks.attachMany)/responses/409`.
+            ///
+            /// HTTP response code: `409 conflict`.
+            case conflict(Operations.tasks_period_attachMany.Output.Conflict)
+            /// The associated value of the enum case if `self` is `.conflict`.
+            ///
+            /// - Throws: An error if `self` is not `.conflict`.
+            /// - SeeAlso: `.conflict`.
+            public var conflict: Operations.tasks_period_attachMany.Output.Conflict {
+                get throws {
+                    switch self {
+                    case let .conflict(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "conflict",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/422/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/422/content/application\/json`.
+                    case json(Components.Schemas.InvalidTaskEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.InvalidTaskEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_attachMany.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_attachMany.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// InvalidTask
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/attachments/batch/post(tasks.attachMany)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.tasks_period_attachMany.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            public var unprocessableContent: Operations.tasks_period_attachMany.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct InternalServerError: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/500/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/500/content/application\/json`.
+                    case json(Components.Schemas.InternalErrorEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.InternalErrorEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_attachMany.Output.InternalServerError.Body
+                /// Creates a new `InternalServerError`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_attachMany.Output.InternalServerError.Body) {
+                    self.body = body
+                }
+            }
+            /// InternalError
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/attachments/batch/post(tasks.attachMany)/responses/500`.
+            ///
+            /// HTTP response code: `500 internalServerError`.
+            case internalServerError(Operations.tasks_period_attachMany.Output.InternalServerError)
+            /// The associated value of the enum case if `self` is `.internalServerError`.
+            ///
+            /// - Throws: An error if `self` is not `.internalServerError`.
+            /// - SeeAlso: `.internalServerError`.
+            public var internalServerError: Operations.tasks_period_attachMany.Output.InternalServerError {
+                get throws {
+                    switch self {
+                    case let .internalServerError(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "internalServerError",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
     /// - Remark: HTTP `POST /profiles/{profile}/tasks/{task}/attachments`.
     /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/attachments/post(tasks.attach)`.
     public enum tasks_period_attach {
@@ -2792,6 +3776,8 @@ public enum Operations {
                 public struct jsonPayload: Codable, Hashable, Sendable {
                     private var _explicitNullKeys: Set<String> = []
 
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/POST/requestBody/json/name`.
+                    public var name: Swift.String?
                     /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/POST/requestBody/json/from_version`.
                     public var from_version: Swift.Int
                     /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/POST/requestBody/json/location`.
@@ -2844,19 +3830,23 @@ public enum Operations {
                     /// Creates a new `jsonPayload`.
                     ///
                     /// - Parameters:
+                    ///   - name:
                     ///   - from_version:
                     ///   - location:
                     ///   - label:
                     public init(
+                        name: Swift.String? = nil,
                         from_version: Swift.Int,
                         location: Operations.tasks_period_attach.Input.Body.jsonPayload.locationPayload,
                         label: Swift.String? = nil
                     ) {
+                        self.name = name
                         self.from_version = from_version
                         self.location = location
                         self.label = label
                     }
                     public enum CodingKeys: String, CodingKey {
+                        case name
                         case from_version
                         case location
                         case label
@@ -2864,6 +3854,10 @@ public enum Operations {
                     public init(from decoder: any Swift.Decoder) throws {
                         let container = try decoder.container(keyedBy: CodingKeys.self)
                         self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.name = try container.decodeIfPresent(
+                            Swift.String.self,
+                            forKey: .name
+                        )
                         self.from_version = try container.decode(
                             Swift.Int.self,
                             forKey: .from_version
@@ -2877,6 +3871,7 @@ public enum Operations {
                             forKey: .label
                         )
                         try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "name",
                             "from_version",
                             "location",
                             "label"
@@ -2885,6 +3880,11 @@ public enum Operations {
 
                     public func encode(to encoder: any Swift.Encoder) throws {
                         var container = encoder.container(keyedBy: CodingKeys.self)
+                        if self.name == nil && _explicitNullKeys.contains(CodingKeys.name.stringValue) {
+                            try container.encodeNil(forKey: .name)
+                        } else {
+                            try container.encodeIfPresent(self.name, forKey: .name)
+                        }
                         try container.encode(self.from_version, forKey: .from_version)
                         try container.encode(self.location, forKey: .location)
                         if self.label == nil && _explicitNullKeys.contains(CodingKeys.label.stringValue) {
@@ -11820,6 +12820,53 @@ public enum Operations {
                 public struct jsonPayload: Codable, Hashable, Sendable {
                     private var _explicitNullKeys: Set<String> = []
 
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/POST/requestBody/json/attachmentsPayload`.
+                    @frozen public enum attachmentsPayloadPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/POST/requestBody/json/attachmentsPayload/SwiftTagged_file_9effb3b18dd2ec69`.
+                        case file(Components.Schemas.SwiftTagged_file_9effb3b18dd2ec69)
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/POST/requestBody/json/attachmentsPayload/SwiftTagged_image_409f55577e999188`.
+                        case image(Components.Schemas.SwiftTagged_image_409f55577e999188)
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/POST/requestBody/json/attachmentsPayload/SwiftTagged_link_a1918c5d4f327f78`.
+                        case link(Components.Schemas.SwiftTagged_link_a1918c5d4f327f78)
+                        public enum CodingKeys: String, CodingKey {
+                            case kind
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            let discriminator = try container.decode(
+                                Swift.String.self,
+                                forKey: .kind
+                            )
+                            switch discriminator {
+                            case "file":
+                                self = .file(try .init(from: decoder))
+                            case "image":
+                                self = .image(try .init(from: decoder))
+                            case "link":
+                                self = .link(try .init(from: decoder))
+                            default:
+                                throw Swift.DecodingError.unknownOneOfDiscriminator(
+                                    discriminatorKey: CodingKeys.kind,
+                                    discriminatorValue: discriminator,
+                                    codingPath: decoder.codingPath
+                                )
+                            }
+                        }
+                        public func encode(to encoder: any Swift.Encoder) throws {
+                            switch self {
+                            case let .file(value):
+                                try value.encode(to: encoder)
+                            case let .image(value):
+                                try value.encode(to: encoder)
+                            case let .link(value):
+                                try value.encode(to: encoder)
+                            }
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/POST/requestBody/json/attachments`.
+                    public typealias attachmentsPayload = [Operations.tasks_period_create.Input.Body.jsonPayload.attachmentsPayloadPayload]
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/POST/requestBody/json/attachments`.
+                    public var attachments: Operations.tasks_period_create.Input.Body.jsonPayload.attachmentsPayload?
                     /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/POST/requestBody/json/title`.
                     public var title: Swift.String
                     /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/POST/requestBody/json/description`.
@@ -12180,6 +13227,7 @@ public enum Operations {
                     /// Creates a new `jsonPayload`.
                     ///
                     /// - Parameters:
+                    ///   - attachments:
                     ///   - title:
                     ///   - description:
                     ///   - project_id:
@@ -12194,6 +13242,7 @@ public enum Operations {
                     ///   - project_name:
                     ///   - tag_names:
                     public init(
+                        attachments: Operations.tasks_period_create.Input.Body.jsonPayload.attachmentsPayload? = nil,
                         title: Swift.String,
                         description: Swift.String? = nil,
                         project_id: Swift.String? = nil,
@@ -12208,6 +13257,7 @@ public enum Operations {
                         project_name: Swift.String? = nil,
                         tag_names: [Swift.String]? = nil
                     ) {
+                        self.attachments = attachments
                         self.title = title
                         self.description = description
                         self.project_id = project_id
@@ -12223,6 +13273,7 @@ public enum Operations {
                         self.tag_names = tag_names
                     }
                     public enum CodingKeys: String, CodingKey {
+                        case attachments
                         case title
                         case description
                         case project_id
@@ -12240,6 +13291,10 @@ public enum Operations {
                     public init(from decoder: any Swift.Decoder) throws {
                         let container = try decoder.container(keyedBy: CodingKeys.self)
                         self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.attachments = try container.decodeIfPresent(
+                            Operations.tasks_period_create.Input.Body.jsonPayload.attachmentsPayload.self,
+                            forKey: .attachments
+                        )
                         self.title = try container.decode(
                             Swift.String.self,
                             forKey: .title
@@ -12293,6 +13348,7 @@ public enum Operations {
                             forKey: .tag_names
                         )
                         try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "attachments",
                             "title",
                             "description",
                             "project_id",
@@ -12311,6 +13367,11 @@ public enum Operations {
 
                     public func encode(to encoder: any Swift.Encoder) throws {
                         var container = encoder.container(keyedBy: CodingKeys.self)
+                        if self.attachments == nil && _explicitNullKeys.contains(CodingKeys.attachments.stringValue) {
+                            try container.encodeNil(forKey: .attachments)
+                        } else {
+                            try container.encodeIfPresent(self.attachments, forKey: .attachments)
+                        }
                         try container.encode(self.title, forKey: .title)
                         if self.description == nil && _explicitNullKeys.contains(CodingKeys.description.stringValue) {
                             try container.encodeNil(forKey: .description)
@@ -24232,6 +25293,53 @@ public enum Operations {
                     public struct taskPayload: Codable, Hashable, Sendable {
                         private var _explicitNullKeys: Set<String> = []
 
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/series/POST/requestBody/json/task/attachmentsPayload`.
+                        @frozen public enum attachmentsPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/series/POST/requestBody/json/task/attachmentsPayload/SwiftTagged_file_9effb3b18dd2ec69`.
+                            case file(Components.Schemas.SwiftTagged_file_9effb3b18dd2ec69)
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/series/POST/requestBody/json/task/attachmentsPayload/SwiftTagged_image_409f55577e999188`.
+                            case image(Components.Schemas.SwiftTagged_image_409f55577e999188)
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/series/POST/requestBody/json/task/attachmentsPayload/SwiftTagged_link_a1918c5d4f327f78`.
+                            case link(Components.Schemas.SwiftTagged_link_a1918c5d4f327f78)
+                            public enum CodingKeys: String, CodingKey {
+                                case kind
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                let discriminator = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .kind
+                                )
+                                switch discriminator {
+                                case "file":
+                                    self = .file(try .init(from: decoder))
+                                case "image":
+                                    self = .image(try .init(from: decoder))
+                                case "link":
+                                    self = .link(try .init(from: decoder))
+                                default:
+                                    throw Swift.DecodingError.unknownOneOfDiscriminator(
+                                        discriminatorKey: CodingKeys.kind,
+                                        discriminatorValue: discriminator,
+                                        codingPath: decoder.codingPath
+                                    )
+                                }
+                            }
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                switch self {
+                                case let .file(value):
+                                    try value.encode(to: encoder)
+                                case let .image(value):
+                                    try value.encode(to: encoder)
+                                case let .link(value):
+                                    try value.encode(to: encoder)
+                                }
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/series/POST/requestBody/json/task/attachments`.
+                        public typealias attachmentsPayload = [Operations.tasks_period_createSeries.Input.Body.jsonPayload.taskPayload.attachmentsPayloadPayload]
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/series/POST/requestBody/json/task/attachments`.
+                        public var attachments: Operations.tasks_period_createSeries.Input.Body.jsonPayload.taskPayload.attachmentsPayload?
                         /// - Remark: Generated from `#/paths/profiles/{profile}/series/POST/requestBody/json/task/title`.
                         public var title: Swift.String
                         /// - Remark: Generated from `#/paths/profiles/{profile}/series/POST/requestBody/json/task/description`.
@@ -24592,6 +25700,7 @@ public enum Operations {
                         /// Creates a new `taskPayload`.
                         ///
                         /// - Parameters:
+                        ///   - attachments:
                         ///   - title:
                         ///   - description:
                         ///   - project_id:
@@ -24606,6 +25715,7 @@ public enum Operations {
                         ///   - project_name:
                         ///   - tag_names:
                         public init(
+                            attachments: Operations.tasks_period_createSeries.Input.Body.jsonPayload.taskPayload.attachmentsPayload? = nil,
                             title: Swift.String,
                             description: Swift.String? = nil,
                             project_id: Swift.String? = nil,
@@ -24620,6 +25730,7 @@ public enum Operations {
                             project_name: Swift.String? = nil,
                             tag_names: [Swift.String]? = nil
                         ) {
+                            self.attachments = attachments
                             self.title = title
                             self.description = description
                             self.project_id = project_id
@@ -24635,6 +25746,7 @@ public enum Operations {
                             self.tag_names = tag_names
                         }
                         public enum CodingKeys: String, CodingKey {
+                            case attachments
                             case title
                             case description
                             case project_id
@@ -24652,6 +25764,10 @@ public enum Operations {
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
                             self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.attachments = try container.decodeIfPresent(
+                                Operations.tasks_period_createSeries.Input.Body.jsonPayload.taskPayload.attachmentsPayload.self,
+                                forKey: .attachments
+                            )
                             self.title = try container.decode(
                                 Swift.String.self,
                                 forKey: .title
@@ -24705,6 +25821,7 @@ public enum Operations {
                                 forKey: .tag_names
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "attachments",
                                 "title",
                                 "description",
                                 "project_id",
@@ -24723,6 +25840,11 @@ public enum Operations {
 
                         public func encode(to encoder: any Swift.Encoder) throws {
                             var container = encoder.container(keyedBy: CodingKeys.self)
+                            if self.attachments == nil && _explicitNullKeys.contains(CodingKeys.attachments.stringValue) {
+                                try container.encodeNil(forKey: .attachments)
+                            } else {
+                                try container.encodeIfPresent(self.attachments, forKey: .attachments)
+                            }
                             try container.encode(self.title, forKey: .title)
                             if self.description == nil && _explicitNullKeys.contains(CodingKeys.description.stringValue) {
                                 try container.encodeNil(forKey: .description)

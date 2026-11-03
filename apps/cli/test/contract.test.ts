@@ -398,6 +398,22 @@ it("validates every command's single JSON object against its published JSON Sche
     attachmentId,
   ]);
   success("detach", ["detach", attachmentTaskId, attachmentId]);
+  const batchFile = join(scratch, "attachment-batch.json");
+  writeFileSync(
+    batchFile,
+    JSON.stringify({
+      items: [
+        {
+          task_id: attachmentTaskId,
+          from_version: 5,
+          attachments: [
+            { kind: "link", url: "t3-thread://v2/conformance/thread" },
+          ],
+        },
+      ],
+    }),
+  );
+  success("attach-many", ["attach-many", batchFile, "--dry-run"]);
   success("list", ["list", "--status", "open"]);
   success("edit", [
     "edit",

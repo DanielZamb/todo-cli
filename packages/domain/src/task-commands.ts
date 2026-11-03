@@ -1,4 +1,5 @@
 import { Schema, Struct } from "effect";
+import { AttachmentInput } from "./attachments.ts";
 import { Recurrence, TaskDetails } from "./entities.ts";
 import { ProfileId, Sequence, Version } from "./ids.ts";
 
@@ -14,6 +15,7 @@ const TaskInput = Schema.Struct({
 });
 export const TaskPatch = TaskInput.mapFields(Struct.map(Schema.optionalKey));
 export const CreateTask = Schema.Struct({
+  attachments: Schema.optionalKey(Schema.Array(AttachmentInput)),
   ...TaskPatch.fields,
   title: TaskInput.fields.title,
 });

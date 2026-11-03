@@ -1,4 +1,5 @@
 import {
+  AttachManyItem,
   Attachment,
   AttachTask,
   CreateSeries,
@@ -84,6 +85,10 @@ export const Request = Schema.Union([
     profile: ProfileId,
     task: TaskId,
     payload: UploadAttachment,
+  }),
+  Schema.TaggedStruct("attachMany", {
+    profile: ProfileId,
+    payload: AttachManyItem,
   }),
   Schema.TaggedStruct("importTasks", {
     profile: ProfileId,

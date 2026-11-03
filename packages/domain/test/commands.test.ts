@@ -31,7 +31,7 @@ import {
   openStore,
   TaskCommands,
 } from "@todo/domain/store";
-import { Effect, Schema } from "effect";
+import { Clock, Effect, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { profile, time, work } from "./store-fixtures.ts";
 
@@ -65,7 +65,9 @@ it.effect(
   () =>
     usingStore((store) =>
       Effect.gen(function* () {
-        const session = yield* store.auth.signIn("scratch commands passphrase");
+        const session = yield* store.auth
+          .signIn("scratch commands passphrase")
+          .pipe(Effect.provideService(Clock.Clock, Clock.Clock.defaultValue()));
         const request = { credential: session.credential, profile };
         const created = yield* createTask(store, request, {
           title: "Shared completion",
@@ -109,7 +111,9 @@ it.effect(
   () =>
     usingStore((store) =>
       Effect.gen(function* () {
-        const session = yield* store.auth.signIn("scratch commands passphrase");
+        const session = yield* store.auth
+          .signIn("scratch commands passphrase")
+          .pipe(Effect.provideService(Clock.Clock, Clock.Clock.defaultValue()));
         const request = { credential: session.credential, profile };
         const commands = new TaskCommands(store);
         const created = yield* createTask(store, request, {
@@ -199,7 +203,9 @@ it.effect(
       Effect.gen(function* () {
         const personal = Schema.decodeUnknownSync(ProfileId)("personal");
         yield* store.putProfile({ ...work, id: personal, name: "Personal" });
-        const session = yield* store.auth.signIn("scratch commands passphrase");
+        const session = yield* store.auth
+          .signIn("scratch commands passphrase")
+          .pipe(Effect.provideService(Clock.Clock, Clock.Clock.defaultValue()));
         const commands = new TaskCommands(store);
         const ownerRequest = { credential: session.credential, profile };
         const project = Schema.decodeUnknownSync(Project)({
@@ -370,11 +376,10 @@ const instantRule = {
   exdate: [],
 };
 const access = (store: OperationStore) =>
-  store.auth
-    .signIn("scratch commands passphrase")
-    .pipe(
-      Effect.map((session) => ({ credential: session.credential, profile })),
-    );
+  store.auth.signIn("scratch commands passphrase").pipe(
+    Effect.provideService(Clock.Clock, Clock.Clock.defaultValue()),
+    Effect.map((session) => ({ credential: session.credential, profile })),
+  );
 
 it.effect(
   "C05-1 reapplying a rule on January 2 keeps the January 3 due date",
@@ -1008,7 +1013,9 @@ it.effect(
   () =>
     usingStore((store) =>
       Effect.gen(function* () {
-        const session = yield* store.auth.signIn("scratch commands passphrase");
+        const session = yield* store.auth
+          .signIn("scratch commands passphrase")
+          .pipe(Effect.provideService(Clock.Clock, Clock.Clock.defaultValue()));
         const request = { credential: session.credential, profile };
         const commands = new TaskCommands(store);
         const created = yield* commands.create(request, {
@@ -1402,7 +1409,9 @@ it.effect(
   () =>
     usingStore((store) =>
       Effect.gen(function* () {
-        const session = yield* store.auth.signIn("scratch commands passphrase");
+        const session = yield* store.auth
+          .signIn("scratch commands passphrase")
+          .pipe(Effect.provideService(Clock.Clock, Clock.Clock.defaultValue()));
         const request = { credential: session.credential, profile };
         const source = yield* createTask(store, request, {
           title: "Copy source",
@@ -1446,7 +1455,9 @@ it.effect(
       Effect.gen(function* () {
         const destination = Schema.decodeUnknownSync(ProfileId)("personal");
         yield* store.putProfile({ ...work, id: destination, name: "Personal" });
-        const session = yield* store.auth.signIn("scratch commands passphrase");
+        const session = yield* store.auth
+          .signIn("scratch commands passphrase")
+          .pipe(Effect.provideService(Clock.Clock, Clock.Clock.defaultValue()));
         const request = { credential: session.credential, profile };
         const source = yield* createTask(store, request, {
           title: "Copy source",
@@ -1488,9 +1499,11 @@ for (const clash of [false, true]) {
             id: destination,
             name: "Personal",
           });
-          const session = yield* store.auth.signIn(
-            "scratch commands passphrase",
-          );
+          const session = yield* store.auth
+            .signIn("scratch commands passphrase")
+            .pipe(
+              Effect.provideService(Clock.Clock, Clock.Clock.defaultValue()),
+            );
           const request = { credential: session.credential, profile };
           const source = yield* createTask(store, request, {
             title: "Move source",

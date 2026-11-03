@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { expect, it } from "@effect/vitest";
 import { openStore } from "@todo/domain/store";
-import { Effect, Schema } from "effect";
+import { Clock, Effect, Schema } from "effect";
 import {
   actor,
   created,
@@ -463,19 +463,22 @@ import { unlinkSync } from "node:fs";
 import { Task } from "@todo/domain";
 import type { OperationStore } from "@todo/domain/store";
 
-it("Attachment links reject malformed URLs and embedded credentials", () => {
+it("Attachment links accept URI schemes and reject malformed HTTP URLs and credentials", () => {
+  for (const url of [
+    "t3-thread://v2/host/thread",
+    "mailto:owner@example.com",
+    "urn:todo:task",
+    "file:///tmp/draft.md",
+    "javascript:alert(1)",
+  ])
+    expect(validAttachmentLocation({ kind: "link", url })).toBe(true);
   expect(
     validAttachmentLocation({
       kind: "link",
       url: "https://example.com/issue/42",
     }),
   ).toBe(true);
-  for (const url of [
-    "https://[invalid",
-    "https://owner:secret@example.com/",
-    "javascript:alert(1)",
-    "file:///tmp/draft.md",
-  ])
+  for (const url of ["https://[invalid", "https://owner:secret@example.com/"])
     expect(validAttachmentLocation({ kind: "link", url })).toBe(false);
 });
 
@@ -518,7 +521,9 @@ it.effect(
         yield* store.putProfile({ ...work, id: personal, name: "Personal" });
         yield* TestClock.setTime(Date.parse(later));
         yield* store.auth.setupOwner("scratch copy proof");
-        const session = yield* store.auth.signIn("scratch copy proof");
+        const session = yield* store.auth
+          .signIn("scratch copy proof")
+          .pipe(Effect.provideService(Clock.Clock, Clock.Clock.defaultValue()));
         const request = { profile, credential: session.credential };
         const commands = new TaskCommands(store);
         const created = yield* commands.create(request, {

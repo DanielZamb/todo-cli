@@ -83,6 +83,20 @@ const guides = {
     concurrency:
       "Reads the current Version before detaching. An optional expected Version rejects stale input.",
   }),
+  "attach-many": reference({
+    purpose:
+      "Attach files and URI links to many Tasks, with a result for each Task.",
+    synopsis: "todo attach-many <file|-> [--dry-run]",
+    flags: ["--dry-run (preview without writes)"],
+    examples: [
+      "todo schema attach-many-input",
+      "todo attach-many attachments.json --dry-run --format json",
+    ],
+    output:
+      "Each items entry supplies task_id, from_version, and attachments. Results are attached, unchanged, or rejected. Duplicate references with the same kind, location, label and name are unchanged.",
+    concurrency:
+      "Each Task needs its own from_version. A stale Version rejects that Task with current_version. Attachments for one Task commit together.",
+  }),
   todo: reference({
     purpose:
       "Todo CLI: local-first task tracking with OCC, auth, and markdown-first output.",
@@ -256,6 +270,9 @@ const guides = {
     flags: [
       "--parse <text> (opt in to quick-add tokens; literal titles stay unchanged)",
       ...taskFlags,
+      "--attach <path> (repeatable)",
+      "--link <URI> (repeatable)",
+      "--label <text> (optional label for the supplied Attachments)",
     ],
     examples: [
       "todo add 'Pay rent' --priority P1 --due 2030-01-01",

@@ -1,5 +1,7 @@
 import { Clock, Effect, Schema } from "effect";
+import { resolveAttachments } from "./attachment-input.ts";
 import { copyAttachments, removeWrittenImage } from "./attachment-store.ts";
+import type { AttachmentInput } from "./attachments.ts";
 import { type AccessRequest, AuthError } from "./auth/model.ts";
 import { isInboxTask } from "./client-reads.ts";
 import {
@@ -369,6 +371,26 @@ export class TaskCommands {
               kind: "TaskCreated",
               input,
             });
+          const attachments = yield* Effect.try({
+            try: () =>
+              input.attachments === undefined
+                ? undefined
+                : resolveAttachments(input.attachments, time),
+            catch: () => "invalid_attachment",
+          }).pipe(Effect.catch(() => Effect.succeed(null)));
+          if (attachments === null) {
+            yield* this.rejectValidation(request, {
+              kind: "TaskCreated",
+              input,
+            });
+            return {
+              outcome: "rejected",
+              reason: "validation",
+              latest: null,
+              message:
+                "Invalid Attachment URI or file path. Check every Attachment and retry.",
+            } satisfies TaskCommandResult;
+          }
           const initial = Schema.decodeUnknownSync(Task)({
             description: null,
             project_id: null,
@@ -380,6 +402,7 @@ export class TaskCommands {
             source: "manual",
             tags: [],
             ...input,
+            ...(attachments === undefined ? {} : { attachments }),
             id: taskId(),
             profile_id: identity.profile,
             entity_version: 1,
@@ -416,6 +439,9 @@ export class TaskCommands {
                 ...(task.external_id === undefined
                   ? {}
                   : { external_id: task.external_id }),
+                ...(task.attachments === undefined
+                  ? {}
+                  : { attachments: task.attachments }),
                 task_id: task.id,
                 occurrence_id: Schema.decodeUnknownSync(OccurrenceId)(
                   crypto.randomUUID(),
@@ -801,7 +827,7 @@ const cliResult = (
           ? result.latest
             ? `stale Version; retry with --expected-version ${result.latest.row_version}`
             : "stale Version; read the Task and pass --expected-version"
-          : result.reason,
+          : (result.message ?? result.reason),
         result.latest
           ? taskView(result.latest, data.projects, data.tags, data.series)
           : undefined,
@@ -814,6 +840,7 @@ export const createTask = Effect.fn(function* (
   request: AccessRequest,
   input: TaskFlags,
   draft?: QuickAddDraft,
+  attachments?: readonly AttachmentInput[],
 ) {
   const data = yield* readTasks(store, request);
   const commands = new TaskCommands(store);
@@ -837,6 +864,7 @@ export const createTask = Effect.fn(function* (
           ? { due_at: draft.due_at, scheduled_at: draft.scheduled_at }
           : {}),
         ...prepared.fields,
+        ...(attachments === undefined ? {} : { attachments }),
       }),
     );
     return { inputTask, options: prepared.options };

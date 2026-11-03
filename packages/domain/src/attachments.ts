@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { AttachmentId, Version } from "./ids.ts";
+import { AttachmentId, TaskId, Version } from "./ids.ts";
 import { Instant } from "./time.ts";
 
 export const attachmentLimit = 20 * 1024 * 1024;
@@ -24,7 +24,9 @@ export const AttachmentLocation = Schema.Union([
   Schema.Struct({ kind: Schema.Literal("image"), path: AttachmentPath }),
   Schema.Struct({
     kind: Schema.Literal("link"),
-    url: Schema.NonEmptyString.check(Schema.isPattern(/^https?:\/\/[^\s]+$/i)),
+    url: Schema.NonEmptyString.check(
+      Schema.isPattern(/^[a-z][a-z\d+.-]*:[^\s]*$/i),
+    ),
   }),
 ]);
 export const Attachment = Schema.Union([
@@ -54,6 +56,7 @@ export const AttachmentStatus = Schema.Union([
   }),
 ]);
 export const AttachTask = Schema.Struct({
+  name: fields.name,
   from_version: Version,
   location: AttachmentLocation,
   label: Schema.optionalKey(Schema.NonEmptyString),
@@ -61,13 +64,19 @@ export const AttachTask = Schema.Struct({
 export type AttachTask = typeof AttachTask.Type;
 export function validAttachmentLocation(location: AttachTask["location"]) {
   if (location.kind !== "link") return true;
+  if (
+    !Schema.is(AttachmentLocation.members[2])(location) ||
+    Array.from(location.url).some(
+      (character) =>
+        character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127,
+    )
+  )
+    return false;
   try {
     const url = new URL(location.url);
     return (
-      ["http:", "https:"].includes(url.protocol) &&
-      url.hostname !== "" &&
-      url.username === "" &&
-      url.password === ""
+      !["http:", "https:"].includes(url.protocol) ||
+      (url.hostname !== "" && url.username === "" && url.password === "")
     );
   } catch {
     return false;
@@ -94,3 +103,50 @@ export const UploadAttachment = Schema.Struct({
   label: Schema.optionalKey(Schema.NonEmptyString),
 });
 export type UploadAttachment = typeof UploadAttachment.Type;
+
+const inputFields = { label: fields.label, name: fields.name };
+export const AttachmentInput = Schema.Union([
+  Schema.Struct({ ...AttachmentLocation.members[0].fields, ...inputFields }),
+  Schema.Struct({ ...AttachmentLocation.members[1].fields, ...inputFields }),
+  Schema.Struct({ ...AttachmentLocation.members[2].fields, ...inputFields }),
+]);
+export type AttachmentInput = typeof AttachmentInput.Type;
+export const AttachManyItem = Schema.Struct({
+  task_id: TaskId,
+  from_version: Version,
+  attachments: Schema.Array(AttachmentInput).check(Schema.isMinLength(1)),
+});
+export type AttachManyItem = typeof AttachManyItem.Type;
+export const AttachManyRequest = Schema.Struct({
+  items: Schema.Array(Schema.Json),
+  dry_run: Schema.optionalKey(Schema.Boolean),
+});
+export type AttachManyRequest = typeof AttachManyRequest.Type;
+export const AttachManyRow = Schema.Struct({
+  task_id: Schema.NullOr(TaskId),
+  from_version: Schema.NullOr(Version),
+  current_version: Schema.NullOr(Version),
+  outcome: Schema.Literals(["attached", "unchanged", "rejected"]),
+  attached: Schema.Int,
+  error: Schema.optionalKey(
+    Schema.Struct({
+      code: Schema.String,
+      message: Schema.String,
+      details: Schema.optionalKey(
+        Schema.Struct({ current_version: Schema.NullOr(Version) }),
+      ),
+    }),
+  ),
+});
+export type AttachManyRow = typeof AttachManyRow.Type;
+export const AttachManyReport = Schema.Struct({
+  generated_at: Instant,
+  dry_run: Schema.Boolean,
+  items: Schema.Array(AttachManyRow),
+  totals: Schema.Struct({
+    attached: Schema.Int,
+    unchanged: Schema.Int,
+    rejected: Schema.Int,
+  }),
+});
+export type AttachManyReport = typeof AttachManyReport.Type;
