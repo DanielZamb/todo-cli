@@ -9,8 +9,9 @@ Generated using `create-verification-skill`.
 Read the [feature map](features/README.md). This is headless proof only.
 Native UI, XCTest, certificate signing and Keychain remain on HOLD; this recipe grants no
 permission for them. A separate unsigned compile-only build passed with
-signing disabled. Its command and artifact observation are recorded in
-[unsigned-build.json](../../../docs/evidence/w03/unsigned-build/unsigned-build.json).
+signing disabled. The historical artifact receipt is not retained in the checkout.
+Use the [unsigned build helper](scripts/unsigned-build.sh) with a new absolute
+evidence directory to repeat that compile-only check.
 That compile did not launch Todo and does not prove signed runtime behavior.
 
 ## Launch

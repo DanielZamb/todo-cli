@@ -281,8 +281,9 @@ lost by the old catch block, so the injected unit-test error is not native evide
 
 ## W06 implementation and headless proof
 
-The [W06 report](../../docs/evidence/w06/REPORT.md) maps all ten W01 findings
-and D02 polish to the changes. Move to Profile, History Revert, and Series
+The historical W06 report is not retained in the checkout. The current
+[headless write recipe](../../.agents/skills/verify-macos/features/writes.md)
+documents how to repeat the write checks. Move to Profile, History Revert, and Series
 create/edit/skip use the generated client. Thirteen headless Swift Testing tests
 and compiled scratch HTTP writes passed, with durable Version and History checks.
 The macOS verification skill now includes the repeatable headless write recipe.

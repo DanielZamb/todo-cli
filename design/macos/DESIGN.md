@@ -14,7 +14,7 @@ This follows Apple's [Liquid Glass guidance](https://developer.apple.com/documen
 
 ## Shared review dispositions
 
-The full source findings are preserved in [D01-r1.md](references/D01-r1.md). The approved D01 review at `8c29e73` adds [two shared polish items](references/D01-r2.md). Both are applied here. Project and one tag keep their natural widths, and overdue date text uses the destructive role with an explicit Overdue label.
+The historical D01 review reports are not retained in the checkout. The table below records the six shared findings. The approved D01 review at `8c29e73` adds two shared polish items, also specified in the [shared Electron design](../electron/DESIGN.md). Project and one tag keep their natural widths, and overdue date text uses the destructive role with an explicit Overdue label.
 
 | Finding | D02 disposition | Evidence |
 |---|---|---|
@@ -27,7 +27,7 @@ The full source findings are preserved in [D01-r1.md](references/D01-r1.md). The
 
 ## Screen and state coverage
 
-Each row has ready, empty, loading, error, conflict, and offline screenshots in light and dark appearances. Filenames are `screen-state-appearance.png` in [evidence/screenshots](evidence/screenshots).
+The historical prototype captured each row in ready, empty, loading, error, conflict, and offline states in light and dark appearances. That screenshot set is not retained in the checkout. The current [offscreen design recipe](../../.agents/skills/verify-macos/features/design.md) documents how to generate integrated client captures. Generated screenshots and receipts stay local.
 
 | Screen | Ready content | Recovery behavior |
 |---|---|---|
@@ -39,7 +39,7 @@ Each row has ready, empty, loading, error, conflict, and offline screenshots in 
 | `editor` | Reordered native form on glass, base Version 7 | Draft stays through retry and reconnect. An overlap opens the comparison |
 | `conflict` | Both title values, unselected radios, merge summary | Choices stay through recovery. A second conflict shows the newer title and Version |
 
-Settings and design foundations add a ready capture in both appearances. The manifest contains 88 images. The Today ready images are also the requested dense-task evidence. The quick-add ready images are the parsed-chip and glass-over-content evidence.
+The historical prototype manifest contained 88 images, including Settings and design foundations in both appearances. Its Today ready images covered dense tasks, and its quick-add ready images covered parsed chips and glass over content. These are historical coverage notes, not retained proof of the current client.
 
 ## Semantic mapping
 
@@ -53,6 +53,6 @@ The preview has no database, credentials, HTTP calls, recurrence expansion, or c
 
 The editor's transition menu and Move to Profile demonstrate placement. W01 implements the accepted task transitions and profile move. W01 also verifies sheet focus return, VoiceOver announcements, system appearance, Increase Contrast, and Reduce Motion in the integrated app.
 
-The current D01 v2 contracts are preserved in the reference directory. Work has 16 distinct open tasks, Website has 13, and Personal site has 3. Today has twelve tasks, Scheduled has six, and Inbox has three. Personal is empty and displays no Work tasks.
+The shared D01 v2 contracts are retained in [TOKENS.md](../electron/TOKENS.md) and [STATES.md](../electron/STATES.md). Work has 16 distinct open tasks, Website has 13, and Personal site has 3. Today has twelve tasks, Scheduled has six, and Inbox has three. Personal is empty and displays no Work tasks.
 
-D02 has no verification skill until W01, as its ticket specifies. [VERIFY.md](VERIFY.md) records the exact compiled-app build, drive, and capture path. Coordinator visual APPROVE remains required before integration.
+The [macOS verification skill](../../.agents/skills/verify-macos/SKILL.md) records the current build, drive, and capture recipes, including the native HOLD. Coordinator visual APPROVE remains required before integration.

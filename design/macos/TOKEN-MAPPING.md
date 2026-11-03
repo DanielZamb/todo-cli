@@ -1,6 +1,6 @@
 # D01 to SwiftUI token mapping
 
-Reconciled against D01 handoff v2 and the October 27 Liquid Glass amendment. macOS 26 is the deployment target. The source snapshots are [D01 tokens](references/D01-TOKENS.md) and [D01 states](references/D01-STATES.md). The shared design is approved at D01 commit `8c29e73`. D02 still requires its own coordinator visual verdict. No source files in D01 were changed.
+Reconciled against D01 handoff v2 and the October 27 Liquid Glass amendment. macOS 26 is the deployment target. The shared contracts are [D01 tokens](../electron/TOKENS.md) and [D01 states](../electron/STATES.md). The shared design is approved at D01 commit `8c29e73`. D02 still requires its own coordinator visual verdict. No source files in D01 were changed.
 
 The shadcn method maps a role to a paired foreground, then maps type, spacing, geometry, and component states. This preview uses that method with SwiftUI controls. It has no shadcn JavaScript dependency.
 

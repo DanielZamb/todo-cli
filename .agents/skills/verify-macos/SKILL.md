@@ -8,6 +8,15 @@ description: Verify the compiled macOS 26 Todo SwiftUI app against scratch HTTP 
 Created with `create-verification-skill`.
 Read [the feature map](features/README.md) before selecting coverage.
 
+## Check documentation links
+
+Run `node scripts/check-doc-links.mjs HEAD` from the checkout root after editing
+the macOS verification docs, README, HANDOFF, or design specifications. The
+checker reads the committed Git tree, so ignored local evidence cannot satisfy
+a link. It prints each missing local target and exits 1 if any are missing.
+Pass another commit instead of `HEAD` to check an earlier tree. This static
+check does not build or launch an app.
+
 ## Native verification is on HOLD
 
 The user stopped the 2026-10-27 run after repeated Keychain prompts. Do not
@@ -186,7 +195,9 @@ prove native Settings, signing or Keychain. The full flow above remains held.
 The checked-in Xcode project passed an unsigned compile with
 `CODE_SIGNING_ALLOWED=NO`, `CODE_SIGNING_REQUIRED=NO` and an empty
 `EXPANDED_CODE_SIGN_IDENTITY`. The app included the executable bundled server.
-See [the command and artifact receipt](../../../docs/evidence/resume-20261027/w02/unsigned-build.json).
+The historical artifact receipt is not retained in the checkout. Use the
+[unsigned build helper](../verify-macos-lifecycle/scripts/unsigned-build.sh)
+with a new absolute evidence directory to repeat the compile-only check.
 No app or XCTest was launched. This proof does not lift the interactive hold
 or change production signing settings.
 

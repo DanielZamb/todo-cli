@@ -42,7 +42,7 @@ The titled Dialog shows equal full-width cards for Your change and Latest accept
 
 ## States and evidence
 
-[STATES.md](STATES.md) defines seven screens across six states. [evidence/README.md](evidence/README.md) indexes the complete regenerated set and the extra Today density and parsed-chip screenshots. The compiled verifier asserts row heights, section counts, editor bounds, chip behavior, shortcut behavior, menu actions, calendar behavior, readable disabled actions and both conflict outcomes.
+[STATES.md](STATES.md) defines seven screens across six states. The historical prototype screenshot set is not retained in the checkout. Use the [Electron verification recipe](../../.agents/skills/verify-electron/SKILL.md) for the current compiled client checks and capture commands. Generated screenshots and receipts stay local.
 
 ## Scope and gates
 
