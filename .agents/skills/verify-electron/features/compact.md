@@ -20,6 +20,8 @@ The Compact task is to scan priorities and select a Task. Quick add is the one
 primary action, in the header when populated and below the groups when empty.
 Dense captures cover the top, a 53 px scroll and the bottom. The measured drawing
 viewport must contain whole 56 px rows, with zero partially drawn rows.
+The empty Compact check requires every P1/P2/P3/P4 heading to intersect the
+viewport completely before scrolling. A count of four DOM headings is not enough.
 Existing Today/date planning sections remain unchanged.
 
 ## Sub-features

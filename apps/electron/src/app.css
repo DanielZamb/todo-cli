@@ -1290,6 +1290,9 @@ nav {
 .compact .task-pane > [data-slot="empty"] {
   flex: 1;
 }
+.compact .task-pane > [data-slot="empty"].empty-priorities {
+  flex: 0 0 auto;
+}
 .compact-row-metadata .overdue {
   color: var(--destructive);
 }

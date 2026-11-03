@@ -16,6 +16,8 @@ full-priority captures. The manifest contains 294 PNGs and Assets.car must exist
 TODO_SNAPSHOT_PRIORITY_ONLY=1 selects 18 captures for a focused check, including
 the dense list after scrolling 53 pt and to its bottom. Compact geometry must
 show zero partially drawn Task rows at the measured viewport edges.
+The full ready capture also requires the P1 header to finish above the first
+Task row. Inspect both the circle and title in light and dark appearances.
 Require the preserved identifier check and unsigned xcodebuild to exit 0.
 The Compact task is to scan priorities and select a Task. Add task is the one
 primary action, in the header when populated and below the groups when empty.

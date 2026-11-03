@@ -548,7 +548,7 @@ struct TaskListView: View {
             } else {
                 List(selection: $selection) {
                     ForEach(taskGroups) { group in
-                        if compactMode {
+                        if compactMode || model.selectedView == "all" {
                             if model.selectedView == "all" || taskGroups.count > 1 {
                                 HStack {
                                     Text(group.name)
@@ -558,20 +558,16 @@ struct TaskListView: View {
                                     .accessibilityAddTraits(.isHeader)
                                     .frame(maxWidth: .infinity, alignment: .leading).compactBounds("section-label-\(group.id)")
                                     .padding(.top, 12).padding(.bottom, 8)
-                                    .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
+                                    .listRowInsets(compactMode ? EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4) : nil)
                                     .listRowSeparator(.hidden).selectionDisabled()
+                            }
+                            if group.tasks.isEmpty && !compactMode {
+                                Text("No tasks").foregroundStyle(.secondary).selectionDisabled()
                             }
                             ForEach(group.tasks) { row($0, overdue: group.name == "Overdue") }
                         } else {
-                            Section {
-                                if group.tasks.isEmpty { Text("No tasks").foregroundStyle(.secondary).selectionDisabled() }
+                            Section(group.name) {
                                 ForEach(group.tasks) { row($0, overdue: group.name == "Overdue") }
-                            } header: {
-                                HStack {
-                                    Text(group.name)
-                                    Spacer()
-                                    if model.selectedView == "all" { Text(TaskCount.text(group.tasks.count)) }
-                                }
                             }
                         }
                     }

@@ -107,6 +107,13 @@ struct Snapshots {
                     }
                 }
                 try await Task.sleep(for: .milliseconds(100))
+                if name == "full-priority-ready" {
+                    let frames = compactMeasurements.frames
+                    let header = try #require(frames["section-label-P1"])
+                    let row = try #require(frames["row-priority-urgent"])
+                    #expect(row.minY >= header.maxY, "P1 header must precede the whole first Task row")
+                    compactLayouts[name + "-" + mode] = frames.mapValues { [Double($0.minX), Double($0.minY), Double($0.width), Double($0.height)] }
+                }
                 if name.hasPrefix("compact-") {
                     let frames = compactMeasurements.frames
                     compactLayouts[name + "-" + mode] = frames.mapValues { [Double($0.minX), Double($0.minY), Double($0.width), Double($0.height)] }

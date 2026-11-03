@@ -110,6 +110,10 @@ try {
     )
     .toEqual(["P1", "P2", "P3", "P4"]);
   await expect(groups.locator(".empty-priority")).toHaveCount(4);
+  for (const priority of ["P1", "P2", "P3", "P4"])
+    await expect(
+      page.getByRole("heading", { name: priority, exact: true }),
+    ).toBeInViewport({ ratio: 1 });
   const measure = async (screen: string) => {
     const geometry = await page
       .locator(".whole-task-groups")
