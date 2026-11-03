@@ -95,6 +95,7 @@ if (
   process.platform === "darwin" &&
   process.env.TODO_ELECTRON_VERIFY_HOST !== "1"
 ) {
+  execFileSync("pnpm", ["exec", "install-electron"], { stdio: "inherit" });
   const bundle = resolve(output);
   mkdirSync(resolve(bundle, ".."), { recursive: true });
   rmSync(bundle, { recursive: true, force: true });
