@@ -8,6 +8,14 @@ description: Verify the compiled macOS 26 Todo SwiftUI app against scratch HTTP 
 Created with `create-verification-skill`.
 Read [the feature map](features/README.md) before selecting coverage.
 
+## Priority groups during HOLD
+
+Read [the priority recipe](features/compact.md#priority-groups). It adds production
+TodoModel save, filter and reload checks on compiled scratch HTTP, plus empty,
+ready and dense priority renders in both appearances and window sizes. Run every
+Swift command through the shared swift-slot script specified by the active run.
+This proof never launches Todo.app or accesses Keychain.
+
 ## Native verification is on HOLD
 
 The user stopped the 2026-10-27 run after repeated Keychain prompts. Do not

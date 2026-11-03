@@ -1,7 +1,13 @@
-import { Task, type TaskTime } from "@todo/domain";
+import { Task, TaskPriority, type TaskTime } from "@todo/domain";
 import { Schema } from "effect";
 
 export const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+export function priorityGroups(tasks: readonly (typeof Task.Type)[]) {
+  return TaskPriority.literals.map((name) => ({
+    name,
+    tasks: tasks.filter((task) => task.priority === name),
+  }));
+}
 export function timeText(
   value: typeof TaskTime.Type | null,
   currentZone = zone,

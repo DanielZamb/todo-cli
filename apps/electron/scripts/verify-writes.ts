@@ -46,6 +46,10 @@ const server = spawn(join(scratch, "server"), [], {
   env,
   stdio: ["ignore", "pipe", "pipe"],
 });
+writeFileSync(
+  join(evidence, "server.json"),
+  JSON.stringify({ pid: server.pid, database: env.TODO_DB }),
+);
 server.stdout.on("data", (chunk) => {
   log += chunk;
 });

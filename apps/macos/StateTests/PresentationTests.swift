@@ -113,6 +113,13 @@ struct PresentationTests {
 }
 
 struct CompactFormattingTests {
+    @Test @MainActor func priorityGroupsRemainVisibleInOrderAfterFiltering() {
+        let model = TodoModel(configuration: .init(server: URL(string: "http://127.0.0.1:1")!, initialProfile: "work", vaultService: "never-used"))
+        model.selectedView = "all"
+        let view = TaskListView(model: model, compactMode: true)
+        #expect(view.taskGroups.map(\.name) == ["P1", "P2", "P3", "P4"])
+        #expect(view.taskGroups.map { $0.tasks.count } == [0, 0, 0, 0])
+    }
     @Test func taskCounts() {
         #expect([0, 1, 2].map { TaskCount.text($0) } == ["0 tasks", "1 task", "2 tasks"])
         #expect(TaskCount.text(1, capitalized: true) == "1 Task")

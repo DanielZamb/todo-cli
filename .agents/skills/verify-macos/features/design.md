@@ -23,7 +23,7 @@ The Conflict uses native radioGroup Pickers. Their radio outlines flatten in the
 offscreen cache. The supervised checklist must check unselected, selected and
 keyboard-operated Conflict choices in both appearances.
 
-Require `result.json`, `manifest.json`, `accessibility.json`, all 278 PNGs and exit 0
+Require `result.json`, `manifest.json`, `accessibility.json`, all 294 PNGs and exit 0
 in `commands.json`. The identifier check reads the W08 base a19f207 source and
 accepts formatter-inserted whitespace around the existing string expressions.
 Read the PNGs before claiming visual proof. PresentationTests checks literal row
@@ -81,3 +81,10 @@ production geometry; the state helper retains `u02-formatting-http.json` and
 checks the durable Version separately from the images.
 
 Version guardrails add outdated-server and disabled planning Status captures in both layouts and appearances.
+
+UI01 adds 16 priority captures across Compact and full windows, light and dark,
+ready, empty and dense states, plus Compact scroll positions. The focused
+TODO_SNAPSHOT_PRIORITY_ONLY=1 run keeps these and the two existing quick-add
+captures. Compact Task viewport geometry must contain whole rows. The ready
+and empty fixtures enable their one primary Add task action without restoring
+a Session or touching Keychain.

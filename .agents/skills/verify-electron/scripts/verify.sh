@@ -15,7 +15,7 @@ cd "$root"
 {
   if [ "${TODO_ELECTRON_VERIFY_HOST:-0}" = 1 ]; then
     sh scripts/disk-guard.sh
-    /usr/bin/lockf -k /tmp/todo-fixes-electron.lock pnpm --filter @todo/electron build
+    /usr/bin/lockf -k /tmp/todo-own-work-electron.lock pnpm --filter @todo/electron build
   else
     codesign --verify --deep --strict "$root/dist/signed.noindex/electron/Todo.app"
   fi
@@ -50,7 +50,9 @@ cd "$root"
   if [ "${TODO_VERIFY_SNAPSHOTS:-0}" = 1 ]; then
     pnpm --filter @todo/electron exec bun scripts/verify-snapshots.ts "$scratch" "$evidence"
   elif [ "${TODO_ELECTRON_VERIFY_HOST:-0}" = 1 ]; then
-    if [ "${TODO_VERIFY_VERSION_GUARDRAILS:-0}" = 1 ]; then
+    if [ "${TODO_VERIFY_PRIORITY_GROUPS:-0}" = 1 ]; then
+      pnpm --filter @todo/electron exec bun scripts/verify-priority-groups.ts "$scratch" "$evidence"
+    elif [ "${TODO_VERIFY_VERSION_GUARDRAILS:-0}" = 1 ]; then
       pnpm --filter @todo/electron exec bun scripts/verify-version-guardrails.ts "$scratch" "$evidence"
     elif [ "${TODO_ELECTRON_VERIFY_METADATA_ONLY:-0}" = 1 ]; then
       pnpm --filter @todo/electron exec bun scripts/verify-metadata-host.ts "$scratch" "$evidence"

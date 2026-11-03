@@ -1,5 +1,27 @@
 # Compact mode
 
+## Priority groups
+
+Run from the checkout root after the standing-order disk guard:
+
+```sh
+TODO_ELECTRON_VERIFY_HOST=1 TODO_VERIFY_PRIORITY_GROUPS=1 .agents/skills/verify-electron/scripts/verify.sh "$PWD/apps/electron/evidence/priority-new"
+```
+
+The helper takes the Electron build lock itself. Never wrap it in another lock.
+Use TODO_SERVER_BINARY, TODO_CLI_BINARY and TODO_SEED_BINARY to reuse the current
+source's compiled binaries under this worktree's .scratch/bin.
+The focused drive creates a fresh Profile on scratch HTTP, asserts literal
+P1/P2/P3/P4 membership and empty groups, reloads, then changes P1 to P2 through
+HTTP and checks the live update and another reload. Require exit 0 and
+priority-layout.json. Inspect priority-compact-{light,dark}.png and
+priority-compact-empty-{light,dark}.png before priority-full-{light,dark}.png.
+The Compact task is to scan priorities and select a Task. Quick add is the one
+primary action, in the header when populated and below the groups when empty.
+Dense captures cover the top, a 53 px scroll and the bottom. The measured drawing
+viewport must contain whole 56 px rows, with zero partially drawn rows.
+Existing Today/date planning sections remain unchanged.
+
 ## Sub-features
 
 - Collapse to a 393 × 426 content area and restore the expanded frame.

@@ -1050,6 +1050,49 @@ func compactFormattingSurvivesModelSaveAndReload() async throws {
 }
 
 @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_W06_SERVER"] != nil)) @MainActor
+func priorityGroupsSurviveModelSaveFiltersAndReload() async throws {
+    let server = try #require(ProcessInfo.processInfo.environment["TODO_W06_SERVER"].flatMap(URL.init(string:)))
+    let session = try await todoClient(server: server, credential: "").signIn_period_signIn(body: .json(.init(passphrase: "scratch verification passphrase"))).ok.body.json
+    let client = todoClient(server: server, credential: session.credential)
+    func model() -> TodoModel {
+        let value = TodoModel(configuration: .init(server: server, initialProfile: "work", vaultService: "never-used"), clientFactory: { _, _ in todoClient(server: server, credential: session.credential) })
+        value.signedIn = true
+        value.connection = .live
+        value.selectedView = "all"
+        return value
+    }
+    let value = model()
+    for (priority, title) in [("P4", "UI01 Later"), ("P1", "UI01 Urgent"), ("P3", "UI01 Normal")] {
+        let created = try TaskSnapshot.decode(await client.tasks_period_create(path: .init(profile: "work"), body: .json(.init(title: title, project_name: "UI01 Priority proof"))).ok.body.json)
+        value.beginEditing(created)
+        value.editor?.priority = priority
+        await value.save()
+        #expect(value.editor == nil)
+        #expect(value.taskLoadError == nil)
+    }
+    let project = try #require(value.projects.first { $0.name == "UI01 Priority proof" })
+    value.selectedProject = project.id
+    for compact in [true, false] {
+        let groups = TaskListView(model: value, compactMode: compact).taskGroups
+        #expect(groups.map(\.name) == ["P1", "P2", "P3", "P4"])
+        #expect(groups.map { $0.tasks.map(\.title) } == [["UI01 Urgent"], [], ["UI01 Normal"], ["UI01 Later"]])
+    }
+    let urgent = try #require(value.tasks.first { $0.title == "UI01 Urgent" })
+    value.beginEditing(urgent)
+    value.editor?.priority = "P2"
+    await value.save()
+    let reloaded = model()
+    await reloaded.refreshAfterWrite("Reload priority groups")
+    reloaded.selectedProject = project.id
+    #expect(reloaded.taskLoadError == nil)
+    #expect(TaskListView(model: reloaded).taskGroups.map { $0.tasks.map(\.title) } == [[], ["UI01 Urgent"], ["UI01 Normal"], ["UI01 Later"]])
+    #expect(reloaded.tasks.first { $0.id == urgent.id }?.row_version == 3)
+    reloaded.selectedProject = "no-matching-project"
+    #expect(TaskListView(model: reloaded).taskGroups.map { $0.tasks.count } == [0, 0, 0, 0])
+    try JSONSerialization.data(withJSONObject: ["priorities": ["P1", "P2", "P3", "P4"], "titles": [[], ["UI01 Urgent"], ["UI01 Normal"], ["UI01 Later"]], "version": 3, "emptyCounts": [0, 0, 0, 0]], options: [.sortedKeys]).write(to: URL(fileURLWithPath: try #require(ProcessInfo.processInfo.environment["TODO_W06_RECEIPT"])).deletingLastPathComponent().appendingPathComponent("ui01-priority-http.json"))
+}
+
+@Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_W06_SERVER"] != nil)) @MainActor
 func compactActionErrorRetainsLoadedTasksAfterRefresh() async throws {
     let server = try #require(ProcessInfo.processInfo.environment["TODO_W06_SERVER"].flatMap(URL.init(string:)))
     let session = try await todoClient(server: server, credential: "").signIn_period_signIn(body: .json(.init(passphrase: "scratch verification passphrase"))).ok.body.json

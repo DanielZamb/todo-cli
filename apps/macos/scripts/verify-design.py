@@ -23,7 +23,7 @@ def run(command, log, env=None):
 run(['sh', 'scripts/disk-guard.sh'], 'disk-guard.log')
 run(['python3', 'apps/macos/scripts/check-design-identifiers.py', str(evidence / 'accessibility.json')], 'accessibility.log')
 run(['swift', 'build', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--disable-automatic-resolution', '--build-tests', '--jobs', '2'], 'build.log')
-run(['swift', 'test', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--skip-build', '--filter', 'PresentationTests|WindowLayoutTests|TaskFilterTests'], 'presentation.log')
+run(['swift', 'test', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--skip-build', '--filter', 'PresentationTests|CompactFormattingTests|WindowLayoutTests|TaskFilterTests'], 'presentation.log')
 binary = subprocess.check_output(['swift', 'build', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--show-bin-path'], cwd=root, text=True).strip()
 run([
     'xcrun', 'swiftc', '-typecheck', '-parse-as-library', '-swift-version', '6',
@@ -38,7 +38,7 @@ assert (resources / 'Assets.car').is_file(), 'actool did not compile the product
 environment = dict(os.environ, TODO_SNAPSHOT_DIR=str(evidence))
 run(['swift', 'test', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--skip-build', '--filter', 'Snapshots'], 'render.log', environment)
 manifest = json.loads((evidence / 'manifest.json').read_text())
-assert len(manifest['files']) == (2 if os.environ.get('TODO_SNAPSHOT_QUICK_ONLY') == '1' else 278)
+assert len(manifest['files']) == (2 if os.environ.get('TODO_SNAPSHOT_QUICK_ONLY') == '1' else 18 if os.environ.get('TODO_SNAPSHOT_PRIORITY_ONLY') == '1' else 294)
 assert all((evidence / name).is_file() for name in manifest['files'])
 (evidence / 'result.json').write_text(json.dumps({'status': 'PASS', 'pngs': len(manifest['files']), 'appLaunched': False, 'signed': False, 'keychainAccess': False, 'nativeGlassVerified': False}, indent=2) + '\n')
 print(f"PASS: {len(manifest['files'])} offscreen PNGs in {evidence}")
