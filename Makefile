@@ -2,12 +2,15 @@ INSTALL_DIR ?= $(HOME)/.local/bin
 -include signing.local.mk
 export TODO_SIGNING_TEAM TODO_SIGNING_IDENTITY
 
-.PHONY: all build install install-local check test clean check-signing-config sign-desktop
+.PHONY: all build generate-api install install-local check test clean check-signing-config sign-desktop
 
 all: build
 
 build:
 	pnpm --filter @todo/cli --filter @todo/server build
+
+generate-api:
+	./apps/macos/scripts/generate-api.sh
 
 install install-local:
 	./scripts/install.sh --install-dir "$(INSTALL_DIR)"
