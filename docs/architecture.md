@@ -126,6 +126,12 @@ wakes snoozed Tasks, and deletes expired credentials. Each pass rereads SQLite,
 so a restart does not lose work. ReminderFired operations do not advance Task
 Version. Date-only planning values do not fire reminders.
 
+Creation and import accept Attachment reference arrays. Creation validates every
+reference before committing the Task. Import can adopt an existing Task by id
+and expected Version. Batch Attachment commands commit one Task group at a time,
+with attached, unchanged and rejected results. URI storage and these atomicity
+rules are defined by [ADR-0013](adr/0013-attachment-uri-and-atomic-inputs.md).
+
 ## Diagrams
 
 All four drawings are frames in one Excalidraw scene,

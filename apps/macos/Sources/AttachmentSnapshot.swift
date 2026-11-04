@@ -30,7 +30,7 @@ struct AttachmentSnapshot: Codable, Identifiable, Equatable, Sendable {
     return false
   }
   var exists: Bool? { path.map { FileManager.default.fileExists(atPath: $0) } }
-  var title: String { name ?? (path == nil ? url.host() : url.lastPathComponent) ?? "Attachment" }
+  var title: String { name ?? (path == nil ? (url.host() ?? url.absoluteString) : url.lastPathComponent) ?? "Attachment" }
   var displayPath: String { path ?? url.absoluteString }
   var secondaryText: String { isImage && byte_size != nil ? "Copied image · \(ByteCountFormatter.string(fromByteCount: Int64(byte_size ?? 0), countStyle: .file))" : displayPath }
   private enum CodingKeys: String, CodingKey { case id, kind, path, url, name, byte_size, label, added_at }
@@ -54,9 +54,9 @@ struct AttachmentSnapshot: Codable, Identifiable, Equatable, Sendable {
     case "image": location = .image(try values.decode(String.self, forKey: .path))
     case "link":
       let url = try values.decode(URL.self, forKey: .url)
-      guard ["https", "http"].contains(url.scheme?.lowercased() ?? "") else {
+      guard url.scheme != nil else {
         throw DecodingError.dataCorruptedError(
-          forKey: .url, in: values, debugDescription: "Expected HTTP or HTTPS")
+          forKey: .url, in: values, debugDescription: "Expected absolute URI")
       }
       location = .link(url)
     default:

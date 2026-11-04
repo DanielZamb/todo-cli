@@ -355,6 +355,16 @@ export const serverLayer = (options: {
                 (yield* new NotFound({ message: "Managed image not found" }))
               );
             }),
+          attachMany: ({ params, payload }) =>
+            Effect.gen(function* () {
+              const credential = yield* BearerCredential;
+              return yield* translate(
+                attachments.attachMany(
+                  { credential, profile: params.profile },
+                  payload,
+                ),
+              );
+            }),
           importTasks: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;

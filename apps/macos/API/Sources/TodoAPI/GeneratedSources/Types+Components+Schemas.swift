@@ -34579,6 +34579,255 @@ extension Components {
                 try container.encode(self.url, forKey: .url)
             }
         }
+        /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69`.
+        public struct SwiftTagged_file_9effb3b18dd2ec69: Codable, Hashable, Sendable {
+            private var _explicitNullKeys: Set<String> = []
+
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69/kind`.
+            @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case file = "file"
+            }
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69/kind`.
+            public var kind: Components.Schemas.SwiftTagged_file_9effb3b18dd2ec69.kindPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69/path`.
+            public var path: Swift.String
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69/label`.
+            public var label: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69/name`.
+            public var name: Swift.String?
+            /// Creates a new `SwiftTagged_file_9effb3b18dd2ec69`.
+            ///
+            /// - Parameters:
+            ///   - kind:
+            ///   - path:
+            ///   - label:
+            ///   - name:
+            public init(
+                kind: Components.Schemas.SwiftTagged_file_9effb3b18dd2ec69.kindPayload,
+                path: Swift.String,
+                label: Swift.String? = nil,
+                name: Swift.String? = nil
+            ) {
+                self.kind = kind
+                self.path = path
+                self.label = label
+                self.name = name
+            }
+            public enum CodingKeys: String, CodingKey {
+                case kind
+                case path
+                case label
+                case name
+            }
+            public init(from decoder: any Swift.Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                self.kind = try container.decode(
+                    Components.Schemas.SwiftTagged_file_9effb3b18dd2ec69.kindPayload.self,
+                    forKey: .kind
+                )
+                self.path = try container.decode(
+                    Swift.String.self,
+                    forKey: .path
+                )
+                self.label = try container.decodeIfPresent(
+                    Swift.String.self,
+                    forKey: .label
+                )
+                self.name = try container.decodeIfPresent(
+                    Swift.String.self,
+                    forKey: .name
+                )
+                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                    "kind",
+                    "path",
+                    "label",
+                    "name"
+                ])
+            }
+
+            public func encode(to encoder: any Swift.Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(self.kind, forKey: .kind)
+                try container.encode(self.path, forKey: .path)
+                if self.label == nil && _explicitNullKeys.contains(CodingKeys.label.stringValue) {
+                    try container.encodeNil(forKey: .label)
+                } else {
+                    try container.encodeIfPresent(self.label, forKey: .label)
+                }
+                if self.name == nil && _explicitNullKeys.contains(CodingKeys.name.stringValue) {
+                    try container.encodeNil(forKey: .name)
+                } else {
+                    try container.encodeIfPresent(self.name, forKey: .name)
+                }
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_409f55577e999188`.
+        public struct SwiftTagged_image_409f55577e999188: Codable, Hashable, Sendable {
+            private var _explicitNullKeys: Set<String> = []
+
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_409f55577e999188/kind`.
+            @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case image = "image"
+            }
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_409f55577e999188/kind`.
+            public var kind: Components.Schemas.SwiftTagged_image_409f55577e999188.kindPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_409f55577e999188/path`.
+            public var path: Swift.String
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_409f55577e999188/label`.
+            public var label: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_409f55577e999188/name`.
+            public var name: Swift.String?
+            /// Creates a new `SwiftTagged_image_409f55577e999188`.
+            ///
+            /// - Parameters:
+            ///   - kind:
+            ///   - path:
+            ///   - label:
+            ///   - name:
+            public init(
+                kind: Components.Schemas.SwiftTagged_image_409f55577e999188.kindPayload,
+                path: Swift.String,
+                label: Swift.String? = nil,
+                name: Swift.String? = nil
+            ) {
+                self.kind = kind
+                self.path = path
+                self.label = label
+                self.name = name
+            }
+            public enum CodingKeys: String, CodingKey {
+                case kind
+                case path
+                case label
+                case name
+            }
+            public init(from decoder: any Swift.Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                self.kind = try container.decode(
+                    Components.Schemas.SwiftTagged_image_409f55577e999188.kindPayload.self,
+                    forKey: .kind
+                )
+                self.path = try container.decode(
+                    Swift.String.self,
+                    forKey: .path
+                )
+                self.label = try container.decodeIfPresent(
+                    Swift.String.self,
+                    forKey: .label
+                )
+                self.name = try container.decodeIfPresent(
+                    Swift.String.self,
+                    forKey: .name
+                )
+                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                    "kind",
+                    "path",
+                    "label",
+                    "name"
+                ])
+            }
+
+            public func encode(to encoder: any Swift.Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(self.kind, forKey: .kind)
+                try container.encode(self.path, forKey: .path)
+                if self.label == nil && _explicitNullKeys.contains(CodingKeys.label.stringValue) {
+                    try container.encodeNil(forKey: .label)
+                } else {
+                    try container.encodeIfPresent(self.label, forKey: .label)
+                }
+                if self.name == nil && _explicitNullKeys.contains(CodingKeys.name.stringValue) {
+                    try container.encodeNil(forKey: .name)
+                } else {
+                    try container.encodeIfPresent(self.name, forKey: .name)
+                }
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_a1918c5d4f327f78`.
+        public struct SwiftTagged_link_a1918c5d4f327f78: Codable, Hashable, Sendable {
+            private var _explicitNullKeys: Set<String> = []
+
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_a1918c5d4f327f78/kind`.
+            @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case link = "link"
+            }
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_a1918c5d4f327f78/kind`.
+            public var kind: Components.Schemas.SwiftTagged_link_a1918c5d4f327f78.kindPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_a1918c5d4f327f78/url`.
+            public var url: Swift.String
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_a1918c5d4f327f78/label`.
+            public var label: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_a1918c5d4f327f78/name`.
+            public var name: Swift.String?
+            /// Creates a new `SwiftTagged_link_a1918c5d4f327f78`.
+            ///
+            /// - Parameters:
+            ///   - kind:
+            ///   - url:
+            ///   - label:
+            ///   - name:
+            public init(
+                kind: Components.Schemas.SwiftTagged_link_a1918c5d4f327f78.kindPayload,
+                url: Swift.String,
+                label: Swift.String? = nil,
+                name: Swift.String? = nil
+            ) {
+                self.kind = kind
+                self.url = url
+                self.label = label
+                self.name = name
+            }
+            public enum CodingKeys: String, CodingKey {
+                case kind
+                case url
+                case label
+                case name
+            }
+            public init(from decoder: any Swift.Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                self.kind = try container.decode(
+                    Components.Schemas.SwiftTagged_link_a1918c5d4f327f78.kindPayload.self,
+                    forKey: .kind
+                )
+                self.url = try container.decode(
+                    Swift.String.self,
+                    forKey: .url
+                )
+                self.label = try container.decodeIfPresent(
+                    Swift.String.self,
+                    forKey: .label
+                )
+                self.name = try container.decodeIfPresent(
+                    Swift.String.self,
+                    forKey: .name
+                )
+                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                    "kind",
+                    "url",
+                    "label",
+                    "name"
+                ])
+            }
+
+            public func encode(to encoder: any Swift.Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(self.kind, forKey: .kind)
+                try container.encode(self.url, forKey: .url)
+                if self.label == nil && _explicitNullKeys.contains(CodingKeys.label.stringValue) {
+                    try container.encodeNil(forKey: .label)
+                } else {
+                    try container.encodeIfPresent(self.label, forKey: .label)
+                }
+                if self.name == nil && _explicitNullKeys.contains(CodingKeys.name.stringValue) {
+                    try container.encodeNil(forKey: .name)
+                } else {
+                    try container.encodeIfPresent(self.name, forKey: .name)
+                }
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/SwiftTagged_AttachmentAdded_5547205e905b6be8`.
         public struct SwiftTagged_AttachmentAdded_5547205e905b6be8: Codable, Hashable, Sendable {
             private var _explicitNullKeys: Set<String> = []

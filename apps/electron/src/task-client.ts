@@ -61,6 +61,51 @@ export const taskRequest = (
             payload: request.payload,
           }),
         };
+      case "attachmentTargets":
+        return {
+          _tag: "attachmentTargets",
+          tasks: yield* http.tasks.list({
+            params: { profile: request.profile },
+            query: {},
+          }),
+        };
+      case "attachmentBatch":
+        return {
+          _tag: "attachmentBatch",
+          report: yield* http.tasks.attachMany({
+            params: { profile: request.profile },
+            payload: request.payload,
+          }),
+        };
+      case "attachMany": {
+        const report = yield* http.tasks.attachMany({
+          params: { profile: request.profile },
+          payload: { items: [request.payload] },
+        });
+        const row = report.items[0];
+        if (row?.outcome === "rejected") {
+          if (row.error?.code === "occ_conflict")
+            return {
+              _tag: "conflict",
+              latest: yield* http.tasks.show({
+                params: {
+                  profile: request.profile,
+                  task: request.payload.task_id,
+                },
+              }),
+            };
+          return {
+            _tag: "error",
+            message: row.error?.message ?? "Attachments were rejected.",
+          };
+        }
+        return {
+          _tag: "task",
+          task: yield* http.tasks.show({
+            params: { profile: request.profile, task: request.payload.task_id },
+          }),
+        };
+      }
       case "attach":
         return {
           _tag: "task",

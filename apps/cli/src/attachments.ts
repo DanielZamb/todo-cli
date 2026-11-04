@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
-import { extname, resolve } from "node:path";
 import type { AccessRequest } from "@todo/domain";
 import { AttachmentId, TaskId, Version } from "@todo/domain";
+import { attachmentInput } from "@todo/domain/attachment-input";
 import { AttachmentCommands } from "@todo/domain/attachments";
 import { CommandError, type TaskCommandResult } from "@todo/domain/commands";
 import type { TaskView } from "@todo/domain/presentation";
@@ -95,41 +95,10 @@ export const changeAttachment = (
         .detach(target, { from_version, attachment_id })
         .pipe(Effect.flatMap(resultTask));
     }
-    let location: import("@todo/domain").AttachTask["location"];
-    if (/^[a-z][a-z\d+.-]*:/i.test(input.value)) {
-      let url: URL;
-      try {
-        url = new URL(input.value);
-      } catch {
-        return yield* Effect.fail(
-          new CommandError(
-            2,
-            "invalid_args",
-            "Use an absolute file path or an HTTP/HTTPS URL",
-          ),
-        );
-      }
-      if (
-        !["http:", "https:"].includes(url.protocol) ||
-        url.username ||
-        url.password
-      )
-        return yield* Effect.fail(
-          new CommandError(
-            2,
-            "invalid_args",
-            "Only HTTP/HTTPS links without credentials are supported",
-          ),
-        );
-      location = { kind: "link", url: url.href };
-    } else {
-      const path = resolve(input.value);
-      location = [".png", ".jpg", ".jpeg", ".gif", ".webp"].includes(
-        extname(path).toLowerCase(),
-      )
-        ? { kind: "image", path }
-        : { kind: "file", path };
-    }
+    const location = yield* Effect.try({
+      try: () => attachmentInput(input.value),
+      catch: (error) => new CommandError(2, "invalid_args", String(error)),
+    });
     return yield* commands
       .attach(target, {
         from_version,

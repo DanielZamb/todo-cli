@@ -8,6 +8,7 @@
     "./store": "./src/store/store.ts",
     "./import": "./src/import-tasks.ts",
     "./commands": "./src/commands.ts",
+    "./attachment-input": "./src/attachment-input.ts",
     "./attachments": "./src/attachment-commands.ts",
     "./attachment-store": "./src/attachment-store.ts",
     "./presentation": "./src/presentation.ts"

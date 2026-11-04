@@ -14,6 +14,7 @@ import { ActorId, OccurrenceId, ProfileId, TaskId, Version } from "./ids.ts";
 import { CalendarDate, Instant, TaskTime } from "./time.ts";
 
 export const StartSeries = Schema.Struct({
+  attachments: Task.fields.attachments,
   external_id: Task.fields.external_id,
   actor: ActorId,
   profile: ProfileId,
@@ -198,6 +199,7 @@ export function rebaseTaskDetails(
 }
 
 export function resolveOccurrence(input: {
+  readonly attachments?: Task["attachments"];
   readonly external_id?: Task["external_id"];
   readonly series: Series;
   readonly time: TaskTime;
@@ -208,6 +210,9 @@ export function resolveOccurrence(input: {
   const { series, time } = input;
   return Schema.decodeUnknownSync(Occurrence)({
     ...series.task,
+    ...(input.attachments === undefined
+      ? {}
+      : { attachments: input.attachments }),
     ...(input.external_id === undefined
       ? {}
       : { external_id: input.external_id }),
