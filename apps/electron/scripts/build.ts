@@ -24,8 +24,11 @@ if (
     "Signing requires a macOS user build without verification host mode",
   );
 const signingIdentity = (process.env.TODO_SIGNING_IDENTITY ?? "").trim();
+const signingTeam = (process.env.TODO_SIGNING_TEAM ?? "").trim();
 if (signed && !signingIdentity)
   throw new Error("Set TODO_SIGNING_IDENTITY before building a signed app");
+if (signed && !signingTeam)
+  throw new Error("Set TODO_SIGNING_TEAM before building a signed app");
 
 execFileSync(resolve(import.meta.dirname, "../../../scripts/disk-guard.sh"), {
   stdio: "inherit",
