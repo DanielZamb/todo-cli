@@ -419,9 +419,7 @@ export function AttachmentsSection({
         url: link,
       });
       if (!validAttachmentLocation(location))
-        throw new Error(
-          "Use an absolute URI. HTTP(S) links need a host and no credentials.",
-        );
+        throw new Error("Use an absolute URI. HTTP(S) links need a host.");
       if (
         await perform((task) => ({
           _tag: "attach",

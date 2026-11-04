@@ -247,7 +247,7 @@ func liveAttachmentLabelsKeepIdentityAndRevert() async throws {
 }
 
 @Test func attachmentURIDecodingKeepsOpaqueLinksWithoutOpeningThem() throws {
-  for uri in ["t3-thread://v2/host/thread", "mailto:owner@example.com", "urn:todo:task", "javascript:alert(1)"] {
+  for uri in ["t3-thread://v2/host/thread", "mailto:owner@example.com", "urn:todo:task", "javascript:alert(1)", "https://owner:secret@example.com/"] {
     let data = try JSONSerialization.data(withJSONObject: ["id": "uri", "kind": "link", "url": uri, "added_at": "2026-11-03T00:00:00Z"])
     let value = try JSONDecoder().decode(AttachmentSnapshot.self, from: data)
     #expect(value.displayPath == uri)
@@ -347,4 +347,10 @@ func liveAttachmentBatchSelectPreviewApplyConflictAndReload() async throws {
   let fileReload = try TaskSnapshot.decode(try await client.tasks_period_show(path: .init(profile: "work", task: second.id)).ok.body.json)
   #expect(fileReload.row_version == 3)
   #expect(fileReload.attachments?.last?.path == file.path)
+  let credentialURI = try await client.tasks_period_create(path: .init(profile: "work"), body: .json(.init(title: "CLI01 URI user information"))).ok.body.json
+  model.beginEditing(try TaskSnapshot.decode(credentialURI))
+  await model.attachLink("https://owner:secret@example.com/")
+  #expect(model.editorError == nil)
+  let uriReload = try TaskSnapshot.decode(try await client.tasks_period_show(path: .init(profile: "work", task: credentialURI.id)).ok.body.json)
+  #expect(uriReload.attachments?.last?.displayPath == "https://owner:secret@example.com/")
 }

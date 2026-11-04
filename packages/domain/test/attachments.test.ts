@@ -463,13 +463,14 @@ import { unlinkSync } from "node:fs";
 import { Task } from "@todo/domain";
 import type { OperationStore } from "@todo/domain/store";
 
-it("Attachment links accept URI schemes and reject malformed HTTP URLs and credentials", () => {
+it("Attachment links accept URI schemes and reject malformed HTTP URLs", () => {
   for (const url of [
     "t3-thread://v2/host/thread",
     "mailto:owner@example.com",
     "urn:todo:task",
     "file:///tmp/draft.md",
     "javascript:alert(1)",
+    "https://owner:secret@example.com/",
   ])
     expect(validAttachmentLocation({ kind: "link", url })).toBe(true);
   expect(
@@ -478,7 +479,7 @@ it("Attachment links accept URI schemes and reject malformed HTTP URLs and crede
       url: "https://example.com/issue/42",
     }),
   ).toBe(true);
-  for (const url of ["https://[invalid", "https://owner:secret@example.com/"])
+  for (const url of ["https://[invalid"])
     expect(validAttachmentLocation({ kind: "link", url })).toBe(false);
 });
 

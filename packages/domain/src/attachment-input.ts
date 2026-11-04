@@ -12,9 +12,7 @@ export function validateAttachmentInputs(inputs: readonly AttachmentInput[]) {
   for (const input of inputs) {
     Schema.decodeUnknownSync(AttachmentInput)(input);
     if (!validAttachmentLocation(input))
-      throw new Error(
-        "Use an absolute URI; HTTP(S) links need a host and no credentials.",
-      );
+      throw new Error("Use an absolute URI; HTTP(S) links need a host.");
     if (input.kind !== "link" && !statSync(input.path).isFile())
       throw new Error(`Attachment path is not a file: ${input.path}`);
   }
@@ -55,9 +53,7 @@ export function attachmentInput(
     ...(label === undefined ? {} : { label }),
   });
   if (!validAttachmentLocation(input))
-    throw new Error(
-      "Use an absolute URI; HTTP(S) links need a host and no credentials.",
-    );
+    throw new Error("Use an absolute URI; HTTP(S) links need a host.");
   return input;
 }
 

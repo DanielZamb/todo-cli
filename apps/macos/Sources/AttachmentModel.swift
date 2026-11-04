@@ -70,9 +70,9 @@ extension TodoModel {
     guard let url = URL(string: text), url.scheme != nil,
       !text.contains(where: { $0.isWhitespace || $0.asciiValue.map { $0 < 32 || $0 == 127 } == true }),
       !["https", "http"].contains(url.scheme?.lowercased() ?? "") ||
-        (url.host != nil && url.user == nil && url.password == nil)
+        url.host != nil
     else {
-      editorError = "Use an absolute URI. HTTP(S) links need a host and no credentials."
+      editorError = "Use an absolute URI. HTTP(S) links need a host."
       return
     }
     await attachLocation(["kind": "link", "url": text], label: label)

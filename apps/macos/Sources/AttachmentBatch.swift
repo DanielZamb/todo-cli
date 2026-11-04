@@ -88,8 +88,12 @@ struct AttachmentBatchView: View {
   var body: some View {
     if let draft = model.attachmentBatch {
       VStack(alignment: .leading, spacing: 8) {
-        Text("Attach to Tasks").font(.headline)
-        Text("Choose Tasks. Existing Attachments stay.").font(.caption).foregroundStyle(.secondary)
+        HStack {
+          Text("Attach to Tasks").font(.headline)
+          Spacer()
+          Button { model.attachmentBatch = nil } label: { Image(systemName: "xmark").font(.caption).frame(width: 28, height: 28) }
+            .buttonStyle(.borderless).accessibilityLabel("Close").disabled(model.busy)
+        }
         Text(draft.reference.displayPath).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle).textSelection(.enabled)
         HStack {
           Text("Label").font(.caption)
@@ -115,23 +119,29 @@ struct AttachmentBatchView: View {
                   }
                 }
               }.toggleStyle(.checkbox).frame(minHeight: 56).disabled(model.busy)
-              .accessibilityLabel("Select \(task.title)")
+              .accessibilityLabel("Select \(task.title)").batchBounds("batch-row-\(task.id)")
             }
           }.frame(maxWidth: .infinity, alignment: .leading)
-        }.frame(minHeight: 56, maxHeight: 224)
+        }.frame(height: 224).batchBounds("batch-viewport")
         Divider()
         if let error = draft.error { Text(error).font(.caption).foregroundStyle(TodoColors.color("destructive")) }
         HStack(spacing: 8) {
-          Button("Reload Tasks") { Task { await model.reloadAttachmentTargets() } }.disabled(model.busy || draft.loading)
+          Button("Reload") { Task { await model.reloadAttachmentTargets() } }.disabled(model.busy || draft.loading).accessibilityLabel("Reload Tasks")
           Spacer(minLength: 0)
-          Button("Close") { model.attachmentBatch = nil }.disabled(model.busy)
           Button("Preview") { Task { await model.applyAttachmentBatch(dryRun: true) } }.disabled(model.busy || draft.loading || draft.selected.isEmpty || !model.canWrite)
-        }.controlSize(.regular)
-        Button("Attach to \(draft.selected.count) \(draft.selected.count == 1 ? "Task" : "Tasks")") { Task { await model.applyAttachmentBatch(dryRun: false) } }
-          .buttonStyle(.borderedProminent).frame(maxWidth: .infinity, alignment: .trailing).controlSize(.large)
-          .disabled(model.busy || draft.loading || draft.selected.isEmpty || !model.canWrite)
+          Button("Attach to \(draft.selected.count) \(draft.selected.count == 1 ? "Task" : "Tasks")") { Task { await model.applyAttachmentBatch(dryRun: false) } }
+            .buttonStyle(.borderedProminent).disabled(model.busy || draft.loading || draft.selected.isEmpty || !model.canWrite)
+        }.controlSize(.large).batchBounds("batch-footer")
       }.padding(12).frame(minWidth: 340, idealWidth: 360, maxWidth: 480, minHeight: 340, idealHeight: 400, maxHeight: 426)
       .accessibilityIdentifier("attachment-batch")
     }
+  }
+}
+
+private extension View {
+  func batchBounds(_ id: String) -> some View {
+    background(GeometryReader { geometry in
+      Color.clear.preference(key: AttachmentLayoutKey.self, value: [id: geometry.frame(in: .global)])
+    })
   }
 }

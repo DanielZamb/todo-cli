@@ -74,10 +74,7 @@ export function validAttachmentLocation(location: AttachTask["location"]) {
     return false;
   try {
     const url = new URL(location.url);
-    return (
-      !["http:", "https:"].includes(url.protocol) ||
-      (url.hostname !== "" && url.username === "" && url.password === "")
-    );
+    return !["http:", "https:"].includes(url.protocol) || url.hostname !== "";
   } catch {
     return false;
   }

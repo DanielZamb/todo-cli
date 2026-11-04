@@ -41,6 +41,7 @@ try {
   assert.equal(json(["list"]).tasks.some((t: { title: string }) => t.title === "Must not exist"), false);
   json(["add", "Bad URI must not exist", "--link", "https://[invalid"], 2);
   assert.equal(json(["list"]).tasks.some((t: { title: string }) => t.title === "Bad URI must not exist"), false);
+  assert.equal(json(["add", "URI user information", "--link", "https://owner:secret@example.com/"]).task.attachments[0].url, "https://owner:secret@example.com/");
   const importFile = join(scratch, "import.json");
   const item = { external_id: "cli01:adopt", task_id: target.id, from_version: 1, title: "Adopted" };
   writeFileSync(importFile, JSON.stringify([item]));

@@ -5,11 +5,11 @@ ADR-0011. Its file ownership, copied image, opening and Purge rules remain.
 
 A link Attachment stores an absolute URI with a scheme, including opaque URIs
 such as `mailto:` and application URIs such as `t3-thread://`. HTTP and HTTPS
-URIs still need a host and must not contain credentials. Whitespace and control
+URIs still need a host. User information is preserved as part of the URI. Whitespace and control
 characters are invalid in a URI. A local path remains a file or image reference.
 An explicit file input always means a path, even when its name contains a colon.
 Neither validation nor display fetches a link. The desktop clients continue to
-open only HTTP and HTTPS links. Storing another scheme does not authorize
+open only HTTP and HTTPS links without credentials. Storing another scheme does not authorize
 executing it through the operating system.
 
 Creation accepts an array of references with kind, location and optional label

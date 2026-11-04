@@ -131,6 +131,17 @@ struct Snapshots {
                         }
                     }
                 }
+                if ["attachment-batch-ready-compact", "attachment-batch-preview-compact", "attachment-batch-conflict-compact"].contains(name) {
+                    let frames = measurements.frames
+                    let viewport = try #require(frames["batch-viewport"])
+                    let footer = try #require(frames["batch-footer"])
+                    let rows = frames.filter { $0.key.hasPrefix("batch-row-") }.map(\.value)
+                    #expect(rows.count == 4)
+                    #expect(viewport.height == 224)
+                    #expect(viewport.maxY <= footer.minY)
+                    for row in rows { #expect(row.minY >= viewport.minY - 0.5 && row.maxY <= viewport.maxY + 0.5) }
+                    try JSONSerialization.data(withJSONObject: frames.mapValues { [Double($0.minX), Double($0.minY), Double($0.width), Double($0.height)] }, options: [.sortedKeys]).write(to: directory.appendingPathComponent("\(name)-bounds-\(mode).json"))
+                }
                 if name == "attachments-compact" {
                     let heading = try #require(measurements.frames["heading"])
                     let rows = measurements.frames.filter { $0.key.hasPrefix("row-") }.map(\.value).sorted { $0.minY < $1.minY }
