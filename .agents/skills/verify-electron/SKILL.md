@@ -8,6 +8,13 @@ description: Drive the compiled Todo Electron app with Playwright Electron again
 Created with `create-verification-skill`.
 Read [the feature map](features/README.md) before selecting coverage.
 
+## Priority groups
+
+All tasks, including Project and Tag selections, keeps P1, P2, P3 and P4 in order.
+Empty groups keep their heading and 0 tasks count. Planning views retain their
+domain sections. Run the [priority recipe](features/compact.md#priority-groups)
+against the unsigned scratch host during native HOLD.
+
 ## Launch
 
 Native UI verification is on HOLD for the 2026-10-27 run after repeated

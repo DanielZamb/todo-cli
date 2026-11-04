@@ -112,6 +112,10 @@ nav {
   font-size: 12px;
   margin: 24px 0 8px;
 }
+.list-heading h2 {
+  font: inherit;
+  margin: 0;
+}
 .task-filters {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
@@ -775,6 +779,12 @@ nav {
   padding: 12px;
   overflow-y: auto;
 }
+.compact .whole-task-groups {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
 .compact .sidebar,
 .compact.editing .task-pane {
   display: none;
@@ -807,6 +817,14 @@ nav {
 }
 .compact .list-heading {
   margin-top: 14px;
+}
+.compact .priority-group .list-heading {
+  margin: 8px 0 4px;
+  line-height: 20px;
+}
+.compact .empty-priorities {
+  padding: 12px;
+  min-height: 56px;
 }
 .compact .task-row {
   min-height: 56px;
@@ -1261,7 +1279,8 @@ nav {
 .compact-row-metadata > span:not(.tag-measure) {
   flex-shrink: 0;
 }
-.compact .task-pane > section {
+.compact .task-pane > section,
+.compact .task-group-content > section {
   flex-shrink: 0;
 }
 .appearance-settings button,
@@ -1270,6 +1289,9 @@ nav {
 }
 .compact .task-pane > [data-slot="empty"] {
   flex: 1;
+}
+.compact .task-pane > [data-slot="empty"].empty-priorities {
+  flex: 0 0 auto;
 }
 .compact-row-metadata .overdue {
   color: var(--destructive);

@@ -146,6 +146,47 @@ extension View {
     }
 }
 
+private struct TaskListClip: Shape {
+    let top: CGFloat
+    let bottom: CGFloat
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.addRect(CGRect(x: rect.minX, y: rect.minY + top, width: rect.width, height: max(0, rect.height - top - bottom)))
+        path.addRect(CGRect(x: rect.maxX - 16, y: rect.minY, width: 16, height: rect.height))
+        return path
+    }
+}
+
+private struct WholeTaskRows: ViewModifier {
+    let enabled: Bool
+    @State private var topInset: CGFloat = 0
+    @State private var bottomInset: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        content.compactBounds("task-viewport")
+            .onPreferenceChange(CompactLayoutKey.self) { frames in
+                guard enabled, let viewport = frames["task-viewport"] else { return }
+                var top = viewport.minY
+                var bottom = viewport.maxY
+                for (key, row) in frames where key.hasPrefix("row-") {
+                    if row.minY < viewport.minY && row.maxY > viewport.minY { top = max(top, row.maxY) }
+                    if row.minY < viewport.maxY && row.maxY > viewport.maxY { bottom = min(bottom, row.minY) }
+                }
+                MainActor.assumeIsolated {
+                    topInset = top - viewport.minY
+                    bottomInset = viewport.maxY - max(top, bottom)
+                }
+            }
+            .mask(TaskListClip(top: enabled ? topInset : 0, bottom: enabled ? bottomInset : 0))
+            .contentShape(TaskListClip(top: enabled ? topInset : 0, bottom: enabled ? bottomInset : 0))
+            .overlay {
+                Color.clear.compactBounds("whole-task-viewport")
+                    .padding(.top, enabled ? topInset : 0).padding(.bottom, enabled ? bottomInset : 0)
+                    .allowsHitTesting(false)
+            }
+    }
+}
+
 struct TaskListView: View {
     @Bindable var model: TodoModel
     var compactMode = false
@@ -183,6 +224,19 @@ struct TaskListView: View {
                 && (model.selectedProject == nil || task.project_id == model.selectedProject)
                 && (model.selectedTag == nil || task.tags.contains(model.selectedTag ?? ""))
                 && (model.taskFilters.isEmpty || (model.matchingTaskIDs?.contains(task.id) ?? true))
+        }
+    }
+    var taskGroups: [PlanningResult.Group] {
+        let tasks = visibleTasks
+        if model.selectedView == "all" {
+            return ["P1", "P2", "P3", "P4"].map { priority in
+                .init(name: priority, tasks: tasks.filter { $0.priority == priority })
+            }
+        }
+        let visibleIDs = Set(tasks.map(\.id))
+        return (model.planning?.groups ?? []).compactMap { group in
+            let filtered = group.tasks.filter { visibleIDs.contains($0.id) }
+            return filtered.isEmpty ? nil : .init(name: group.name, tasks: filtered)
         }
     }
     private var title: String {
@@ -326,6 +380,7 @@ struct TaskListView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .compactBounds("task-screen")
         .onExitCommand {
             if !model.busy {
                 if model.quickAdd { model.quickAdd = false } else { closeInspector() }
@@ -466,7 +521,7 @@ struct TaskListView: View {
             }
             if model.loading {
                 ProgressView("Loading tasks…").frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if visibleTasks.isEmpty {
+            } else if visibleTasks.isEmpty && model.selectedView != "all" {
                 if hasFilters {
                     if compactMode {
                         compactState("No matching tasks.", action: "Clear filters", perform: clearFilters)
@@ -492,30 +547,33 @@ struct TaskListView: View {
                 } }
             } else {
                 List(selection: $selection) {
-                    let visibleIDs = Set(visibleTasks.map(\.id))
-                    if let planning = model.planning {
-                        let groups = planning.groups.filter { group in group.tasks.contains { visibleIDs.contains($0.id) } }
-                        ForEach(groups) { group in
-                            let tasks = group.tasks.filter { visibleIDs.contains($0.id) }
-                            if !tasks.isEmpty {
-                                if compactMode {
-                                    if groups.count > 1 {
-                                        Text(group.name).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                                            .accessibilityAddTraits(.isHeader)
-                                            .frame(maxWidth: .infinity, alignment: .leading).compactBounds("section-label-\(group.id)")
-                                            .padding(.top, 12).padding(.bottom, 8)
-                                            .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
-                                            .listRowSeparator(.hidden).selectionDisabled()
-                                    }
-                                    ForEach(tasks) { row($0, overdue: group.name == "Overdue") }
-                                } else { Section(group.name) { ForEach(tasks) { row($0, overdue: group.name == "Overdue") } } }
+                    ForEach(taskGroups) { group in
+                        if compactMode || model.selectedView == "all" {
+                            if model.selectedView == "all" || taskGroups.count > 1 {
+                                HStack {
+                                    Text(group.name)
+                                    Spacer()
+                                    if model.selectedView == "all" { Text(TaskCount.text(group.tasks.count)).fontWeight(.regular) }
+                                }.font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                                    .accessibilityAddTraits(.isHeader)
+                                    .frame(maxWidth: .infinity, alignment: .leading).compactBounds("section-label-\(group.id)")
+                                    .padding(.top, 12).padding(.bottom, 8)
+                                    .listRowInsets(compactMode ? EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4) : nil)
+                                    .listRowSeparator(.hidden).selectionDisabled()
+                            }
+                            if group.tasks.isEmpty && !compactMode {
+                                Text("No tasks").foregroundStyle(.secondary).selectionDisabled()
+                            }
+                            ForEach(group.tasks) { row($0, overdue: group.name == "Overdue") }
+                        } else {
+                            Section(group.name) {
+                                ForEach(group.tasks) { row($0, overdue: group.name == "Overdue") }
                             }
                         }
-                    } else {
-                        ForEach(visibleTasks) { row($0) }
                     }
                 }.listStyle(.inset)
                     .environment(\.defaultMinListRowHeight, compactMode ? 4 : minimumRowHeight)
+                    .modifier(WholeTaskRows(enabled: compactMode && model.selectedView == "all"))
                     .onChange(of: selection) { old, id in
                         if let task = visibleTasks.first(where: { $0.id == id }), model.editor?.id != id {
                             Task {
@@ -530,6 +588,12 @@ struct TaskListView: View {
                         return .handled
                     }
                     .onDeleteCommand { if model.canWrite { pendingDelete = selectedTask } }
+                if visibleTasks.isEmpty {
+                    Button(hasFilters ? "Clear filters" : search.isEmpty ? "Add task" : "Clear search") {
+                        if hasFilters { clearFilters() } else if search.isEmpty { model.quickAdd = true } else { search = "" }
+                    }.buttonStyle(.borderedProminent).controlSize(.large).disabled(!model.canWrite && !hasFilters && search.isEmpty)
+                        .frame(minHeight: 28).padding(12).compactBounds("state-action")
+                }
             }
             }
             if model.connection != .live && !(compactMode && model.connection == .offline) {

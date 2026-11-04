@@ -114,6 +114,7 @@ with scratch_directory() as temporary:
             with (evidence / 'server.log').open('w') as log:
                 with deferring_cancellation():
                     server = subprocess.Popen([str(scratch / 'server')], cwd=root, env=server_env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+                    (evidence / 'server.json').write_text(json.dumps({'pid': server.pid, 'database': str(scratch / 'scratch.db')}) + '\n')
             deadline = time.monotonic() + 60
             url = None
             while time.monotonic() < deadline:
@@ -155,6 +156,9 @@ with scratch_directory() as temporary:
                 compact = json.loads((evidence / 'u02-formatting-http.json').read_text())
                 assert compact == {'version': 2, 'due': 'Today 9:00\u202fAM', 'scheduled': 'Tomorrow', 'count': '1 task'}, compact
                 assert database.execute('select row_version, status from tasks where title = ?', ('U02 Compact formatting',)).fetchall() == [(2, 'open')]
+                priority = json.loads((evidence / 'ui01-priority-http.json').read_text())
+                assert priority == {'priorities': ['P1', 'P2', 'P3', 'P4'], 'titles': [[], ['UI01 Urgent'], ['UI01 Normal'], ['UI01 Later']], 'version': 3, 'emptyCounts': [0, 0, 0, 0]}, priority
+                assert database.execute('select priority, row_version, status from tasks where title = ?', ('UI01 Urgent',)).fetchall() == [('P2', 3, 'open')]
                 action_error = json.loads((evidence / 'u02-action-error-http.json').read_text())
                 assert action_error == {'version': 2, 'status': 'cancelled', 'notice': 'The Task changed. Close and reopen it before trying that action again.', 'loadError': '', 'loaded': True}, action_error
                 assert database.execute('select row_version, status from tasks where title = ?', ('U02 action error',)).fetchall() == [(2, 'cancelled')]

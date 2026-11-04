@@ -17,6 +17,14 @@ a link. It prints each missing local target and exits 1 if any are missing.
 Pass another commit instead of `HEAD` to check an earlier tree. This static
 check does not build or launch an app.
 
+## Priority groups during HOLD
+
+Read [the priority recipe](features/compact.md#priority-groups). It adds production
+TodoModel save, filter and reload checks on compiled scratch HTTP, plus empty,
+ready and dense priority renders in both appearances and window sizes. Run every
+Swift command through the shared swift-slot script specified by the active run.
+This proof never launches Todo.app or accesses Keychain.
+
 ## Native verification is on HOLD
 
 The user stopped the 2026-10-27 run after repeated Keychain prompts. Do not
@@ -345,4 +353,4 @@ same reference to the selected Tasks. Reload Tasks refreshes Versions after a
 Conflict. `liveAttachmentBatchSelectPreviewApplyConflictAndReload` drives this
 production state, including file and URI references. The design helper adds
 24 full and Compact light/dark captures for ready, preview, Conflict, loading,
-empty and error states, for 302 captures in the complete run.
+empty and error states, for 318 captures in the complete run.

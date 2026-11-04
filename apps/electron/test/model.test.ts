@@ -6,6 +6,7 @@ import {
   conflictText,
   editorFor,
   merge,
+  priorityGroups,
   rebaseEditor,
   taskTagNames,
   timeText,
@@ -32,6 +33,43 @@ const task = Schema.decodeUnknownSync(Task)({
   updated_at: "2026-10-27T00:00:00Z",
   completed_at: null,
   deleted_at: null,
+});
+it("keeps all four priority groups in order and preserves order inside each group", () => {
+  const values = Schema.decodeUnknownSync(Schema.Array(Task))([
+    { ...task, id: "later", priority: "P4" },
+    { ...task, id: "first", priority: "P1" },
+    { ...task, id: "next", priority: "P1" },
+    { ...task, id: "normal", priority: "P3" },
+  ]);
+  expect(
+    priorityGroups(values).map((group) => [
+      group.name,
+      group.tasks.map((task) => task.id),
+    ]),
+  ).toEqual([
+    ["P1", ["first", "next"]],
+    ["P2", []],
+    ["P3", ["normal"]],
+    ["P4", ["later"]],
+  ]);
+  expect(
+    priorityGroups([]).map((group) => [group.name, group.tasks.length]),
+  ).toEqual([
+    ["P1", 0],
+    ["P2", 0],
+    ["P3", 0],
+    ["P4", 0],
+  ]);
+  expect(
+    priorityGroups(values.filter((task) => task.id === "normal")).map(
+      (group) => [group.name, group.tasks.length],
+    ),
+  ).toEqual([
+    ["P1", 0],
+    ["P2", 0],
+    ["P3", 1],
+    ["P4", 0],
+  ]);
 });
 it.effect(
   "requires a choice for every overlapping field and preserves disjoint accepted changes",
