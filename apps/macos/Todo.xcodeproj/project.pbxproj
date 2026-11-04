@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F802BA7C670BE45DADFF01A1 /* BatchEdit.swift in Sources */ = {isa = PBXBuildFile; fileRef = F802BA7C670BE45DADFF01A2 /* BatchEdit.swift */; };
 		F801BA7C670BE45DADFF01A1 /* AttachmentBatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = F801BA7C670BE45DADFF01A2 /* AttachmentBatch.swift */; };
 		054077BC747B4B92E15B62879E9BD3A2 /* AppViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 291184CFD2B334466B941D312AD390CB /* AppViews.swift */; };
 		0837A9BC7357182EDEA6F4D48EB604A1 /* ClientReads.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7440DCD95D1AF1139B8A09577E15DB92 /* ClientReads.swift */; };
@@ -62,6 +63,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		F802BA7C670BE45DADFF01A2 /* BatchEdit.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BatchEdit.swift; sourceTree = "<group>"; };
 		F801BA7C670BE45DADFF01A2 /* AttachmentBatch.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AttachmentBatch.swift; sourceTree = "<group>"; };
 		0560C54AE21E4581BEA46AFC /* DiagnosticsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DiagnosticsView.swift; sourceTree = "<group>"; };
 		06554C23D75CFCC59EB84BDF7F4DE203 /* Reminders.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Reminders.swift; sourceTree = "<group>"; };
@@ -146,6 +148,7 @@
 			children = (
 				0560C54AE21E4581BEA46AFC /* DiagnosticsView.swift */,
 				291184CFD2B334466B941D312AD390CB /* AppViews.swift */,
+				F802BA7C670BE45DADFF01A2 /* BatchEdit.swift */,
 				F801BA7C670BE45DADFF01A2 /* AttachmentBatch.swift */,
 				AFB2DE520990A7A9A722C3E5CCB69E7F /* AttachmentModel.swift */,
 				510C8D464D335DCF17E67EDC67A778E1 /* AttachmentSnapshot.swift */,
@@ -389,6 +392,7 @@
 			files = (
 				6C6D1D8FEA8632036D1C11A5 /* DiagnosticsView.swift in Sources */,
 				054077BC747B4B92E15B62879E9BD3A2 /* AppViews.swift in Sources */,
+				F802BA7C670BE45DADFF01A1 /* BatchEdit.swift in Sources */,
 				F801BA7C670BE45DADFF01A1 /* AttachmentBatch.swift in Sources */,
 				790EEB15398CB7A4A33FA9CAC28C83EE /* AttachmentModel.swift in Sources */,
 				81DC6E52EB76DB1721FC3A8CFCA1B17D /* AttachmentSnapshot.swift in Sources */,

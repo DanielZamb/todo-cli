@@ -260,6 +260,7 @@ struct TaskListView: View {
                 expandedContent
             }
         }
+        .sheet(item: $model.batchEdit) { _ in BatchEditView(model: model, compact: compactMode).interactiveDismissDisabled(model.busy) }
         .sheet(isPresented: $model.showingImport) { ImportView(model: model, compact: compactMode).interactiveDismissDisabled(model.busy) }
         .sheet(isPresented: $showingTaskFilters) {
             TaskFilterView(draft: model.taskFilters, compact: compactMode, planning: model.selectedView != "all", apply: model.applyTaskFilters, close: { showingTaskFilters = false })
@@ -299,6 +300,9 @@ struct TaskListView: View {
                 .navigationSubtitle("\(model.profileName) · \(TaskCount.text(visibleTasks.count))")
                 .searchable(text: $search, prompt: "Find a task")
                 .toolbar {
+                    ToolbarItem {
+                        Button("Edit Tasks…") { Task { await model.beginBatchEdit() } }.disabled(!model.canWrite).accessibilityIdentifier("batch-edit-tasks")
+                    }
                     ToolbarItem {
                         Button("Import…") { model.resetImport(); model.showingImport = true }
                             .disabled(!model.canWrite).accessibilityIdentifier("import-tasks")
@@ -756,6 +760,7 @@ struct CompactRowMetadata: View {
 struct CompactUtilityActions: View {
     @Bindable var model: TodoModel
     var body: some View {
+        Button("Edit Tasks…") { Task { await model.beginBatchEdit() } }.controlSize(.large).frame(minHeight: 28).disabled(!model.canWrite).accessibilityIdentifier("compact-batch-edit-tasks")
         Button("Import…") { model.resetImport(); model.showingImport = true }
             .controlSize(.large).frame(minHeight: 28).disabled(!model.canWrite).accessibilityIdentifier("compact-import-tasks")
         SettingsLink { Text("Settings…").frame(minHeight: 28) }.controlSize(.large)

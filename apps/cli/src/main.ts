@@ -24,6 +24,9 @@ import {
   AttachManyItem,
   AttachManyReport,
   AttachManyRequest,
+  BatchEditReport,
+  BatchEditRequest,
+  batchEditTasks,
   ClientReads,
   filterTaskRecords,
   ProfileDeletionReport,
@@ -841,6 +844,54 @@ const show = Command.make(
       );
     }),
 ).pipe(withGuide("show"));
+registerCommandSchema("batch-edit", BatchEditReport);
+registerCommandSchema("batch-edit-input", BatchEditRequest, "input");
+const batchEditCommand = Command.make(
+  "batch-edit",
+  { file: Argument.String("file"), dryRun: bool("dry-run") },
+  (input) =>
+    Effect.gen(function* () {
+      const cfg = yield* root;
+      const body = yield* Effect.try({
+        try: () =>
+          Schema.decodeUnknownSync(BatchEditRequest, {
+            onExcessProperty: "error",
+          })(
+            JSON.parse(
+              readFileSync(input.file === "-" ? 0 : input.file, "utf8"),
+            ),
+          ),
+        catch: (error) =>
+          new CommandError(
+            2,
+            "invalid_args",
+            `Cannot read batch edit. Supply Task ids, from_version and one shared changes field. Check todo schema batch-edit-input. ${String(error)}`,
+          ),
+      });
+      yield* withStore(cfg, (store) =>
+        Effect.gen(function* () {
+          const report = yield* batchEditTasks(
+            store,
+            yield* selectProfile(store, cfg),
+            { ...body, dry_run: input.dryRun || body.dry_run || false },
+          );
+          yield* write(
+            cfg.format === "json"
+              ? encodeResponse(BatchEditReport, report)
+              : `${report.dry_run ? "Dry run\n" : ""}${report.items.map((row) => `${row.task_id}\t${row.outcome}\t${row.error?.message ?? `Version ${row.current_version}`}`).join("\n")}\n`,
+          );
+          if (report.totals.rejected)
+            process.exitCode = report.items.some(
+              (row) => row.error?.code === "occ_conflict",
+            )
+              ? 4
+              : report.items.some((row) => row.error?.code === "not_found")
+                ? 3
+                : 2;
+        }),
+      );
+    }),
+).pipe(withGuide("batch-edit"));
 registerCommandSchema("attach-many", AttachManyReport);
 registerCommandSchema(
   "attach-many-input",
@@ -1481,6 +1532,7 @@ const app = root.pipe(
     parseCommand,
     list,
     show,
+    batchEditCommand,
     attachManyCommand,
     attachmentCommand(false),
     attachmentCommand(true),

@@ -257,3 +257,7 @@ previews, applies, rejects stale Versions, reloads and previews unchanged values
 It reads durable Tasks through the compiled CLI and captures both appearances
 at Compact and full sizes. This proves renderer behavior and HTTP writes, while
 native Electron IPC, window behavior and Keychain remain under HOLD.
+
+## Batch edit
+
+Read [Edit several Tasks](features/batch-edit.md) for the shared batch-edit contract and the compiled scratch proof. Both client flows retain selections and loaded Versions through preview, apply and Conflict reload.

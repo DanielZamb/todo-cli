@@ -127,3 +127,7 @@ current Versions on Conflicts, one JSON object, and `todo schema move` and `copy
 ## Version guardrails
 
 The install verifier requires --version to report build and contract without changing the database directory. See [the feature recipe](features/agent-contract.md) for commands and expected evidence.
+
+## Batch edit
+
+Read [Edit several Tasks](features/batch-edit.md) for the shared batch-edit contract and the compiled scratch proof. Both client flows retain selections and loaded Versions through preview, apply and Conflict reload.

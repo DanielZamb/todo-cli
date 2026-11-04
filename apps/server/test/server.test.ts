@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "@effect/vitest";
 import { BUILD_ID, CONTRACT_ID, Conflict, TodoApi } from "@todo/api";
 import {
+  BatchEditReport,
   ImportReport,
   OccurrenceId,
   OpLogEntry,
@@ -83,6 +84,97 @@ const tokenSecret = Schema.decodeUnknownSync(
 );
 
 describe("Todo HTTP contract", () => {
+  it.effect(
+    "batch edit HTTP preserves dry-run and returns independent stale-Version rows",
+    () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const { request, credential, store } = yield* fixture;
+          const a = parseTask(
+            (yield* request(
+              "POST",
+              "/profiles/work/tasks",
+              { title: "First" },
+              credential,
+            )).body,
+          );
+          const b = parseTask(
+            (yield* request(
+              "POST",
+              "/profiles/work/tasks",
+              { title: "Second" },
+              credential,
+            )).body,
+          );
+          const input = {
+            items: [
+              { task_id: a.id, from_version: 1 },
+              { task_id: b.id, from_version: 1 },
+            ],
+            changes: { priority: "P1" },
+          };
+          const history = yield* store.history();
+          const preview = yield* request(
+            "POST",
+            "/profiles/work/batch-edit",
+            { ...input, dry_run: true },
+            credential,
+          );
+          expect(preview.status).toBe(200);
+          expect(
+            Schema.decodeUnknownSync(BatchEditReport)(preview.body).totals,
+          ).toEqual({ updated: 2, rejected: 0 });
+          expect(yield* store.history()).toEqual(history);
+          yield* request(
+            "PATCH",
+            `/profiles/work/tasks/${b.id}`,
+            { from_version: 1, changes: { title: "Competing edit" } },
+            credential,
+          );
+          const report = yield* request(
+            "POST",
+            "/profiles/work/batch-edit",
+            input,
+            credential,
+          );
+          expect(report.status).toBe(200);
+          expect(
+            Schema.decodeUnknownSync(BatchEditReport)(report.body).items.map(
+              (row) => [
+                row.outcome,
+                row.current_version,
+                row.error?.code ?? null,
+              ],
+            ),
+          ).toEqual([
+            ["updated", 2, null],
+            ["rejected", 2, "occ_conflict"],
+          ]);
+          expect(
+            parseTask(
+              (yield* request(
+                "GET",
+                `/profiles/work/tasks/${b.id}`,
+                undefined,
+                credential,
+              )).body,
+            ).priority,
+          ).toBe("P3");
+          expect(
+            (yield* request(
+              "POST",
+              "/profiles/work/batch-edit",
+              { ...input, changes: {} },
+              credential,
+            )).status,
+          ).toBe(400);
+          expect(
+            (yield* request("POST", "/profiles/work/batch-edit", input)).status,
+          ).toBe(401);
+        }),
+      ),
+  );
+
   it.effect(
     "imports through the shared contract with no-write previews, idempotency and per-Task Conflicts",
     () =>

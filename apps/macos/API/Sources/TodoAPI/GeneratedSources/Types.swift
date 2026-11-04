@@ -41,6 +41,9 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /profiles/{profile}/tasks/{task}/attachments/{attachment}/image`.
     /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/attachments/{attachment}/image/get(tasks.attachmentImage)`.
     func tasks_period_attachmentImage(_ input: Operations.tasks_period_attachmentImage.Input) async throws -> Operations.tasks_period_attachmentImage.Output
+    /// - Remark: HTTP `POST /profiles/{profile}/batch-edit`.
+    /// - Remark: Generated from `#/paths//profiles/{profile}/batch-edit/post(tasks.batchEdit)`.
+    func tasks_period_batchEdit(_ input: Operations.tasks_period_batchEdit.Input) async throws -> Operations.tasks_period_batchEdit.Output
     /// - Remark: HTTP `POST /profiles/{profile}/import`.
     /// - Remark: Generated from `#/paths//profiles/{profile}/import/post(tasks.importTasks)`.
     func tasks_period_importTasks(_ input: Operations.tasks_period_importTasks.Input) async throws -> Operations.tasks_period_importTasks.Output
@@ -250,6 +253,19 @@ extension APIProtocol {
         try await tasks_period_attachmentImage(Operations.tasks_period_attachmentImage.Input(
             path: path,
             headers: headers
+        ))
+    }
+    /// - Remark: HTTP `POST /profiles/{profile}/batch-edit`.
+    /// - Remark: Generated from `#/paths//profiles/{profile}/batch-edit/post(tasks.batchEdit)`.
+    public func tasks_period_batchEdit(
+        path: Operations.tasks_period_batchEdit.Input.Path,
+        headers: Operations.tasks_period_batchEdit.Input.Headers = .init(),
+        body: Operations.tasks_period_batchEdit.Input.Body
+    ) async throws -> Operations.tasks_period_batchEdit.Output {
+        try await tasks_period_batchEdit(Operations.tasks_period_batchEdit.Input(
+            path: path,
+            headers: headers,
+            body: body
         ))
     }
     /// - Remark: HTTP `POST /profiles/{profile}/import`.

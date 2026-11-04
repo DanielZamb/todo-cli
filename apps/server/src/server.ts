@@ -14,6 +14,7 @@ import {
   ValidationHistory,
 } from "@todo/api";
 import {
+  batchEditTasks,
   ClientReads,
   ExpectedVersion,
   ProfileId,
@@ -360,6 +361,17 @@ export const serverLayer = (options: {
               const credential = yield* BearerCredential;
               return yield* translate(
                 attachments.attachMany(
+                  { credential, profile: params.profile },
+                  payload,
+                ),
+              );
+            }),
+          batchEdit: ({ params, payload }) =>
+            Effect.gen(function* () {
+              const credential = yield* BearerCredential;
+              return yield* translate(
+                batchEditTasks(
+                  store,
                   { credential, profile: params.profile },
                   payload,
                 ),

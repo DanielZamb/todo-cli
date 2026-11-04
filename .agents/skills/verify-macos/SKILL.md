@@ -354,3 +354,7 @@ Conflict. `liveAttachmentBatchSelectPreviewApplyConflictAndReload` drives this
 production state, including file and URI references. The design helper adds
 24 full and Compact light/dark captures for ready, preview, Conflict, loading,
 empty and error states, for 318 captures in the complete run.
+
+## Batch edit
+
+Read [Edit several Tasks](features/batch-edit.md) for the shared batch-edit contract and the compiled scratch proof. Both client flows retain selections and loaded Versions through preview, apply and Conflict reload.

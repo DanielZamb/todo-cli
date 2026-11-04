@@ -83,6 +83,18 @@ const guides = {
     concurrency:
       "Reads the current Version before detaching. An optional expected Version rejects stale input.",
   }),
+  "batch-edit": reference({
+    purpose: "Update one shared field with each Task's expected Version.",
+    synopsis: "todo batch-edit <file|-> [--dry-run]",
+    examples: [
+      "todo schema batch-edit-input",
+      "todo batch-edit changes.json --dry-run --format json",
+      "todo batch-edit changes.json --format json",
+    ],
+    flags: ["--dry-run"],
+    concurrency:
+      "Input contains items with task_id and from_version, plus changes with exactly one field. Preview writes nothing. Apply reports each success and Conflict. Reload stale Tasks before applying again.",
+  }),
   "attach-many": reference({
     purpose:
       "Attach files and URI links to many Tasks, with a result for each Task.",

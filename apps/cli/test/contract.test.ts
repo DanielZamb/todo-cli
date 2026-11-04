@@ -413,6 +413,15 @@ it("validates every command's single JSON object against its published JSON Sche
       ],
     }),
   );
+  const editBatchFile = join(scratch, "batch-edit.json");
+  writeFileSync(
+    editBatchFile,
+    JSON.stringify({
+      items: [{ task_id: id, from_version: 1 }],
+      changes: { priority: "P1" },
+    }),
+  );
+  success("batch-edit", ["batch-edit", editBatchFile, "--dry-run"]);
   success("attach-many", ["attach-many", batchFile, "--dry-run"]);
   success("list", ["list", "--status", "open"]);
   success("edit", [

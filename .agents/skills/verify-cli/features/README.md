@@ -21,3 +21,5 @@ Move and Copy use the compiled CLI cases in `apps/cli/test/cli.test.ts` and
 completed status, per-Task Conflict reports, source isolation, and both schemas.
 
 Version guardrails are covered in [agent-contract](<agent-contract.md>).
+
+[Edit several Tasks](batch-edit.md) covers per-Task expected Versions, preview, independent apply results and Conflict reload.

@@ -44,6 +44,7 @@ import {
 import { createRoot } from "react-dom/client";
 import { acceptAttachmentTask } from "./attachment-model.ts";
 import { AttachmentsSection, JiraMarker } from "./attachments.tsx";
+import { BatchEditDialog } from "./batch-edit.tsx";
 import { Alert, AlertDescription } from "./components/ui/alert.tsx";
 import { Button } from "./components/ui/button.tsx";
 import {
@@ -318,6 +319,7 @@ function App() {
     return () => clearInterval(timer);
   }, []);
   const reverted = revertedSequences(history?.entries ?? []);
+  const [batchEditOpen, setBatchEditOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [profileDelete, setProfileDelete] = useState<{
     name: string;
@@ -646,6 +648,7 @@ function App() {
         setParsed(null);
         setMoveOpen(false);
         setImportOpen(false);
+        setBatchEditOpen(false);
         setTransferResult(null);
         setContextTask(null);
         setProfileDelete(null);
@@ -1248,6 +1251,18 @@ function App() {
           </Button>
         </DialogContent>
       </Dialog>
+      {batchEditOpen && (
+        <BatchEditDialog
+          key={profile}
+          profile={profile}
+          request={request}
+          canWrite={!readOnly}
+          onClose={() => setBatchEditOpen(false)}
+          onApplied={() => {
+            void refresh();
+          }}
+        />
+      )}
       {importOpen && (
         <ImportDialog
           key={profile}
@@ -1520,6 +1535,12 @@ function App() {
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       disabled={readOnly}
+                      onClick={() => setBatchEditOpen(true)}
+                    >
+                      Edit Tasks…
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={readOnly}
                       onClick={() => setImportOpen(true)}
                     >
                       Import…
@@ -1607,6 +1628,15 @@ function App() {
             )}
           </div>
           <div className="actions">
+            {!compact && (
+              <Button
+                variant="outline"
+                disabled={readOnly}
+                onClick={() => setBatchEditOpen(true)}
+              >
+                Edit Tasks…
+              </Button>
+            )}
             {!compact && (
               <Button
                 variant="outline"

@@ -61,6 +61,14 @@ export const taskRequest = (
             payload: request.payload,
           }),
         };
+      case "batchEdit":
+        return {
+          _tag: "batchEdit",
+          report: yield* http.tasks.batchEdit({
+            params: { profile: request.profile },
+            payload: request.payload,
+          }),
+        };
       case "attachmentTargets":
         return {
           _tag: "attachmentTargets",

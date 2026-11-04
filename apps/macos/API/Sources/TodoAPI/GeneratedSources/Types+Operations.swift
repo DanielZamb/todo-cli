@@ -10232,6 +10232,1518 @@ public enum Operations {
             }
         }
     }
+    /// - Remark: HTTP `POST /profiles/{profile}/batch-edit`.
+    /// - Remark: Generated from `#/paths//profiles/{profile}/batch-edit/post(tasks.batchEdit)`.
+    public enum tasks_period_batchEdit {
+        public static let id: Swift.String = "tasks.batchEdit"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/path`.
+            public struct Path: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/path/profile`.
+                public var profile: Swift.String
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - profile:
+                public init(profile: Swift.String) {
+                    self.profile = profile
+                }
+            }
+            public var path: Operations.tasks_period_batchEdit.Input.Path
+            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.tasks_period_batchEdit.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.tasks_period_batchEdit.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.tasks_period_batchEdit.Input.Headers
+            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody`.
+            @frozen public enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json`.
+                public struct jsonPayload: Codable, Hashable, Sendable {
+                        private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/itemsPayload`.
+                    public struct itemsPayloadPayload: Codable, Hashable, Sendable {
+                        private var _explicitNullKeys: Set<String> = []
+
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/itemsPayload/task_id`.
+                        public var task_id: Swift.String
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/itemsPayload/from_version`.
+                        public var from_version: Swift.Int
+                        /// Creates a new `itemsPayloadPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - task_id:
+                        ///   - from_version:
+                        public init(
+                            task_id: Swift.String,
+                            from_version: Swift.Int
+                        ) {
+                            self.task_id = task_id
+                            self.from_version = from_version
+                        }
+                        public enum CodingKeys: String, CodingKey {
+                            case task_id
+                            case from_version
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.task_id = try container.decode(
+                                Swift.String.self,
+                                forKey: .task_id
+                            )
+                            self.from_version = try container.decode(
+                                Swift.Int.self,
+                                forKey: .from_version
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "task_id",
+                                "from_version"
+                            ])
+                        }
+
+                        public func encode(to encoder: any Swift.Encoder) throws {
+                            var container = encoder.container(keyedBy: CodingKeys.self)
+                            try container.encode(self.task_id, forKey: .task_id)
+                            try container.encode(self.from_version, forKey: .from_version)
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/items`.
+                    public typealias itemsPayload = [Operations.tasks_period_batchEdit.Input.Body.jsonPayload.itemsPayloadPayload]
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/items`.
+                    public var items: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.itemsPayload
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes`.
+                    public struct changesPayload: Codable, Hashable, Sendable {
+                        private var _explicitNullKeys: Set<String> = []
+
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/title`.
+                        public var title: Swift.String?
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/description`.
+                        public var description: Swift.String?
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/priority`.
+                        @frozen public enum priorityPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case P1 = "P1"
+                            case P2 = "P2"
+                            case P3 = "P3"
+                            case P4 = "P4"
+                        }
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/priority`.
+                        public var priority: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.priorityPayload?
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/project_name`.
+                        public var project_name: Swift.String?
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/tag_names`.
+                        public var tag_names: [Swift.String]?
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/due_at`.
+                        public struct due_atPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/due_at/value1`.
+                            public struct Value1Payload: Codable, Hashable, Sendable {
+                                private var _explicitNullKeys: Set<String> = []
+
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/due_at/value1/kind`.
+                                @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case instant = "instant"
+                                }
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/due_at/value1/kind`.
+                                public var kind: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.due_atPayload.Value1Payload.kindPayload
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/due_at/value1/utc`.
+                                public var utc: Swift.String
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/due_at/value1/time_zone`.
+                                public var time_zone: Swift.String
+                                /// Creates a new `Value1Payload`.
+                                ///
+                                /// - Parameters:
+                                ///   - kind:
+                                ///   - utc:
+                                ///   - time_zone:
+                                public init(
+                                    kind: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.due_atPayload.Value1Payload.kindPayload,
+                                    utc: Swift.String,
+                                    time_zone: Swift.String
+                                ) {
+                                    self.kind = kind
+                                    self.utc = utc
+                                    self.time_zone = time_zone
+                                }
+                                public enum CodingKeys: String, CodingKey {
+                                    case kind
+                                    case utc
+                                    case time_zone
+                                }
+                                public init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.kind = try container.decode(
+                                        Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.due_atPayload.Value1Payload.kindPayload.self,
+                                        forKey: .kind
+                                    )
+                                    self.utc = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .utc
+                                    )
+                                    self.time_zone = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .time_zone
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "kind",
+                                        "utc",
+                                        "time_zone"
+                                    ])
+                                }
+
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    var container = encoder.container(keyedBy: CodingKeys.self)
+                                    try container.encode(self.kind, forKey: .kind)
+                                    try container.encode(self.utc, forKey: .utc)
+                                    try container.encode(self.time_zone, forKey: .time_zone)
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/due_at/value1`.
+                            public var value1: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.due_atPayload.Value1Payload?
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/due_at/value2`.
+                            public struct Value2Payload: Codable, Hashable, Sendable {
+                                private var _explicitNullKeys: Set<String> = []
+
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/due_at/value2/kind`.
+                                @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case date = "date"
+                                }
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/due_at/value2/kind`.
+                                public var kind: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.due_atPayload.Value2Payload.kindPayload
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/due_at/value2/date`.
+                                public var date: Swift.String
+                                /// Creates a new `Value2Payload`.
+                                ///
+                                /// - Parameters:
+                                ///   - kind:
+                                ///   - date:
+                                public init(
+                                    kind: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.due_atPayload.Value2Payload.kindPayload,
+                                    date: Swift.String
+                                ) {
+                                    self.kind = kind
+                                    self.date = date
+                                }
+                                public enum CodingKeys: String, CodingKey {
+                                    case kind
+                                    case date
+                                }
+                                public init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.kind = try container.decode(
+                                        Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.due_atPayload.Value2Payload.kindPayload.self,
+                                        forKey: .kind
+                                    )
+                                    self.date = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .date
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "kind",
+                                        "date"
+                                    ])
+                                }
+
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    var container = encoder.container(keyedBy: CodingKeys.self)
+                                    try container.encode(self.kind, forKey: .kind)
+                                    try container.encode(self.date, forKey: .date)
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/due_at/value2`.
+                            public var value2: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.due_atPayload.Value2Payload?
+                            /// Creates a new `due_atPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - value1:
+                            ///   - value2:
+                            public init(
+                                value1: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.due_atPayload.Value1Payload? = nil,
+                                value2: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.due_atPayload.Value2Payload? = nil
+                            ) {
+                                self.value1 = value1
+                                self.value2 = value2
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                var errors: [any Swift.Error] = []
+                                do {
+                                    self.value1 = try .init(from: decoder)
+                                } catch {
+                                    errors.append(error)
+                                }
+                                do {
+                                    self.value2 = try .init(from: decoder)
+                                } catch {
+                                    errors.append(error)
+                                }
+                                try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                    [
+                                        self.value1,
+                                        self.value2
+                                    ],
+                                    type: Self.self,
+                                    codingPath: decoder.codingPath,
+                                    errors: errors
+                                )
+                            }
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                try self.value1?.encode(to: encoder)
+                                try self.value2?.encode(to: encoder)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/due_at`.
+                        public var due_at: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.due_atPayload?
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/scheduled_at`.
+                        public struct scheduled_atPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/scheduled_at/value1`.
+                            public struct Value1Payload: Codable, Hashable, Sendable {
+                                private var _explicitNullKeys: Set<String> = []
+
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/scheduled_at/value1/kind`.
+                                @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case instant = "instant"
+                                }
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/scheduled_at/value1/kind`.
+                                public var kind: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.scheduled_atPayload.Value1Payload.kindPayload
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/scheduled_at/value1/utc`.
+                                public var utc: Swift.String
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/scheduled_at/value1/time_zone`.
+                                public var time_zone: Swift.String
+                                /// Creates a new `Value1Payload`.
+                                ///
+                                /// - Parameters:
+                                ///   - kind:
+                                ///   - utc:
+                                ///   - time_zone:
+                                public init(
+                                    kind: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.scheduled_atPayload.Value1Payload.kindPayload,
+                                    utc: Swift.String,
+                                    time_zone: Swift.String
+                                ) {
+                                    self.kind = kind
+                                    self.utc = utc
+                                    self.time_zone = time_zone
+                                }
+                                public enum CodingKeys: String, CodingKey {
+                                    case kind
+                                    case utc
+                                    case time_zone
+                                }
+                                public init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.kind = try container.decode(
+                                        Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.scheduled_atPayload.Value1Payload.kindPayload.self,
+                                        forKey: .kind
+                                    )
+                                    self.utc = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .utc
+                                    )
+                                    self.time_zone = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .time_zone
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "kind",
+                                        "utc",
+                                        "time_zone"
+                                    ])
+                                }
+
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    var container = encoder.container(keyedBy: CodingKeys.self)
+                                    try container.encode(self.kind, forKey: .kind)
+                                    try container.encode(self.utc, forKey: .utc)
+                                    try container.encode(self.time_zone, forKey: .time_zone)
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/scheduled_at/value1`.
+                            public var value1: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.scheduled_atPayload.Value1Payload?
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/scheduled_at/value2`.
+                            public struct Value2Payload: Codable, Hashable, Sendable {
+                                private var _explicitNullKeys: Set<String> = []
+
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/scheduled_at/value2/kind`.
+                                @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case date = "date"
+                                }
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/scheduled_at/value2/kind`.
+                                public var kind: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.scheduled_atPayload.Value2Payload.kindPayload
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/scheduled_at/value2/date`.
+                                public var date: Swift.String
+                                /// Creates a new `Value2Payload`.
+                                ///
+                                /// - Parameters:
+                                ///   - kind:
+                                ///   - date:
+                                public init(
+                                    kind: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.scheduled_atPayload.Value2Payload.kindPayload,
+                                    date: Swift.String
+                                ) {
+                                    self.kind = kind
+                                    self.date = date
+                                }
+                                public enum CodingKeys: String, CodingKey {
+                                    case kind
+                                    case date
+                                }
+                                public init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.kind = try container.decode(
+                                        Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.scheduled_atPayload.Value2Payload.kindPayload.self,
+                                        forKey: .kind
+                                    )
+                                    self.date = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .date
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "kind",
+                                        "date"
+                                    ])
+                                }
+
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    var container = encoder.container(keyedBy: CodingKeys.self)
+                                    try container.encode(self.kind, forKey: .kind)
+                                    try container.encode(self.date, forKey: .date)
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/scheduled_at/value2`.
+                            public var value2: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.scheduled_atPayload.Value2Payload?
+                            /// Creates a new `scheduled_atPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - value1:
+                            ///   - value2:
+                            public init(
+                                value1: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.scheduled_atPayload.Value1Payload? = nil,
+                                value2: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.scheduled_atPayload.Value2Payload? = nil
+                            ) {
+                                self.value1 = value1
+                                self.value2 = value2
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                var errors: [any Swift.Error] = []
+                                do {
+                                    self.value1 = try .init(from: decoder)
+                                } catch {
+                                    errors.append(error)
+                                }
+                                do {
+                                    self.value2 = try .init(from: decoder)
+                                } catch {
+                                    errors.append(error)
+                                }
+                                try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                    [
+                                        self.value1,
+                                        self.value2
+                                    ],
+                                    type: Self.self,
+                                    codingPath: decoder.codingPath,
+                                    errors: errors
+                                )
+                            }
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                try self.value1?.encode(to: encoder)
+                                try self.value2?.encode(to: encoder)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/scheduled_at`.
+                        public var scheduled_at: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.scheduled_atPayload?
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/energy`.
+                        public var energy: Swift.Int?
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes/estimate_min`.
+                        public var estimate_min: Swift.Int?
+                        /// Creates a new `changesPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - title:
+                        ///   - description:
+                        ///   - priority:
+                        ///   - project_name:
+                        ///   - tag_names:
+                        ///   - due_at:
+                        ///   - scheduled_at:
+                        ///   - energy:
+                        ///   - estimate_min:
+                        public init(
+                            title: Swift.String? = nil,
+                            description: Swift.String? = nil,
+                            priority: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.priorityPayload? = nil,
+                            project_name: Swift.String? = nil,
+                            tag_names: [Swift.String]? = nil,
+                            due_at: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.due_atPayload? = nil,
+                            scheduled_at: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.scheduled_atPayload? = nil,
+                            energy: Swift.Int? = nil,
+                            estimate_min: Swift.Int? = nil
+                        ) {
+                            self.title = title
+                            self.description = description
+                            self.priority = priority
+                            self.project_name = project_name
+                            self.tag_names = tag_names
+                            self.due_at = due_at
+                            self.scheduled_at = scheduled_at
+                            self.energy = energy
+                            self.estimate_min = estimate_min
+                        }
+                        public enum CodingKeys: String, CodingKey {
+                            case title
+                            case description
+                            case priority
+                            case project_name
+                            case tag_names
+                            case due_at
+                            case scheduled_at
+                            case energy
+                            case estimate_min
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.title = try container.decodeIfPresent(
+                                Swift.String.self,
+                                forKey: .title
+                            )
+                            self.description = try container.decodeIfPresent(
+                                Swift.String.self,
+                                forKey: .description
+                            )
+                            self.priority = try container.decodeIfPresent(
+                                Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.priorityPayload.self,
+                                forKey: .priority
+                            )
+                            self.project_name = try container.decodeIfPresent(
+                                Swift.String.self,
+                                forKey: .project_name
+                            )
+                            self.tag_names = try container.decodeIfPresent(
+                                [Swift.String].self,
+                                forKey: .tag_names
+                            )
+                            self.due_at = try container.decodeIfPresent(
+                                Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.due_atPayload.self,
+                                forKey: .due_at
+                            )
+                            self.scheduled_at = try container.decodeIfPresent(
+                                Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.scheduled_atPayload.self,
+                                forKey: .scheduled_at
+                            )
+                            self.energy = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .energy
+                            )
+                            self.estimate_min = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .estimate_min
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "title",
+                                "description",
+                                "priority",
+                                "project_name",
+                                "tag_names",
+                                "due_at",
+                                "scheduled_at",
+                                "energy",
+                                "estimate_min"
+                            ])
+                        }
+
+                        public func encode(to encoder: any Swift.Encoder) throws {
+                            var container = encoder.container(keyedBy: CodingKeys.self)
+                            if self.title == nil && _explicitNullKeys.contains(CodingKeys.title.stringValue) {
+                                try container.encodeNil(forKey: .title)
+                            } else {
+                                try container.encodeIfPresent(self.title, forKey: .title)
+                            }
+                            if self.description == nil && _explicitNullKeys.contains(CodingKeys.description.stringValue) {
+                                try container.encodeNil(forKey: .description)
+                            } else {
+                                try container.encodeIfPresent(self.description, forKey: .description)
+                            }
+                            if self.priority == nil && _explicitNullKeys.contains(CodingKeys.priority.stringValue) {
+                                try container.encodeNil(forKey: .priority)
+                            } else {
+                                try container.encodeIfPresent(self.priority, forKey: .priority)
+                            }
+                            if self.project_name == nil && _explicitNullKeys.contains(CodingKeys.project_name.stringValue) {
+                                try container.encodeNil(forKey: .project_name)
+                            } else {
+                                try container.encodeIfPresent(self.project_name, forKey: .project_name)
+                            }
+                            if self.tag_names == nil && _explicitNullKeys.contains(CodingKeys.tag_names.stringValue) {
+                                try container.encodeNil(forKey: .tag_names)
+                            } else {
+                                try container.encodeIfPresent(self.tag_names, forKey: .tag_names)
+                            }
+                            if self.due_at == nil && _explicitNullKeys.contains(CodingKeys.due_at.stringValue) {
+                                try container.encodeNil(forKey: .due_at)
+                            } else {
+                                try container.encodeIfPresent(self.due_at, forKey: .due_at)
+                            }
+                            if self.scheduled_at == nil && _explicitNullKeys.contains(CodingKeys.scheduled_at.stringValue) {
+                                try container.encodeNil(forKey: .scheduled_at)
+                            } else {
+                                try container.encodeIfPresent(self.scheduled_at, forKey: .scheduled_at)
+                            }
+                            if self.energy == nil && _explicitNullKeys.contains(CodingKeys.energy.stringValue) {
+                                try container.encodeNil(forKey: .energy)
+                            } else {
+                                try container.encodeIfPresent(self.energy, forKey: .energy)
+                            }
+                            if self.estimate_min == nil && _explicitNullKeys.contains(CodingKeys.estimate_min.stringValue) {
+                                try container.encodeNil(forKey: .estimate_min)
+                            } else {
+                                try container.encodeIfPresent(self.estimate_min, forKey: .estimate_min)
+                            }
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/changes`.
+                    public var changes: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/json/dry_run`.
+                    public var dry_run: Swift.Bool?
+                    /// Creates a new `jsonPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - items:
+                    ///   - changes:
+                    ///   - dry_run:
+                    public init(
+                        items: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.itemsPayload,
+                        changes: Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload,
+                        dry_run: Swift.Bool? = nil
+                    ) {
+                        self.items = items
+                        self.changes = changes
+                        self.dry_run = dry_run
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case items
+                        case changes
+                        case dry_run
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.items = try container.decode(
+                            Operations.tasks_period_batchEdit.Input.Body.jsonPayload.itemsPayload.self,
+                            forKey: .items
+                        )
+                        self.changes = try container.decode(
+                            Operations.tasks_period_batchEdit.Input.Body.jsonPayload.changesPayload.self,
+                            forKey: .changes
+                        )
+                        self.dry_run = try container.decodeIfPresent(
+                            Swift.Bool.self,
+                            forKey: .dry_run
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "items",
+                            "changes",
+                            "dry_run"
+                        ])
+                    }
+
+                        public func encode(to encoder: any Swift.Encoder) throws {
+                            var container = encoder.container(keyedBy: CodingKeys.self)
+                            try container.encode(self.items, forKey: .items)
+                            try container.encode(self.changes, forKey: .changes)
+                            if self.dry_run == nil && _explicitNullKeys.contains(CodingKeys.dry_run.stringValue) {
+                                try container.encodeNil(forKey: .dry_run)
+                            } else {
+                                try container.encodeIfPresent(self.dry_run, forKey: .dry_run)
+                            }
+                        }
+                    }
+                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/requestBody/content/application\/json`.
+                case json(Operations.tasks_period_batchEdit.Input.Body.jsonPayload)
+            }
+            public var body: Operations.tasks_period_batchEdit.Input.Body
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            ///   - body:
+            public init(
+                path: Operations.tasks_period_batchEdit.Input.Path,
+                headers: Operations.tasks_period_batchEdit.Input.Headers = .init(),
+                body: Operations.tasks_period_batchEdit.Input.Body
+            ) {
+                self.path = path
+                self.headers = headers
+                self.body = body
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json`.
+                    public struct jsonPayload: Codable, Hashable, Sendable {
+                        private var _explicitNullKeys: Set<String> = []
+
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/generated_at`.
+                        public var generated_at: Swift.String
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/dry_run`.
+                        public var dry_run: Swift.Bool
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload`.
+                        public struct itemsPayloadPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/task_id`.
+                            public var task_id: Swift.String
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/from_version`.
+                            public var from_version: Swift.Int
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/current_version`.
+                            public var current_version: Swift.Int?
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/outcome`.
+                            @frozen public enum outcomePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case updated = "updated"
+                                case rejected = "rejected"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/outcome`.
+                            public var outcome: Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.itemsPayloadPayload.outcomePayload
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/error`.
+                            public struct errorPayload: Codable, Hashable, Sendable {
+                                private var _explicitNullKeys: Set<String> = []
+
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/error/generated_at`.
+                                public var generated_at: Swift.String
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/error/code`.
+                                public var code: Swift.String
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/error/message`.
+                                public var message: Swift.String
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/error/details`.
+                                public struct detailsPayload: Codable, Hashable, Sendable {
+                                    private var _explicitNullKeys: Set<String> = []
+
+                                    /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/error/details/current_version`.
+                                    public var current_version: Swift.Int?
+                                    /// Creates a new `detailsPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - current_version:
+                                    public init(current_version: Swift.Int? = nil) {
+                                        self.current_version = current_version
+                                    }
+                                    public enum CodingKeys: String, CodingKey {
+                                        case current_version
+                                    }
+                                    public init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                        self.current_version = try container.decodeIfPresent(
+                                            Swift.Int.self,
+                                            forKey: .current_version
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "current_version"
+                                        ])
+                                    }
+
+                                    public func encode(to encoder: any Swift.Encoder) throws {
+                                        var container = encoder.container(keyedBy: CodingKeys.self)
+                                        if self.current_version == nil && _explicitNullKeys.contains(CodingKeys.current_version.stringValue) {
+                                            try container.encodeNil(forKey: .current_version)
+                                        } else {
+                                            try container.encodeIfPresent(self.current_version, forKey: .current_version)
+                                        }
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/error/details`.
+                                public var details: Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.detailsPayload
+                                /// Creates a new `errorPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - generated_at:
+                                ///   - code:
+                                ///   - message:
+                                ///   - details:
+                                public init(
+                                    generated_at: Swift.String,
+                                    code: Swift.String,
+                                    message: Swift.String,
+                                    details: Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.detailsPayload
+                                ) {
+                                    self.generated_at = generated_at
+                                    self.code = code
+                                    self.message = message
+                                    self.details = details
+                                }
+                                public enum CodingKeys: String, CodingKey {
+                                    case generated_at
+                                    case code
+                                    case message
+                                    case details
+                                }
+                                public init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.generated_at = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .generated_at
+                                    )
+                                    self.code = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .code
+                                    )
+                                    self.message = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .message
+                                    )
+                                    self.details = try container.decode(
+                                        Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.detailsPayload.self,
+                                        forKey: .details
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "generated_at",
+                                        "code",
+                                        "message",
+                                        "details"
+                                    ])
+                                }
+
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    var container = encoder.container(keyedBy: CodingKeys.self)
+                                    try container.encode(self.generated_at, forKey: .generated_at)
+                                    try container.encode(self.code, forKey: .code)
+                                    try container.encode(self.message, forKey: .message)
+                                    try container.encode(self.details, forKey: .details)
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/error`.
+                            public var error: Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload?
+                            /// Creates a new `itemsPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - task_id:
+                            ///   - from_version:
+                            ///   - current_version:
+                            ///   - outcome:
+                            ///   - error:
+                            public init(
+                                task_id: Swift.String,
+                                from_version: Swift.Int,
+                                current_version: Swift.Int? = nil,
+                                outcome: Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.itemsPayloadPayload.outcomePayload,
+                                error: Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload? = nil
+                            ) {
+                                self.task_id = task_id
+                                self.from_version = from_version
+                                self.current_version = current_version
+                                self.outcome = outcome
+                                self.error = error
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case task_id
+                                case from_version
+                                case current_version
+                                case outcome
+                                case error
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.task_id = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .task_id
+                                )
+                                self.from_version = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .from_version
+                                )
+                                self.current_version = try container.decodeIfPresent(
+                                    Swift.Int.self,
+                                    forKey: .current_version
+                                )
+                                self.outcome = try container.decode(
+                                    Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.itemsPayloadPayload.outcomePayload.self,
+                                    forKey: .outcome
+                                )
+                                self.error = try container.decodeIfPresent(
+                                    Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.self,
+                                    forKey: .error
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "task_id",
+                                    "from_version",
+                                    "current_version",
+                                    "outcome",
+                                    "error"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.task_id, forKey: .task_id)
+                                try container.encode(self.from_version, forKey: .from_version)
+                                if self.current_version == nil && _explicitNullKeys.contains(CodingKeys.current_version.stringValue) {
+                                    try container.encodeNil(forKey: .current_version)
+                                } else {
+                                    try container.encodeIfPresent(self.current_version, forKey: .current_version)
+                                }
+                                try container.encode(self.outcome, forKey: .outcome)
+                                if self.error == nil && _explicitNullKeys.contains(CodingKeys.error.stringValue) {
+                                    try container.encodeNil(forKey: .error)
+                                } else {
+                                    try container.encodeIfPresent(self.error, forKey: .error)
+                                }
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/items`.
+                        public typealias itemsPayload = [Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.itemsPayloadPayload]
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/items`.
+                        public var items: Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.itemsPayload
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/totals`.
+                        public struct totalsPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/totals/updated`.
+                            public var updated: Swift.Int
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/totals/rejected`.
+                            public var rejected: Swift.Int
+                            /// Creates a new `totalsPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - updated:
+                            ///   - rejected:
+                            public init(
+                                updated: Swift.Int,
+                                rejected: Swift.Int
+                            ) {
+                                self.updated = updated
+                                self.rejected = rejected
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case updated
+                                case rejected
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.updated = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .updated
+                                )
+                                self.rejected = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .rejected
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "updated",
+                                    "rejected"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.updated, forKey: .updated)
+                                try container.encode(self.rejected, forKey: .rejected)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/totals`.
+                        public var totals: Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.totalsPayload
+                        /// Creates a new `jsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - generated_at:
+                        ///   - dry_run:
+                        ///   - items:
+                        ///   - totals:
+                        public init(
+                            generated_at: Swift.String,
+                            dry_run: Swift.Bool,
+                            items: Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.itemsPayload,
+                            totals: Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.totalsPayload
+                        ) {
+                            self.generated_at = generated_at
+                            self.dry_run = dry_run
+                            self.items = items
+                            self.totals = totals
+                        }
+                        public enum CodingKeys: String, CodingKey {
+                            case generated_at
+                            case dry_run
+                            case items
+                            case totals
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.generated_at = try container.decode(
+                                Swift.String.self,
+                                forKey: .generated_at
+                            )
+                            self.dry_run = try container.decode(
+                                Swift.Bool.self,
+                                forKey: .dry_run
+                            )
+                            self.items = try container.decode(
+                                Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.itemsPayload.self,
+                                forKey: .items
+                            )
+                            self.totals = try container.decode(
+                                Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.totalsPayload.self,
+                                forKey: .totals
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "generated_at",
+                                "dry_run",
+                                "items",
+                                "totals"
+                            ])
+                        }
+
+                        public func encode(to encoder: any Swift.Encoder) throws {
+                            var container = encoder.container(keyedBy: CodingKeys.self)
+                            try container.encode(self.generated_at, forKey: .generated_at)
+                            try container.encode(self.dry_run, forKey: .dry_run)
+                            try container.encode(self.items, forKey: .items)
+                            try container.encode(self.totals, forKey: .totals)
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/application\/json`.
+                    case json(Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_batchEdit.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_batchEdit.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Success
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/batch-edit/post(tasks.batchEdit)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.tasks_period_batchEdit.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.tasks_period_batchEdit.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct BadRequest: Sendable, Hashable {
+                /// Creates a new `BadRequest`.
+                public init() {}
+            }
+            /// BadRequest
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/batch-edit/post(tasks.batchEdit)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.tasks_period_batchEdit.Output.BadRequest)
+            /// BadRequest
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/batch-edit/post(tasks.batchEdit)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            public static var badRequest: Self {
+                .badRequest(.init())
+            }
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            public var badRequest: Operations.tasks_period_batchEdit.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/401/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/401/content/application\/json`.
+                    case json(Components.Schemas.UnauthorizedEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.UnauthorizedEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_batchEdit.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_batchEdit.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// Unauthorized
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/batch-edit/post(tasks.batchEdit)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.tasks_period_batchEdit.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            public var unauthorized: Operations.tasks_period_batchEdit.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/403/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/403/content/application\/json`.
+                    case json(Components.Schemas.ForbiddenEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.ForbiddenEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_batchEdit.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_batchEdit.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// Forbidden
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/batch-edit/post(tasks.batchEdit)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.tasks_period_batchEdit.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            public var forbidden: Operations.tasks_period_batchEdit.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct NotFound: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/404/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/404/content/json`.
+                    public struct jsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/404/content/json/value1`.
+                        public struct Value1Payload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/404/content/json/value1/generated_at`.
+                            public var generated_at: Swift.String
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/404/content/json/value1/code`.
+                            @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_found = "not_found"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/404/content/json/value1/code`.
+                            public var code: Operations.tasks_period_batchEdit.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/404/content/json/value1/message`.
+                            public var message: Swift.String
+                            /// Creates a new `Value1Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - generated_at:
+                            ///   - code:
+                            ///   - message:
+                            public init(
+                                generated_at: Swift.String,
+                                code: Operations.tasks_period_batchEdit.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
+                                message: Swift.String
+                            ) {
+                                self.generated_at = generated_at
+                                self.code = code
+                                self.message = message
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case generated_at
+                                case code
+                                case message
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.generated_at = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .generated_at
+                                )
+                                self.code = try container.decode(
+                                    Operations.tasks_period_batchEdit.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "generated_at",
+                                    "code",
+                                    "message"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.generated_at, forKey: .generated_at)
+                                try container.encode(self.code, forKey: .code)
+                                try container.encode(self.message, forKey: .message)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/404/content/json/value1`.
+                        public var value1: Operations.tasks_period_batchEdit.Output.NotFound.Body.jsonPayload.Value1Payload?
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/404/content/json/value2`.
+                        public var value2: Components.Schemas.NotFoundEncoded?
+                        /// Creates a new `jsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - value1:
+                        ///   - value2:
+                        public init(
+                            value1: Operations.tasks_period_batchEdit.Output.NotFound.Body.jsonPayload.Value1Payload? = nil,
+                            value2: Components.Schemas.NotFoundEncoded? = nil
+                        ) {
+                            self.value1 = value1
+                            self.value2 = value2
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self.value1 = try .init(from: decoder)
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self.value2 = try .init(from: decoder)
+                            } catch {
+                                errors.append(error)
+                            }
+                            try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                [
+                                    self.value1,
+                                    self.value2
+                                ],
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
+                            )
+                        }
+                        public func encode(to encoder: any Swift.Encoder) throws {
+                            try self.value1?.encode(to: encoder)
+                            try self.value2?.encode(to: encoder)
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/404/content/application\/json`.
+                    case json(Operations.tasks_period_batchEdit.Output.NotFound.Body.jsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Operations.tasks_period_batchEdit.Output.NotFound.Body.jsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_batchEdit.Output.NotFound.Body
+                /// Creates a new `NotFound`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_batchEdit.Output.NotFound.Body) {
+                    self.body = body
+                }
+            }
+            /// NotFound
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/batch-edit/post(tasks.batchEdit)/responses/404`.
+            ///
+            /// HTTP response code: `404 notFound`.
+            case notFound(Operations.tasks_period_batchEdit.Output.NotFound)
+            /// The associated value of the enum case if `self` is `.notFound`.
+            ///
+            /// - Throws: An error if `self` is not `.notFound`.
+            /// - SeeAlso: `.notFound`.
+            public var notFound: Operations.tasks_period_batchEdit.Output.NotFound {
+                get throws {
+                    switch self {
+                    case let .notFound(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "notFound",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct Conflict: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/409/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/409/content/application\/json`.
+                    case json(Components.Schemas.ConflictEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.ConflictEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_batchEdit.Output.Conflict.Body
+                /// Creates a new `Conflict`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_batchEdit.Output.Conflict.Body) {
+                    self.body = body
+                }
+            }
+            /// Conflict
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/batch-edit/post(tasks.batchEdit)/responses/409`.
+            ///
+            /// HTTP response code: `409 conflict`.
+            case conflict(Operations.tasks_period_batchEdit.Output.Conflict)
+            /// The associated value of the enum case if `self` is `.conflict`.
+            ///
+            /// - Throws: An error if `self` is not `.conflict`.
+            /// - SeeAlso: `.conflict`.
+            public var conflict: Operations.tasks_period_batchEdit.Output.Conflict {
+                get throws {
+                    switch self {
+                    case let .conflict(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "conflict",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/422/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/422/content/application\/json`.
+                    case json(Components.Schemas.InvalidTaskEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.InvalidTaskEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_batchEdit.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_batchEdit.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// InvalidTask
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/batch-edit/post(tasks.batchEdit)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.tasks_period_batchEdit.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            public var unprocessableContent: Operations.tasks_period_batchEdit.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct InternalServerError: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/500/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/500/content/application\/json`.
+                    case json(Components.Schemas.InternalErrorEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.InternalErrorEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_batchEdit.Output.InternalServerError.Body
+                /// Creates a new `InternalServerError`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_batchEdit.Output.InternalServerError.Body) {
+                    self.body = body
+                }
+            }
+            /// InternalError
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/batch-edit/post(tasks.batchEdit)/responses/500`.
+            ///
+            /// HTTP response code: `500 internalServerError`.
+            case internalServerError(Operations.tasks_period_batchEdit.Output.InternalServerError)
+            /// The associated value of the enum case if `self` is `.internalServerError`.
+            ///
+            /// - Throws: An error if `self` is not `.internalServerError`.
+            /// - SeeAlso: `.internalServerError`.
+            public var internalServerError: Operations.tasks_period_batchEdit.Output.InternalServerError {
+                get throws {
+                    switch self {
+                    case let .internalServerError(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "internalServerError",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
     /// - Remark: HTTP `POST /profiles/{profile}/import`.
     /// - Remark: Generated from `#/paths//profiles/{profile}/import/post(tasks.importTasks)`.
     public enum tasks_period_importTasks {

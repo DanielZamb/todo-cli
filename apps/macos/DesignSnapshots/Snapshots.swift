@@ -278,6 +278,41 @@ struct Snapshots {
                 }
 
             }
+            if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] != "1" && ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] != "1" {
+                for compact in [true, false] {
+                    for state in ["ready", "preview", "applied", "conflict", "empty", "loading", "error"] {
+                        let batchModel = fixture()
+                        batchModel.signedIn = true
+                        batchModel.connection = .live
+                        var draft = BatchEditDraft(profile: "work")
+                        draft.targets = state == "empty" ? [] : Array(batchModel.tasks.prefix(4))
+                        if state == "conflict" {
+                            draft.targets = try draft.targets.map { task in
+                                var value = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(task)) as? [String: Any])
+                                value["row_version"] = 1
+                                return try JSONDecoder().decode(TaskSnapshot.self, from: JSONSerialization.data(withJSONObject: value))
+                            }
+                        }
+                        draft.selected = Set(draft.targets.prefix(2).map(\.id))
+                        draft.loading = state == "loading"
+                        if state == "error" { draft.error = "The server is unavailable. Reconnect and reload Tasks." }
+                        if ["preview", "applied", "conflict"].contains(state) {
+                            let rows: [[String: Any]] = draft.targets.prefix(2).enumerated().map { index, task in
+                                var row: [String: Any] = ["task_id": task.id, "from_version": task.row_version, "outcome": state == "conflict" && index == 1 ? "rejected" : "updated", "current_version": state == "conflict" ? 2 : task.row_version]
+                                if state == "conflict" && index == 1 { row["error"] = ["code": "occ_conflict", "message": "Reload Tasks."] }
+                                return row
+                            }
+                            draft.report = try JSONDecoder().decode(BatchEditReport.self, from: JSONSerialization.data(withJSONObject: ["dry_run": state == "preview", "items": rows]))
+                        }
+                        batchModel.batchEdit = draft
+                        try await render("batch-edit-\(state)-\(compact ? "compact" : "full")", ZStack {
+                            if !compact { WorkspaceSnapshot(model: batchModel); Color.black.opacity(0.08) }
+                            BatchEditView(model: batchModel, compact: compact).frame(width: compact ? 369 : 460, height: compact ? 390 : 510).background(.background, in: RoundedRectangle(cornerRadius: 12)).shadow(radius: 16)
+                        }, width: compact ? 393 : 1100, height: compact ? 426 : 720)
+                    }
+                }
+            }
+            if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" { continue }
             model.newTitle = #"Ship tomorrow p1 #focus #planning @Client"#
             model.signedIn = true
             model.connection = .live
@@ -828,7 +863,7 @@ struct Snapshots {
         try JSONEncoder().encode(importLayouts).write(to: directory.appendingPathComponent("import-layout.json"))
         try JSONEncoder().encode(transferLayouts).write(to: directory.appendingPathComponent("transfer-layout.json"))
         try JSONSerialization.data(withJSONObject: compactLayouts, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("compact-layout.json"))
-        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : 318))
+        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 346))
     }
 
     private func fixture() -> TodoModel {

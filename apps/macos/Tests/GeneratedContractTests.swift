@@ -7,6 +7,12 @@ import OpenAPIRuntime
 #endif
 
 final class GeneratedContractTests: XCTestCase {
+    func testBatchEditKeepsPerTaskVersionsAndSharedChange() throws {
+      try roundTrip(Operations.tasks_period_batchEdit.Input.Body.jsonPayload.self, #"{"items":[{"task_id":"first","from_version":2},{"task_id":"second","from_version":7}],"changes":{"priority":"P1"},"dry_run":true}"#)
+      try roundTrip(Operations.tasks_period_batchEdit.Input.Body.jsonPayload.self, #"{"items":[{"task_id":"first","from_version":2}],"changes":{"due_at":null}}"#)
+      try roundTrip(Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.self, #"{"generated_at":"2026-11-04T00:00:00Z","dry_run":false,"items":[{"task_id":"first","from_version":2,"current_version":3,"outcome":"updated"},{"task_id":"second","from_version":7,"current_version":8,"outcome":"rejected","error":{"generated_at":"2026-11-04T00:00:00Z","code":"occ_conflict","message":"Reload Tasks","details":{"current_version":8}}}],"totals":{"updated":1,"rejected":1}}"#)
+    }
+
     func testDiagnosticsReadPreservesNullableMetadata() async throws {
         let fixture = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("API/Fixtures/diagnostics.json")
         let data = try Data(contentsOf: fixture)

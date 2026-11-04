@@ -4,6 +4,8 @@ import {
   AttachManyRequest,
   Attachment,
   AttachTask,
+  BatchEditReport,
+  BatchEditRequest,
   CreateSeries,
   CreateTask,
   DeleteProfile,
@@ -88,6 +90,10 @@ export const Request = Schema.Union([
     task: TaskId,
     payload: UploadAttachment,
   }),
+  Schema.TaggedStruct("batchEdit", {
+    profile: ProfileId,
+    payload: BatchEditRequest,
+  }),
   Schema.TaggedStruct("attachmentTargets", { profile: ProfileId }),
   Schema.TaggedStruct("attachmentBatch", {
     profile: ProfileId,
@@ -170,6 +176,7 @@ export const Request = Schema.Union([
 export type Request = typeof Request.Type;
 export const Reply = Schema.Union([
   Schema.TaggedStruct("attachmentTargets", { tasks: Schema.Array(Task) }),
+  Schema.TaggedStruct("batchEdit", { report: BatchEditReport }),
   Schema.TaggedStruct("attachmentBatch", { report: AttachManyReport }),
   OutdatedServer,
   Schema.TaggedStruct("diagnostics", { snapshot: DiagnosticsSnapshot }),

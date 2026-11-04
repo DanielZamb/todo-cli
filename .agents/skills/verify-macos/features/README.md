@@ -39,3 +39,5 @@ second-client SSE, offscreen sheets and unsigned build.
 full and Compact appearance, and unsigned compilation checks during HOLD.
 
 Version guardrails are covered in [session](<session.md>).
+
+[Edit several Tasks](batch-edit.md) covers per-Task expected Versions, preview, independent apply results and Conflict reload.
