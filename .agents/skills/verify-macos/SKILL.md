@@ -353,7 +353,7 @@ same reference to the selected Tasks. Reload Tasks refreshes Versions after a
 Conflict. `liveAttachmentBatchSelectPreviewApplyConflictAndReload` drives this
 production state, including file and URI references. The design helper adds
 24 full and Compact light/dark captures for ready, preview, Conflict, loading,
-empty and error states, for 318 captures in the complete run.
+empty and error states. The complete run now has 346 captures including batch edit.
 
 ## Batch edit
 

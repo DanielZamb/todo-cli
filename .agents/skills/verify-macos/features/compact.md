@@ -12,7 +12,7 @@ under the standing-order swift-slot script and require ui01-priority-http.json.
 
 Run the existing offscreen design helper under that same lock. Inspect
 compact-priority-{ready,empty,dense}-{light,dark}.png first, then the corresponding
-full-priority captures. The manifest contains 294 PNGs and Assets.car must exist.
+full-priority captures. The manifest contains 346 PNGs and Assets.car must exist.
 TODO_SNAPSHOT_PRIORITY_ONLY=1 selects 18 captures for a focused check, including
 the dense list after scrolling 53 pt and to its bottom. Compact geometry must
 show zero partially drawn Task rows at the measured viewport edges.

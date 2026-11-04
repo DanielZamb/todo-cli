@@ -42,11 +42,15 @@ Version 2, with Reload Tasks filled and Apply quiet.
 Run the orchestration disk guard before an unsigned build:
 
 ```sh
-xcodebuild -project apps/macos/Todo.xcodeproj -scheme Todo -configuration Debug -destination platform=macOS -derivedDataPath apps/macos/DerivedData/CLI02Unsigned CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO EXPANDED_CODE_SIGN_IDENTITY= build
+xcodebuild -project apps/macos/Todo.xcodeproj -scheme Todo -configuration Debug -destination platform=macOS -derivedDataPath "apps/macos/DerivedData/CLI02Unsigned-$(git rev-parse --short HEAD)" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO EXPANDED_CODE_SIGN_IDENTITY= build
 ```
 
 Keep `TODO_SERVER_BINARY` set so the bundle reuses the cached compiled server.
 Run this command through the Swift wrapper too, and read its process exit code.
+Use the commit-specific DerivedData path shown above. On macOS, overwriting a
+previously executed compiled server in place can leave the copied executable
+subject to a stale code-signature cache and SIGKILL. A fresh build directory
+keeps each commit's bundled executable separate without signing.
 
 ## Gotchas
 

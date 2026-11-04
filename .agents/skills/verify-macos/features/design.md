@@ -23,7 +23,7 @@ The Conflict uses native radioGroup Pickers. Their radio outlines flatten in the
 offscreen cache. The supervised checklist must check unselected, selected and
 keyboard-operated Conflict choices in both appearances.
 
-Require `result.json`, `manifest.json`, `accessibility.json`, all 294 PNGs and exit 0
+Require `result.json`, `manifest.json`, `accessibility.json`, all 346 PNGs and exit 0
 in `commands.json`. The identifier check reads the W08 base a19f207 source and
 accepts formatter-inserted whitespace around the existing string expressions.
 Read the PNGs before claiming visual proof. PresentationTests checks literal row
