@@ -235,3 +235,18 @@ appearance helper opens Settings, then Appearance, from Compact navigation.
 The focused compiled host proves old-health and fake-contract blocking, exact Status membership and disabled planning Status, with Compact-first captures. See [the feature recipe](features/sessions.md) for commands and expected evidence.
 
 Run `TODO_ELECTRON_VERIFY_HOST=1 TODO_VERIFY_VERSION_GUARDRAILS=1 .agents/skills/verify-electron/scripts/verify.sh "$PWD/docs/evidence/version-guardrails/electron-new"`. Never wrap this helper in the Electron build lock. Native and Keychain verification remain on HOLD.
+
+## Attachment batch proof without a native app
+
+`apps/electron/scripts/verify-attachment-batch-offscreen.ts <fresh-evidence>`
+builds the production Attachment section and batch dialog, then drives them in
+headless Chromium against the production task-client adapter and a compiled
+scratch server. Run it behind the shared Electron build lock and disk guard.
+It never imports Electron, safeStorage, or Keychain. An optional
+`TODO_HEADLESS_CHROMIUM` names an existing headless browser executable when the
+Playwright-matched browser is unavailable. No browser is installed by the helper.
+The drive uses the native menu action's same React handler, selects two Tasks,
+previews, applies, rejects stale Versions, reloads and previews unchanged values.
+It reads durable Tasks through the compiled CLI and captures both appearances
+at Compact and full sizes. This proves renderer behavior and HTTP writes, while
+native Electron IPC, window behavior and Keychain remain under HOLD.

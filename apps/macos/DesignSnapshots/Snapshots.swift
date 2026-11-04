@@ -347,6 +347,32 @@ struct Snapshots {
                 .init(id: "image", location: .image(preview.path), name: "launch-sketch.png", byte_size: previewData.count, added_at: "2026-10-29T00:00:00Z"),
                 .init(id: "link", location: .link(URL(string: "https://example.com/issue/42")!), label: "Issue 42", added_at: "2026-10-29T00:00:00Z")
             ]
+            let batchModel = fixture()
+            batchModel.signedIn = true
+            batchModel.connection = .live
+            let batchReference = AttachmentSnapshot(id: "batch-reference", location: .link(URL(string: "t3-thread://v2/host/thread")!), label: "thread", added_at: "2026-11-03T00:00:00Z")
+            for compact in [true, false] {
+                for state in ["ready", "preview", "conflict", "empty", "loading", "error"] {
+                    var draft = AttachmentBatchDraft(profile: "work", reference: batchReference)
+                    draft.targets = state == "empty" ? [] : Array(batchModel.tasks.prefix(4))
+                    draft.selected = Set(draft.targets.prefix(2).map(\.id))
+                    draft.loading = state == "loading"
+                    if state == "error" { draft.error = "The server is unavailable. Reconnect and reload Tasks." }
+                    if state == "preview" || state == "conflict" {
+                        let rows: [[String: Any]] = draft.targets.prefix(2).map { task in
+                            var row: [String: Any] = ["task_id": task.id, "outcome": state == "preview" ? "attached" : "rejected", "current_version": task.row_version]
+                            if state == "conflict" { row["error"] = ["code": "occ_conflict", "message": "Task changed. Reload Tasks and try again."] }
+                            return row
+                        }
+                        draft.report = try JSONDecoder().decode(AttachmentBatchReport.self, from: JSONSerialization.data(withJSONObject: ["dry_run": state == "preview", "items": rows]))
+                    }
+                    batchModel.attachmentBatch = draft
+                    try await render("attachment-batch-\(state)-\(compact ? "compact" : "full")", ZStack {
+                        if !compact { WorkspaceSnapshot(model: batchModel); Color.black.opacity(0.08) }
+                        AttachmentBatchView(model: batchModel).frame(width: compact ? 369 : 420, height: compact ? 402 : 426).background(.background, in: RoundedRectangle(cornerRadius: 12)).shadow(radius: 16)
+                    }, width: compact ? 393 : 1100, height: compact ? 426 : 720)
+                }
+            }
             attachmentModel.tasks = [attachmentTask]
             attachmentModel.editor = TaskDraft(attachmentTask)
             try await render("attachments-compact-row", TaskRow(task: attachmentTask, now: referenceDate, canWrite: true, compact: true, projectName: "International Platform Accessibility and Release Planning", tagNames: longTags, complete: {}).padding(16), width: 393, height: 150)
@@ -738,7 +764,7 @@ struct Snapshots {
         try JSONEncoder().encode(importLayouts).write(to: directory.appendingPathComponent("import-layout.json"))
         try JSONEncoder().encode(transferLayouts).write(to: directory.appendingPathComponent("transfer-layout.json"))
         try JSONSerialization.data(withJSONObject: compactLayouts, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("compact-layout.json"))
-        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : 278))
+        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : 302))
     }
 
     private func fixture() -> TodoModel {

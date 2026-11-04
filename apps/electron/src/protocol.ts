@@ -1,5 +1,7 @@
 import {
   AttachManyItem,
+  AttachManyReport,
+  AttachManyRequest,
   Attachment,
   AttachTask,
   CreateSeries,
@@ -86,6 +88,11 @@ export const Request = Schema.Union([
     task: TaskId,
     payload: UploadAttachment,
   }),
+  Schema.TaggedStruct("attachmentTargets", { profile: ProfileId }),
+  Schema.TaggedStruct("attachmentBatch", {
+    profile: ProfileId,
+    payload: AttachManyRequest,
+  }),
   Schema.TaggedStruct("attachMany", {
     profile: ProfileId,
     payload: AttachManyItem,
@@ -162,6 +169,8 @@ export const Request = Schema.Union([
 ]);
 export type Request = typeof Request.Type;
 export const Reply = Schema.Union([
+  Schema.TaggedStruct("attachmentTargets", { tasks: Schema.Array(Task) }),
+  Schema.TaggedStruct("attachmentBatch", { report: AttachManyReport }),
   OutdatedServer,
   Schema.TaggedStruct("diagnostics", { snapshot: DiagnosticsSnapshot }),
   Schema.TaggedStruct("snapshots", SnapshotList.fields),

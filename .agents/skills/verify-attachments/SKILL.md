@@ -80,3 +80,10 @@ separate coordinator check, not proven by filesystem resolution.
 After the normal drive, run `bun .agents/skills/verify-attachments/scripts/cli01.ts <fresh-absolute-evidence-directory>`. It reuses the same source-hash binaries and drives creation with repeatable `--attach` and `--link`, failed-path atomicity, any-URI links, import adoption and `attach-many` through both the compiled CLI and curl. Its scratch server PID is recorded in `server.json` and stopped before cleanup. `result.json` exists only after all assertions pass.
 
 The domain behavior suite covers Task-group atomicity, duplicate reference idempotence, dry-run History isolation, stale Versions, adoption preserving omitted metadata and replay. Both desktop multi-file pickers use the batch HTTP command. URI storage does not broaden the allowed link-opening schemes.
+
+Both clients also offer Attach to Tasks from a file or link's action menu.
+The native selection dialog previews and applies a reference with an optional
+label to several Tasks, and reports every Task's result. The Swift state and
+offscreen recipes live in verify-macos. The Electron headless renderer recipe
+lives in verify-electron and calls the production HTTP adapter. No native app,
+Keychain or signed build is needed for these bounded proofs.

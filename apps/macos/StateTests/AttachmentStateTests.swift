@@ -305,3 +305,46 @@ func liveCLI01URIAndImportAdoptionSurviveReload() async throws {
   let batchReload = try TaskSnapshot.decode(try await client.tasks_period_show(path: .init(profile: "work", task: batchTask.id)).ok.body.json)
   #expect(batchReload.attachments?.map(\.displayPath) == [first.path, second.path])
 }
+
+@Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_W06_SERVER"] != nil)) @MainActor
+func liveAttachmentBatchSelectPreviewApplyConflictAndReload() async throws {
+  let server = try #require(ProcessInfo.processInfo.environment["TODO_W06_SERVER"].flatMap(URL.init(string:)))
+  let session = try await todoClient(server: server, credential: "").signIn_period_signIn(body: .json(.init(passphrase: "scratch verification passphrase"))).ok.body.json
+  let client = todoClient(server: server, credential: session.credential)
+  let first = try await client.tasks_period_create(path: .init(profile: "work"), body: .json(.init(title: "CLI01 native first"))).ok.body.json
+  let second = try await client.tasks_period_create(path: .init(profile: "work"), body: .json(.init(title: "CLI01 native second"))).ok.body.json
+  let model = TodoModel(configuration: .init(server: server, initialProfile: "work", vaultService: "never-used-cli01-batch"), clientFactory: { _, _ in todoClient(server: server, credential: session.credential) })
+  model.signedIn = true
+  model.connection = .live
+  let reference = AttachmentSnapshot(id: "reference", location: .link(try #require(URL(string: "t3-thread://v2/swift/batch"))), label: "thread", added_at: "2026-11-03T00:00:00Z")
+  model.beginEditing(try TaskSnapshot.decode(first))
+  model.editor?.title = "Preserve the unsaved draft"
+  await model.beginAttachmentBatch(reference)
+  #expect(model.attachmentBatch?.error == nil)
+  model.attachmentBatch?.selected = [first.id, second.id]
+  await model.applyAttachmentBatch(dryRun: true)
+  #expect(model.attachmentBatch?.report?.items.map(\.outcome) == ["attached", "attached"])
+  #expect(try await client.tasks_period_show(path: .init(profile: "work", task: first.id)).ok.body.json.row_version == 1)
+  await model.applyAttachmentBatch(dryRun: false)
+  #expect(model.attachmentBatch?.report?.items.map(\.outcome) == ["attached", "attached"])
+  let saved = try TaskSnapshot.decode(try await client.tasks_period_show(path: .init(profile: "work", task: first.id)).ok.body.json)
+  #expect(saved.row_version == 2)
+  #expect(model.editor?.base.row_version == 2)
+  #expect(model.editor?.title == "Preserve the unsaved draft")
+  #expect(saved.attachments?.map(\.displayPath) == ["t3-thread://v2/swift/batch"])
+  await model.applyAttachmentBatch(dryRun: false)
+  #expect(model.attachmentBatch?.report?.items.map { $0.error?.code } == ["occ_conflict", "occ_conflict"])
+  await model.reloadAttachmentTargets()
+  await model.applyAttachmentBatch(dryRun: true)
+  #expect(model.attachmentBatch?.report?.items.map(\.outcome) == ["unchanged", "unchanged"])
+  let scratch = URL(fileURLWithPath: try #require(ProcessInfo.processInfo.environment["TODO_W06_SCRATCH"]))
+  let file = scratch.appendingPathComponent("cli01-shared.md")
+  try Data("Shared file".utf8).write(to: file)
+  await model.beginAttachmentBatch(AttachmentSnapshot(id: "file", location: .file(file.path), added_at: "2026-11-03T00:00:00Z"))
+  model.attachmentBatch?.selected = [first.id, second.id]
+  await model.applyAttachmentBatch(dryRun: false)
+  #expect(model.attachmentBatch?.report?.items.map(\.outcome) == ["attached", "attached"])
+  let fileReload = try TaskSnapshot.decode(try await client.tasks_period_show(path: .init(profile: "work", task: second.id)).ok.body.json)
+  #expect(fileReload.row_version == 3)
+  #expect(fileReload.attachments?.last?.path == file.path)
+}

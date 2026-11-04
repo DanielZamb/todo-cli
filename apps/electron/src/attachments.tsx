@@ -3,6 +3,7 @@ import {
   AttachmentLocation,
   attachmentLimit,
   ImageMime,
+  type ProfileId,
   type Task,
   validAttachmentLocation,
 } from "@todo/domain";
@@ -18,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { AttachmentBatchDialog } from "./attachment-batch.tsx";
 import { Button } from "./components/ui/button.tsx";
 import {
   DropdownMenu,
@@ -54,12 +56,18 @@ export function JiraMarker({ task }: { task: Task }) {
 }
 function AttachmentRow({
   attachment,
+  profile,
+  taskId,
+  accepted,
   send,
   disabled,
   remove,
   label,
 }: {
   attachment: Attachment;
+  profile: ProfileId;
+  taskId: Task["id"];
+  accepted: (task: Task) => void;
   send: Send;
   disabled: boolean;
   remove: () => void;
@@ -72,6 +80,7 @@ function AttachmentRow({
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(attachment.label ?? "");
+  const [sharing, setSharing] = useState(false);
   useEffect(() => {
     let live = true;
     void send({ _tag: "attachmentStatus", attachment }).then((reply) => {
@@ -227,6 +236,11 @@ function AttachmentRow({
             <MoreHorizontal />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="attachment-menu">
+            {attachment.kind !== "image" && (
+              <DropdownMenuItem onClick={() => setSharing(true)}>
+                Attach to Tasks…
+              </DropdownMenuItem>
+            )}
             {attachment.label?.toLowerCase() !== "jira" && (
               <DropdownMenuItem onClick={() => void label("jira")}>
                 Mark as Jira draft
@@ -258,6 +272,17 @@ function AttachmentRow({
           <X />
         </Button>
       </div>
+      {sharing && (
+        <AttachmentBatchDialog
+          attachment={attachment}
+          profile={profile}
+          request={send}
+          sourceTaskId={taskId}
+          onAccepted={accepted}
+          canWrite={!disabled}
+          onClose={() => setSharing(false)}
+        />
+      )}
     </li>
   );
 }
@@ -491,6 +516,12 @@ export function AttachmentsSection({
             <AttachmentRow
               key={value.id}
               attachment={value}
+              profile={task.profile_id}
+              taskId={task.id}
+              accepted={(value) => {
+                current.current = value;
+                onAccepted(value);
+              }}
               send={request}
               disabled={disabled}
               remove={() =>

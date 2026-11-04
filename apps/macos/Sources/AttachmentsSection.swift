@@ -75,6 +75,7 @@ struct AttachmentsSection: View {
     .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in refreshClipboard() }
     .onDrop(of: [.fileURL, .png, .jpeg, .gif, .webP], isTargeted: $dropTarget, perform: receive)
     .onPasteCommand(of: [.png, .jpeg, .gif, .webP]) { providers in _ = receive(providers) }
+    .sheet(item: $model.attachmentBatch) { _ in AttachmentBatchView(model: model) }
     .sheet(item: $editing) { attachment in
       AttachmentLabelEditor(attachment: attachment, label: $label, disabled: disabled, cancel: { editing = nil }, save: { Task {
           guard model.editor?.id == labelTask, model.profile == labelProfile else { editing = nil; return }
@@ -84,6 +85,7 @@ struct AttachmentsSection: View {
   }
   private func refreshClipboard() { hasImage = NSPasteboard.general.canReadObject(forClasses: [NSImage.self], options: nil) }
   @ViewBuilder private func labelActions(_ attachment: AttachmentSnapshot) -> some View {
+    if !attachment.isImage { Button("Attach to Tasks…") { Task { await model.beginAttachmentBatch(attachment) } } }
     if attachment.label?.lowercased() != "jira" { Button("Mark as Jira draft") { Task { await model.labelAttachment(attachment, label: "jira") } } }
     Button("Edit label…") { label = attachment.label ?? ""; labelTask = model.editor?.id; labelProfile = model.profile; editing = attachment }
     if attachment.label != nil { Button("Clear label") { Task { await model.labelAttachment(attachment, label: nil) } } }

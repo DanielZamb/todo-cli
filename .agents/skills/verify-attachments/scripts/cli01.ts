@@ -39,6 +39,8 @@ try {
   assert.equal(created.attachments[1].label, "jira");
   json(["add", "Must not exist", "--attach", join(scratch, "missing")], 2);
   assert.equal(json(["list"]).tasks.some((t: { title: string }) => t.title === "Must not exist"), false);
+  json(["add", "Bad URI must not exist", "--link", "https://[invalid"], 2);
+  assert.equal(json(["list"]).tasks.some((t: { title: string }) => t.title === "Bad URI must not exist"), false);
   const importFile = join(scratch, "import.json");
   const item = { external_id: "cli01:adopt", task_id: target.id, from_version: 1, title: "Adopted" };
   writeFileSync(importFile, JSON.stringify([item]));
@@ -65,6 +67,8 @@ try {
   assert.deepEqual(dry.items.map((r: { outcome: string }) => r.outcome), ["unchanged", "attached"]);
   assert.equal(json(["show", created.id]).task.row_version, created.row_version);
   const batch = json(["attach-many", batchFile]);
+  assert.equal(batch.items[1].attached, 2);
+  assert.equal(json(["show", created.id]).task.row_version, 3);
   assert.deepEqual(batch.items.map((r: { outcome: string }) => r.outcome), ["unchanged", "attached"]);
   assert.deepEqual(json(["attach-many", batchFile], 4).items.map((r: { outcome: string }) => r.outcome), ["unchanged", "rejected"]);
   for (const name of ["attach-many", "attach-many-input", "import-item"]) assert.ok(json(["schema", name]));

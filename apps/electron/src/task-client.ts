@@ -61,6 +61,22 @@ export const taskRequest = (
             payload: request.payload,
           }),
         };
+      case "attachmentTargets":
+        return {
+          _tag: "attachmentTargets",
+          tasks: yield* http.tasks.list({
+            params: { profile: request.profile },
+            query: {},
+          }),
+        };
+      case "attachmentBatch":
+        return {
+          _tag: "attachmentBatch",
+          report: yield* http.tasks.attachMany({
+            params: { profile: request.profile },
+            payload: request.payload,
+          }),
+        };
       case "attachMany": {
         const report = yield* http.tasks.attachMany({
           params: { profile: request.profile },

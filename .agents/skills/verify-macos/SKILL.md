@@ -327,3 +327,11 @@ Attachment groups through `TodoModel.attachPaths`, including invalid-path rollba
 and unchanged repeats. The native file picker uses this same batch command.
 Generated contract checks cover creation reference arrays and batch requests and
 reports. URI decoding does not expand the allowed opening schemes.
+
+The Attachment action menu also offers Attach to Tasks. Its native sheet lists
+Profile Tasks, keeps per-Task expected Versions, and previews or applies the
+same reference to the selected Tasks. Reload Tasks refreshes Versions after a
+Conflict. `liveAttachmentBatchSelectPreviewApplyConflictAndReload` drives this
+production state, including file and URI references. The design helper adds
+24 full and Compact light/dark captures for ready, preview, Conflict, loading,
+empty and error states, for 302 captures in the complete run.

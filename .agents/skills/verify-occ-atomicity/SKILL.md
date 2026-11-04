@@ -89,7 +89,7 @@ Do not relax `AtomicCAS`, change a pin, or update hashes to obtain a pass.
 ## Check the model against the code
 
 The mapping was confirmed at commit
-`a595e277dcb1f4356c8451df0bc3f5cc1fab28d9`.
+`1589cf6aa34ff37dcf7aef19ded5ae19a7ac2caa`.
 [coverage.json](coverage.json) records exact source hashes and covered functions.
 The gate covers whole files conservatively, even when only one function matters.
 
@@ -185,3 +185,9 @@ be satisfied by a source hash mismatch or a compiler error.
 Both scratch variants made the one check command exit 1. After byte-for-byte
 restoration, the same command exited 0. No product-code finding appeared in the
 unchanged source within these bounds. [REPORT.md](REPORT.md) records the run.
+
+## CLI01 mapping review
+
+At product commit `1589cf6aa34ff37dcf7aef19ded5ae19a7ac2caa`, only `attachments.ts` changed among the covered files. Its URI validator accepts more schemes, and its new input and report schemas describe Attachment groups. The store transaction, before-value comparison, Version check, projection, event schemas and replay are byte-identical to the earlier mapping. The model already treats the whole resolved Task payload as content. URI locations therefore fit the same abstract content values without changing a transition or invariant.
+
+Batch groups and import adoption compose existing commands within the existing immediate transaction. The model still excludes command-input handoff and multiple operations in an outer transaction. The compiled CLI01 drive, import tests and Attachment verification cover those behaviors separately.
