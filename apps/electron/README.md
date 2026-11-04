@@ -6,13 +6,39 @@ The renderer has a sandboxed preload bridge with schema-validated requests and
 replies. Neither process opens SQLite or executes domain task commands.
 
 ```sh
+scripts/disk-guard.sh
+pnpm install --frozen-lockfile
 pnpm --filter @todo/electron typecheck
 pnpm --filter @todo/electron test
-pnpm --filter @todo/electron build
+/usr/bin/lockf -k /tmp/todo-own-work-electron.lock pnpm --filter @todo/electron build
 ```
 
-Build runs the required disk guard and creates unsigned `dist/Todo.app` on macOS,
-with bundle ID `dev.todo.electron`. Agents never sign code.
+Run these commands from the repository root with Node.js 22.12 or newer,
+pnpm 10.30.1, Bun 1.4.4 or newer, and Xcode 26 for icon compilation. Run
+`scripts/disk-guard.sh` before installing dependencies.
+
+Build runs the required disk guard and creates unsigned
+`apps/electron/dist/Todo.app` on macOS, with bundle ID `dev.todo.electron`.
+Before copying Electron, the macOS package build runs the pinned package's
+`install-electron` command. Electron 44.9.3 does not download its runtime during
+`pnpm install`. The first package build needs network access to download the
+runtime; later builds reuse it. Building does not launch the app. Agents never
+sign code.
+
+To verify a committed build from a clean export, run:
+
+```sh
+TODO_VERIFY_ELECTRON_PACKAGE=1 pnpm --filter @todo/electron test test/package-build.test.ts
+```
+
+This opt-in test exports `HEAD` into a new temporary directory, uses an isolated
+HOME, pnpm store, and Electron cache, and checks disk space before installation
+and packaging. It asserts that `Electron.app` is absent after installation, then
+builds under the shared package lock and inspects the bundle without launching it.
+The printed directory retains the clean export, `head.txt`, `commands.json` with
+exit codes, `install.log`, `build.log`, and a `PASS` file after all checks pass.
+Ordinary test runs skip this download and package check.
+
 For signed apps, the user runs `make sign-desktop` at the repository root in their
 own Terminal. `@electron/osx-sign` signs nested code with hardened runtime and
 Electron entitlements, using `TODO_SIGNING_IDENTITY` and `TODO_SIGNING_TEAM` from
