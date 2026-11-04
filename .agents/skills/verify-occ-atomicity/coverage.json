@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "1589cf6aa34ff37dcf7aef19ded5ae19a7ac2caa",
+  "confirmedCommit": "ed4e2423d696d0321bb0e19674bba1865bd2541d",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
@@ -55,7 +55,7 @@
     },
     {
       "path": "packages/domain/src/attachments.ts",
-      "sha256": "dcba4225431855973532931aabfdcf7d001d8cb8fe3112fcd8e50c32589796f5",
+      "sha256": "a894806ccf22b2262e2d783b602e5540e3122e44d85d1c08fae9225f746a5aca",
       "functions": ["Attachment", "validAttachmentLocation"]
     }
   ]
