@@ -2,6 +2,7 @@ import { expect, it } from "@effect/vitest";
 import { Task, TaskTime } from "@todo/domain";
 import { Effect, Schema } from "effect";
 import {
+  changedPayload,
   conflicts,
   conflictText,
   editorFor,
@@ -320,3 +321,23 @@ it("accepting an Attachment keeps the old Version when an unsaved field overlaps
 });
 
 import { acceptAttachmentTask } from "../src/attachment-model.ts";
+
+it("sends only changed fields, so an older Task with long values can still be edited", () => {
+  const older = Schema.decodeUnknownSync(Task)({
+    ...task,
+    title: "t".repeat(1_001),
+    description: "d".repeat(100_001),
+    tags: Array.from({ length: 101 }, (_, index) => `tag-${index}`),
+  });
+  const editor = editorFor(older);
+  expect(changedPayload(older, editor.changes)).toEqual({});
+  expect(changedPayload(older, { ...editor.changes, priority: "P4" })).toEqual({
+    priority: "P4",
+  });
+  expect(changedPayload(older, { ...editor.changes, description: "" })).toEqual(
+    { description: null },
+  );
+  expect(
+    changedPayload(task, { ...editorFor(task).changes, description: "" }),
+  ).toEqual({});
+});

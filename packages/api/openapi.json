@@ -3696,8 +3696,7 @@
                       "properties": {
                         "external_id": {
                           "type": "string",
-                          "minLength": 1,
-                          "maxLength": 1000
+                          "minLength": 1
                         },
                         "task_id": {
                           "type": "string",
@@ -9695,8 +9694,7 @@
                               "additionalProperties": false
                             }
                           ]
-                        },
-                        "maxItems": 1000
+                        }
                       }
                     },
                     "required": ["dtstart", "rrule", "exdate"],

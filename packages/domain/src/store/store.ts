@@ -767,20 +767,48 @@ export class OperationStore {
         // already past a limit may keep, but not grow, their lists. Move and
         // Revert only reproduce a state the Task already had, so they are
         // not checked; a Copy is a new Task and must meet the limits.
+        // An Occurrence successor has no previous state; it reproduces its
+        // stored Series defaults and its predecessor, so those bound it.
         const grows = (after: number, before: number, limit: number) =>
           after > limit && after > before;
+        const successorOf =
+          change.before === null &&
+          change.after.occurrence !== null &&
+          event.kind !== "TaskCreated"
+            ? {
+                series: readSeries(this.db).find(
+                  (value) => value.id === change.after?.occurrence?.series_id,
+                ),
+                predecessors: resolved.tasks.filter(
+                  (other) => other.before !== null,
+                ),
+              }
+            : null;
+        const previousTags = Math.max(
+          change.before?.tags.length ?? 0,
+          successorOf?.series?.task.tags.length ?? 0,
+          ...(successorOf?.predecessors ?? []).map(
+            (other) => other.before?.tags.length ?? 0,
+          ),
+        );
+        const previousAttachments = Math.max(
+          change.before?.attachments?.length ?? 0,
+          ...(successorOf?.predecessors ?? []).map(
+            (other) => other.before?.attachments?.length ?? 0,
+          ),
+        );
         if (
           event.kind !== "TaskMovedIn" &&
           event.kind !== "TaskMovedOut" &&
           event.kind !== "TaskReverted" &&
           (grows(
             change.after.tags.length,
-            change.before?.tags.length ?? 0,
+            previousTags,
             inputLimits.tagsPerTask,
           ) ||
             grows(
               change.after.attachments?.length ?? 0,
-              change.before?.attachments?.length ?? 0,
+              previousAttachments,
               inputLimits.attachmentsPerTask,
             ))
         )
@@ -862,6 +890,15 @@ export class OperationStore {
         (change.after.row_version !== (previous ?? 0) + 1 ||
           change.after.id !== series.id ||
           change.after.profile_id !== profile)
+      )
+        throw new Rejection("validation");
+      // Exclusion dates may be kept past the limit, not grown past it.
+      if (
+        change.after &&
+        event.kind !== "TaskReverted" &&
+        change.after.recurrence.exdate.length > inputLimits.exdates &&
+        change.after.recurrence.exdate.length >
+          (change.before?.recurrence.exdate.length ?? 0)
       )
         throw new Rejection("validation");
       if (change.after) validateMetadata(change.after.task);

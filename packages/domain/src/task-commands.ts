@@ -64,6 +64,12 @@ export const RecurrenceInput = Schema.Struct({
   dtstart: TaskTimeInput,
   exdate: limitedItems(TaskTimeInput, inputLimits.exdates),
 });
+// An edit resends the stored exclusion dates, which an older Series may hold
+// past the limit; the store refuses growth past it instead.
+export const RecurrenceEditInput = Schema.Struct({
+  ...RecurrenceInput.fields,
+  exdate: Schema.Array(TaskTimeInput),
+});
 export const CreateSeries = Schema.Struct({
   task: CreateTask,
   recurrence: RecurrenceInput,
@@ -72,6 +78,6 @@ export type CreateSeries = typeof CreateSeries.Type;
 export const EditSeries = Schema.Struct({
   from_version: Version,
   changes: TaskPatch,
-  recurrence: RecurrenceInput,
+  recurrence: RecurrenceEditInput,
 });
 export type EditSeries = typeof EditSeries.Type;

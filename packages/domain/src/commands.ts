@@ -40,6 +40,7 @@ import {
   type EditTask,
   type ExpectedVersion,
   type MoveTask,
+  RecurrenceEditInput,
   RecurrenceInput,
   type RevertTask,
   TaskPatch,
@@ -838,9 +839,9 @@ const prepareFlags = (
         : flags.recurrence === ""
           ? null
           : // Submitted recurrence meets the input limits; stored ones need not.
-            Schema.decodeUnknownSync(RecurrenceInput)(
-              JSON.parse(flags.recurrence),
-            );
+            Schema.decodeUnknownSync(
+              before ? RecurrenceEditInput : RecurrenceInput,
+            )(JSON.parse(flags.recurrence));
     if (before && recurrence && !resolveNextTime(recurrence, null))
       throw invalid("Series has no Occurrence");
     const options: CommandOptions = {

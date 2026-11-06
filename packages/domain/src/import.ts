@@ -29,7 +29,8 @@ export const ImportItem = Schema.Struct({
 });
 export type ImportItem = typeof ImportItem.Type;
 export const ImportCancellation = Schema.Struct({
-  external_id: ExternalIdInput,
+  // A reference to a stored Task's id, which may predate the limit.
+  external_id: Schema.NonEmptyString,
   task_id: TaskIdInput,
   from_version: Version,
 });

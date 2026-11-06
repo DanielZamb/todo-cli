@@ -3202,8 +3202,7 @@
                       "properties": {
                         "external_id": {
                           "type": "string",
-                          "minLength": 1,
-                          "maxLength": 1000
+                          "minLength": 1
                         },
                         "task_id": {
                           "type": "string",
@@ -7996,8 +7995,7 @@
                               "date": "#/components/schemas/SwiftTagged_date_f80d834415328e7c"
                             }
                           }
-                        },
-                        "maxItems": 1000
+                        }
                       }
                     },
                     "required": ["dtstart", "rrule", "exdate"],

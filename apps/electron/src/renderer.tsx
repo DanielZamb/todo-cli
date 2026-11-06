@@ -93,6 +93,7 @@ import {
 } from "./history.ts";
 import { ImportDialog } from "./import-dialog.tsx";
 import {
+  changedPayload,
   conflicts,
   conflictText,
   Editor,
@@ -716,10 +717,7 @@ function App() {
       task: base.id,
       payload: {
         from_version: base.row_version,
-        changes: {
-          ...taskPayload(changes),
-          description: changes.description || null,
-        },
+        changes: changedPayload(base, changes),
       },
     });
     if (active.current !== profile || selected.current !== base.id) {
@@ -814,10 +812,7 @@ function App() {
                 ...target,
                 payload: {
                   ...payload,
-                  changes: {
-                    ...taskPayload(changes),
-                    description: changes.description || null,
-                  },
+                  changes: changedPayload(base, changes),
                   recurrence: intent.recurrence,
                 },
               }

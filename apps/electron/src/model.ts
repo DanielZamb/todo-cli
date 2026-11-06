@@ -97,6 +97,22 @@ export function taskPayload(changes: Changes) {
 }
 const same = (left: unknown, right: unknown) =>
   JSON.stringify(left) === JSON.stringify(right);
+// Only fields that differ from the Version being edited are sent. An older
+// Task may hold values past today's input limits; sending them back
+// unchanged would refuse an unrelated edit.
+export function changedPayload(base: typeof Task.Type, changes: Changes) {
+  const before: Record<string, unknown> = {
+    ...taskPayload(editorFor(base).changes),
+    description: base.description ?? null,
+  };
+  const after: Record<string, unknown> = {
+    ...taskPayload(changes),
+    description: changes.description || null,
+  };
+  return Object.fromEntries(
+    Object.entries(after).filter(([key, value]) => !same(value, before[key])),
+  );
+}
 export function conflicts(editor: Editor, latest: typeof Task.Type) {
   const before = editorFor(editor.base).changes;
   const accepted = editorFor(latest).changes;

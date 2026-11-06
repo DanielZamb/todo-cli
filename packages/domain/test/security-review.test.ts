@@ -12,7 +12,9 @@ import { AuthError, TokenOptions } from "../src/auth/model.ts";
 import { BatchEditRequest } from "../src/batch-edit.ts";
 import {
   copyTask,
+  createSeries,
   createTask,
+  editSeries,
   ensureProfile,
   moveTask,
   mutateTask,
@@ -20,6 +22,7 @@ import {
 } from "../src/commands.ts";
 import { Project, Tag, Task } from "../src/entities.ts";
 import { ProfileId, TaskId, Version } from "../src/ids.ts";
+import { ImportRequest } from "../src/import.ts";
 import { importTasks } from "../src/import-tasks.ts";
 import { inputLimits } from "../src/limits.ts";
 import {
@@ -27,7 +30,7 @@ import {
   openStore,
   TaskCommands,
 } from "../src/store/store.ts";
-import { CreateSeries, CreateTask } from "../src/task-commands.ts";
+import { CreateSeries, CreateTask, EditSeries } from "../src/task-commands.ts";
 import {
   actor,
   created as createdEvent,
@@ -885,4 +888,127 @@ describe("second security review", () => {
         }),
       ),
   );
+
+  const exdates = (count: number) =>
+    Array.from({ length: count }, (_, index) => ({
+      kind: "date" as const,
+      date: new Date(Date.UTC(2030, 0, 1 + index)).toISOString().slice(0, 10),
+    }));
+  const olderSeries = (store: OperationStore, tags: number, excluded: number) =>
+    Effect.gen(function* () {
+      const request = yield* owner(store);
+      const created = yield* createSeries(
+        store,
+        request,
+        Schema.decodeUnknownSync(CreateSeries)({
+          task: {
+            title: "Daily",
+            tag_names: Array.from({ length: tags }, (_, index) => `s${index}`),
+          },
+          recurrence: {
+            dtstart: { kind: "date", date: "2026-11-06" },
+            rrule: "FREQ=DAILY",
+            exdate: exdates(excluded),
+          },
+        }),
+      );
+      if (created.outcome !== "committed") throw new Error("fixture");
+      return { request, task: created.task };
+    });
+  const lowered = <A, E>(
+    key: "tagsPerTask" | "exdates",
+    value: number,
+    run: Effect.Effect<A, E>,
+  ) => {
+    const limits = inputLimits as Record<typeof key, number>;
+    const original = limits[key];
+    return Effect.acquireUseRelease(
+      Effect.sync(() => {
+        limits[key] = value;
+      }),
+      () => run,
+      () =>
+        Effect.sync(() => {
+          limits[key] = original;
+        }),
+    );
+  };
+
+  it.effect(
+    "R7-2: an older Series past the Tag limit can still complete its Occurrence",
+    () =>
+      withStore((store) =>
+        Effect.gen(function* () {
+          const { request, task } = yield* olderSeries(store, 60, 0);
+          // Lower the limit so this Series looks like one written before it.
+          const result = yield* lowered(
+            "tagsPerTask",
+            50,
+            new TaskCommands(store).transition(
+              { ...request, task_id: task.id },
+              { from_version: task.row_version, action: "complete" },
+            ),
+          );
+          expect(result.outcome).toBe("committed");
+          const open = (yield* new TaskCommands(store).list(request)).filter(
+            (value) => value.status === "open",
+          );
+          expect(open[0]?.tags).toHaveLength(60);
+        }),
+      ),
+  );
+
+  it.effect(
+    "R7-4: a Series edit keeps older exclusion dates past the limit but cannot add more",
+    () =>
+      withStore((store) =>
+        Effect.gen(function* () {
+          const { request, task } = yield* olderSeries(store, 0, 1_000);
+          const target = { ...request, task_id: task.id };
+          const edit = (count: number) =>
+            editSeries(store, target, {
+              from_version: task.row_version,
+              changes: {},
+              recurrence: Schema.decodeUnknownSync(
+                EditSeries.fields.recurrence,
+              )({
+                dtstart: { kind: "date", date: "2026-11-06" },
+                rrule: "FREQ=WEEKLY",
+                exdate: exdates(count),
+              }),
+            });
+          expect(
+            Schema.is(EditSeries)({
+              from_version: 1,
+              changes: {},
+              recurrence: {
+                dtstart: { kind: "date", date: "2026-11-06" },
+                rrule: "FREQ=WEEKLY",
+                exdate: exdates(1_001),
+              },
+            }),
+          ).toBe(true);
+          const grown = yield* lowered("exdates", 999, edit(1_001));
+          expect(grown.outcome).toBe("rejected");
+          const kept = yield* lowered("exdates", 999, edit(1_000));
+          expect(kept.outcome).toBe("committed");
+        }),
+      ),
+  );
+
+  it("R7-3: close-missing candidates may name an older external id past the limit", () => {
+    expect(
+      Schema.is(ImportRequest)({
+        items: [],
+        close_missing: true,
+        close_missing_candidates: [
+          {
+            external_id: "x".repeat(1_001),
+            task_id: "task-1",
+            from_version: 1,
+          },
+        ],
+      }),
+    ).toBe(true);
+  });
 });
