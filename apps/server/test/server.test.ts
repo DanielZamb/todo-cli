@@ -227,6 +227,11 @@ describe("Todo HTTP contract", () => {
               "/profiles/work/tasks",
               { title: "Bloat", description: "a".repeat(100_001) },
             ],
+            // Lowercasing doubles this name past 200 characters.
+            [
+              "/profiles/work/tasks",
+              { title: "Dotted", tag_names: ["\u0130".repeat(200)] },
+            ],
             [
               "/profiles/work/batch-edit",
               {
@@ -252,6 +257,7 @@ describe("Todo HTTP contract", () => {
           // 100,001-character description is kept only as a preview.
           const refused = (yield* store.history()).slice(after.length);
           expect(refused.map((entry) => entry.event.kind)).toEqual([
+            "TaskAttemptRejected",
             "TaskAttemptRejected",
             "TaskAttemptRejected",
           ]);

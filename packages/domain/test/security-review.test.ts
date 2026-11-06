@@ -767,4 +767,54 @@ describe("second security review", () => {
         }),
       ),
   );
+
+  it.effect(
+    "R5-1: an existing Profile whose name is over 200 characters can still be used",
+    () =>
+      withStore((store) =>
+        Effect.gen(function* () {
+          const long = "p".repeat(201);
+          const older = Schema.decodeUnknownSync(ProfileId)(long);
+          yield* store.putProfile({ ...work, id: older, name: long });
+          expect((yield* ensureProfile(store, long)).id).toBe(long);
+          expect(
+            (yield* Effect.result(ensureProfile(store, "q".repeat(201))))._tag,
+          ).toBe("Failure");
+        }),
+      ),
+  );
+
+  it.effect(
+    "R5-2: a Tag that lowercases past 200 characters is a normal rejection, and import continues",
+    () =>
+      withStore((store) =>
+        Effect.gen(function* () {
+          const request = yield* owner(store);
+          const dotted = "\u0130".repeat(200);
+          const result = yield* new TaskCommands(store).create(request, {
+            title: "Dotted",
+            tag_names: [dotted],
+          });
+          expect(result).toMatchObject({
+            outcome: "rejected",
+            reason: "validation",
+          });
+          const report = yield* importTasks(store, request, {
+            items: [
+              { external_id: "a", title: "First" },
+              { external_id: "b", title: "Dotted", tag_names: [dotted] },
+              { external_id: "c", title: "Third" },
+            ],
+          });
+          expect(report.items.map((row) => row.outcome)).toEqual([
+            "created",
+            "rejected",
+            "created",
+          ]);
+          expect(
+            (yield* store.tags()).some((tag) => tag.name.length > 200),
+          ).toBe(false);
+        }),
+      ),
+  );
 });

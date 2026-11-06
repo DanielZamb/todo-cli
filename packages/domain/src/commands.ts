@@ -161,9 +161,16 @@ export const ensureProfile = Effect.fn(function* (
   name: string,
 ) {
   const time = nowInstant();
+  // A new Profile's name becomes its id, which History rows copy, so only a
+  // new one is limited; an existing Profile is found whatever its length.
+  const existing =
+    name.length > inputLimits.name
+      ? (yield* store.profiles()).some(
+          (profile) => profile.name === name || profile.id === name,
+        )
+      : true;
   const candidate = yield* parse(() => {
-    // A new Profile's name becomes its id, which History rows copy.
-    if (name.length > inputLimits.name)
+    if (!existing)
       throw invalid(
         `Profile names have at most ${inputLimits.name} characters.`,
       );

@@ -45,7 +45,19 @@ export const ExternalIdInput = Schema.NonEmptyString.check(
   Schema.isPattern(/\S/),
   characters(inputLimits.externalId),
 );
-export const TagNamesInput = Schema.Array(NameInput).check(
+// Tag names split on commas and are stored lowercased, which can lengthen
+// them, so each stored part is checked too.
+const TagNameInput = NameInput.check(
+  Schema.makeFilter(
+    (value) =>
+      value
+        .split(",")
+        .every(
+          (part) => part.trim().toLowerCase().length <= inputLimits.name,
+        ) || `Tag names have at most ${inputLimits.name} characters.`,
+  ),
+);
+export const TagNamesInput = Schema.Array(TagNameInput).check(
   items(inputLimits.tagsPerTask),
 );
 // Ids a client names. Stored ids are unlimited; real ones are short.
