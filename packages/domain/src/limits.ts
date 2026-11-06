@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { AttachmentId, TaskId } from "./ids.ts";
 import { Instant, TaskTime } from "./time.ts";
 
 // Size limits on what a client may submit. Every accepted value is kept
@@ -46,6 +47,11 @@ export const ExternalIdInput = Schema.NonEmptyString.check(
 );
 export const TagNamesInput = Schema.Array(NameInput).check(
   items(inputLimits.tagsPerTask),
+);
+// Ids a client names. Stored ids are unlimited; real ones are short.
+export const TaskIdInput = TaskId.check(Schema.isMaxLength(inputLimits.id));
+export const AttachmentIdInput = AttachmentId.check(
+  Schema.isMaxLength(inputLimits.id),
 );
 // The stored time schemas accept any number of fractional-second digits.
 export const InstantInput = Instant.check(

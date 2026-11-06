@@ -7,6 +7,7 @@ import {
   limitedItems,
   NameInput,
   TagNamesInput,
+  TaskIdInput,
 } from "./limits.ts";
 import { TaskPatch } from "./task-commands.ts";
 import { Instant } from "./time.ts";
@@ -23,13 +24,13 @@ export const ImportItem = Schema.Struct({
   ),
   tag_names: Schema.optionalKey(Schema.NullOr(TagNamesInput)),
   status: Schema.optionalKey(Schema.Literals(["open", "done", "cancelled"])),
-  task_id: Schema.optionalKey(Schema.NullOr(TaskId)),
+  task_id: Schema.optionalKey(Schema.NullOr(TaskIdInput)),
   from_version: Schema.optionalKey(Schema.NullOr(Version)),
 });
 export type ImportItem = typeof ImportItem.Type;
 export const ImportCancellation = Schema.Struct({
   external_id: ExternalIdInput,
-  task_id: TaskId,
+  task_id: TaskIdInput,
   from_version: Version,
 });
 export const ImportRequest = Schema.Struct({

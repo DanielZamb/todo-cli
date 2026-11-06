@@ -140,24 +140,29 @@ export class Authentication<Read> {
     if (this.waitingSignIns >= maximumWaitingSignIns)
       return Promise.resolve({ kind: "busy" });
     this.waitingSignIns++;
-    // The lock check, the verification and the record of a wrong passphrase
-    // happen inside the queue, so in-process attempts cannot race past 10.
+    // The queue keeps one verification at a time per process. Other
+    // processes (the CLI, another server) share only the database, so the
+    // outcome is decided in one write transaction that re-checks the lock:
+    // past the 10th recorded failure, every result reads as locked, a valid
+    // guess too, so concurrent processes learn nothing beyond 10 guesses.
     const attempt = this.signInQueue.then(async (): Promise<Verification> => {
       const until = this.signInLockedUntil(time);
       if (until !== null) return { kind: "locked", until };
       // Without an owner nothing can match, but the attempt still counts
       // toward the lock, so an unprovisioned server cannot be flooded.
       const valid = hash !== null && (await Bun.password.verify(value, hash));
-      if (!valid)
-        this.transaction(() =>
-          this.record({
-            action: "signIn",
-            time,
-            actor: "anonymous",
-            error: new AuthError("invalid_passphrase"),
-          }),
-        );
-      return { kind: valid ? "valid" : "invalid" };
+      return this.transaction((): Verification => {
+        const lockedUntil = this.signInLockedUntil(time);
+        if (lockedUntil !== null) return { kind: "locked", until: lockedUntil };
+        if (valid) return { kind: "valid" };
+        this.record({
+          action: "signIn",
+          time,
+          actor: "anonymous",
+          error: new AuthError("invalid_passphrase"),
+        });
+        return { kind: "invalid" };
+      });
     });
     this.signInQueue = attempt.then(
       () => undefined,

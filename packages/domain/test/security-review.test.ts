@@ -7,7 +7,9 @@ import { describe, expect, it } from "@effect/vitest";
 import { Effect, Fiber, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { AttachmentCommands } from "../src/attachment-commands.ts";
+import { AttachManyItem } from "../src/attachments.ts";
 import { AuthError, TokenOptions } from "../src/auth/model.ts";
+import { BatchEditRequest } from "../src/batch-edit.ts";
 import { importTasks } from "../src/import-tasks.ts";
 import {
   type OperationStore,
@@ -270,4 +272,80 @@ describe("second security review", () => {
         }),
       ),
   );
+
+  it.effect(
+    "DS2-4: separate database handles guessing at once get only 10 results in total",
+    () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          yield* TestClock.setTime(Date.parse("2026-11-06T12:00:00Z"));
+          const directory = yield* Effect.acquireRelease(
+            Effect.sync(() => mkdtempSync(join(tmpdir(), "todo-review-"))),
+            (path) =>
+              Effect.sync(() => rmSync(path, { recursive: true, force: true })),
+          );
+          const path = join(directory, "scratch.db");
+          const open = Effect.acquireRelease(openStore({ path }), (value) =>
+            Effect.orDie(value.close()),
+          );
+          const first = yield* open;
+          yield* first.auth.setupOwner(passphrase);
+          const handles = [
+            first,
+            yield* open,
+            yield* open,
+            yield* open,
+            yield* open,
+          ];
+          // Five handles have five queues; three guesses each run at once.
+          const outcomes = yield* Effect.all(
+            handles.flatMap((store) =>
+              [0, 1, 2].map(() =>
+                Effect.map(
+                  Effect.flip(store.auth.signIn("wrong guess")),
+                  (error) =>
+                    error instanceof AuthError ? error.detail : "other",
+                ),
+              ),
+            ),
+            { concurrency: "unbounded" },
+          );
+          const counted = outcomes.filter(
+            (detail) => detail === "invalid_passphrase",
+          );
+          expect(counted).toHaveLength(10);
+          expect(
+            outcomes
+              .filter((detail) => detail !== "invalid_passphrase")
+              .every(
+                (detail) =>
+                  detail === "sign_in_locked" || detail === "sign_in_busy",
+              ),
+          ).toBe(true);
+          expect(
+            (yield* first.history()).filter(
+              (entry) =>
+                entry.event.kind === "AuthAttemptRejected" &&
+                entry.event.detail === "invalid_passphrase",
+            ),
+          ).toHaveLength(10);
+        }),
+      ),
+  );
+
+  it("DS2-3: refuses submitted Task and Attachment ids over 200 characters", () => {
+    const item = (task_id: string) => ({ task_id, from_version: 1 });
+    const batch = (task_id: string) => ({
+      items: [item(task_id)],
+      changes: { priority: "P1" },
+    });
+    expect(Schema.is(BatchEditRequest)(batch("t".repeat(200)))).toBe(true);
+    expect(Schema.is(BatchEditRequest)(batch("t".repeat(201)))).toBe(false);
+    expect(
+      Schema.is(AttachManyItem)({
+        ...item("t".repeat(201)),
+        attachments: [{ kind: "link", url: "https://example.com/" }],
+      }),
+    ).toBe(false);
+  });
 });

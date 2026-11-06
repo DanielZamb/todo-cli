@@ -1,6 +1,12 @@
 import { Schema } from "effect";
 import { AttachmentId, TaskId, Version } from "./ids.ts";
-import { inputLimits, limitedItems, NonEmptyNameInput } from "./limits.ts";
+import {
+  AttachmentIdInput,
+  inputLimits,
+  limitedItems,
+  NonEmptyNameInput,
+  TaskIdInput,
+} from "./limits.ts";
 import { Instant } from "./time.ts";
 
 export const attachmentLimit = 20 * 1024 * 1024;
@@ -91,12 +97,12 @@ export function validAttachmentLocation(location: AttachTask["location"]) {
 }
 export const DetachTask = Schema.Struct({
   from_version: Version,
-  attachment_id: AttachmentId,
+  attachment_id: AttachmentIdInput,
 });
 export type DetachTask = typeof DetachTask.Type;
 export const LabelAttachment = Schema.Struct({
   from_version: Version,
-  attachment_id: AttachmentId,
+  attachment_id: AttachmentIdInput,
   label: Schema.NullOr(NonEmptyNameInput),
 });
 export type LabelAttachment = typeof LabelAttachment.Type;
@@ -128,7 +134,7 @@ export const AttachmentInput = Schema.Union([
 ]);
 export type AttachmentInput = typeof AttachmentInput.Type;
 export const AttachManyItem = Schema.Struct({
-  task_id: TaskId,
+  task_id: TaskIdInput,
   from_version: Version,
   attachments: limitedItems(
     AttachmentInput,
