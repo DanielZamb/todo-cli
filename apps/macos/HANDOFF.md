@@ -281,17 +281,17 @@ lost by the old catch block, so the injected unit-test error is not native evide
 
 ## W06 implementation and headless proof
 
-The [W06 report](../../docs/evidence/w06/REPORT.md) maps all ten W01 findings
-and D02 polish to the changes. Move to Profile, History Revert, and Series
+The historical W06 report is not retained in the checkout. The current
+[headless write recipe](../../.agents/skills/verify-macos/features/writes.md)
+documents how to repeat the write checks. Move to Profile, History Revert, and Series
 create/edit/skip use the generated client. Thirteen headless Swift Testing tests
 and compiled scratch HTTP writes passed, with durable Version and History checks.
 The macOS verification skill now includes the repeatable headless write recipe.
 
 The unsigned Debug build, pnpm check, API regeneration and byte-identical project
-regeneration pass. Signing settings are unchanged. Agents never sign; every
-xcodebuild uses CODE_SIGNING_ALLOWED=NO. Signed builds come only from
-make sign-desktop in the user's Terminal. This order supersedes older signing
-authorizations recorded above.
+regeneration pass. Signing settings are unchanged. Verification xcodebuild uses
+CODE_SIGNING_ALLOWED=NO. Signed installs come from scripts/sign-and-install.sh.
+This order supersedes older signing authorizations recorded above.
 
 No native app, hosted XCTest, Keychain or notification permission flow ran for
 W06. The coordinator still owns native screenshots, focus and sizing checks,

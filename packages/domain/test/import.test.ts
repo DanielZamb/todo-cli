@@ -1156,3 +1156,287 @@ it.effect(
       }),
     ),
 );
+
+it.effect(
+  "adopts an unlinked Task by id and preserves omitted metadata through replay",
+  () =>
+    usingImport((store, request) =>
+      Effect.gen(function* () {
+        const commands = new TaskCommands(store);
+        const created = yield* commands.create(
+          request,
+          Schema.decodeUnknownSync(CreateTask)({
+            title: "Existing",
+            priority: "P1",
+            due_at: { kind: "date", date: "2026-12-01" },
+          }),
+        );
+        if (created.outcome !== "committed") throw new Error("create failed");
+        const item = {
+          external_id: "adopt:one",
+          task_id: created.task.id,
+          from_version: 1,
+          title: "Adopted",
+        };
+        const report = yield* importTasks(store, request, input([item]));
+        expect(report.totals).toEqual({
+          created: 0,
+          updated: 1,
+          unchanged: 0,
+          rejected: 0,
+        });
+        expect(
+          yield* commands.get({ ...request, task_id: created.task.id }),
+        ).toMatchObject({
+          id: created.task.id,
+          title: "Adopted",
+          priority: "P1",
+          due_at: { kind: "date", date: "2026-12-01" },
+          external_id: "adopt:one",
+          row_version: 2,
+        });
+        yield* importTasks(
+          store,
+          request,
+          input([{ external_id: "adopt:one", description: "Later" }]),
+        );
+        yield* store.rebuild();
+        expect(
+          (yield* commands.list(request)).map((t) => [
+            t.id,
+            t.title,
+            t.description,
+            t.row_version,
+          ]),
+        ).toEqual([[created.task.id, "Adopted", "Later", 3]]);
+      }),
+    ),
+);
+
+it.effect(
+  "creation and import validate all Attachments before creating a Task",
+  () =>
+    usingImport((store, request) =>
+      Effect.gen(function* () {
+        const commands = new TaskCommands(store);
+        const attachments = [
+          { kind: "link", url: "t3-thread://v2/host/thread", label: "thread" },
+        ];
+        const created = yield* commands.create(
+          request,
+          Schema.decodeUnknownSync(CreateTask)({
+            title: "With link",
+            attachments,
+          }),
+        );
+        expect(created).toMatchObject({
+          outcome: "committed",
+          task: {
+            row_version: 1,
+            attachments: [
+              {
+                kind: "link",
+                url: "t3-thread://v2/host/thread",
+                label: "thread",
+              },
+            ],
+          },
+        });
+        const result = yield* importTasks(
+          store,
+          request,
+          input([
+            {
+              external_id: "invalid:path",
+              title: "Must not exist",
+              attachments: [
+                { kind: "link", url: "https://example.com" },
+                { kind: "file", path: "/missing-cli01/file" },
+              ],
+            },
+          ]),
+        );
+        expect(result.items.map((r) => r.outcome)).toEqual(["rejected"]);
+        expect((yield* commands.list(request)).map((t) => t.title)).toEqual([
+          "With link",
+        ]);
+      }),
+    ),
+);
+
+it.effect(
+  "bulk Attachments isolate Task groups, preview without writes, and reject stale repeats",
+  () =>
+    usingImport((store, request) =>
+      Effect.gen(function* () {
+        const tasks = new TaskCommands(store);
+        const first = yield* tasks.create(request, { title: "First" });
+        const second = yield* tasks.create(request, { title: "Second" });
+        if (first.outcome !== "committed" || second.outcome !== "committed")
+          throw new Error("create failed");
+        const commands = new AttachmentCommands(store);
+        const attachments = [
+          { kind: "link", url: "t3-thread://v2/host/thread" },
+          { kind: "link", url: "mailto:owner@example.com", label: "mail" },
+        ];
+        const batch = Schema.decodeUnknownSync(AttachManyRequest)({
+          items: [
+            { task_id: first.task.id, from_version: 1, attachments },
+            {
+              task_id: second.task.id,
+              from_version: 1,
+              attachments: [
+                ...attachments,
+                { kind: "file", path: "/missing-cli01/file" },
+              ],
+            },
+          ],
+        });
+        const historyBefore = yield* store.history();
+        expect(
+          (yield* commands.attachMany(request, {
+            ...batch,
+            dry_run: true,
+          })).items.map((r) => [r.outcome, r.attached, r.current_version]),
+        ).toEqual([
+          ["attached", 2, 3],
+          ["rejected", 0, 1],
+        ]);
+        expect(yield* store.history()).toEqual(historyBefore);
+        expect(
+          (yield* tasks.list(request))
+            .sort((a, b) => a.title.localeCompare(b.title))
+            .map((t) => [t.title, t.row_version, t.attachments ?? []]),
+        ).toEqual([
+          ["First", 1, []],
+          ["Second", 1, []],
+        ]);
+        const applied = yield* commands.attachMany(request, batch);
+        expect(applied.items.map((r) => [r.outcome, r.attached])).toEqual([
+          ["attached", 2],
+          ["rejected", 0],
+        ]);
+        const repeat = yield* commands.attachMany(request, {
+          items: [{ task_id: first.task.id, from_version: 3, attachments }],
+        });
+        expect(repeat.items.map((r) => [r.outcome, r.current_version])).toEqual(
+          [["unchanged", 3]],
+        );
+        expect(
+          (yield* commands.attachMany(request, batch)).items[0],
+        ).toMatchObject({
+          outcome: "rejected",
+          error: { code: "occ_conflict", details: { current_version: 3 } },
+        });
+        yield* store.rebuild();
+        expect(
+          (yield* tasks.get({
+            ...request,
+            task_id: first.task.id,
+          }))?.attachments?.map((a) => (a.kind === "link" ? a.url : a.path)),
+        ).toEqual(["t3-thread://v2/host/thread", "mailto:owner@example.com"]);
+        expect(
+          (yield* tasks.get({ ...request, task_id: second.task.id }))
+            ?.row_version,
+        ).toBe(1);
+      }),
+    ),
+);
+
+import { AttachManyRequest } from "../src/attachments.ts";
+
+it.effect(
+  "stale adoption keeps its external id unassigned and attachments roll back with field edits",
+  () =>
+    usingImport((store, request) =>
+      Effect.gen(function* () {
+        const commands = new TaskCommands(store);
+        const created = yield* commands.create(request, { title: "Original" });
+        if (created.outcome !== "committed") throw new Error("create failed");
+        yield* commands.edit(
+          { ...request, task_id: created.task.id },
+          {
+            from_version: created.task.row_version,
+            changes: { title: "Competing title" },
+          },
+        );
+        const stale = yield* importTasks(
+          store,
+          request,
+          input([
+            {
+              external_id: "adopt:stale",
+              task_id: created.task.id,
+              from_version: 1,
+            },
+          ]),
+        );
+        expect(stale.items[0]).toMatchObject({
+          outcome: "rejected",
+          error: { code: "occ_conflict", details: { current_version: 2 } },
+        });
+        expect(stale.items[0]?.error?.message).toContain("no external id yet");
+        expect(
+          (yield* commands.get({ ...request, task_id: created.task.id }))
+            ?.external_id ?? null,
+        ).toBe(null);
+        const invalid = yield* importTasks(
+          store,
+          request,
+          input([
+            {
+              external_id: "adopt:stale",
+              task_id: created.task.id,
+              from_version: 2,
+              title: "Must roll back",
+              attachments: [{ kind: "file", path: "/missing-cli01/file" }],
+            },
+          ]),
+        );
+        expect(invalid.totals).toEqual({
+          created: 0,
+          updated: 0,
+          unchanged: 0,
+          rejected: 1,
+        });
+        expect(
+          yield* commands.get({ ...request, task_id: created.task.id }),
+        ).toMatchObject({ title: "Competing title", row_version: 2 });
+      }),
+    ),
+);
+
+it.effect("creation Attachments belong only to the first Occurrence", () =>
+  usingImport((store, request) =>
+    Effect.gen(function* () {
+      const commands = new TaskCommands(store);
+      const recurrence = Schema.decodeUnknownSync(Recurrence)({
+        dtstart: { kind: "date", date: "2026-12-01" },
+        rrule: "FREQ=DAILY;COUNT=2",
+        exdate: [],
+      });
+      const result = yield* commands.create(
+        request,
+        Schema.decodeUnknownSync(CreateTask)({
+          title: "First only",
+          attachments: [{ kind: "link", url: "urn:todo:first" }],
+        }),
+        { recurrence },
+      );
+      expect(result).toMatchObject({
+        outcome: "committed",
+        task: { attachments: [{ kind: "link", url: "urn:todo:first" }] },
+      });
+      if (result.outcome !== "committed") throw new Error("create failed");
+      yield* commands.transition(
+        { ...request, task_id: result.task.id },
+        { from_version: result.task.row_version, action: "complete" },
+      );
+      expect(
+        (yield* commands.list(request))
+          .filter((t) => t.status === "open")
+          .map((t) => t.attachments ?? []),
+      ).toEqual([[]]);
+    }),
+  ),
+);

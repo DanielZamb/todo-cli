@@ -10,7 +10,7 @@ Read [CONTEXT.md](CONTEXT.md) for domain terms,
 [docs/adr](docs/adr/README.md) for binding decisions. Share Task behavior
 through `packages/domain` and expose human-client operations through the
 authenticated HTTP contract. Regenerate the Swift API after contract changes
-with `apps/macos/scripts/generate-api.sh`.
+with `make generate-api`.
 
 ## Verify a change
 
@@ -39,17 +39,25 @@ The default Electron build is unsigned:
 pnpm --filter @todo/electron build
 ```
 
-For a compile-only macOS build, run the disk guard and disable signing:
+For a compile-only macOS build, generate the contract, run the disk guard,
+and disable signing:
 
 ```sh
+scripts/swift-slot.sh make generate-api
 scripts/disk-guard.sh
 scripts/swift-slot.sh xcodebuild -project apps/macos/Todo.xcodeproj -scheme Todo -configuration Debug -destination platform=macOS -derivedDataPath "$PWD/apps/macos/DerivedData/Contributor" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO EXPANDED_CODE_SIGN_IDENTITY= build
 ```
 
+`make generate-api` starts with the Effect HttpApi definition and regenerates
+every contract output. It requires the installed pnpm dependencies, Python 3,
+and the Swift toolchain. It builds only the release generator executable.
+See [the generated files and their sources](apps/macos/README.md#generate-the-api-contract).
+
 For signed builds, copy `signing.example.mk` to `signing.local.mk`, replace the
 example values with your certificate identity and team, then run
-`make sign-desktop`. The file stays local. Signed bundles and their signature
-receipt appear under `dist/signed.noindex/`.
+`scripts/sign-and-install.sh`. That installs the SwiftUI app, Electron app, CLI,
+and server. `make sign-desktop` only stages bundles under `dist/signed.noindex/`.
+The signing file stays local.
 Xcode uses automatic Apple Development signing for the configured team.
 Electron uses the configured certificate identity.
 

@@ -398,6 +398,31 @@ it("validates every command's single JSON object against its published JSON Sche
     attachmentId,
   ]);
   success("detach", ["detach", attachmentTaskId, attachmentId]);
+  const batchFile = join(scratch, "attachment-batch.json");
+  writeFileSync(
+    batchFile,
+    JSON.stringify({
+      items: [
+        {
+          task_id: attachmentTaskId,
+          from_version: 5,
+          attachments: [
+            { kind: "link", url: "t3-thread://v2/conformance/thread" },
+          ],
+        },
+      ],
+    }),
+  );
+  const editBatchFile = join(scratch, "batch-edit.json");
+  writeFileSync(
+    editBatchFile,
+    JSON.stringify({
+      items: [{ task_id: id, from_version: 1 }],
+      changes: { priority: "P1" },
+    }),
+  );
+  success("batch-edit", ["batch-edit", editBatchFile, "--dry-run"]);
+  success("attach-many", ["attach-many", batchFile, "--dry-run"]);
   success("list", ["list", "--status", "open"]);
   success("edit", [
     "edit",
@@ -691,6 +716,19 @@ it("publishes diagnostics and top schemas and uses shared errors before accessin
       code: "auth_required",
       message: "run todo login",
     });
+  }
+  for (const command of ["diagnostics", "top"]) {
+    const remote = run([
+      command,
+      "--format",
+      "json",
+      "--server",
+      "http://192.0.2.1:4310",
+    ]);
+    expect([remote.code, JSON.parse(remote.out).code]).toEqual([
+      2,
+      "invalid_args",
+    ]);
   }
   const invalid = run(["diagnostics", "--format", "json", "--unsupported"]);
   expect(invalid.code).toBe(2);

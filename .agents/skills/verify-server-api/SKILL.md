@@ -144,3 +144,7 @@ isolated exactly as in the original helper.
 ## Version guardrails
 
 The compiled HTTP recipes compare health with CONTRACT_ID and reject unknown query names with HTTP 400. See [the feature recipe](features/contract.md) for commands and expected evidence.
+
+## Batch edit
+
+Read [Edit several Tasks](features/batch-edit.md) for the shared batch-edit contract and the compiled scratch proof. Both client flows retain selections and loaded Versions through preview, apply and Conflict reload.

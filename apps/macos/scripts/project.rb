@@ -15,6 +15,7 @@ ui = project.new_target(:ui_test_bundle, 'TodoUITests', :osx, '26.0')
       'MACOSX_DEPLOYMENT_TARGET' => '26.0', 'GENERATE_INFOPLIST_FILE' => 'YES',
       'PRODUCT_BUNDLE_IDENTIFIER' => "local.todo.#{target.name}",
       'CODE_SIGN_IDENTITY' => 'Apple Development', 'CODE_SIGN_STYLE' => 'Automatic',
+      'DEVELOPMENT_TEAM' => '$(TODO_SIGNING_TEAM)',
       'CURRENT_PROJECT_VERSION' => '1', 'MARKETING_VERSION' => '0.1.0',
       'ENABLE_APP_SANDBOX' => 'NO', 'ENABLE_HARDENED_RUNTIME' => 'YES',
       'COMBINE_HIDPI_IMAGES' => 'YES'

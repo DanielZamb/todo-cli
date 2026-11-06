@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import {
   chmodSync,
   mkdirSync,
@@ -35,6 +36,83 @@ it("refuses executable files, app bundles, and symlinks to either without openin
       join(root, "bundle-alias.md"),
     ])
       expect(() => openableAttachmentPath(path)).toThrow();
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+it("refuses files that run code, install software or open another location", () => {
+  const root = mkdtempSync(join(tmpdir(), "todo-open-types-"));
+  try {
+    const decision = (name: string) => {
+      const path = join(root, name);
+      writeFileSync(path, "content", { mode: 0o600 });
+      try {
+        openableAttachmentPath(path);
+        return "open";
+      } catch {
+        return "refused";
+      }
+    };
+    const refused = [
+      "Settings.terminal",
+      "run.tool",
+      "Setup.mpkg",
+      "Profile.mobileconfig",
+      "site.webloc",
+      "share.inetloc",
+      "target.fileloc",
+      "flow.shortcut",
+      "script.applescript",
+      "step.action",
+      "bundle.scptd",
+      "archive.xip",
+    ];
+    const opened = [
+      "notes.md",
+      "report.pdf",
+      "photo.png",
+      "sheet.xlsx",
+      "plain",
+    ];
+    expect(
+      [...refused, ...opened].map((name) => [name, decision(name)]),
+    ).toEqual([
+      ...refused.map((name) => [name, "refused"]),
+      ...opened.map((name) => [name, "open"]),
+    ]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+it("refuses Finder aliases, which open their original target", () => {
+  const root = mkdtempSync(join(tmpdir(), "todo-open-alias-"));
+  try {
+    const bookmark = join(root, "bookmark.md");
+    writeFileSync(
+      bookmark,
+      Buffer.concat([
+        Buffer.from("book\0\0\0\0mark", "latin1"),
+        Buffer.alloc(64),
+      ]),
+      { mode: 0o600 },
+    );
+    const flagged = join(root, "flagged.md");
+    writeFileSync(flagged, "notes", { mode: 0o600 });
+    execFileSync("/usr/bin/xattr", [
+      "-wx",
+      "com.apple.FinderInfo",
+      `616C6973 4D414353 8000${"00".repeat(22)}`,
+      flagged,
+    ]);
+    const plain = join(root, "plain.md");
+    writeFileSync(plain, "notes", { mode: 0o600 });
+    expect(() => openableAttachmentPath(bookmark)).toThrow(/Finder aliases/);
+    expect(() => openableAttachmentPath(flagged)).toThrow(/Finder aliases/);
+    expect(openableAttachmentPath(plain)).toBe(
+      join(realpathSync(root), "plain.md"),
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

@@ -8,6 +8,23 @@ description: Verify the compiled macOS 26 Todo SwiftUI app against scratch HTTP 
 Created with `create-verification-skill`.
 Read [the feature map](features/README.md) before selecting coverage.
 
+## Check documentation links
+
+Run `node scripts/check-doc-links.mjs HEAD` from the checkout root after editing
+the macOS verification docs, README, HANDOFF, or design specifications. The
+checker reads the committed Git tree, so ignored local evidence cannot satisfy
+a link. It prints each missing local target and exits 1 if any are missing.
+Pass another commit instead of `HEAD` to check an earlier tree. This static
+check does not build or launch an app.
+
+## Priority groups during HOLD
+
+Read [the priority recipe](features/compact.md#priority-groups). It adds production
+TodoModel save, filter and reload checks on compiled scratch HTTP, plus empty,
+ready and dense priority renders in both appearances and window sizes. Run every
+Swift command through the shared swift-slot script specified by the active run.
+This proof never launches Todo.app or accesses Keychain.
+
 ## Native verification is on HOLD
 
 The user stopped the 2026-10-27 run after repeated Keychain prompts. Do not
@@ -64,11 +81,10 @@ Use a new absolute evidence directory for the authorized attempt:
 TODO_VERIFY_NATIVE_UI=1 .agents/skills/verify-macos/scripts/verify.sh "$PWD/apps/macos/evidence/native-new"
 ```
 
-The user first runs `make sign-desktop` in their own Terminal. It builds the
-Release app at `dist/signed.noindex/macos/Todo.app`, with the configured team, and writes
-`dist/signed.noindex/signing-receipt.json`. Agents never run that target or sign code.
-Use `make -n sign-desktop` to inspect its commands without executing them.
-This does not lift HOLD.
+`scripts/sign-and-install.sh` builds the Release app at
+`dist/signed.noindex/macos/Todo.app`, with the configured team, and writes
+`dist/signed.noindex/signing-receipt.json`. Use `make -n sign-desktop` to
+inspect its commands without executing them. This does not lift HOLD.
 
 The helper builds only a scratch server, provisioner and compiled CLI, checks
 loopback health and verifies the existing signed Release app. It never rebuilds
@@ -186,7 +202,9 @@ prove native Settings, signing or Keychain. The full flow above remains held.
 The checked-in Xcode project passed an unsigned compile with
 `CODE_SIGNING_ALLOWED=NO`, `CODE_SIGNING_REQUIRED=NO` and an empty
 `EXPANDED_CODE_SIGN_IDENTITY`. The app included the executable bundled server.
-See [the command and artifact receipt](../../../docs/evidence/resume-20261027/w02/unsigned-build.json).
+The historical artifact receipt is not retained in the checkout. Use the
+[unsigned build helper](../verify-macos-lifecycle/scripts/unsigned-build.sh)
+with a new absolute evidence directory to repeat the compile-only check.
 No app or XCTest was launched. This proof does not lift the interactive hold
 or change production signing settings.
 
@@ -229,9 +247,9 @@ Current proof is in `docs/evidence/w06/headless-r5/`. Native visual verification
 remains held. This recipe extends the existing macOS subsystem skill using
 `create-verification-skill`.
 
-Agents never sign code. Every xcodebuild command must use
+Verification builds stay unsigned. Every xcodebuild command in this skill must use
 `CODE_SIGNING_ALLOWED=NO`; leave project signing settings unchanged. Signed
-builds come only from `make sign-desktop`, run by the user in their Terminal.
+installs come from `scripts/sign-and-install.sh`.
 
 ## Headless History formatting proof during HOLD
 
@@ -319,3 +337,23 @@ recovery controls, plus production TodoModel formatting proof after reload.
 ## Version guardrails
 
 Headless StateTests prove stale-health blocking, exact Status membership and the enabled states of the five native filter controls. The offscreen recipe captures both new states in both layouts and appearances. See [the feature recipe](features/session.md) for commands and expected evidence.
+
+CLI01 adds a headless URI and import-adoption case in `AttachmentStateTests`.
+It attaches `t3-thread://`, checks a stale adoption, applies the current Version,
+and reloads the same Task with both URI references. It also drives multi-file
+Attachment groups through `TodoModel.attachPaths`, including invalid-path rollback
+and unchanged repeats. The native file picker uses this same batch command.
+Generated contract checks cover creation reference arrays and batch requests and
+reports. URI decoding does not expand the allowed opening schemes.
+
+The Attachment action menu also offers Attach to Tasks. Its native sheet lists
+Profile Tasks, keeps per-Task expected Versions, and previews or applies the
+same reference to the selected Tasks. Reload Tasks refreshes Versions after a
+Conflict. `liveAttachmentBatchSelectPreviewApplyConflictAndReload` drives this
+production state, including file and URI references. The design helper adds
+24 full and Compact light/dark captures for ready, preview, Conflict, loading,
+empty and error states. The complete run now has 346 captures including batch edit.
+
+## Batch edit
+
+Read [Edit several Tasks](features/batch-edit.md) for the shared batch-edit contract and the compiled scratch proof. Both client flows retain selections and loaded Versions through preview, apply and Conflict reload.

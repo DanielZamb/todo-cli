@@ -2,7 +2,7 @@
 
 ## Sub-features
 
-Attach a path or HTTP/HTTPS URL, label a Jira draft, read missing-file status,
+Attach a path or absolute URI, label a Jira draft, read missing-file status,
 and preview detach without writing.
 
 ## How to get to it (user POV)
@@ -23,3 +23,7 @@ their definitions, and Revert restores the label while preserving metadata.
 ## Gotchas
 
 Path attachments reference the existing file. The CLI does not copy it.
+
+Creation accepts repeatable `--attach <path>` and `--link <URI>`; `--label` labels all supplied references. New file paths must exist. The existing single attach command retains missing references.
+
+`todo attach-many file.json --dry-run --format json` previews `{items:[{task_id,from_version,attachments:[{kind:"link",url:"t3-thread://v2/host/thread"}]}]}`. Remove `--dry-run` to apply. Supply a separate expected Version for each Task. Use `todo schema attach-many-input` for the full input. Each Task group returns attached, unchanged or rejected. Every Attachment in a group commits together, and duplicate references remain unchanged.

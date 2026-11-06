@@ -6,23 +6,49 @@ The renderer has a sandboxed preload bridge with schema-validated requests and
 replies. Neither process opens SQLite or executes domain task commands.
 
 ```sh
+scripts/disk-guard.sh
+pnpm install --frozen-lockfile
 pnpm --filter @todo/electron typecheck
 pnpm --filter @todo/electron test
-pnpm --filter @todo/electron build
+/usr/bin/lockf -k /tmp/todo-own-work-electron.lock pnpm --filter @todo/electron build
 ```
 
-Build runs the required disk guard and creates unsigned `dist/Todo.app` on macOS,
-with bundle ID `dev.todo.electron`. Agents never sign code.
-For signed apps, the user runs `make sign-desktop` at the repository root in their
-own Terminal. `@electron/osx-sign` signs nested code with hardened runtime and
+Run these commands from the repository root with Node.js 22.12 or newer,
+pnpm 10.30.1, Bun 1.4.4 or newer, and Xcode 26 for icon compilation. Run
+`scripts/disk-guard.sh` before installing dependencies.
+
+Build runs the required disk guard and creates unsigned
+`apps/electron/dist/Todo.app` on macOS, with bundle ID `dev.todo.electron`.
+Before copying Electron, the macOS package build runs the pinned package's
+`install-electron` command. Electron 44.9.3 does not download its runtime during
+`pnpm install`. The first package build needs network access to download the
+runtime; later builds reuse it. Building does not launch the app. Verification
+builds stay unsigned.
+
+To verify a committed build from a clean export, run:
+
+```sh
+TODO_VERIFY_ELECTRON_PACKAGE=1 pnpm --filter @todo/electron test test/package-build.test.ts
+```
+
+This opt-in test exports `HEAD` into a new temporary directory, uses an isolated
+HOME, pnpm store, and Electron cache, and checks disk space before installation
+and packaging. It asserts that `Electron.app` is absent after installation, then
+builds under the shared package lock and inspects the bundle without launching it.
+The printed directory retains the clean export, `head.txt`, `commands.json` with
+exit codes, `install.log`, `build.log`, and a `PASS` file after all checks pass.
+Ordinary test runs skip this download and package check.
+
+`scripts/sign-and-install.sh` signs and installs both desktop apps, the CLI, and
+the server. `@electron/osx-sign` signs nested code with hardened runtime and
 Electron entitlements, using `TODO_SIGNING_IDENTITY` and `TODO_SIGNING_TEAM` from
 the environment or ignored `signing.local.mk`. Copy `signing.example.mk` at the
-repository root to configure your own certificate. Timestamping is disabled. The output is
-`dist/signed.noindex/electron/Todo.app`; native sessions drive that existing artifact
-without rebuilding. Notarization remains separate release work.
+repository root to configure your own certificate. Timestamping is disabled. The staged
+output is `dist/signed.noindex/electron/Todo.app`; the script then copies it to
+`/Applications/Todo Electron.app`. Notarization remains separate release work.
 
-Native verification remains on HOLD until current user consent. Signed builds
-are exclusively user-run and do not authorize app launches or Keychain access.
+Native verification remains on HOLD until current user consent. Signing does
+not authorize app launches or Keychain access.
 `TODO_SERVER_URL` defaults to
 http://127.0.0.1:4310 and accepts loopback HTTP only. `TODO_ELECTRON_DATA` selects
 an isolated app-data directory for verification.

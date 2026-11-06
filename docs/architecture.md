@@ -126,6 +126,21 @@ wakes snoozed Tasks, and deletes expired credentials. Each pass rereads SQLite,
 so a restart does not lose work. ReminderFired operations do not advance Task
 Version. Date-only planning values do not fire reminders.
 
+Creation and import accept Attachment reference arrays. Creation validates every
+reference before committing the Task. Import can adopt an existing Task by id
+and expected Version. Batch Attachment commands commit one Task group at a time,
+with attached, unchanged and rejected results. URI storage and these atomicity
+rules are defined by [ADR-0013](adr/0013-attachment-uri-and-atomic-inputs.md).
+
+Batch edit accepts explicit Task ids, each Task's expected Version and exactly
+one shared field change. The CLI and `POST /profiles/:profile/batch-edit` call
+`batchEditTasks`, which composes the existing Task edit command. Each Task
+commits independently. A stale Version returns a Conflict row without changing
+that Task. Dry run executes against an in-memory store copy, preserving the
+source database, History, metadata definitions and Versions. Both desktop
+clients keep the loaded selection for preview and apply, then reload the
+current Versions explicitly after a Conflict.
+
 ## Diagrams
 
 All four drawings are frames in one Excalidraw scene,

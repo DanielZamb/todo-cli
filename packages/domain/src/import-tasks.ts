@@ -1,4 +1,6 @@
 import { Effect, Option, Schema } from "effect";
+import { AttachmentCommands } from "./attachment-commands.ts";
+import { validateAttachmentInputs } from "./attachment-input.ts";
 import type { AccessRequest } from "./auth/model.ts";
 import { type TaskCommandResult, TaskCommands } from "./commands.ts";
 import type { Task } from "./entities.ts";
@@ -25,6 +27,7 @@ const accepted = (result: TaskCommandResult) =>
 const same = (a: unknown, b: unknown) =>
   JSON.stringify(a) === JSON.stringify(b);
 const identity = Schema.Struct({ external_id: Schema.String });
+const targetInput = Schema.Struct({ task_id: ImportItem.fields.task_id });
 const expectedVersionInput = Schema.Struct({
   from_version: ImportItem.fields.from_version,
 });
@@ -52,8 +55,15 @@ const executeImport = Effect.fn(function* (
     const id = Schema.decodeUnknownOption(identity)(raw);
     const external_id = Option.isSome(id) ? id.value.external_id : "";
     seen.add(external_id);
-    const before =
+    const target = Schema.decodeUnknownOption(targetInput)(raw);
+    const requestedId = Option.isSome(target)
+      ? target.value.task_id
+      : undefined;
+    const matched =
       initial.find((task) => task.external_id === external_id) ?? null;
+    const before = requestedId
+      ? (initial.find((task) => task.id === requestedId) ?? matched)
+      : matched;
     const base = {
       external_id,
       task_id: before?.id ?? null,
@@ -85,6 +95,8 @@ const executeImport = Effect.fn(function* (
     const item = decoded.value;
     const expectedVersion =
       item.from_version === undefined ? base.from_version : item.from_version;
+    const adopting =
+      before !== null && before.external_id == null && requestedId != null;
     const { project_name, ...fields } = item;
     const changes = Schema.decodeUnknownSync(TaskPatch)({
       ...fields,
@@ -99,10 +111,12 @@ const executeImport = Effect.fn(function* (
     const result = yield* store.auth
       .mutate(request, () =>
         Effect.gen(function* () {
-          const current =
-            (yield* store.auth.read(request)).tasks.find(
-              (task) => task.external_id === external_id,
-            ) ?? null;
+          const tasks = (yield* store.auth.read(request)).tasks;
+          const linked =
+            tasks.find((task) => task.external_id === external_id) ?? null;
+          const current = requestedId
+            ? (tasks.find((task) => task.id === requestedId) ?? null)
+            : linked;
           if (current?.deleted_at != null)
             return yield* Effect.fail(
               new ImportFailure({
@@ -112,6 +126,10 @@ const executeImport = Effect.fn(function* (
               }),
             );
           if (
+            (adopting && item.from_version == null) ||
+            (current?.external_id != null &&
+              current.external_id !== external_id) ||
+            (linked !== null && linked.id !== current?.id) ||
             (item.task_id !== undefined &&
               item.task_id !== (current?.id ?? null)) ||
             (current?.row_version ?? null) !== expectedVersion ||
@@ -121,9 +139,19 @@ const executeImport = Effect.fn(function* (
               new ImportFailure({
                 outcome: "rejected",
                 reason: "conflict",
-                latest: current,
+                latest: current ?? linked,
               }),
             );
+          if (item.attachments !== undefined)
+            yield* Effect.try({
+              try: () => validateAttachmentInputs(item.attachments ?? []),
+              catch: () =>
+                new ImportFailure({
+                  outcome: "rejected",
+                  reason: "invalid_attachment",
+                  latest: current,
+                }),
+            });
           const data = yield* store.auth.read(request);
           const normalizedNames = (changes.tag_names ?? [])
             .flatMap((name) => name.split(","))
@@ -177,6 +205,9 @@ const executeImport = Effect.fn(function* (
                   source: "import",
                   ...changes,
                   title: item.title,
+                  ...(item.attachments === undefined
+                    ? {}
+                    : { attachments: item.attachments }),
                 }),
               ),
             );
@@ -188,6 +219,33 @@ const executeImport = Effect.fn(function* (
               ),
             );
           } else task = current;
+          if (current !== null && item.attachments?.length) {
+            const report = yield* new AttachmentCommands(store).attachMany(
+              request,
+              {
+                items: [
+                  {
+                    task_id: task.id,
+                    from_version: task.row_version,
+                    attachments: item.attachments,
+                  },
+                ],
+              },
+            );
+            if (report.totals.rejected)
+              return yield* Effect.fail(
+                new ImportFailure({
+                  outcome: "rejected",
+                  reason: "invalid_attachment",
+                  latest: current,
+                }),
+              );
+            if (report.totals.attached) changed_fields.push("attachments");
+            task =
+              (yield* commands.get({ ...request, task_id: task.id })) ?? task;
+          }
+          if (current === null && item.attachments?.length)
+            changed_fields.push("attachments");
           if (item.status !== undefined && item.status !== task.status) {
             changed_fields.push("status");
             if (
@@ -264,14 +322,18 @@ const executeImport = Effect.fn(function* (
                       code: reason === "conflict" ? "occ_conflict" : reason,
                       message:
                         reason === "conflict"
-                          ? "Task changed since preview. Preview again and apply the current Version."
+                          ? adopting && latest?.external_id == null
+                            ? "Task changed and has no external id yet. Read its current Version and import again with task_id and from_version."
+                            : "Task changed since preview. Preview again and apply the current Version."
                           : reason === "title_required"
                             ? "New Tasks need a title. Add a title and import again."
-                            : reason === "task_deleted"
-                              ? "This Task is deleted. Restore it before importing changes."
-                              : reason === "external_id_conflict"
-                                ? "This external id already belongs to a Task. Restore the deleted Task or use another external id."
-                                : "Task fields are invalid. Check import-item and import again.",
+                            : reason === "invalid_attachment"
+                              ? "Invalid Attachment URI or file path. Fix this item and import again."
+                              : reason === "task_deleted"
+                                ? "This Task is deleted. Restore it before importing changes."
+                                : reason === "external_id_conflict"
+                                  ? "This external id already belongs to a Task. Restore the deleted Task or use another external id."
+                                  : "Task fields are invalid. Check import-item and import again.",
                       details: { current_version: latest?.row_version ?? null },
                     },
                   }) satisfies ImportRow,
@@ -375,10 +437,14 @@ export const importTasks = (
   input: ImportRequest,
 ) =>
   input.dry_run
-    ? Effect.acquireUseRelease(
-        store.fork(),
-        (copy) => executeImport(copy, request, input),
-        (copy) => Effect.orDie(copy.close()),
+    ? // Authenticate before forking: a fork serializes the whole database.
+      Effect.andThen(
+        store.auth.authenticate({ ...request, access: "write" }),
+        Effect.acquireUseRelease(
+          store.fork(),
+          (copy) => executeImport(copy, request, input),
+          (copy) => Effect.orDie(copy.close()),
+        ),
       )
     : Effect.gen(function* () {
         yield* store.auth.authenticate({ ...request, access: "write" });

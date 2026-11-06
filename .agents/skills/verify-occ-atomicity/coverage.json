@@ -1,0 +1,62 @@
+{
+  "confirmedCommit": "ed4e2423d696d0321bb0e19674bba1865bd2541d",
+  "files": [
+    {
+      "path": "packages/domain/src/store/store.ts",
+      "sha256": "4b3ac6159c75eba4abe0fa74d92d73e5163c60232c6fb22b30ec8c8157984d4f",
+      "functions": [
+        "OperationStore.constructor",
+        "OperationStore.transaction",
+        "OperationStore.record",
+        "OperationStore.recordRejection",
+        "OperationStore.validate",
+        "OperationStore.appendSync",
+        "OperationStore.append",
+        "OperationStore.historySync",
+        "OperationStore.takeSnapshot",
+        "OperationStore.rebuild"
+      ]
+    },
+    {
+      "path": "packages/domain/src/store/projection.ts",
+      "sha256": "b148e244a30e955a969941018bcc737c24f301bc719fc47a1eb13ae41cbef316",
+      "functions": [
+        "changes",
+        "applyEvent",
+        "applyChanges",
+        "putTask",
+        "readTasks",
+        "Snapshot",
+        "snapshot"
+      ]
+    },
+    {
+      "path": "packages/domain/src/events.ts",
+      "sha256": "c8bb9ed964da0028df89eca9997294d2e5a768bf3addc05a4a772c7bd2e3556b",
+      "functions": [
+        "TaskCreated",
+        "TaskEdited",
+        "AttachmentAdded",
+        "TaskDeleted",
+        "TaskAttemptRejected",
+        "Event",
+        "OpLogEntry"
+      ]
+    },
+    {
+      "path": "packages/domain/src/entities.ts",
+      "sha256": "ee505f78a6434528dbfe5f072463ec77cd6823bab1781f3f656d01c77f2d52f9",
+      "functions": ["Task", "Profile"]
+    },
+    {
+      "path": "packages/domain/src/ids.ts",
+      "sha256": "c1081994f401f4898f950348587ff4633fd36eb822628ca00d3d215e73defd0f",
+      "functions": ["ActorId", "ProfileId", "TaskId", "Version"]
+    },
+    {
+      "path": "packages/domain/src/attachments.ts",
+      "sha256": "a894806ccf22b2262e2d783b602e5540e3122e44d85d1c08fae9225f746a5aca",
+      "functions": ["Attachment", "validAttachmentLocation"]
+    }
+  ]
+}

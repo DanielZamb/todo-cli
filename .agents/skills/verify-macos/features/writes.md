@@ -39,8 +39,8 @@ directory. Evidence remains at the requested path. A failed run is not proof.
 
 This is a headless state and HTTP proof. It cannot prove glass, focus, native
 menus, sheet sizing, VoiceOver or Keychain. The parent skill's native HOLD remains
-in force. All xcodebuild commands must use CODE_SIGNING_ALLOWED=NO. Agents never
-sign. The user runs make sign-desktop in their own Terminal for signed builds.
+in force. All xcodebuild commands must use CODE_SIGNING_ALLOWED=NO. Verification
+builds stay unsigned. Signed installs come from scripts/sign-and-install.sh.
 The headless test only initializes notification handling for ReminderFired,
 which its scratch fixture does not generate. Do not add reminder fixtures here.
 

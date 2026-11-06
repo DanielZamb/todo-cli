@@ -35,7 +35,7 @@ try:
             time.sleep(.05)
         assert base, 'No loopback listener'
         with urllib.request.urlopen(base + '/health', timeout=5) as response:
-            assert json.load(response) == {'service': 'todo-server'}
+            assert json.load(response).get('service') == 'todo-server'
         listeners = subprocess.check_output(['lsof', '-nP', '-a', '-p', str(server.pid), '-iTCP', '-sTCP:LISTEN'], text=True)
         assert '127.0.0.1:' in listeners and '*:' not in listeners
         (evidence / 'listener.txt').write_text(listeners)

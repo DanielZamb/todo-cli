@@ -9,8 +9,9 @@ Generated using `create-verification-skill`.
 Read the [feature map](features/README.md). This is headless proof only.
 Native UI, XCTest, certificate signing and Keychain remain on HOLD; this recipe grants no
 permission for them. A separate unsigned compile-only build passed with
-signing disabled. Its command and artifact observation are recorded in
-[unsigned-build.json](../../../docs/evidence/w03/unsigned-build/unsigned-build.json).
+signing disabled. The historical artifact receipt is not retained in the checkout.
+Use the [unsigned build helper](scripts/unsigned-build.sh) with a new absolute
+evidence directory to repeat that compile-only check.
 That compile did not launch Todo and does not prove signed runtime behavior.
 
 ## Launch
@@ -25,10 +26,10 @@ Choose a new absolute evidence directory. Require macOS, a GUI launchd domain,
 Swift 6, Python 3, Bun and pnpm-installed dependencies. Never install Bun.
 The helper checks the 10 GB disk floor before each compilation. It compiles
 the production server through the actual bundling script with
-`CODE_SIGNING_ALLOWED=NO`. Agents never sign, including ad hoc signing.
-The unsigned helper runs every lifecycle and HTTP check. Helper entitlements
-and hardened signing require the user's `make sign-desktop` artifacts and are
-a separate unproven check. It compiles
+`CODE_SIGNING_ALLOWED=NO`. Verification builds stay unsigned, including ad hoc
+signing. The unsigned helper runs every lifecycle and HTTP check. Helper entitlements
+and hardened signing come from `scripts/sign-and-install.sh` and are a separate
+check from this recipe. It compiles
 `ServerLifecycle.swift` and `TaskSnapshot.swift` with Foundation-only drivers.
 No native app is built by verify.sh. The recipe also compiles the pre-W02 S03 lifecycle
 source from commit `7cfb2418351446119c992c6a257238114f9ec101`, relocating only

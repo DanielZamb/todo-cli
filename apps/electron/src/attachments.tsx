@@ -1,8 +1,11 @@
 import {
   type Attachment,
+  AttachmentLocation,
   attachmentLimit,
   ImageMime,
+  type ProfileId,
   type Task,
+  validAttachmentLocation,
 } from "@todo/domain";
 import { Schema } from "effect";
 import {
@@ -16,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { AttachmentBatchDialog } from "./attachment-batch.tsx";
 import { Button } from "./components/ui/button.tsx";
 import {
   DropdownMenu,
@@ -52,12 +56,18 @@ export function JiraMarker({ task }: { task: Task }) {
 }
 function AttachmentRow({
   attachment,
+  profile,
+  taskId,
+  accepted,
   send,
   disabled,
   remove,
   label,
 }: {
   attachment: Attachment;
+  profile: ProfileId;
+  taskId: Task["id"];
+  accepted: (task: Task) => void;
   send: Send;
   disabled: boolean;
   remove: () => void;
@@ -70,6 +80,7 @@ function AttachmentRow({
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(attachment.label ?? "");
+  const [sharing, setSharing] = useState(false);
   useEffect(() => {
     let live = true;
     void send({ _tag: "attachmentStatus", attachment }).then((reply) => {
@@ -82,7 +93,7 @@ function AttachmentRow({
   const title =
     attachment.name ??
     (attachment.kind === "link"
-      ? new URL(attachment.url).hostname
+      ? new URL(attachment.url).hostname || attachment.url
       : attachment.path.split("/").pop()) ??
     "Attachment";
   const location =
@@ -225,6 +236,11 @@ function AttachmentRow({
             <MoreHorizontal />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="attachment-menu">
+            {attachment.kind !== "image" && (
+              <DropdownMenuItem onClick={() => setSharing(true)}>
+                Attach to Tasks…
+              </DropdownMenuItem>
+            )}
             {attachment.label?.toLowerCase() !== "jira" && (
               <DropdownMenuItem onClick={() => void label("jira")}>
                 Mark as Jira draft
@@ -256,6 +272,17 @@ function AttachmentRow({
           <X />
         </Button>
       </div>
+      {sharing && (
+        <AttachmentBatchDialog
+          attachment={attachment}
+          profile={profile}
+          request={send}
+          sourceTaskId={taskId}
+          onAccepted={accepted}
+          canWrite={!disabled}
+          onClose={() => setSharing(false)}
+        />
+      )}
     </li>
   );
 }
@@ -316,6 +343,22 @@ export function AttachmentsSection({
           : { kind: "file", path: value },
       },
     }));
+  const paths = (values: readonly string[]) =>
+    values.length === 0
+      ? Promise.resolve(true)
+      : perform((task) => ({
+          _tag: "attachMany",
+          profile: task.profile_id,
+          payload: {
+            task_id: task.id,
+            from_version: task.row_version,
+            attachments: values.map((value) =>
+              /\.(png|jpe?g|gif|webp)$/i.test(value)
+                ? { kind: "image", path: value }
+                : { kind: "file", path: value },
+            ),
+          },
+        }));
   const upload = (
     mime: typeof ImageMime.Type,
     data: string,
@@ -371,16 +414,19 @@ export function AttachmentsSection({
   };
   const saveLink = () => {
     void action(async () => {
-      const url = new URL(link);
-      if (!["https:", "http:"].includes(url.protocol))
-        throw new Error("Use an HTTP/HTTPS link");
+      const location = Schema.decodeUnknownSync(AttachmentLocation)({
+        kind: "link",
+        url: link,
+      });
+      if (!validAttachmentLocation(location))
+        throw new Error("Use an absolute URI. HTTP(S) links need a host.");
       if (
         await perform((task) => ({
           _tag: "attach",
           ...target(task),
           payload: {
             from_version: task.row_version,
-            location: { kind: "link", url: url.href },
+            location,
           },
         }))
       ) {
@@ -436,9 +482,7 @@ export function AttachmentsSection({
                 void action(async () => {
                   const reply = await request({ _tag: "pickAttachment" });
                   if (reply._tag === "attachmentPaths")
-                    for (const value of reply.paths) {
-                      if (!(await path(value))) break;
-                    }
+                    await paths(reply.paths);
                 })
               }
             >
@@ -470,6 +514,12 @@ export function AttachmentsSection({
             <AttachmentRow
               key={value.id}
               attachment={value}
+              profile={task.profile_id}
+              taskId={task.id}
+              accepted={(value) => {
+                current.current = value;
+                onAccepted(value);
+              }}
               send={request}
               disabled={disabled}
               remove={() =>

@@ -1,5 +1,28 @@
 # Compact mode
 
+## Priority groups
+
+All tasks, including Project and Tag selections, always has P1, P2, P3 and P4.
+Empty groups keep their heading and 0 tasks count. Planning views keep their
+domain sections. The production headless test
+priorityGroupsSurviveModelSaveFiltersAndReload saves priorities through TodoModel,
+checks literal membership in both layouts, changes P1 to P2, reloads a fresh
+model and checks Version 3 and empty filtered groups. Run the write-state helper
+under the standing-order swift-slot script and require ui01-priority-http.json.
+
+Run the existing offscreen design helper under that same lock. Inspect
+compact-priority-{ready,empty,dense}-{light,dark}.png first, then the corresponding
+full-priority captures. The manifest contains 346 PNGs and Assets.car must exist.
+TODO_SNAPSHOT_PRIORITY_ONLY=1 selects 18 captures for a focused check, including
+the dense list after scrolling 53 pt and to its bottom. Compact geometry must
+show zero partially drawn Task rows at the measured viewport edges.
+The full ready capture also requires the P1 header to finish above the first
+Task row. Inspect both the circle and title in light and dark appearances.
+Require the preserved identifier check and unsigned xcodebuild to exit 0.
+The Compact task is to scan priorities and select a Task. Add task is the one
+primary action, in the header when populated and below the groups when empty.
+Offscreen native chrome, keyboard and interactive scrolling remain held.
+
 ## Sub-features
 
 - Collapse to a 393 × 426 content area, matching the iPhone 15 Pro logical

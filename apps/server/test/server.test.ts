@@ -1,9 +1,11 @@
+import { Database } from "bun:sqlite";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "@effect/vitest";
 import { BUILD_ID, CONTRACT_ID, Conflict, TodoApi } from "@todo/api";
 import {
+  BatchEditReport,
   ImportReport,
   OccurrenceId,
   OpLogEntry,
@@ -74,7 +76,7 @@ const fixture = Effect.gen(function* () {
   const credential = Schema.decodeUnknownSync(
     Schema.Struct({ credential: Schema.String }),
   )(signIn.body).credential;
-  return { store, request, credential, base };
+  return { store, request, credential, base, path };
 });
 
 const parseTask = Schema.decodeUnknownSync(Task);
@@ -83,6 +85,194 @@ const tokenSecret = Schema.decodeUnknownSync(
 );
 
 describe("Todo HTTP contract", () => {
+  it.effect(
+    "refuses browser, rebinding and non-JSON requests before authentication records anything",
+    () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const { base, path, credential } = yield* fixture;
+          const rows = () => {
+            const db = new Database(path, { readonly: true });
+            try {
+              return db
+                .query<{ count: number }, []>(
+                  "SELECT count(*) AS count FROM op_log",
+                )
+                .get()?.count;
+            } finally {
+              db.close();
+            }
+          };
+          const before = rows();
+          const send = (path: string, init: RequestInit) =>
+            Effect.tryPromise(async () => {
+              const response = await fetch(base + path, init);
+              return { status: response.status, body: await response.json() };
+            });
+          const cases = [
+            {
+              path: "/profiles",
+              init: { headers: { Host: "evil.example:4310" } },
+              status: 403,
+              code: "forbidden_host",
+            },
+            {
+              path: "/profiles",
+              init: { headers: { Host: "[::1].evil.example" } },
+              status: 403,
+              code: "forbidden_host",
+            },
+            {
+              path: "/profiles",
+              init: { headers: { Host: "localhost.:4310" } },
+              status: 403,
+              code: "forbidden_host",
+            },
+            {
+              path: "/profiles",
+              init: { headers: { Origin: "https://evil.example" } },
+              status: 403,
+              code: "forbidden_origin",
+            },
+            {
+              path: "/profiles",
+              init: { headers: { "Sec-Fetch-Site": "cross-site" } },
+              status: 403,
+              code: "forbidden_origin",
+            },
+            {
+              path: "/profiles",
+              init: {
+                headers: {
+                  Origin: "https://evil.example",
+                  Authorization: `Bearer ${credential}`,
+                },
+              },
+              status: 403,
+              code: "forbidden_origin",
+            },
+            {
+              path: "/auth/sessions",
+              init: {
+                method: "POST",
+                headers: { "Content-Type": "text/plain" },
+                body: JSON.stringify({ passphrase: "test passphrase" }),
+              },
+              status: 415,
+              code: "unsupported_media_type",
+            },
+          ];
+          for (const { path, init, status, code } of cases) {
+            const response = yield* send(path, init);
+            expect([path, response.status, response.body.code]).toEqual([
+              path,
+              status,
+              code,
+            ]);
+          }
+          expect(rows()).toBe(before);
+          const allowed = yield* send("/profiles", {
+            headers: {
+              Host: "localhost",
+              "Sec-Fetch-Site": "none",
+              Authorization: `Bearer ${credential}`,
+            },
+          });
+          expect(allowed.status).toBe(200);
+        }),
+      ),
+  );
+  it.effect(
+    "batch edit HTTP preserves dry-run and returns independent stale-Version rows",
+    () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const { request, credential, store } = yield* fixture;
+          const a = parseTask(
+            (yield* request(
+              "POST",
+              "/profiles/work/tasks",
+              { title: "First" },
+              credential,
+            )).body,
+          );
+          const b = parseTask(
+            (yield* request(
+              "POST",
+              "/profiles/work/tasks",
+              { title: "Second" },
+              credential,
+            )).body,
+          );
+          const input = {
+            items: [
+              { task_id: a.id, from_version: 1 },
+              { task_id: b.id, from_version: 1 },
+            ],
+            changes: { priority: "P1" },
+          };
+          const history = yield* store.history();
+          const preview = yield* request(
+            "POST",
+            "/profiles/work/batch-edit",
+            { ...input, dry_run: true },
+            credential,
+          );
+          expect(preview.status).toBe(200);
+          expect(
+            Schema.decodeUnknownSync(BatchEditReport)(preview.body).totals,
+          ).toEqual({ updated: 2, rejected: 0 });
+          expect(yield* store.history()).toEqual(history);
+          yield* request(
+            "PATCH",
+            `/profiles/work/tasks/${b.id}`,
+            { from_version: 1, changes: { title: "Competing edit" } },
+            credential,
+          );
+          const report = yield* request(
+            "POST",
+            "/profiles/work/batch-edit",
+            input,
+            credential,
+          );
+          expect(report.status).toBe(200);
+          expect(
+            Schema.decodeUnknownSync(BatchEditReport)(report.body).items.map(
+              (row) => [
+                row.outcome,
+                row.current_version,
+                row.error?.code ?? null,
+              ],
+            ),
+          ).toEqual([
+            ["updated", 2, null],
+            ["rejected", 2, "occ_conflict"],
+          ]);
+          expect(
+            parseTask(
+              (yield* request(
+                "GET",
+                `/profiles/work/tasks/${b.id}`,
+                undefined,
+                credential,
+              )).body,
+            ).priority,
+          ).toBe("P3");
+          expect(
+            (yield* request(
+              "POST",
+              "/profiles/work/batch-edit",
+              { ...input, changes: {} },
+              credential,
+            )).status,
+          ).toBe(400);
+          expect(
+            (yield* request("POST", "/profiles/work/batch-edit", input)).status,
+          ).toBe(401);
+        }),
+      ),
+  );
+
   it.effect(
     "imports through the shared contract with no-write previews, idempotency and per-Task Conflicts",
     () =>

@@ -15,6 +15,7 @@ import { type OperationStore, openStore, StoreError } from "@todo/domain/store";
 import { Effect, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { RRuleTemporal } from "rrule-temporal";
+import { signInTiming } from "../src/auth/auth.ts";
 import { migrationSql } from "../src/store/0002.ts";
 import { createProjection } from "../src/store/projection.ts";
 import {
@@ -948,6 +949,103 @@ describe("database boundary", () => {
           } finally {
             yield* reopened.close();
           }
+        }),
+      ),
+  );
+  it.effect("requires a 12 to 1024 character owner passphrase", () =>
+    usingStore((store) =>
+      Effect.gen(function* () {
+        expect(yield* denial(store.auth.setupOwner("eleven char"))).toEqual([
+          "auth",
+          "invalid_request",
+        ]);
+        expect(yield* denial(store.auth.setupOwner("x".repeat(1025)))).toEqual([
+          "auth",
+          "invalid_request",
+        ]);
+        yield* store.auth.setupOwner("twelve chars");
+        expect(yield* denial(store.auth.signIn("x".repeat(1025)))).toEqual([
+          "auth",
+          "invalid_request",
+        ]);
+        expect((yield* store.auth.signIn("twelve chars")).credential).toMatch(
+          /^ses_/,
+        );
+      }),
+    ),
+  );
+
+  it.effect(
+    "backs off after consecutive failed sign-ins, caps the wait and resets after success",
+    () =>
+      usingStore((store) =>
+        Effect.gen(function* () {
+          yield* store.auth.setupOwner("scratch owner passphrase");
+          const waits: number[] = [];
+          const sleep = signInTiming.sleep;
+          signInTiming.sleep = async (ms) => {
+            waits.push(ms);
+          };
+          try {
+            const attempt = (passphrase: string) =>
+              Effect.map(
+                Effect.result(store.auth.signIn(passphrase)),
+                (result) => result._tag,
+              );
+            const outcomes = [];
+            for (let index = 0; index < 7; index++)
+              outcomes.push(yield* attempt("wrong passphrase"));
+            outcomes.push(yield* attempt("scratch owner passphrase"));
+            outcomes.push(yield* attempt("scratch owner passphrase"));
+            outcomes.push(yield* attempt("wrong passphrase"));
+            expect(outcomes).toEqual([
+              ...Array(7).fill("Failure"),
+              "Success",
+              "Success",
+              "Failure",
+            ]);
+            // No wait before the first attempt or after a success.
+            expect(waits).toEqual([250, 500, 1000, 2000, 4000, 5000, 5000]);
+          } finally {
+            signInTiming.sleep = sleep;
+          }
+        }),
+      ),
+  );
+
+  it.effect(
+    "Snapshot restore keeps revoked Access Tokens revoked and later Sessions valid",
+    () =>
+      usingStore((store) =>
+        Effect.gen(function* () {
+          const session = yield* signIn(store);
+          const token = yield* store.auth.issueToken({
+            credential: session.credential,
+            token: { name: "leaked", profile, scope: "read-write" },
+          });
+          const saved = yield* store.snapshots.create("before revoke");
+          yield* store.auth.revokeToken({
+            credential: session.credential,
+            name: "leaked",
+          });
+          const later = yield* store.auth.signIn("scratch owner passphrase");
+          yield* store.snapshots.restore(saved.id);
+          expect(
+            yield* denial(
+              store.auth.authenticate({
+                credential: token.credential,
+                profile,
+                access: "read",
+              }),
+            ),
+          ).toEqual(["auth", "revoked"]);
+          expect(
+            (yield* store.auth.authenticate({
+              credential: later.credential,
+              profile,
+              access: "write",
+            })).kind,
+          ).toBe("session");
         }),
       ),
   );

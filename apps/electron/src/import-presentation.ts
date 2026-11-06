@@ -15,6 +15,7 @@ const names: Readonly<Record<string, string>> = {
   energy: "Energy",
   source: "Source",
   status: "Status",
+  attachments: "Attachments",
 };
 export const importChangesText = (
   row: Pick<ImportRow, "outcome" | "changed_fields">,

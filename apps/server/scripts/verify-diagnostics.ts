@@ -95,7 +95,13 @@ try {
     await sleep(50);
   }
   assert.ok(base);
-  assert.deepEqual(request("GET", "/health").value, { service: "todo-server" });
+  const health = request("GET", "/health").value as Record<string, unknown>;
+  assert.deepEqual(Object.keys(health).sort(), [
+    "build",
+    "contract",
+    "service",
+  ]);
+  assert.equal(health.service, "todo-server");
   const signIn = request("POST", "/auth/sessions", {
     passphrase: "scratch verification passphrase",
   });

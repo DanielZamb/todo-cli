@@ -393,6 +393,69 @@ export class Snapshots {
               for (const id of ids) redactTaskHistory(copy, history(copy), id);
             })
             .immediate();
+          // Credentials and the owner passphrase are not point-in-time data.
+          // Restoring them would revive revoked Sessions and Access Tokens or
+          // an old passphrase, so the staged copy keeps the live ones.
+          // A live token for a Profile the Snapshot lacks cannot be used and is dropped.
+          const credentialColumns =
+            "id,kind,secret_hash,name,profile,scope,created_at,expires_at,revoked_at";
+          const liveCredentials = this.db
+            .query<
+              {
+                id: string;
+                kind: string;
+                secret_hash: string;
+                name: string | null;
+                profile: string | null;
+                scope: string;
+                created_at: string;
+                expires_at: string;
+                revoked_at: string | null;
+              },
+              []
+            >(`SELECT ${credentialColumns} FROM credentials`)
+            .all();
+          const liveOwner = this.db
+            .query<{ singleton: number; passphrase_hash: string }, []>(
+              "SELECT singleton,passphrase_hash FROM owner",
+            )
+            .all();
+          copy
+            .transaction(() => {
+              const profiles = new Set(
+                copy
+                  .query<{ id: string }, []>("SELECT id FROM profiles")
+                  .all()
+                  .map((row) => row.id),
+              );
+              copy.exec("DELETE FROM credentials");
+              const insert = copy.query(
+                `INSERT INTO credentials(${credentialColumns}) VALUES (?,?,?,?,?,?,?,?,?)`,
+              );
+              for (const row of liveCredentials)
+                if (row.profile === null || profiles.has(row.profile))
+                  insert.run(
+                    row.id,
+                    row.kind,
+                    row.secret_hash,
+                    row.name,
+                    row.profile,
+                    row.scope,
+                    row.created_at,
+                    row.expires_at,
+                    row.revoked_at,
+                  );
+              if (liveOwner.length) {
+                copy.exec("DELETE FROM owner");
+                for (const row of liveOwner)
+                  copy
+                    .query(
+                      "INSERT INTO owner(singleton,passphrase_hash) VALUES (?,?)",
+                    )
+                    .run(row.singleton, row.passphrase_hash);
+              }
+            })
+            .immediate();
           this.db.query("ATTACH DATABASE ? AS restore_source").run(stage);
           attached = true;
           const before = counts(this.db);

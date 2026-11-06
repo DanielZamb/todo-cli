@@ -1,6 +1,10 @@
 import {
+  AttachManyReport,
+  AttachManyRequest,
   AttachmentId,
   AttachTask,
+  BatchEditReport,
+  BatchEditRequest,
   CreateSeries,
   CreateTask,
   CredentialInfo,
@@ -130,6 +134,12 @@ const taskErrors = [
 ];
 const Tasks = HttpApiGroup.make("tasks")
   .add(
+    HttpApiEndpoint.post("attachMany", "/profiles/:profile/attachments/batch", {
+      params: profile,
+      payload: AttachManyRequest,
+      success: AttachManyReport,
+      error: taskErrors,
+    }),
     HttpApiEndpoint.post(
       "attach",
       "/profiles/:profile/tasks/:task/attachments",
@@ -179,6 +189,12 @@ const Tasks = HttpApiGroup.make("tasks")
         error: taskErrors,
       },
     ),
+    HttpApiEndpoint.post("batchEdit", "/profiles/:profile/batch-edit", {
+      params: profile,
+      payload: BatchEditRequest,
+      success: BatchEditReport,
+      error: taskErrors,
+    }),
     HttpApiEndpoint.post("importTasks", "/profiles/:profile/import", {
       params: profile,
       payload: ImportRequest,

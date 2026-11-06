@@ -30,6 +30,25 @@ const sha256 = (secret: string) =>
   createHash("sha256").update(secret).digest("hex");
 const instant = (time: number) =>
   Schema.decodeUnknownSync(Instant)(new Date(time).toISOString());
+// Setup requires a passphrase worth guessing against; both paths cap its length
+// so a request cannot choose the cost of Argon2 before verification.
+const maximumPassphraseLength = 1024;
+const OwnerPassphrase = Schema.String.check(
+  Schema.isMinLength(12),
+  Schema.isMaxLength(maximumPassphraseLength),
+);
+const SignInPassphrase = Schema.NonEmptyString.check(
+  Schema.isMaxLength(maximumPassphraseLength),
+);
+// Sign-in verifies one passphrase at a time. Each consecutive failure doubles
+// the wait before the next verification, up to five seconds, and a full queue
+// is refused, so guessing is slow and cannot pile up Argon2 memory.
+const maximumWaitingSignIns = 4;
+const failureDelay = (failures: number) =>
+  failures === 0 ? 0 : Math.min(250 * 2 ** (failures - 1), 5000);
+// Tests replace sleep to observe the requested waits without real time.
+export const signInTiming = { sleep: (ms: number) => Bun.sleep(ms) };
+
 const parse = <S extends Schema.ConstraintDecoder<unknown>>(
   schema: S,
   input: unknown,
@@ -76,6 +95,30 @@ export class Authentication<Read> {
     private readonly transaction: <A>(run: () => A) => A,
     private readonly ports: Ports<Read>,
   ) {}
+
+  private signInQueue: Promise<unknown> = Promise.resolve();
+  private waitingSignIns = 0;
+  private failedSignIns = 0;
+
+  private verifyPassphrase(value: string, hash: string): Promise<boolean> {
+    if (this.waitingSignIns >= maximumWaitingSignIns)
+      return Promise.resolve(false);
+    this.waitingSignIns++;
+    const attempt = this.signInQueue.then(async () => {
+      const delay = failureDelay(this.failedSignIns);
+      if (delay) await signInTiming.sleep(delay);
+      const valid = await Bun.password.verify(value, hash);
+      this.failedSignIns = valid ? 0 : this.failedSignIns + 1;
+      return valid;
+    });
+    this.signInQueue = attempt.then(
+      () => undefined,
+      () => undefined,
+    );
+    return attempt.finally(() => {
+      this.waitingSignIns--;
+    });
+  }
 
   private record(input: {
     action: AuthAction;
@@ -227,7 +270,7 @@ export class Authentication<Read> {
   readonly setupOwner = (passphrase: string) =>
     Effect.gen({ self: this }, function* () {
       const value = yield* this.perform("setupOwner", null, () => {
-        const value = parse(Schema.NonEmptyString, passphrase);
+        const value = parse(OwnerPassphrase, passphrase);
         if (this.db.query("SELECT 1 FROM owner").get())
           throw new AuthError("owner_exists");
         return value;
@@ -252,7 +295,7 @@ export class Authentication<Read> {
   readonly signIn = (passphrase: string) =>
     Effect.gen({ self: this }, function* () {
       const input = yield* this.perform("signIn", null, () => {
-        const value = parse(Schema.NonEmptyString, passphrase);
+        const value = parse(SignInPassphrase, passphrase);
         const row = this.db
           .query<{ passphrase_hash: string }, []>(
             "SELECT passphrase_hash FROM owner WHERE singleton=1",
@@ -262,7 +305,7 @@ export class Authentication<Read> {
         return { value, hash: row.passphrase_hash };
       });
       const valid = yield* Effect.tryPromise({
-        try: () => Bun.password.verify(input.value, input.hash),
+        try: () => this.verifyPassphrase(input.value, input.hash),
         catch: (cause) => new StoreError(cause),
       });
       return yield* this.perform("signIn", null, (time) => {

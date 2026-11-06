@@ -1,5 +1,7 @@
 # Attachments reference local files and links
 
+The HTTP(S)-only storage restriction is superseded by [ADR-0013](0013-attachment-uri-and-atomic-inputs.md).
+
 A Task has Attachments with a stable id, kind `file`, `image` or `link`, a path for files and images or an HTTP/HTTPS URL for links, an optional label, and `added_at`. Paths are absolute on the owner's machine. Attaching a path records a reference and leaves the file where it is. A missing path remains attached and appears as missing, with `exists: false`. Link existence is unknown and does not trigger a network request. The `jira` label gives the Task a compact Jira marker and exposes the draft path in the editor.
 
 Pasted and dropped image bytes go through the authenticated server upload endpoint. The shared domain writes them beneath `~/.todo-cli/attachments/<encoded-profile>/<encoded-task>/<attachment-id>.<extension>`. Tests may supply an isolated attachment root. Each path segment uses a reversible hex encoding of the identifier. The server chooses the filename and validates both image signatures and the declared MIME type. Supported uploads are PNG, JPEG, GIF and WebP, limited to 20 MiB of decoded bytes per image. Existing local file references have no size limit because Todo does not copy or read them. The upload request uses base64 JSON, with a bounded encoded length in the HttpApi schema and HTTP body limit.

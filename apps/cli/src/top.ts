@@ -2,12 +2,21 @@ import type { DiagnosticsSnapshot } from "@todo/domain";
 import { diagnosticProfileName } from "@todo/domain/presentation";
 import { Effect } from "effect";
 
+// Control characters, plus bidi overrides and invisible formatting characters
+// that can reorder or hide text on screen.
+export const isTerminalUnsafe = (code: number) =>
+  code < 32 ||
+  (code >= 127 && code <= 159) ||
+  code === 0x061c ||
+  (code >= 0x200b && code <= 0x200f) ||
+  (code >= 0x202a && code <= 0x202e) ||
+  (code >= 0x2060 && code <= 0x2069) ||
+  code === 0xfeff;
 const safe = (value: string) =>
   [...value]
-    .map((character) => {
-      const code = character.codePointAt(0) ?? 0;
-      return code < 32 || (code >= 127 && code <= 159) ? " " : character;
-    })
+    .map((character) =>
+      isTerminalUnsafe(character.codePointAt(0) ?? 0) ? " " : character,
+    )
     .join("");
 const padLine = (text: string, width: number) => {
   const chars = [...safe(text)];

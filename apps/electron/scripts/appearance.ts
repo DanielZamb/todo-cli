@@ -12,13 +12,21 @@ export async function setAppearance(page: Page, appearance: "light" | "dark") {
     name: appearance === "dark" ? "Dark appearance" : "Light appearance",
     exact: true,
   });
-  if (await button.isVisible()) {
-    await button.click();
-    return;
-  }
-  await page
-    .getByRole("button", { name: "Navigate tasks", exact: true })
+  await button
+    .or(page.getByRole("button", { name: "Navigate tasks", exact: true }))
     .click();
+  const settings = page.getByRole("menuitem", {
+    name: "Settings",
+    exact: true,
+  });
+  const applied = () =>
+    page
+      .evaluate(() => document.documentElement.classList.contains("dark"))
+      .then((dark) => dark === (appearance === "dark"));
+  await expect
+    .poll(async () => (await applied()) || (await settings.isVisible()))
+    .toBe(true);
+  if (await applied()) return;
   await page.getByRole("menuitem", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: "Appearance…", exact: true }).click();
   await button.click();

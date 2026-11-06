@@ -15,3 +15,5 @@ compiled [Snapshot drive](../../verify-snapshots/SKILL.md). It checks Session
 access, Token refusal, dry-run counts, Restore, SSE reload and reminder recovery.
 
 Version guardrails are covered in [contract](<contract.md>).
+
+[Edit several Tasks](batch-edit.md) covers per-Task expected Versions, preview, independent apply results and Conflict reload.

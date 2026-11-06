@@ -7,6 +7,12 @@ import OpenAPIRuntime
 #endif
 
 final class GeneratedContractTests: XCTestCase {
+    func testBatchEditKeepsPerTaskVersionsAndSharedChange() throws {
+      try roundTrip(Operations.tasks_period_batchEdit.Input.Body.jsonPayload.self, #"{"items":[{"task_id":"first","from_version":2},{"task_id":"second","from_version":7}],"changes":{"priority":"P1"},"dry_run":true}"#)
+      try roundTrip(Operations.tasks_period_batchEdit.Input.Body.jsonPayload.self, #"{"items":[{"task_id":"first","from_version":2}],"changes":{"due_at":null}}"#)
+      try roundTrip(Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.self, #"{"generated_at":"2026-11-04T00:00:00Z","dry_run":false,"items":[{"task_id":"first","from_version":2,"current_version":3,"outcome":"updated"},{"task_id":"second","from_version":7,"current_version":8,"outcome":"rejected","error":{"generated_at":"2026-11-04T00:00:00Z","code":"occ_conflict","message":"Reload Tasks","details":{"current_version":8}}}],"totals":{"updated":1,"rejected":1}}"#)
+    }
+
     func testDiagnosticsReadPreservesNullableMetadata() async throws {
         let fixture = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("API/Fixtures/diagnostics.json")
         let data = try Data(contentsOf: fixture)
@@ -26,6 +32,13 @@ final class GeneratedContractTests: XCTestCase {
         try roundTrip(Operations.snapshots_period_create.Input.Body.jsonPayload.self, #"{"reason":"before import"}"#)
         try roundTrip(Operations.snapshots_period_restore.Output.Ok.Body.jsonPayload.self,
                       #"{"id":"11111111-1111-1111-1111-111111111111","dry_run":true,"seq_before":9,"seq_after":4,"seq_delta":-5,"task_counts":[{"profile":"work","name":"Work","before":2,"after":1}],"safety_snapshot":null,"generation":"initial"}"#)
+    }
+
+    func testCLI01AttachmentInputsAndBatchContract() throws {
+      try roundTrip(Operations.tasks_period_attach.Input.Body.jsonPayload.self, #"{"from_version":1,"location":{"kind":"link","url":"t3-thread://v2/host/thread"}}"#)
+      try roundTrip(Operations.tasks_period_create.Input.Body.jsonPayload.self, #"{"title":"With references","attachments":[{"kind":"file","path":"/tmp/draft.md","label":"jira"},{"kind":"link","url":"mailto:owner@example.com"}]}"#)
+      try roundTrip(Operations.tasks_period_attachMany.Input.Body.jsonPayload.self, #"{"items":[{"task_id":"task-1","from_version":2,"attachments":[{"kind":"link","url":"urn:todo:task"}]}],"dry_run":true}"#)
+      try roundTrip(Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.self, #"{"generated_at":"2026-11-03T00:00:00Z","dry_run":true,"items":[{"task_id":"task-1","from_version":2,"current_version":3,"outcome":"attached","attached":1}],"totals":{"attached":1,"unchanged":0,"rejected":0}}"#)
     }
 
     func testAttachmentCommandsPreserveGeneratedPayloads() throws {

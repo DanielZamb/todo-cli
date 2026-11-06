@@ -33,10 +33,18 @@ import {
   Sun,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { createRoot } from "react-dom/client";
 import { acceptAttachmentTask } from "./attachment-model.ts";
 import { AttachmentsSection, JiraMarker } from "./attachments.tsx";
+import { BatchEditDialog } from "./batch-edit.tsx";
 import { Alert, AlertDescription } from "./components/ui/alert.tsx";
 import { Button } from "./components/ui/button.tsx";
 import {
@@ -91,6 +99,7 @@ import {
   editorFor,
   type FieldName,
   merge,
+  priorityGroups,
   rebaseEditor,
   taskPayload,
   taskTagNames,
@@ -107,6 +116,61 @@ import { TaskFilterDialog, taskFilterSummary } from "./task-filter-dialog.tsx";
 import { TaskTags } from "./task-tags.tsx";
 import "./index.css";
 import "./app.css";
+
+function TaskGroups({
+  compact,
+  children,
+}: {
+  compact: boolean;
+  children: ReactNode;
+}) {
+  const viewport = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const element = viewport.current;
+    if (!element || !compact) return;
+    const content = element.firstElementChild;
+    if (!(content instanceof HTMLElement)) return;
+    const clip = () => {
+      const bounds = element.getBoundingClientRect();
+      let top = bounds.top;
+      let bottom = bounds.bottom;
+      for (const row of element.querySelectorAll(".task-row")) {
+        const frame = row.getBoundingClientRect();
+        if (frame.top < bounds.top && frame.bottom > bounds.top)
+          top = Math.max(top, frame.bottom);
+        if (frame.top < bounds.bottom && frame.bottom > bounds.bottom)
+          bottom = Math.min(bottom, frame.top);
+      }
+      const contentBounds = content.getBoundingClientRect();
+      content.style.clipPath = `inset(${top - contentBounds.top}px 0 ${contentBounds.bottom - Math.max(top, bottom)}px 0)`;
+      element.dataset.visibleTop = String(top);
+      element.dataset.visibleBottom = String(Math.max(top, bottom));
+    };
+    clip();
+    const observer = new ResizeObserver(clip);
+    observer.observe(element);
+    observer.observe(content);
+    const changes = new MutationObserver(clip);
+    changes.observe(content, { childList: true, subtree: true });
+    element.addEventListener("scroll", clip);
+    return () => {
+      observer.disconnect();
+      changes.disconnect();
+      element.removeEventListener("scroll", clip);
+      content.style.clipPath = "";
+      delete element.dataset.visibleTop;
+      delete element.dataset.visibleBottom;
+    };
+  }, [compact]);
+  return (
+    <div
+      ref={viewport}
+      className={cn("task-groups", compact && "whole-task-groups")}
+    >
+      <div className="task-group-content">{children}</div>
+    </div>
+  );
+}
 
 const decodeProfile = Schema.decodeUnknownSync(ProfileId);
 const filterApplyError =
@@ -255,6 +319,7 @@ function App() {
     return () => clearInterval(timer);
   }, []);
   const reverted = revertedSequences(history?.entries ?? []);
+  const [batchEditOpen, setBatchEditOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [profileDelete, setProfileDelete] = useState<{
     name: string;
@@ -583,6 +648,7 @@ function App() {
         setParsed(null);
         setMoveOpen(false);
         setImportOpen(false);
+        setBatchEditOpen(false);
         setTransferResult(null);
         setContextTask(null);
         setProfileDelete(null);
@@ -1033,19 +1099,19 @@ function App() {
     setError((current) => (current === filterApplyError ? "" : current));
     void refresh();
   };
-  const groups = (
-    catalog?.planning?.groups ?? [{ name: "All tasks", tasks }]
-  ).map((group) => ({
-    ...group,
-    tasks: group.tasks.filter(
-      (task) =>
-        (project === null || task.project_id === project) &&
-        (tag === null || task.tags.some((id) => id === tag)) &&
-        (Object.keys(advancedFilters).length === 0 ||
-          catalog?.matching_task_ids === undefined ||
-          catalog.matching_task_ids.some((id) => id === task.id)),
-    ),
-  }));
+  const groups = (catalog?.planning?.groups ?? priorityGroups(tasks)).map(
+    (group) => ({
+      ...group,
+      tasks: group.tasks.filter(
+        (task) =>
+          (project === null || task.project_id === project) &&
+          (tag === null || task.tags.some((id) => id === tag)) &&
+          (Object.keys(advancedFilters).length === 0 ||
+            catalog?.matching_task_ids === undefined ||
+            catalog.matching_task_ids.some((id) => id === task.id)),
+      ),
+    }),
+  );
   const overlaps = editor && latest ? conflicts(editor, latest) : [];
   const rowDateOptions = { now: new Date(presentationNow) };
   const date = rowDateOptions.now.toLocaleDateString("en-US", {
@@ -1185,6 +1251,18 @@ function App() {
           </Button>
         </DialogContent>
       </Dialog>
+      {batchEditOpen && (
+        <BatchEditDialog
+          key={profile}
+          profile={profile}
+          request={request}
+          canWrite={!readOnly}
+          onClose={() => setBatchEditOpen(false)}
+          onApplied={() => {
+            void refresh();
+          }}
+        />
+      )}
       {importOpen && (
         <ImportDialog
           key={profile}
@@ -1457,6 +1535,12 @@ function App() {
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       disabled={readOnly}
+                      onClick={() => setBatchEditOpen(true)}
+                    >
+                      Edit Tasks…
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={readOnly}
                       onClick={() => setImportOpen(true)}
                     >
                       Import…
@@ -1544,6 +1628,15 @@ function App() {
             )}
           </div>
           <div className="actions">
+            {!compact && (
+              <Button
+                variant="outline"
+                disabled={readOnly}
+                onClick={() => setBatchEditOpen(true)}
+              >
+                Edit Tasks…
+              </Button>
+            )}
             {!compact && (
               <Button
                 variant="outline"
@@ -1722,223 +1815,258 @@ function App() {
             </AlertDescription>
           </Alert>
         )}
-        {!(compact && (connection === "offline" || loadError)) &&
-          groups.map((group) => (
-            <section key={group.name} aria-label={group.name}>
-              {(!compact ||
-                groups.filter((group) => group.tasks.length > 0).length >
-                  1) && (
-                <div className="list-heading">
-                  <span>{group.name}</span>
-                  <span>{countTasks(group.tasks.length)}</span>
-                </div>
-              )}
-              <div className="task-list">
-                {group.tasks.map((task) => {
-                  const projectName = catalog?.projects.find(
-                    (entry) => entry.id === task.project_id,
-                  )?.name;
-                  const tags = taskTagNames(task, catalog?.tags ?? []);
-                  const tagNames = tags.map((name) => `#${name}`).join(" · ");
-                  const metadata = [projectName, tagNames]
-                    .filter(Boolean)
-                    .join(" · ");
-                  const overdue =
-                    task.status === "open" &&
-                    task.due_at &&
-                    (task.due_at.kind === "date"
-                      ? task.due_at.date <
-                        rowDateOptions.now.toLocaleDateString("en-CA")
-                      : Date.parse(task.due_at.utc) < presentationNow);
-                  return (
-                    <div
-                      className={cn(
-                        "task-row",
-                        editor?.base.id === task.id && "selected",
-                      )}
-                      key={task.id}
-                      data-task-id={task.id}
+        <TaskGroups
+          compact={
+            compact &&
+            !catalog?.planning &&
+            connection !== "offline" &&
+            !loadError
+          }
+        >
+          {!(compact && (connection === "offline" || loadError)) &&
+            groups.map((group) => (
+              <section
+                key={group.name}
+                aria-label={group.name}
+                className={!catalog?.planning ? "priority-group" : undefined}
+              >
+                {(!catalog?.planning ||
+                  !compact ||
+                  groups.filter((group) => group.tasks.length > 0).length >
+                    1) && (
+                  <div className="list-heading">
+                    <h2>{group.name}</h2>
+                    <span
+                      className={
+                        group.tasks.length === 0 ? "empty-priority" : undefined
+                      }
                     >
-                      <button
-                        type="button"
-                        className="complete"
-                        aria-label={`${task.status === "done" ? "Reopen" : "Complete"} ${task.title}`}
-                        disabled={readOnly}
-                        onClick={() => {
-                          void transition(
-                            task,
-                            task.status === "done" ? "reopen" : "complete",
-                          );
-                        }}
+                      {countTasks(group.tasks.length)}
+                    </span>
+                  </div>
+                )}
+                <div className="task-list">
+                  {group.tasks.map((task) => {
+                    const projectName = catalog?.projects.find(
+                      (entry) => entry.id === task.project_id,
+                    )?.name;
+                    const tags = taskTagNames(task, catalog?.tags ?? []);
+                    const tagNames = tags.map((name) => `#${name}`).join(" · ");
+                    const metadata = [projectName, tagNames]
+                      .filter(Boolean)
+                      .join(" · ");
+                    const overdue =
+                      task.status === "open" &&
+                      task.due_at &&
+                      (task.due_at.kind === "date"
+                        ? task.due_at.date <
+                          rowDateOptions.now.toLocaleDateString("en-CA")
+                        : Date.parse(task.due_at.utc) < presentationNow);
+                    return (
+                      <div
+                        className={cn(
+                          "task-row",
+                          editor?.base.id === task.id && "selected",
+                        )}
+                        key={task.id}
+                        data-task-id={task.id}
                       >
-                        {task.status === "done" ? <Check /> : <Circle />}
-                      </button>
-                      <button
-                        type="button"
-                        className="task-content"
-                        onContextMenu={(event) => {
-                          event.preventDefault();
-                          setContextTask(task);
-                        }}
-                        onClick={() => {
-                          setEditor((current) => draftForTask(task, current));
-                          setLatest(null);
-                          setWriteIntent(null);
-                          setSeriesDialog(null);
-                          setHistory(null);
-                          setMoveOpen(false);
-                        }}
-                        title={task.title}
-                      >
-                        <span
-                          className={`priority priority-${task.priority.toLowerCase()}`}
+                        <button
+                          type="button"
+                          className="complete"
+                          aria-label={`${task.status === "done" ? "Reopen" : "Complete"} ${task.title}`}
+                          disabled={readOnly}
+                          onClick={() => {
+                            void transition(
+                              task,
+                              task.status === "done" ? "reopen" : "complete",
+                            );
+                          }}
                         >
-                          {task.priority}
-                          {compact && task.status !== "open" && (
-                            <span className="task-status"> {task.status}</span>
-                          )}
-                        </span>
-                        <span className="task-title">{task.title}</span>
-                        <JiraMarker task={task} />
-                        {!compact && task.external_id && (
+                          {task.status === "done" ? <Check /> : <Circle />}
+                        </button>
+                        <button
+                          type="button"
+                          className="task-content"
+                          onContextMenu={(event) => {
+                            event.preventDefault();
+                            setContextTask(task);
+                          }}
+                          onClick={() => {
+                            setEditor((current) => draftForTask(task, current));
+                            setLatest(null);
+                            setWriteIntent(null);
+                            setSeriesDialog(null);
+                            setHistory(null);
+                            setMoveOpen(false);
+                          }}
+                          title={task.title}
+                        >
                           <span
-                            className="task-external-id"
-                            title={task.external_id}
+                            className={`priority priority-${task.priority.toLowerCase()}`}
                           >
-                            {task.external_id}
+                            {task.priority}
+                            {compact && task.status !== "open" && (
+                              <span className="task-status">
+                                {" "}
+                                {task.status}
+                              </span>
+                            )}
                           </span>
-                        )}
-                        {compact ? (
-                          <RowMetadata
-                            items={[
-                              ...(task.due_at
-                                ? [
-                                    {
-                                      id: "due",
-                                      label: `Due ${rowDateText(task.due_at, rowDateOptions)}`,
-                                      overdue: Boolean(overdue),
-                                    },
-                                  ]
-                                : []),
-                              ...(!task.due_at && task.scheduled_at
-                                ? [
-                                    {
-                                      id: "scheduled",
-                                      label: `Scheduled ${rowDateText(task.scheduled_at, rowDateOptions)}`,
-                                    },
-                                  ]
-                                : []),
-                              ...(projectName
-                                ? [{ id: "project", label: projectName }]
-                                : []),
-                              ...tags.map((tag) => ({
-                                id: `tag:${tag}`,
-                                label: `#${tag}`,
-                              })),
-                              ...(task.external_id
-                                ? [{ id: "external", label: task.external_id }]
-                                : []),
-                            ]}
-                          />
-                        ) : (
-                          <>
-                            <span className="task-meta" title={metadata}>
-                              {projectName && (
-                                <span className="task-project">
-                                  {projectName}
-                                </span>
-                              )}
-                              {projectName && tagNames && " · "}
-                              {tagNames && (
-                                <TaskTags tags={tags} compact={compact} />
-                              )}
-                            </span>
+                          <span className="task-title">{task.title}</span>
+                          <JiraMarker task={task} />
+                          {!compact && task.external_id && (
                             <span
-                              className={cn("task-dates", overdue && "overdue")}
+                              className="task-external-id"
+                              title={task.external_id}
                             >
-                              <span>
-                                {task.due_at &&
-                                  `Due ${rowDateText(task.due_at, rowDateOptions)}`}
-                              </span>
-                              <span className="quiet">
-                                {task.scheduled_at &&
-                                  `Scheduled ${rowDateText(task.scheduled_at, rowDateOptions)}`}
-                              </span>
-                              {task.status !== "open" && (
-                                <span className="quiet">{task.status}</span>
-                              )}
+                              {task.external_id}
                             </span>
-                          </>
-                        )}
-                      </button>
-                      <DropdownMenu
-                        open={contextTask?.id === task.id}
-                        onOpenChange={(open) =>
-                          setContextTask(open ? task : null)
-                        }
-                      >
-                        <DropdownMenuTrigger
-                          render={
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              aria-label={`Task actions for ${task.title}`}
-                              disabled={readOnly}
+                          )}
+                          {compact ? (
+                            <RowMetadata
+                              items={[
+                                ...(task.due_at
+                                  ? [
+                                      {
+                                        id: "due",
+                                        label: `Due ${rowDateText(task.due_at, rowDateOptions)}`,
+                                        overdue: Boolean(overdue),
+                                      },
+                                    ]
+                                  : []),
+                                ...(!task.due_at && task.scheduled_at
+                                  ? [
+                                      {
+                                        id: "scheduled",
+                                        label: `Scheduled ${rowDateText(task.scheduled_at, rowDateOptions)}`,
+                                      },
+                                    ]
+                                  : []),
+                                ...(projectName
+                                  ? [{ id: "project", label: projectName }]
+                                  : []),
+                                ...tags.map((tag) => ({
+                                  id: `tag:${tag}`,
+                                  label: `#${tag}`,
+                                })),
+                                ...(task.external_id
+                                  ? [
+                                      {
+                                        id: "external",
+                                        label: task.external_id,
+                                      },
+                                    ]
+                                  : []),
+                              ]}
                             />
+                          ) : (
+                            <>
+                              <span className="task-meta" title={metadata}>
+                                {projectName && (
+                                  <span className="task-project">
+                                    {projectName}
+                                  </span>
+                                )}
+                                {projectName && tagNames && " · "}
+                                {tagNames && (
+                                  <TaskTags tags={tags} compact={compact} />
+                                )}
+                              </span>
+                              <span
+                                className={cn(
+                                  "task-dates",
+                                  overdue && "overdue",
+                                )}
+                              >
+                                <span>
+                                  {task.due_at &&
+                                    `Due ${rowDateText(task.due_at, rowDateOptions)}`}
+                                </span>
+                                <span className="quiet">
+                                  {task.scheduled_at &&
+                                    `Scheduled ${rowDateText(task.scheduled_at, rowDateOptions)}`}
+                                </span>
+                                {task.status !== "open" && (
+                                  <span className="quiet">{task.status}</span>
+                                )}
+                              </span>
+                            </>
+                          )}
+                        </button>
+                        <DropdownMenu
+                          open={contextTask?.id === task.id}
+                          onOpenChange={(open) =>
+                            setContextTask(open ? task : null)
                           }
                         >
-                          <MoreHorizontal />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          <DropdownMenuGroup>
-                            {(["move", "copy"] as const).map((kind) => (
-                              <DropdownMenuItem
-                                key={kind}
-                                onClick={() => {
-                                  setEditor((current) =>
-                                    draftForTask(task, current),
-                                  );
-                                  setLatest(null);
-                                  setWriteIntent(null);
-                                  setHistory(null);
-                                  setSeriesDialog(null);
-                                  setDestination(
-                                    catalog?.profiles.find(
-                                      (entry) => entry.id !== profile,
-                                    )?.id ?? "",
-                                  );
-                                  setError("");
-                                  setTransferKind(kind);
-                                  setMoveOpen(true);
-                                  setContextTask(null);
-                                }}
-                              >
-                                {kind === "move"
-                                  ? "Move to Profile"
-                                  : "Copy to Profile"}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuGroup>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
+                          <DropdownMenuTrigger
+                            render={
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label={`Task actions for ${task.title}`}
+                                disabled={readOnly}
+                              />
+                            }
+                          >
+                            <MoreHorizontal />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                            <DropdownMenuGroup>
+                              {(["move", "copy"] as const).map((kind) => (
+                                <DropdownMenuItem
+                                  key={kind}
+                                  onClick={() => {
+                                    setEditor((current) =>
+                                      draftForTask(task, current),
+                                    );
+                                    setLatest(null);
+                                    setWriteIntent(null);
+                                    setHistory(null);
+                                    setSeriesDialog(null);
+                                    setDestination(
+                                      catalog?.profiles.find(
+                                        (entry) => entry.id !== profile,
+                                      )?.id ?? "",
+                                    );
+                                    setError("");
+                                    setTransferKind(kind);
+                                    setMoveOpen(true);
+                                    setContextTask(null);
+                                  }}
+                                >
+                                  {kind === "move"
+                                    ? "Move to Profile"
+                                    : "Copy to Profile"}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuGroup>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+        </TaskGroups>
         {!(compact && (connection === "offline" || loadError)) &&
           groups.every((group) => group.tasks.length === 0) && (
-            <Empty>
-              <EmptyHeader>
-                <EmptyTitle>
-                  {filtered
-                    ? "No matching tasks"
-                    : compact
-                      ? "No tasks here."
-                      : "No tasks in this view"}
-                </EmptyTitle>
-              </EmptyHeader>
+            <Empty
+              className={!catalog?.planning ? "empty-priorities" : undefined}
+            >
+              {(catalog?.planning || !compact || filtered) && (
+                <EmptyHeader>
+                  <EmptyTitle>
+                    {filtered
+                      ? "No matching tasks"
+                      : compact
+                        ? "No tasks here."
+                        : "No tasks in this view"}
+                  </EmptyTitle>
+                </EmptyHeader>
+              )}
               {filtered ? (
                 <Button variant="outline" onClick={clearFilters}>
                   Clear filters

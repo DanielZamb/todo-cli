@@ -24,3 +24,5 @@ notices identify the deleted Profile. Open the Profile button, then select
 `Delete "<name>"…`; it is unavailable in the last Profile, offline or editing.
 
 Version guardrails are covered in [sessions](<sessions.md>).
+
+[Edit several Tasks](batch-edit.md) covers per-Task expected Versions, preview, independent apply results and Conflict reload.

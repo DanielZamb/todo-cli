@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { BUILD_ID, CONTRACT_ID } from "../../../../packages/api/src/index.ts";
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -94,7 +95,7 @@ try {
     assert.equal(status, expected, JSON.stringify(result));
     return result;
   };
-  assert.deepEqual(request("GET", "/health"), { service: "todo-server" });
+  assert.deepEqual(request("GET", "/health"), { service: "todo-server", contract: CONTRACT_ID, build: BUILD_ID });
   const { credential } = request("POST", "/auth/sessions", { passphrase: "scratch F11 passphrase" });
   const target = `/profiles/work/tasks/${id}`;
   stream = spawn("curl", ["-sSN", "--max-time", "20", "-H", `Authorization: Bearer ${credential}`, base + "/profiles/work/events"], { cwd: scratch, env });

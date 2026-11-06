@@ -6,6 +6,36 @@ from pathlib import Path
 import subprocess
 import sys
 
+def check_commands():
+    root = Path(__file__).resolve().parents[1]
+    for team, identity in [
+        ("ALPHATEAM1", "Apple Development: Alpha Example (ALPHA12345)"),
+        ("BETATEAM02", "Apple Development: Beta Example (BETA678901)"),
+    ]:
+        result = subprocess.run(
+            ["make", "--no-print-directory", "-n", "sign-desktop",
+             f"TODO_SIGNING_TEAM={team}", f"TODO_SIGNING_IDENTITY={identity}"],
+            cwd=root, capture_output=True, text=True, check=True,
+        )
+        commands = result.stdout.splitlines()
+        assert (
+            f'xcodebuild -project apps/macos/Todo.xcodeproj -scheme Todo -configuration Release '
+            f'-destination platform=macOS -derivedDataPath "{root}/dist/signed.noindex/DerivedData" '
+            f'CONFIGURATION_BUILD_DIR="{root}/dist/signed.noindex/macos" DEVELOPMENT_TEAM="{team}" '
+            'CODE_SIGN_STYLE=Automatic CODE_SIGN_IDENTITY="Apple Development" CODE_SIGNING_ALLOWED=YES '
+            'CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO OTHER_CODE_SIGN_FLAGS="--timestamp=none" build'
+        ) in commands, result.stdout
+        assert (
+            f'TODO_SIGNING_TEAM="{team}" TODO_SIGNING_IDENTITY="{identity}" '
+            f'pnpm --filter @todo/electron build --sign --output "{root}/dist/signed.noindex/electron/Todo.app"'
+        ) in commands, result.stdout
+    print("PASS: literal signing commands match both override sets; no signing executed")
+
+
+if sys.argv[1:] == ["--check-commands"]:
+    check_commands()
+    raise SystemExit(0)
+
 output = Path(sys.argv[1]).resolve()
 root = Path(__file__).resolve().parents[1]
 expected_team = os.environ.get("TODO_SIGNING_TEAM", "").strip()

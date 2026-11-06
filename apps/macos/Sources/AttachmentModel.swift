@@ -46,14 +46,36 @@ extension TodoModel {
         "path": URL(fileURLWithPath: path).standardizedFileURL.path,
       ], label: label)
   }
+  func attachPaths(_ paths: [String], label: String? = nil) async {
+    guard !paths.isEmpty else { return }
+    await changeAttachment { client, draft in
+      let attachments = paths.map { path -> [String: String] in
+        var value = ["kind": ["png", "jpg", "jpeg", "gif", "webp"].contains(URL(fileURLWithPath: path).pathExtension.lowercased()) ? "image" : "file", "path": URL(fileURLWithPath: path).standardizedFileURL.path]
+        if let label, !label.isEmpty { value["label"] = label }
+        return value
+      }
+      let value: [String: Any] = ["items": [["task_id": draft.id, "from_version": draft.base.row_version, "attachments": attachments]]]
+      let payload = try JSONDecoder().decode(Operations.tasks_period_attachMany.Input.Body.jsonPayload.self, from: JSONSerialization.data(withJSONObject: value))
+      let response = try await client.tasks_period_attachMany(path: .init(profile: draft.base.profile_id), body: .json(payload)).ok.body.json
+      let report = try JSONDecoder().decode(AttachmentBatchResponse.self, from: JSONEncoder().encode(response))
+      if let row = report.items.first, row.outcome == "rejected", row.error?.code != "occ_conflict" {
+        throw AttachmentBatchFailure(message: row.error?.message ?? "Attachments were rejected.")
+      }
+      let latest = try TaskSnapshot.decode(try await client.tasks_period_show(path: .init(profile: draft.base.profile_id, task: draft.id)).ok.body.json)
+      if report.items.first?.error?.code == "occ_conflict" { return .conflict(latest) }
+      return .accepted(latest)
+    }
+  }
   func attachLink(_ text: String, label: String? = nil) async {
-    guard let url = URL(string: text), ["https", "http"].contains(url.scheme?.lowercased() ?? ""),
-      url.host != nil, url.user == nil, url.password == nil
+    guard let url = URL(string: text), url.scheme != nil,
+      !text.contains(where: { $0.isWhitespace || $0.asciiValue.map { $0 < 32 || $0 == 127 } == true }),
+      !["https", "http"].contains(url.scheme?.lowercased() ?? "") ||
+        url.host != nil
     else {
-      editorError = "Use an HTTP or HTTPS link without credentials."
+      editorError = "Use an absolute URI. HTTP(S) links need a host."
       return
     }
-    await attachLocation(["kind": "link", "url": url.absoluteString], label: label)
+    await attachLocation(["kind": "link", "url": text], label: label)
   }
   private func attachLocation(_ location: [String: String], label: String?) async {
     await changeAttachment { client, draft in
@@ -134,4 +156,17 @@ extension TaskDraft {
     }
     return merging(task, choices: [:])
   }
+}
+
+private struct AttachmentBatchResponse: Decodable {
+  struct Row: Decodable {
+    struct Failure: Decodable { let code: String; let message: String }
+    let outcome: String
+    let error: Failure?
+  }
+  let items: [Row]
+}
+private struct AttachmentBatchFailure: LocalizedError {
+  let message: String
+  var errorDescription: String? { message }
 }

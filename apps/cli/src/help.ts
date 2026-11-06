@@ -83,13 +83,39 @@ const guides = {
     concurrency:
       "Reads the current Version before detaching. An optional expected Version rejects stale input.",
   }),
+  "batch-edit": reference({
+    purpose: "Update one shared field with each Task's expected Version.",
+    synopsis: "todo batch-edit <file|-> [--dry-run]",
+    examples: [
+      "todo schema batch-edit-input",
+      "todo batch-edit changes.json --dry-run --format json",
+      "todo batch-edit changes.json --format json",
+    ],
+    flags: ["--dry-run"],
+    concurrency:
+      "Input contains items with task_id and from_version, plus changes with exactly one field. Preview writes nothing. Apply reports each success and Conflict. Reload stale Tasks before applying again.",
+  }),
+  "attach-many": reference({
+    purpose:
+      "Attach files and URI links to many Tasks, with a result for each Task.",
+    synopsis: "todo attach-many <file|-> [--dry-run]",
+    flags: ["--dry-run (preview without writes)"],
+    examples: [
+      "todo schema attach-many-input",
+      "todo attach-many attachments.json --dry-run --format json",
+    ],
+    output:
+      "Each items entry supplies task_id, from_version, and attachments. Results are attached, unchanged, or rejected. Duplicate references with the same kind, location, label and name are unchanged.",
+    concurrency:
+      "Each Task needs its own from_version. A stale Version rejects that Task with current_version. Attachments for one Task commit together.",
+  }),
   todo: reference({
     purpose:
       "Todo CLI: local-first task tracking with OCC, auth, and markdown-first output.",
     synopsis: "todo [global flags] <command> [flags]",
     flags: [],
     examples: [
-      "printf 'secret\\n' | todo init --password-stdin",
+      "printf '%s\\n' \"$TODO_PASSPHRASE\" | todo init --password-stdin",
       "todo login --password-stdin",
       "todo add 'Pay rent' --priority P1",
       "todo list --format json",
@@ -150,11 +176,11 @@ const guides = {
       "todo init [--username <name>] [--password <passphrase> | --password-stdin]",
     flags: [
       "--username <name> (default unset, compatibility flag)",
-      "--password <passphrase> (default unset, bootstrap owner)",
+      "--password <passphrase> (default unset, bootstrap owner; visible in shell history and process lists, prefer --password-stdin)",
       "--password-stdin (default false, reads the first line of stdin)",
     ],
     examples: [
-      "printf 'secret\\n' | todo init --password-stdin",
+      "printf '%s\\n' \"$TODO_PASSPHRASE\" | todo init --password-stdin",
       "todo init --profile personal",
     ],
     auth: "No Session required. The owner can be configured only once.",
@@ -172,7 +198,7 @@ const guides = {
     ],
     examples: [
       "todo login",
-      "printf 'secret\\n' | todo login --password-stdin",
+      "printf '%s\\n' \"$TODO_PASSPHRASE\" | todo login --password-stdin",
     ],
     auth: "Requires the owner's passphrase, not an existing Session. Sessions expire after a fixed seven days.",
     output:
@@ -256,6 +282,9 @@ const guides = {
     flags: [
       "--parse <text> (opt in to quick-add tokens; literal titles stay unchanged)",
       ...taskFlags,
+      "--attach <path> (repeatable)",
+      "--link <URI> (repeatable)",
+      "--label <text> (optional label for the supplied Attachments)",
     ],
     examples: [
       "todo add 'Pay rent' --priority P1 --due 2030-01-01",

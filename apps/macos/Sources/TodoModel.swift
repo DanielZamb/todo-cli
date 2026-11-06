@@ -28,6 +28,8 @@ final class TodoModel {
     var viewCounts: [String: Int] = [:]
     var profileName: String { profiles.first { $0.id == profile }?.name ?? "Profile" }
     var writeIntent: TaskWriteIntent?
+    var batchEdit: BatchEditDraft?
+    var attachmentBatch: AttachmentBatchDraft?
     var showingImport = false
     var importDocument: ImportDocument?
     var importReport: ImportSummary?
@@ -118,6 +120,8 @@ final class TodoModel {
     }
 
     func resetImport() {
+        batchEdit = nil
+        attachmentBatch = nil
         importGeneration += 1
         importDocument = nil
         importReport = nil

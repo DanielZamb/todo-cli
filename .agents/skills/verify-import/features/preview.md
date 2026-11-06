@@ -52,3 +52,16 @@ requires version 5 and one pre-migration Snapshot, and compares every original
 row and op_log payload byte for byte. The HTTP import drive requires the shared
 404 for both preview and Apply into a deleted Profile. CLI import cannot recreate
 the tombstoned Profile or add Tasks to it.
+
+## Attachment references and adoption
+
+Supply `task_id`, `from_version`, and a free `external_id` to adopt an existing
+Task without replacing it. Omitted priority, due date and other metadata remain.
+A stale Version leaves its external id unassigned and reports the current Version.
+Later imports can use only the external id. The same file works in both clients.
+
+Supply `attachments` as an array of file/image path or link URI inputs with
+optional labels. Existing references remain. New references are added once.
+An invalid path or URI rejects that entire Task item, including supplied field
+changes. Creation validates references before the Task commits. The CLI01 drive
+in verify-attachments exercises these rules through compiled CLI and HTTP.

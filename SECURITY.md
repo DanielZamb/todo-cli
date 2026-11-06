@@ -18,6 +18,13 @@ a Session or Access Token for protected routes. Keep the database and credential
 private to the owner. Exposing the server through a proxy requires a separate
 deployment review.
 
+Before authentication, the server refuses requests whose Host is not
+`127.0.0.1`, `localhost` or `[::1]`, which blocks DNS rebinding. It also refuses
+any request carrying `Origin` or a cross-site `Sec-Fetch-Site`, so web pages
+cannot reach it, and any request body that is not `application/json`. A proxy
+host must be listed in `TODO_ALLOWED_HOSTS` (comma-separated). `todo diagnostics`
+and `todo top` send the owner Session only to those same hosts.
+
 Electron keeps the Session in its main process and encrypts persisted credentials
 with safeStorage. The SwiftUI client uses Keychain. Do not disable these controls
 to work around a verification or signing prompt.
@@ -27,6 +34,15 @@ to work around a verification or signing prompt.
 Run `pnpm audit` and `pnpm licenses list --json` when changing dependencies.
 Preserve the lockfile and the minimum package-age policy in
 `pnpm-workspace.yaml`. Review build tools as well as runtime dependencies.
+`scripts/check-package-age.ts` enforces the same seven-day minimum on locked
+npm packages and pinned Swift packages. `scripts/sign-and-install.sh` and
+`make sign-desktop` run it before installing or building, and it fails closed
+when a publish time cannot be verified. It also runs
+`scripts/check-install-scripts.ts`, which `pnpm check` runs too: no workspace
+`package.json` may declare an install-time script (`preinstall`, `install`,
+`postinstall`, `prepare` and similar) and the repository may not carry a
+`.pnpmfile`, because pnpm runs those during install whatever
+`onlyBuiltDependencies` says.
 
 Keep signing settings in ignored `signing.local.mk` or environment variables.
 Never commit a signing key or certificate export. A valid local Apple Development

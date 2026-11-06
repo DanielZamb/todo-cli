@@ -98,7 +98,7 @@ def start(name):
         matches = re.findall(r'Listening on http://127\.0\.0\.1:(\d+)', path.read_text())
         return f'http://127.0.0.1:{matches[-1]}' if matches else None
     base = wait_for(ready)
-    assert request(base, 'GET', '/health') == {'service': 'todo-server'}
+    assert request(base, 'GET', '/health').get('service') == 'todo-server'
     return process, base
 
 
@@ -197,7 +197,7 @@ try:
         if not matches:
             return None
         try:
-            return request(f'http://127.0.0.1:{matches[-1]}', 'GET', '/health') == {'service': 'todo-server'}
+            return request(f'http://127.0.0.1:{matches[-1]}', 'GET', '/health').get('service') == 'todo-server'
         except OSError:
             return None
     wait_for(agent_ready)

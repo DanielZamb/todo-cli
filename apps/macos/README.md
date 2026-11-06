@@ -44,15 +44,45 @@ app against its scratch server, database and CLI HOME. It never builds or signs.
 drive in [verify-macos](../../.agents/skills/verify-macos/SKILL.md), then submit
 the captured light and dark screenshots for coordinator design review.
 
-Regenerate the client with `apps/macos/scripts/generate-api.sh`. Dependencies
-are pinned in `API/Package.swift` and Package.resolved. The script derives an
-OpenAPI 3.0.3 input from the canonical 3.1 schema because generator 1.14.3 drops
-nullable anyOf fields. It also extracts the canonical SSE contentSchema and
+## Generate the API contract
+
+After `pnpm install --frozen-lockfile`, run this command from the repository
+root before building the macOS app:
+
+```sh
+scripts/swift-slot.sh make generate-api
+```
+
+This command also works when both OpenAPI documents and `GeneratedSources/`
+are absent. It requires Bun, Python 3, and the Swift toolchain, checks disk space, and
+builds the release generator executable. It does not launch or sign the app.
+`make build` builds only the CLI and server binaries.
+
+| Generated output | Source |
+| --- | --- |
+| `packages/api/openapi.json` | Effect `TodoApi` in `packages/api/src/index.ts`, emitted by `packages/api/scripts/openapi.ts` |
+| `packages/api/src/contract.ts` and `API/Sources/TodoAPI/ContractIdentity.swift` | SHA-256 of the canonical OpenAPI document, emitted by `packages/api/scripts/openapi.ts` |
+| `API/Sources/TodoAPI/openapi.json` | Canonical OpenAPI document transformed by `scripts/normalize-openapi.py` |
+| `API/Sources/TodoAPI/GeneratedSources/*.swift` | Normalized document and `API/Sources/TodoAPI/openapi-generator-config.yaml`, processed by the Swift generator and `scripts/preserve-null.py` |
+
+Paths beginning with `API/` or `scripts/` in this table are relative to
+`apps/macos`. Generated files remain checked in. Keep `packages/api/src/contract.ts`
+present because the HttpApi module re-exports it during generation.
+Edit their sources, then run the command above.
+`pnpm --filter @todo/api openapi` regenerates only the
+canonical document and the two contract identities.
+
+Dependencies are pinned in `API/Package.swift` and `API/Package.resolved`.
+The script derives an OpenAPI 3.0.3 input from the canonical 3.1 schema because
+the Swift generator drops nullable anyOf fields.
+It also extracts the canonical SSE contentSchema and
 adds presence-aware generated Codable encoding so omitted edits stay omitted
 and explicit null clears a value. The canonical contract remains unchanged.
 Round-trip and real scratch HTTP tests cover both forms. The generator runs
 in release mode because its debug build overflows the decoder stack on this
-expanded schema. Generated source is checked in for normal app builds.
+expanded schema.
+
+## Build the app
 
 `scripts/project.rb` generates Todo.xcodeproj with the xcodeproj Ruby gem.
 The generated project uses automatic Apple Development signing, bundle ID
@@ -64,15 +94,15 @@ server inherits Xcode's resolved signing identity and uses identifier
 `local.todo.server`. Regeneration normalizes UUIDs twice because xcodeproj's
 first pass includes the original target UUID in dependency hashes.
 
-Agents never sign or run signed builds. Every agent xcodebuild command uses
-`CODE_SIGNING_ALLOWED=NO`, and project signing settings stay unchanged. The user
-runs `make sign-desktop` in their own Terminal to build the Release app at
-`dist/signed.noindex/macos/Todo.app` and Electron at `dist/signed.noindex/electron/Todo.app`.
-Signing disables timestamp requests. The command checks package age and disk
-space, then records strict signature verification, team and designated
-requirement in `dist/signed.noindex/signing-receipt.json`. `make -n sign-desktop` prints
+Verification builds stay unsigned. Every verification xcodebuild command uses
+`CODE_SIGNING_ALLOWED=NO`, and project signing settings stay unchanged.
+`scripts/sign-and-install.sh` signs and installs the Release app and Electron,
+and installs the CLI and server. Signing disables timestamp requests. The
+command checks package age and disk space, then records strict signature
+verification, team and designated requirement in
+`dist/signed.noindex/signing-receipt.json`. `make -n sign-desktop` prints
 the commands without executing them. App launches, hosted XCTest and Keychain
-access by agents remain on HOLD.
+access remain on HOLD.
 
 Native sessions use that existing signed Release app without rebuilding.
 App launches, XCTest and Keychain remain on HOLD until current consent.

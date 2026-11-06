@@ -112,6 +112,10 @@ nav {
   font-size: 12px;
   margin: 24px 0 8px;
 }
+.list-heading h2 {
+  font: inherit;
+  margin: 0;
+}
 .task-filters {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
@@ -775,6 +779,12 @@ nav {
   padding: 12px;
   overflow-y: auto;
 }
+.compact .whole-task-groups {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
 .compact .sidebar,
 .compact.editing .task-pane {
   display: none;
@@ -807,6 +817,14 @@ nav {
 }
 .compact .list-heading {
   margin-top: 14px;
+}
+.compact .priority-group .list-heading {
+  margin: 8px 0 4px;
+  line-height: 20px;
+}
+.compact .empty-priorities {
+  padding: 12px;
+  min-height: 56px;
 }
 .compact .task-row {
   min-height: 56px;
@@ -1261,7 +1279,8 @@ nav {
 .compact-row-metadata > span:not(.tag-measure) {
   flex-shrink: 0;
 }
-.compact .task-pane > section {
+.compact .task-pane > section,
+.compact .task-group-content > section {
   flex-shrink: 0;
 }
 .appearance-settings button,
@@ -1270,6 +1289,9 @@ nav {
 }
 .compact .task-pane > [data-slot="empty"] {
   flex: 1;
+}
+.compact .task-pane > [data-slot="empty"].empty-priorities {
+  flex: 0 0 auto;
 }
 .compact-row-metadata .overdue {
   color: var(--destructive);
@@ -1384,4 +1406,80 @@ nav {
 }
 .outdated-server.compact h1 {
   font-size: 22px;
+}
+
+.batch-edit-dialog {
+  width: min(460px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+.batch-edit-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.batch-edit-field {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  font-size: 12px;
+}
+.batch-edit-fields [data-slot="native-select-wrapper"] {
+  width: 100%;
+}
+.batch-edit-list {
+  height: 224px;
+  min-height: 56px;
+  overflow-y: auto;
+  border-block: 1px solid var(--border);
+}
+.batch-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--border);
+}
+.batch-edit-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+  flex: none;
+}
+.batch-edit-row > span {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+.batch-edit-row > span > span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.batch-edit-row small {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.batch-edit-row [role="alert"] {
+  color: var(--destructive);
+}
+.batch-edit-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.batch-edit-footer button:first-child {
+  margin-right: auto;
+}
+
+@media (max-height: 500px) {
+  .batch-edit-list {
+    height: 112px;
+    flex: none;
+  }
 }

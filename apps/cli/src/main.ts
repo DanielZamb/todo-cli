@@ -21,6 +21,12 @@ import {
 import { BunServices } from "@effect/platform-bun";
 import { BUILD_ID, CONTRACT_ID } from "@todo/api";
 import {
+  AttachManyItem,
+  AttachManyReport,
+  AttachManyRequest,
+  BatchEditReport,
+  BatchEditRequest,
+  batchEditTasks,
   ClientReads,
   filterTaskRecords,
   ProfileDeletionReport,
@@ -34,7 +40,9 @@ import {
   TaskStatus,
   Version,
 } from "@todo/domain";
+import { attachmentInput } from "@todo/domain/attachment-input";
 import { attachmentCopyStats } from "@todo/domain/attachment-store";
+import { AttachmentCommands } from "@todo/domain/attachments";
 import {
   authFailure,
   CommandError,
@@ -97,12 +105,28 @@ import {
   StatusResponse,
   TextResponse,
 } from "./schema.ts";
-import { runTop } from "./top.ts";
+import { isTerminalUnsafe, runTop } from "./top.ts";
 import { TransferResponse, type TransferResult } from "./transfer-schema.ts";
 
+// Task content can come from imports and agents. Output writes terminal control
+// characters (escape sequences, BEL, carriage return) and bidi or invisible
+// formatting characters as visible \uXXXX escapes, keeping tab and newline.
+// Inside JSON strings that escape decodes to the original character, so JSON
+// output stays lossless.
+const terminalSafe = (text: string) => {
+  let safe = "";
+  for (const character of text) {
+    const code = character.codePointAt(0) ?? 0;
+    safe +=
+      code !== 9 && code !== 10 && isTerminalUnsafe(code)
+        ? `\\u${code.toString(16).padStart(4, "0")}`
+        : character;
+  }
+  return safe;
+};
 const write = (text: string) =>
   Effect.sync(() => {
-    process.stdout.write(text);
+    process.stdout.write(terminalSafe(text));
   });
 const response = <S extends Schema.ConstraintEncoder<unknown>>(
   format: Format,
@@ -295,6 +319,12 @@ const init = Command.make(
             "use either --password or --password-stdin",
           ),
         );
+      if (input.password)
+        yield* Effect.sync(() =>
+          process.stderr.write(
+            "warning: --password is visible in shell history and process lists; prefer --password-stdin\n",
+          ),
+        );
       const password = input.passwordStdin
         ? yield* io(() => readFileSync(0, "utf8").split("\n")[0]?.trim() ?? "")
         : input.password;
@@ -435,6 +465,9 @@ const add = Command.make(
   "add",
   {
     ...addOptions,
+    attach: stringFlag("attach").pipe(Flag.atLeast(0)),
+    link: stringFlag("link").pipe(Flag.atLeast(0)),
+    label: stringFlag("label").pipe(Flag.optional),
     titleArg: Argument.String("title").pipe(Argument.optional),
     parse: stringFlag("parse").pipe(Flag.optional),
   },
@@ -464,11 +497,34 @@ const add = Command.make(
               title: draft?.title ?? Option.getOrElse(input.titleArg, () => ""),
             },
             draft,
+            yield* Effect.try({
+              try: () => [
+                ...input.attach.map((path) =>
+                  attachmentInput(
+                    path,
+                    "file",
+                    Option.getOrUndefined(input.label),
+                  ),
+                ),
+                ...input.link.map((uri) =>
+                  attachmentInput(
+                    uri,
+                    "link",
+                    Option.getOrUndefined(input.label),
+                  ),
+                ),
+              ],
+              catch: (error) =>
+                new CommandError(2, "invalid_args", String(error)),
+            }),
           );
           const data = yield* readTasks(store, request);
           yield* write(
             renderTask(
-              taskView(result.task, data.projects, data.tags, data.series),
+              withAttachmentStatus(
+                taskView(result.task, data.projects, data.tags, data.series),
+                result.task.attachments ?? [],
+              ),
               cfg.format,
               nowInstant(),
             ),
@@ -810,6 +866,110 @@ const show = Command.make(
       );
     }),
 ).pipe(withGuide("show"));
+registerCommandSchema("batch-edit", BatchEditReport);
+registerCommandSchema("batch-edit-input", BatchEditRequest, "input");
+const batchEditCommand = Command.make(
+  "batch-edit",
+  { file: Argument.String("file"), dryRun: bool("dry-run") },
+  (input) =>
+    Effect.gen(function* () {
+      const cfg = yield* root;
+      const body = yield* Effect.try({
+        try: () =>
+          Schema.decodeUnknownSync(BatchEditRequest, {
+            onExcessProperty: "error",
+          })(
+            JSON.parse(
+              readFileSync(input.file === "-" ? 0 : input.file, "utf8"),
+            ),
+          ),
+        catch: (error) =>
+          new CommandError(
+            2,
+            "invalid_args",
+            `Cannot read batch edit. Supply Task ids, from_version and one shared changes field. Check todo schema batch-edit-input. ${String(error)}`,
+          ),
+      });
+      yield* withStore(cfg, (store) =>
+        Effect.gen(function* () {
+          const report = yield* batchEditTasks(
+            store,
+            yield* selectProfile(store, cfg),
+            { ...body, dry_run: input.dryRun || body.dry_run || false },
+          );
+          yield* write(
+            cfg.format === "json"
+              ? encodeResponse(BatchEditReport, report)
+              : `${report.dry_run ? "Dry run\n" : ""}${report.items.map((row) => `${row.task_id}\t${row.outcome}\t${row.error?.message ?? `Version ${row.current_version}`}`).join("\n")}\n`,
+          );
+          if (report.totals.rejected)
+            process.exitCode = report.items.some(
+              (row) => row.error?.code === "occ_conflict",
+            )
+              ? 4
+              : report.items.some((row) => row.error?.code === "not_found")
+                ? 3
+                : 2;
+        }),
+      );
+    }),
+).pipe(withGuide("batch-edit"));
+registerCommandSchema("attach-many", AttachManyReport);
+registerCommandSchema(
+  "attach-many-input",
+  Schema.Struct({
+    items: Schema.Array(AttachManyItem),
+    dry_run: Schema.optionalKey(Schema.Boolean),
+  }),
+  "input",
+);
+const attachManyCommand = Command.make(
+  "attach-many",
+  { file: Argument.String("file"), dryRun: bool("dry-run") },
+  (input) =>
+    Effect.gen(function* () {
+      const cfg = yield* root;
+      const requestBody = yield* Effect.try({
+        try: () =>
+          Schema.decodeUnknownSync(AttachManyRequest, {
+            onExcessProperty: "error",
+          })(
+            JSON.parse(
+              readFileSync(input.file === "-" ? 0 : input.file, "utf8"),
+            ),
+          ),
+        catch: (error) =>
+          new CommandError(
+            2,
+            "invalid_args",
+            `Cannot read Attachment batch: ${String(error)}`,
+          ),
+      });
+      yield* withStore(cfg, (store) =>
+        Effect.gen(function* () {
+          const request = yield* selectProfile(store, cfg);
+          const report = yield* new AttachmentCommands(store).attachMany(
+            request,
+            {
+              ...requestBody,
+              dry_run: input.dryRun || (requestBody.dry_run ?? false),
+            },
+          );
+          yield* write(
+            cfg.format === "json"
+              ? encodeResponse(AttachManyReport, report)
+              : `${report.dry_run ? "Dry run\n" : ""}${report.items.map((row) => `${row.task_id ?? "?"}\t${row.outcome}\t${row.error?.message ?? row.attached}`).join("\n")}\n`,
+          );
+          if (report.totals.rejected)
+            process.exitCode = report.items.some(
+              (row) => row.error?.code === "occ_conflict",
+            )
+              ? 4
+              : 2;
+        }),
+      );
+    }),
+).pipe(withGuide("attach-many"));
 const attachmentCommand = (detach: boolean) =>
   Command.make(
     detach ? "detach" : "attach",
@@ -1394,6 +1554,8 @@ const app = root.pipe(
     parseCommand,
     list,
     show,
+    batchEditCommand,
+    attachManyCommand,
     attachmentCommand(false),
     attachmentCommand(true),
     labelAttachmentCommand,
@@ -1575,12 +1737,14 @@ const program = Effect.gen(function* () {
                 : String(error),
             );
       (format === "json" && !follow ? process.stdout : process.stderr).write(
-        renderError(
-          failure.code,
-          failure.message,
-          follow ? "json" : format,
-          nowInstant(),
-          failure.latest,
+        terminalSafe(
+          renderError(
+            failure.code,
+            failure.message,
+            follow ? "json" : format,
+            nowInstant(),
+            failure.latest,
+          ),
         ),
       );
       process.exitCode = failure.exit;

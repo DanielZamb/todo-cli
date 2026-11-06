@@ -8,6 +8,13 @@ description: Drive the compiled Todo Electron app with Playwright Electron again
 Created with `create-verification-skill`.
 Read [the feature map](features/README.md) before selecting coverage.
 
+## Priority groups
+
+All tasks, including Project and Tag selections, keeps P1, P2, P3 and P4 in order.
+Empty groups keep their heading and 0 tasks count. Planning views retain their
+domain sections. Run the [priority recipe](features/compact.md#priority-groups)
+against the unsigned scratch host during native HOLD.
+
 ## Launch
 
 Native UI verification is on HOLD for the 2026-10-27 run after repeated
@@ -33,10 +40,10 @@ TODO_VERIFY_NATIVE_UI=1 .agents/skills/verify-electron/scripts/verify.sh "$PWD/a
 Choose a new absolute evidence directory. Host mode runs the disk guard and
 builds unsigned production main, preload and Vite renderer bundles. Default
 `pnpm --filter @todo/electron build` also assembles an unsigned
-`apps/electron/dist/Todo.app`. Agents never sign or run signed builds.
+`apps/electron/dist/Todo.app`. Verification builds stay unsigned.
 
-For a native session, the user first runs `make sign-desktop` in their own
-Terminal. It writes `dist/signed.noindex/electron/Todo.app` and a signing receipt.
+For a native session, `scripts/sign-and-install.sh` writes
+`dist/signed.noindex/electron/Todo.app` and a signing receipt.
 The helper verifies and drives that existing app without rebuilding it.
 The bundle ID is `dev.todo.electron`. Configure your team and certificate using
 `signing.example.mk` and ignored `signing.local.mk`, or the `TODO_SIGNING_TEAM`
@@ -235,3 +242,22 @@ appearance helper opens Settings, then Appearance, from Compact navigation.
 The focused compiled host proves old-health and fake-contract blocking, exact Status membership and disabled planning Status, with Compact-first captures. See [the feature recipe](features/sessions.md) for commands and expected evidence.
 
 Run `TODO_ELECTRON_VERIFY_HOST=1 TODO_VERIFY_VERSION_GUARDRAILS=1 .agents/skills/verify-electron/scripts/verify.sh "$PWD/docs/evidence/version-guardrails/electron-new"`. Never wrap this helper in the Electron build lock. Native and Keychain verification remain on HOLD.
+
+## Attachment batch proof without a native app
+
+`apps/electron/scripts/verify-attachment-batch-offscreen.ts <fresh-evidence>`
+builds the production Attachment section and batch dialog, then drives them in
+headless Chromium against the production task-client adapter and a compiled
+scratch server. Run it behind the shared Electron build lock and disk guard.
+It never imports Electron, safeStorage, or Keychain. An optional
+`TODO_HEADLESS_CHROMIUM` names an existing headless browser executable when the
+Playwright-matched browser is unavailable. No browser is installed by the helper.
+The drive uses the native menu action's same React handler, selects two Tasks,
+previews, applies, rejects stale Versions, reloads and previews unchanged values.
+It reads durable Tasks through the compiled CLI and captures both appearances
+at Compact and full sizes. This proves renderer behavior and HTTP writes, while
+native Electron IPC, window behavior and Keychain remain under HOLD.
+
+## Batch edit
+
+Read [Edit several Tasks](features/batch-edit.md) for the shared batch-edit contract and the compiled scratch proof. Both client flows retain selections and loaded Versions through preview, apply and Conflict reload.

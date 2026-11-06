@@ -49,7 +49,7 @@ struct Snapshots {
             NSApplication.shared.appearance = NSAppearance(named: scheme == .light ? .aqua : .darkAqua)
             let mode = scheme == .light ? "light" : "dark"
             let model = fixture()
-            func render<V: View>(_ name: String, _ view: V, width: CGFloat, height: CGFloat, scrollEditor: Bool = false) async throws {
+            func render<V: View>(_ name: String, _ view: V, width: CGFloat, height: CGFloat, scrollEditor: Bool = false, scrollTasks: CGFloat? = nil) async throws {
                 let capture = SnapshotBoundsCapture()
                 let measurements = AttachmentMeasurements()
                 let compactMeasurements = AttachmentMeasurements()
@@ -96,7 +96,24 @@ struct Snapshots {
                         host.layoutSubtreeIfNeeded()
                     }
                 }
+                if let scrollTasks {
+                    func scrollViews(_ view: NSView) -> [NSScrollView] { (view as? NSScrollView).map { [$0] } ?? view.subviews.flatMap(scrollViews) }
+                    if let scroller = scrollViews(host).max(by: { ($0.documentView?.frame.height ?? 0) < ($1.documentView?.frame.height ?? 0) }), let document = scroller.documentView {
+                        let bottom = max(0, document.bounds.height - scroller.contentView.bounds.height)
+                        let offset = min(scrollTasks, bottom)
+                        scroller.contentView.scroll(to: NSPoint(x: 0, y: document.isFlipped ? offset : bottom - offset))
+                        scroller.reflectScrolledClipView(scroller.contentView)
+                        host.layoutSubtreeIfNeeded()
+                    }
+                }
                 try await Task.sleep(for: .milliseconds(100))
+                if name == "full-priority-ready" {
+                    let frames = compactMeasurements.frames
+                    let header = try #require(frames["section-label-P1"])
+                    let row = try #require(frames["row-priority-urgent"])
+                    #expect(row.minY >= header.maxY, "P1 header must precede the whole first Task row")
+                    compactLayouts[name + "-" + mode] = frames.mapValues { [Double($0.minX), Double($0.minY), Double($0.width), Double($0.height)] }
+                }
                 if name.hasPrefix("compact-") {
                     let frames = compactMeasurements.frames
                     compactLayouts[name + "-" + mode] = frames.mapValues { [Double($0.minX), Double($0.minY), Double($0.width), Double($0.height)] }
@@ -126,10 +143,34 @@ struct Snapshots {
                         for frame in separators { #expect(abs(frame.minX - first.minX) < 0.5 && abs(frame.maxX - first.maxX) < 0.5) }
                     }
                     for (key, label) in frames where key.hasPrefix("section-label-") {
-                        if let previous = rows.filter({ $0.maxY <= label.minY }).max(by: { $0.maxY < $1.maxY }) {
-                            #expect(abs(label.minY - previous.maxY - 12) < 0.5)
+                        let headers = frames.filter { $0.key.hasPrefix("section-label-") && $0.key != key }.map(\.value)
+                        let preceding = rows.map { ($0, CGFloat(12)) } + headers.map { ($0, CGFloat(20)) }
+                        if let previous = preceding.filter({ $0.0.maxY <= label.minY }).max(by: { $0.0.maxY < $1.0.maxY }) {
+                            #expect(abs(label.minY - previous.0.maxY - previous.1) < 0.5, "\(name) \(key) section spacing")
                         }
                     }
+                    if name.hasPrefix("compact-priority-") {
+                        let screen = try #require(frames["task-screen"])
+                        let viewport = try #require(frames["whole-task-viewport"])
+                        #expect(viewport.height > 0)
+                        #expect(viewport.minY >= screen.minY && viewport.maxY <= screen.maxY)
+                        for row in rows where row.maxY > viewport.minY + 0.5 && row.minY < viewport.maxY - 0.5 {
+                            #expect(row.minY >= viewport.minY - 0.5 && row.maxY <= viewport.maxY + 0.5)
+                        }
+                        let primary = try #require(frames[name == "compact-priority-empty" ? "state-action" : "add-task"])
+                        #expect(primary.minY >= screen.minY && primary.maxY <= screen.maxY)
+                    }
+                }
+                if ["attachment-batch-ready-compact", "attachment-batch-preview-compact", "attachment-batch-conflict-compact"].contains(name) {
+                    let frames = measurements.frames
+                    let viewport = try #require(frames["batch-viewport"])
+                    let footer = try #require(frames["batch-footer"])
+                    let rows = frames.filter { $0.key.hasPrefix("batch-row-") }.map(\.value)
+                    #expect(rows.count == 4)
+                    #expect(viewport.height == 224)
+                    #expect(viewport.maxY <= footer.minY)
+                    for row in rows { #expect(row.minY >= viewport.minY - 0.5 && row.maxY <= viewport.maxY + 0.5) }
+                    try JSONSerialization.data(withJSONObject: frames.mapValues { [Double($0.minX), Double($0.minY), Double($0.width), Double($0.height)] }, options: [.sortedKeys]).write(to: directory.appendingPathComponent("\(name)-bounds-\(mode).json"))
                 }
                 if name == "attachments-compact" {
                     let heading = try #require(measurements.frames["heading"])
@@ -237,6 +278,41 @@ struct Snapshots {
                 }
 
             }
+            if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] != "1" && ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] != "1" {
+                for compact in [true, false] {
+                    for state in ["ready", "preview", "applied", "conflict", "empty", "loading", "error"] {
+                        let batchModel = fixture()
+                        batchModel.signedIn = true
+                        batchModel.connection = .live
+                        var draft = BatchEditDraft(profile: "work")
+                        draft.targets = state == "empty" ? [] : Array(batchModel.tasks.prefix(4))
+                        if state == "conflict" {
+                            draft.targets = try draft.targets.map { task in
+                                var value = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(task)) as? [String: Any])
+                                value["row_version"] = 1
+                                return try JSONDecoder().decode(TaskSnapshot.self, from: JSONSerialization.data(withJSONObject: value))
+                            }
+                        }
+                        draft.selected = Set(draft.targets.prefix(2).map(\.id))
+                        draft.loading = state == "loading"
+                        if state == "error" { draft.error = "The server is unavailable. Reconnect and reload Tasks." }
+                        if ["preview", "applied", "conflict"].contains(state) {
+                            let rows: [[String: Any]] = draft.targets.prefix(2).enumerated().map { index, task in
+                                var row: [String: Any] = ["task_id": task.id, "from_version": task.row_version, "outcome": state == "conflict" && index == 1 ? "rejected" : "updated", "current_version": state == "conflict" ? 2 : task.row_version]
+                                if state == "conflict" && index == 1 { row["error"] = ["code": "occ_conflict", "message": "Reload Tasks."] }
+                                return row
+                            }
+                            draft.report = try JSONDecoder().decode(BatchEditReport.self, from: JSONSerialization.data(withJSONObject: ["dry_run": state == "preview", "items": rows]))
+                        }
+                        batchModel.batchEdit = draft
+                        try await render("batch-edit-\(state)-\(compact ? "compact" : "full")", ZStack {
+                            if !compact { WorkspaceSnapshot(model: batchModel); Color.black.opacity(0.08) }
+                            BatchEditView(model: batchModel, compact: compact).frame(width: compact ? 369 : 460, height: compact ? 390 : 510).background(.background, in: RoundedRectangle(cornerRadius: 12)).shadow(radius: 16)
+                        }, width: compact ? 393 : 1100, height: compact ? 426 : 720)
+                    }
+                }
+            }
+            if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" { continue }
             model.newTitle = #"Ship tomorrow p1 #focus #planning @Client"#
             model.signedIn = true
             model.connection = .live
@@ -244,6 +320,29 @@ struct Snapshots {
             model.parsedTask = ParsedTask(title: "Ship", due_at: TaskTime(kind: "date", date: "2026-10-29"), priority: "P1", tags: ["focus", "planning"], project: "Client")
             try await render("compact-quick-add-short", QuickAddView(model: model, floating: true, compact: true, referenceDate: referenceDate).content, width: 393, height: 426)
             if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" { continue }
+            let priorities = fixture()
+            priorities.signedIn = true
+            priorities.selectedView = "all"
+            priorities.planning = nil
+            for state in ["ready", "empty", "dense"] {
+                priorities.tasks = state == "empty" ? [] : state == "dense"
+                    ? (1...9).map { task(id: "priority-dense-\($0)", title: "Review release task \($0)", priority: "P1", tags: ["review"], hasDates: false) }
+                    : [
+                        task(id: "priority-later", title: "Review someday ideas", priority: "P4", tags: [], hasDates: false),
+                        task(id: "priority-urgent", title: "Ship priority groups", priority: "P1", tags: [], hasDates: false),
+                        task(id: "priority-normal", title: "Review the release notes", priority: "P3", tags: [], hasDates: false),
+                    ]
+                for compact in [true, false] {
+                    let size: (CGFloat, CGFloat) = compact ? (393, 426) : (1100, 720)
+                    let view = compact ? AnyView(TaskListView(model: priorities, compactMode: true, referenceDate: referenceDate).compactContent) : AnyView(WorkspaceSnapshot(model: priorities))
+                    try await render("\(compact ? "compact" : "full")-priority-\(state)", view, width: size.0, height: size.1)
+                    if compact && state == "dense" {
+                        try await render("compact-priority-dense-scrolled", view, width: size.0, height: size.1, scrollTasks: 53)
+                        try await render("compact-priority-dense-bottom", view, width: size.0, height: size.1, scrollTasks: 10000)
+                    }
+                }
+            }
+            if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" { continue }
             for compact in [true, false] {
                 let size: (CGFloat, CGFloat) = compact ? (393, 426) : (1100, 720)
                 let stale = fixture()
@@ -347,6 +446,32 @@ struct Snapshots {
                 .init(id: "image", location: .image(preview.path), name: "launch-sketch.png", byte_size: previewData.count, added_at: "2026-10-29T00:00:00Z"),
                 .init(id: "link", location: .link(URL(string: "https://example.com/issue/42")!), label: "Issue 42", added_at: "2026-10-29T00:00:00Z")
             ]
+            let batchModel = fixture()
+            batchModel.signedIn = true
+            batchModel.connection = .live
+            let batchReference = AttachmentSnapshot(id: "batch-reference", location: .link(URL(string: "t3-thread://v2/host/thread")!), label: "thread", added_at: "2026-11-03T00:00:00Z")
+            for compact in [true, false] {
+                for state in ["ready", "preview", "conflict", "empty", "loading", "error"] {
+                    var draft = AttachmentBatchDraft(profile: "work", reference: batchReference)
+                    draft.targets = state == "empty" ? [] : Array(batchModel.tasks.prefix(4))
+                    draft.selected = Set(draft.targets.prefix(2).map(\.id))
+                    draft.loading = state == "loading"
+                    if state == "error" { draft.error = "The server is unavailable. Reconnect and reload Tasks." }
+                    if state == "preview" || state == "conflict" {
+                        let rows: [[String: Any]] = draft.targets.prefix(2).map { task in
+                            var row: [String: Any] = ["task_id": task.id, "outcome": state == "preview" ? "attached" : "rejected", "current_version": task.row_version]
+                            if state == "conflict" { row["error"] = ["code": "occ_conflict", "message": "Task changed. Reload Tasks and try again."] }
+                            return row
+                        }
+                        draft.report = try JSONDecoder().decode(AttachmentBatchReport.self, from: JSONSerialization.data(withJSONObject: ["dry_run": state == "preview", "items": rows]))
+                    }
+                    batchModel.attachmentBatch = draft
+                    try await render("attachment-batch-\(state)-\(compact ? "compact" : "full")", ZStack {
+                        if !compact { WorkspaceSnapshot(model: batchModel); Color.black.opacity(0.08) }
+                        AttachmentBatchView(model: batchModel).frame(width: compact ? 369 : 420, height: compact ? 402 : 426).background(.background, in: RoundedRectangle(cornerRadius: 12)).shadow(radius: 16)
+                    }, width: compact ? 393 : 1100, height: compact ? 426 : 720)
+                }
+            }
             attachmentModel.tasks = [attachmentTask]
             attachmentModel.editor = TaskDraft(attachmentTask)
             try await render("attachments-compact-row", TaskRow(task: attachmentTask, now: referenceDate, canWrite: true, compact: true, projectName: "International Platform Accessibility and Release Planning", tagNames: longTags, complete: {}).padding(16), width: 393, height: 150)
@@ -738,7 +863,7 @@ struct Snapshots {
         try JSONEncoder().encode(importLayouts).write(to: directory.appendingPathComponent("import-layout.json"))
         try JSONEncoder().encode(transferLayouts).write(to: directory.appendingPathComponent("transfer-layout.json"))
         try JSONSerialization.data(withJSONObject: compactLayouts, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("compact-layout.json"))
-        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : 278))
+        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 346))
     }
 
     private func fixture() -> TodoModel {
