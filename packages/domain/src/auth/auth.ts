@@ -120,6 +120,12 @@ export class Authentication<Read> {
     });
   }
 
+  // ADR-0007 amendment: a repeated rejection (same actor, Profile, action and
+  // detail) is recorded once per minute, so a local process retrying forever
+  // adds at most one History row per kind per minute instead of one per try.
+  private rejectionMinute = -1;
+  private readonly rejectionsThisMinute = new Set<string>();
+
   private record(input: {
     action: AuthAction;
     time: number;
@@ -128,6 +134,22 @@ export class Authentication<Read> {
     credential_id?: string;
     error?: AuthError;
   }) {
+    const kind = input.error
+      ? JSON.stringify([
+          input.actor,
+          input.profile ?? null,
+          input.action,
+          input.error.detail,
+        ])
+      : undefined;
+    if (kind !== undefined) {
+      const minute = Math.floor(input.time / 60_000);
+      if (minute !== this.rejectionMinute) {
+        this.rejectionMinute = minute;
+        this.rejectionsThisMinute.clear();
+      }
+      if (this.rejectionsThisMinute.has(kind)) return;
+    }
     const event = input.error
       ? {
           kind: "AuthAttemptRejected",
@@ -155,6 +177,7 @@ export class Authentication<Read> {
         input.error ? "rejected" : "committed",
         input.error ? "auth" : null,
       );
+    if (kind !== undefined) this.rejectionsThisMinute.add(kind);
   }
 
   private perform<A>(

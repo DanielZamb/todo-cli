@@ -17,6 +17,7 @@ import {
   ImageMime,
   ImportReport,
   ImportRequest,
+  inputLimits,
   LabelAttachment,
   MoveTask,
   OpLogEntry,
@@ -390,7 +391,11 @@ const Changes = HttpApiGroup.make("changes")
   )
   .middleware(Authorization);
 
-const Passphrase = Schema.Struct({ passphrase: Schema.NonEmptyString });
+const Passphrase = Schema.Struct({
+  passphrase: Schema.NonEmptyString.check(
+    Schema.isMaxLength(inputLimits.passphrase),
+  ),
+});
 const IssuedCredential = Schema.Struct({
   ...CredentialInfo.fields,
   credential: Schema.String,
@@ -476,7 +481,11 @@ const Snapshots = HttpApiGroup.make("snapshots")
       error: taskErrors,
     }),
     HttpApiEndpoint.post("create", "/snapshots", {
-      payload: Schema.Struct({ reason: Schema.NonEmptyString }),
+      payload: Schema.Struct({
+        reason: Schema.NonEmptyString.check(
+          Schema.isMaxLength(inputLimits.reason),
+        ),
+      }),
       success: SnapshotManifest,
       error: taskErrors,
     }),

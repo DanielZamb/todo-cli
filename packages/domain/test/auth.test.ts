@@ -1014,6 +1014,52 @@ describe("database boundary", () => {
   );
 
   it.effect(
+    "records a repeated rejection once per minute per actor, Profile, action and detail",
+    () =>
+      usingStore((store) =>
+        Effect.gen(function* () {
+          yield* signIn(store);
+          const rejections = () =>
+            Effect.map(store.history(), (entries) =>
+              entries.flatMap((entry) =>
+                entry.event.kind === "AuthAttemptRejected"
+                  ? [[entry.profile, entry.event.action, entry.event.detail]]
+                  : [],
+              ),
+            );
+          const read = (credential: string, target = profile) =>
+            denial(
+              store.auth.authenticate({
+                credential,
+                profile: target,
+                access: "read",
+              }),
+            );
+          for (let index = 0; index < 50; index++)
+            expect(yield* read("tok_forged")).toEqual([
+              "auth",
+              "invalid_credential",
+            ]);
+          yield* read("tok_forged", personal);
+          expect(yield* rejections()).toEqual([
+            ["work", "authenticate", "invalid_credential"],
+            ["personal", "authenticate", "invalid_credential"],
+          ]);
+          yield* TestClock.adjust("59 seconds");
+          yield* read("tok_forged");
+          expect(yield* rejections()).toHaveLength(2);
+          yield* TestClock.adjust("1 second");
+          yield* read("tok_forged");
+          expect(yield* rejections()).toEqual([
+            ["work", "authenticate", "invalid_credential"],
+            ["personal", "authenticate", "invalid_credential"],
+            ["work", "authenticate", "invalid_credential"],
+          ]);
+        }),
+      ),
+  );
+
+  it.effect(
     "Snapshot restore keeps revoked Access Tokens revoked and later Sessions valid",
     () =>
       usingStore((store) =>

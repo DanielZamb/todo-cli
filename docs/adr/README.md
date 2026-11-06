@@ -53,7 +53,8 @@ The source of truth is now `op_log`. Each attempt is an event with actor,
 Profile, resolved payload, versions, and `committed` or `rejected`. A committed
 event and its projection update share one transaction. The Version check is
 compare-and-swap. Rejected attempts are stored so Conflicts stay visible, and
-they are never replayed. SSE streams committed ops by `seq`. Guard triggers
+they are never replayed. An amendment bounds them: a repeated auth rejection is
+recorded once per minute, and a refused oversized input only as a preview. SSE streams committed ops by `seq`. Guard triggers
 reject direct writes to projection tables.
 
 [ADR-0007. The operation log is the source of truth](0007-operation-log-is-the-source-of-truth.md)
@@ -124,7 +125,7 @@ images and redacts paths from History. External files are never deleted.
 | [0004](0004-change-log-via-triggers-streamed-over-sse.md) | Change log filled by SQLite triggers, streamed over SSE | superseded by 0007 |
 | [0005](0005-single-owner-profiles-and-two-credential-kinds.md) | Single owner, Profiles, two credential kinds | accepted |
 | [0006](0006-time-model-and-rfc5545-recurrence.md) | Time model and RFC 5545 recurrence | accepted |
-| [0007](0007-operation-log-is-the-source-of-truth.md) | Operation log is the source of truth | accepted |
+| [0007](0007-operation-log-is-the-source-of-truth.md) | Operation log is the source of truth | accepted, amended 2026-11-05 |
 | [0008](0008-purge-redacts-history-content.md) | Purge redacts History content | accepted |
 | [0009](0009-every-capability-is-native-to-agents-and-humans.md) | Every capability is native to agents and humans | accepted |
 | [0010](0010-profile-deletion.md) | Profile deletion preserves History and reserves IDs | accepted |

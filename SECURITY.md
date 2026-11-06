@@ -25,6 +25,15 @@ cannot reach it, and any request body that is not `application/json`. A proxy
 host must be listed in `TODO_ALLOWED_HOSTS` (comma-separated). `todo diagnostics`
 and `todo top` send the owner Session only to those same hosts.
 
+Every input has a size limit (`packages/domain/src/limits.ts`, also published
+in the OpenAPI document): titles 1,000 characters, descriptions 100,000, names
+200, paths 4,096, URLs 8,192, and 1,000 items per batch edit, import or
+attach-many request. History keeps rejected attempts, so a refused input over
+32,768 characters of JSON is stored only as its size and a preview. A repeated
+auth denial is stored once per minute. One request, or a stream of refused
+retries, therefore adds a bounded amount. A read-write credential can still
+create many valid Tasks, so revoke a misbehaving Access Token.
+
 Electron keeps the Session in its main process and encrypts persisted credentials
 with safeStorage. The SwiftUI client uses Keychain. Do not disable these controls
 to work around a verification or signing prompt.

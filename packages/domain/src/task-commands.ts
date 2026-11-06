@@ -1,21 +1,33 @@
 import { Schema, Struct } from "effect";
 import { AttachmentInput } from "./attachments.ts";
 import { Recurrence, TaskDetails } from "./entities.ts";
-import { ProfileId, Sequence, Version } from "./ids.ts";
+import { ProfileId, Sequence, TagId, Version } from "./ids.ts";
+import {
+  DescriptionInput,
+  ExternalIdInput,
+  inputLimits,
+  limitedItems,
+  NameInput,
+  TagNamesInput,
+  TitleInput,
+} from "./limits.ts";
+import { TaskTime } from "./time.ts";
 
 const TaskInput = Schema.Struct({
   ...TaskDetails.fields,
-  external_id: Schema.NullOr(
-    Schema.NonEmptyString.check(Schema.isPattern(/\S/)),
-  ),
-  project_name: Schema.String,
-  tag_names: Schema.Array(Schema.String),
-  title: Schema.NonEmptyString.check(Schema.isPattern(/\S/)),
+  description: Schema.NullOr(DescriptionInput),
+  external_id: Schema.NullOr(ExternalIdInput),
+  project_name: NameInput,
+  tag_names: TagNamesInput,
+  tags: limitedItems(TagId, inputLimits.tagsPerTask),
+  title: TitleInput,
   source: Schema.Literals(["manual", "agent", "import"]),
 });
 export const TaskPatch = TaskInput.mapFields(Struct.map(Schema.optionalKey));
 export const CreateTask = Schema.Struct({
-  attachments: Schema.optionalKey(Schema.Array(AttachmentInput)),
+  attachments: Schema.optionalKey(
+    limitedItems(AttachmentInput, inputLimits.attachmentsPerTask),
+  ),
   ...TaskPatch.fields,
   title: TaskInput.fields.title,
 });
@@ -43,14 +55,20 @@ export const RevertTask = Schema.Struct({
   seq: Sequence,
 });
 export type RevertTask = typeof RevertTask.Type;
+// The stored Recurrence is not limited; what a client submits is.
+export const RecurrenceInput = Schema.Struct({
+  ...Recurrence.fields,
+  rrule: Schema.NonEmptyString.check(Schema.isMaxLength(inputLimits.rrule)),
+  exdate: limitedItems(TaskTime, inputLimits.exdates),
+});
 export const CreateSeries = Schema.Struct({
   task: CreateTask,
-  recurrence: Recurrence,
+  recurrence: RecurrenceInput,
 });
 export type CreateSeries = typeof CreateSeries.Type;
 export const EditSeries = Schema.Struct({
   from_version: Version,
   changes: TaskPatch,
-  recurrence: Recurrence,
+  recurrence: RecurrenceInput,
 });
 export type EditSeries = typeof EditSeries.Type;

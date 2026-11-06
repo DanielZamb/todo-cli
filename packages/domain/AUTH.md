@@ -70,7 +70,8 @@ keys. It adds the owner hash and credential tables. `op_log.profile` is nullable
 so sign-in failures can be recorded before any Profile exists. Task mutations
 still require an existing Profile. Successful credential changes append
 `AuthChanged`; denials append `AuthAttemptRejected` with reason `auth` after the
-failed transaction rolls back. Denials fail with `AuthError`, code `auth`.
+failed transaction rolls back. A denial that repeats the same actor, Profile,
+action and detail within one minute appends nothing (ADR-0007 amendment). Denials fail with `AuthError`, code `auth`.
 SQLite, corrupt storage and cryptographic failures use `StoreError`.
 Task projection replay ignores auth events and retains credential tables.
 Auth tables hold canonical credential state and are outside Task snapshots.

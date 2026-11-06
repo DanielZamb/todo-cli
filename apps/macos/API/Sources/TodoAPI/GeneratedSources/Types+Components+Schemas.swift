@@ -34426,25 +34426,25 @@ extension Components {
                 try encoder.encodeAdditionalProperties(additionalProperties)
             }
         }
-        /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_c263e6ce242848b2`.
-        public struct SwiftTagged_file_c263e6ce242848b2: Codable, Hashable, Sendable {
+        /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_a1224eb6fd690fcb`.
+        public struct SwiftTagged_file_a1224eb6fd690fcb: Codable, Hashable, Sendable {
             private var _explicitNullKeys: Set<String> = []
 
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_c263e6ce242848b2/kind`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_a1224eb6fd690fcb/kind`.
             @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case file = "file"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_c263e6ce242848b2/kind`.
-            public var kind: Components.Schemas.SwiftTagged_file_c263e6ce242848b2.kindPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_c263e6ce242848b2/path`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_a1224eb6fd690fcb/kind`.
+            public var kind: Components.Schemas.SwiftTagged_file_a1224eb6fd690fcb.kindPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_a1224eb6fd690fcb/path`.
             public var path: Swift.String
-            /// Creates a new `SwiftTagged_file_c263e6ce242848b2`.
+            /// Creates a new `SwiftTagged_file_a1224eb6fd690fcb`.
             ///
             /// - Parameters:
             ///   - kind:
             ///   - path:
             public init(
-                kind: Components.Schemas.SwiftTagged_file_c263e6ce242848b2.kindPayload,
+                kind: Components.Schemas.SwiftTagged_file_a1224eb6fd690fcb.kindPayload,
                 path: Swift.String
             ) {
                 self.kind = kind
@@ -34458,7 +34458,7 @@ extension Components {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
                 self.kind = try container.decode(
-                    Components.Schemas.SwiftTagged_file_c263e6ce242848b2.kindPayload.self,
+                    Components.Schemas.SwiftTagged_file_a1224eb6fd690fcb.kindPayload.self,
                     forKey: .kind
                 )
                 self.path = try container.decode(
@@ -34477,25 +34477,25 @@ extension Components {
                 try container.encode(self.path, forKey: .path)
             }
         }
-        /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_08ee1674dbff0b24`.
-        public struct SwiftTagged_image_08ee1674dbff0b24: Codable, Hashable, Sendable {
+        /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_f7200697c6a258b3`.
+        public struct SwiftTagged_image_f7200697c6a258b3: Codable, Hashable, Sendable {
             private var _explicitNullKeys: Set<String> = []
 
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_08ee1674dbff0b24/kind`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_f7200697c6a258b3/kind`.
             @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case image = "image"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_08ee1674dbff0b24/kind`.
-            public var kind: Components.Schemas.SwiftTagged_image_08ee1674dbff0b24.kindPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_08ee1674dbff0b24/path`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_f7200697c6a258b3/kind`.
+            public var kind: Components.Schemas.SwiftTagged_image_f7200697c6a258b3.kindPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_f7200697c6a258b3/path`.
             public var path: Swift.String
-            /// Creates a new `SwiftTagged_image_08ee1674dbff0b24`.
+            /// Creates a new `SwiftTagged_image_f7200697c6a258b3`.
             ///
             /// - Parameters:
             ///   - kind:
             ///   - path:
             public init(
-                kind: Components.Schemas.SwiftTagged_image_08ee1674dbff0b24.kindPayload,
+                kind: Components.Schemas.SwiftTagged_image_f7200697c6a258b3.kindPayload,
                 path: Swift.String
             ) {
                 self.kind = kind
@@ -34509,7 +34509,7 @@ extension Components {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
                 self.kind = try container.decode(
-                    Components.Schemas.SwiftTagged_image_08ee1674dbff0b24.kindPayload.self,
+                    Components.Schemas.SwiftTagged_image_f7200697c6a258b3.kindPayload.self,
                     forKey: .kind
                 )
                 self.path = try container.decode(
@@ -34528,25 +34528,25 @@ extension Components {
                 try container.encode(self.path, forKey: .path)
             }
         }
-        /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_3ed328370e513918`.
-        public struct SwiftTagged_link_3ed328370e513918: Codable, Hashable, Sendable {
+        /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_7ccecc202e6507d1`.
+        public struct SwiftTagged_link_7ccecc202e6507d1: Codable, Hashable, Sendable {
             private var _explicitNullKeys: Set<String> = []
 
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_3ed328370e513918/kind`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_7ccecc202e6507d1/kind`.
             @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case link = "link"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_3ed328370e513918/kind`.
-            public var kind: Components.Schemas.SwiftTagged_link_3ed328370e513918.kindPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_3ed328370e513918/url`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_7ccecc202e6507d1/kind`.
+            public var kind: Components.Schemas.SwiftTagged_link_7ccecc202e6507d1.kindPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_7ccecc202e6507d1/url`.
             public var url: Swift.String
-            /// Creates a new `SwiftTagged_link_3ed328370e513918`.
+            /// Creates a new `SwiftTagged_link_7ccecc202e6507d1`.
             ///
             /// - Parameters:
             ///   - kind:
             ///   - url:
             public init(
-                kind: Components.Schemas.SwiftTagged_link_3ed328370e513918.kindPayload,
+                kind: Components.Schemas.SwiftTagged_link_7ccecc202e6507d1.kindPayload,
                 url: Swift.String
             ) {
                 self.kind = kind
@@ -34560,7 +34560,7 @@ extension Components {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
                 self.kind = try container.decode(
-                    Components.Schemas.SwiftTagged_link_3ed328370e513918.kindPayload.self,
+                    Components.Schemas.SwiftTagged_link_7ccecc202e6507d1.kindPayload.self,
                     forKey: .kind
                 )
                 self.url = try container.decode(
@@ -34579,23 +34579,23 @@ extension Components {
                 try container.encode(self.url, forKey: .url)
             }
         }
-        /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69`.
-        public struct SwiftTagged_file_9effb3b18dd2ec69: Codable, Hashable, Sendable {
+        /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_660795b389d92e70`.
+        public struct SwiftTagged_file_660795b389d92e70: Codable, Hashable, Sendable {
             private var _explicitNullKeys: Set<String> = []
 
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69/kind`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_660795b389d92e70/kind`.
             @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case file = "file"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69/kind`.
-            public var kind: Components.Schemas.SwiftTagged_file_9effb3b18dd2ec69.kindPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69/path`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_660795b389d92e70/kind`.
+            public var kind: Components.Schemas.SwiftTagged_file_660795b389d92e70.kindPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_660795b389d92e70/path`.
             public var path: Swift.String
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69/label`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_660795b389d92e70/label`.
             public var label: Swift.String?
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69/name`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_660795b389d92e70/name`.
             public var name: Swift.String?
-            /// Creates a new `SwiftTagged_file_9effb3b18dd2ec69`.
+            /// Creates a new `SwiftTagged_file_660795b389d92e70`.
             ///
             /// - Parameters:
             ///   - kind:
@@ -34603,7 +34603,7 @@ extension Components {
             ///   - label:
             ///   - name:
             public init(
-                kind: Components.Schemas.SwiftTagged_file_9effb3b18dd2ec69.kindPayload,
+                kind: Components.Schemas.SwiftTagged_file_660795b389d92e70.kindPayload,
                 path: Swift.String,
                 label: Swift.String? = nil,
                 name: Swift.String? = nil
@@ -34623,7 +34623,7 @@ extension Components {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
                 self.kind = try container.decode(
-                    Components.Schemas.SwiftTagged_file_9effb3b18dd2ec69.kindPayload.self,
+                    Components.Schemas.SwiftTagged_file_660795b389d92e70.kindPayload.self,
                     forKey: .kind
                 )
                 self.path = try container.decode(
@@ -34662,23 +34662,23 @@ extension Components {
                 }
             }
         }
-        /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_409f55577e999188`.
-        public struct SwiftTagged_image_409f55577e999188: Codable, Hashable, Sendable {
+        /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_3d8a86930a2c606b`.
+        public struct SwiftTagged_image_3d8a86930a2c606b: Codable, Hashable, Sendable {
             private var _explicitNullKeys: Set<String> = []
 
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_409f55577e999188/kind`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_3d8a86930a2c606b/kind`.
             @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case image = "image"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_409f55577e999188/kind`.
-            public var kind: Components.Schemas.SwiftTagged_image_409f55577e999188.kindPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_409f55577e999188/path`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_3d8a86930a2c606b/kind`.
+            public var kind: Components.Schemas.SwiftTagged_image_3d8a86930a2c606b.kindPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_3d8a86930a2c606b/path`.
             public var path: Swift.String
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_409f55577e999188/label`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_3d8a86930a2c606b/label`.
             public var label: Swift.String?
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_409f55577e999188/name`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_3d8a86930a2c606b/name`.
             public var name: Swift.String?
-            /// Creates a new `SwiftTagged_image_409f55577e999188`.
+            /// Creates a new `SwiftTagged_image_3d8a86930a2c606b`.
             ///
             /// - Parameters:
             ///   - kind:
@@ -34686,7 +34686,7 @@ extension Components {
             ///   - label:
             ///   - name:
             public init(
-                kind: Components.Schemas.SwiftTagged_image_409f55577e999188.kindPayload,
+                kind: Components.Schemas.SwiftTagged_image_3d8a86930a2c606b.kindPayload,
                 path: Swift.String,
                 label: Swift.String? = nil,
                 name: Swift.String? = nil
@@ -34706,7 +34706,7 @@ extension Components {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
                 self.kind = try container.decode(
-                    Components.Schemas.SwiftTagged_image_409f55577e999188.kindPayload.self,
+                    Components.Schemas.SwiftTagged_image_3d8a86930a2c606b.kindPayload.self,
                     forKey: .kind
                 )
                 self.path = try container.decode(
@@ -34745,23 +34745,23 @@ extension Components {
                 }
             }
         }
-        /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_a1918c5d4f327f78`.
-        public struct SwiftTagged_link_a1918c5d4f327f78: Codable, Hashable, Sendable {
+        /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_c07227ae37504c97`.
+        public struct SwiftTagged_link_c07227ae37504c97: Codable, Hashable, Sendable {
             private var _explicitNullKeys: Set<String> = []
 
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_a1918c5d4f327f78/kind`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_c07227ae37504c97/kind`.
             @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case link = "link"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_a1918c5d4f327f78/kind`.
-            public var kind: Components.Schemas.SwiftTagged_link_a1918c5d4f327f78.kindPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_a1918c5d4f327f78/url`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_c07227ae37504c97/kind`.
+            public var kind: Components.Schemas.SwiftTagged_link_c07227ae37504c97.kindPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_c07227ae37504c97/url`.
             public var url: Swift.String
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_a1918c5d4f327f78/label`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_c07227ae37504c97/label`.
             public var label: Swift.String?
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_a1918c5d4f327f78/name`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_c07227ae37504c97/name`.
             public var name: Swift.String?
-            /// Creates a new `SwiftTagged_link_a1918c5d4f327f78`.
+            /// Creates a new `SwiftTagged_link_c07227ae37504c97`.
             ///
             /// - Parameters:
             ///   - kind:
@@ -34769,7 +34769,7 @@ extension Components {
             ///   - label:
             ///   - name:
             public init(
-                kind: Components.Schemas.SwiftTagged_link_a1918c5d4f327f78.kindPayload,
+                kind: Components.Schemas.SwiftTagged_link_c07227ae37504c97.kindPayload,
                 url: Swift.String,
                 label: Swift.String? = nil,
                 name: Swift.String? = nil
@@ -34789,7 +34789,7 @@ extension Components {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
                 self.kind = try container.decode(
-                    Components.Schemas.SwiftTagged_link_a1918c5d4f327f78.kindPayload.self,
+                    Components.Schemas.SwiftTagged_link_c07227ae37504c97.kindPayload.self,
                     forKey: .kind
                 )
                 self.url = try container.decode(

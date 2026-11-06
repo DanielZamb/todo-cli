@@ -7,6 +7,7 @@ export * from "./entities.ts";
 export * from "./events.ts";
 export * from "./ids.ts";
 export * from "./import.ts";
+export * from "./limits.ts";
 export * from "./profile-commands.ts";
 export * from "./quick-add.ts";
 export * from "./recurrence.ts";

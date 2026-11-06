@@ -10,3 +10,14 @@ Modeled on Cursor's Continuity WAL (https://cursor.com/blog/git-at-any-scale): d
 
 - Entries record resolved events, not commands. Replay never re-runs RRULE expansion or reads the clock, so it gives the same result after code changes. Event payloads are versioned with Effect Schema, which is what `entity_version` is for.
 - The log stays inside SQLite so each operation is one atomic transaction. The event format is self-contained, so exporting log segments for future sync is a projection of the log, not a redesign.
+
+## Amendment (2026-11-05): rejected attempts are bounded
+
+A security review found that anything able to reach the store could grow the log without limit. A local process can retry a refused sign-in or a forged credential forever, and a credential holder can submit a 20 MB title that is refused but still recorded. Rejected rows are never pruned and every Snapshot copies them. Two rules now bound what a rejection adds:
+
+- A repeated rejected auth attempt, with the same actor, Profile, action and detail, is appended once per minute. Later repeats in that minute add nothing. The first row stands for all of them, and a different actor, Profile, action or detail still gets its own row. The log stays append-only: no row is updated or deleted.
+- A rejected Task attempt records its received input only up to 32,768 characters of JSON. Anything larger is recorded as `{ truncated: true, characters, preview }` with the first 2,000 characters.
+
+Inputs are also capped before they reach the log. These limits are part of the HttpApi contract (`packages/domain/src/limits.ts`): title 1,000 characters, description 100,000, Project, Tag and Attachment names 200, external id 1,000, file paths 4,096, URLs 8,192, 100 Tags or Attachments per Task, and 1,000 items per batch edit, import or attach-many request. Stored entities are not limited, so rows written earlier still decode.
+
+Rejected alternatives: counting repeats in the existing row, which needs an `UPDATE` that the append-only triggers forbid. A separate mutable counter table, which adds a migration and per-minute rows anyway, only to keep a count. Not recording rejections without a credential, which leaves no trace of probing. Pruning old rejected rows, which punches holes in `seq` that ADR-0008 avoids.

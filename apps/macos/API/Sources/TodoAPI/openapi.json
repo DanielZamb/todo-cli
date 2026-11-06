@@ -161,7 +161,8 @@
                 "properties": {
                   "passphrase": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 1024
                   }
                 },
                 "required": ["passphrase"],
@@ -383,7 +384,8 @@
                 "properties": {
                   "name": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 200
                   },
                   "profile": {
                     "type": "string",
@@ -842,7 +844,8 @@
                 "type": "object",
                 "properties": {
                   "items": {
-                    "type": "array"
+                    "type": "array",
+                    "maxItems": 1000
                   },
                   "dry_run": {
                     "type": "boolean"
@@ -1214,7 +1217,8 @@
                 "properties": {
                   "name": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 200
                   },
                   "from_version": {
                     "type": "integer",
@@ -1224,27 +1228,28 @@
                   "location": {
                     "oneOf": [
                       {
-                        "$ref": "#/components/schemas/SwiftTagged_file_c263e6ce242848b2"
+                        "$ref": "#/components/schemas/SwiftTagged_file_a1224eb6fd690fcb"
                       },
                       {
-                        "$ref": "#/components/schemas/SwiftTagged_image_08ee1674dbff0b24"
+                        "$ref": "#/components/schemas/SwiftTagged_image_f7200697c6a258b3"
                       },
                       {
-                        "$ref": "#/components/schemas/SwiftTagged_link_3ed328370e513918"
+                        "$ref": "#/components/schemas/SwiftTagged_link_7ccecc202e6507d1"
                       }
                     ],
                     "discriminator": {
                       "propertyName": "kind",
                       "mapping": {
-                        "file": "#/components/schemas/SwiftTagged_file_c263e6ce242848b2",
-                        "image": "#/components/schemas/SwiftTagged_image_08ee1674dbff0b24",
-                        "link": "#/components/schemas/SwiftTagged_link_3ed328370e513918"
+                        "file": "#/components/schemas/SwiftTagged_file_a1224eb6fd690fcb",
+                        "image": "#/components/schemas/SwiftTagged_image_f7200697c6a258b3",
+                        "link": "#/components/schemas/SwiftTagged_link_7ccecc202e6507d1"
                       }
                     }
                   },
                   "label": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 200
                   }
                 },
                 "required": ["from_version", "location"],
@@ -1997,6 +2002,7 @@
                   "label": {
                     "type": "string",
                     "minLength": 1,
+                    "maxLength": 200,
                     "nullable": true
                   }
                 },
@@ -2371,7 +2377,8 @@
                   },
                   "name": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 200
                   },
                   "mime_type": {
                     "type": "string",
@@ -2389,7 +2396,8 @@
                   },
                   "label": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 200
                   }
                 },
                 "required": ["from_version", "mime_type", "data"],
@@ -2788,6 +2796,7 @@
                       "required": ["task_id", "from_version"],
                       "additionalProperties": false
                     },
+                    "maxItems": 1000,
                     "minItems": 1
                   },
                   "changes": {
@@ -2795,10 +2804,12 @@
                     "properties": {
                       "title": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "maxLength": 1000
                       },
                       "description": {
                         "type": "string",
+                        "maxLength": 100000,
                         "nullable": true
                       },
                       "priority": {
@@ -2806,13 +2817,16 @@
                         "enum": ["P1", "P2", "P3", "P4"]
                       },
                       "project_name": {
-                        "type": "string"
+                        "type": "string",
+                        "maxLength": 200
                       },
                       "tag_names": {
                         "type": "array",
                         "items": {
-                          "type": "string"
-                        }
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "maxItems": 100
                       },
                       "due_at": {
                         "anyOf": [
@@ -3158,7 +3172,8 @@
                     "maxLength": 480
                   },
                   "items": {
-                    "type": "array"
+                    "type": "array",
+                    "maxItems": 1000
                   },
                   "dry_run": {
                     "type": "boolean"
@@ -3173,7 +3188,8 @@
                       "properties": {
                         "external_id": {
                           "type": "string",
-                          "minLength": 1
+                          "minLength": 1,
+                          "maxLength": 1000
                         },
                         "task_id": {
                           "type": "string",
@@ -3187,7 +3203,8 @@
                       },
                       "required": ["external_id", "task_id", "from_version"],
                       "additionalProperties": false
-                    }
+                    },
+                    "maxItems": 10000
                   }
                 },
                 "required": ["items"],
@@ -3971,31 +3988,34 @@
                     "items": {
                       "oneOf": [
                         {
-                          "$ref": "#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69"
+                          "$ref": "#/components/schemas/SwiftTagged_file_660795b389d92e70"
                         },
                         {
-                          "$ref": "#/components/schemas/SwiftTagged_image_409f55577e999188"
+                          "$ref": "#/components/schemas/SwiftTagged_image_3d8a86930a2c606b"
                         },
                         {
-                          "$ref": "#/components/schemas/SwiftTagged_link_a1918c5d4f327f78"
+                          "$ref": "#/components/schemas/SwiftTagged_link_c07227ae37504c97"
                         }
                       ],
                       "discriminator": {
                         "propertyName": "kind",
                         "mapping": {
-                          "file": "#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69",
-                          "image": "#/components/schemas/SwiftTagged_image_409f55577e999188",
-                          "link": "#/components/schemas/SwiftTagged_link_a1918c5d4f327f78"
+                          "file": "#/components/schemas/SwiftTagged_file_660795b389d92e70",
+                          "image": "#/components/schemas/SwiftTagged_image_3d8a86930a2c606b",
+                          "link": "#/components/schemas/SwiftTagged_link_c07227ae37504c97"
                         }
                       }
-                    }
+                    },
+                    "maxItems": 100
                   },
                   "title": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 1000
                   },
                   "description": {
                     "type": "string",
+                    "maxLength": 100000,
                     "nullable": true
                   },
                   "project_id": {
@@ -4101,21 +4121,26 @@
                     "items": {
                       "type": "string",
                       "minLength": 1
-                    }
+                    },
+                    "maxItems": 100
                   },
                   "external_id": {
                     "type": "string",
                     "minLength": 1,
+                    "maxLength": 1000,
                     "nullable": true
                   },
                   "project_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 200
                   },
                   "tag_names": {
                     "type": "array",
                     "items": {
-                      "type": "string"
-                    }
+                      "type": "string",
+                      "maxLength": 200
+                    },
+                    "maxItems": 100
                   }
                 },
                 "required": ["title"],
@@ -4841,10 +4866,12 @@
                     "properties": {
                       "title": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "maxLength": 1000
                       },
                       "description": {
                         "type": "string",
+                        "maxLength": 100000,
                         "nullable": true
                       },
                       "project_id": {
@@ -4950,21 +4977,26 @@
                         "items": {
                           "type": "string",
                           "minLength": 1
-                        }
+                        },
+                        "maxItems": 100
                       },
                       "external_id": {
                         "type": "string",
                         "minLength": 1,
+                        "maxLength": 1000,
                         "nullable": true
                       },
                       "project_name": {
-                        "type": "string"
+                        "type": "string",
+                        "maxLength": 200
                       },
                       "tag_names": {
                         "type": "array",
                         "items": {
-                          "type": "string"
-                        }
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "maxItems": 100
                       }
                     },
                     "additionalProperties": false
@@ -7188,31 +7220,34 @@
                         "items": {
                           "oneOf": [
                             {
-                              "$ref": "#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69"
+                              "$ref": "#/components/schemas/SwiftTagged_file_660795b389d92e70"
                             },
                             {
-                              "$ref": "#/components/schemas/SwiftTagged_image_409f55577e999188"
+                              "$ref": "#/components/schemas/SwiftTagged_image_3d8a86930a2c606b"
                             },
                             {
-                              "$ref": "#/components/schemas/SwiftTagged_link_a1918c5d4f327f78"
+                              "$ref": "#/components/schemas/SwiftTagged_link_c07227ae37504c97"
                             }
                           ],
                           "discriminator": {
                             "propertyName": "kind",
                             "mapping": {
-                              "file": "#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69",
-                              "image": "#/components/schemas/SwiftTagged_image_409f55577e999188",
-                              "link": "#/components/schemas/SwiftTagged_link_a1918c5d4f327f78"
+                              "file": "#/components/schemas/SwiftTagged_file_660795b389d92e70",
+                              "image": "#/components/schemas/SwiftTagged_image_3d8a86930a2c606b",
+                              "link": "#/components/schemas/SwiftTagged_link_c07227ae37504c97"
                             }
                           }
-                        }
+                        },
+                        "maxItems": 100
                       },
                       "title": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "maxLength": 1000
                       },
                       "description": {
                         "type": "string",
+                        "maxLength": 100000,
                         "nullable": true
                       },
                       "project_id": {
@@ -7318,21 +7353,26 @@
                         "items": {
                           "type": "string",
                           "minLength": 1
-                        }
+                        },
+                        "maxItems": 100
                       },
                       "external_id": {
                         "type": "string",
                         "minLength": 1,
+                        "maxLength": 1000,
                         "nullable": true
                       },
                       "project_name": {
-                        "type": "string"
+                        "type": "string",
+                        "maxLength": 200
                       },
                       "tag_names": {
                         "type": "array",
                         "items": {
-                          "type": "string"
-                        }
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "maxItems": 100
                       }
                     },
                     "required": ["title"],
@@ -7360,7 +7400,8 @@
                       },
                       "rrule": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "maxLength": 1000
                       },
                       "exdate": {
                         "type": "array",
@@ -7380,7 +7421,8 @@
                               "date": "#/components/schemas/SwiftTagged_date_f80d834415328e7c"
                             }
                           }
-                        }
+                        },
+                        "maxItems": 1000
                       }
                     },
                     "required": ["dtstart", "rrule", "exdate"],
@@ -7761,10 +7803,12 @@
                     "properties": {
                       "title": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "maxLength": 1000
                       },
                       "description": {
                         "type": "string",
+                        "maxLength": 100000,
                         "nullable": true
                       },
                       "project_id": {
@@ -7870,21 +7914,26 @@
                         "items": {
                           "type": "string",
                           "minLength": 1
-                        }
+                        },
+                        "maxItems": 100
                       },
                       "external_id": {
                         "type": "string",
                         "minLength": 1,
+                        "maxLength": 1000,
                         "nullable": true
                       },
                       "project_name": {
-                        "type": "string"
+                        "type": "string",
+                        "maxLength": 200
                       },
                       "tag_names": {
                         "type": "array",
                         "items": {
-                          "type": "string"
-                        }
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "maxItems": 100
                       }
                     },
                     "additionalProperties": false
@@ -7911,7 +7960,8 @@
                       },
                       "rrule": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "maxLength": 1000
                       },
                       "exdate": {
                         "type": "array",
@@ -7931,7 +7981,8 @@
                               "date": "#/components/schemas/SwiftTagged_date_f80d834415328e7c"
                             }
                           }
-                        }
+                        },
+                        "maxItems": 1000
                       }
                     },
                     "required": ["dtstart", "rrule", "exdate"],
@@ -10212,7 +10263,8 @@
                 "properties": {
                   "text": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 2000
                   },
                   "now": {
                     "type": "string"
@@ -11255,7 +11307,8 @@
                 "properties": {
                   "reason": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 1000
                   }
                 },
                 "required": ["reason"],
@@ -21067,7 +21120,7 @@
         ],
         "additionalProperties": true
       },
-      "SwiftTagged_file_c263e6ce242848b2": {
+      "SwiftTagged_file_a1224eb6fd690fcb": {
         "type": "object",
         "properties": {
           "kind": {
@@ -21076,13 +21129,14 @@
           },
           "path": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 4096
           }
         },
         "required": ["kind", "path"],
         "additionalProperties": false
       },
-      "SwiftTagged_image_08ee1674dbff0b24": {
+      "SwiftTagged_image_f7200697c6a258b3": {
         "type": "object",
         "properties": {
           "kind": {
@@ -21091,13 +21145,14 @@
           },
           "path": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 4096
           }
         },
         "required": ["kind", "path"],
         "additionalProperties": false
       },
-      "SwiftTagged_link_3ed328370e513918": {
+      "SwiftTagged_link_7ccecc202e6507d1": {
         "type": "object",
         "properties": {
           "kind": {
@@ -21106,13 +21161,14 @@
           },
           "url": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 8192
           }
         },
         "required": ["kind", "url"],
         "additionalProperties": false
       },
-      "SwiftTagged_file_9effb3b18dd2ec69": {
+      "SwiftTagged_file_660795b389d92e70": {
         "type": "object",
         "properties": {
           "kind": {
@@ -21121,21 +21177,24 @@
           },
           "path": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 4096
           },
           "label": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 200
           },
           "name": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 200
           }
         },
         "required": ["kind", "path"],
         "additionalProperties": false
       },
-      "SwiftTagged_image_409f55577e999188": {
+      "SwiftTagged_image_3d8a86930a2c606b": {
         "type": "object",
         "properties": {
           "kind": {
@@ -21144,21 +21203,24 @@
           },
           "path": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 4096
           },
           "label": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 200
           },
           "name": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 200
           }
         },
         "required": ["kind", "path"],
         "additionalProperties": false
       },
-      "SwiftTagged_link_a1918c5d4f327f78": {
+      "SwiftTagged_link_c07227ae37504c97": {
         "type": "object",
         "properties": {
           "kind": {
@@ -21167,15 +21229,18 @@
           },
           "url": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 8192
           },
           "label": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 200
           },
           "name": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 200
           }
         },
         "required": ["kind", "url"],

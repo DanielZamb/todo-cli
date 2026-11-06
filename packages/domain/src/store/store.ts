@@ -26,6 +26,7 @@ import {
   TaskMutationKind,
 } from "../events.ts";
 import { ActorId, ProfileId, Sequence, TaskId, Version } from "../ids.ts";
+import { rejectedInputForHistory } from "../limits.ts";
 import {
   DeleteProfile,
   type ProfileDeletionResult,
@@ -606,7 +607,13 @@ export class OperationStore {
       occurred_at: envelope.occurred_at,
       attempted_kind: envelope.kind,
       task_id: (primary?.after ?? primary?.before)?.id ?? taskId,
-      violations: [{ field: "event", received: payload, code: reason }],
+      violations: [
+        {
+          field: "event",
+          received: rejectedInputForHistory(payload),
+          code: reason,
+        },
+      ],
     });
     return this.transaction(() => {
       const entry = this.record(input, {
