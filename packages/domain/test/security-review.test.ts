@@ -11,14 +11,15 @@ import { AttachManyItem } from "../src/attachments.ts";
 import { AuthError, TokenOptions } from "../src/auth/model.ts";
 import { BatchEditRequest } from "../src/batch-edit.ts";
 import {
+  copyTask,
   createTask,
   ensureProfile,
   moveTask,
   mutateTask,
   revertTask,
 } from "../src/commands.ts";
-import { Tag, Task } from "../src/entities.ts";
-import { ProfileId } from "../src/ids.ts";
+import { Project, Tag, Task } from "../src/entities.ts";
+import { ProfileId, TaskId, Version } from "../src/ids.ts";
 import { importTasks } from "../src/import-tasks.ts";
 import { inputLimits } from "../src/limits.ts";
 import {
@@ -814,6 +815,73 @@ describe("second security review", () => {
           expect(
             (yield* store.tags()).some((tag) => tag.name.length > 200),
           ).toBe(false);
+        }),
+      ),
+  );
+
+  it.effect(
+    "R6-1: Move and Copy keep working for a Task with older long Project and Tag names",
+    () =>
+      withStore((store) =>
+        Effect.gen(function* () {
+          const request = yield* owner(store);
+          const personal = Schema.decodeUnknownSync(ProfileId)("personal");
+          yield* store.putProfile({ ...work, id: personal, name: "Personal" });
+          const long = "n".repeat(201);
+          const project = Schema.decodeUnknownSync(Project)({
+            id: "older-project",
+            profile_id: "work",
+            name: long,
+            created_at: taskInput.created_at,
+            updated_at: taskInput.created_at,
+          });
+          const tag = Schema.decodeUnknownSync(Tag)({
+            id: "older-tag",
+            profile_id: "work",
+            name: long,
+          });
+          const make = (id: string) =>
+            store.append({
+              actor,
+              profile,
+              event: {
+                ...createdEvent,
+                task: Schema.decodeUnknownSync(Task)({
+                  ...taskInput,
+                  id,
+                  project_id: project.id,
+                  tags: [tag.id],
+                }),
+                project,
+                tags: [tag],
+              },
+            });
+          expect((yield* make("older-move")).outcome).toBe("committed");
+          expect((yield* make("older-copy")).outcome).toBe("committed");
+          const moved = yield* moveTask(
+            store,
+            {
+              ...request,
+              task_id: Schema.decodeUnknownSync(TaskId)("older-move"),
+            },
+            {
+              from_version: Schema.decodeUnknownSync(Version)(1),
+              destination_profile: personal,
+            },
+          );
+          expect(moved.outcome).toBe("committed");
+          const copied = yield* copyTask(
+            store,
+            {
+              ...request,
+              task_id: Schema.decodeUnknownSync(TaskId)("older-copy"),
+            },
+            {
+              from_version: Schema.decodeUnknownSync(Version)(1),
+              destination_profile: personal,
+            },
+          );
+          expect(copied.outcome).toBe("committed");
         }),
       ),
   );

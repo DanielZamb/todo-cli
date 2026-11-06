@@ -192,18 +192,6 @@ function metadata(
 ) {
   const now = nowInstant();
   const projectName = flags.project;
-  // Submitted names meet the input limit here, because only their ids reach
-  // TaskPatch; names already stored are kept as they are.
-  const tooLong = (name: string) => name.length > inputLimits.name;
-  if (projectName !== undefined && tooLong(projectName))
-    throw invalid(`Project names have at most ${inputLimits.name} characters.`);
-  // Tags are stored lowercased, and lowercasing can lengthen a name.
-  if (
-    flags.tag?.some((value) =>
-      value.split(",").some((name) => tooLong(name.trim().toLowerCase())),
-    )
-  )
-    throw invalid(`Tag names have at most ${inputLimits.name} characters.`);
   const project =
     projectName === undefined
       ? (data.projects.find(
@@ -795,6 +783,21 @@ export class TaskCommands {
   };
 }
 
+// Names typed on the CLI meet the input limits here, because only their ids
+// reach TaskPatch. metadata also resolves stored names for Move and Copy,
+// which must keep working for older long names, so it does not check.
+const checkSubmittedNames = (flags: TaskFlags) => {
+  const tooLong = (name: string) => name.length > inputLimits.name;
+  if (flags.project !== undefined && tooLong(flags.project))
+    throw invalid(`Project names have at most ${inputLimits.name} characters.`);
+  // Tags are stored lowercased, and lowercasing can lengthen a name.
+  if (
+    flags.tag?.some((value) =>
+      value.split(",").some((name) => tooLong(name.trim().toLowerCase())),
+    )
+  )
+    throw invalid(`Tag names have at most ${inputLimits.name} characters.`);
+};
 const prepareFlags = (
   flags: TaskFlags,
   request: AccessRequest,
@@ -802,6 +805,7 @@ const prepareFlags = (
   before?: Task,
 ) =>
   parse(() => {
+    checkSubmittedNames(flags);
     const { project, tags } = metadata(flags, request, data, before);
     const fields = Schema.decodeUnknownSync(TaskPatch)({
       ...(flags.title === undefined ? {} : { title: flags.title.trim() }),
