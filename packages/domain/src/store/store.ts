@@ -892,6 +892,15 @@ export class OperationStore {
           change.after.profile_id !== profile)
       )
         throw new Rejection("validation");
+      // Series defaults seed every successor, so their Tags are bounded like
+      // a Task's: kept past the limit, not grown past it.
+      if (
+        change.after &&
+        event.kind !== "TaskReverted" &&
+        change.after.task.tags.length > inputLimits.tagsPerTask &&
+        change.after.task.tags.length > (change.before?.task.tags.length ?? 0)
+      )
+        throw new Rejection("validation");
       // Exclusion dates may be kept past the limit, not grown past it.
       if (
         change.after &&

@@ -341,3 +341,25 @@ it("sends only changed fields, so an older Task with long values can still be ed
     changedPayload(task, { ...editorFor(task).changes, description: "" }),
   ).toEqual({});
 });
+
+it("sends the full Tag selection whenever Tags change, so adding one keeps the rest", () => {
+  const tagged = Schema.decodeUnknownSync(Task)({ ...task, tags: ["keep"] });
+  const editor = editorFor(tagged);
+  expect(
+    changedPayload(tagged, { ...editor.changes, tag_names: ["new"] }),
+  ).toEqual({ tags: ["keep"], tag_names: ["new"] });
+  // An added-then-removed unsaved name changes nothing.
+  expect(changedPayload(tagged, { ...editor.changes, tag_names: [] })).toEqual(
+    {},
+  );
+  expect(changedPayload(tagged, { ...editor.changes, tags: [] })).toEqual({
+    tags: [],
+  });
+  expect(
+    changedPayload(tagged, {
+      ...editor.changes,
+      priority: "P4",
+      tag_names: [],
+    }),
+  ).toEqual({ priority: "P4" });
+});

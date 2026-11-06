@@ -31,6 +31,7 @@ import {
   TaskCommands,
 } from "../src/store/store.ts";
 import { CreateSeries, CreateTask, EditSeries } from "../src/task-commands.ts";
+import { Instant } from "../src/time.ts";
 import {
   actor,
   created as createdEvent,
@@ -1011,4 +1012,65 @@ describe("second security review", () => {
       }),
     ).toBe(true);
   });
+
+  it.effect(
+    "R8-2: a crafted edit cannot grow a Series' default Tags past 100",
+    () =>
+      withStore((store) =>
+        Effect.gen(function* () {
+          const { request, task } = yield* olderSeries(store, 0, 0);
+          // 101 Tag definitions, from two ordinary Tasks within the limit.
+          for (const offset of [0, 60])
+            yield* new TaskCommands(store).create(request, {
+              title: `Tags ${offset}`,
+              tag_names: Array.from(
+                { length: offset === 0 ? 60 : 41 },
+                (_, index) => `d${offset + index}`,
+              ),
+            });
+          const tags = (yield* store.tags()).filter((tag) =>
+            tag.name.startsWith("d"),
+          );
+          expect(tags).toHaveLength(101);
+          const series = (yield* store.series())[0];
+          if (!series) throw new Error("fixture");
+          const at = Schema.decodeUnknownSync(Instant)(
+            "2026-11-06T12:00:00.000Z",
+          );
+          const crafted = (count: number) =>
+            store.append({
+              actor,
+              profile,
+              event: {
+                kind: "TaskEdited",
+                entity_version: 1,
+                occurred_at: at,
+                before: task,
+                after: {
+                  ...task,
+                  row_version: task.row_version + 1,
+                  updated_at: at,
+                },
+                series_before: series,
+                series_after: {
+                  ...series,
+                  row_version: series.row_version + 1,
+                  updated_at: at,
+                  task: {
+                    ...series.task,
+                    tags: tags.slice(0, count).map((tag) => tag.id),
+                  },
+                },
+                project_before: null,
+                project_after: null,
+                tags_before: [],
+                tags_after: [],
+              },
+            });
+          expect((yield* crafted(101)).outcome).toBe("rejected");
+          // The same crafted edit within the limit commits.
+          expect((yield* crafted(50)).outcome).toBe("committed");
+        }),
+      ),
+  );
 });
