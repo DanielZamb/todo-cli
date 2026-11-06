@@ -757,20 +757,25 @@ export class OperationStore {
       if (change.after) {
         // Input limits bound each request; these bound the resulting Task,
         // since names split on commas and repeated groups add up. Tasks
-        // already past a limit may keep, but not grow, their lists.
+        // already past a limit may keep, but not grow, their lists. Move and
+        // Revert only reproduce a state the Task already had, so they are
+        // not checked; a Copy is a new Task and must meet the limits.
         const grows = (after: number, before: number, limit: number) =>
           after > limit && after > before;
         if (
-          grows(
+          event.kind !== "TaskMovedIn" &&
+          event.kind !== "TaskMovedOut" &&
+          event.kind !== "TaskReverted" &&
+          (grows(
             change.after.tags.length,
             change.before?.tags.length ?? 0,
             inputLimits.tagsPerTask,
           ) ||
-          grows(
-            change.after.attachments?.length ?? 0,
-            change.before?.attachments?.length ?? 0,
-            inputLimits.attachmentsPerTask,
-          )
+            grows(
+              change.after.attachments?.length ?? 0,
+              change.before?.attachments?.length ?? 0,
+              inputLimits.attachmentsPerTask,
+            ))
         )
           throw new Rejection("validation");
         if (

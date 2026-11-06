@@ -49,7 +49,11 @@ const SignInPassphrase = Schema.NonEmptyString.check(
 const maximumWaitingSignIns = 4;
 export const signInLockout = { attempts: 10, durationMs: 3_600_000 } as const;
 type Verification =
-  | { readonly kind: "valid" | "invalid" | "busy" }
+  | { readonly kind: "invalid" | "busy" }
+  | {
+      readonly kind: "valid";
+      readonly issued: ReturnType<Authentication<unknown>["issueSession"]>;
+    }
   | { readonly kind: "locked"; readonly until: number };
 
 const parse = <S extends Schema.ConstraintDecoder<unknown>>(
@@ -145,6 +149,8 @@ export class Authentication<Read> {
     // outcome is decided in one write transaction that re-checks the lock:
     // past the 10th recorded failure, every result reads as locked, a valid
     // guess too, so concurrent processes learn nothing beyond 10 guesses.
+    // The same transaction re-reads the hash (a reset may have replaced it)
+    // and issues the Session, so no lock or reset can land in between.
     const attempt = this.signInQueue.then(async (): Promise<Verification> => {
       const until = this.signInLockedUntil(time);
       if (until !== null) return { kind: "locked", until };
@@ -154,7 +160,14 @@ export class Authentication<Read> {
       return this.transaction((): Verification => {
         const lockedUntil = this.signInLockedUntil(time);
         if (lockedUntil !== null) return { kind: "locked", until: lockedUntil };
-        if (valid) return { kind: "valid" };
+        const current =
+          this.db
+            .query<{ passphrase_hash: string }, []>(
+              "SELECT passphrase_hash FROM owner WHERE singleton=1",
+            )
+            .get()?.passphrase_hash ?? null;
+        if (valid && current === hash)
+          return { kind: "valid", issued: this.issueSession(time) };
         this.record({
           action: "signIn",
           time,
@@ -429,38 +442,35 @@ export class Authentication<Read> {
       // A wrong passphrase was already recorded inside the queue.
       if (outcome.kind === "invalid")
         return yield* Effect.fail(new AuthError("invalid_passphrase"));
-      return yield* this.perform("signIn", null, (time) => {
+      if (outcome.kind === "valid") return outcome.issued;
+      return yield* this.perform("signIn", null, () => {
         if (outcome.kind === "locked")
           throw new AuthError(
             "sign_in_locked",
             "anonymous",
             instant(outcome.until),
           );
-        if (outcome.kind === "busy") throw new AuthError("sign_in_busy");
-        // A reset may have replaced the hash while this attempt was verified
-        // against the old one: the old passphrase must not get a Session.
-        const current = this.db
-          .query<{ passphrase_hash: string }, []>(
-            "SELECT passphrase_hash FROM owner WHERE singleton=1",
-          )
-          .get()?.passphrase_hash;
-        if (current !== input.hash) throw new AuthError("invalid_passphrase");
-        const issued = this.issue(time, {
-          kind: "session",
-          name: null,
-          profile: null,
-          scope: "read-write",
-          expires_at: instant(time + 7 * 86400000),
-        });
-        this.record({
-          action: "signIn",
-          actor: "owner",
-          time,
-          credential_id: issued.id,
-        });
-        return issued;
+        throw new AuthError("sign_in_busy");
       });
     });
+
+  // Runs inside the sign-in decision transaction.
+  private issueSession(time: number) {
+    const issued = this.issue(time, {
+      kind: "session",
+      name: null,
+      profile: null,
+      scope: "read-write",
+      expires_at: instant(time + 7 * 86400000),
+    });
+    this.record({
+      action: "signIn",
+      actor: "owner",
+      time,
+      credential_id: issued.id,
+    });
+    return issued;
+  }
 
   readonly authenticate = (
     input: AccessRequest & { readonly access: "read" | "write" },

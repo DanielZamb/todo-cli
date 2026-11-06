@@ -10,7 +10,10 @@ import { AttachmentCommands } from "../src/attachment-commands.ts";
 import { AttachManyItem } from "../src/attachments.ts";
 import { AuthError, TokenOptions } from "../src/auth/model.ts";
 import { BatchEditRequest } from "../src/batch-edit.ts";
+import { moveTask, revertTask } from "../src/commands.ts";
+import { ProfileId } from "../src/ids.ts";
 import { importTasks } from "../src/import-tasks.ts";
+import { inputLimits } from "../src/limits.ts";
 import {
   type OperationStore,
   openStore,
@@ -20,7 +23,9 @@ import { CreateSeries, CreateTask } from "../src/task-commands.ts";
 import { profile, work } from "./store-fixtures.ts";
 
 const passphrase = "scratch review passphrase";
-const withStore = <A, E>(run: (store: OperationStore) => Effect.Effect<A, E>) =>
+const withStore = <A, E>(
+  run: (store: OperationStore, path: string) => Effect.Effect<A, E>,
+) =>
   Effect.scoped(
     Effect.gen(function* () {
       yield* TestClock.setTime(Date.parse("2026-11-06T12:00:00Z"));
@@ -34,7 +39,7 @@ const withStore = <A, E>(run: (store: OperationStore) => Effect.Effect<A, E>) =>
         (value) => Effect.orDie(value.close()),
       );
       yield* store.putProfile(work);
-      return yield* run(store);
+      return yield* run(store, join(directory, "scratch.db"));
     }),
   );
 const owner = (store: OperationStore) =>
@@ -348,4 +353,116 @@ describe("second security review", () => {
       }),
     ).toBe(false);
   });
+
+  it.effect(
+    "R-1: a correct sign-in that finishes after the 10th failure is refused as locked",
+    () =>
+      withStore((store, path) =>
+        Effect.gen(function* () {
+          yield* store.auth.setupOwner(passphrase);
+          for (let index = 0; index < 9; index++)
+            yield* Effect.flip(store.auth.signIn("wrong guess"));
+          const verify = Bun.password.verify;
+          let release = () => {};
+          const held = new Promise<void>((resolve) => {
+            release = resolve;
+          });
+          let entered = () => {};
+          const started = new Promise<void>((resolve) => {
+            entered = resolve;
+          });
+          // Hold only the correct passphrase's verification.
+          Bun.password.verify = async (value, ...rest) => {
+            if (value === passphrase) {
+              entered();
+              await held;
+            }
+            return verify(value, ...rest);
+          };
+          try {
+            const correct = yield* Effect.forkChild(
+              Effect.flip(store.auth.signIn(passphrase)),
+            );
+            yield* Effect.promise(() => started);
+            const other = yield* openStore({ path });
+            try {
+              yield* Effect.flip(other.auth.signIn("wrong guess"));
+            } finally {
+              yield* Effect.orDie(other.close());
+            }
+            release();
+            const error = yield* Fiber.join(correct);
+            expect(error instanceof AuthError ? error.detail : null).toBe(
+              "sign_in_locked",
+            );
+          } finally {
+            Bun.password.verify = verify;
+            release();
+          }
+        }),
+      ),
+  );
+
+  it.effect(
+    "R-2: Move and Revert of the Move keep a Task that is already past the Tag limit",
+    () =>
+      withStore((store) =>
+        Effect.gen(function* () {
+          const request = yield* owner(store);
+          const personal = Schema.decodeUnknownSync(ProfileId)("personal");
+          yield* store.putProfile({ ...work, id: personal, name: "Personal" });
+          const commands = new TaskCommands(store);
+          const created = yield* commands.create(request, {
+            title: "Many tags",
+            tag_names: Array.from({ length: 60 }, (_, index) => `tag${index}`),
+          });
+          if (created.outcome !== "committed") throw new Error("fixture");
+          // Lower the limit so this Task looks like one written before it.
+          const limits = inputLimits as { tagsPerTask: number };
+          const original = limits.tagsPerTask;
+          limits.tagsPerTask = 50;
+          try {
+            const target = { ...request, task_id: created.task.id };
+            const grown = yield* commands.edit(target, {
+              from_version: created.task.row_version,
+              changes: {
+                tag_names: [
+                  ...Array.from({ length: 60 }, (_, index) => `tag${index}`),
+                  "one more",
+                ],
+              },
+            });
+            expect(grown.outcome).toBe("rejected");
+            const moved = yield* moveTask(store, target, {
+              from_version: created.task.row_version,
+              destination_profile: personal,
+            });
+            expect(moved.outcome).toBe("committed");
+            const arrived = (yield* commands.list({
+              ...request,
+              profile: personal,
+            }))[0];
+            expect(arrived?.tags).toHaveLength(60);
+            if (!arrived) throw new Error("fixture");
+            // Reverting the Move brings the Task back with the same Tags.
+            const arrival = (yield* store.history()).find(
+              (entry) => entry.event.kind === "TaskMovedIn",
+            );
+            if (!arrival) throw new Error("fixture");
+            const reverted = yield* revertTask(
+              store,
+              { ...request, profile: personal, task_id: arrived.id },
+              { from_version: arrived.row_version, seq: arrival.seq },
+            );
+            expect(reverted.outcome).toBe("committed");
+            const back = (yield* commands.list(request)).find(
+              (task) => task.id === arrived.id,
+            );
+            expect(back?.tags).toHaveLength(60);
+          } finally {
+            limits.tagsPerTask = original;
+          }
+        }),
+      ),
+  );
 });
