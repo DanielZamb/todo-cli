@@ -569,4 +569,46 @@ describe("second security review", () => {
         }),
       ),
   );
+
+  it.effect(
+    "R2-1: a Move through the store cannot grow a Task past 100 Tags",
+    () =>
+      withStore((store) =>
+        Effect.gen(function* () {
+          const request = yield* owner(store);
+          const personal = Schema.decodeUnknownSync(ProfileId)("personal");
+          yield* store.putProfile({ ...work, id: personal, name: "Personal" });
+          const created = yield* new TaskCommands(store).create(request, {
+            title: "Bare",
+          });
+          if (created.outcome !== "committed") throw new Error("fixture");
+          const before = created.task;
+          const crafted = (count: number) => {
+            const tags = Array.from({ length: count }, (_, index) =>
+              Schema.decodeUnknownSync(Tag)({
+                id: `moved-${count}-${index}`,
+                profile_id: "personal",
+                name: `moved${count}-${index}`,
+              }),
+            );
+            return store.move({
+              actor,
+              before,
+              after: Schema.decodeUnknownSync(Task)({
+                ...before,
+                profile_id: personal,
+                row_version: before.row_version + 1,
+                tags: tags.map((tag) => tag.id),
+              }),
+              original_seq: null,
+              definitions: { project: null, tags },
+            });
+          };
+          expect((yield* crafted(101)).outcome).toBe("rejected");
+          // The same crafted Move within the limit commits, so the refusal
+          // above comes from the limit.
+          expect((yield* crafted(50)).outcome).toBe("committed");
+        }),
+      ),
+  );
 });

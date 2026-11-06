@@ -1006,6 +1006,14 @@ export class OperationStore {
             before.deleted_at !== null ||
             after.deleted_at !== null ||
             after.row_version !== before.row_version + 1 ||
+            // validate skips list limits for the arrival, which has no
+            // previous state; a Move may carry the lists over, not grow them.
+            (after.tags.length > inputLimits.tagsPerTask &&
+              after.tags.length > before.tags.length) ||
+            ((after.attachments?.length ?? 0) >
+              inputLimits.attachmentsPerTask &&
+              (after.attachments?.length ?? 0) >
+                (before.attachments?.length ?? 0)) ||
             !this.db
               .query(
                 "SELECT 1 FROM profiles WHERE id=? AND id NOT IN (SELECT profile FROM profile_deletions)",
