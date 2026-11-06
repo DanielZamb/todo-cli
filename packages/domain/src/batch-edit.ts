@@ -2,16 +2,17 @@ import { Effect, Schema } from "effect";
 import type { AccessRequest } from "./auth/model.ts";
 import { TaskCommands } from "./commands.ts";
 import { TaskId, Version } from "./ids.ts";
+import { limitedItems, TaskIdInput } from "./limits.ts";
 import type { OperationStore } from "./store/store.ts";
 import { TaskPatch } from "./task-commands.ts";
 import { Instant } from "./time.ts";
 
 export const BatchEditItem = Schema.Struct({
-  task_id: TaskId,
+  task_id: TaskIdInput,
   from_version: Version,
 });
 export const BatchEditRequest = Schema.Struct({
-  items: Schema.Array(BatchEditItem).check(
+  items: limitedItems(BatchEditItem).check(
     Schema.isMinLength(1),
     Schema.makeFilter(
       (items) =>

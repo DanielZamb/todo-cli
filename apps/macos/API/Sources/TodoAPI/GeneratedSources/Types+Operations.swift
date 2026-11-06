@@ -650,6 +650,57 @@ public enum Operations {
                     }
                 }
             }
+            public struct TooManyRequests: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/auth/sessions/POST/responses/429/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/auth/sessions/POST/responses/429/content/application\/json`.
+                    case json(Components.Schemas.TooManySignInsEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.TooManySignInsEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.signIn_period_signIn.Output.TooManyRequests.Body
+                /// Creates a new `TooManyRequests`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.signIn_period_signIn.Output.TooManyRequests.Body) {
+                    self.body = body
+                }
+            }
+            /// TooManySignIns
+            ///
+            /// - Remark: Generated from `#/paths//auth/sessions/post(signIn.signIn)/responses/429`.
+            ///
+            /// HTTP response code: `429 tooManyRequests`.
+            case tooManyRequests(Operations.signIn_period_signIn.Output.TooManyRequests)
+            /// The associated value of the enum case if `self` is `.tooManyRequests`.
+            ///
+            /// - Throws: An error if `self` is not `.tooManyRequests`.
+            /// - SeeAlso: `.tooManyRequests`.
+            public var tooManyRequests: Operations.signIn_period_signIn.Output.TooManyRequests {
+                get throws {
+                    switch self {
+                    case let .tooManyRequests(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "tooManyRequests",
+                            response: self
+                        )
+                    }
+                }
+            }
             public struct InternalServerError: Sendable, Hashable {
                 /// - Remark: Generated from `#/paths/auth/sessions/POST/responses/500/content`.
                 @frozen public enum Body: Sendable, Hashable {
@@ -3782,12 +3833,12 @@ public enum Operations {
                     public var from_version: Swift.Int
                     /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/POST/requestBody/json/location`.
                     @frozen public enum locationPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/POST/requestBody/json/location/SwiftTagged_file_c263e6ce242848b2`.
-                        case file(Components.Schemas.SwiftTagged_file_c263e6ce242848b2)
-                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/POST/requestBody/json/location/SwiftTagged_image_08ee1674dbff0b24`.
-                        case image(Components.Schemas.SwiftTagged_image_08ee1674dbff0b24)
-                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/POST/requestBody/json/location/SwiftTagged_link_3ed328370e513918`.
-                        case link(Components.Schemas.SwiftTagged_link_3ed328370e513918)
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/POST/requestBody/json/location/SwiftTagged_file_a1224eb6fd690fcb`.
+                        case file(Components.Schemas.SwiftTagged_file_a1224eb6fd690fcb)
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/POST/requestBody/json/location/SwiftTagged_image_f7200697c6a258b3`.
+                        case image(Components.Schemas.SwiftTagged_image_f7200697c6a258b3)
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/POST/requestBody/json/location/SwiftTagged_link_7ccecc202e6507d1`.
+                        case link(Components.Schemas.SwiftTagged_link_7ccecc202e6507d1)
                         public enum CodingKeys: String, CodingKey {
                             case kind
                         }
@@ -14334,12 +14385,12 @@ public enum Operations {
 
                     /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/POST/requestBody/json/attachmentsPayload`.
                     @frozen public enum attachmentsPayloadPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/POST/requestBody/json/attachmentsPayload/SwiftTagged_file_9effb3b18dd2ec69`.
-                        case file(Components.Schemas.SwiftTagged_file_9effb3b18dd2ec69)
-                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/POST/requestBody/json/attachmentsPayload/SwiftTagged_image_409f55577e999188`.
-                        case image(Components.Schemas.SwiftTagged_image_409f55577e999188)
-                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/POST/requestBody/json/attachmentsPayload/SwiftTagged_link_a1918c5d4f327f78`.
-                        case link(Components.Schemas.SwiftTagged_link_a1918c5d4f327f78)
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/POST/requestBody/json/attachmentsPayload/SwiftTagged_file_660795b389d92e70`.
+                        case file(Components.Schemas.SwiftTagged_file_660795b389d92e70)
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/POST/requestBody/json/attachmentsPayload/SwiftTagged_image_3d8a86930a2c606b`.
+                        case image(Components.Schemas.SwiftTagged_image_3d8a86930a2c606b)
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/POST/requestBody/json/attachmentsPayload/SwiftTagged_link_c07227ae37504c97`.
+                        case link(Components.Schemas.SwiftTagged_link_c07227ae37504c97)
                         public enum CodingKeys: String, CodingKey {
                             case kind
                         }
@@ -26807,12 +26858,12 @@ public enum Operations {
 
                         /// - Remark: Generated from `#/paths/profiles/{profile}/series/POST/requestBody/json/task/attachmentsPayload`.
                         @frozen public enum attachmentsPayloadPayload: Codable, Hashable, Sendable {
-                            /// - Remark: Generated from `#/paths/profiles/{profile}/series/POST/requestBody/json/task/attachmentsPayload/SwiftTagged_file_9effb3b18dd2ec69`.
-                            case file(Components.Schemas.SwiftTagged_file_9effb3b18dd2ec69)
-                            /// - Remark: Generated from `#/paths/profiles/{profile}/series/POST/requestBody/json/task/attachmentsPayload/SwiftTagged_image_409f55577e999188`.
-                            case image(Components.Schemas.SwiftTagged_image_409f55577e999188)
-                            /// - Remark: Generated from `#/paths/profiles/{profile}/series/POST/requestBody/json/task/attachmentsPayload/SwiftTagged_link_a1918c5d4f327f78`.
-                            case link(Components.Schemas.SwiftTagged_link_a1918c5d4f327f78)
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/series/POST/requestBody/json/task/attachmentsPayload/SwiftTagged_file_660795b389d92e70`.
+                            case file(Components.Schemas.SwiftTagged_file_660795b389d92e70)
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/series/POST/requestBody/json/task/attachmentsPayload/SwiftTagged_image_3d8a86930a2c606b`.
+                            case image(Components.Schemas.SwiftTagged_image_3d8a86930a2c606b)
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/series/POST/requestBody/json/task/attachmentsPayload/SwiftTagged_link_c07227ae37504c97`.
+                            case link(Components.Schemas.SwiftTagged_link_c07227ae37504c97)
                             public enum CodingKeys: String, CodingKey {
                                 case kind
                             }
@@ -37487,10 +37538,10 @@ public enum Operations {
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/history/GET/responses/200/content/jsonPayload`.
                     @frozen public enum jsonPayloadPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/history/GET/responses/200/content/jsonPayload/SwiftTagged_committed_4d7933223522e445`.
-                        case committed(Components.Schemas.SwiftTagged_committed_4d7933223522e445)
-                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/history/GET/responses/200/content/jsonPayload/SwiftTagged_rejected_3b8ba18ea68495b7`.
-                        case rejected(Components.Schemas.SwiftTagged_rejected_3b8ba18ea68495b7)
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/history/GET/responses/200/content/jsonPayload/SwiftTagged_committed_35ab0ce1f2e94769`.
+                        case committed(Components.Schemas.SwiftTagged_committed_35ab0ce1f2e94769)
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/history/GET/responses/200/content/jsonPayload/SwiftTagged_rejected_6e5bf36e0773479f`.
+                        case rejected(Components.Schemas.SwiftTagged_rejected_6e5bf36e0773479f)
                         public enum CodingKeys: String, CodingKey {
                             case outcome
                         }

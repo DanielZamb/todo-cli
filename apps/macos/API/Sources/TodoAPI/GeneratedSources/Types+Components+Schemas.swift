@@ -1213,6 +1213,73 @@ extension Components {
                 try container.encode(self.message, forKey: .message)
             }
         }
+        /// - Remark: Generated from `#/components/schemas/TooManySignInsEncoded`.
+        public struct TooManySignInsEncoded: Codable, Hashable, Sendable {
+            private var _explicitNullKeys: Set<String> = []
+
+            /// - Remark: Generated from `#/components/schemas/TooManySignInsEncoded/_tag`.
+            @frozen public enum _tagPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case TooManySignIns = "TooManySignIns"
+            }
+            /// - Remark: Generated from `#/components/schemas/TooManySignInsEncoded/_tag`.
+            public var _tag: Components.Schemas.TooManySignInsEncoded._tagPayload
+            /// - Remark: Generated from `#/components/schemas/TooManySignInsEncoded/message`.
+            public var message: Swift.String
+            /// - Remark: Generated from `#/components/schemas/TooManySignInsEncoded/locked_until`.
+            public var locked_until: Swift.String?
+            /// Creates a new `TooManySignInsEncoded`.
+            ///
+            /// - Parameters:
+            ///   - _tag:
+            ///   - message:
+            ///   - locked_until:
+            public init(
+                _tag: Components.Schemas.TooManySignInsEncoded._tagPayload,
+                message: Swift.String,
+                locked_until: Swift.String? = nil
+            ) {
+                self._tag = _tag
+                self.message = message
+                self.locked_until = locked_until
+            }
+            public enum CodingKeys: String, CodingKey {
+                case _tag
+                case message
+                case locked_until
+            }
+            public init(from decoder: any Swift.Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                self._tag = try container.decode(
+                    Components.Schemas.TooManySignInsEncoded._tagPayload.self,
+                    forKey: ._tag
+                )
+                self.message = try container.decode(
+                    Swift.String.self,
+                    forKey: .message
+                )
+                self.locked_until = try container.decodeIfPresent(
+                    Swift.String.self,
+                    forKey: .locked_until
+                )
+                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                    "_tag",
+                    "message",
+                    "locked_until"
+                ])
+            }
+
+            public func encode(to encoder: any Swift.Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(self._tag, forKey: ._tag)
+                try container.encode(self.message, forKey: .message)
+                if self.locked_until == nil && _explicitNullKeys.contains(CodingKeys.locked_until.stringValue) {
+                    try container.encodeNil(forKey: .locked_until)
+                } else {
+                    try container.encodeIfPresent(self.locked_until, forKey: .locked_until)
+                }
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/CommittedOperation`.
         public struct CommittedOperation: Codable, Hashable, Sendable {
             private var _explicitNullKeys: Set<String> = []
@@ -1231,8 +1298,8 @@ extension Components {
                 case AttachmentAdded(Components.Schemas.SwiftTagged_AttachmentAdded_03b78c8c9397e1d6)
                 /// - Remark: Generated from `#/components/schemas/CommittedOperation/event/SwiftTagged_AttachmentRemoved_02e2f0411dfd2b69`.
                 case AttachmentRemoved(Components.Schemas.SwiftTagged_AttachmentRemoved_02e2f0411dfd2b69)
-                /// - Remark: Generated from `#/components/schemas/CommittedOperation/event/SwiftTagged_AuthChanged_25fb6dcbf234c4d7`.
-                case AuthChanged(Components.Schemas.SwiftTagged_AuthChanged_25fb6dcbf234c4d7)
+                /// - Remark: Generated from `#/components/schemas/CommittedOperation/event/SwiftTagged_AuthChanged_6a14a81d77477a4f`.
+                case AuthChanged(Components.Schemas.SwiftTagged_AuthChanged_6a14a81d77477a4f)
                 /// - Remark: Generated from `#/components/schemas/CommittedOperation/event/SwiftTagged_DatabaseRestored_bde10219965659a7`.
                 case DatabaseRestored(Components.Schemas.SwiftTagged_DatabaseRestored_bde10219965659a7)
                 /// - Remark: Generated from `#/components/schemas/CommittedOperation/event/SwiftTagged_ProfileDeleted_66ec0ddfda1634f2`.
@@ -29575,21 +29642,21 @@ extension Components {
                 try encoder.encodeAdditionalProperties(additionalProperties)
             }
         }
-        /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_25fb6dcbf234c4d7`.
-        public struct SwiftTagged_AuthChanged_25fb6dcbf234c4d7: Codable, Hashable, Sendable {
+        /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_6a14a81d77477a4f`.
+        public struct SwiftTagged_AuthChanged_6a14a81d77477a4f: Codable, Hashable, Sendable {
             private var _explicitNullKeys: Set<String> = []
 
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_25fb6dcbf234c4d7/entity_version`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_6a14a81d77477a4f/entity_version`.
             public var entity_version: Swift.Double
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_25fb6dcbf234c4d7/occurred_at`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_6a14a81d77477a4f/occurred_at`.
             public var occurred_at: Swift.String
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_25fb6dcbf234c4d7/kind`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_6a14a81d77477a4f/kind`.
             @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case AuthChanged = "AuthChanged"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_25fb6dcbf234c4d7/kind`.
-            public var kind: Components.Schemas.SwiftTagged_AuthChanged_25fb6dcbf234c4d7.kindPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_25fb6dcbf234c4d7/action`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_6a14a81d77477a4f/kind`.
+            public var kind: Components.Schemas.SwiftTagged_AuthChanged_6a14a81d77477a4f.kindPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_6a14a81d77477a4f/action`.
             @frozen public enum actionPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case setupOwner = "setupOwner"
                 case signIn = "signIn"
@@ -29606,14 +29673,15 @@ extension Components {
                 case finishTask = "finishTask"
                 case cleanupExpired = "cleanupExpired"
                 case deleteProfile = "deleteProfile"
+                case resetPassphrase = "resetPassphrase"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_25fb6dcbf234c4d7/action`.
-            public var action: Components.Schemas.SwiftTagged_AuthChanged_25fb6dcbf234c4d7.actionPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_25fb6dcbf234c4d7/credential_id`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_6a14a81d77477a4f/action`.
+            public var action: Components.Schemas.SwiftTagged_AuthChanged_6a14a81d77477a4f.actionPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_6a14a81d77477a4f/credential_id`.
             public var credential_id: Swift.String?
             /// A container of undocumented properties.
             public var additionalProperties: OpenAPIRuntime.OpenAPIObjectContainer
-            /// Creates a new `SwiftTagged_AuthChanged_25fb6dcbf234c4d7`.
+            /// Creates a new `SwiftTagged_AuthChanged_6a14a81d77477a4f`.
             ///
             /// - Parameters:
             ///   - entity_version:
@@ -29625,8 +29693,8 @@ extension Components {
             public init(
                 entity_version: Swift.Double,
                 occurred_at: Swift.String,
-                kind: Components.Schemas.SwiftTagged_AuthChanged_25fb6dcbf234c4d7.kindPayload,
-                action: Components.Schemas.SwiftTagged_AuthChanged_25fb6dcbf234c4d7.actionPayload,
+                kind: Components.Schemas.SwiftTagged_AuthChanged_6a14a81d77477a4f.kindPayload,
+                action: Components.Schemas.SwiftTagged_AuthChanged_6a14a81d77477a4f.actionPayload,
                 credential_id: Swift.String? = nil,
                 additionalProperties: OpenAPIRuntime.OpenAPIObjectContainer = .init()
             ) {
@@ -29656,11 +29724,11 @@ extension Components {
                     forKey: .occurred_at
                 )
                 self.kind = try container.decode(
-                    Components.Schemas.SwiftTagged_AuthChanged_25fb6dcbf234c4d7.kindPayload.self,
+                    Components.Schemas.SwiftTagged_AuthChanged_6a14a81d77477a4f.kindPayload.self,
                     forKey: .kind
                 )
                 self.action = try container.decode(
-                    Components.Schemas.SwiftTagged_AuthChanged_25fb6dcbf234c4d7.actionPayload.self,
+                    Components.Schemas.SwiftTagged_AuthChanged_6a14a81d77477a4f.actionPayload.self,
                     forKey: .action
                 )
                 self.credential_id = try container.decodeIfPresent(
@@ -34426,25 +34494,25 @@ extension Components {
                 try encoder.encodeAdditionalProperties(additionalProperties)
             }
         }
-        /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_c263e6ce242848b2`.
-        public struct SwiftTagged_file_c263e6ce242848b2: Codable, Hashable, Sendable {
+        /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_a1224eb6fd690fcb`.
+        public struct SwiftTagged_file_a1224eb6fd690fcb: Codable, Hashable, Sendable {
             private var _explicitNullKeys: Set<String> = []
 
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_c263e6ce242848b2/kind`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_a1224eb6fd690fcb/kind`.
             @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case file = "file"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_c263e6ce242848b2/kind`.
-            public var kind: Components.Schemas.SwiftTagged_file_c263e6ce242848b2.kindPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_c263e6ce242848b2/path`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_a1224eb6fd690fcb/kind`.
+            public var kind: Components.Schemas.SwiftTagged_file_a1224eb6fd690fcb.kindPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_a1224eb6fd690fcb/path`.
             public var path: Swift.String
-            /// Creates a new `SwiftTagged_file_c263e6ce242848b2`.
+            /// Creates a new `SwiftTagged_file_a1224eb6fd690fcb`.
             ///
             /// - Parameters:
             ///   - kind:
             ///   - path:
             public init(
-                kind: Components.Schemas.SwiftTagged_file_c263e6ce242848b2.kindPayload,
+                kind: Components.Schemas.SwiftTagged_file_a1224eb6fd690fcb.kindPayload,
                 path: Swift.String
             ) {
                 self.kind = kind
@@ -34458,7 +34526,7 @@ extension Components {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
                 self.kind = try container.decode(
-                    Components.Schemas.SwiftTagged_file_c263e6ce242848b2.kindPayload.self,
+                    Components.Schemas.SwiftTagged_file_a1224eb6fd690fcb.kindPayload.self,
                     forKey: .kind
                 )
                 self.path = try container.decode(
@@ -34477,25 +34545,25 @@ extension Components {
                 try container.encode(self.path, forKey: .path)
             }
         }
-        /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_08ee1674dbff0b24`.
-        public struct SwiftTagged_image_08ee1674dbff0b24: Codable, Hashable, Sendable {
+        /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_f7200697c6a258b3`.
+        public struct SwiftTagged_image_f7200697c6a258b3: Codable, Hashable, Sendable {
             private var _explicitNullKeys: Set<String> = []
 
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_08ee1674dbff0b24/kind`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_f7200697c6a258b3/kind`.
             @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case image = "image"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_08ee1674dbff0b24/kind`.
-            public var kind: Components.Schemas.SwiftTagged_image_08ee1674dbff0b24.kindPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_08ee1674dbff0b24/path`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_f7200697c6a258b3/kind`.
+            public var kind: Components.Schemas.SwiftTagged_image_f7200697c6a258b3.kindPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_f7200697c6a258b3/path`.
             public var path: Swift.String
-            /// Creates a new `SwiftTagged_image_08ee1674dbff0b24`.
+            /// Creates a new `SwiftTagged_image_f7200697c6a258b3`.
             ///
             /// - Parameters:
             ///   - kind:
             ///   - path:
             public init(
-                kind: Components.Schemas.SwiftTagged_image_08ee1674dbff0b24.kindPayload,
+                kind: Components.Schemas.SwiftTagged_image_f7200697c6a258b3.kindPayload,
                 path: Swift.String
             ) {
                 self.kind = kind
@@ -34509,7 +34577,7 @@ extension Components {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
                 self.kind = try container.decode(
-                    Components.Schemas.SwiftTagged_image_08ee1674dbff0b24.kindPayload.self,
+                    Components.Schemas.SwiftTagged_image_f7200697c6a258b3.kindPayload.self,
                     forKey: .kind
                 )
                 self.path = try container.decode(
@@ -34528,25 +34596,25 @@ extension Components {
                 try container.encode(self.path, forKey: .path)
             }
         }
-        /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_3ed328370e513918`.
-        public struct SwiftTagged_link_3ed328370e513918: Codable, Hashable, Sendable {
+        /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_7ccecc202e6507d1`.
+        public struct SwiftTagged_link_7ccecc202e6507d1: Codable, Hashable, Sendable {
             private var _explicitNullKeys: Set<String> = []
 
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_3ed328370e513918/kind`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_7ccecc202e6507d1/kind`.
             @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case link = "link"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_3ed328370e513918/kind`.
-            public var kind: Components.Schemas.SwiftTagged_link_3ed328370e513918.kindPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_3ed328370e513918/url`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_7ccecc202e6507d1/kind`.
+            public var kind: Components.Schemas.SwiftTagged_link_7ccecc202e6507d1.kindPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_7ccecc202e6507d1/url`.
             public var url: Swift.String
-            /// Creates a new `SwiftTagged_link_3ed328370e513918`.
+            /// Creates a new `SwiftTagged_link_7ccecc202e6507d1`.
             ///
             /// - Parameters:
             ///   - kind:
             ///   - url:
             public init(
-                kind: Components.Schemas.SwiftTagged_link_3ed328370e513918.kindPayload,
+                kind: Components.Schemas.SwiftTagged_link_7ccecc202e6507d1.kindPayload,
                 url: Swift.String
             ) {
                 self.kind = kind
@@ -34560,7 +34628,7 @@ extension Components {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
                 self.kind = try container.decode(
-                    Components.Schemas.SwiftTagged_link_3ed328370e513918.kindPayload.self,
+                    Components.Schemas.SwiftTagged_link_7ccecc202e6507d1.kindPayload.self,
                     forKey: .kind
                 )
                 self.url = try container.decode(
@@ -34579,23 +34647,23 @@ extension Components {
                 try container.encode(self.url, forKey: .url)
             }
         }
-        /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69`.
-        public struct SwiftTagged_file_9effb3b18dd2ec69: Codable, Hashable, Sendable {
+        /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_660795b389d92e70`.
+        public struct SwiftTagged_file_660795b389d92e70: Codable, Hashable, Sendable {
             private var _explicitNullKeys: Set<String> = []
 
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69/kind`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_660795b389d92e70/kind`.
             @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case file = "file"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69/kind`.
-            public var kind: Components.Schemas.SwiftTagged_file_9effb3b18dd2ec69.kindPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69/path`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_660795b389d92e70/kind`.
+            public var kind: Components.Schemas.SwiftTagged_file_660795b389d92e70.kindPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_660795b389d92e70/path`.
             public var path: Swift.String
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69/label`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_660795b389d92e70/label`.
             public var label: Swift.String?
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69/name`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_file_660795b389d92e70/name`.
             public var name: Swift.String?
-            /// Creates a new `SwiftTagged_file_9effb3b18dd2ec69`.
+            /// Creates a new `SwiftTagged_file_660795b389d92e70`.
             ///
             /// - Parameters:
             ///   - kind:
@@ -34603,7 +34671,7 @@ extension Components {
             ///   - label:
             ///   - name:
             public init(
-                kind: Components.Schemas.SwiftTagged_file_9effb3b18dd2ec69.kindPayload,
+                kind: Components.Schemas.SwiftTagged_file_660795b389d92e70.kindPayload,
                 path: Swift.String,
                 label: Swift.String? = nil,
                 name: Swift.String? = nil
@@ -34623,7 +34691,7 @@ extension Components {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
                 self.kind = try container.decode(
-                    Components.Schemas.SwiftTagged_file_9effb3b18dd2ec69.kindPayload.self,
+                    Components.Schemas.SwiftTagged_file_660795b389d92e70.kindPayload.self,
                     forKey: .kind
                 )
                 self.path = try container.decode(
@@ -34662,23 +34730,23 @@ extension Components {
                 }
             }
         }
-        /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_409f55577e999188`.
-        public struct SwiftTagged_image_409f55577e999188: Codable, Hashable, Sendable {
+        /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_3d8a86930a2c606b`.
+        public struct SwiftTagged_image_3d8a86930a2c606b: Codable, Hashable, Sendable {
             private var _explicitNullKeys: Set<String> = []
 
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_409f55577e999188/kind`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_3d8a86930a2c606b/kind`.
             @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case image = "image"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_409f55577e999188/kind`.
-            public var kind: Components.Schemas.SwiftTagged_image_409f55577e999188.kindPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_409f55577e999188/path`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_3d8a86930a2c606b/kind`.
+            public var kind: Components.Schemas.SwiftTagged_image_3d8a86930a2c606b.kindPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_3d8a86930a2c606b/path`.
             public var path: Swift.String
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_409f55577e999188/label`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_3d8a86930a2c606b/label`.
             public var label: Swift.String?
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_409f55577e999188/name`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_image_3d8a86930a2c606b/name`.
             public var name: Swift.String?
-            /// Creates a new `SwiftTagged_image_409f55577e999188`.
+            /// Creates a new `SwiftTagged_image_3d8a86930a2c606b`.
             ///
             /// - Parameters:
             ///   - kind:
@@ -34686,7 +34754,7 @@ extension Components {
             ///   - label:
             ///   - name:
             public init(
-                kind: Components.Schemas.SwiftTagged_image_409f55577e999188.kindPayload,
+                kind: Components.Schemas.SwiftTagged_image_3d8a86930a2c606b.kindPayload,
                 path: Swift.String,
                 label: Swift.String? = nil,
                 name: Swift.String? = nil
@@ -34706,7 +34774,7 @@ extension Components {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
                 self.kind = try container.decode(
-                    Components.Schemas.SwiftTagged_image_409f55577e999188.kindPayload.self,
+                    Components.Schemas.SwiftTagged_image_3d8a86930a2c606b.kindPayload.self,
                     forKey: .kind
                 )
                 self.path = try container.decode(
@@ -34745,23 +34813,23 @@ extension Components {
                 }
             }
         }
-        /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_a1918c5d4f327f78`.
-        public struct SwiftTagged_link_a1918c5d4f327f78: Codable, Hashable, Sendable {
+        /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_c07227ae37504c97`.
+        public struct SwiftTagged_link_c07227ae37504c97: Codable, Hashable, Sendable {
             private var _explicitNullKeys: Set<String> = []
 
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_a1918c5d4f327f78/kind`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_c07227ae37504c97/kind`.
             @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case link = "link"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_a1918c5d4f327f78/kind`.
-            public var kind: Components.Schemas.SwiftTagged_link_a1918c5d4f327f78.kindPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_a1918c5d4f327f78/url`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_c07227ae37504c97/kind`.
+            public var kind: Components.Schemas.SwiftTagged_link_c07227ae37504c97.kindPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_c07227ae37504c97/url`.
             public var url: Swift.String
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_a1918c5d4f327f78/label`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_c07227ae37504c97/label`.
             public var label: Swift.String?
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_a1918c5d4f327f78/name`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_link_c07227ae37504c97/name`.
             public var name: Swift.String?
-            /// Creates a new `SwiftTagged_link_a1918c5d4f327f78`.
+            /// Creates a new `SwiftTagged_link_c07227ae37504c97`.
             ///
             /// - Parameters:
             ///   - kind:
@@ -34769,7 +34837,7 @@ extension Components {
             ///   - label:
             ///   - name:
             public init(
-                kind: Components.Schemas.SwiftTagged_link_a1918c5d4f327f78.kindPayload,
+                kind: Components.Schemas.SwiftTagged_link_c07227ae37504c97.kindPayload,
                 url: Swift.String,
                 label: Swift.String? = nil,
                 name: Swift.String? = nil
@@ -34789,7 +34857,7 @@ extension Components {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
                 self.kind = try container.decode(
-                    Components.Schemas.SwiftTagged_link_a1918c5d4f327f78.kindPayload.self,
+                    Components.Schemas.SwiftTagged_link_c07227ae37504c97.kindPayload.self,
                     forKey: .kind
                 )
                 self.url = try container.decode(
@@ -58065,21 +58133,21 @@ extension Components {
                 try container.encode(self.series, forKey: .series)
             }
         }
-        /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_4d1e3f953b86b025`.
-        public struct SwiftTagged_AuthChanged_4d1e3f953b86b025: Codable, Hashable, Sendable {
+        /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_d85fcaf3b5ca49f6`.
+        public struct SwiftTagged_AuthChanged_d85fcaf3b5ca49f6: Codable, Hashable, Sendable {
             private var _explicitNullKeys: Set<String> = []
 
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_4d1e3f953b86b025/entity_version`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_d85fcaf3b5ca49f6/entity_version`.
             public var entity_version: Swift.Double
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_4d1e3f953b86b025/occurred_at`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_d85fcaf3b5ca49f6/occurred_at`.
             public var occurred_at: Swift.String
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_4d1e3f953b86b025/kind`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_d85fcaf3b5ca49f6/kind`.
             @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case AuthChanged = "AuthChanged"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_4d1e3f953b86b025/kind`.
-            public var kind: Components.Schemas.SwiftTagged_AuthChanged_4d1e3f953b86b025.kindPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_4d1e3f953b86b025/action`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_d85fcaf3b5ca49f6/kind`.
+            public var kind: Components.Schemas.SwiftTagged_AuthChanged_d85fcaf3b5ca49f6.kindPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_d85fcaf3b5ca49f6/action`.
             @frozen public enum actionPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case setupOwner = "setupOwner"
                 case signIn = "signIn"
@@ -58096,12 +58164,13 @@ extension Components {
                 case finishTask = "finishTask"
                 case cleanupExpired = "cleanupExpired"
                 case deleteProfile = "deleteProfile"
+                case resetPassphrase = "resetPassphrase"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_4d1e3f953b86b025/action`.
-            public var action: Components.Schemas.SwiftTagged_AuthChanged_4d1e3f953b86b025.actionPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_4d1e3f953b86b025/credential_id`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_d85fcaf3b5ca49f6/action`.
+            public var action: Components.Schemas.SwiftTagged_AuthChanged_d85fcaf3b5ca49f6.actionPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthChanged_d85fcaf3b5ca49f6/credential_id`.
             public var credential_id: Swift.String?
-            /// Creates a new `SwiftTagged_AuthChanged_4d1e3f953b86b025`.
+            /// Creates a new `SwiftTagged_AuthChanged_d85fcaf3b5ca49f6`.
             ///
             /// - Parameters:
             ///   - entity_version:
@@ -58112,8 +58181,8 @@ extension Components {
             public init(
                 entity_version: Swift.Double,
                 occurred_at: Swift.String,
-                kind: Components.Schemas.SwiftTagged_AuthChanged_4d1e3f953b86b025.kindPayload,
-                action: Components.Schemas.SwiftTagged_AuthChanged_4d1e3f953b86b025.actionPayload,
+                kind: Components.Schemas.SwiftTagged_AuthChanged_d85fcaf3b5ca49f6.kindPayload,
+                action: Components.Schemas.SwiftTagged_AuthChanged_d85fcaf3b5ca49f6.actionPayload,
                 credential_id: Swift.String? = nil
             ) {
                 self.entity_version = entity_version
@@ -58141,11 +58210,11 @@ extension Components {
                     forKey: .occurred_at
                 )
                 self.kind = try container.decode(
-                    Components.Schemas.SwiftTagged_AuthChanged_4d1e3f953b86b025.kindPayload.self,
+                    Components.Schemas.SwiftTagged_AuthChanged_d85fcaf3b5ca49f6.kindPayload.self,
                     forKey: .kind
                 )
                 self.action = try container.decode(
-                    Components.Schemas.SwiftTagged_AuthChanged_4d1e3f953b86b025.actionPayload.self,
+                    Components.Schemas.SwiftTagged_AuthChanged_d85fcaf3b5ca49f6.actionPayload.self,
                     forKey: .action
                 )
                 self.credential_id = try container.decodeIfPresent(
@@ -62415,21 +62484,21 @@ extension Components {
                 try container.encode(self.violations, forKey: .violations)
             }
         }
-        /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthAttemptRejected_355d839e291dab5f`.
-        public struct SwiftTagged_AuthAttemptRejected_355d839e291dab5f: Codable, Hashable, Sendable {
+        /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21`.
+        public struct SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21: Codable, Hashable, Sendable {
             private var _explicitNullKeys: Set<String> = []
 
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthAttemptRejected_355d839e291dab5f/entity_version`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21/entity_version`.
             public var entity_version: Swift.Double
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthAttemptRejected_355d839e291dab5f/occurred_at`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21/occurred_at`.
             public var occurred_at: Swift.String
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthAttemptRejected_355d839e291dab5f/kind`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21/kind`.
             @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case AuthAttemptRejected = "AuthAttemptRejected"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthAttemptRejected_355d839e291dab5f/kind`.
-            public var kind: Components.Schemas.SwiftTagged_AuthAttemptRejected_355d839e291dab5f.kindPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthAttemptRejected_355d839e291dab5f/action`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21/kind`.
+            public var kind: Components.Schemas.SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21.kindPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21/action`.
             @frozen public enum actionPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case setupOwner = "setupOwner"
                 case signIn = "signIn"
@@ -62446,16 +62515,17 @@ extension Components {
                 case finishTask = "finishTask"
                 case cleanupExpired = "cleanupExpired"
                 case deleteProfile = "deleteProfile"
+                case resetPassphrase = "resetPassphrase"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthAttemptRejected_355d839e291dab5f/action`.
-            public var action: Components.Schemas.SwiftTagged_AuthAttemptRejected_355d839e291dab5f.actionPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthAttemptRejected_355d839e291dab5f/code`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21/action`.
+            public var action: Components.Schemas.SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21.actionPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21/code`.
             @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case auth = "auth"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthAttemptRejected_355d839e291dab5f/code`.
-            public var code: Components.Schemas.SwiftTagged_AuthAttemptRejected_355d839e291dab5f.codePayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthAttemptRejected_355d839e291dab5f/detail`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21/code`.
+            public var code: Components.Schemas.SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21.codePayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21/detail`.
             @frozen public enum detailPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case invalid_request = "invalid_request"
                 case owner_exists = "owner_exists"
@@ -62467,10 +62537,12 @@ extension Components {
                 case write_scope = "write_scope"
                 case owner_required = "owner_required"
                 case profile_deleted = "profile_deleted"
+                case sign_in_locked = "sign_in_locked"
+                case sign_in_busy = "sign_in_busy"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthAttemptRejected_355d839e291dab5f/detail`.
-            public var detail: Components.Schemas.SwiftTagged_AuthAttemptRejected_355d839e291dab5f.detailPayload
-            /// Creates a new `SwiftTagged_AuthAttemptRejected_355d839e291dab5f`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21/detail`.
+            public var detail: Components.Schemas.SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21.detailPayload
+            /// Creates a new `SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21`.
             ///
             /// - Parameters:
             ///   - entity_version:
@@ -62482,10 +62554,10 @@ extension Components {
             public init(
                 entity_version: Swift.Double,
                 occurred_at: Swift.String,
-                kind: Components.Schemas.SwiftTagged_AuthAttemptRejected_355d839e291dab5f.kindPayload,
-                action: Components.Schemas.SwiftTagged_AuthAttemptRejected_355d839e291dab5f.actionPayload,
-                code: Components.Schemas.SwiftTagged_AuthAttemptRejected_355d839e291dab5f.codePayload,
-                detail: Components.Schemas.SwiftTagged_AuthAttemptRejected_355d839e291dab5f.detailPayload
+                kind: Components.Schemas.SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21.kindPayload,
+                action: Components.Schemas.SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21.actionPayload,
+                code: Components.Schemas.SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21.codePayload,
+                detail: Components.Schemas.SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21.detailPayload
             ) {
                 self.entity_version = entity_version
                 self.occurred_at = occurred_at
@@ -62514,19 +62586,19 @@ extension Components {
                     forKey: .occurred_at
                 )
                 self.kind = try container.decode(
-                    Components.Schemas.SwiftTagged_AuthAttemptRejected_355d839e291dab5f.kindPayload.self,
+                    Components.Schemas.SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21.kindPayload.self,
                     forKey: .kind
                 )
                 self.action = try container.decode(
-                    Components.Schemas.SwiftTagged_AuthAttemptRejected_355d839e291dab5f.actionPayload.self,
+                    Components.Schemas.SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21.actionPayload.self,
                     forKey: .action
                 )
                 self.code = try container.decode(
-                    Components.Schemas.SwiftTagged_AuthAttemptRejected_355d839e291dab5f.codePayload.self,
+                    Components.Schemas.SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21.codePayload.self,
                     forKey: .code
                 )
                 self.detail = try container.decode(
-                    Components.Schemas.SwiftTagged_AuthAttemptRejected_355d839e291dab5f.detailPayload.self,
+                    Components.Schemas.SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21.detailPayload.self,
                     forKey: .detail
                 )
                 try decoder.ensureNoAdditionalProperties(knownKeys: [
@@ -62636,53 +62708,53 @@ extension Components {
                 try container.encode(self.visible_task_count, forKey: .visible_task_count)
             }
         }
-        /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445`.
-        public struct SwiftTagged_committed_4d7933223522e445: Codable, Hashable, Sendable {
+        /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769`.
+        public struct SwiftTagged_committed_35ab0ce1f2e94769: Codable, Hashable, Sendable {
             private var _explicitNullKeys: Set<String> = []
 
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/seq`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/seq`.
             public var seq: Swift.Int
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/actor`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/actor`.
             public var actor: Swift.String
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/profile`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/profile`.
             public var profile: Swift.String?
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/from_version`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/from_version`.
             public var from_version: Swift.Int?
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/event`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/event`.
             @frozen public enum eventPayload: Codable, Hashable, Sendable {
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/event/SwiftTagged_AttachmentAdded_5547205e905b6be8`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/event/SwiftTagged_AttachmentAdded_5547205e905b6be8`.
                 case AttachmentAdded(Components.Schemas.SwiftTagged_AttachmentAdded_5547205e905b6be8)
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/event/SwiftTagged_AttachmentRemoved_f5dcfccb1dd937c9`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/event/SwiftTagged_AttachmentRemoved_f5dcfccb1dd937c9`.
                 case AttachmentRemoved(Components.Schemas.SwiftTagged_AttachmentRemoved_f5dcfccb1dd937c9)
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/event/SwiftTagged_AuthChanged_4d1e3f953b86b025`.
-                case AuthChanged(Components.Schemas.SwiftTagged_AuthChanged_4d1e3f953b86b025)
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/event/SwiftTagged_DatabaseRestored_b439aae6a5d2bc1c`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/event/SwiftTagged_AuthChanged_d85fcaf3b5ca49f6`.
+                case AuthChanged(Components.Schemas.SwiftTagged_AuthChanged_d85fcaf3b5ca49f6)
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/event/SwiftTagged_DatabaseRestored_b439aae6a5d2bc1c`.
                 case DatabaseRestored(Components.Schemas.SwiftTagged_DatabaseRestored_b439aae6a5d2bc1c)
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/event/SwiftTagged_ProfileDeleted_5c556a8ced0af96f`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/event/SwiftTagged_ProfileDeleted_5c556a8ced0af96f`.
                 case ProfileDeleted(Components.Schemas.SwiftTagged_ProfileDeleted_5c556a8ced0af96f)
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/event/SwiftTagged_ReminderFired_0a8d1f2e06ddf9b4`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/event/SwiftTagged_ReminderFired_0a8d1f2e06ddf9b4`.
                 case ReminderFired(Components.Schemas.SwiftTagged_ReminderFired_0a8d1f2e06ddf9b4)
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/event/SwiftTagged_TaskCancelled_fb6f15976aca9cc1`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/event/SwiftTagged_TaskCancelled_fb6f15976aca9cc1`.
                 case TaskCancelled(Components.Schemas.SwiftTagged_TaskCancelled_fb6f15976aca9cc1)
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/event/SwiftTagged_TaskCompleted_fc2c510f9da9c022`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/event/SwiftTagged_TaskCompleted_fc2c510f9da9c022`.
                 case TaskCompleted(Components.Schemas.SwiftTagged_TaskCompleted_fc2c510f9da9c022)
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/event/SwiftTagged_TaskCreated_62c864fb077540ef`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/event/SwiftTagged_TaskCreated_62c864fb077540ef`.
                 case TaskCreated(Components.Schemas.SwiftTagged_TaskCreated_62c864fb077540ef)
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/event/SwiftTagged_TaskDeleted_da6d81eab94ae6cc`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/event/SwiftTagged_TaskDeleted_da6d81eab94ae6cc`.
                 case TaskDeleted(Components.Schemas.SwiftTagged_TaskDeleted_da6d81eab94ae6cc)
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/event/SwiftTagged_TaskEdited_9754745457776d72`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/event/SwiftTagged_TaskEdited_9754745457776d72`.
                 case TaskEdited(Components.Schemas.SwiftTagged_TaskEdited_9754745457776d72)
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/event/SwiftTagged_TaskHistoryRedacted_ae3a483cae8e2794`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/event/SwiftTagged_TaskHistoryRedacted_ae3a483cae8e2794`.
                 case TaskHistoryRedacted(Components.Schemas.SwiftTagged_TaskHistoryRedacted_ae3a483cae8e2794)
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/event/SwiftTagged_TaskMovedIn_08520f01568c2136`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/event/SwiftTagged_TaskMovedIn_08520f01568c2136`.
                 case TaskMovedIn(Components.Schemas.SwiftTagged_TaskMovedIn_08520f01568c2136)
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/event/SwiftTagged_TaskMovedOut_55435d6ab0a8fed7`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/event/SwiftTagged_TaskMovedOut_55435d6ab0a8fed7`.
                 case TaskMovedOut(Components.Schemas.SwiftTagged_TaskMovedOut_55435d6ab0a8fed7)
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/event/SwiftTagged_TaskPurged_354b687adee1fd33`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/event/SwiftTagged_TaskPurged_354b687adee1fd33`.
                 case TaskPurged(Components.Schemas.SwiftTagged_TaskPurged_354b687adee1fd33)
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/event/SwiftTagged_TaskReopened_22d9f9d506dee42d`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/event/SwiftTagged_TaskReopened_22d9f9d506dee42d`.
                 case TaskReopened(Components.Schemas.SwiftTagged_TaskReopened_22d9f9d506dee42d)
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/event/SwiftTagged_TaskReverted_2abe0cf08b1e4a71`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/event/SwiftTagged_TaskReverted_2abe0cf08b1e4a71`.
                 case TaskReverted(Components.Schemas.SwiftTagged_TaskReverted_2abe0cf08b1e4a71)
                 public enum CodingKeys: String, CodingKey {
                     case kind
@@ -62775,23 +62847,23 @@ extension Components {
                     }
                 }
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/event`.
-            public var event: Components.Schemas.SwiftTagged_committed_4d7933223522e445.eventPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/to_version`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/event`.
+            public var event: Components.Schemas.SwiftTagged_committed_35ab0ce1f2e94769.eventPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/to_version`.
             public var to_version: Swift.Int?
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/outcome`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/outcome`.
             @frozen public enum outcomePayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case committed = "committed"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/outcome`.
-            public var outcome: Components.Schemas.SwiftTagged_committed_4d7933223522e445.outcomePayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/reason`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/outcome`.
+            public var outcome: Components.Schemas.SwiftTagged_committed_35ab0ce1f2e94769.outcomePayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/reason`.
             @frozen public enum reasonPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case _empty = ""
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_4d7933223522e445/reason`.
-            public var reason: Components.Schemas.SwiftTagged_committed_4d7933223522e445.reasonPayload?
-            /// Creates a new `SwiftTagged_committed_4d7933223522e445`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769/reason`.
+            public var reason: Components.Schemas.SwiftTagged_committed_35ab0ce1f2e94769.reasonPayload?
+            /// Creates a new `SwiftTagged_committed_35ab0ce1f2e94769`.
             ///
             /// - Parameters:
             ///   - seq:
@@ -62807,10 +62879,10 @@ extension Components {
                 actor: Swift.String,
                 profile: Swift.String? = nil,
                 from_version: Swift.Int? = nil,
-                event: Components.Schemas.SwiftTagged_committed_4d7933223522e445.eventPayload,
+                event: Components.Schemas.SwiftTagged_committed_35ab0ce1f2e94769.eventPayload,
                 to_version: Swift.Int? = nil,
-                outcome: Components.Schemas.SwiftTagged_committed_4d7933223522e445.outcomePayload,
-                reason: Components.Schemas.SwiftTagged_committed_4d7933223522e445.reasonPayload? = nil
+                outcome: Components.Schemas.SwiftTagged_committed_35ab0ce1f2e94769.outcomePayload,
+                reason: Components.Schemas.SwiftTagged_committed_35ab0ce1f2e94769.reasonPayload? = nil
             ) {
                 self.seq = seq
                 self.actor = actor
@@ -62851,7 +62923,7 @@ extension Components {
                     forKey: .from_version
                 )
                 self.event = try container.decode(
-                    Components.Schemas.SwiftTagged_committed_4d7933223522e445.eventPayload.self,
+                    Components.Schemas.SwiftTagged_committed_35ab0ce1f2e94769.eventPayload.self,
                     forKey: .event
                 )
                 self.to_version = try container.decodeIfPresent(
@@ -62859,11 +62931,11 @@ extension Components {
                     forKey: .to_version
                 )
                 self.outcome = try container.decode(
-                    Components.Schemas.SwiftTagged_committed_4d7933223522e445.outcomePayload.self,
+                    Components.Schemas.SwiftTagged_committed_35ab0ce1f2e94769.outcomePayload.self,
                     forKey: .outcome
                 )
                 self.reason = try container.decodeIfPresent(
-                    Components.Schemas.SwiftTagged_committed_4d7933223522e445.reasonPayload.self,
+                    Components.Schemas.SwiftTagged_committed_35ab0ce1f2e94769.reasonPayload.self,
                     forKey: .reason
                 )
                 try decoder.ensureNoAdditionalProperties(knownKeys: [
@@ -62906,27 +62978,27 @@ extension Components {
                 }
             }
         }
-        /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_3b8ba18ea68495b7`.
-        public struct SwiftTagged_rejected_3b8ba18ea68495b7: Codable, Hashable, Sendable {
+        /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_6e5bf36e0773479f`.
+        public struct SwiftTagged_rejected_6e5bf36e0773479f: Codable, Hashable, Sendable {
             private var _explicitNullKeys: Set<String> = []
 
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_3b8ba18ea68495b7/seq`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_6e5bf36e0773479f/seq`.
             public var seq: Swift.Int
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_3b8ba18ea68495b7/actor`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_6e5bf36e0773479f/actor`.
             public var actor: Swift.String
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_3b8ba18ea68495b7/profile`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_6e5bf36e0773479f/profile`.
             public var profile: Swift.String?
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_3b8ba18ea68495b7/from_version`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_6e5bf36e0773479f/from_version`.
             public var from_version: Swift.Int?
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_3b8ba18ea68495b7/event`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_6e5bf36e0773479f/event`.
             @frozen public enum eventPayload: Codable, Hashable, Sendable {
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_3b8ba18ea68495b7/event/SwiftTagged_AuthAttemptRejected_355d839e291dab5f`.
-                case AuthAttemptRejected(Components.Schemas.SwiftTagged_AuthAttemptRejected_355d839e291dab5f)
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_3b8ba18ea68495b7/event/SwiftTagged_ProfileDeletionRejected_310fcd3b740927d2`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_6e5bf36e0773479f/event/SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21`.
+                case AuthAttemptRejected(Components.Schemas.SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21)
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_6e5bf36e0773479f/event/SwiftTagged_ProfileDeletionRejected_310fcd3b740927d2`.
                 case ProfileDeletionRejected(Components.Schemas.SwiftTagged_ProfileDeletionRejected_310fcd3b740927d2)
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_3b8ba18ea68495b7/event/SwiftTagged_TaskAttemptRejected_5f357fe7dd185d8a`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_6e5bf36e0773479f/event/SwiftTagged_TaskAttemptRejected_5f357fe7dd185d8a`.
                 case TaskAttemptRejected(Components.Schemas.SwiftTagged_TaskAttemptRejected_5f357fe7dd185d8a)
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_3b8ba18ea68495b7/event/SwiftTagged_TaskHistoryRedacted_ae3a483cae8e2794`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_6e5bf36e0773479f/event/SwiftTagged_TaskHistoryRedacted_ae3a483cae8e2794`.
                 case TaskHistoryRedacted(Components.Schemas.SwiftTagged_TaskHistoryRedacted_ae3a483cae8e2794)
                 public enum CodingKeys: String, CodingKey {
                     case kind
@@ -62967,23 +63039,23 @@ extension Components {
                     }
                 }
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_3b8ba18ea68495b7/event`.
-            public var event: Components.Schemas.SwiftTagged_rejected_3b8ba18ea68495b7.eventPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_3b8ba18ea68495b7/to_version`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_6e5bf36e0773479f/event`.
+            public var event: Components.Schemas.SwiftTagged_rejected_6e5bf36e0773479f.eventPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_6e5bf36e0773479f/to_version`.
             @frozen public enum to_versionPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case _empty = ""
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_3b8ba18ea68495b7/to_version`.
-            public var to_version: Components.Schemas.SwiftTagged_rejected_3b8ba18ea68495b7.to_versionPayload?
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_3b8ba18ea68495b7/outcome`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_6e5bf36e0773479f/to_version`.
+            public var to_version: Components.Schemas.SwiftTagged_rejected_6e5bf36e0773479f.to_versionPayload?
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_6e5bf36e0773479f/outcome`.
             @frozen public enum outcomePayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case rejected = "rejected"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_3b8ba18ea68495b7/outcome`.
-            public var outcome: Components.Schemas.SwiftTagged_rejected_3b8ba18ea68495b7.outcomePayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_3b8ba18ea68495b7/reason`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_6e5bf36e0773479f/outcome`.
+            public var outcome: Components.Schemas.SwiftTagged_rejected_6e5bf36e0773479f.outcomePayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_6e5bf36e0773479f/reason`.
             public var reason: Swift.String
-            /// Creates a new `SwiftTagged_rejected_3b8ba18ea68495b7`.
+            /// Creates a new `SwiftTagged_rejected_6e5bf36e0773479f`.
             ///
             /// - Parameters:
             ///   - seq:
@@ -62999,9 +63071,9 @@ extension Components {
                 actor: Swift.String,
                 profile: Swift.String? = nil,
                 from_version: Swift.Int? = nil,
-                event: Components.Schemas.SwiftTagged_rejected_3b8ba18ea68495b7.eventPayload,
-                to_version: Components.Schemas.SwiftTagged_rejected_3b8ba18ea68495b7.to_versionPayload? = nil,
-                outcome: Components.Schemas.SwiftTagged_rejected_3b8ba18ea68495b7.outcomePayload,
+                event: Components.Schemas.SwiftTagged_rejected_6e5bf36e0773479f.eventPayload,
+                to_version: Components.Schemas.SwiftTagged_rejected_6e5bf36e0773479f.to_versionPayload? = nil,
+                outcome: Components.Schemas.SwiftTagged_rejected_6e5bf36e0773479f.outcomePayload,
                 reason: Swift.String
             ) {
                 self.seq = seq
@@ -63043,15 +63115,15 @@ extension Components {
                     forKey: .from_version
                 )
                 self.event = try container.decode(
-                    Components.Schemas.SwiftTagged_rejected_3b8ba18ea68495b7.eventPayload.self,
+                    Components.Schemas.SwiftTagged_rejected_6e5bf36e0773479f.eventPayload.self,
                     forKey: .event
                 )
                 self.to_version = try container.decodeIfPresent(
-                    Components.Schemas.SwiftTagged_rejected_3b8ba18ea68495b7.to_versionPayload.self,
+                    Components.Schemas.SwiftTagged_rejected_6e5bf36e0773479f.to_versionPayload.self,
                     forKey: .to_version
                 )
                 self.outcome = try container.decode(
-                    Components.Schemas.SwiftTagged_rejected_3b8ba18ea68495b7.outcomePayload.self,
+                    Components.Schemas.SwiftTagged_rejected_6e5bf36e0773479f.outcomePayload.self,
                     forKey: .outcome
                 )
                 self.reason = try container.decode(

@@ -5,6 +5,16 @@ bootstraps the single owner once. `signIn(passphrase)` uses Bun's asynchronous
 Argon2id implementation with 64 MiB and three iterations. It returns a `ses_`
 credential with a fixed 7-day expiry. Reads never renew it. `signOut` revokes it.
 
+Sign-in checks one passphrase at a time and refuses a full queue with
+`sign_in_busy`. After 10 wrong passphrases in a row it refuses every attempt for
+an hour with `sign_in_locked` and `AuthError.locked_until`, without running
+Argon2. The count comes from the wrong-passphrase History rows since the last
+owner setup, sign-in or reset, so the CLI and the server share it.
+`resetPassphrase(passphrase)` sets a new owner passphrase, ends a lock and
+revokes every Session. It takes no credential: only code that opens the
+database can call it, and the CLI calls it after macOS accepts the account
+password. See the ADR-0005 amendment.
+
 `issueToken({ credential, token: { name, profile, scope, expires_at? } })`
 requires a Session. A null Profile grants access across Profiles. Scope is
 `read-only` or `read-write`. The default expiry is 90 days from issue, independent
@@ -70,7 +80,8 @@ keys. It adds the owner hash and credential tables. `op_log.profile` is nullable
 so sign-in failures can be recorded before any Profile exists. Task mutations
 still require an existing Profile. Successful credential changes append
 `AuthChanged`; denials append `AuthAttemptRejected` with reason `auth` after the
-failed transaction rolls back. Denials fail with `AuthError`, code `auth`.
+failed transaction rolls back. A denial that repeats the same actor, Profile,
+action and detail within one minute appends nothing (ADR-0007 amendment). Denials fail with `AuthError`, code `auth`.
 SQLite, corrupt storage and cryptographic failures use `StoreError`.
 Task projection replay ignores auth events and retains credential tables.
 Auth tables hold canonical credential state and are outside Task snapshots.

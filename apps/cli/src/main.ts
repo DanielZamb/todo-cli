@@ -8,7 +8,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { homedir } from "node:os";
+import { homedir, userInfo } from "node:os";
 import {
   basename,
   dirname,
@@ -88,12 +88,14 @@ import {
 import { diagnosticsOutput, diagnosticsRead } from "./diagnostics.ts";
 import { manualPage, withGuide } from "./help.ts";
 import { makeImportCommand, readImportFile, renderImport } from "./import.ts";
+import { verifyMacPassword } from "./macos-password.ts";
 import {
   ConfigResponse,
   commandNames,
   commandSchema,
   IdentityResponse,
   inputNames,
+  PassphraseResetResponse,
   PathResponse,
   registerCommandSchema,
   SchemaListResponse,
@@ -386,6 +388,87 @@ const login = Command.make(
       );
     }),
 ).pipe(withGuide("login"));
+const resetPassphrase = Command.make(
+  "reset-passphrase",
+  { passwordStdin: bool("password-stdin") },
+  (input) =>
+    Effect.gen(function* () {
+      const cfg = yield* root;
+      const interactive =
+        process.stdin.isTTY && !input.passwordStdin && cfg.format !== "json";
+      if (!interactive && !input.passwordStdin)
+        return yield* Effect.fail(
+          new CommandError(
+            2,
+            "invalid_args",
+            "pass --password-stdin with the macOS account password on the first line and the new owner passphrase on the second",
+          ),
+        );
+      const secrets = interactive
+        ? yield* Effect.gen(function* () {
+            const account = Redacted.value(
+              yield* Prompt.Password({
+                message: `macOS login password for ${userInfo().username}`,
+              }),
+            );
+            const next = Redacted.value(
+              yield* Prompt.Password({ message: "New owner passphrase" }),
+            );
+            const again = Redacted.value(
+              yield* Prompt.Password({ message: "Repeat the new passphrase" }),
+            );
+            if (next !== again)
+              return yield* Effect.fail(
+                new CommandError(
+                  2,
+                  "invalid_args",
+                  "the two new passphrases differ",
+                ),
+              );
+            return { account, next };
+          })
+        : yield* io(() => {
+            const [account = "", next = ""] = readFileSync(0, "utf8")
+              .split("\n")
+              .map((line) => line.replace(/\r$/, ""));
+            return { account, next };
+          });
+      if (!secrets.account || !secrets.next)
+        return yield* Effect.fail(
+          new CommandError(
+            2,
+            "invalid_args",
+            "both the macOS account password and the new owner passphrase are required",
+          ),
+        );
+      const verified = yield* Effect.promise(() =>
+        verifyMacPassword(secrets.account),
+      );
+      if (!verified)
+        return yield* Effect.fail(
+          new CommandError(
+            3,
+            "auth_required",
+            "macOS did not accept that login password for this account",
+          ),
+        );
+      yield* withStore(cfg, (store) =>
+        Effect.gen(function* () {
+          const result = yield* store.auth.resetPassphrase(secrets.next);
+          yield* response(
+            cfg.format,
+            PassphraseResetResponse,
+            {
+              generated_at: iso(nowInstant()),
+              status: "passphrase_reset",
+              sessions_revoked: result.sessions_revoked,
+            },
+            `owner passphrase reset; ${result.sessions_revoked} Session${result.sessions_revoked === 1 ? "" : "s"} revoked. Run todo login.\n`,
+          );
+        }),
+      );
+    }),
+).pipe(withGuide("reset-passphrase"));
 const logout = Command.make("logout", {}, () =>
   Effect.gen(function* () {
     const cfg = yield* root;
@@ -1547,6 +1630,7 @@ const app = root.pipe(
     init,
     login,
     logout,
+    resetPassphrase,
     whoami,
     importCommand,
     profiles,

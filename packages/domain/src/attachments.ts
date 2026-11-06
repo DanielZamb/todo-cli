@@ -1,5 +1,12 @@
 import { Schema } from "effect";
 import { AttachmentId, TaskId, Version } from "./ids.ts";
+import {
+  AttachmentIdInput,
+  inputLimits,
+  limitedItems,
+  NonEmptyNameInput,
+  TaskIdInput,
+} from "./limits.ts";
 import { Instant } from "./time.ts";
 
 export const attachmentLimit = 20 * 1024 * 1024;
@@ -19,16 +26,25 @@ const fields = {
   label: Schema.optionalKey(Schema.NonEmptyString),
   added_at: Instant,
 };
+const AttachmentUrl = Schema.NonEmptyString.check(
+  Schema.isPattern(/^[a-z][a-z\d+.-]*:[^\s]*$/i),
+);
 export const AttachmentLocation = Schema.Union([
   Schema.Struct({ kind: Schema.Literal("file"), path: AttachmentPath }),
   Schema.Struct({ kind: Schema.Literal("image"), path: AttachmentPath }),
+  Schema.Struct({ kind: Schema.Literal("link"), url: AttachmentUrl }),
+]);
+// What a client may submit: the stored Attachment above is not limited.
+const PathInput = AttachmentPath.check(Schema.isMaxLength(inputLimits.path));
+const AttachmentLocationInput = Schema.Union([
+  Schema.Struct({ kind: Schema.Literal("file"), path: PathInput }),
+  Schema.Struct({ kind: Schema.Literal("image"), path: PathInput }),
   Schema.Struct({
     kind: Schema.Literal("link"),
-    url: Schema.NonEmptyString.check(
-      Schema.isPattern(/^[a-z][a-z\d+.-]*:[^\s]*$/i),
-    ),
+    url: AttachmentUrl.check(Schema.isMaxLength(inputLimits.url)),
   }),
 ]);
+const LabelInput = Schema.optionalKey(NonEmptyNameInput);
 export const Attachment = Schema.Union([
   Schema.Struct({ ...fields, ...AttachmentLocation.members[0].fields }),
   Schema.Struct({
@@ -56,10 +72,10 @@ export const AttachmentStatus = Schema.Union([
   }),
 ]);
 export const AttachTask = Schema.Struct({
-  name: fields.name,
+  name: LabelInput,
   from_version: Version,
-  location: AttachmentLocation,
-  label: Schema.optionalKey(Schema.NonEmptyString),
+  location: AttachmentLocationInput,
+  label: LabelInput,
 });
 export type AttachTask = typeof AttachTask.Type;
 export function validAttachmentLocation(location: AttachTask["location"]) {
@@ -81,41 +97,53 @@ export function validAttachmentLocation(location: AttachTask["location"]) {
 }
 export const DetachTask = Schema.Struct({
   from_version: Version,
-  attachment_id: AttachmentId,
+  attachment_id: AttachmentIdInput,
 });
 export type DetachTask = typeof DetachTask.Type;
 export const LabelAttachment = Schema.Struct({
   from_version: Version,
-  attachment_id: AttachmentId,
-  label: Schema.NullOr(Schema.NonEmptyString),
+  attachment_id: AttachmentIdInput,
+  label: Schema.NullOr(NonEmptyNameInput),
 });
 export type LabelAttachment = typeof LabelAttachment.Type;
 export const UploadAttachment = Schema.Struct({
   from_version: Version,
-  name: Schema.optionalKey(Schema.NonEmptyString),
+  name: LabelInput,
   mime_type: ImageMime,
   data: Schema.NonEmptyString.check(
     Schema.isMaxLength(Math.ceil(attachmentLimit / 3) * 4),
   ),
-  label: Schema.optionalKey(Schema.NonEmptyString),
+  label: LabelInput,
 });
 export type UploadAttachment = typeof UploadAttachment.Type;
 
-const inputFields = { label: fields.label, name: fields.name };
+const inputFields = { label: LabelInput, name: LabelInput };
 export const AttachmentInput = Schema.Union([
-  Schema.Struct({ ...AttachmentLocation.members[0].fields, ...inputFields }),
-  Schema.Struct({ ...AttachmentLocation.members[1].fields, ...inputFields }),
-  Schema.Struct({ ...AttachmentLocation.members[2].fields, ...inputFields }),
+  Schema.Struct({
+    ...AttachmentLocationInput.members[0].fields,
+    ...inputFields,
+  }),
+  Schema.Struct({
+    ...AttachmentLocationInput.members[1].fields,
+    ...inputFields,
+  }),
+  Schema.Struct({
+    ...AttachmentLocationInput.members[2].fields,
+    ...inputFields,
+  }),
 ]);
 export type AttachmentInput = typeof AttachmentInput.Type;
 export const AttachManyItem = Schema.Struct({
-  task_id: TaskId,
+  task_id: TaskIdInput,
   from_version: Version,
-  attachments: Schema.Array(AttachmentInput).check(Schema.isMinLength(1)),
+  attachments: limitedItems(
+    AttachmentInput,
+    inputLimits.attachmentsPerTask,
+  ).check(Schema.isMinLength(1)),
 });
 export type AttachManyItem = typeof AttachManyItem.Type;
 export const AttachManyRequest = Schema.Struct({
-  items: Schema.Array(Schema.Json),
+  items: limitedItems(Schema.Json),
   dry_run: Schema.optionalKey(Schema.Boolean),
 });
 export type AttachManyRequest = typeof AttachManyRequest.Type;

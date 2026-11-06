@@ -94,7 +94,9 @@ A Profile is one area of life, such as work or personal. Select it with
 `--profile work`. `todo init --profile work` creates a Profile after owner
 setup. Sign in for that Profile with `todo --profile work login`. The owner's
 Session lasts seven days with no sliding renewal. Agents can use scoped,
-revocable Access Tokens issued through the server API.
+revocable Access Tokens issued through the server API. Ten wrong passphrases
+in a row lock sign-in for an hour. `todo reset-passphrase` asks for your macOS
+login password, sets a new passphrase and ends the lock.
 
 ```sh
 todo --profile work list

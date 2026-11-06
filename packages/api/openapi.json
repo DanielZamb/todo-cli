@@ -160,6 +160,16 @@
               }
             }
           },
+          "429": {
+            "description": "TooManySignIns",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManySignInsEncoded"
+                }
+              }
+            }
+          },
           "500": {
             "description": "InternalError",
             "content": {
@@ -179,7 +189,8 @@
                 "properties": {
                   "passphrase": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 1024
                   }
                 },
                 "required": ["passphrase"],
@@ -419,7 +430,8 @@
                 "properties": {
                   "name": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 200
                   },
                   "profile": {
                     "anyOf": [
@@ -439,7 +451,8 @@
                   "expires_at": {
                     "anyOf": [
                       {
-                        "type": "string"
+                        "type": "string",
+                        "maxLength": 40
                       },
                       {
                         "type": "null"
@@ -932,7 +945,8 @@
                 "type": "object",
                 "properties": {
                   "items": {
-                    "type": "array"
+                    "type": "array",
+                    "maxItems": 1000
                   },
                   "dry_run": {
                     "type": "boolean"
@@ -1381,7 +1395,8 @@
                 "properties": {
                   "name": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 200
                   },
                   "from_version": {
                     "type": "integer",
@@ -1399,7 +1414,8 @@
                           },
                           "path": {
                             "type": "string",
-                            "minLength": 1
+                            "minLength": 1,
+                            "maxLength": 4096
                           }
                         },
                         "required": ["kind", "path"],
@@ -1414,7 +1430,8 @@
                           },
                           "path": {
                             "type": "string",
-                            "minLength": 1
+                            "minLength": 1,
+                            "maxLength": 4096
                           }
                         },
                         "required": ["kind", "path"],
@@ -1429,7 +1446,8 @@
                           },
                           "url": {
                             "type": "string",
-                            "minLength": 1
+                            "minLength": 1,
+                            "maxLength": 8192
                           }
                         },
                         "required": ["kind", "url"],
@@ -1439,7 +1457,8 @@
                   },
                   "label": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 200
                   }
                 },
                 "required": ["from_version", "location"],
@@ -1890,7 +1909,8 @@
                   },
                   "attachment_id": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 200
                   }
                 },
                 "required": ["from_version", "attachment_id"],
@@ -2341,13 +2361,15 @@
                   },
                   "attachment_id": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 200
                   },
                   "label": {
                     "anyOf": [
                       {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "maxLength": 200
                       },
                       {
                         "type": "null"
@@ -2803,7 +2825,8 @@
                   },
                   "name": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 200
                   },
                   "mime_type": {
                     "type": "string",
@@ -2821,7 +2844,8 @@
                   },
                   "label": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 200
                   }
                 },
                 "required": ["from_version", "mime_type", "data"],
@@ -3221,7 +3245,8 @@
                       "properties": {
                         "task_id": {
                           "type": "string",
-                          "minLength": 1
+                          "minLength": 1,
+                          "maxLength": 200
                         },
                         "from_version": {
                           "type": "integer",
@@ -3232,6 +3257,7 @@
                       "required": ["task_id", "from_version"],
                       "additionalProperties": false
                     },
+                    "maxItems": 1000,
                     "minItems": 1
                   },
                   "changes": {
@@ -3239,12 +3265,14 @@
                     "properties": {
                       "title": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "maxLength": 1000
                       },
                       "description": {
                         "anyOf": [
                           {
-                            "type": "string"
+                            "type": "string",
+                            "maxLength": 100000
                           },
                           {
                             "type": "null"
@@ -3256,13 +3284,16 @@
                         "enum": ["P1", "P2", "P3", "P4"]
                       },
                       "project_name": {
-                        "type": "string"
+                        "type": "string",
+                        "maxLength": 200
                       },
                       "tag_names": {
                         "type": "array",
                         "items": {
-                          "type": "string"
-                        }
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "maxItems": 100
                       },
                       "due_at": {
                         "anyOf": [
@@ -3649,7 +3680,8 @@
                     "maxLength": 480
                   },
                   "items": {
-                    "type": "array"
+                    "type": "array",
+                    "maxItems": 1000
                   },
                   "dry_run": {
                     "type": "boolean"
@@ -3668,7 +3700,8 @@
                         },
                         "task_id": {
                           "type": "string",
-                          "minLength": 1
+                          "minLength": 1,
+                          "maxLength": 200
                         },
                         "from_version": {
                           "type": "integer",
@@ -3678,7 +3711,8 @@
                       },
                       "required": ["external_id", "task_id", "from_version"],
                       "additionalProperties": false
-                    }
+                    },
+                    "maxItems": 10000
                   }
                 },
                 "required": ["items"],
@@ -4624,15 +4658,18 @@
                             },
                             "path": {
                               "type": "string",
-                              "minLength": 1
+                              "minLength": 1,
+                              "maxLength": 4096
                             },
                             "label": {
                               "type": "string",
-                              "minLength": 1
+                              "minLength": 1,
+                              "maxLength": 200
                             },
                             "name": {
                               "type": "string",
-                              "minLength": 1
+                              "minLength": 1,
+                              "maxLength": 200
                             }
                           },
                           "required": ["kind", "path"],
@@ -4647,15 +4684,18 @@
                             },
                             "path": {
                               "type": "string",
-                              "minLength": 1
+                              "minLength": 1,
+                              "maxLength": 4096
                             },
                             "label": {
                               "type": "string",
-                              "minLength": 1
+                              "minLength": 1,
+                              "maxLength": 200
                             },
                             "name": {
                               "type": "string",
-                              "minLength": 1
+                              "minLength": 1,
+                              "maxLength": 200
                             }
                           },
                           "required": ["kind", "path"],
@@ -4670,31 +4710,37 @@
                             },
                             "url": {
                               "type": "string",
-                              "minLength": 1
+                              "minLength": 1,
+                              "maxLength": 8192
                             },
                             "label": {
                               "type": "string",
-                              "minLength": 1
+                              "minLength": 1,
+                              "maxLength": 200
                             },
                             "name": {
                               "type": "string",
-                              "minLength": 1
+                              "minLength": 1,
+                              "maxLength": 200
                             }
                           },
                           "required": ["kind", "url"],
                           "additionalProperties": false
                         }
                       ]
-                    }
+                    },
+                    "maxItems": 100
                   },
                   "title": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 1000
                   },
                   "description": {
                     "anyOf": [
                       {
-                        "type": "string"
+                        "type": "string",
+                        "maxLength": 100000
                       },
                       {
                         "type": "null"
@@ -4833,13 +4879,15 @@
                     "items": {
                       "type": "string",
                       "minLength": 1
-                    }
+                    },
+                    "maxItems": 100
                   },
                   "external_id": {
                     "anyOf": [
                       {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "maxLength": 1000
                       },
                       {
                         "type": "null"
@@ -4847,13 +4895,16 @@
                     ]
                   },
                   "project_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 200
                   },
                   "tag_names": {
                     "type": "array",
                     "items": {
-                      "type": "string"
-                    }
+                      "type": "string",
+                      "maxLength": 200
+                    },
+                    "maxItems": 100
                   }
                 },
                 "required": ["title"],
@@ -5733,12 +5784,14 @@
                     "properties": {
                       "title": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "maxLength": 1000
                       },
                       "description": {
                         "anyOf": [
                           {
-                            "type": "string"
+                            "type": "string",
+                            "maxLength": 100000
                           },
                           {
                             "type": "null"
@@ -5877,13 +5930,15 @@
                         "items": {
                           "type": "string",
                           "minLength": 1
-                        }
+                        },
+                        "maxItems": 100
                       },
                       "external_id": {
                         "anyOf": [
                           {
                             "type": "string",
-                            "minLength": 1
+                            "minLength": 1,
+                            "maxLength": 1000
                           },
                           {
                             "type": "null"
@@ -5891,13 +5946,16 @@
                         ]
                       },
                       "project_name": {
-                        "type": "string"
+                        "type": "string",
+                        "maxLength": 200
                       },
                       "tag_names": {
                         "type": "array",
                         "items": {
-                          "type": "string"
-                        }
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "maxItems": 100
                       }
                     },
                     "additionalProperties": false
@@ -8591,15 +8649,18 @@
                                 },
                                 "path": {
                                   "type": "string",
-                                  "minLength": 1
+                                  "minLength": 1,
+                                  "maxLength": 4096
                                 },
                                 "label": {
                                   "type": "string",
-                                  "minLength": 1
+                                  "minLength": 1,
+                                  "maxLength": 200
                                 },
                                 "name": {
                                   "type": "string",
-                                  "minLength": 1
+                                  "minLength": 1,
+                                  "maxLength": 200
                                 }
                               },
                               "required": ["kind", "path"],
@@ -8614,15 +8675,18 @@
                                 },
                                 "path": {
                                   "type": "string",
-                                  "minLength": 1
+                                  "minLength": 1,
+                                  "maxLength": 4096
                                 },
                                 "label": {
                                   "type": "string",
-                                  "minLength": 1
+                                  "minLength": 1,
+                                  "maxLength": 200
                                 },
                                 "name": {
                                   "type": "string",
-                                  "minLength": 1
+                                  "minLength": 1,
+                                  "maxLength": 200
                                 }
                               },
                               "required": ["kind", "path"],
@@ -8637,31 +8701,37 @@
                                 },
                                 "url": {
                                   "type": "string",
-                                  "minLength": 1
+                                  "minLength": 1,
+                                  "maxLength": 8192
                                 },
                                 "label": {
                                   "type": "string",
-                                  "minLength": 1
+                                  "minLength": 1,
+                                  "maxLength": 200
                                 },
                                 "name": {
                                   "type": "string",
-                                  "minLength": 1
+                                  "minLength": 1,
+                                  "maxLength": 200
                                 }
                               },
                               "required": ["kind", "url"],
                               "additionalProperties": false
                             }
                           ]
-                        }
+                        },
+                        "maxItems": 100
                       },
                       "title": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "maxLength": 1000
                       },
                       "description": {
                         "anyOf": [
                           {
-                            "type": "string"
+                            "type": "string",
+                            "maxLength": 100000
                           },
                           {
                             "type": "null"
@@ -8800,13 +8870,15 @@
                         "items": {
                           "type": "string",
                           "minLength": 1
-                        }
+                        },
+                        "maxItems": 100
                       },
                       "external_id": {
                         "anyOf": [
                           {
                             "type": "string",
-                            "minLength": 1
+                            "minLength": 1,
+                            "maxLength": 1000
                           },
                           {
                             "type": "null"
@@ -8814,13 +8886,16 @@
                         ]
                       },
                       "project_name": {
-                        "type": "string"
+                        "type": "string",
+                        "maxLength": 200
                       },
                       "tag_names": {
                         "type": "array",
                         "items": {
-                          "type": "string"
-                        }
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "maxItems": 100
                       }
                     },
                     "required": ["title"],
@@ -8866,7 +8941,8 @@
                       },
                       "rrule": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "maxLength": 1000
                       },
                       "exdate": {
                         "type": "array",
@@ -8904,7 +8980,8 @@
                               "additionalProperties": false
                             }
                           ]
-                        }
+                        },
+                        "maxItems": 1000
                       }
                     },
                     "required": ["dtstart", "rrule", "exdate"],
@@ -9362,12 +9439,14 @@
                     "properties": {
                       "title": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "maxLength": 1000
                       },
                       "description": {
                         "anyOf": [
                           {
-                            "type": "string"
+                            "type": "string",
+                            "maxLength": 100000
                           },
                           {
                             "type": "null"
@@ -9506,13 +9585,15 @@
                         "items": {
                           "type": "string",
                           "minLength": 1
-                        }
+                        },
+                        "maxItems": 100
                       },
                       "external_id": {
                         "anyOf": [
                           {
                             "type": "string",
-                            "minLength": 1
+                            "minLength": 1,
+                            "maxLength": 1000
                           },
                           {
                             "type": "null"
@@ -9520,13 +9601,16 @@
                         ]
                       },
                       "project_name": {
-                        "type": "string"
+                        "type": "string",
+                        "maxLength": 200
                       },
                       "tag_names": {
                         "type": "array",
                         "items": {
-                          "type": "string"
-                        }
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "maxItems": 100
                       }
                     },
                     "additionalProperties": false
@@ -9571,7 +9655,8 @@
                       },
                       "rrule": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "maxLength": 1000
                       },
                       "exdate": {
                         "type": "array",
@@ -22543,7 +22628,8 @@
                                           "startSeries",
                                           "finishTask",
                                           "cleanupExpired",
-                                          "deleteProfile"
+                                          "deleteProfile",
+                                          "resetPassphrase"
                                         ]
                                       },
                                       "credential_id": {
@@ -35943,7 +36029,8 @@
                                       "startSeries",
                                       "finishTask",
                                       "cleanupExpired",
-                                      "deleteProfile"
+                                      "deleteProfile",
+                                      "resetPassphrase"
                                     ]
                                   },
                                   "credential_id": {
@@ -37915,7 +38002,8 @@
                                       "startSeries",
                                       "finishTask",
                                       "cleanupExpired",
-                                      "deleteProfile"
+                                      "deleteProfile",
+                                      "resetPassphrase"
                                     ]
                                   },
                                   "code": {
@@ -37934,7 +38022,9 @@
                                       "profile_scope",
                                       "write_scope",
                                       "owner_required",
-                                      "profile_deleted"
+                                      "profile_deleted",
+                                      "sign_in_locked",
+                                      "sign_in_busy"
                                     ]
                                   }
                                 },
@@ -39988,13 +40078,16 @@
                 "properties": {
                   "text": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 2000
                   },
                   "now": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 40
                   },
                   "time_zone": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 64
                   }
                 },
                 "required": ["text", "now", "time_zone"],
@@ -41109,7 +41202,8 @@
                 "properties": {
                   "reason": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 1000
                   }
                 },
                 "required": ["reason"],
@@ -42292,6 +42386,30 @@
           }
         },
         "required": ["_tag", "message"],
+        "additionalProperties": false
+      },
+      "TooManySignInsEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["TooManySignIns"]
+          },
+          "message": {
+            "type": "string"
+          },
+          "locked_until": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["_tag", "message", "locked_until"],
         "additionalProperties": false
       }
     },

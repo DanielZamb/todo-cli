@@ -183,6 +183,89 @@ describe("Todo HTTP contract", () => {
       ),
   );
   it.effect(
+    "answers 429 with the unlock time once 10 wrong passphrases lock sign-in",
+    () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const { request } = yield* fixture;
+          for (let index = 0; index < 10; index++)
+            expect(
+              (yield* request("POST", "/auth/sessions", {
+                passphrase: "wrong passphrase",
+              })).status,
+            ).toBe(401);
+          const locked = yield* request("POST", "/auth/sessions", {
+            passphrase: "test passphrase",
+          });
+          expect(locked.status).toBe(429);
+          expect(locked.body).toMatchObject({
+            _tag: "TooManySignIns",
+            locked_until: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+            message: expect.stringContaining("todo reset-passphrase"),
+          });
+        }),
+      ),
+  );
+  it.effect(
+    "refuses oversized Task text and batches before anything reaches History",
+    () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const { request, credential, store } = yield* fixture;
+          const history = yield* store.history();
+          const created = yield* request(
+            "POST",
+            "/profiles/work/tasks",
+            { title: "a".repeat(1_000) },
+            credential,
+          );
+          expect(created.status).toBe(200);
+          const after = yield* store.history();
+          for (const [path, body] of [
+            ["/profiles/work/tasks", { title: "a".repeat(1_001) }],
+            [
+              "/profiles/work/tasks",
+              { title: "Bloat", description: "a".repeat(100_001) },
+            ],
+            // Lowercasing doubles this name past 200 characters.
+            [
+              "/profiles/work/tasks",
+              { title: "Dotted", tag_names: ["\u0130".repeat(200)] },
+            ],
+            [
+              "/profiles/work/batch-edit",
+              {
+                items: Array.from({ length: 1_001 }, (_, index) => ({
+                  task_id: `t${index}`,
+                  from_version: 1,
+                })),
+                changes: { priority: "P1" },
+              },
+            ],
+            ["/profiles/work/import", { items: Array(1_001).fill({}) }],
+            [
+              "/profiles/work/attachments/batch",
+              { items: Array(1_001).fill({}) },
+            ],
+          ] as const)
+            expect([
+              path,
+              (yield* request("POST", path, body, credential)).status,
+            ]).toEqual([path, 400]);
+          expect(history.length + 1).toBe(after.length);
+          // Refused Task writes are still recorded (ADR-0007), but the
+          // 100,001-character description is kept only as a preview.
+          const refused = (yield* store.history()).slice(after.length);
+          expect(refused.map((entry) => entry.event.kind)).toEqual([
+            "TaskAttemptRejected",
+            "TaskAttemptRejected",
+            "TaskAttemptRejected",
+          ]);
+          expect(JSON.stringify(refused).length).toBeLessThan(8_000);
+        }),
+      ),
+  );
+  it.effect(
     "batch edit HTTP preserves dry-run and returns independent stale-Version rows",
     () =>
       Effect.scoped(
@@ -776,11 +859,24 @@ describe("Todo HTTP contract", () => {
               task.row_version,
             ]),
           ).toEqual([["Token write", 1]]);
+          // One row per actor, Profile, action and detail per minute: the
+          // reader's four refused writes share one row (ADR-0007 amendment).
           expect(
-            (yield* store.history()).filter(
-              (entry) => entry.event.kind === "AuthAttemptRejected",
-            ).length,
-          ).toBeGreaterThanOrEqual(10);
+            (yield* store.history()).flatMap((entry) =>
+              entry.event.kind === "AuthAttemptRejected"
+                ? [[entry.profile, entry.event.action, entry.event.detail]]
+                : [],
+            ),
+          ).toEqual([
+            ["work", "read", "invalid_credential"],
+            [null, "signIn", "invalid_passphrase"],
+            ["work", "mutate", "write_scope"],
+            ["personal", "read", "profile_scope"],
+            ["personal", "mutate", "profile_scope"],
+            [null, "listTokens", "owner_required"],
+            ["work", "read", "revoked"],
+            ["work", "read", "revoked"],
+          ]);
         }),
       ),
     20000,

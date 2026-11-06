@@ -197,6 +197,7 @@ export const AuthAction = Schema.Literals([
   "finishTask",
   "cleanupExpired",
   "deleteProfile",
+  "resetPassphrase",
 ]);
 export type AuthAction = typeof AuthAction.Type;
 
@@ -222,6 +223,8 @@ export const AuthAttemptRejected = Schema.Struct({
     "write_scope",
     "owner_required",
     "profile_deleted",
+    "sign_in_locked",
+    "sign_in_busy",
   ]),
 });
 export type AuthAttemptRejected = typeof AuthAttemptRejected.Type;

@@ -142,6 +142,16 @@
               }
             }
           },
+          "429": {
+            "description": "TooManySignIns",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManySignInsEncoded"
+                }
+              }
+            }
+          },
           "500": {
             "description": "InternalError",
             "content": {
@@ -161,7 +171,8 @@
                 "properties": {
                   "passphrase": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 1024
                   }
                 },
                 "required": ["passphrase"],
@@ -383,7 +394,8 @@
                 "properties": {
                   "name": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 200
                   },
                   "profile": {
                     "type": "string",
@@ -396,6 +408,7 @@
                   },
                   "expires_at": {
                     "type": "string",
+                    "maxLength": 40,
                     "nullable": true
                   }
                 },
@@ -842,7 +855,8 @@
                 "type": "object",
                 "properties": {
                   "items": {
-                    "type": "array"
+                    "type": "array",
+                    "maxItems": 1000
                   },
                   "dry_run": {
                     "type": "boolean"
@@ -1214,7 +1228,8 @@
                 "properties": {
                   "name": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 200
                   },
                   "from_version": {
                     "type": "integer",
@@ -1224,27 +1239,28 @@
                   "location": {
                     "oneOf": [
                       {
-                        "$ref": "#/components/schemas/SwiftTagged_file_c263e6ce242848b2"
+                        "$ref": "#/components/schemas/SwiftTagged_file_a1224eb6fd690fcb"
                       },
                       {
-                        "$ref": "#/components/schemas/SwiftTagged_image_08ee1674dbff0b24"
+                        "$ref": "#/components/schemas/SwiftTagged_image_f7200697c6a258b3"
                       },
                       {
-                        "$ref": "#/components/schemas/SwiftTagged_link_3ed328370e513918"
+                        "$ref": "#/components/schemas/SwiftTagged_link_7ccecc202e6507d1"
                       }
                     ],
                     "discriminator": {
                       "propertyName": "kind",
                       "mapping": {
-                        "file": "#/components/schemas/SwiftTagged_file_c263e6ce242848b2",
-                        "image": "#/components/schemas/SwiftTagged_image_08ee1674dbff0b24",
-                        "link": "#/components/schemas/SwiftTagged_link_3ed328370e513918"
+                        "file": "#/components/schemas/SwiftTagged_file_a1224eb6fd690fcb",
+                        "image": "#/components/schemas/SwiftTagged_image_f7200697c6a258b3",
+                        "link": "#/components/schemas/SwiftTagged_link_7ccecc202e6507d1"
                       }
                     }
                   },
                   "label": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 200
                   }
                 },
                 "required": ["from_version", "location"],
@@ -1618,7 +1634,8 @@
                   },
                   "attachment_id": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 200
                   }
                 },
                 "required": ["from_version", "attachment_id"],
@@ -1992,11 +2009,13 @@
                   },
                   "attachment_id": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 200
                   },
                   "label": {
                     "type": "string",
                     "minLength": 1,
+                    "maxLength": 200,
                     "nullable": true
                   }
                 },
@@ -2371,7 +2390,8 @@
                   },
                   "name": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 200
                   },
                   "mime_type": {
                     "type": "string",
@@ -2389,7 +2409,8 @@
                   },
                   "label": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 200
                   }
                 },
                 "required": ["from_version", "mime_type", "data"],
@@ -2777,7 +2798,8 @@
                       "properties": {
                         "task_id": {
                           "type": "string",
-                          "minLength": 1
+                          "minLength": 1,
+                          "maxLength": 200
                         },
                         "from_version": {
                           "type": "integer",
@@ -2788,6 +2810,7 @@
                       "required": ["task_id", "from_version"],
                       "additionalProperties": false
                     },
+                    "maxItems": 1000,
                     "minItems": 1
                   },
                   "changes": {
@@ -2795,10 +2818,12 @@
                     "properties": {
                       "title": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "maxLength": 1000
                       },
                       "description": {
                         "type": "string",
+                        "maxLength": 100000,
                         "nullable": true
                       },
                       "priority": {
@@ -2806,13 +2831,16 @@
                         "enum": ["P1", "P2", "P3", "P4"]
                       },
                       "project_name": {
-                        "type": "string"
+                        "type": "string",
+                        "maxLength": 200
                       },
                       "tag_names": {
                         "type": "array",
                         "items": {
-                          "type": "string"
-                        }
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "maxItems": 100
                       },
                       "due_at": {
                         "anyOf": [
@@ -3158,7 +3186,8 @@
                     "maxLength": 480
                   },
                   "items": {
-                    "type": "array"
+                    "type": "array",
+                    "maxItems": 1000
                   },
                   "dry_run": {
                     "type": "boolean"
@@ -3177,7 +3206,8 @@
                         },
                         "task_id": {
                           "type": "string",
-                          "minLength": 1
+                          "minLength": 1,
+                          "maxLength": 200
                         },
                         "from_version": {
                           "type": "integer",
@@ -3187,7 +3217,8 @@
                       },
                       "required": ["external_id", "task_id", "from_version"],
                       "additionalProperties": false
-                    }
+                    },
+                    "maxItems": 10000
                   }
                 },
                 "required": ["items"],
@@ -3971,31 +4002,34 @@
                     "items": {
                       "oneOf": [
                         {
-                          "$ref": "#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69"
+                          "$ref": "#/components/schemas/SwiftTagged_file_660795b389d92e70"
                         },
                         {
-                          "$ref": "#/components/schemas/SwiftTagged_image_409f55577e999188"
+                          "$ref": "#/components/schemas/SwiftTagged_image_3d8a86930a2c606b"
                         },
                         {
-                          "$ref": "#/components/schemas/SwiftTagged_link_a1918c5d4f327f78"
+                          "$ref": "#/components/schemas/SwiftTagged_link_c07227ae37504c97"
                         }
                       ],
                       "discriminator": {
                         "propertyName": "kind",
                         "mapping": {
-                          "file": "#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69",
-                          "image": "#/components/schemas/SwiftTagged_image_409f55577e999188",
-                          "link": "#/components/schemas/SwiftTagged_link_a1918c5d4f327f78"
+                          "file": "#/components/schemas/SwiftTagged_file_660795b389d92e70",
+                          "image": "#/components/schemas/SwiftTagged_image_3d8a86930a2c606b",
+                          "link": "#/components/schemas/SwiftTagged_link_c07227ae37504c97"
                         }
                       }
-                    }
+                    },
+                    "maxItems": 100
                   },
                   "title": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 1000
                   },
                   "description": {
                     "type": "string",
+                    "maxLength": 100000,
                     "nullable": true
                   },
                   "project_id": {
@@ -4101,21 +4135,26 @@
                     "items": {
                       "type": "string",
                       "minLength": 1
-                    }
+                    },
+                    "maxItems": 100
                   },
                   "external_id": {
                     "type": "string",
                     "minLength": 1,
+                    "maxLength": 1000,
                     "nullable": true
                   },
                   "project_name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 200
                   },
                   "tag_names": {
                     "type": "array",
                     "items": {
-                      "type": "string"
-                    }
+                      "type": "string",
+                      "maxLength": 200
+                    },
+                    "maxItems": 100
                   }
                 },
                 "required": ["title"],
@@ -4841,10 +4880,12 @@
                     "properties": {
                       "title": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "maxLength": 1000
                       },
                       "description": {
                         "type": "string",
+                        "maxLength": 100000,
                         "nullable": true
                       },
                       "project_id": {
@@ -4950,21 +4991,26 @@
                         "items": {
                           "type": "string",
                           "minLength": 1
-                        }
+                        },
+                        "maxItems": 100
                       },
                       "external_id": {
                         "type": "string",
                         "minLength": 1,
+                        "maxLength": 1000,
                         "nullable": true
                       },
                       "project_name": {
-                        "type": "string"
+                        "type": "string",
+                        "maxLength": 200
                       },
                       "tag_names": {
                         "type": "array",
                         "items": {
-                          "type": "string"
-                        }
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "maxItems": 100
                       }
                     },
                     "additionalProperties": false
@@ -7188,31 +7234,34 @@
                         "items": {
                           "oneOf": [
                             {
-                              "$ref": "#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69"
+                              "$ref": "#/components/schemas/SwiftTagged_file_660795b389d92e70"
                             },
                             {
-                              "$ref": "#/components/schemas/SwiftTagged_image_409f55577e999188"
+                              "$ref": "#/components/schemas/SwiftTagged_image_3d8a86930a2c606b"
                             },
                             {
-                              "$ref": "#/components/schemas/SwiftTagged_link_a1918c5d4f327f78"
+                              "$ref": "#/components/schemas/SwiftTagged_link_c07227ae37504c97"
                             }
                           ],
                           "discriminator": {
                             "propertyName": "kind",
                             "mapping": {
-                              "file": "#/components/schemas/SwiftTagged_file_9effb3b18dd2ec69",
-                              "image": "#/components/schemas/SwiftTagged_image_409f55577e999188",
-                              "link": "#/components/schemas/SwiftTagged_link_a1918c5d4f327f78"
+                              "file": "#/components/schemas/SwiftTagged_file_660795b389d92e70",
+                              "image": "#/components/schemas/SwiftTagged_image_3d8a86930a2c606b",
+                              "link": "#/components/schemas/SwiftTagged_link_c07227ae37504c97"
                             }
                           }
-                        }
+                        },
+                        "maxItems": 100
                       },
                       "title": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "maxLength": 1000
                       },
                       "description": {
                         "type": "string",
+                        "maxLength": 100000,
                         "nullable": true
                       },
                       "project_id": {
@@ -7318,21 +7367,26 @@
                         "items": {
                           "type": "string",
                           "minLength": 1
-                        }
+                        },
+                        "maxItems": 100
                       },
                       "external_id": {
                         "type": "string",
                         "minLength": 1,
+                        "maxLength": 1000,
                         "nullable": true
                       },
                       "project_name": {
-                        "type": "string"
+                        "type": "string",
+                        "maxLength": 200
                       },
                       "tag_names": {
                         "type": "array",
                         "items": {
-                          "type": "string"
-                        }
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "maxItems": 100
                       }
                     },
                     "required": ["title"],
@@ -7360,7 +7414,8 @@
                       },
                       "rrule": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "maxLength": 1000
                       },
                       "exdate": {
                         "type": "array",
@@ -7380,7 +7435,8 @@
                               "date": "#/components/schemas/SwiftTagged_date_f80d834415328e7c"
                             }
                           }
-                        }
+                        },
+                        "maxItems": 1000
                       }
                     },
                     "required": ["dtstart", "rrule", "exdate"],
@@ -7761,10 +7817,12 @@
                     "properties": {
                       "title": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "maxLength": 1000
                       },
                       "description": {
                         "type": "string",
+                        "maxLength": 100000,
                         "nullable": true
                       },
                       "project_id": {
@@ -7870,21 +7928,26 @@
                         "items": {
                           "type": "string",
                           "minLength": 1
-                        }
+                        },
+                        "maxItems": 100
                       },
                       "external_id": {
                         "type": "string",
                         "minLength": 1,
+                        "maxLength": 1000,
                         "nullable": true
                       },
                       "project_name": {
-                        "type": "string"
+                        "type": "string",
+                        "maxLength": 200
                       },
                       "tag_names": {
                         "type": "array",
                         "items": {
-                          "type": "string"
-                        }
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        "maxItems": 100
                       }
                     },
                     "additionalProperties": false
@@ -7911,7 +7974,8 @@
                       },
                       "rrule": {
                         "type": "string",
-                        "minLength": 1
+                        "minLength": 1,
+                        "maxLength": 1000
                       },
                       "exdate": {
                         "type": "array",
@@ -8444,7 +8508,7 @@
                                     "$ref": "#/components/schemas/SwiftTagged_TaskReverted_ce8ca931721e9145"
                                   },
                                   {
-                                    "$ref": "#/components/schemas/SwiftTagged_AuthChanged_25fb6dcbf234c4d7"
+                                    "$ref": "#/components/schemas/SwiftTagged_AuthChanged_6a14a81d77477a4f"
                                   },
                                   {
                                     "$ref": "#/components/schemas/SwiftTagged_ProfileDeleted_66ec0ddfda1634f2"
@@ -8474,7 +8538,7 @@
                                     "TaskDeleted": "#/components/schemas/SwiftTagged_TaskDeleted_4035bf0d96e1c45f",
                                     "TaskPurged": "#/components/schemas/SwiftTagged_TaskPurged_e0200b534c649a4a",
                                     "TaskReverted": "#/components/schemas/SwiftTagged_TaskReverted_ce8ca931721e9145",
-                                    "AuthChanged": "#/components/schemas/SwiftTagged_AuthChanged_25fb6dcbf234c4d7",
+                                    "AuthChanged": "#/components/schemas/SwiftTagged_AuthChanged_6a14a81d77477a4f",
                                     "ProfileDeleted": "#/components/schemas/SwiftTagged_ProfileDeleted_66ec0ddfda1634f2",
                                     "ReminderFired": "#/components/schemas/SwiftTagged_ReminderFired_1ad0ab0e8fa13bbd",
                                     "DatabaseRestored": "#/components/schemas/SwiftTagged_DatabaseRestored_bde10219965659a7",
@@ -9880,17 +9944,17 @@
                   "items": {
                     "oneOf": [
                       {
-                        "$ref": "#/components/schemas/SwiftTagged_committed_4d7933223522e445"
+                        "$ref": "#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769"
                       },
                       {
-                        "$ref": "#/components/schemas/SwiftTagged_rejected_3b8ba18ea68495b7"
+                        "$ref": "#/components/schemas/SwiftTagged_rejected_6e5bf36e0773479f"
                       }
                     ],
                     "discriminator": {
                       "propertyName": "outcome",
                       "mapping": {
-                        "committed": "#/components/schemas/SwiftTagged_committed_4d7933223522e445",
-                        "rejected": "#/components/schemas/SwiftTagged_rejected_3b8ba18ea68495b7"
+                        "committed": "#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769",
+                        "rejected": "#/components/schemas/SwiftTagged_rejected_6e5bf36e0773479f"
                       }
                     }
                   }
@@ -10212,13 +10276,16 @@
                 "properties": {
                   "text": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 2000
                   },
                   "now": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 40
                   },
                   "time_zone": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 64
                   }
                 },
                 "required": ["text", "now", "time_zone"],
@@ -11255,7 +11322,8 @@
                 "properties": {
                   "reason": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "maxLength": 1000
                   }
                 },
                 "required": ["reason"],
@@ -12273,6 +12341,24 @@
         "required": ["_tag", "message"],
         "additionalProperties": false
       },
+      "TooManySignInsEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["TooManySignIns"]
+          },
+          "message": {
+            "type": "string"
+          },
+          "locked_until": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["_tag", "message", "locked_until"],
+        "additionalProperties": false
+      },
       "CommittedOperation": {
         "type": "object",
         "properties": {
@@ -12335,7 +12421,7 @@
                 "$ref": "#/components/schemas/SwiftTagged_TaskReverted_ce8ca931721e9145"
               },
               {
-                "$ref": "#/components/schemas/SwiftTagged_AuthChanged_25fb6dcbf234c4d7"
+                "$ref": "#/components/schemas/SwiftTagged_AuthChanged_6a14a81d77477a4f"
               },
               {
                 "$ref": "#/components/schemas/SwiftTagged_ProfileDeleted_66ec0ddfda1634f2"
@@ -12365,7 +12451,7 @@
                 "TaskDeleted": "#/components/schemas/SwiftTagged_TaskDeleted_4035bf0d96e1c45f",
                 "TaskPurged": "#/components/schemas/SwiftTagged_TaskPurged_e0200b534c649a4a",
                 "TaskReverted": "#/components/schemas/SwiftTagged_TaskReverted_ce8ca931721e9145",
-                "AuthChanged": "#/components/schemas/SwiftTagged_AuthChanged_25fb6dcbf234c4d7",
+                "AuthChanged": "#/components/schemas/SwiftTagged_AuthChanged_6a14a81d77477a4f",
                 "ProfileDeleted": "#/components/schemas/SwiftTagged_ProfileDeleted_66ec0ddfda1634f2",
                 "ReminderFired": "#/components/schemas/SwiftTagged_ReminderFired_1ad0ab0e8fa13bbd",
                 "DatabaseRestored": "#/components/schemas/SwiftTagged_DatabaseRestored_bde10219965659a7",
@@ -19755,7 +19841,7 @@
         ],
         "additionalProperties": true
       },
-      "SwiftTagged_AuthChanged_25fb6dcbf234c4d7": {
+      "SwiftTagged_AuthChanged_6a14a81d77477a4f": {
         "type": "object",
         "properties": {
           "entity_version": {
@@ -19786,7 +19872,8 @@
               "startSeries",
               "finishTask",
               "cleanupExpired",
-              "deleteProfile"
+              "deleteProfile",
+              "resetPassphrase"
             ]
           },
           "credential_id": {
@@ -21067,7 +21154,7 @@
         ],
         "additionalProperties": true
       },
-      "SwiftTagged_file_c263e6ce242848b2": {
+      "SwiftTagged_file_a1224eb6fd690fcb": {
         "type": "object",
         "properties": {
           "kind": {
@@ -21076,13 +21163,14 @@
           },
           "path": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 4096
           }
         },
         "required": ["kind", "path"],
         "additionalProperties": false
       },
-      "SwiftTagged_image_08ee1674dbff0b24": {
+      "SwiftTagged_image_f7200697c6a258b3": {
         "type": "object",
         "properties": {
           "kind": {
@@ -21091,13 +21179,14 @@
           },
           "path": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 4096
           }
         },
         "required": ["kind", "path"],
         "additionalProperties": false
       },
-      "SwiftTagged_link_3ed328370e513918": {
+      "SwiftTagged_link_7ccecc202e6507d1": {
         "type": "object",
         "properties": {
           "kind": {
@@ -21106,13 +21195,14 @@
           },
           "url": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 8192
           }
         },
         "required": ["kind", "url"],
         "additionalProperties": false
       },
-      "SwiftTagged_file_9effb3b18dd2ec69": {
+      "SwiftTagged_file_660795b389d92e70": {
         "type": "object",
         "properties": {
           "kind": {
@@ -21121,21 +21211,24 @@
           },
           "path": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 4096
           },
           "label": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 200
           },
           "name": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 200
           }
         },
         "required": ["kind", "path"],
         "additionalProperties": false
       },
-      "SwiftTagged_image_409f55577e999188": {
+      "SwiftTagged_image_3d8a86930a2c606b": {
         "type": "object",
         "properties": {
           "kind": {
@@ -21144,21 +21237,24 @@
           },
           "path": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 4096
           },
           "label": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 200
           },
           "name": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 200
           }
         },
         "required": ["kind", "path"],
         "additionalProperties": false
       },
-      "SwiftTagged_link_a1918c5d4f327f78": {
+      "SwiftTagged_link_c07227ae37504c97": {
         "type": "object",
         "properties": {
           "kind": {
@@ -21167,15 +21263,18 @@
           },
           "url": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 8192
           },
           "label": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 200
           },
           "name": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "maxLength": 200
           }
         },
         "required": ["kind", "url"],
@@ -27885,7 +27984,7 @@
         ],
         "additionalProperties": false
       },
-      "SwiftTagged_AuthChanged_4d1e3f953b86b025": {
+      "SwiftTagged_AuthChanged_d85fcaf3b5ca49f6": {
         "type": "object",
         "properties": {
           "entity_version": {
@@ -27916,7 +28015,8 @@
               "startSeries",
               "finishTask",
               "cleanupExpired",
-              "deleteProfile"
+              "deleteProfile",
+              "resetPassphrase"
             ]
           },
           "credential_id": {
@@ -29227,7 +29327,7 @@
         ],
         "additionalProperties": false
       },
-      "SwiftTagged_AuthAttemptRejected_355d839e291dab5f": {
+      "SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21": {
         "type": "object",
         "properties": {
           "entity_version": {
@@ -29258,7 +29358,8 @@
               "startSeries",
               "finishTask",
               "cleanupExpired",
-              "deleteProfile"
+              "deleteProfile",
+              "resetPassphrase"
             ]
           },
           "code": {
@@ -29277,7 +29378,9 @@
               "profile_scope",
               "write_scope",
               "owner_required",
-              "profile_deleted"
+              "profile_deleted",
+              "sign_in_locked",
+              "sign_in_busy"
             ]
           }
         },
@@ -29323,7 +29426,7 @@
         ],
         "additionalProperties": false
       },
-      "SwiftTagged_committed_4d7933223522e445": {
+      "SwiftTagged_committed_35ab0ce1f2e94769": {
         "type": "object",
         "properties": {
           "seq": {
@@ -29385,7 +29488,7 @@
                 "$ref": "#/components/schemas/SwiftTagged_TaskReverted_2abe0cf08b1e4a71"
               },
               {
-                "$ref": "#/components/schemas/SwiftTagged_AuthChanged_4d1e3f953b86b025"
+                "$ref": "#/components/schemas/SwiftTagged_AuthChanged_d85fcaf3b5ca49f6"
               },
               {
                 "$ref": "#/components/schemas/SwiftTagged_ProfileDeleted_5c556a8ced0af96f"
@@ -29415,7 +29518,7 @@
                 "TaskDeleted": "#/components/schemas/SwiftTagged_TaskDeleted_da6d81eab94ae6cc",
                 "TaskPurged": "#/components/schemas/SwiftTagged_TaskPurged_354b687adee1fd33",
                 "TaskReverted": "#/components/schemas/SwiftTagged_TaskReverted_2abe0cf08b1e4a71",
-                "AuthChanged": "#/components/schemas/SwiftTagged_AuthChanged_4d1e3f953b86b025",
+                "AuthChanged": "#/components/schemas/SwiftTagged_AuthChanged_d85fcaf3b5ca49f6",
                 "ProfileDeleted": "#/components/schemas/SwiftTagged_ProfileDeleted_5c556a8ced0af96f",
                 "ReminderFired": "#/components/schemas/SwiftTagged_ReminderFired_0a8d1f2e06ddf9b4",
                 "DatabaseRestored": "#/components/schemas/SwiftTagged_DatabaseRestored_b439aae6a5d2bc1c",
@@ -29451,7 +29554,7 @@
         ],
         "additionalProperties": false
       },
-      "SwiftTagged_rejected_3b8ba18ea68495b7": {
+      "SwiftTagged_rejected_6e5bf36e0773479f": {
         "type": "object",
         "properties": {
           "seq": {
@@ -29480,7 +29583,7 @@
                 "$ref": "#/components/schemas/SwiftTagged_TaskAttemptRejected_5f357fe7dd185d8a"
               },
               {
-                "$ref": "#/components/schemas/SwiftTagged_AuthAttemptRejected_355d839e291dab5f"
+                "$ref": "#/components/schemas/SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21"
               },
               {
                 "$ref": "#/components/schemas/SwiftTagged_ProfileDeletionRejected_310fcd3b740927d2"
@@ -29493,7 +29596,7 @@
               "propertyName": "kind",
               "mapping": {
                 "TaskAttemptRejected": "#/components/schemas/SwiftTagged_TaskAttemptRejected_5f357fe7dd185d8a",
-                "AuthAttemptRejected": "#/components/schemas/SwiftTagged_AuthAttemptRejected_355d839e291dab5f",
+                "AuthAttemptRejected": "#/components/schemas/SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21",
                 "ProfileDeletionRejected": "#/components/schemas/SwiftTagged_ProfileDeletionRejected_310fcd3b740927d2",
                 "TaskHistoryRedacted": "#/components/schemas/SwiftTagged_TaskHistoryRedacted_ae3a483cae8e2794"
               }

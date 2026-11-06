@@ -17,6 +17,7 @@ import {
   ImageMime,
   ImportReport,
   ImportRequest,
+  inputLimits,
   LabelAttachment,
   MoveTask,
   OpLogEntry,
@@ -96,6 +97,13 @@ export class InvalidTask extends Schema.TaggedError<InvalidTask>()(
     details: Schema.optionalKey(ExternalIdConflictDetails),
   },
   { httpApiStatus: 422 },
+) {}
+// Sign-in refused without checking the passphrase: locked after 10 wrong
+// passphrases in a row (locked_until says when it reopens), or busy.
+export class TooManySignIns extends Schema.TaggedError<TooManySignIns>()(
+  "TooManySignIns",
+  { message: Schema.String, locked_until: Schema.NullOr(Schema.String) },
+  { httpApiStatus: 429 },
 ) {}
 export class InternalError extends Schema.TaggedError<InternalError>()(
   "InternalError",
@@ -390,7 +398,11 @@ const Changes = HttpApiGroup.make("changes")
   )
   .middleware(Authorization);
 
-const Passphrase = Schema.Struct({ passphrase: Schema.NonEmptyString });
+const Passphrase = Schema.Struct({
+  passphrase: Schema.NonEmptyString.check(
+    Schema.isMaxLength(inputLimits.passphrase),
+  ),
+});
 const IssuedCredential = Schema.Struct({
   ...CredentialInfo.fields,
   credential: Schema.String,
@@ -402,6 +414,7 @@ const SignIn = HttpApiGroup.make("signIn").add(
     error: [
       HttpApiError.BadRequestNoContent,
       Unauthorized,
+      TooManySignIns,
       ProfileNotFound,
       InternalError,
     ],
@@ -476,7 +489,11 @@ const Snapshots = HttpApiGroup.make("snapshots")
       error: taskErrors,
     }),
     HttpApiEndpoint.post("create", "/snapshots", {
-      payload: Schema.Struct({ reason: Schema.NonEmptyString }),
+      payload: Schema.Struct({
+        reason: Schema.NonEmptyString.check(
+          Schema.isMaxLength(inputLimits.reason),
+        ),
+      }),
       success: SnapshotManifest,
       error: taskErrors,
     }),
