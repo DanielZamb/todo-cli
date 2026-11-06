@@ -1,3 +1,4 @@
+import { Database } from "bun:sqlite";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -75,7 +76,7 @@ const fixture = Effect.gen(function* () {
   const credential = Schema.decodeUnknownSync(
     Schema.Struct({ credential: Schema.String }),
   )(signIn.body).credential;
-  return { store, request, credential, base };
+  return { store, request, credential, base, path };
 });
 
 const parseTask = Schema.decodeUnknownSync(Task);
@@ -84,6 +85,91 @@ const tokenSecret = Schema.decodeUnknownSync(
 );
 
 describe("Todo HTTP contract", () => {
+  it.effect(
+    "refuses browser, rebinding and non-JSON requests before authentication records anything",
+    () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const { base, path, credential } = yield* fixture;
+          const rows = () => {
+            const db = new Database(path, { readonly: true });
+            try {
+              return db
+                .query<{ count: number }, []>(
+                  "SELECT count(*) AS count FROM op_log",
+                )
+                .get()?.count;
+            } finally {
+              db.close();
+            }
+          };
+          const before = rows();
+          const send = (path: string, init: RequestInit) =>
+            Effect.tryPromise(async () => {
+              const response = await fetch(base + path, init);
+              return { status: response.status, body: await response.json() };
+            });
+          const cases = [
+            {
+              path: "/profiles",
+              init: { headers: { Host: "evil.example:4310" } },
+              status: 403,
+              code: "forbidden_host",
+            },
+            {
+              path: "/profiles",
+              init: { headers: { Origin: "https://evil.example" } },
+              status: 403,
+              code: "forbidden_origin",
+            },
+            {
+              path: "/profiles",
+              init: { headers: { "Sec-Fetch-Site": "cross-site" } },
+              status: 403,
+              code: "forbidden_origin",
+            },
+            {
+              path: "/profiles",
+              init: {
+                headers: {
+                  Origin: "https://evil.example",
+                  Authorization: `Bearer ${credential}`,
+                },
+              },
+              status: 403,
+              code: "forbidden_origin",
+            },
+            {
+              path: "/auth/sessions",
+              init: {
+                method: "POST",
+                headers: { "Content-Type": "text/plain" },
+                body: JSON.stringify({ passphrase: "test passphrase" }),
+              },
+              status: 415,
+              code: "unsupported_media_type",
+            },
+          ];
+          for (const { path, init, status, code } of cases) {
+            const response = yield* send(path, init);
+            expect([path, response.status, response.body.code]).toEqual([
+              path,
+              status,
+              code,
+            ]);
+          }
+          expect(rows()).toBe(before);
+          const allowed = yield* send("/profiles", {
+            headers: {
+              Host: "localhost",
+              "Sec-Fetch-Site": "none",
+              Authorization: `Bearer ${credential}`,
+            },
+          });
+          expect(allowed.status).toBe(200);
+        }),
+      ),
+  );
   it.effect(
     "batch edit HTTP preserves dry-run and returns independent stale-Version rows",
     () =>

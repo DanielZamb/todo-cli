@@ -4,7 +4,7 @@ import { BunRuntime } from "@effect/platform-bun";
 import { BUILD_ID, CONTRACT_ID } from "@todo/api";
 import { Config, Effect, Layer } from "effect";
 import { lifecycle, serviceLabel } from "./lifecycle.ts";
-import { serverLayer } from "./server.ts";
+import { allowedHostsFrom, serverLayer } from "./server.ts";
 
 Effect.gen(function* () {
   const command = process.argv[2];
@@ -72,5 +72,11 @@ Effect.gen(function* () {
     return yield* Effect.die(
       new Error("TODO_PORT must be between 0 and 65535"),
     );
-  yield* Layer.launch(serverLayer({ path, port }));
+  yield* Layer.launch(
+    serverLayer({
+      path,
+      port,
+      allowedHosts: allowedHostsFrom(process.env.TODO_ALLOWED_HOSTS),
+    }),
+  );
 }).pipe(BunRuntime.runMain);

@@ -115,7 +115,7 @@ const guides = {
     synopsis: "todo [global flags] <command> [flags]",
     flags: [],
     examples: [
-      "printf 'secret\\n' | todo init --password-stdin",
+      "printf '%s\\n' \"$TODO_PASSPHRASE\" | todo init --password-stdin",
       "todo login --password-stdin",
       "todo add 'Pay rent' --priority P1",
       "todo list --format json",
@@ -176,11 +176,11 @@ const guides = {
       "todo init [--username <name>] [--password <passphrase> | --password-stdin]",
     flags: [
       "--username <name> (default unset, compatibility flag)",
-      "--password <passphrase> (default unset, bootstrap owner)",
+      "--password <passphrase> (default unset, bootstrap owner; visible in shell history and process lists, prefer --password-stdin)",
       "--password-stdin (default false, reads the first line of stdin)",
     ],
     examples: [
-      "printf 'secret\\n' | todo init --password-stdin",
+      "printf '%s\\n' \"$TODO_PASSPHRASE\" | todo init --password-stdin",
       "todo init --profile personal",
     ],
     auth: "No Session required. The owner can be configured only once.",
@@ -198,7 +198,7 @@ const guides = {
     ],
     examples: [
       "todo login",
-      "printf 'secret\\n' | todo login --password-stdin",
+      "printf '%s\\n' \"$TODO_PASSPHRASE\" | todo login --password-stdin",
     ],
     auth: "Requires the owner's passphrase, not an existing Session. Sessions expire after a fixed seven days.",
     output:

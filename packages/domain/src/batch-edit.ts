@@ -128,9 +128,13 @@ export const batchEditTasks = (
   input: BatchEditRequest,
 ) =>
   input.dry_run
-    ? Effect.acquireUseRelease(
-        store.fork(),
-        (copy) => execute(copy, request, input),
-        (copy) => Effect.orDie(copy.close()),
+    ? // Authenticate before forking: a fork serializes the whole database.
+      Effect.andThen(
+        store.auth.authenticate({ ...request, access: "write" }),
+        Effect.acquireUseRelease(
+          store.fork(),
+          (copy) => execute(copy, request, input),
+          (copy) => Effect.orDie(copy.close()),
+        ),
       )
     : execute(store, request, input);

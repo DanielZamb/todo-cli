@@ -55,3 +55,4 @@ xcuserdata/
 *.pfx
 *.key
 *.pem
+/.cursor/

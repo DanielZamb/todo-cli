@@ -303,6 +303,12 @@ const init = Command.make(
             "use either --password or --password-stdin",
           ),
         );
+      if (input.password)
+        yield* Effect.sync(() =>
+          process.stderr.write(
+            "warning: --password is visible in shell history and process lists; prefer --password-stdin\n",
+          ),
+        );
       const password = input.passwordStdin
         ? yield* io(() => readFileSync(0, "utf8").split("\n")[0]?.trim() ?? "")
         : input.password;

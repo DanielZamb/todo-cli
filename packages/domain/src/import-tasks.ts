@@ -437,10 +437,14 @@ export const importTasks = (
   input: ImportRequest,
 ) =>
   input.dry_run
-    ? Effect.acquireUseRelease(
-        store.fork(),
-        (copy) => executeImport(copy, request, input),
-        (copy) => Effect.orDie(copy.close()),
+    ? // Authenticate before forking: a fork serializes the whole database.
+      Effect.andThen(
+        store.auth.authenticate({ ...request, access: "write" }),
+        Effect.acquireUseRelease(
+          store.fork(),
+          (copy) => executeImport(copy, request, input),
+          (copy) => Effect.orDie(copy.close()),
+        ),
       )
     : Effect.gen(function* () {
         yield* store.auth.authenticate({ ...request, access: "write" });

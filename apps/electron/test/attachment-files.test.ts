@@ -39,3 +39,48 @@ it("refuses executable files, app bundles, and symlinks to either without openin
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+it("refuses files that run code, install software or open another location", () => {
+  const root = mkdtempSync(join(tmpdir(), "todo-open-types-"));
+  try {
+    const decision = (name: string) => {
+      const path = join(root, name);
+      writeFileSync(path, "content", { mode: 0o600 });
+      try {
+        openableAttachmentPath(path);
+        return "open";
+      } catch {
+        return "refused";
+      }
+    };
+    const refused = [
+      "Settings.terminal",
+      "run.tool",
+      "Setup.mpkg",
+      "Profile.mobileconfig",
+      "site.webloc",
+      "share.inetloc",
+      "target.fileloc",
+      "flow.shortcut",
+      "script.applescript",
+      "step.action",
+      "bundle.scptd",
+      "archive.xip",
+    ];
+    const opened = [
+      "notes.md",
+      "report.pdf",
+      "photo.png",
+      "sheet.xlsx",
+      "plain",
+    ];
+    expect(
+      [...refused, ...opened].map((name) => [name, decision(name)]),
+    ).toEqual([
+      ...refused.map((name) => [name, "refused"]),
+      ...opened.map((name) => [name, "open"]),
+    ]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

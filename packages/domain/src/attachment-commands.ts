@@ -242,10 +242,14 @@ export class AttachmentCommands {
 
   readonly attachMany = (request: AccessRequest, input: AttachManyRequest) =>
     input.dry_run
-      ? Effect.acquireUseRelease(
-          this.store.fork(),
-          (copy) => new AttachmentCommands(copy).executeMany(request, input),
-          (copy) => Effect.orDie(copy.close()),
+      ? // Authenticate before forking: a fork serializes the whole database.
+        Effect.andThen(
+          this.store.auth.authenticate({ ...request, access: "write" }),
+          Effect.acquireUseRelease(
+            this.store.fork(),
+            (copy) => new AttachmentCommands(copy).executeMany(request, input),
+            (copy) => Effect.orDie(copy.close()),
+          ),
         )
       : this.executeMany(request, input);
 

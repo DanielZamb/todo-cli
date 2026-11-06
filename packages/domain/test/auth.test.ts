@@ -951,4 +951,95 @@ describe("database boundary", () => {
         }),
       ),
   );
+  it.effect("requires a 12 to 1024 character owner passphrase", () =>
+    usingStore((store) =>
+      Effect.gen(function* () {
+        expect(yield* denial(store.auth.setupOwner("eleven char"))).toEqual([
+          "auth",
+          "invalid_request",
+        ]);
+        expect(yield* denial(store.auth.setupOwner("x".repeat(1025)))).toEqual([
+          "auth",
+          "invalid_request",
+        ]);
+        yield* store.auth.setupOwner("twelve chars");
+        expect(yield* denial(store.auth.signIn("x".repeat(1025)))).toEqual([
+          "auth",
+          "invalid_request",
+        ]);
+        expect((yield* store.auth.signIn("twelve chars")).credential).toMatch(
+          /^ses_/,
+        );
+      }),
+    ),
+  );
+
+  it.effect(
+    "slows consecutive failed sign-ins and resets after a correct passphrase",
+    () =>
+      usingStore((store) =>
+        Effect.gen(function* () {
+          yield* store.auth.setupOwner("scratch owner passphrase");
+          const timed = (passphrase: string) =>
+            Effect.gen(function* () {
+              const started = performance.now();
+              const result = yield* Effect.result(
+                store.auth.signIn(passphrase),
+              );
+              return [result._tag, performance.now() - started] as const;
+            });
+          const first = yield* timed("wrong passphrase");
+          const second = yield* timed("wrong passphrase");
+          const third = yield* timed("scratch owner passphrase");
+          const fourth = yield* timed("scratch owner passphrase");
+          expect([first[0], second[0], third[0], fourth[0]]).toEqual([
+            "Failure",
+            "Failure",
+            "Success",
+            "Success",
+          ]);
+          // Waits are 0, 250 and 500 ms before the first three; none after a success.
+          expect(second[1] - first[1]).toBeGreaterThanOrEqual(200);
+          expect(third[1] - first[1]).toBeGreaterThanOrEqual(450);
+          expect(fourth[1]).toBeLessThan(third[1] - 400);
+        }),
+      ),
+  );
+
+  it.effect(
+    "Snapshot restore keeps revoked Access Tokens revoked and later Sessions valid",
+    () =>
+      usingStore((store) =>
+        Effect.gen(function* () {
+          const session = yield* signIn(store);
+          const token = yield* store.auth.issueToken({
+            credential: session.credential,
+            token: { name: "leaked", profile, scope: "read-write" },
+          });
+          const saved = yield* store.snapshots.create("before revoke");
+          yield* store.auth.revokeToken({
+            credential: session.credential,
+            name: "leaked",
+          });
+          const later = yield* store.auth.signIn("scratch owner passphrase");
+          yield* store.snapshots.restore(saved.id);
+          expect(
+            yield* denial(
+              store.auth.authenticate({
+                credential: token.credential,
+                profile,
+                access: "read",
+              }),
+            ),
+          ).toEqual(["auth", "revoked"]);
+          expect(
+            (yield* store.auth.authenticate({
+              credential: later.credential,
+              profile,
+              access: "write",
+            })).kind,
+          ).toBe("session");
+        }),
+      ),
+  );
 });

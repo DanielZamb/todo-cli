@@ -138,6 +138,60 @@ export const rejectUnknownQuery = <E, R>(
         )
       : httpEffect;
   });
+const loopbackHosts = new Set(["127.0.0.1", "localhost", "[::1]"]);
+const refuse = (status: number, code: string, message: string) =>
+  Effect.succeed(
+    HttpServerResponse.jsonUnsafe(
+      { generated_at: new Date().toISOString(), code, message },
+      { status },
+    ),
+  );
+const hostnameOf = (host: string) => {
+  const value = host.trim().toLowerCase();
+  if (value.startsWith("[")) return value.slice(0, value.indexOf("]") + 1);
+  return value.split(":")[0] ?? "";
+};
+// Only native clients talk to this server. Browsers always send Origin or
+// Sec-Fetch-Site, and DNS rebinding arrives with a foreign Host, so both are
+// refused before authentication runs or anything is recorded.
+export const rejectForeignRequests =
+  (allowedHosts: ReadonlySet<string> = new Set()) =>
+  <E, R>(
+    httpEffect: Effect.Effect<HttpServerResponse.HttpServerResponse, E, R>,
+  ) =>
+    Effect.flatMap(HttpServerRequest.HttpServerRequest, (request) => {
+      const headers = request.headers;
+      const hostname = hostnameOf(headers.host ?? "");
+      if (!loopbackHosts.has(hostname) && !allowedHosts.has(hostname))
+        return refuse(403, "forbidden_host", "Host is not allowed");
+      const fetchSite = headers["sec-fetch-site"];
+      if (
+        headers.origin !== undefined ||
+        (fetchSite !== undefined && fetchSite !== "none")
+      )
+        return refuse(403, "forbidden_origin", "Browser requests are refused");
+      const hasBody =
+        headers["transfer-encoding"] !== undefined ||
+        Number(headers["content-length"] ?? 0) > 0;
+      const mediaType = (headers["content-type"] ?? "")
+        .split(";")[0]
+        ?.trim()
+        .toLowerCase();
+      if (hasBody && mediaType !== "application/json")
+        return refuse(
+          415,
+          "unsupported_media_type",
+          "Request bodies must be application/json",
+        );
+      return httpEffect;
+    });
+export const allowedHostsFrom = (value: string | undefined) =>
+  new Set(
+    (value ?? "")
+      .split(",")
+      .map((host) => host.trim().toLowerCase())
+      .filter(Boolean),
+  );
 export const diagnosticsMiddleware =
   (diagnostics: OperationStore["diagnostics"]) =>
   <E, R>(
@@ -159,6 +213,7 @@ export const diagnosticsMiddleware =
 export const serverLayer = (options: {
   readonly path: string;
   readonly port: number;
+  readonly allowedHosts?: ReadonlySet<string>;
 }) =>
   Layer.unwrap(
     Effect.gen(function* () {
@@ -710,7 +765,11 @@ export const serverLayer = (options: {
       );
       return HttpRouter.serve(routes, {
         middleware: (effect) =>
-          diagnosticsMiddleware(diagnostics)(rejectUnknownQuery(effect)),
+          diagnosticsMiddleware(diagnostics)(
+            rejectForeignRequests(options.allowedHosts)(
+              rejectUnknownQuery(effect),
+            ),
+          ),
       }).pipe(
         Layer.provideMerge(
           BunHttpServer.layer({

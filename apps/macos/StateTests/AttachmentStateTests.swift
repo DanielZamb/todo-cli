@@ -354,3 +354,26 @@ func liveAttachmentBatchSelectPreviewApplyConflictAndReload() async throws {
   let uriReload = try TaskSnapshot.decode(try await client.tasks_period_show(path: .init(profile: "work", task: credentialURI.id)).ok.body.json)
   #expect(uriReload.attachments?.last?.displayPath == "https://owner:secret@example.com/")
 }
+
+@Test func attachmentOpenDecisionRefusesFilesThatRunOrInstallWhenOpened() throws {
+  let root = FileManager.default.temporaryDirectory.appendingPathComponent(
+    "todo-open-types-\(UUID())")
+  try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+  defer { try? FileManager.default.removeItem(at: root) }
+  func decision(_ name: String) throws -> Bool {
+    let path = root.appendingPathComponent(name)
+    try Data("content".utf8).write(to: path)
+    return AttachmentOpening.allowedURL(
+      .init(id: name, location: .file(path.path), added_at: "2026-11-05T00:00:00Z")) != nil
+  }
+  for name in [
+    "Settings.terminal", "run.tool", "Setup.mpkg", "Profile.mobileconfig", "site.webloc",
+    "share.inetloc", "target.fileloc", "flow.shortcut", "script.applescript", "step.action",
+    "bundle.scptd", "archive.xip",
+  ] {
+    #expect(try decision(name) == false, "\(name) must be refused")
+  }
+  for name in ["notes.md", "report.pdf", "photo.png", "sheet.xlsx", "data.csv", "plain"] {
+    #expect(try decision(name) == true, "\(name) must open")
+  }
+}

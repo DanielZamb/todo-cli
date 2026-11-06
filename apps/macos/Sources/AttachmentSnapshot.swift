@@ -86,6 +86,17 @@ struct AttachmentSnapshot: Codable, Identifiable, Equatable, Sendable {
 }
 
 enum AttachmentOpening {
+  // Types that run code, install software or settings, or open another location.
+  static let blockedTypes: [UTType] =
+    [.executable, .script, .shellScript, .application, .applicationBundle, .bundle, .package]
+    + [
+      "com.apple.installer-package-archive", "com.apple.installer-meta-package",
+      "com.apple.terminal.settings", "com.apple.terminal.shell-script", "com.apple.mobileconfig",
+      "com.apple.web-internet-location", "com.apple.internet-location", "com.apple.applescript.script",
+      "com.apple.applescript.script-bundle", "com.apple.automator-action",
+      "com.apple.automator-workflow", "com.apple.shortcut",
+    ].compactMap { UTType($0) }
+
   static func allowedURL(_ attachment: AttachmentSnapshot) -> URL? {
     let url = attachment.url
     if attachment.path == nil {
@@ -93,9 +104,16 @@ enum AttachmentOpening {
         && url.password == nil ? url : nil
     }
     let resolved = url.resolvingSymlinksInPath()
+    // Keep this list identical to executableExtensions in the Electron client.
     let blocked = Set([
-      "app", "bundle", "exe", "com", "bat", "cmd", "sh", "bash", "zsh", "command", "py", "rb", "pl",
-      "js", "mjs", "cjs", "jar", "pkg", "dmg", "scpt", "workflow",
+      "app", "bundle", "exe", "com", "bat", "cmd", "ps1", "vbs", "msi", "sh", "bash", "zsh", "csh",
+      "tcsh", "ksh", "fish", "command", "tool", "terminal", "py", "rb", "pl", "php", "lua", "tcl",
+      "js", "mjs", "cjs", "jar", "jnlp", "pkg", "mpkg", "dmg", "xip", "scpt", "scptd",
+      "applescript", "osascript", "workflow", "action", "caction", "shortcut", "mobileconfig",
+      "configprofile", "provisionprofile", "webloc", "inetloc", "fileloc", "afploc", "ftploc",
+      "smbloc", "url", "prefpane", "plugin", "kext", "appex", "framework", "osax", "qlgenerator",
+      "saver", "wdgt", "mdimporter", "service", "xpc", "systemextension", "dext", "component",
+      "definition", "inputplugin"
     ])
     for candidate in [url, resolved] {
       if candidate.pathComponents.contains(where: {
@@ -108,7 +126,9 @@ enum AttachmentOpening {
       let values = try? resolved.resourceValues(forKeys: [
         .isRegularFileKey, .isExecutableKey, .contentTypeKey,
       ]), values.isRegularFile == true,
-      values.isExecutable != true, values.contentType?.conforms(to: .executable) != true
+      values.isExecutable != true,
+      let contentType = values.contentType,
+      !blockedTypes.contains(where: { contentType.conforms(to: $0) })
     else { return nil }
     return resolved
   }
