@@ -28,7 +28,7 @@ help-signing:
 	@echo 'Copy signing.example.mk to ignored signing.local.mk, or export TODO_SIGNING_TEAM and TODO_SIGNING_IDENTITY.'
 	@echo 'TODO_SIGNING_TEAM selects the Xcode development team and the expected team for both signed apps.'
 	@echo 'TODO_SIGNING_IDENTITY selects the Electron certificate. Xcode uses automatic Apple Development signing for that team.'
-	@echo 'Inspect with make -n sign-desktop. Only the user runs make sign-desktop in their Terminal.'
+	@echo 'Inspect with make -n sign-desktop. Local publish is scripts/sign-and-install.sh.'
 	@echo 'Check rendered commands without signing: make check-signing-commands.'
 	@echo 'Unsigned Electron: pnpm --filter @todo/electron build'
 	@echo 'Unsigned macOS: xcodebuild -project apps/macos/Todo.xcodeproj -scheme Todo build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO'

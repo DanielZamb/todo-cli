@@ -27,6 +27,10 @@ to work around a verification or signing prompt.
 Run `pnpm audit` and `pnpm licenses list --json` when changing dependencies.
 Preserve the lockfile and the minimum package-age policy in
 `pnpm-workspace.yaml`. Review build tools as well as runtime dependencies.
+`scripts/check-package-age.ts` enforces the same seven-day minimum on locked
+npm packages and pinned Swift packages. `scripts/sign-and-install.sh` and
+`make sign-desktop` run it before installing or building, and it fails closed
+when a publish time cannot be verified.
 
 Keep signing settings in ignored `signing.local.mk` or environment variables.
 Never commit a signing key or certificate export. A valid local Apple Development

@@ -55,8 +55,9 @@ See [the generated files and their sources](apps/macos/README.md#generate-the-ap
 
 For signed builds, copy `signing.example.mk` to `signing.local.mk`, replace the
 example values with your certificate identity and team, then run
-`make sign-desktop`. The file stays local. Signed bundles and their signature
-receipt appear under `dist/signed.noindex/`.
+`scripts/sign-and-install.sh`. That installs the SwiftUI app, Electron app, CLI,
+and server. `make sign-desktop` only stages bundles under `dist/signed.noindex/`.
+The signing file stays local.
 Xcode uses automatic Apple Development signing for the configured team.
 Electron uses the configured certificate identity.
 

@@ -94,15 +94,15 @@ server inherits Xcode's resolved signing identity and uses identifier
 `local.todo.server`. Regeneration normalizes UUIDs twice because xcodeproj's
 first pass includes the original target UUID in dependency hashes.
 
-Agents never sign or run signed builds. Every agent xcodebuild command uses
-`CODE_SIGNING_ALLOWED=NO`, and project signing settings stay unchanged. The user
-runs `make sign-desktop` in their own Terminal to build the Release app at
-`dist/signed.noindex/macos/Todo.app` and Electron at `dist/signed.noindex/electron/Todo.app`.
-Signing disables timestamp requests. The command checks package age and disk
-space, then records strict signature verification, team and designated
-requirement in `dist/signed.noindex/signing-receipt.json`. `make -n sign-desktop` prints
+Verification builds stay unsigned. Every verification xcodebuild command uses
+`CODE_SIGNING_ALLOWED=NO`, and project signing settings stay unchanged.
+`scripts/sign-and-install.sh` signs and installs the Release app and Electron,
+and installs the CLI and server. Signing disables timestamp requests. The
+command checks package age and disk space, then records strict signature
+verification, team and designated requirement in
+`dist/signed.noindex/signing-receipt.json`. `make -n sign-desktop` prints
 the commands without executing them. App launches, hosted XCTest and Keychain
-access by agents remain on HOLD.
+access remain on HOLD.
 
 Native sessions use that existing signed Release app without rebuilding.
 App launches, XCTest and Keychain remain on HOLD until current consent.

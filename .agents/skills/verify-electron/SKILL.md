@@ -40,10 +40,10 @@ TODO_VERIFY_NATIVE_UI=1 .agents/skills/verify-electron/scripts/verify.sh "$PWD/a
 Choose a new absolute evidence directory. Host mode runs the disk guard and
 builds unsigned production main, preload and Vite renderer bundles. Default
 `pnpm --filter @todo/electron build` also assembles an unsigned
-`apps/electron/dist/Todo.app`. Agents never sign or run signed builds.
+`apps/electron/dist/Todo.app`. Verification builds stay unsigned.
 
-For a native session, the user first runs `make sign-desktop` in their own
-Terminal. It writes `dist/signed.noindex/electron/Todo.app` and a signing receipt.
+For a native session, `scripts/sign-and-install.sh` writes
+`dist/signed.noindex/electron/Todo.app` and a signing receipt.
 The helper verifies and drives that existing app without rebuilding it.
 The bundle ID is `dev.todo.electron`. Configure your team and certificate using
 `signing.example.mk` and ignored `signing.local.mk`, or the `TODO_SIGNING_TEAM`

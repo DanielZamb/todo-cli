@@ -289,10 +289,9 @@ and compiled scratch HTTP writes passed, with durable Version and History checks
 The macOS verification skill now includes the repeatable headless write recipe.
 
 The unsigned Debug build, pnpm check, API regeneration and byte-identical project
-regeneration pass. Signing settings are unchanged. Agents never sign; every
-xcodebuild uses CODE_SIGNING_ALLOWED=NO. Signed builds come only from
-make sign-desktop in the user's Terminal. This order supersedes older signing
-authorizations recorded above.
+regeneration pass. Signing settings are unchanged. Verification xcodebuild uses
+CODE_SIGNING_ALLOWED=NO. Signed installs come from scripts/sign-and-install.sh.
+This order supersedes older signing authorizations recorded above.
 
 No native app, hosted XCTest, Keychain or notification permission flow ran for
 W06. The coordinator still owns native screenshots, focus and sizing checks,

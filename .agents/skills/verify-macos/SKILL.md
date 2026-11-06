@@ -81,11 +81,10 @@ Use a new absolute evidence directory for the authorized attempt:
 TODO_VERIFY_NATIVE_UI=1 .agents/skills/verify-macos/scripts/verify.sh "$PWD/apps/macos/evidence/native-new"
 ```
 
-The user first runs `make sign-desktop` in their own Terminal. It builds the
-Release app at `dist/signed.noindex/macos/Todo.app`, with the configured team, and writes
-`dist/signed.noindex/signing-receipt.json`. Agents never run that target or sign code.
-Use `make -n sign-desktop` to inspect its commands without executing them.
-This does not lift HOLD.
+`scripts/sign-and-install.sh` builds the Release app at
+`dist/signed.noindex/macos/Todo.app`, with the configured team, and writes
+`dist/signed.noindex/signing-receipt.json`. Use `make -n sign-desktop` to
+inspect its commands without executing them. This does not lift HOLD.
 
 The helper builds only a scratch server, provisioner and compiled CLI, checks
 loopback health and verifies the existing signed Release app. It never rebuilds
@@ -248,9 +247,9 @@ Current proof is in `docs/evidence/w06/headless-r5/`. Native visual verification
 remains held. This recipe extends the existing macOS subsystem skill using
 `create-verification-skill`.
 
-Agents never sign code. Every xcodebuild command must use
+Verification builds stay unsigned. Every xcodebuild command in this skill must use
 `CODE_SIGNING_ALLOWED=NO`; leave project signing settings unchanged. Signed
-builds come only from `make sign-desktop`, run by the user in their Terminal.
+installs come from `scripts/sign-and-install.sh`.
 
 ## Headless History formatting proof during HOLD
 

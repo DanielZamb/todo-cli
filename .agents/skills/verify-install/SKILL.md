@@ -70,10 +70,11 @@ skill discovery is a separate check from executable verification.
 calls executable `scripts/drive.py <scratch> <evidence>` with Python 3.
 Use `/maintain-verification-skill` when the installer or feature map changes.
 
-## User-run desktop signing
+## Desktop signing
 
-`make sign-desktop` is for the user's Terminal only. Agents prove it exclusively
-with `make -n sign-desktop`. Copy `signing.example.mk` to ignored
+`scripts/sign-and-install.sh` signs and installs the desktop apps, CLI, and server.
+This drive proves `make sign-desktop` with `make -n sign-desktop` and does not
+execute a desktop build. Copy `signing.example.mk` to ignored
 `signing.local.mk` and configure your certificate and team, or export
 `TODO_SIGNING_IDENTITY` and `TODO_SIGNING_TEAM`. The target rejects missing
 settings before build output or Keychain access. It audits package age and disk space before
@@ -88,8 +89,7 @@ the bundled server under `Contents/Resources/Server/`.
 
 The install drive records the dry-run output without executing a desktop build.
 Default Electron and all verification builds are unsigned. Native sessions reuse
-user-built signed artifacts and remain subject to current consent and HOLD.
-Signing and the real receipt remain unproven until the user runs the target.
+signed artifacts and remain subject to current consent and HOLD.
 
 The drive requires all signed build outputs to use `dist/signed.noindex`.
 The suffix excludes build copies from Spotlight. The signing target unregisters

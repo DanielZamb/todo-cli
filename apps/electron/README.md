@@ -22,8 +22,8 @@ Build runs the required disk guard and creates unsigned
 Before copying Electron, the macOS package build runs the pinned package's
 `install-electron` command. Electron 44.9.3 does not download its runtime during
 `pnpm install`. The first package build needs network access to download the
-runtime; later builds reuse it. Building does not launch the app. Agents never
-sign code.
+runtime; later builds reuse it. Building does not launch the app. Verification
+builds stay unsigned.
 
 To verify a committed build from a clean export, run:
 
@@ -39,16 +39,16 @@ The printed directory retains the clean export, `head.txt`, `commands.json` with
 exit codes, `install.log`, `build.log`, and a `PASS` file after all checks pass.
 Ordinary test runs skip this download and package check.
 
-For signed apps, the user runs `make sign-desktop` at the repository root in their
-own Terminal. `@electron/osx-sign` signs nested code with hardened runtime and
+`scripts/sign-and-install.sh` signs and installs both desktop apps, the CLI, and
+the server. `@electron/osx-sign` signs nested code with hardened runtime and
 Electron entitlements, using `TODO_SIGNING_IDENTITY` and `TODO_SIGNING_TEAM` from
 the environment or ignored `signing.local.mk`. Copy `signing.example.mk` at the
-repository root to configure your own certificate. Timestamping is disabled. The output is
-`dist/signed.noindex/electron/Todo.app`; native sessions drive that existing artifact
-without rebuilding. Notarization remains separate release work.
+repository root to configure your own certificate. Timestamping is disabled. The staged
+output is `dist/signed.noindex/electron/Todo.app`; the script then copies it to
+`/Applications/Todo Electron.app`. Notarization remains separate release work.
 
-Native verification remains on HOLD until current user consent. Signed builds
-are exclusively user-run and do not authorize app launches or Keychain access.
+Native verification remains on HOLD until current user consent. Signing does
+not authorize app launches or Keychain access.
 `TODO_SERVER_URL` defaults to
 http://127.0.0.1:4310 and accepts loopback HTTP only. `TODO_ELECTRON_DATA` selects
 an isolated app-data directory for verification.
