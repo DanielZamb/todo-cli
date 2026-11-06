@@ -1,13 +1,13 @@
 import { Effect, Schema } from "effect";
 import { Temporal } from "temporal-polyfill";
 import { TaskPriority } from "./entities.ts";
-import { inputLimits } from "./limits.ts";
-import { Instant, TaskTime, TimeZoneId } from "./time.ts";
+import { InstantInput, inputLimits } from "./limits.ts";
+import { TaskTime, TimeZoneId } from "./time.ts";
 
 export const QuickAddInput = Schema.Struct({
   text: Schema.NonEmptyString.check(Schema.isMaxLength(inputLimits.quickAdd)),
-  now: Instant,
-  time_zone: TimeZoneId,
+  now: InstantInput,
+  time_zone: TimeZoneId.check(Schema.isMaxLength(64)),
 });
 export type QuickAddInput = typeof QuickAddInput.Type;
 export const QuickAddDraft = Schema.Struct({

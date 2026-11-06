@@ -113,7 +113,7 @@ describe("input limits", () => {
   });
 
   it.effect(
-    "records a refused oversized write in History as its size and a preview, not in full",
+    "records a refused oversized write in History as its size alone, not in full",
     () =>
       Effect.scoped(
         Effect.gen(function* () {

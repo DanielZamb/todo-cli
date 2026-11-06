@@ -1,7 +1,7 @@
 import { Schema, Struct } from "effect";
 import type { AuthAttemptRejected } from "../events.ts";
 import { ProfileId } from "../ids.ts";
-import { NonEmptyNameInput } from "../limits.ts";
+import { InstantInput, NonEmptyNameInput } from "../limits.ts";
 import { FinishTask, StartSeries } from "../recurrence.ts";
 import { Instant } from "../time.ts";
 
@@ -41,7 +41,7 @@ export const TokenOptions = Schema.Struct({
   name: NonEmptyNameInput,
   profile: Schema.NullOr(ProfileId),
   scope: AccessScope,
-  expires_at: Schema.optional(Instant),
+  expires_at: Schema.optional(InstantInput),
 });
 export type TokenOptions = typeof TokenOptions.Type;
 

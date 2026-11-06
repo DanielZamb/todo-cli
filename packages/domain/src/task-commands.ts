@@ -9,13 +9,15 @@ import {
   limitedItems,
   NameInput,
   TagNamesInput,
+  TaskTimeInput,
   TitleInput,
 } from "./limits.ts";
-import { TaskTime } from "./time.ts";
 
 const TaskInput = Schema.Struct({
   ...TaskDetails.fields,
   description: Schema.NullOr(DescriptionInput),
+  scheduled_at: Schema.NullOr(TaskTimeInput),
+  due_at: Schema.NullOr(TaskTimeInput),
   external_id: Schema.NullOr(ExternalIdInput),
   project_name: NameInput,
   tag_names: TagNamesInput,
@@ -59,7 +61,8 @@ export type RevertTask = typeof RevertTask.Type;
 export const RecurrenceInput = Schema.Struct({
   ...Recurrence.fields,
   rrule: Schema.NonEmptyString.check(Schema.isMaxLength(inputLimits.rrule)),
-  exdate: limitedItems(TaskTime, inputLimits.exdates),
+  dtstart: TaskTimeInput,
+  exdate: limitedItems(TaskTimeInput, inputLimits.exdates),
 });
 export const CreateSeries = Schema.Struct({
   task: CreateTask,

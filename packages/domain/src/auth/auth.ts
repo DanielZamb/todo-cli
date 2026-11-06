@@ -134,7 +134,7 @@ export class Authentication<Read> {
 
   private verifyPassphrase(
     value: string,
-    hash: string,
+    hash: string | null,
     time: number,
   ): Promise<Verification> {
     if (this.waitingSignIns >= maximumWaitingSignIns)
@@ -145,7 +145,9 @@ export class Authentication<Read> {
     const attempt = this.signInQueue.then(async (): Promise<Verification> => {
       const until = this.signInLockedUntil(time);
       if (until !== null) return { kind: "locked", until };
-      const valid = await Bun.password.verify(value, hash);
+      // Without an owner nothing can match, but the attempt still counts
+      // toward the lock, so an unprovisioned server cannot be flooded.
+      const valid = hash !== null && (await Bun.password.verify(value, hash));
       if (!valid)
         this.transaction(() =>
           this.record({
@@ -412,8 +414,7 @@ export class Authentication<Read> {
             "SELECT passphrase_hash FROM owner WHERE singleton=1",
           )
           .get();
-        if (!row) throw new AuthError("invalid_passphrase");
-        return { value, hash: row.passphrase_hash };
+        return { value, hash: row?.passphrase_hash ?? null };
       });
       const time = yield* Clock.currentTimeMillis;
       const outcome = yield* Effect.tryPromise({
@@ -431,6 +432,14 @@ export class Authentication<Read> {
             instant(outcome.until),
           );
         if (outcome.kind === "busy") throw new AuthError("sign_in_busy");
+        // A reset may have replaced the hash while this attempt was verified
+        // against the old one: the old passphrase must not get a Session.
+        const current = this.db
+          .query<{ passphrase_hash: string }, []>(
+            "SELECT passphrase_hash FROM owner WHERE singleton=1",
+          )
+          .get()?.passphrase_hash;
+        if (current !== input.hash) throw new AuthError("invalid_passphrase");
         const issued = this.issue(time, {
           kind: "session",
           name: null,

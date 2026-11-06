@@ -451,7 +451,8 @@
                   "expires_at": {
                     "anyOf": [
                       {
-                        "type": "string"
+                        "type": "string",
+                        "maxLength": 40
                       },
                       {
                         "type": "null"
@@ -40079,10 +40080,12 @@
                     "maxLength": 2000
                   },
                   "now": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 40
                   },
                   "time_zone": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 64
                   }
                 },
                 "required": ["text", "now", "time_zone"],

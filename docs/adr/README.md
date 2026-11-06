@@ -54,7 +54,7 @@ Profile, resolved payload, versions, and `committed` or `rejected`. A committed
 event and its projection update share one transaction. The Version check is
 compare-and-swap. Rejected attempts are stored so Conflicts stay visible, and
 they are never replayed. An amendment bounds them: a repeated auth rejection is
-recorded once per minute, and a refused oversized input only as a preview. SSE streams committed ops by `seq`. Guard triggers
+recorded once per minute, and a refused oversized input only as its size. SSE streams committed ops by `seq`. Guard triggers
 reject direct writes to projection tables.
 
 [ADR-0007. The operation log is the source of truth](0007-operation-log-is-the-source-of-truth.md)

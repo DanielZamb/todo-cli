@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { Instant, TaskTime } from "./time.ts";
 
 // Size limits on what a client may submit. Every accepted value is kept
 // forever in History and copied into every Snapshot, so a credential holder
@@ -20,6 +21,9 @@ export const inputLimits = {
   exdates: 1_000,
   batchItems: 1_000,
   closeMissingCandidates: 10_000,
+  time: 128,
+  instant: 40,
+  id: 200,
 } as const;
 
 const characters = (maximum: number) => Schema.isMaxLength(maximum);
@@ -43,6 +47,17 @@ export const ExternalIdInput = Schema.NonEmptyString.check(
 export const TagNamesInput = Schema.Array(NameInput).check(
   items(inputLimits.tagsPerTask),
 );
+// The stored time schemas accept any number of fractional-second digits.
+export const InstantInput = Instant.check(
+  Schema.isMaxLength(inputLimits.instant),
+);
+export const TaskTimeInput = TaskTime.check(
+  Schema.makeFilter(
+    (value) =>
+      (JSON.stringify(value)?.length ?? 0) <= inputLimits.time ||
+      `A time must be at most ${inputLimits.time} characters of JSON.`,
+  ),
+);
 export const limitedItems = <S extends Schema.Top>(
   item: S,
   maximum: number = inputLimits.batchItems,
@@ -50,16 +65,12 @@ export const limitedItems = <S extends Schema.Top>(
 
 // A rejected attempt is recorded with what was received (ADR-0007), so an
 // input refused for being too large must not be stored in full. Anything
-// over this many characters of JSON is replaced by its size and a preview.
+// over this many characters of JSON is replaced by its size alone. No
+// preview is kept: Purge could not find a Task's content inside one.
 export const rejectedInputCharacters = 32_768;
-const previewCharacters = 2_000;
 export const rejectedInputForHistory = (value: unknown): unknown => {
   const text = JSON.stringify(value) ?? "null";
   return text.length <= rejectedInputCharacters
     ? value
-    : {
-        truncated: true,
-        characters: text.length,
-        preview: text.slice(0, previewCharacters),
-      };
+    : { truncated: true, characters: text.length };
 };

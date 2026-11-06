@@ -26,7 +26,7 @@ import {
   TaskMutationKind,
 } from "../events.ts";
 import { ActorId, ProfileId, Sequence, TaskId, Version } from "../ids.ts";
-import { rejectedInputForHistory } from "../limits.ts";
+import { inputLimits, rejectedInputForHistory } from "../limits.ts";
 import {
   DeleteProfile,
   type ProfileDeletionResult,
@@ -606,7 +606,11 @@ export class OperationStore {
       entity_version: 1,
       occurred_at: envelope.occurred_at,
       attempted_kind: envelope.kind,
-      task_id: (primary?.after ?? primary?.before)?.id ?? taskId,
+      // An unvalidated id from a refused input is kept only if short; the
+      // payload holding it is already bounded above.
+      task_id:
+        (primary?.after ?? primary?.before)?.id ??
+        (taskId !== null && taskId.length <= inputLimits.id ? taskId : null),
       violations: [
         {
           field: "event",
@@ -751,6 +755,24 @@ export class OperationStore {
         )
         .get(task.id)?.version;
       if (change.after) {
+        // Input limits bound each request; these bound the resulting Task,
+        // since names split on commas and repeated groups add up. Tasks
+        // already past a limit may keep, but not grow, their lists.
+        const grows = (after: number, before: number, limit: number) =>
+          after > limit && after > before;
+        if (
+          grows(
+            change.after.tags.length,
+            change.before?.tags.length ?? 0,
+            inputLimits.tagsPerTask,
+          ) ||
+          grows(
+            change.after.attachments?.length ?? 0,
+            change.before?.attachments?.length ?? 0,
+            inputLimits.attachmentsPerTask,
+          )
+        )
+          throw new Rejection("validation");
         if (
           change.after.attachments?.some(
             (attachment) => !validAttachmentLocation(attachment),
