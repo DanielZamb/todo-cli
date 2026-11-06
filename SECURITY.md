@@ -37,7 +37,12 @@ Preserve the lockfile and the minimum package-age policy in
 `scripts/check-package-age.ts` enforces the same seven-day minimum on locked
 npm packages and pinned Swift packages. `scripts/sign-and-install.sh` and
 `make sign-desktop` run it before installing or building, and it fails closed
-when a publish time cannot be verified.
+when a publish time cannot be verified. It also runs
+`scripts/check-install-scripts.ts`, which `pnpm check` runs too: no workspace
+`package.json` may declare an install-time script (`preinstall`, `install`,
+`postinstall`, `prepare` and similar) and the repository may not carry a
+`.pnpmfile`, because pnpm runs those during install whatever
+`onlyBuiltDependencies` says.
 
 Keep signing settings in ignored `signing.local.mk` or environment variables.
 Never commit a signing key or certificate export. A valid local Apple Development

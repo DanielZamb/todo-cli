@@ -105,19 +105,21 @@ import {
   StatusResponse,
   TextResponse,
 } from "./schema.ts";
-import { runTop } from "./top.ts";
+import { isTerminalUnsafe, runTop } from "./top.ts";
 import { TransferResponse, type TransferResult } from "./transfer-schema.ts";
 
-// Task content can come from imports and agents. Strip terminal control
-// characters (escape sequences, BEL, carriage return) from text output, keeping
-// tab and newline. JSON output already escapes them.
+// Task content can come from imports and agents. Output writes terminal control
+// characters (escape sequences, BEL, carriage return) and bidi or invisible
+// formatting characters as visible \uXXXX escapes, keeping tab and newline.
+// Inside JSON strings that escape decodes to the original character, so JSON
+// output stays lossless.
 const terminalSafe = (text: string) => {
   let safe = "";
   for (const character of text) {
     const code = character.codePointAt(0) ?? 0;
     safe +=
-      (code < 32 && code !== 9 && code !== 10) || (code >= 127 && code <= 159)
-        ? " "
+      code !== 9 && code !== 10 && isTerminalUnsafe(code)
+        ? `\\u${code.toString(16).padStart(4, "0")}`
         : character;
   }
   return safe;

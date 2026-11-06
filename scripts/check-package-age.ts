@@ -7,6 +7,7 @@
 // registry's, or a network error is a failure, not a pass.
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { installScriptProblems } from "./check-install-scripts.ts";
 
 const minimumDays = Number(process.argv[2] ?? 7);
 if (!Number.isFinite(minimumDays) || minimumDays < 7) {
@@ -136,6 +137,12 @@ const inBatches = async <T, R>(items: T[], run: (item: T) => Promise<R>) => {
   return results;
 };
 
+const installProblems = installScriptProblems();
+if (installProblems.length) {
+  console.error("Refusing to install. Repository code would run during pnpm install:");
+  for (const problem of installProblems) console.error(`  ${problem}`);
+  process.exit(1);
+}
 const locked = lockedPackages("pnpm-lock.yaml");
 if (locked.length === 0) {
   console.error("pnpm-lock.yaml lists no packages. Refusing to continue.");
