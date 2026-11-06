@@ -101,7 +101,8 @@ with (evidence / 'server.log').open('w') as log:
             assert result.returncode == 0, (args, result.stdout, result.stderr)
             return value
 
-        assert request('GET', '/health') == {'service': 'todo-server'}
+        health = request('GET', '/health')
+        assert health['service'] == 'todo-server' and set(health) == {'service', 'contract', 'build'}, health
         session = request('POST', '/auth/sessions', payload={'passphrase': 'scratch verification passphrase'})['credential']
         reader = request('POST', '/auth/tokens', payload={'name': 'sse-reader', 'profile': 'work', 'scope': 'read-only'}, credential=session)['credential']
         cli('login', '--password-stdin', stdin='scratch verification passphrase\n')

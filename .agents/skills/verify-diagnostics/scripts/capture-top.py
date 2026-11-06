@@ -48,7 +48,7 @@ try:
     expected = int(previous.group(1)) + 1 if previous else 1
     health = subprocess.run(['curl', '--silent', '--show-error', '--max-time', '5', server + '/health'], capture_output=True, text=True)
     assert health.returncode == 0
-    assert json.loads(health.stdout) == {'service': 'todo-server'}
+    assert json.loads(health.stdout).get('service') == 'todo-server'
     for _ in range(17):
         collect(.1)
         if re.search(r'GET /health\s+n=' + str(expected) + r'\b', frame()):

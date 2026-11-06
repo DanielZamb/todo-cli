@@ -3,6 +3,17 @@ import { CommandError } from "@todo/domain/commands";
 import { encodeResponse } from "@todo/domain/presentation";
 import { Effect, Schema } from "effect";
 
+// The owner Session goes only to this machine, or to a host the owner listed
+// in TODO_ALLOWED_HOSTS (the same setting the server uses for a proxy).
+const loopbackHosts = new Set(["127.0.0.1", "localhost", "[::1]"]);
+const allowedServerHost = (hostname: string) =>
+  loopbackHosts.has(hostname.toLowerCase()) ||
+  (process.env.TODO_ALLOWED_HOSTS ?? "")
+    .split(",")
+    .map((host) => host.trim().toLowerCase())
+    .filter(Boolean)
+    .includes(hostname.toLowerCase());
+
 export const diagnosticsRead = (server: string, credential: string) =>
   Effect.tryPromise({
     try: async (signal) => {
@@ -24,6 +35,12 @@ export const diagnosticsRead = (server: string, credential: string) =>
           "--server must be an HTTP or HTTPS URL without credentials, query or fragment",
         );
       }
+      if (!allowedServerHost(url.hostname))
+        throw new CommandError(
+          2,
+          "invalid_args",
+          "--server must be on this machine (127.0.0.1, localhost or [::1]) or listed in TODO_ALLOWED_HOSTS",
+        );
       let response: Response;
       try {
         response = await fetch(new URL("/diagnostics", url), {

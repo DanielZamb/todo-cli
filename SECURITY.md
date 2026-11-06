@@ -18,6 +18,13 @@ a Session or Access Token for protected routes. Keep the database and credential
 private to the owner. Exposing the server through a proxy requires a separate
 deployment review.
 
+Before authentication, the server refuses requests whose Host is not
+`127.0.0.1`, `localhost` or `[::1]`, which blocks DNS rebinding. It also refuses
+any request carrying `Origin` or a cross-site `Sec-Fetch-Site`, so web pages
+cannot reach it, and any request body that is not `application/json`. A proxy
+host must be listed in `TODO_ALLOWED_HOSTS` (comma-separated). `todo diagnostics`
+and `todo top` send the owner Session only to those same hosts.
+
 Electron keeps the Session in its main process and encrypts persisted credentials
 with safeStorage. The SwiftUI client uses Keychain. Do not disable these controls
 to work around a verification or signing prompt.

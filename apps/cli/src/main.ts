@@ -108,9 +108,23 @@ import {
 import { runTop } from "./top.ts";
 import { TransferResponse, type TransferResult } from "./transfer-schema.ts";
 
+// Task content can come from imports and agents. Strip terminal control
+// characters (escape sequences, BEL, carriage return) from text output, keeping
+// tab and newline. JSON output already escapes them.
+const terminalSafe = (text: string) => {
+  let safe = "";
+  for (const character of text) {
+    const code = character.codePointAt(0) ?? 0;
+    safe +=
+      (code < 32 && code !== 9 && code !== 10) || (code >= 127 && code <= 159)
+        ? " "
+        : character;
+  }
+  return safe;
+};
 const write = (text: string) =>
   Effect.sync(() => {
-    process.stdout.write(text);
+    process.stdout.write(terminalSafe(text));
   });
 const response = <S extends Schema.ConstraintEncoder<unknown>>(
   format: Format,
@@ -1721,12 +1735,14 @@ const program = Effect.gen(function* () {
                 : String(error),
             );
       (format === "json" && !follow ? process.stdout : process.stderr).write(
-        renderError(
-          failure.code,
-          failure.message,
-          follow ? "json" : format,
-          nowInstant(),
-          failure.latest,
+        terminalSafe(
+          renderError(
+            failure.code,
+            failure.message,
+            follow ? "json" : format,
+            nowInstant(),
+            failure.latest,
+          ),
         ),
       );
       process.exitCode = failure.exit;

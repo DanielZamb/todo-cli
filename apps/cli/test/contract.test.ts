@@ -717,6 +717,19 @@ it("publishes diagnostics and top schemas and uses shared errors before accessin
       message: "run todo login",
     });
   }
+  for (const command of ["diagnostics", "top"]) {
+    const remote = run([
+      command,
+      "--format",
+      "json",
+      "--server",
+      "http://192.0.2.1:4310",
+    ]);
+    expect([remote.code, JSON.parse(remote.out).code]).toEqual([
+      2,
+      "invalid_args",
+    ]);
+  }
   const invalid = run(["diagnostics", "--format", "json", "--unsupported"]);
   expect(invalid.code).toBe(2);
   expect(JSON.parse(invalid.out).code).toBe("invalid_args");
