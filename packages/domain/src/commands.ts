@@ -39,6 +39,7 @@ import {
   type EditTask,
   type ExpectedVersion,
   type MoveTask,
+  RecurrenceInput,
   type RevertTask,
   TaskPatch,
   type TransitionTask,
@@ -784,7 +785,11 @@ const prepareFlags = (
         : { external_id: flags.external_id || null }),
       ...(flags.desc === undefined ? {} : { description: flags.desc || null }),
       project_id: project?.id ?? null,
-      tags: tags.map((tag) => tag.id),
+      // An edit that names no Tags keeps them: copying an older Task's list
+      // into the patch would trip the per-request limit for no change.
+      ...(before && flags.tag === undefined
+        ? {}
+        : { tags: tags.map((tag) => tag.id) }),
       ...(flags.priority === undefined ? {} : { priority: flags.priority }),
       ...(flags.source === undefined ? {} : { source: flags.source }),
       ...(flags.due === undefined ? {} : { due_at: parseTime(flags.due) }),
@@ -803,7 +808,10 @@ const prepareFlags = (
         ? undefined
         : flags.recurrence === ""
           ? null
-          : Schema.decodeUnknownSync(Recurrence)(JSON.parse(flags.recurrence));
+          : // Submitted recurrence meets the input limits; stored ones need not.
+            Schema.decodeUnknownSync(RecurrenceInput)(
+              JSON.parse(flags.recurrence),
+            );
     if (before && recurrence && !resolveNextTime(recurrence, null))
       throw invalid("Series has no Occurrence");
     const options: CommandOptions = {

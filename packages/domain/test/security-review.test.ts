@@ -10,7 +10,13 @@ import { AttachmentCommands } from "../src/attachment-commands.ts";
 import { AttachManyItem } from "../src/attachments.ts";
 import { AuthError, TokenOptions } from "../src/auth/model.ts";
 import { BatchEditRequest } from "../src/batch-edit.ts";
-import { moveTask, revertTask } from "../src/commands.ts";
+import {
+  createTask,
+  moveTask,
+  mutateTask,
+  revertTask,
+} from "../src/commands.ts";
+import { Tag, Task } from "../src/entities.ts";
 import { ProfileId } from "../src/ids.ts";
 import { importTasks } from "../src/import-tasks.ts";
 import { inputLimits } from "../src/limits.ts";
@@ -20,7 +26,13 @@ import {
   TaskCommands,
 } from "../src/store/store.ts";
 import { CreateSeries, CreateTask } from "../src/task-commands.ts";
-import { profile, work } from "./store-fixtures.ts";
+import {
+  actor,
+  created as createdEvent,
+  profile,
+  taskInput,
+  work,
+} from "./store-fixtures.ts";
 
 const passphrase = "scratch review passphrase";
 const withStore = <A, E>(
@@ -462,6 +474,98 @@ describe("second security review", () => {
           } finally {
             limits.tagsPerTask = original;
           }
+        }),
+      ),
+  );
+
+  it.effect(
+    "SOL-R-3: a CLI title edit keeps working on an older Task with more than 100 Tags",
+    () =>
+      withStore((store) =>
+        Effect.gen(function* () {
+          const request = yield* owner(store);
+          const limits = inputLimits as { tagsPerTask: number };
+          const original = limits.tagsPerTask;
+          // Append a 101-Tag Task as an older version would have written it.
+          const tags = Array.from({ length: 101 }, (_, index) =>
+            Schema.decodeUnknownSync(Tag)({
+              id: `tag-${index}`,
+              profile_id: "work",
+              name: `tag${index}`,
+            }),
+          );
+          const older = Schema.decodeUnknownSync(Task)({
+            ...taskInput,
+            id: "older-task",
+            tags: tags.map((tag) => tag.id),
+          });
+          limits.tagsPerTask = 200;
+          try {
+            yield* store.append({
+              actor,
+              profile,
+              event: { ...createdEvent, task: older, tags },
+            });
+          } finally {
+            limits.tagsPerTask = original;
+          }
+          const createdTask = (yield* new TaskCommands(store).list(request))[0];
+          if (!createdTask) throw new Error("fixture");
+          expect(createdTask.tags).toHaveLength(101);
+          const created = { task: createdTask };
+          const edited = yield* mutateTask(
+            store,
+            request,
+            "edit",
+            created.task.id,
+            created.task.row_version,
+            { title: "Renamed older Task" },
+          );
+          expect(edited).toMatchObject({
+            outcome: "committed",
+            task: { title: "Renamed older Task" },
+          });
+          expect(
+            (yield* new TaskCommands(store).list(request))[0]?.tags,
+          ).toHaveLength(101);
+        }),
+      ),
+  );
+
+  it.effect(
+    "SOL-R-4: the CLI --recurrence flag meets the same exdate limit as HTTP",
+    () =>
+      withStore((store) =>
+        Effect.gen(function* () {
+          const request = yield* owner(store);
+          const recurrence = (count: number) =>
+            JSON.stringify({
+              dtstart: { kind: "date", date: "2026-11-06" },
+              rrule: "FREQ=DAILY",
+              exdate: Array.from({ length: count }, () => ({
+                kind: "date",
+                date: "2026-11-07",
+              })),
+            });
+          const accepted = yield* Effect.result(
+            createTask(store, request, {
+              title: "Daily",
+              recurrence: recurrence(1_000),
+            }),
+          );
+          expect(accepted._tag).toBe("Success");
+          const refused = yield* Effect.result(
+            createTask(store, request, {
+              title: "Daily too",
+              recurrence: recurrence(1_001),
+            }),
+          );
+          expect(refused._tag).toBe("Failure");
+          expect(
+            (yield* new TaskCommands(store).list(request)).map(
+              (task) => task.title,
+            ),
+          ).toEqual(["Daily"]);
         }),
       ),
   );
