@@ -16,6 +16,9 @@ fi
 if [ "${CODE_SIGNING_ALLOWED:-YES}" != NO ] && [ -n "${EXPANDED_CODE_SIGN_IDENTITY:-}" ]; then
     /usr/bin/codesign --force --identifier local.todo.server --entitlements "$root/apps/macos/BunServer.entitlements" --options runtime --timestamp=none --sign "$EXPANDED_CODE_SIGN_IDENTITY" "$staging/todo-server"
 fi
+# Replace, never overwrite: macOS keeps the signature of a binary that already
+# ran, so new contents copied over it are killed as tampered (SIGKILL).
+rm -f "$output/todo-server"
 cp "$staging/todo-server" "$output/todo-server"
 chmod 755 "$output/todo-server"
 "$output/todo-server" --version > "$output/identity.txt"
