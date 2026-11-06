@@ -897,3 +897,47 @@ it("returns one JSON error when a Profile delete argument or flag is missing", (
     expect(invalid.out).not.toContain("USAGE");
   }
 });
+
+it("locks login after 10 wrong passphrases and requires the macOS password to reset", () => {
+  const home = join(scratch, "lockout");
+  const json = ["--format", "json"];
+  expect(
+    run(["init", "--password-stdin"], "scratch-passphrase\n", home).code,
+  ).toBe(0);
+  for (let index = 0; index < 10; index++) {
+    const wrong = run(
+      ["login", "--password-stdin", ...json],
+      "wrong passphrase\n",
+      home,
+    );
+    expect(wrong.code).toBe(3);
+    expect(JSON.parse(wrong.out)).toMatchObject({
+      code: "auth_required",
+      message: "incorrect owner passphrase",
+    });
+  }
+  const locked = run(
+    ["login", "--password-stdin", ...json],
+    "scratch-passphrase\n",
+    home,
+  );
+  expect(locked.code).toBe(3);
+  expect(JSON.parse(locked.out)).toMatchObject({
+    code: "sign_in_locked",
+    message: expect.stringContaining("run todo reset-passphrase"),
+  });
+  // Without a terminal the command never prompts: both secrets come on stdin.
+  for (const [args, input] of [
+    [["reset-passphrase"], ""],
+    [["reset-passphrase", "--password-stdin"], "only one line\n"],
+  ] as const) {
+    const usage = run([...args, ...json], input, home);
+    expect(usage.code).toBe(2);
+    expect(JSON.parse(usage.out)).toMatchObject({ code: "invalid_args" });
+  }
+  const schema = run(["schema", "reset-passphrase"], "", home);
+  expect(schema.code, schema.err).toBe(0);
+  expect(JSON.parse(schema.out)).toMatchObject({
+    required: ["generated_at", "status", "sessions_revoked"],
+  });
+});

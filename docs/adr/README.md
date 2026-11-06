@@ -83,6 +83,9 @@ Profile and grouped by Project. A Session comes from the owner passphrase and
 lasts seven days with no sliding renewal. Agents use a separate Access Token:
 named, optional Profile scope, read-only or read-write, revocable. Prefixes
 `ses_` and `tok_` distinguish them on the same `Authorization` header.
+An amendment locks sign-in for an hour after 10 wrong passphrases in a row.
+`todo reset-passphrase`, after macOS checks the account password, ends a lock
+and sets a new passphrase.
 
 [ADR-0005. Single owner, Profiles instead of users, two credential kinds](0005-single-owner-profiles-and-two-credential-kinds.md)
 
@@ -123,7 +126,7 @@ images and redacts paths from History. External files are never deleted.
 | [0002](0002-server-is-the-gateway-for-ui-and-remote-clients.md) | The server is the gateway for UI and remote clients | accepted |
 | [0003](0003-httpapi-openapi-as-the-single-contract.md) | HttpApi with OpenAPI is the single client contract | accepted |
 | [0004](0004-change-log-via-triggers-streamed-over-sse.md) | Change log filled by SQLite triggers, streamed over SSE | superseded by 0007 |
-| [0005](0005-single-owner-profiles-and-two-credential-kinds.md) | Single owner, Profiles, two credential kinds | accepted |
+| [0005](0005-single-owner-profiles-and-two-credential-kinds.md) | Single owner, Profiles, two credential kinds | accepted, amended 2026-11-06 |
 | [0006](0006-time-model-and-rfc5545-recurrence.md) | Time model and RFC 5545 recurrence | accepted |
 | [0007](0007-operation-log-is-the-source-of-truth.md) | Operation log is the source of truth | accepted, amended 2026-11-05 |
 | [0008](0008-purge-redacts-history-content.md) | Purge redacts History content | accepted |

@@ -11,6 +11,8 @@ export class AuthError extends Error {
   constructor(
     readonly detail: AuthAttemptRejected["detail"],
     readonly actor = "anonymous",
+    // Set with detail sign_in_locked: when sign-in accepts passphrases again.
+    readonly locked_until: string | null = null,
   ) {
     super("Authentication or authorization failed");
   }

@@ -142,6 +142,16 @@
               }
             }
           },
+          "429": {
+            "description": "TooManySignIns",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManySignInsEncoded"
+                }
+              }
+            }
+          },
           "500": {
             "description": "InternalError",
             "content": {
@@ -8495,7 +8505,7 @@
                                     "$ref": "#/components/schemas/SwiftTagged_TaskReverted_ce8ca931721e9145"
                                   },
                                   {
-                                    "$ref": "#/components/schemas/SwiftTagged_AuthChanged_25fb6dcbf234c4d7"
+                                    "$ref": "#/components/schemas/SwiftTagged_AuthChanged_6a14a81d77477a4f"
                                   },
                                   {
                                     "$ref": "#/components/schemas/SwiftTagged_ProfileDeleted_66ec0ddfda1634f2"
@@ -8525,7 +8535,7 @@
                                     "TaskDeleted": "#/components/schemas/SwiftTagged_TaskDeleted_4035bf0d96e1c45f",
                                     "TaskPurged": "#/components/schemas/SwiftTagged_TaskPurged_e0200b534c649a4a",
                                     "TaskReverted": "#/components/schemas/SwiftTagged_TaskReverted_ce8ca931721e9145",
-                                    "AuthChanged": "#/components/schemas/SwiftTagged_AuthChanged_25fb6dcbf234c4d7",
+                                    "AuthChanged": "#/components/schemas/SwiftTagged_AuthChanged_6a14a81d77477a4f",
                                     "ProfileDeleted": "#/components/schemas/SwiftTagged_ProfileDeleted_66ec0ddfda1634f2",
                                     "ReminderFired": "#/components/schemas/SwiftTagged_ReminderFired_1ad0ab0e8fa13bbd",
                                     "DatabaseRestored": "#/components/schemas/SwiftTagged_DatabaseRestored_bde10219965659a7",
@@ -9931,17 +9941,17 @@
                   "items": {
                     "oneOf": [
                       {
-                        "$ref": "#/components/schemas/SwiftTagged_committed_4d7933223522e445"
+                        "$ref": "#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769"
                       },
                       {
-                        "$ref": "#/components/schemas/SwiftTagged_rejected_3b8ba18ea68495b7"
+                        "$ref": "#/components/schemas/SwiftTagged_rejected_6e5bf36e0773479f"
                       }
                     ],
                     "discriminator": {
                       "propertyName": "outcome",
                       "mapping": {
-                        "committed": "#/components/schemas/SwiftTagged_committed_4d7933223522e445",
-                        "rejected": "#/components/schemas/SwiftTagged_rejected_3b8ba18ea68495b7"
+                        "committed": "#/components/schemas/SwiftTagged_committed_35ab0ce1f2e94769",
+                        "rejected": "#/components/schemas/SwiftTagged_rejected_6e5bf36e0773479f"
                       }
                     }
                   }
@@ -12326,6 +12336,24 @@
         "required": ["_tag", "message"],
         "additionalProperties": false
       },
+      "TooManySignInsEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["TooManySignIns"]
+          },
+          "message": {
+            "type": "string"
+          },
+          "locked_until": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": ["_tag", "message", "locked_until"],
+        "additionalProperties": false
+      },
       "CommittedOperation": {
         "type": "object",
         "properties": {
@@ -12388,7 +12416,7 @@
                 "$ref": "#/components/schemas/SwiftTagged_TaskReverted_ce8ca931721e9145"
               },
               {
-                "$ref": "#/components/schemas/SwiftTagged_AuthChanged_25fb6dcbf234c4d7"
+                "$ref": "#/components/schemas/SwiftTagged_AuthChanged_6a14a81d77477a4f"
               },
               {
                 "$ref": "#/components/schemas/SwiftTagged_ProfileDeleted_66ec0ddfda1634f2"
@@ -12418,7 +12446,7 @@
                 "TaskDeleted": "#/components/schemas/SwiftTagged_TaskDeleted_4035bf0d96e1c45f",
                 "TaskPurged": "#/components/schemas/SwiftTagged_TaskPurged_e0200b534c649a4a",
                 "TaskReverted": "#/components/schemas/SwiftTagged_TaskReverted_ce8ca931721e9145",
-                "AuthChanged": "#/components/schemas/SwiftTagged_AuthChanged_25fb6dcbf234c4d7",
+                "AuthChanged": "#/components/schemas/SwiftTagged_AuthChanged_6a14a81d77477a4f",
                 "ProfileDeleted": "#/components/schemas/SwiftTagged_ProfileDeleted_66ec0ddfda1634f2",
                 "ReminderFired": "#/components/schemas/SwiftTagged_ReminderFired_1ad0ab0e8fa13bbd",
                 "DatabaseRestored": "#/components/schemas/SwiftTagged_DatabaseRestored_bde10219965659a7",
@@ -19808,7 +19836,7 @@
         ],
         "additionalProperties": true
       },
-      "SwiftTagged_AuthChanged_25fb6dcbf234c4d7": {
+      "SwiftTagged_AuthChanged_6a14a81d77477a4f": {
         "type": "object",
         "properties": {
           "entity_version": {
@@ -19839,7 +19867,8 @@
               "startSeries",
               "finishTask",
               "cleanupExpired",
-              "deleteProfile"
+              "deleteProfile",
+              "resetPassphrase"
             ]
           },
           "credential_id": {
@@ -27950,7 +27979,7 @@
         ],
         "additionalProperties": false
       },
-      "SwiftTagged_AuthChanged_4d1e3f953b86b025": {
+      "SwiftTagged_AuthChanged_d85fcaf3b5ca49f6": {
         "type": "object",
         "properties": {
           "entity_version": {
@@ -27981,7 +28010,8 @@
               "startSeries",
               "finishTask",
               "cleanupExpired",
-              "deleteProfile"
+              "deleteProfile",
+              "resetPassphrase"
             ]
           },
           "credential_id": {
@@ -29292,7 +29322,7 @@
         ],
         "additionalProperties": false
       },
-      "SwiftTagged_AuthAttemptRejected_355d839e291dab5f": {
+      "SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21": {
         "type": "object",
         "properties": {
           "entity_version": {
@@ -29323,7 +29353,8 @@
               "startSeries",
               "finishTask",
               "cleanupExpired",
-              "deleteProfile"
+              "deleteProfile",
+              "resetPassphrase"
             ]
           },
           "code": {
@@ -29342,7 +29373,9 @@
               "profile_scope",
               "write_scope",
               "owner_required",
-              "profile_deleted"
+              "profile_deleted",
+              "sign_in_locked",
+              "sign_in_busy"
             ]
           }
         },
@@ -29388,7 +29421,7 @@
         ],
         "additionalProperties": false
       },
-      "SwiftTagged_committed_4d7933223522e445": {
+      "SwiftTagged_committed_35ab0ce1f2e94769": {
         "type": "object",
         "properties": {
           "seq": {
@@ -29450,7 +29483,7 @@
                 "$ref": "#/components/schemas/SwiftTagged_TaskReverted_2abe0cf08b1e4a71"
               },
               {
-                "$ref": "#/components/schemas/SwiftTagged_AuthChanged_4d1e3f953b86b025"
+                "$ref": "#/components/schemas/SwiftTagged_AuthChanged_d85fcaf3b5ca49f6"
               },
               {
                 "$ref": "#/components/schemas/SwiftTagged_ProfileDeleted_5c556a8ced0af96f"
@@ -29480,7 +29513,7 @@
                 "TaskDeleted": "#/components/schemas/SwiftTagged_TaskDeleted_da6d81eab94ae6cc",
                 "TaskPurged": "#/components/schemas/SwiftTagged_TaskPurged_354b687adee1fd33",
                 "TaskReverted": "#/components/schemas/SwiftTagged_TaskReverted_2abe0cf08b1e4a71",
-                "AuthChanged": "#/components/schemas/SwiftTagged_AuthChanged_4d1e3f953b86b025",
+                "AuthChanged": "#/components/schemas/SwiftTagged_AuthChanged_d85fcaf3b5ca49f6",
                 "ProfileDeleted": "#/components/schemas/SwiftTagged_ProfileDeleted_5c556a8ced0af96f",
                 "ReminderFired": "#/components/schemas/SwiftTagged_ReminderFired_0a8d1f2e06ddf9b4",
                 "DatabaseRestored": "#/components/schemas/SwiftTagged_DatabaseRestored_b439aae6a5d2bc1c",
@@ -29516,7 +29549,7 @@
         ],
         "additionalProperties": false
       },
-      "SwiftTagged_rejected_3b8ba18ea68495b7": {
+      "SwiftTagged_rejected_6e5bf36e0773479f": {
         "type": "object",
         "properties": {
           "seq": {
@@ -29545,7 +29578,7 @@
                 "$ref": "#/components/schemas/SwiftTagged_TaskAttemptRejected_5f357fe7dd185d8a"
               },
               {
-                "$ref": "#/components/schemas/SwiftTagged_AuthAttemptRejected_355d839e291dab5f"
+                "$ref": "#/components/schemas/SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21"
               },
               {
                 "$ref": "#/components/schemas/SwiftTagged_ProfileDeletionRejected_310fcd3b740927d2"
@@ -29558,7 +29591,7 @@
               "propertyName": "kind",
               "mapping": {
                 "TaskAttemptRejected": "#/components/schemas/SwiftTagged_TaskAttemptRejected_5f357fe7dd185d8a",
-                "AuthAttemptRejected": "#/components/schemas/SwiftTagged_AuthAttemptRejected_355d839e291dab5f",
+                "AuthAttemptRejected": "#/components/schemas/SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21",
                 "ProfileDeletionRejected": "#/components/schemas/SwiftTagged_ProfileDeletionRejected_310fcd3b740927d2",
                 "TaskHistoryRedacted": "#/components/schemas/SwiftTagged_TaskHistoryRedacted_ae3a483cae8e2794"
               }

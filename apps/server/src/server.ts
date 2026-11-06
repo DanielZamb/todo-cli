@@ -10,6 +10,7 @@ import {
   NotFound,
   ProfileNotFound,
   TodoApi,
+  TooManySignIns,
   Unauthorized,
   ValidationHistory,
 } from "@todo/api";
@@ -661,7 +662,26 @@ export const serverLayer = (options: {
       const SignInLive = HttpApiBuilder.group(TodoApi, "signIn", (handlers) =>
         handlers.handleAll({
           signIn: ({ payload }) =>
-            translate(store.auth.signIn(payload.passphrase)).pipe(
+            store.auth.signIn(payload.passphrase).pipe(
+              Effect.catchTag("AuthError", (error) =>
+                Effect.gen(function* () {
+                  if (error.detail === "sign_in_locked")
+                    return yield* new TooManySignIns({
+                      message: `Sign-in is locked after 10 wrong passphrases until ${error.locked_until}. Wait, or run todo reset-passphrase on this Mac.`,
+                      locked_until: error.locked_until,
+                    });
+                  if (error.detail === "sign_in_busy")
+                    return yield* new TooManySignIns({
+                      message:
+                        "Too many sign-in attempts are in progress. Retry in a moment.",
+                      locked_until: null,
+                    });
+                  return yield* translate(Effect.fail(error));
+                }),
+              ),
+              Effect.catchTag("StoreError", (error) =>
+                translate(Effect.fail(error)),
+              ),
               Effect.catchTag("Forbidden", () =>
                 Effect.fail(new Unauthorized({ message: "Sign-in failed" })),
               ),

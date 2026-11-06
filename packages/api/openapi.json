@@ -160,6 +160,16 @@
               }
             }
           },
+          "429": {
+            "description": "TooManySignIns",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManySignInsEncoded"
+                }
+              }
+            }
+          },
           "500": {
             "description": "InternalError",
             "content": {
@@ -22615,7 +22625,8 @@
                                           "startSeries",
                                           "finishTask",
                                           "cleanupExpired",
-                                          "deleteProfile"
+                                          "deleteProfile",
+                                          "resetPassphrase"
                                         ]
                                       },
                                       "credential_id": {
@@ -36015,7 +36026,8 @@
                                       "startSeries",
                                       "finishTask",
                                       "cleanupExpired",
-                                      "deleteProfile"
+                                      "deleteProfile",
+                                      "resetPassphrase"
                                     ]
                                   },
                                   "credential_id": {
@@ -37987,7 +37999,8 @@
                                       "startSeries",
                                       "finishTask",
                                       "cleanupExpired",
-                                      "deleteProfile"
+                                      "deleteProfile",
+                                      "resetPassphrase"
                                     ]
                                   },
                                   "code": {
@@ -38006,7 +38019,9 @@
                                       "profile_scope",
                                       "write_scope",
                                       "owner_required",
-                                      "profile_deleted"
+                                      "profile_deleted",
+                                      "sign_in_locked",
+                                      "sign_in_busy"
                                     ]
                                   }
                                 },
@@ -42366,6 +42381,30 @@
           }
         },
         "required": ["_tag", "message"],
+        "additionalProperties": false
+      },
+      "TooManySignInsEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["TooManySignIns"]
+          },
+          "message": {
+            "type": "string"
+          },
+          "locked_until": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": ["_tag", "message", "locked_until"],
         "additionalProperties": false
       }
     },

@@ -44,6 +44,11 @@ export const IdentityResponse = Schema.Struct({
   profile: Schema.String,
   expires_at: Schema.String,
 });
+export const PassphraseResetResponse = Schema.Struct({
+  generated_at: Schema.String,
+  status: Schema.Literal("passphrase_reset"),
+  sessions_revoked: Schema.Int,
+});
 export type PathResponse = typeof PathResponse.Type;
 export const PathResponse = Schema.Struct({
   generated_at: Schema.String,
@@ -127,6 +132,7 @@ registerCommandSchema("help", TextResponse);
 
 for (const name of ["init", "logout", "rm", "config set"])
   registerCommandSchema(name, StatusResponse);
+registerCommandSchema("reset-passphrase", PassphraseResetResponse);
 for (const name of ["login", "whoami"])
   registerCommandSchema(name, IdentityResponse);
 for (const name of ["config get", "config show"])

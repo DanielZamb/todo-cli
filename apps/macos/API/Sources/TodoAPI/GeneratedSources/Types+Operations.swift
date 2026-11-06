@@ -650,6 +650,57 @@ public enum Operations {
                     }
                 }
             }
+            public struct TooManyRequests: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/auth/sessions/POST/responses/429/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/auth/sessions/POST/responses/429/content/application\/json`.
+                    case json(Components.Schemas.TooManySignInsEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.TooManySignInsEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.signIn_period_signIn.Output.TooManyRequests.Body
+                /// Creates a new `TooManyRequests`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.signIn_period_signIn.Output.TooManyRequests.Body) {
+                    self.body = body
+                }
+            }
+            /// TooManySignIns
+            ///
+            /// - Remark: Generated from `#/paths//auth/sessions/post(signIn.signIn)/responses/429`.
+            ///
+            /// HTTP response code: `429 tooManyRequests`.
+            case tooManyRequests(Operations.signIn_period_signIn.Output.TooManyRequests)
+            /// The associated value of the enum case if `self` is `.tooManyRequests`.
+            ///
+            /// - Throws: An error if `self` is not `.tooManyRequests`.
+            /// - SeeAlso: `.tooManyRequests`.
+            public var tooManyRequests: Operations.signIn_period_signIn.Output.TooManyRequests {
+                get throws {
+                    switch self {
+                    case let .tooManyRequests(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "tooManyRequests",
+                            response: self
+                        )
+                    }
+                }
+            }
             public struct InternalServerError: Sendable, Hashable {
                 /// - Remark: Generated from `#/paths/auth/sessions/POST/responses/500/content`.
                 @frozen public enum Body: Sendable, Hashable {
@@ -37487,10 +37538,10 @@ public enum Operations {
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/history/GET/responses/200/content/jsonPayload`.
                     @frozen public enum jsonPayloadPayload: Codable, Hashable, Sendable {
-                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/history/GET/responses/200/content/jsonPayload/SwiftTagged_committed_4d7933223522e445`.
-                        case committed(Components.Schemas.SwiftTagged_committed_4d7933223522e445)
-                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/history/GET/responses/200/content/jsonPayload/SwiftTagged_rejected_3b8ba18ea68495b7`.
-                        case rejected(Components.Schemas.SwiftTagged_rejected_3b8ba18ea68495b7)
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/history/GET/responses/200/content/jsonPayload/SwiftTagged_committed_35ab0ce1f2e94769`.
+                        case committed(Components.Schemas.SwiftTagged_committed_35ab0ce1f2e94769)
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/history/GET/responses/200/content/jsonPayload/SwiftTagged_rejected_6e5bf36e0773479f`.
+                        case rejected(Components.Schemas.SwiftTagged_rejected_6e5bf36e0773479f)
                         public enum CodingKeys: String, CodingKey {
                             case outcome
                         }

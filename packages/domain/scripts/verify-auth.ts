@@ -514,7 +514,8 @@ const program = Effect.acquireUseRelease(
           ["auth", "profile_scope"],
           ["auth", "write_scope"],
           ["auth", "profile_scope"],
-          ["auth", "write_scope"],
+          // A second identical write_scope denial in the same minute adds no
+          // row (ADR-0007 amendment).
           ["auth", "revoked"],
           ["auth", "revoked"],
           ["auth", "expired"],
@@ -613,12 +614,75 @@ const program = Effect.acquireUseRelease(
       }
       dump("06-symlink");
       dump("05-reopened");
+      // Lockout on a second scratch database: 10 wrong passphrases lock
+      // sign-in for an hour, the lock survives reopening, reset ends it.
+      const lockPath = join(directory, "lockout.db");
+      const lockStart = time;
+      const lockout = yield* Effect.acquireUseRelease(
+        openStore({ path: lockPath }),
+        (first) =>
+          Effect.gen(function* () {
+            yield* first.auth.setupOwner("compiled lockout passphrase");
+            yield* first.auth.signIn("compiled lockout passphrase");
+            for (let index = 0; index < 10; index++)
+              yield* denied(
+                `lockout wrong passphrase ${index + 1}`,
+                first.auth.signIn("wrong lockout secret"),
+                "invalid_passphrase",
+              );
+            const error = yield* Effect.flip(
+              first.auth.signIn("compiled lockout passphrase"),
+            );
+            assert.ok(error instanceof AuthError);
+            assert.equal(error.detail, "sign_in_locked");
+            return error.locked_until;
+          }),
+        (first) => Effect.orDie(first.close()),
+      );
+      assert.equal(lockout, new Date(lockStart + 3_600_000).toISOString());
+      yield* Effect.acquireUseRelease(
+        openStore({ path: lockPath, create: false }),
+        (second) =>
+          Effect.gen(function* () {
+            yield* denied(
+              "lockout holds after reopening the database",
+              second.auth.signIn("compiled lockout passphrase"),
+              "sign_in_locked",
+            );
+            const reset = yield* second.auth.resetPassphrase(
+              "compiled replacement passphrase",
+            );
+            assert.deepEqual(reset, { sessions_revoked: 1 });
+            const renewed = yield* second.auth.signIn(
+              "compiled replacement passphrase",
+            );
+            assert.match(renewed.credential, /^ses_/);
+            const result = {
+              locked_after: 10,
+              locked_until: lockout,
+              reset,
+              signed_in_after_reset: true,
+              wrong_passphrase_rows: (yield* second.history()).filter(
+                (entry) =>
+                  entry.event.kind === "AuthAttemptRejected" &&
+                  entry.event.detail === "invalid_passphrase",
+              ).length,
+            };
+            assert.equal(result.wrong_passphrase_rows, 10);
+            mark("sign-in lockout and resetPassphrase", result);
+            writeFileSync(
+              join(evidence, "07-lockout.json"),
+              `${JSON.stringify(result, null, 2)}\n`,
+            );
+          }),
+        (second) => Effect.orDie(second.close()),
+      );
       writeFileSync(
         join(evidence, "result.json"),
         `${JSON.stringify({ status: "passed", settings: yield* store.settings(), modes: modes(), tasks: yield* store.tasks(), rejected, history }, null, 2)}\n`,
       );
       process.stdout.write(
-        "PASS owner Argon2id, hashed credentials, fixed Session expiry, Token expiry, revocation, scopes, rejected history, 0600 files including symlink target siblings, authenticated Series start/complete/cancel, atomic successor rollback, replay and reopen\n",
+        "PASS owner Argon2id, hashed credentials, fixed Session expiry, Token expiry, revocation, scopes, rejected history, 0600 files including symlink target siblings, authenticated Series start/complete/cancel, atomic successor rollback, replay and reopen, sign-in lockout and passphrase reset\n",
       );
     }),
   (store) => Effect.orDie(store.close()),

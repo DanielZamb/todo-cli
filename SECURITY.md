@@ -34,6 +34,13 @@ auth denial is stored once per minute. One request, or a stream of refused
 retries, therefore adds a bounded amount. A read-write credential can still
 create many valid Tasks, so revoke a misbehaving Access Token.
 
+Sign-in locks for an hour after 10 wrong passphrases in a row, so the
+passphrase cannot be guessed, even slowly. While locked, sessions that are
+already signed in keep working. `todo reset-passphrase` ends the lock early and
+sets a new passphrase, after macOS confirms the login password of the account
+running Todo. A process already running as the owner can still lock sign-in
+on purpose, but not guess the passphrase.
+
 Electron keeps the Session in its main process and encrypts persisted credentials
 with safeStorage. The SwiftUI client uses Keychain. Do not disable these controls
 to work around a verification or signing prompt.

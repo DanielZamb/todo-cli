@@ -1010,9 +1010,23 @@ export function exportScope(
   throw invalid("invalid export scope");
 }
 export const authFailure = (error: unknown) =>
-  error instanceof AuthError
-    ? new CommandError(3, "auth_required", "invalid or expired session")
-    : error;
+  !(error instanceof AuthError)
+    ? error
+    : error.detail === "sign_in_locked"
+      ? new CommandError(
+          3,
+          "sign_in_locked",
+          `sign-in is locked after 10 wrong passphrases until ${error.locked_until}; wait, or run todo reset-passphrase`,
+        )
+      : error.detail === "sign_in_busy"
+        ? new CommandError(
+            3,
+            "sign_in_busy",
+            "too many sign-in attempts are in progress; retry in a moment",
+          )
+        : error.detail === "invalid_passphrase"
+          ? new CommandError(3, "auth_required", "incorrect owner passphrase")
+          : new CommandError(3, "auth_required", "invalid or expired session");
 
 type ClientWriteContext = {
   readonly before: Task;

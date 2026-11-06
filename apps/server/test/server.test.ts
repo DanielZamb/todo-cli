@@ -183,6 +183,30 @@ describe("Todo HTTP contract", () => {
       ),
   );
   it.effect(
+    "answers 429 with the unlock time once 10 wrong passphrases lock sign-in",
+    () =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const { request } = yield* fixture;
+          for (let index = 0; index < 10; index++)
+            expect(
+              (yield* request("POST", "/auth/sessions", {
+                passphrase: "wrong passphrase",
+              })).status,
+            ).toBe(401);
+          const locked = yield* request("POST", "/auth/sessions", {
+            passphrase: "test passphrase",
+          });
+          expect(locked.status).toBe(429);
+          expect(locked.body).toMatchObject({
+            _tag: "TooManySignIns",
+            locked_until: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+            message: expect.stringContaining("todo reset-passphrase"),
+          });
+        }),
+      ),
+  );
+  it.effect(
     "refuses oversized Task text and batches before anything reaches History",
     () =>
       Effect.scoped(

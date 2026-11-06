@@ -15,7 +15,6 @@ import { type OperationStore, openStore, StoreError } from "@todo/domain/store";
 import { Effect, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { RRuleTemporal } from "rrule-temporal";
-import { signInTiming } from "../src/auth/auth.ts";
 import { migrationSql } from "../src/store/0002.ts";
 import { createProjection } from "../src/store/projection.ts";
 import {
@@ -976,39 +975,118 @@ describe("database boundary", () => {
   );
 
   it.effect(
-    "backs off after consecutive failed sign-ins, caps the wait and resets after success",
+    "locks sign-in for an hour after 10 wrong passphrases in a row, even for the correct one",
     () =>
       usingStore((store) =>
         Effect.gen(function* () {
+          yield* TestClock.setTime(start);
           yield* store.auth.setupOwner("scratch owner passphrase");
-          const waits: number[] = [];
-          const sleep = signInTiming.sleep;
-          signInTiming.sleep = async (ms) => {
-            waits.push(ms);
-          };
-          try {
-            const attempt = (passphrase: string) =>
-              Effect.map(
-                Effect.result(store.auth.signIn(passphrase)),
-                (result) => result._tag,
+          const attempt = (passphrase: string) =>
+            Effect.map(
+              Effect.result(store.auth.signIn(passphrase)),
+              (result) =>
+                result._tag === "Success"
+                  ? "signed in"
+                  : result.failure instanceof AuthError
+                    ? result.failure.detail
+                    : "unexpected",
+            );
+          // A correct sign-in ends a run of failures.
+          for (let index = 0; index < 9; index++)
+            expect(yield* attempt("wrong passphrase")).toBe(
+              "invalid_passphrase",
+            );
+          expect(yield* attempt("scratch owner passphrase")).toBe("signed in");
+          for (let index = 0; index < 10; index++)
+            expect(yield* attempt("wrong passphrase")).toBe(
+              "invalid_passphrase",
+            );
+          expect(yield* attempt("scratch owner passphrase")).toBe(
+            "sign_in_locked",
+          );
+          const locked = yield* Effect.flip(
+            store.auth.signIn("scratch owner passphrase"),
+          );
+          expect(locked instanceof AuthError && locked.locked_until).toBe(
+            "2026-10-27T15:00:00.000Z",
+          );
+          // The lock holds until the hour ends.
+          yield* TestClock.adjust("59 minutes");
+          expect(yield* attempt("scratch owner passphrase")).toBe(
+            "sign_in_locked",
+          );
+          yield* TestClock.adjust("1 minute");
+          expect(yield* attempt("wrong passphrase")).toBe("invalid_passphrase");
+          expect(yield* attempt("scratch owner passphrase")).toBe("signed in");
+          const rejected = (yield* store.history()).flatMap((entry) =>
+            entry.event.kind === "AuthAttemptRejected"
+              ? [entry.event.detail]
+              : [],
+          );
+          // Every wrong passphrase is kept. Lock refusals in the same minute
+          // share a row; the one 59 minutes later gets its own.
+          expect(rejected).toEqual([
+            ...Array(19).fill("invalid_passphrase"),
+            "sign_in_locked",
+            "sign_in_locked",
+            "invalid_passphrase",
+          ]);
+        }),
+      ),
+  );
+
+  it.effect(
+    "keeps the lock across stores on the same database and ends it on reset",
+    () =>
+      scratch((path) =>
+        Effect.gen(function* () {
+          yield* TestClock.setTime(start);
+          const open = <A, E>(
+            run: (store: OperationStore) => Effect.Effect<A, E>,
+          ) =>
+            Effect.acquireUseRelease(openStore({ path }), run, (store) =>
+              Effect.orDie(store.close()),
+            );
+          const session = yield* open((store) =>
+            Effect.gen(function* () {
+              yield* store.putProfile(work);
+              yield* store.auth.setupOwner("scratch owner passphrase");
+              const session = yield* store.auth.signIn(
+                "scratch owner passphrase",
               );
-            const outcomes = [];
-            for (let index = 0; index < 7; index++)
-              outcomes.push(yield* attempt("wrong passphrase"));
-            outcomes.push(yield* attempt("scratch owner passphrase"));
-            outcomes.push(yield* attempt("scratch owner passphrase"));
-            outcomes.push(yield* attempt("wrong passphrase"));
-            expect(outcomes).toEqual([
-              ...Array(7).fill("Failure"),
-              "Success",
-              "Success",
-              "Failure",
-            ]);
-            // No wait before the first attempt or after a success.
-            expect(waits).toEqual([250, 500, 1000, 2000, 4000, 5000, 5000]);
-          } finally {
-            signInTiming.sleep = sleep;
-          }
+              for (let index = 0; index < 10; index++)
+                yield* Effect.flip(store.auth.signIn("wrong passphrase"));
+              return session;
+            }),
+          );
+          yield* open((store) =>
+            Effect.gen(function* () {
+              expect(
+                yield* denial(store.auth.signIn("scratch owner passphrase")),
+              ).toEqual(["auth", "sign_in_locked"]);
+              expect(
+                yield* denial(store.auth.resetPassphrase("too short")),
+              ).toEqual(["auth", "invalid_request"]);
+              expect(
+                yield* store.auth.resetPassphrase("a brand new passphrase"),
+              ).toEqual({ sessions_revoked: 1 });
+              expect(
+                yield* denial(
+                  store.auth.authenticate({
+                    credential: session.credential,
+                    profile,
+                    access: "read",
+                  }),
+                ),
+              ).toEqual(["auth", "revoked"]);
+              expect(
+                yield* denial(store.auth.signIn("scratch owner passphrase")),
+              ).toEqual(["auth", "invalid_passphrase"]);
+              expect(
+                (yield* store.auth.signIn("a brand new passphrase")).credential,
+              ).toMatch(/^ses_/);
+            }),
+          );
         }),
       ),
   );
