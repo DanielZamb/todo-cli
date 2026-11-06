@@ -294,9 +294,10 @@ const guides = {
   add: reference({
     purpose:
       'Create a Task in the selected Profile. A structured recurrence also creates a Series and its first Occurrence atomically. Dash-leading descriptions work as --desc "- item" or --desc="- item". Use equals form when the value looks like a long flag, for example --desc=--help.',
-    synopsis: "todo add <title> [flags] | todo add --parse <text> [flags]",
+    synopsis:
+      "todo add <title...> [flags] | todo add --parse <text...> [flags]",
     flags: [
-      "--parse <text> (opt in to quick-add tokens; literal titles stay unchanged)",
+      "--parse <text> (opt in to quick-add tokens; literal titles stay unchanged; unquoted words after it join the text)",
       ...taskFlags,
       "--attach <path> (repeatable)",
       "--link <URI> (repeatable)",
@@ -304,6 +305,8 @@ const guides = {
     ],
     examples: [
       "todo add 'Pay rent' --priority P1 --due 2030-01-01",
+      "todo add Pay rent --priority P1",
+      "todo add --parse buy milk tomorrow p1",
       "todo add 'Ship CLI' --project work --tag cli --format json",
       `todo add --parse 'Ship #"deep focus" @"Client Project" p1' --format json`,
     ],
@@ -312,7 +315,7 @@ const guides = {
   }),
   parse: reference({
     purpose: "Parse quick-add text without creating a Task.",
-    synopsis: "todo parse <text> [--format md|json|table]",
+    synopsis: "todo parse <text...> [--format md|json|table]",
     flags: [],
     examples: [
       `todo parse 'Ship #"deep focus" @"Client Project" p1' --format json`,

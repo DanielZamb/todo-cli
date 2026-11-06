@@ -532,11 +532,12 @@ const quickDraft = (text: string) =>
   );
 const parseCommand = Command.make(
   "parse",
-  { text: Argument.String("text") },
-  ({ text }) =>
+  // Unquoted words join with single spaces, so `todo parse buy milk` works.
+  { words: Argument.String("text").pipe(Argument.variadic({ min: 1 })) },
+  ({ words }) =>
     Effect.gen(function* () {
       const cfg = yield* root;
-      const draft = yield* quickDraft(text);
+      const draft = yield* quickDraft(words.join(" "));
       yield* write(
         cfg.format === "json"
           ? encodeResponse(ParseResponse, { generated_at: nowInstant(), draft })
@@ -551,13 +552,18 @@ const add = Command.make(
     attach: stringFlag("attach").pipe(Flag.atLeast(0)),
     link: stringFlag("link").pipe(Flag.atLeast(0)),
     label: stringFlag("label").pipe(Flag.optional),
-    titleArg: Argument.String("title").pipe(Argument.optional),
+    // Unquoted words join with single spaces, so `todo add buy milk` works.
+    titleWords: Argument.String("title").pipe(Argument.variadic()),
     parse: stringFlag("parse").pipe(Flag.optional),
   },
   (input) =>
     Effect.gen(function* () {
       const cfg = yield* root;
-      if (Option.isSome(input.titleArg) === Option.isSome(input.parse))
+      const titleArg =
+        input.titleWords.length > 0
+          ? Option.some(input.titleWords.join(" "))
+          : Option.none<string>();
+      if (Option.isSome(titleArg) === Option.isSome(input.parse))
         return yield* Effect.fail(
           new CommandError(
             2,
@@ -577,7 +583,7 @@ const add = Command.make(
             request,
             {
               ...flags,
-              title: draft?.title ?? Option.getOrElse(input.titleArg, () => ""),
+              title: draft?.title ?? Option.getOrElse(titleArg, () => ""),
             },
             draft,
             yield* Effect.try({
@@ -1669,6 +1675,29 @@ for (let index = 0; index < rawArgs.length; index++) {
   if (arg === "--") {
     args.push(...rawArgs.slice(index));
     break;
+  }
+  // --parse takes the quick-add text, so unquoted words after it belong to it:
+  // `todo add --parse buy milk tomorrow` parses "buy milk tomorrow".
+  if (arg === "--parse" || arg.startsWith("--parse=")) {
+    const inline = arg.startsWith("--parse=");
+    const value = inline ? arg.slice("--parse=".length) : rawArgs[index + 1];
+    if (value === undefined || (!inline && value.startsWith("--"))) {
+      args.push(arg);
+      continue;
+    }
+    const words = [value];
+    let end = inline ? index : index + 1;
+    for (
+      let word = rawArgs[end + 1];
+      word !== undefined && !word.startsWith("-");
+      word = rawArgs[end + 1]
+    ) {
+      words.push(word);
+      end++;
+    }
+    args.push(`--parse=${words.join(" ")}`);
+    index = end;
+    continue;
   }
   const next = rawArgs[index + 1];
   if (stringFlags.has(arg) && next?.startsWith("-") && !next.startsWith("--")) {
