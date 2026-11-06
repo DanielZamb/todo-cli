@@ -606,11 +606,12 @@ export class OperationStore {
       entity_version: 1,
       occurred_at: envelope.occurred_at,
       attempted_kind: envelope.kind,
-      // An unvalidated id from a refused input is kept only if short; the
-      // payload holding it is already bounded above.
-      task_id:
-        (primary?.after ?? primary?.before)?.id ??
-        (taskId !== null && taskId.length <= inputLimits.id ? taskId : null),
+      // A refused input's id, from whichever field supplied it, is kept only
+      // if short; the payload holding it is already bounded above.
+      task_id: ((id) =>
+        id !== null && id.length <= inputLimits.id ? id : null)(
+        (primary?.after ?? primary?.before)?.id ?? taskId,
+      ),
       violations: [
         {
           field: "event",

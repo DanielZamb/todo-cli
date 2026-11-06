@@ -16,6 +16,7 @@ import {
 } from "./entities.ts";
 import { Event, type OpLogEntry, type TaskMutationKind } from "./events.ts";
 import { type ActorId, OccurrenceId, ProfileId, TaskId } from "./ids.ts";
+import { inputLimits } from "./limits.ts";
 import {
   type ExternalIdConflictDetails,
   type TaskView,
@@ -179,6 +180,17 @@ function metadata(
 ) {
   const now = nowInstant();
   const projectName = flags.project;
+  // Submitted names meet the input limit here, because only their ids reach
+  // TaskPatch; names already stored are kept as they are.
+  const tooLong = (name: string) => name.length > inputLimits.name;
+  if (projectName !== undefined && tooLong(projectName))
+    throw invalid(`Project names have at most ${inputLimits.name} characters.`);
+  if (
+    flags.tag?.some((value) =>
+      value.split(",").some((name) => tooLong(name.trim())),
+    )
+  )
+    throw invalid(`Tag names have at most ${inputLimits.name} characters.`);
   const project =
     projectName === undefined
       ? (data.projects.find(

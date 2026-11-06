@@ -611,4 +611,84 @@ describe("second security review", () => {
         }),
       ),
   );
+
+  it.effect(
+    "R3-1: a refused creation with a huge Task id stores a bounded event",
+    () =>
+      withStore((store) =>
+        Effect.gen(function* () {
+          yield* owner(store);
+          const before = (yield* historyText(store)).length;
+          const huge = Schema.decodeUnknownSync(Task)({
+            ...taskInput,
+            id: "q".repeat(1_000_000),
+            row_version: 2,
+          });
+          const entry = yield* store.append({
+            actor,
+            profile,
+            event: { ...createdEvent, task: huge },
+          });
+          expect(entry.outcome).toBe("rejected");
+          expect((yield* historyText(store)).length - before).toBeLessThan(
+            2_000,
+          );
+        }),
+      ),
+  );
+
+  it.effect(
+    "R3-2: CLI Project and Tag names over 200 characters are refused on add and edit",
+    () =>
+      withStore((store) =>
+        Effect.gen(function* () {
+          const request = yield* owner(store);
+          const long = "n".repeat(201);
+          for (const flags of [
+            { project: long },
+            { tag: [long] },
+            { tag: [`ok,${long}`] },
+          ])
+            expect(
+              (yield* Effect.result(
+                createTask(store, request, { title: "Named", ...flags }),
+              ))._tag,
+            ).toBe("Failure");
+          const created = yield* createTask(store, request, {
+            title: "Named",
+            project: "n".repeat(200),
+            tag: ["t".repeat(200)],
+          });
+          expect(created.outcome).toBe("committed");
+          if (created.outcome !== "committed") throw new Error("fixture");
+          const edited = yield* Effect.result(
+            mutateTask(
+              store,
+              request,
+              "edit",
+              created.task.id,
+              created.task.row_version,
+              {
+                project: long,
+              },
+            ),
+          );
+          expect(edited._tag).toBe("Failure");
+          // Refused attempts are recorded (ADR-0007, bounded); no committed
+          // change, Project or Tag carries the long name.
+          expect(
+            JSON.stringify(
+              (yield* store.history()).filter(
+                (entry) => entry.outcome === "committed",
+              ),
+            ),
+          ).not.toContain(long);
+          expect(
+            [...(yield* store.projects()), ...(yield* store.tags())].some(
+              (definition) => definition.name.length > 200,
+            ),
+          ).toBe(false);
+        }),
+      ),
+  );
 });
