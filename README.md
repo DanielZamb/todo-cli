@@ -166,9 +166,11 @@ runs the same script. macOS may ask for the login keychain password.
 
 Before `pnpm install` runs, the script prints a warning listing every npm
 package the install will add or change. It stops if any locked npm package or
-pinned Swift package is less than seven days old, comes from outside the npm
-registry or GitHub, or cannot be checked. You can run the same check on its
-own with `bun scripts/check-package-age.ts 7`.
+pinned Swift package is less than seven days old or cannot be checked. Each npm
+package must resolve from the npm registry with the registry's own integrity
+hash. Each Swift pin needs a GitHub Release whose tag points at the pinned
+revision, because commit dates can be backdated. You can run the same check on
+its own with `bun scripts/check-package-age.ts 7`.
 
 `make sign-desktop` builds into `dist/signed.noindex/` and does not replace
 `/Applications`. It checks package age and free disk before building, prints

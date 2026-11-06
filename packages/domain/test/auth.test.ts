@@ -15,6 +15,7 @@ import { type OperationStore, openStore, StoreError } from "@todo/domain/store";
 import { Effect, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { RRuleTemporal } from "rrule-temporal";
+import { signInTiming } from "../src/auth/auth.ts";
 import { migrationSql } from "../src/store/0002.ts";
 import { createProjection } from "../src/store/projection.ts";
 import {
@@ -975,33 +976,39 @@ describe("database boundary", () => {
   );
 
   it.effect(
-    "slows consecutive failed sign-ins and resets after a correct passphrase",
+    "backs off after consecutive failed sign-ins, caps the wait and resets after success",
     () =>
       usingStore((store) =>
         Effect.gen(function* () {
           yield* store.auth.setupOwner("scratch owner passphrase");
-          const timed = (passphrase: string) =>
-            Effect.gen(function* () {
-              const started = performance.now();
-              const result = yield* Effect.result(
-                store.auth.signIn(passphrase),
+          const waits: number[] = [];
+          const sleep = signInTiming.sleep;
+          signInTiming.sleep = async (ms) => {
+            waits.push(ms);
+          };
+          try {
+            const attempt = (passphrase: string) =>
+              Effect.map(
+                Effect.result(store.auth.signIn(passphrase)),
+                (result) => result._tag,
               );
-              return [result._tag, performance.now() - started] as const;
-            });
-          const first = yield* timed("wrong passphrase");
-          const second = yield* timed("wrong passphrase");
-          const third = yield* timed("scratch owner passphrase");
-          const fourth = yield* timed("scratch owner passphrase");
-          expect([first[0], second[0], third[0], fourth[0]]).toEqual([
-            "Failure",
-            "Failure",
-            "Success",
-            "Success",
-          ]);
-          // Waits are 0, 250 and 500 ms before the first three; none after a success.
-          expect(second[1] - first[1]).toBeGreaterThanOrEqual(200);
-          expect(third[1] - first[1]).toBeGreaterThanOrEqual(450);
-          expect(fourth[1]).toBeLessThan(third[1] - 400);
+            const outcomes = [];
+            for (let index = 0; index < 7; index++)
+              outcomes.push(yield* attempt("wrong passphrase"));
+            outcomes.push(yield* attempt("scratch owner passphrase"));
+            outcomes.push(yield* attempt("scratch owner passphrase"));
+            outcomes.push(yield* attempt("wrong passphrase"));
+            expect(outcomes).toEqual([
+              ...Array(7).fill("Failure"),
+              "Success",
+              "Success",
+              "Failure",
+            ]);
+            // No wait before the first attempt or after a success.
+            expect(waits).toEqual([250, 500, 1000, 2000, 4000, 5000, 5000]);
+          } finally {
+            signInTiming.sleep = sleep;
+          }
         }),
       ),
   );

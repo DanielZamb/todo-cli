@@ -146,11 +146,13 @@ const refuse = (status: number, code: string, message: string) =>
       { status },
     ),
   );
-const hostnameOf = (host: string) => {
-  const value = host.trim().toLowerCase();
-  if (value.startsWith("[")) return value.slice(0, value.indexOf("]") + 1);
-  return value.split(":")[0] ?? "";
-};
+// The whole Host header must be a name with an optional port; anything else,
+// such as "[::1].evil.example", yields no hostname and is refused.
+const hostnameOf = (host: string) =>
+  host
+    .trim()
+    .toLowerCase()
+    .match(/^(\[[0-9a-f:.]+\]|[a-z0-9.-]+)(?::\d{1,5})?$/)?.[1] ?? "";
 // Only native clients talk to this server. Browsers always send Origin or
 // Sec-Fetch-Site, and DNS rebinding arrives with a foreign Host, so both are
 // refused before authentication runs or anything is recorded.

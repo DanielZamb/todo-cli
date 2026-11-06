@@ -46,6 +46,8 @@ const SignInPassphrase = Schema.NonEmptyString.check(
 const maximumWaitingSignIns = 4;
 const failureDelay = (failures: number) =>
   failures === 0 ? 0 : Math.min(250 * 2 ** (failures - 1), 5000);
+// Tests replace sleep to observe the requested waits without real time.
+export const signInTiming = { sleep: (ms: number) => Bun.sleep(ms) };
 
 const parse = <S extends Schema.ConstraintDecoder<unknown>>(
   schema: S,
@@ -104,7 +106,7 @@ export class Authentication<Read> {
     this.waitingSignIns++;
     const attempt = this.signInQueue.then(async () => {
       const delay = failureDelay(this.failedSignIns);
-      if (delay) await Bun.sleep(delay);
+      if (delay) await signInTiming.sleep(delay);
       const valid = await Bun.password.verify(value, hash);
       this.failedSignIns = valid ? 0 : this.failedSignIns + 1;
       return valid;

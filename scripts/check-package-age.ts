@@ -2,10 +2,11 @@
 // Usage: bun scripts/check-package-age.ts [minimum-days]
 // Lists the npm packages `pnpm install --frozen-lockfile` would add or change,
 // then checks every locked npm package and every pinned Swift package.
-// Fails closed: an unknown publish time, a non-registry source or a network
-// error is a failure, not a pass.
-import { existsSync, readFileSync } from "node:fs";
+// Fails closed: an unknown or invalid publish time, a source other than the
+// npm registry or a GitHub Release, a lockfile hash that differs from the
+// registry's, or a network error is a failure, not a pass.
 import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 
 const minimumDays = Number(process.argv[2] ?? 7);
 if (!Number.isFinite(minimumDays) || minimumDays < 7) {
@@ -16,32 +17,48 @@ const now = Date.now();
 const cutoff = now - minimumDays * 86_400_000;
 const day = (iso: string) => iso.slice(0, 10);
 const age = (iso: string) => Math.floor((now - Date.parse(iso)) / 86_400_000);
+// A publish time must be a real timestamp in the past; anything else fails.
+const timestamp = (value: unknown) =>
+  typeof value === "string" &&
+  Number.isFinite(Date.parse(value)) &&
+  Date.parse(value) <= now
+    ? value
+    : undefined;
 
-type Locked = { name: string; version: string };
+type Locked = { key: string; name: string; version: string; resolution: Record<string, unknown> };
 type Result = { label: string; published?: string; problem?: string };
 
 const lockedPackages = (file: string): Locked[] => {
   if (!existsSync(file)) return [];
-  const section = readFileSync(file, "utf8").split(/^packages:\s*$/m)[1]?.split(/^\S/m)[0] ?? "";
-  return [...section.matchAll(/^ {2}(\S.*?):\s*$/gm)].map(([, raw]) => {
-    const key = raw.replace(/^'|'$/g, "");
+  const lock = Bun.YAML.parse(readFileSync(file, "utf8")) as {
+    packages?: Record<string, { resolution?: Record<string, unknown> }>;
+  };
+  return Object.entries(lock.packages ?? {}).map(([key, entry]) => {
     const at = key.lastIndexOf("@");
-    return { name: key.slice(0, at), version: key.slice(at + 1) };
+    return { key, name: key.slice(0, at), version: key.slice(at + 1), resolution: entry?.resolution ?? {} };
   });
 };
 
 const semver = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 
-const checkNpm = async ({ name, version }: Locked): Promise<Result> => {
+const checkNpm = async ({ name, version, resolution }: Locked): Promise<Result> => {
   const label = `${name} ${version}`;
   if (!semver.test(version)) return { label, problem: "not a registry version, cannot verify its age" };
+  // Only a bare registry integrity is allowed: a tarball, git, directory or
+  // other resolution would make pnpm fetch something this check never saw.
+  const keys = Object.keys(resolution);
+  if (keys.length !== 1 || keys[0] !== "integrity" || typeof resolution.integrity !== "string")
+    return { label, problem: `resolved outside the npm registry (${keys.join(", ") || "no resolution"})` };
   try {
     const response = await fetch(`https://registry.npmjs.org/${name.replace("/", "%2F")}`, {
       headers: { accept: "application/json" },
     });
     if (!response.ok) return { label, problem: `registry answered ${response.status}` };
-    const published: string | undefined = (await response.json()).time?.[version];
-    if (!published) return { label, problem: "registry has no publish time" };
+    const document = await response.json();
+    if (document.versions?.[version]?.dist?.integrity !== resolution.integrity)
+      return { label, problem: "lockfile integrity does not match the npm registry's artifact" };
+    const published = timestamp(document.time?.[version]);
+    if (!published) return { label, problem: "registry has no valid publish time" };
     return { label, published, problem: Date.parse(published) > cutoff ? "too new" : undefined };
   } catch (error) {
     return { label, problem: `registry request failed: ${(error as Error).message}` };
@@ -77,19 +94,34 @@ const swiftPins = (): Pin[] => {
   return [...pins.values()];
 };
 
-// SwiftPM pins a git revision; its committer date is the closest available publish time.
+// A commit date is set by whoever made the commit, so it alone proves nothing.
+// A Swift pin needs a GitHub Release for its version, whose publish time GitHub
+// records, and that version's tag must point at the pinned revision. Both the
+// Release and the commit must be at least the minimum age.
 const checkSwift = async (pin: Pin, token?: string): Promise<Result> => {
   const label = `${pin.identity} ${pin.version ?? pin.revision.slice(0, 12)} (Swift)`;
   const repo = pin.location.match(/^https:\/\/github\.com\/([^/]+\/[^/]+?)(?:\.git)?\/?$/)?.[1];
   if (!repo) return { label, problem: `not a GitHub repository, cannot verify its age: ${pin.location}` };
   if (!/^[0-9a-f]{40}$/.test(pin.revision)) return { label, problem: "pin has no full revision" };
-  try {
-    const response = await fetch(`https://api.github.com/repos/${repo}/commits/${pin.revision}`, {
+  if (!pin.version || !/^[0-9A-Za-z.+-]+$/.test(pin.version))
+    return { label, problem: "pin has no released version, cannot verify its age" };
+  const github = async (path: string) => {
+    const response = await fetch(`https://api.github.com/repos/${repo}/${path}`, {
       headers: { accept: "application/vnd.github+json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
     });
-    if (!response.ok) return { label, problem: `GitHub answered ${response.status}` };
-    const published: string | undefined = (await response.json()).commit?.committer?.date;
-    if (!published) return { label, problem: "GitHub has no commit date" };
+    return { status: response.status, body: response.ok ? await response.json() : undefined };
+  };
+  try {
+    const release = await github(`releases/tags/${encodeURIComponent(pin.version)}`);
+    if (release.status === 404) return { label, problem: "no GitHub Release for this version" };
+    if (!release.body) return { label, problem: `GitHub answered ${release.status}` };
+    const tagged = await github(`commits/${encodeURIComponent(pin.version)}`);
+    if (!tagged.body) return { label, problem: `GitHub answered ${tagged.status} for the version tag` };
+    if (tagged.body.sha !== pin.revision) return { label, problem: "version tag does not point at the pinned revision" };
+    const released = timestamp(release.body.published_at);
+    const committed = timestamp(tagged.body.commit?.committer?.date);
+    if (!released || !committed) return { label, problem: "GitHub has no valid Release or commit time" };
+    const published = Date.parse(released) > Date.parse(committed) ? released : committed;
     return { label, published, problem: Date.parse(published) > cutoff ? "too new" : undefined };
   } catch (error) {
     return { label, problem: `GitHub request failed: ${(error as Error).message}` };
@@ -109,7 +141,7 @@ if (locked.length === 0) {
   console.error("pnpm-lock.yaml lists no packages. Refusing to continue.");
   process.exit(1);
 }
-const installed = new Set(lockedPackages("node_modules/.pnpm/lock.yaml").map(({ name, version }) => `${name}@${version}`));
+const installed = new Set(lockedPackages("node_modules/.pnpm/lock.yaml").map(({ key, resolution }) => `${key} ${JSON.stringify(resolution)}`));
 const npmResults = await inBatches(locked, checkNpm);
 const token = githubToken();
 const swiftResults = await inBatches(swiftPins(), (pin) => checkSwift(pin, token));
@@ -117,7 +149,7 @@ const swiftResults = await inBatches(swiftPins(), (pin) => checkSwift(pin, token
 const describe = ({ label, published, problem }: Result) =>
   `  ${label}${published ? `  published ${day(published)} (${age(published)} days ago)` : ""}${problem ? `  ${problem.toUpperCase()}` : ""}`;
 
-const incoming = npmResults.filter((_, index) => !installed.has(`${locked[index].name}@${locked[index].version}`));
+const incoming = npmResults.filter((_, index) => !installed.has(`${locked[index].key} ${JSON.stringify(locked[index].resolution)}`));
 console.log(`Package age check: every dependency must be at least ${minimumDays} days old.`);
 if (incoming.length === 0) {
   console.log(`pnpm install adds or changes no npm packages. All ${locked.length} locked packages are already installed.`);

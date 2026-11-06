@@ -94,7 +94,7 @@ enum AttachmentOpening {
       "com.apple.terminal.settings", "com.apple.terminal.shell-script", "com.apple.mobileconfig",
       "com.apple.web-internet-location", "com.apple.internet-location", "com.apple.applescript.script",
       "com.apple.applescript.script-bundle", "com.apple.automator-action",
-      "com.apple.automator-workflow", "com.apple.shortcut",
+      "com.apple.automator-workflow", "com.apple.shortcut", "com.apple.alias-file",
     ].compactMap { UTType($0) }
 
   static func allowedURL(_ attachment: AttachmentSnapshot) -> URL? {
@@ -119,6 +119,12 @@ enum AttachmentOpening {
       if candidate.pathComponents.contains(where: {
         ["app", "bundle"].contains(URL(fileURLWithPath: $0).pathExtension.lowercased())
       }) || blocked.contains(candidate.pathExtension.lowercased()) {
+        return nil
+      }
+    }
+    // A Finder alias opens its original, which symlink resolution never sees.
+    for candidate in [url, resolved] {
+      if (try? candidate.resourceValues(forKeys: [.isAliasFileKey]))?.isAliasFile != false {
         return nil
       }
     }

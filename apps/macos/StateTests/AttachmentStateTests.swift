@@ -377,3 +377,20 @@ func liveAttachmentBatchSelectPreviewApplyConflictAndReload() async throws {
     #expect(try decision(name) == true, "\(name) must open")
   }
 }
+
+@Test func attachmentOpenDecisionRefusesFinderAliases() throws {
+  let root = FileManager.default.temporaryDirectory.appendingPathComponent(
+    "todo-open-alias-\(UUID())")
+  try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+  defer { try? FileManager.default.removeItem(at: root) }
+  let target = root.appendingPathComponent("run.command")
+  try Data("#!/bin/sh\necho forbidden\n".utf8).write(to: target)
+  try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: target.path)
+  let alias = root.appendingPathComponent("safe-looking.md")
+  try URL.writeBookmarkData(
+    try target.bookmarkData(options: .suitableForBookmarkFile), to: alias)
+  #expect(try alias.resourceValues(forKeys: [.isAliasFileKey]).isAliasFile == true)
+  #expect(
+    AttachmentOpening.allowedURL(
+      .init(id: "alias", location: .file(alias.path), added_at: "2026-11-05T00:00:00Z")) == nil)
+}

@@ -118,6 +118,18 @@ describe("Todo HTTP contract", () => {
             },
             {
               path: "/profiles",
+              init: { headers: { Host: "[::1].evil.example" } },
+              status: 403,
+              code: "forbidden_host",
+            },
+            {
+              path: "/profiles",
+              init: { headers: { Host: "localhost.:4310" } },
+              status: 403,
+              code: "forbidden_host",
+            },
+            {
+              path: "/profiles",
               init: { headers: { Origin: "https://evil.example" } },
               status: 403,
               code: "forbidden_origin",
