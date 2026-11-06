@@ -161,14 +161,19 @@ export const ensureProfile = Effect.fn(function* (
   name: string,
 ) {
   const time = nowInstant();
-  const candidate = yield* parse(() =>
-    Schema.decodeUnknownSync(Profile)({
+  const candidate = yield* parse(() => {
+    // A new Profile's name becomes its id, which History rows copy.
+    if (name.length > inputLimits.name)
+      throw invalid(
+        `Profile names have at most ${inputLimits.name} characters.`,
+      );
+    return Schema.decodeUnknownSync(Profile)({
       id: name,
       name,
       created_at: time,
       updated_at: time,
-    }),
-  );
+    });
+  });
   return yield* store.ensureProfile(candidate);
 });
 
@@ -185,9 +190,10 @@ function metadata(
   const tooLong = (name: string) => name.length > inputLimits.name;
   if (projectName !== undefined && tooLong(projectName))
     throw invalid(`Project names have at most ${inputLimits.name} characters.`);
+  // Tags are stored lowercased, and lowercasing can lengthen a name.
   if (
     flags.tag?.some((value) =>
-      value.split(",").some((name) => tooLong(name.trim())),
+      value.split(",").some((name) => tooLong(name.trim().toLowerCase())),
     )
   )
     throw invalid(`Tag names have at most ${inputLimits.name} characters.`);

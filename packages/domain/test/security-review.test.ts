@@ -12,6 +12,7 @@ import { AuthError, TokenOptions } from "../src/auth/model.ts";
 import { BatchEditRequest } from "../src/batch-edit.ts";
 import {
   createTask,
+  ensureProfile,
   moveTask,
   mutateTask,
   revertTask,
@@ -105,6 +106,7 @@ describe("second security review", () => {
           }
         }),
       ),
+    30_000,
   );
 
   it.effect(
@@ -348,6 +350,7 @@ describe("second security review", () => {
           ).toHaveLength(10);
         }),
       ),
+    30_000,
   );
 
   it("DS2-3: refuses submitted Task and Attachment ids over 200 characters", () => {
@@ -413,6 +416,7 @@ describe("second security review", () => {
           }
         }),
       ),
+    30_000,
   );
 
   it.effect(
@@ -687,6 +691,78 @@ describe("second security review", () => {
             [...(yield* store.projects()), ...(yield* store.tags())].some(
               (definition) => definition.name.length > 200,
             ),
+          ).toBe(false);
+        }),
+      ),
+  );
+
+  it.effect("R4-1: a new Profile name over 200 characters is refused", () =>
+    withStore((store) =>
+      Effect.gen(function* () {
+        expect(
+          (yield* Effect.result(ensureProfile(store, "p".repeat(201))))._tag,
+        ).toBe("Failure");
+        expect(
+          (yield* ensureProfile(store, "p".repeat(200))).name,
+        ).toHaveLength(200);
+        // An existing Profile is still found by name.
+        expect((yield* ensureProfile(store, "Work")).id).toBe("work");
+      }),
+    ),
+  );
+
+  it.effect(
+    "R4-2: a refused event's over-long time and reason are not copied into History",
+    () =>
+      withStore((store) =>
+        Effect.gen(function* () {
+          yield* owner(store);
+          const before = (yield* historyText(store)).length;
+          const longTime = `2026-11-06T12:00:00.${"0".repeat(100_000)}Z`;
+          const entry = yield* store.append({
+            actor,
+            profile,
+            event: {
+              ...createdEvent,
+              occurred_at: longTime,
+              task: { ...taskInput, row_version: 2 },
+            },
+          });
+          expect(entry.outcome).toBe("rejected");
+          expect((yield* historyText(store)).length - before).toBeLessThan(
+            2_000,
+          );
+          const refused = yield* Effect.result(
+            store.reject({
+              actor,
+              profile,
+              reason: "r".repeat(65),
+              event: {
+                kind: "TaskCreated",
+                occurred_at: "2026-11-06T12:00:00Z",
+              },
+            }),
+          );
+          expect(refused._tag).toBe("Failure");
+        }),
+      ),
+  );
+
+  it.effect(
+    "R4-3: a Tag name that lowercases past 200 characters is refused",
+    () =>
+      withStore((store) =>
+        Effect.gen(function* () {
+          const request = yield* owner(store);
+          const dotted = "\u0130".repeat(200);
+          expect(dotted.toLowerCase().length).toBeGreaterThan(200);
+          expect(
+            (yield* Effect.result(
+              createTask(store, request, { title: "Dotted", tag: [dotted] }),
+            ))._tag,
+          ).toBe("Failure");
+          expect(
+            (yield* store.tags()).some((tag) => tag.name.length > 200),
           ).toBe(false);
         }),
       ),

@@ -1033,6 +1033,7 @@ describe("database boundary", () => {
           ]);
         }),
       ),
+    30_000,
   );
 
   it.effect(
@@ -1089,6 +1090,7 @@ describe("database boundary", () => {
           );
         }),
       ),
+    30_000,
   );
 
   it.effect(

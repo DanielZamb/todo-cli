@@ -590,6 +590,12 @@ export class OperationStore {
     const envelope = Schema.decodeUnknownSync(
       Schema.Struct({ kind: TaskMutationKind, occurred_at: Instant }),
     )(payload);
+    // A refused event's time is copied into History; an over-long one is
+    // replaced by the time of recording.
+    const occurredAt =
+      envelope.occurred_at.length <= inputLimits.instant
+        ? envelope.occurred_at
+        : Schema.decodeUnknownSync(Instant)(new Date().toISOString());
     const primary = Schema.is(Event)(payload)
       ? changes(payload).tasks[0]
       : undefined;
@@ -604,7 +610,7 @@ export class OperationStore {
     const event = Schema.decodeUnknownSync(TaskAttemptRejected)({
       kind: "TaskAttemptRejected",
       entity_version: 1,
-      occurred_at: envelope.occurred_at,
+      occurred_at: occurredAt,
       attempted_kind: envelope.kind,
       // A refused input's id, from whichever field supplied it, is kept only
       // if short; the payload holding it is already bounded above.
@@ -1211,7 +1217,10 @@ export class OperationStore {
   ) =>
     attempt(() => {
       Schema.decodeUnknownSync(identity)(input);
-      Schema.decodeUnknownSync(Schema.NonEmptyString)(input.reason);
+      // Reasons are short codes such as "validation"; History copies them.
+      Schema.decodeUnknownSync(
+        Schema.NonEmptyString.check(Schema.isMaxLength(64)),
+      )(input.reason);
       return this.recordRejection(
         input,
         input.reason,
