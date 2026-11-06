@@ -16,6 +16,7 @@ import {
 } from "./entities.ts";
 import { Event, type OpLogEntry, type TaskMutationKind } from "./events.ts";
 import { type ActorId, OccurrenceId, ProfileId, TaskId } from "./ids.ts";
+import { inputLimits } from "./limits.ts";
 import {
   type ExternalIdConflictDetails,
   type TaskView,
@@ -39,6 +40,8 @@ import {
   type EditTask,
   type ExpectedVersion,
   type MoveTask,
+  RecurrenceEditInput,
+  RecurrenceInput,
   type RevertTask,
   TaskPatch,
   type TransitionTask,
@@ -159,14 +162,26 @@ export const ensureProfile = Effect.fn(function* (
   name: string,
 ) {
   const time = nowInstant();
-  const candidate = yield* parse(() =>
-    Schema.decodeUnknownSync(Profile)({
+  // A new Profile's name becomes its id, which History rows copy, so only a
+  // new one is limited; an existing Profile is found whatever its length.
+  const existing =
+    name.length > inputLimits.name
+      ? (yield* store.profiles()).some(
+          (profile) => profile.name === name || profile.id === name,
+        )
+      : true;
+  const candidate = yield* parse(() => {
+    if (!existing)
+      throw invalid(
+        `Profile names have at most ${inputLimits.name} characters.`,
+      );
+    return Schema.decodeUnknownSync(Profile)({
       id: name,
       name,
       created_at: time,
       updated_at: time,
-    }),
-  );
+    });
+  });
   return yield* store.ensureProfile(candidate);
 });
 
@@ -769,6 +784,21 @@ export class TaskCommands {
   };
 }
 
+// Names typed on the CLI meet the input limits here, because only their ids
+// reach TaskPatch. metadata also resolves stored names for Move and Copy,
+// which must keep working for older long names, so it does not check.
+const checkSubmittedNames = (flags: TaskFlags) => {
+  const tooLong = (name: string) => name.length > inputLimits.name;
+  if (flags.project !== undefined && tooLong(flags.project))
+    throw invalid(`Project names have at most ${inputLimits.name} characters.`);
+  // Tags are stored lowercased, and lowercasing can lengthen a name.
+  if (
+    flags.tag?.some((value) =>
+      value.split(",").some((name) => tooLong(name.trim().toLowerCase())),
+    )
+  )
+    throw invalid(`Tag names have at most ${inputLimits.name} characters.`);
+};
 const prepareFlags = (
   flags: TaskFlags,
   request: AccessRequest,
@@ -776,6 +806,7 @@ const prepareFlags = (
   before?: Task,
 ) =>
   parse(() => {
+    checkSubmittedNames(flags);
     const { project, tags } = metadata(flags, request, data, before);
     const fields = Schema.decodeUnknownSync(TaskPatch)({
       ...(flags.title === undefined ? {} : { title: flags.title.trim() }),
@@ -784,7 +815,11 @@ const prepareFlags = (
         : { external_id: flags.external_id || null }),
       ...(flags.desc === undefined ? {} : { description: flags.desc || null }),
       project_id: project?.id ?? null,
-      tags: tags.map((tag) => tag.id),
+      // An edit that names no Tags keeps them: copying an older Task's list
+      // into the patch would trip the per-request limit for no change.
+      ...(before && flags.tag === undefined
+        ? {}
+        : { tags: tags.map((tag) => tag.id) }),
       ...(flags.priority === undefined ? {} : { priority: flags.priority }),
       ...(flags.source === undefined ? {} : { source: flags.source }),
       ...(flags.due === undefined ? {} : { due_at: parseTime(flags.due) }),
@@ -803,7 +838,10 @@ const prepareFlags = (
         ? undefined
         : flags.recurrence === ""
           ? null
-          : Schema.decodeUnknownSync(Recurrence)(JSON.parse(flags.recurrence));
+          : // Submitted recurrence meets the input limits; stored ones need not.
+            Schema.decodeUnknownSync(
+              before ? RecurrenceEditInput : RecurrenceInput,
+            )(JSON.parse(flags.recurrence));
     if (before && recurrence && !resolveNextTime(recurrence, null))
       throw invalid("Series has no Occurrence");
     const options: CommandOptions = {
@@ -1010,9 +1048,23 @@ export function exportScope(
   throw invalid("invalid export scope");
 }
 export const authFailure = (error: unknown) =>
-  error instanceof AuthError
-    ? new CommandError(3, "auth_required", "invalid or expired session")
-    : error;
+  !(error instanceof AuthError)
+    ? error
+    : error.detail === "sign_in_locked"
+      ? new CommandError(
+          3,
+          "sign_in_locked",
+          `sign-in is locked after 10 wrong passphrases until ${error.locked_until}; wait, or run todo reset-passphrase`,
+        )
+      : error.detail === "sign_in_busy"
+        ? new CommandError(
+            3,
+            "sign_in_busy",
+            "too many sign-in attempts are in progress; retry in a moment",
+          )
+        : error.detail === "invalid_passphrase"
+          ? new CommandError(3, "auth_required", "incorrect owner passphrase")
+          : new CommandError(3, "auth_required", "invalid or expired session");
 
 type ClientWriteContext = {
   readonly before: Task;

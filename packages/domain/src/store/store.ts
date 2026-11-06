@@ -26,6 +26,7 @@ import {
   TaskMutationKind,
 } from "../events.ts";
 import { ActorId, ProfileId, Sequence, TaskId, Version } from "../ids.ts";
+import { inputLimits, rejectedInputForHistory } from "../limits.ts";
 import {
   DeleteProfile,
   type ProfileDeletionResult,
@@ -589,6 +590,12 @@ export class OperationStore {
     const envelope = Schema.decodeUnknownSync(
       Schema.Struct({ kind: TaskMutationKind, occurred_at: Instant }),
     )(payload);
+    // A refused event's time is copied into History; an over-long one is
+    // replaced by the time of recording.
+    const occurredAt =
+      envelope.occurred_at.length <= inputLimits.instant
+        ? envelope.occurred_at
+        : Schema.decodeUnknownSync(Instant)(new Date().toISOString());
     const primary = Schema.is(Event)(payload)
       ? changes(payload).tasks[0]
       : undefined;
@@ -603,10 +610,21 @@ export class OperationStore {
     const event = Schema.decodeUnknownSync(TaskAttemptRejected)({
       kind: "TaskAttemptRejected",
       entity_version: 1,
-      occurred_at: envelope.occurred_at,
+      occurred_at: occurredAt,
       attempted_kind: envelope.kind,
-      task_id: (primary?.after ?? primary?.before)?.id ?? taskId,
-      violations: [{ field: "event", received: payload, code: reason }],
+      // A refused input's id, from whichever field supplied it, is kept only
+      // if short; the payload holding it is already bounded above.
+      task_id: ((id) =>
+        id !== null && id.length <= inputLimits.id ? id : null)(
+        (primary?.after ?? primary?.before)?.id ?? taskId,
+      ),
+      violations: [
+        {
+          field: "event",
+          received: rejectedInputForHistory(payload),
+          code: reason,
+        },
+      ],
     });
     return this.transaction(() => {
       const entry = this.record(input, {
@@ -744,6 +762,57 @@ export class OperationStore {
         )
         .get(task.id)?.version;
       if (change.after) {
+        // Input limits bound each request; these bound the resulting Task,
+        // since names split on commas and repeated groups add up. Tasks
+        // already past a limit may keep, but not grow, their lists. Move and
+        // Revert only reproduce a state the Task already had, so they are
+        // not checked; a Copy is a new Task and must meet the limits.
+        // An Occurrence successor has no previous state; it reproduces its
+        // stored Series defaults and its predecessor, so those bound it.
+        const grows = (after: number, before: number, limit: number) =>
+          after > limit && after > before;
+        const successorOf =
+          change.before === null &&
+          change.after.occurrence !== null &&
+          event.kind !== "TaskCreated"
+            ? {
+                series: readSeries(this.db).find(
+                  (value) => value.id === change.after?.occurrence?.series_id,
+                ),
+                predecessors: resolved.tasks.filter(
+                  (other) => other.before !== null,
+                ),
+              }
+            : null;
+        const previousTags = Math.max(
+          change.before?.tags.length ?? 0,
+          successorOf?.series?.task.tags.length ?? 0,
+          ...(successorOf?.predecessors ?? []).map(
+            (other) => other.before?.tags.length ?? 0,
+          ),
+        );
+        const previousAttachments = Math.max(
+          change.before?.attachments?.length ?? 0,
+          ...(successorOf?.predecessors ?? []).map(
+            (other) => other.before?.attachments?.length ?? 0,
+          ),
+        );
+        if (
+          event.kind !== "TaskMovedIn" &&
+          event.kind !== "TaskMovedOut" &&
+          event.kind !== "TaskReverted" &&
+          (grows(
+            change.after.tags.length,
+            previousTags,
+            inputLimits.tagsPerTask,
+          ) ||
+            grows(
+              change.after.attachments?.length ?? 0,
+              previousAttachments,
+              inputLimits.attachmentsPerTask,
+            ))
+        )
+          throw new Rejection("validation");
         if (
           change.after.attachments?.some(
             (attachment) => !validAttachmentLocation(attachment),
@@ -821,6 +890,24 @@ export class OperationStore {
         (change.after.row_version !== (previous ?? 0) + 1 ||
           change.after.id !== series.id ||
           change.after.profile_id !== profile)
+      )
+        throw new Rejection("validation");
+      // Series defaults seed every successor, so their Tags are bounded like
+      // a Task's: kept past the limit, not grown past it.
+      if (
+        change.after &&
+        event.kind !== "TaskReverted" &&
+        change.after.task.tags.length > inputLimits.tagsPerTask &&
+        change.after.task.tags.length > (change.before?.task.tags.length ?? 0)
+      )
+        throw new Rejection("validation");
+      // Exclusion dates may be kept past the limit, not grown past it.
+      if (
+        change.after &&
+        event.kind !== "TaskReverted" &&
+        change.after.recurrence.exdate.length > inputLimits.exdates &&
+        change.after.recurrence.exdate.length >
+          (change.before?.recurrence.exdate.length ?? 0)
       )
         throw new Rejection("validation");
       if (change.after) validateMetadata(change.after.task);
@@ -972,6 +1059,14 @@ export class OperationStore {
             before.deleted_at !== null ||
             after.deleted_at !== null ||
             after.row_version !== before.row_version + 1 ||
+            // validate skips list limits for the arrival, which has no
+            // previous state; a Move may carry the lists over, not grow them.
+            (after.tags.length > inputLimits.tagsPerTask &&
+              after.tags.length > before.tags.length) ||
+            ((after.attachments?.length ?? 0) >
+              inputLimits.attachmentsPerTask &&
+              (after.attachments?.length ?? 0) >
+                (before.attachments?.length ?? 0)) ||
             !this.db
               .query(
                 "SELECT 1 FROM profiles WHERE id=? AND id NOT IN (SELECT profile FROM profile_deletions)",
@@ -1168,7 +1263,10 @@ export class OperationStore {
   ) =>
     attempt(() => {
       Schema.decodeUnknownSync(identity)(input);
-      Schema.decodeUnknownSync(Schema.NonEmptyString)(input.reason);
+      // Reasons are short codes such as "validation"; History copies them.
+      Schema.decodeUnknownSync(
+        Schema.NonEmptyString.check(Schema.isMaxLength(64)),
+      )(input.reason);
       return this.recordRejection(
         input,
         input.reason,

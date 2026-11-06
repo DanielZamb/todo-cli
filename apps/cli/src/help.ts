@@ -205,6 +205,22 @@ const guides = {
       "json returns generated_at, owner, profile, and expires_at. md and table print the owner identity and Session expiry.",
     concurrency: "Sign-in does not mutate Task Versions.",
   }),
+  "reset-passphrase": reference({
+    purpose:
+      "Set a new owner passphrase after proving the macOS login password of this account. Ends a sign-in lock and revokes every Session; Access Tokens keep working.",
+    synopsis: "todo reset-passphrase [--password-stdin]",
+    flags: [
+      "--password-stdin (default false, reads the macOS login password from the first line and the new owner passphrase from the second)",
+    ],
+    examples: [
+      "todo reset-passphrase",
+      'printf \'%s\\n%s\\n\' "$MAC_PASSWORD" "$NEW_PASSPHRASE" | todo reset-passphrase --password-stdin',
+    ],
+    auth: "No Session required. macOS checks the account password with dscl; the new passphrase needs 12 to 1,024 characters. Sign-in locks for an hour after 10 wrong passphrases in a row; this ends the lock early.",
+    output:
+      "json returns generated_at, status passphrase_reset and sessions_revoked. md and table print the number of revoked Sessions.",
+    concurrency: "Reset does not mutate Task Versions.",
+  }),
   logout: reference({
     purpose:
       "Revoke the selected Profile's saved Session and delete its local credential file.",

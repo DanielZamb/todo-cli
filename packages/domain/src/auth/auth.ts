@@ -40,14 +40,21 @@ const OwnerPassphrase = Schema.String.check(
 const SignInPassphrase = Schema.NonEmptyString.check(
   Schema.isMaxLength(maximumPassphraseLength),
 );
-// Sign-in verifies one passphrase at a time. Each consecutive failure doubles
-// the wait before the next verification, up to five seconds, and a full queue
-// is refused, so guessing is slow and cannot pile up Argon2 memory.
+// Sign-in verifies one passphrase at a time and refuses a full queue, so
+// guesses cannot pile up Argon2 memory. After 10 wrong passphrases in a row it
+// refuses every attempt, the correct one too, for an hour. A correct sign-in or
+// `todo reset-passphrase` (which proves the macOS account password) ends the
+// run. The count is read from History, so it holds across processes and
+// restarts.
 const maximumWaitingSignIns = 4;
-const failureDelay = (failures: number) =>
-  failures === 0 ? 0 : Math.min(250 * 2 ** (failures - 1), 5000);
-// Tests replace sleep to observe the requested waits without real time.
-export const signInTiming = { sleep: (ms: number) => Bun.sleep(ms) };
+export const signInLockout = { attempts: 10, durationMs: 3_600_000 } as const;
+type Verification =
+  | { readonly kind: "invalid" | "busy" }
+  | {
+      readonly kind: "valid";
+      readonly issued: ReturnType<Authentication<unknown>["issueSession"]>;
+    }
+  | { readonly kind: "locked"; readonly until: number };
 
 const parse = <S extends Schema.ConstraintDecoder<unknown>>(
   schema: S,
@@ -98,18 +105,77 @@ export class Authentication<Read> {
 
   private signInQueue: Promise<unknown> = Promise.resolve();
   private waitingSignIns = 0;
-  private failedSignIns = 0;
 
-  private verifyPassphrase(value: string, hash: string): Promise<boolean> {
+  // Replays the wrong-passphrase rows since the last owner sign-in, setup or
+  // reset. The 10th wrong passphrase starts an hour-long lock; once it ends,
+  // the next 10 attempts start a new run.
+  private signInLockedUntil(time: number): number | null {
+    const since =
+      this.db
+        .query<{ seq: number | null }, []>(
+          "SELECT max(seq) AS seq FROM op_log WHERE outcome='committed' AND json_extract(event,'$.kind')='AuthChanged' AND json_extract(event,'$.action') IN ('setupOwner','signIn','resetPassphrase')",
+        )
+        .get()?.seq ?? 0;
+    const failures = this.db
+      .query<{ occurred_at: string }, [number]>(
+        "SELECT json_extract(event,'$.occurred_at') AS occurred_at FROM op_log WHERE seq>? AND outcome='rejected' AND reason='auth' AND json_extract(event,'$.action')='signIn' AND json_extract(event,'$.detail')='invalid_passphrase' ORDER BY seq",
+      )
+      .all(since);
+    let count = 0;
+    let until: number | null = null;
+    for (const failure of failures) {
+      const at = Date.parse(failure.occurred_at);
+      if (until !== null && at >= until) {
+        count = 0;
+        until = null;
+      }
+      count++;
+      if (count === signInLockout.attempts)
+        until = at + signInLockout.durationMs;
+    }
+    return until !== null && time < until ? until : null;
+  }
+
+  private verifyPassphrase(
+    value: string,
+    hash: string | null,
+    time: number,
+  ): Promise<Verification> {
     if (this.waitingSignIns >= maximumWaitingSignIns)
-      return Promise.resolve(false);
+      return Promise.resolve({ kind: "busy" });
     this.waitingSignIns++;
-    const attempt = this.signInQueue.then(async () => {
-      const delay = failureDelay(this.failedSignIns);
-      if (delay) await signInTiming.sleep(delay);
-      const valid = await Bun.password.verify(value, hash);
-      this.failedSignIns = valid ? 0 : this.failedSignIns + 1;
-      return valid;
+    // The queue keeps one verification at a time per process. Other
+    // processes (the CLI, another server) share only the database, so the
+    // outcome is decided in one write transaction that re-checks the lock:
+    // past the 10th recorded failure, every result reads as locked, a valid
+    // guess too, so concurrent processes learn nothing beyond 10 guesses.
+    // The same transaction re-reads the hash (a reset may have replaced it)
+    // and issues the Session, so no lock or reset can land in between.
+    const attempt = this.signInQueue.then(async (): Promise<Verification> => {
+      const until = this.signInLockedUntil(time);
+      if (until !== null) return { kind: "locked", until };
+      // Without an owner nothing can match, but the attempt still counts
+      // toward the lock, so an unprovisioned server cannot be flooded.
+      const valid = hash !== null && (await Bun.password.verify(value, hash));
+      return this.transaction((): Verification => {
+        const lockedUntil = this.signInLockedUntil(time);
+        if (lockedUntil !== null) return { kind: "locked", until: lockedUntil };
+        const current =
+          this.db
+            .query<{ passphrase_hash: string }, []>(
+              "SELECT passphrase_hash FROM owner WHERE singleton=1",
+            )
+            .get()?.passphrase_hash ?? null;
+        if (valid && current === hash)
+          return { kind: "valid", issued: this.issueSession(time) };
+        this.record({
+          action: "signIn",
+          time,
+          actor: "anonymous",
+          error: new AuthError("invalid_passphrase"),
+        });
+        return { kind: "invalid" };
+      });
     });
     this.signInQueue = attempt.then(
       () => undefined,
@@ -120,6 +186,12 @@ export class Authentication<Read> {
     });
   }
 
+  // ADR-0007 amendment: a repeated rejection (same actor, Profile, action and
+  // detail) is recorded once per minute, so a local process retrying forever
+  // adds at most one History row per kind per minute instead of one per try.
+  private rejectionMinute = -1;
+  private readonly rejectionsThisMinute = new Set<string>();
+
   private record(input: {
     action: AuthAction;
     time: number;
@@ -128,6 +200,28 @@ export class Authentication<Read> {
     credential_id?: string;
     error?: AuthError;
   }) {
+    const kind = input.error
+      ? JSON.stringify([
+          input.actor,
+          input.profile ?? null,
+          input.action,
+          input.error.detail,
+        ])
+      : undefined;
+    if (kind !== undefined) {
+      const minute = Math.floor(input.time / 60_000);
+      if (minute !== this.rejectionMinute) {
+        this.rejectionMinute = minute;
+        this.rejectionsThisMinute.clear();
+      }
+      // Wrong passphrases are never merged: the lockout counts each one,
+      // and it already caps them at 10 an hour.
+      if (
+        input.error?.detail !== "invalid_passphrase" &&
+        this.rejectionsThisMinute.has(kind)
+      )
+        return;
+    }
     const event = input.error
       ? {
           kind: "AuthAttemptRejected",
@@ -155,6 +249,7 @@ export class Authentication<Read> {
         input.error ? "rejected" : "committed",
         input.error ? "auth" : null,
       );
+    if (kind !== undefined) this.rejectionsThisMinute.add(kind);
   }
 
   private perform<A>(
@@ -292,6 +387,42 @@ export class Authentication<Read> {
       });
     });
 
+  // Local recovery for a forgotten passphrase or a locked sign-in. Only code
+  // that already opens the database can call it; the CLI first proves the
+  // macOS account password. It ends any lock and revokes every Session.
+  readonly resetPassphrase = (passphrase: string) =>
+    Effect.gen({ self: this }, function* () {
+      const value = yield* this.perform("resetPassphrase", null, () => {
+        const value = parse(OwnerPassphrase, passphrase);
+        if (!this.db.query("SELECT 1 FROM owner").get())
+          throw new AuthError("invalid_request");
+        return value;
+      });
+      const hash = yield* Effect.tryPromise({
+        try: () =>
+          Bun.password.hash(value, {
+            algorithm: "argon2id",
+            memoryCost: 65536,
+            timeCost: 3,
+          }),
+        catch: (cause) => new StoreError(cause),
+      });
+      return yield* this.perform("resetPassphrase", null, (time) => {
+        if (!this.db.query("SELECT 1 FROM owner").get())
+          throw new AuthError("invalid_request");
+        this.db
+          .query("UPDATE owner SET passphrase_hash=? WHERE singleton=1")
+          .run(hash);
+        const revoked = this.db
+          .query(
+            "UPDATE credentials SET revoked_at=? WHERE kind='session' AND revoked_at IS NULL",
+          )
+          .run(instant(time)).changes;
+        this.record({ action: "resetPassphrase", actor: "owner", time });
+        return { sessions_revoked: revoked };
+      });
+    });
+
   readonly signIn = (passphrase: string) =>
     Effect.gen({ self: this }, function* () {
       const input = yield* this.perform("signIn", null, () => {
@@ -301,31 +432,45 @@ export class Authentication<Read> {
             "SELECT passphrase_hash FROM owner WHERE singleton=1",
           )
           .get();
-        if (!row) throw new AuthError("invalid_passphrase");
-        return { value, hash: row.passphrase_hash };
+        return { value, hash: row?.passphrase_hash ?? null };
       });
-      const valid = yield* Effect.tryPromise({
-        try: () => this.verifyPassphrase(input.value, input.hash),
+      const time = yield* Clock.currentTimeMillis;
+      const outcome = yield* Effect.tryPromise({
+        try: () => this.verifyPassphrase(input.value, input.hash, time),
         catch: (cause) => new StoreError(cause),
       });
-      return yield* this.perform("signIn", null, (time) => {
-        if (!valid) throw new AuthError("invalid_passphrase");
-        const issued = this.issue(time, {
-          kind: "session",
-          name: null,
-          profile: null,
-          scope: "read-write",
-          expires_at: instant(time + 7 * 86400000),
-        });
-        this.record({
-          action: "signIn",
-          actor: "owner",
-          time,
-          credential_id: issued.id,
-        });
-        return issued;
+      // A wrong passphrase was already recorded inside the queue.
+      if (outcome.kind === "invalid")
+        return yield* Effect.fail(new AuthError("invalid_passphrase"));
+      if (outcome.kind === "valid") return outcome.issued;
+      return yield* this.perform("signIn", null, () => {
+        if (outcome.kind === "locked")
+          throw new AuthError(
+            "sign_in_locked",
+            "anonymous",
+            instant(outcome.until),
+          );
+        throw new AuthError("sign_in_busy");
       });
     });
+
+  // Runs inside the sign-in decision transaction.
+  private issueSession(time: number) {
+    const issued = this.issue(time, {
+      kind: "session",
+      name: null,
+      profile: null,
+      scope: "read-write",
+      expires_at: instant(time + 7 * 86400000),
+    });
+    this.record({
+      action: "signIn",
+      actor: "owner",
+      time,
+      credential_id: issued.id,
+    });
+    return issued;
+  }
 
   readonly authenticate = (
     input: AccessRequest & { readonly access: "read" | "write" },

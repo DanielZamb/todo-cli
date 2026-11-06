@@ -1,6 +1,7 @@
 import { Schema, Struct } from "effect";
 import type { AuthAttemptRejected } from "../events.ts";
 import { ProfileId } from "../ids.ts";
+import { InstantInput, NonEmptyNameInput } from "../limits.ts";
 import { FinishTask, StartSeries } from "../recurrence.ts";
 import { Instant } from "../time.ts";
 
@@ -10,6 +11,8 @@ export class AuthError extends Error {
   constructor(
     readonly detail: AuthAttemptRejected["detail"],
     readonly actor = "anonymous",
+    // Set with detail sign_in_locked: when sign-in accepts passphrases again.
+    readonly locked_until: string | null = null,
   ) {
     super("Authentication or authorization failed");
   }
@@ -35,10 +38,10 @@ export const AccessRequest = Schema.Struct({
 });
 export type AccessRequest = typeof AccessRequest.Type;
 export const TokenOptions = Schema.Struct({
-  name: Schema.NonEmptyString,
+  name: NonEmptyNameInput,
   profile: Schema.NullOr(ProfileId),
   scope: AccessScope,
-  expires_at: Schema.optional(Instant),
+  expires_at: Schema.optional(InstantInput),
 });
 export type TokenOptions = typeof TokenOptions.Type;
 

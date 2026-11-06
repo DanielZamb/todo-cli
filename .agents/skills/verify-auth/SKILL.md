@@ -1,6 +1,6 @@
 ---
 name: verify-auth
-description: Verify Todo owner sign-in, fixed Sessions, scoped Access Tokens, rejected auth history and private database permissions through a compiled Bun domain driver on a scratch SQLite database. Use after changing auth, migration 0003 or database opening.
+description: Verify Todo owner sign-in, the 10-attempt sign-in lockout and passphrase reset, fixed Sessions, scoped Access Tokens, rejected auth history and private database permissions through a compiled Bun domain driver on a scratch SQLite database. Use after changing auth, migration 0003 or database opening.
 ---
 
 # Verify authentication
@@ -24,6 +24,11 @@ and runs the binary against its new `scratch.db`. Bun 1.4.4 or newer, installed
 pnpm dependencies, and `sqlite3` are required. It needs no server, port, real
 credential, or shared database. Exit zero and `PASS; evidence survived cleanup`
 mean the complete recipe finished. The helper tears down its scratch directory.
+A second scratch database, `lockout.db`, proves that 10 wrong passphrases lock
+sign-in for an hour, that the lock holds after reopening, and that
+`resetPassphrase` ends it and revokes the Session (`07-lockout.json`). The macOS
+password check in `todo reset-passphrase` is proven only with a nonexistent
+account (`apps/cli/test/macos-password.test.ts`), never with a real password.
 
 ## Doctor
 
