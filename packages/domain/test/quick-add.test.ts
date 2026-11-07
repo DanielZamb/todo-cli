@@ -1,6 +1,7 @@
 import { expect, it } from "@effect/vitest";
 import { Effect, Schema } from "effect";
 import {
+  emptyTitleMessage,
   isInboxTask,
   parseQuickAdd,
   QuickAddInput,
@@ -114,6 +115,31 @@ it.effect(
             input(text, { time_zone: "America/New_York" }),
           ).pipe(Effect.flip))._tag,
         ).toBe("QuickAddError");
+    }),
+);
+
+it.effect(
+  "asks for a title when the text is only dates, priority, Tags and a Project",
+  () =>
+    Effect.gen(function* () {
+      for (const text of [
+        "tomorrow #tag @client p1",
+        'tomorrow p1 #tag @"Client Project"',
+      ])
+        expect(
+          yield* parseQuickAdd(input(text)).pipe(
+            Effect.flip,
+            Effect.map((error) => ({
+              tag: error._tag,
+              message: error.message,
+            })),
+          ),
+        ).toEqual({ tag: "QuickAddError", message: emptyTitleMessage });
+      expect(
+        (yield* parseQuickAdd(
+          input('Pay rent tomorrow p1 #bills @"Client Project"'),
+        )).title,
+      ).toBe("Pay rent");
     }),
 );
 

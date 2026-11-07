@@ -32,6 +32,9 @@ const clockPattern = /^(\d+)(?::(\d+))?(am|pm)$/i;
 const datePattern =
   /^(today|tomorrow|mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?|\d{4}-\d{2}-\d{2})$/i;
 
+export const emptyTitleMessage =
+  "Add a title. Dates, p1-p4, #tags and @project are not part of it.";
+
 export const parseQuickAdd = (input: QuickAddInput) =>
   Effect.try({
     try: (): QuickAddDraft => {
@@ -140,6 +143,10 @@ export const parseQuickAdd = (input: QuickAddInput) =>
           due_at = time;
         }
       }
+      // Dates, priority, #Tags and @Project are removed from the title, so
+      // text made only of them leaves nothing to name the Task.
+      if (title.join("").trim() === "")
+        throw new QuickAddError(emptyTitleMessage);
       return Schema.decodeUnknownSync(QuickAddDraft)({
         title: title.join(" ").trim(),
         due_at,

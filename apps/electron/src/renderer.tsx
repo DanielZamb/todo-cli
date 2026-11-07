@@ -2621,7 +2621,7 @@ function App() {
                   />
                 </Field>
                 <p className="quiet quick-hint">
-                  Try: tomorrow p1 #tag @"Client Project"
+                  Try: Pay rent tomorrow p1 #bills @"Client Project"
                 </p>
               </div>
               {parsed && (
