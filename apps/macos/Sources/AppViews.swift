@@ -803,7 +803,7 @@ struct QuickAddView: View {
                     .frame(minHeight: 32)
                     .accessibilityIdentifier("new-title")
                     .onSubmit { add(edit: false) }
-                Text("Try: tomorrow p1 #tag @\"Client Project\"")
+                Text("Try: Pay rent tomorrow p1 #bills @\"Client Project\"")
                     .font(.caption).foregroundStyle(.secondary)
             }
             if let parsed = model.parsedTask?.displayingTokens(in: model.parsedInput).removing(model.removedQuickAddFields) {

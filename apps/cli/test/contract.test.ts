@@ -165,6 +165,45 @@ it("returns JSON usage errors without help and accepts dash-leading descriptions
     });
   }
 });
+it("joins unquoted title and quick-add words instead of refusing them", () => {
+  const profile = ["--profile", "unquoted"];
+  expect(run(["init", ...profile]).code).toBe(0);
+  expect(
+    run(["login", ...profile, "--password-stdin"], "scratch-passphrase\n").code,
+  ).toBe(0);
+  const json = (args: string[]) => {
+    const result = run([...args, ...profile, "--format", "json"]);
+    expect(result.code, result.out + result.err).toBe(0);
+    return JSON.parse(result.out);
+  };
+  expect(json(["add", "buy", "milk", "--priority", "P1"]).task).toMatchObject({
+    title: "buy milk",
+    priority: "P1",
+  });
+  expect(json(["parse", "buy", "milk", "p1"]).draft).toMatchObject({
+    title: "buy milk",
+    priority: "P1",
+  });
+  for (const parse of [
+    ["--parse", "call", "mom", "#home", "p2"],
+    ["--parse=call", "mom", "#home", "p2"],
+  ])
+    expect(json(["add", ...parse, "--tag", "family"]).task).toMatchObject({
+      title: "call mom",
+      priority: "P2",
+    });
+  const both = run([
+    "add",
+    "literal",
+    "--parse",
+    "parsed",
+    ...profile,
+    "--format",
+    "json",
+  ]);
+  expect(both.code).toBe(2);
+  expect(JSON.parse(both.out)).toMatchObject({ code: "invalid_args" });
+});
 it("reports the current Version for every missing-Version and Conflict error", () => {
   const profile = ["--profile", "versions"];
   expect(run(["init", ...profile]).code).toBe(0);
@@ -626,11 +665,11 @@ it("review regression: preserves operands after the end-of-options delimiter", (
     "",
     home,
   );
-  expect(result.code, result.out).toBe(2);
-  expect(JSON.parse(result.out)).toMatchObject({ code: "invalid_args" });
-  expect(
-    JSON.parse(run(["list", "--format", "json"], "", home).out),
-  ).not.toHaveProperty("tasks");
+  // Operands after `--` are title words, never flags: no description is set.
+  expect(result.code, result.out).toBe(0);
+  const task = JSON.parse(result.out).task;
+  expect(task.title).toBe("--desc -hello");
+  expect(task.description ?? "").toBe("");
 });
 it("review regression: rejects ambiguous long values in every format", () => {
   for (const format of ["md", "table", "json"]) {

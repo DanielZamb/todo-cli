@@ -38,7 +38,7 @@ Chips and input wrap inside the field; the chevron keeps its own right column.
 Quick add gives each Tag its own Hash icon and `Remove Tag <name>` button.
 The drive removes beta from alpha/beta/gamma, then requires alpha and gamma after
 save and reload. Priority, Project and date chips use Flag, Folder and CalendarDays
-icons. The hint teaches `Try: tomorrow p1 #tag @"Client Project"` in both modes.
+icons. The hint teaches `Try: Pay rent tomorrow p1 #bills @"Client Project"` in both modes.
 `whole-tags.test.ts` checks literal fitting and overflow counts; the compiled
 drive checks displayed whole Tags, +N and their bounds in the production row.
 

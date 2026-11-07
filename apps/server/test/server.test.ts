@@ -205,6 +205,8 @@ describe("Todo HTTP contract", () => {
           });
         }),
       ),
+    // Ten Argon2 verifications can pass 5 s on a loaded machine.
+    30_000,
   );
   it.effect(
     "refuses oversized Task text and batches before anything reaches History",

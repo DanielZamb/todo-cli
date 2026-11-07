@@ -48,7 +48,7 @@ Quoted metadata can contain words such as p1. The priority-chip scanner skips
 priority. The compiled headless regression and `quoted-name-priority-*` captures
 require no priority chip for those names.
 
-Quick-add hints teach `Try: tomorrow p1 #tag @"Client Project"` in the full window,
+Quick-add hints teach `Try: Pay rent tomorrow p1 #bills @"Client Project"` in the full window,
 Compact mode and MenuBarExtra production view. The captures include those hints.
 
 Compact quick add uses QuickAddFlow to place metadata and date chips from left
