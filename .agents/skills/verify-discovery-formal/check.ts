@@ -161,13 +161,30 @@ try {
   copyFileSync(join(skill, "coverage.json"), join(evidence, "coverage.json"));
   record("provenance", {
     head: head.out.trim(),
-    scope: "approved-contract-model-only; production mapping pending C/D",
+    scope: coverage.status,
     bounds,
     modelHash: hash(join(skill, "Discovery.tla")),
     runnerHash: hash(join(skill, "check.ts")),
     runtime: process.versions,
     coverage,
   });
+  const inputs = await execute("carried-inputs", "bun", [
+    join(skill, "check-inputs.ts"),
+  ]);
+  assert.equal(
+    inputs.exit,
+    0,
+    "Reviewed input equivalence/receipt checks failed",
+  );
+  const mapped = coverage.productionFiles.map((file) => ({
+    ...file,
+    observed: hash(join(root, file.path)),
+  }));
+  record("source-mapping", { ...coverage, mapped });
+  assert.ok(
+    mapped.every((file) => file.sha256 === file.observed),
+    "Discovery source drift: inspect semantics before renewing hashes",
+  );
   async function tlc(label: string, broken = "", property = "") {
     const directory = join(evidence, label);
     mkdirSync(directory);
@@ -264,17 +281,33 @@ try {
     createHash("sha256").update(source).digest("hex"),
     "Model changed during proof",
   );
+  const clients = await execute("electron-real-code", "bun", [
+    join(skill, "check-electron.ts"),
+    coverage.candidateCommit,
+  ]);
+  assert.equal(clients.exit, 0, "Real Electron controller sensitivity failed");
+  const swift = await execute("swift-real-code", "bun", [
+    join(skill, "check-swift.ts"),
+    coverage.candidateCommit,
+    ...(process.env.TODO_DISCOVERY_SWIFT_REUSE === undefined
+      ? []
+      : [process.env.TODO_DISCOVERY_SWIFT_REUSE]),
+  ]);
+  assert.equal(swift.exit, 0, "Real Swift discovery sensitivity failed");
   record("result", {
     passed: true,
-    scope: "bounded approved-contract model only",
+    scope:
+      "bounded discovery safety, reviewed c488 source mapping and real C/D controls",
     productionConformance:
-      "unproven; await C/D immutable source and behavioral sensitivity",
+      "manually mapped and regression/sensitivity checked at c488; no mechanical refinement or future SEC coverage",
+    candidateCommit: coverage.candidateCommit,
+    taskSearch: "HOLD until coordinator final SEC SHA and L1 integration",
     head: head.out.trim(),
     stages,
     evidence,
   });
   console.log(
-    "PASS: bounded discovery model and restored sensitivity; production conformance UNPROVEN",
+    "PASS: discovery-only c488 mapping, bounded safety and real C/D sensitivity; TaskSearch HOLD",
   );
 } catch (error) {
   record("result", { passed: false, stages, error: String(error), evidence });

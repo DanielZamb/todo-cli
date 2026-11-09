@@ -1,0 +1,87 @@
+for (const field of ["id", "profile_id"] as const) {
+  it(`Show rejects an exact read with the wrong ${field}`, async () => {
+    const { controller, appliedSnapshot } = await showing();
+    const publications: string[] = [];
+    await controller.show(appliedSnapshot, match, {
+      prepare: () => true,
+      request: async () => ({
+        _tag: "task",
+        task: {
+          ...task,
+          [field]:
+            field === "id" ? "bbbbbbbb-0000-4000-8000-000000000001" : "work",
+        },
+      }),
+      open: () => {
+        publications.push("open");
+      },
+      error: () => {
+        publications.push("error");
+      },
+    });
+    expect(publications).toEqual(["error"]);
+  });
+}
+
+it("Show's extra generation guard rejects Close/reopen during the exact read", async () => {
+  const { controller, appliedSnapshot } = await showing();
+  const read = deferred<Reply>();
+  const publications: string[] = [];
+  const run = controller.show(appliedSnapshot, match, {
+    prepare: () => true,
+    request: () => read.promise,
+    open: () => {
+      publications.push("open");
+    },
+    error: () => {
+      publications.push("error");
+    },
+  });
+  await Promise.resolve();
+  controller.open("lookup");
+  read.resolve({ _tag: "task", task });
+  await run;
+  expect(publications).toEqual([]);
+});
+
+for (const reply of [
+  { _tag: "directory", profiles: [] } satisfies Reply,
+  { _tag: "error", message: "old directory error" } satisfies Reply,
+]) {
+  it(`directory discards ${reply._tag} after Close/reopen`, async () => {
+    const controller = new DiscoveryStateController();
+    const read = deferred<Reply>();
+    controller.open("directory");
+    const run = controller.submit(() => read.promise, "", "directory");
+    controller.close();
+    controller.open("directory");
+    const expected = controller.snapshot();
+    read.resolve(reply);
+    await run;
+    expect(controller.snapshot()).toBe(expected);
+  });
+}
+it("prepared Show publishes nothing after credential replacement", async () => {
+  const { controller, appliedSnapshot } = await showing();
+  const decision = deferred<boolean>();
+  const publications: string[] = [];
+  let reads = 0;
+  const run = controller.show(appliedSnapshot, match, {
+    prepare: () => decision.promise,
+    request: async () => {
+      reads++;
+      return { _tag: "task", task };
+    },
+    open: () => {
+      publications.push("open");
+    },
+    error: () => {
+      publications.push("error");
+    },
+  });
+  controller.credentialChanged();
+  decision.resolve(true);
+  await run;
+  expect(reads).toBe(0);
+  expect(publications).toEqual([]);
+});

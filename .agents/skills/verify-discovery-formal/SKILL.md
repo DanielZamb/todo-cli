@@ -1,6 +1,6 @@
 ---
 name: verify-discovery-formal
-description: Check bounded discovery response publication and Show provenance with TLA+. Use after discovery credential, dialog, submission, prefix edit, Close, Retry or Show lifecycle changes. Model-ready only until C/D production mapping and real-code sensitivity are reviewed.
+description: Check bounded discovery publication and Show provenance with TLA+, reviewed C/D source mapping, and independent real-code controls. Use after discovery credential, dialog, submission, prefix edit, Close, Retry, Show or authorization-epoch changes. TaskSearch renewal is separately held for final SEC integration.
 ---
 
 # Verify discovery publication
@@ -11,11 +11,14 @@ From the checkout root, run:
 bun .agents/skills/verify-discovery-formal/check.ts
 ```
 
-A pass currently proves the approved contract model within the exact bounds
-below. Production conformance is unproven. C/D have not supplied their final
-implementation. Do not renew existing Task search source hashes to bypass that
-gate. [SOURCE-MAPPING.md](SOURCE-MAPPING.md) records the pending mapping and the
-immutable contract commit. [REPORT.md](REPORT.md) records actual proof receipts.
+A pass checks the approved contract model within the exact bounds below and
+the explicitly named real-source controls. This is a discovery-only checkpoint
+at c4882258, before the final SEC base. [SOURCE-MAPPING.md](SOURCE-MAPPING.md)
+maps the actual C/D functions, awaits, guards, synchronous publication and UI
+dispatch. [REPORT.md](REPORT.md) distinguishes original carried regressions,
+fresh controls and outstanding gates. No mechanical refinement is claimed.
+TaskSearch semantic reproof and hash renewal remain on coordinator HOLD until
+the final SEC SHA is integrated by L1. Do not merge/rebase this worktree yourself.
 
 Created using the create-formal-verification-skill workflow. TLA+ fits this
 question because late replies can publish under a different credential or dialog.
@@ -27,8 +30,11 @@ real Authentication and discovery queries.
 The command requires Java 11+, Bun, curl and the existing pnpm dependencies.
 It downloads the pinned jar only when absent, after the run's disk guard, and
 verifies its SHA-256 every time. tool.json pins TLA+ tools v1.7.4, TLC 2.19.
-It installs no dependency, builds no app, opens no database, launches no native
-app, and accesses no Keychain or installed Todo binary.
+It installs no dependency and launches no native app. Client controls use copied
+source, existing installed dependencies, fixed reviewed backend binaries and
+fresh scratch databases. Swift controls substitute only the existing in-memory
+SessionVault fixture. Keychain, signed apps, installed Todo and real data remain
+under HOLD.
 
 ## Read the result
 
@@ -127,14 +133,49 @@ checks. It checks each intended invariant separately so one observation cannot
 hide a semantic failure. It then exhausts the original full safety graph again.
 It never edits the tracked model or product files.
 
-This proves model sensitivity. The create-formal-verification-skill real-code
-scratch mutation requirement is still pending until C/D exist. Before production
-conformance, review each actual function and its await/publication boundary,
-add immutable covered file hashes, run C/D's production behavior checks and
-isolated real-code mutations, restore the original source, and rerun clean.
-Only then advance the source sync commit. Review Task search behavior in any
-changed covered client file and rerun its required sensitivity before updating
-verify-task-search-formal/coverage.json. Never weaken existing invariants.
+Model sensitivity and real-source sensitivity are separate stages. The Electron
+helper imports an independent git-archive copy of DiscoveryStateController,
+the unchanged real regression suite and the additional literal controls in
+electron-extra.ts.txt. Each of seven mutants must fail its named expectation,
+then the entire copied suite must pass after byte restoration. Parser/compiler
+errors, callback exceptions and timeouts cannot satisfy the named comparison.
+
+The Swift helper captures actual TodoModel, Discovery, AppViews, DiscoveryView,
+API and regression sources. Its proof-only manifest selects discovery/report
+and authorization tests. The existing memory SessionVault replaces Keychain;
+the original adapter bytes and both hashes are retained. The year-2100 U02
+fixture remains in the captured source. The helper tests publication, per-attempt
+UUID, presentation dismissal versus Cancel, and the shared authorization epoch.
+Every mutant needs an actual Swift Testing expectation failure, byte restoration
+and a fresh-database clean rerun. A final combined clean run follows. This is
+headless execution, not native alert activation or hosted XCTest.
+
+Before every Swift series and command, swift-command.sh checks df against 30GiB
+and runs disk-guard inside the shared swift-slot. Exit3 means stop and report;
+never delete foreign files or override the floor. Every SwiftPM argv contains
+--disable-automatic-resolution and is recorded with stdout/stderr/actual exit.
+All three copied Package.resolved files have before/after hashes and actual
+git diff --no-index exit receipts around each invocation. No resolution or pin
+upgrade is authorized. Swift installed dependencies are copied from the root
+integration cache; no C/D worktree path is used. An optional third argument to
+check-swift.ts reuses only this E worktree's already restored independent source
+and build cache. It validates every source against a new immutable archive first.
+
+carried-inputs.json pins original C/D text receipts, review verdicts and root
+full-check-c488 fixed binary paths/hashes/build provenance. check-inputs.ts
+checks source equivalence and receipt hashes; it never reads a mutable cache
+manifest. The canonical B source hash and legacy Attachment cache label are
+different algorithms and remain separately named. Carried proofs keep their
+original SHA and exit, including old red/setup/notification failures. They do
+not become new c488 executions. Archives contain text and artifact hash metadata;
+this skill does not require the removed C/D binaries or screenshots.
+
+Before advancing covered source hashes, inspect every mapped await/publication
+boundary, prove controls/restoration and retain production regression receipts.
+On a changed candidate, fail closed and review the change before renewal.
+TaskSearch whole-file coverage remains independently held for the coordinator's
+final SEC integration. AtomicCAS source drift and renewal remain L1-owned.
+Never weaken an invariant to accommodate a product defect.
 
 The relative .claude/skills/verify-discovery-formal link enables filesystem
 skill discovery. Fresh-session discovery is not established by that link alone.
