@@ -115,3 +115,15 @@ the draft at Version 2; Discard leaves the original at Version 1. Explicit Cance
 clears the intent, keeps the local draft and rejects the retained action without
 navigation. Require discovery-alert-actions-http.json from the state proof.
 This drives the documented alert-binding ordering without native activation.
+
+The U02 live formatting fixture pins its due instant, scheduled date and
+presentation clock together to October 28 and 29, 2100. Its literal Today and
+Tomorrow assertions stay unchanged. This prevents the pre-existing past due
+instant from firing through SSE into UserNotifications in an unhosted process.
+Require three consecutive full state runs on fresh scratch databases after the
+fixture correction, preserving each source, pin, command, exit and cleanup receipt.
+
+Every Swift package invocation in apps/macos/scripts disables automatic
+resolution, including show-bin-path. The design ledger records that query's
+actual argv, stdout and exit. Non-package swiftc and xcrun swiftc calls do not
+resolve packages. Continue running every script through the shared Swift slot.

@@ -19,19 +19,25 @@ source_files += sorted((root / 'design/macos/Assets.xcassets').glob('search-high
 }, indent=2) + '\n')
 commands = []
 
-def run(command, log, env=None):
+def run(command, log, env=None, capture_stdout=False):
     with (evidence / log).open('w') as output:
-        result = subprocess.run(command, cwd=root, env=env, stdout=output, stderr=subprocess.STDOUT)
-    commands.append({'argv': command, 'exit': result.returncode, 'log': log})
+        result = subprocess.run(command, cwd=root, env=env, stdout=subprocess.PIPE if capture_stdout else output, stderr=output if capture_stdout else subprocess.STDOUT, text=True)
+        if capture_stdout:
+            output.write(result.stdout)
+    entry = {'argv': command, 'exit': result.returncode, 'log': log}
+    if capture_stdout:
+        entry['stdout'] = result.stdout
+    commands.append(entry)
     (evidence / 'commands.json').write_text(json.dumps(commands, indent=2) + '\n')
     if result.returncode:
         raise SystemExit(result.returncode)
+    return result.stdout
 
 run(['sh', 'scripts/disk-guard.sh'], 'disk-guard.log')
 run(['python3', 'apps/macos/scripts/check-design-identifiers.py', str(evidence / 'accessibility.json')], 'accessibility.log')
 run(['swift', 'build', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--disable-automatic-resolution', '--build-tests', '--jobs', '2'], 'build.log')
 run(['swift', 'test', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--skip-build', '--disable-automatic-resolution', '--filter', 'PresentationTests|CompactFormattingTests|WindowLayoutTests|TaskFilterTests'], 'presentation.log')
-binary = subprocess.check_output(['swift', 'build', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--show-bin-path'], cwd=root, text=True).strip()
+binary = run(['swift', 'build', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--disable-automatic-resolution', '--show-bin-path'], 'show-bin-path.log', capture_stdout=True).strip()
 run([
     'xcrun', 'swiftc', '-typecheck', '-parse-as-library', '-swift-version', '6',
     '-target', f'{platform.machine()}-apple-macosx26.0', '-I', str(Path(binary) / 'Modules'),

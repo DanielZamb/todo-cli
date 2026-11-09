@@ -1031,8 +1031,8 @@ func compactFormattingSurvivesModelSaveAndReload() async throws {
     model.signedIn = true
     model.connection = .live
     model.beginEditing(created)
-    model.editor?.due = TaskTime(kind: "instant", utc: "2026-10-28T14:00:00Z", time_zone: "America/Bogota")
-    model.editor?.scheduled = TaskTime(kind: "date", date: "2026-10-29")
+    model.editor?.due = TaskTime(kind: "instant", utc: "2100-10-28T14:00:00Z", time_zone: "America/Bogota")
+    model.editor?.scheduled = TaskTime(kind: "date", date: "2100-10-29")
     await model.save()
     #expect(model.editor?.id == nil)
     let reloaded = try TaskSnapshot.decode(await client.tasks_period_show(path: .init(profile: "work", task: created.id)).ok.body.json)
@@ -1040,7 +1040,7 @@ func compactFormattingSurvivesModelSaveAndReload() async throws {
     let accepted = try #require(model.editor?.base)
     var calendar = Calendar(identifier: .gregorian)
     calendar.timeZone = TimeZone(identifier: "America/Bogota")!
-    let row = TaskRowPresentation(task: accepted, tagNames: [], now: ISO8601DateFormatter().date(from: "2026-10-28T15:00:00Z")!, locale: Locale(identifier: "en_US"), calendar: calendar)
+    let row = TaskRowPresentation(task: accepted, tagNames: [], now: ISO8601DateFormatter().date(from: "2100-10-28T15:00:00Z")!, locale: Locale(identifier: "en_US"), calendar: calendar)
     #expect(row.due == "Today 9:00\u{202F}AM")
     #expect(row.scheduled == "Tomorrow")
     #expect(TaskCount.text([accepted].count) == "1 task")
