@@ -6,7 +6,8 @@ workflow failed with auth_required. This amends the CLI plumbing in the
 [ADR-0019](../adr/0019-authorized-read-only-discovery.md).
 
 Global `--credential-profile <name>` chooses the stored key for the invocation.
-One CLI resolver uses it when nonempty, otherwise `--profile`, otherwise default.
+One CLI resolver uses it when supplied, otherwise `--profile`, otherwise default.
+An explicit empty selector is a usage error with exit 2 and never falls back.
 It applies to every command that uses stored credentials, reads and mutations.
 No implicit fallback reads a different credential file. Authorization and exact
 Task id rules remain in the domain. A scoped key against a different target
