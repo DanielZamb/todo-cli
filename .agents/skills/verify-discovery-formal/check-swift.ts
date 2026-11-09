@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import {
   appendFileSync,
   copyFileSync,
+  existsSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
@@ -216,17 +217,21 @@ try {
   });
   const memory =
     ".agents/skills/verify-macos/fixtures/auth-epoch/SessionVault.swift";
-  copyFileSync(
-    join(source, memory),
-    join(source, "apps/macos/Sources/SessionVault.swift"),
-  );
-  copyFileSync(
-    join(
-      source,
+  for (const [from, to] of [
+    [memory, "apps/macos/Sources/SessionVault.swift"],
+    [
       ".agents/skills/verify-macos/fixtures/auth-epoch/AuthEpochTests.swift",
-    ),
-    join(source, "apps/macos/StateTests/AuthEpochTests.swift"),
-  );
+      "apps/macos/StateTests/AuthEpochTests.swift",
+    ],
+  ]) {
+    assert.ok(from && to);
+    const target = join(source, to);
+    if (
+      !existsSync(target) ||
+      sha(readFileSync(target)) !== sha(readFileSync(join(source, from)))
+    )
+      copyFileSync(join(source, from), target);
+  }
   const packagePath = join(source, "apps/macos/Package.swift");
   const packageOriginal = readFileSync(
     join(captured, "apps/macos/Package.swift"),
@@ -235,13 +240,12 @@ try {
   const beforeTarget =
     '.testTarget(name: "WriteStateTests", dependencies: ["TodoState"], path: "StateTests")';
   assert.equal(packageOriginal.split(beforeTarget).length, 2);
-  writeFileSync(
-    packagePath,
-    packageOriginal.replace(
-      beforeTarget,
-      '.testTarget(name: "WriteStateTests", dependencies: ["TodoState"], path: "StateTests", sources: ["DiscoveryStateTests.swift", "DiscoveryReportStateTests.swift", "AuthEpochTests.swift"])',
-    ),
+  const proofPackage = packageOriginal.replace(
+    beforeTarget,
+    '.testTarget(name: "WriteStateTests", dependencies: ["TodoState"], path: "StateTests", sources: ["DiscoveryStateTests.swift", "DiscoveryReportStateTests.swift", "AuthEpochTests.swift"])',
   );
+  if (readFileSync(packagePath, "utf8") !== proofPackage)
+    writeFileSync(packagePath, proofPackage);
   const build = join(reuse ?? evidence, "swift-build");
   if (!reuse) mkdirSync(build);
   const installed =
@@ -432,6 +436,24 @@ try {
         serverSignal: server.signalCode,
         scratchRemoved: true,
       });
+      const temporaries = await execute(`${label}-bun-temporaries`, "find", [
+        root,
+        "-name",
+        ".*.bun-build",
+        "-type",
+        "f",
+      ]);
+      record(`${label}-order30`, {
+        created: 0,
+        retired: 0,
+        remaining: temporaries.out.trim().split("\n").filter(Boolean),
+      });
+      assert.equal(temporaries.exit, 0);
+      assert.equal(
+        temporaries.out.trim(),
+        "",
+        "Unexpected Bun temporary needs ownership/lsof review",
+      );
     }
   }
   const baseline = await test(

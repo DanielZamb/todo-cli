@@ -1,13 +1,11 @@
 {
-  "candidateCommit": "c4882258d95bb8d8e80315d2f3d5f88fd5bd9901",
-  "electronCommit": "75052d51f52d04b3c44e128d88be2540cdfef0f5",
-  "swiftProofCommit": "205dcbe9731baa0568f62a53a8488e8ff951979f",
-  "swiftProductCommit": "c4c1a9709b14dc4440ffcf6a35361d4df61f0fea",
+  "candidateCommit": "f85aef6faf7d93be80feef930554206e09d61be3",
+  "electronCommit": "81cdef8ec257a8ca7e1cbfb1ab2b3ff3afcbbf14",
+  "swiftProofCommit": "36f9c56e200048aa2ca16186aaf713bea8d5454e",
+  "swiftProductCommit": "36f9c56e200048aa2ca16186aaf713bea8d5454e",
   "backend": {
-    "builtHead": "fad74437992ffdfe9d914d774400836057feedba",
-    "canonicalBSourceHash": "e76674ad89a63dabb3e603beae0fc2333264c29e47a659d9be9070ece95fa973",
-    "legacyAttachmentCacheLabel": "7f8462c827387e08e48456e1819152d4e36c00a7509b130a1d4923f5d12972dd",
-    "labelAlgorithmsAreDifferent": true,
+    "builtHead": "36f9c56e200048aa2ca16186aaf713bea8d5454e",
+    "sourceHash": "b9ec2d8ebf6eed046577134dccdc4a4004a10d76a5409a44af4e2f8b62f19ced",
     "sourceEquivalencePaths": [
       "apps/cli/src",
       "apps/cli/scripts",
@@ -22,16 +20,16 @@
     ],
     "binaries": {
       "cli": {
-        "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/.scratch/bin/todo-7f8462c827387e08e48456e1819152d4e36c00a7509b130a1d4923f5d12972dd",
-        "sha256": "725152db259e21fd1adb62721005584a7d8aed56de780f6f95605bba819124b9"
+        "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/.scratch/bin/b9ec2d8ebf6e-36f9c56e2000/todo",
+        "sha256": "ac059420e71fee7976ab0ecf4c1db73b1d6b644ed524f9819467014a1711d347"
       },
       "server": {
-        "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/.scratch/bin/todo-server-7f8462c827387e08e48456e1819152d4e36c00a7509b130a1d4923f5d12972dd",
-        "sha256": "92bb31f71e19f1dbda6c43ecbbb186eb36fdd2b5218857f5dec337d75a24e8c5"
+        "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/.scratch/bin/b9ec2d8ebf6e-36f9c56e2000/todo-server",
+        "sha256": "474608c247b3e91ada6ec62c84cdf43957e6dafa6688524af34bccfa837884a3"
       },
       "seed": {
-        "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/.scratch/bin/seed-7f8462c827387e08e48456e1819152d4e36c00a7509b130a1d4923f5d12972dd",
-        "sha256": "fd4fb12c0e6318d34e581b3ba0b4342b964aa92bb436dae555a76ff2cdbdeb10"
+        "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/.scratch/bin/b9ec2d8ebf6e-36f9c56e2000/seed",
+        "sha256": "cb17ccfa4489e644b4ab85b58f7350f19b6cce9a3e688be485b420dcc61163fa"
       }
     }
   },
@@ -179,7 +177,128 @@
     {
       "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/docs/evidence/agent-discovery/integration/full-check-c488/result.json",
       "sha256": "f7eb2d6ec0297dbd3c317c9ddf02853c4de8182462e1bfff67eba79ab4691d10"
+    },
+    {
+      "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/docs/evidence/agent-discovery/integration/full-check-sec36f9/result.json",
+      "sha256": "b853636d986608b6c1f76796e5c67c454b8281f37c8dc728c1e6aeae7dc1f068",
+      "claim": "final merged root command actual exit0 at its recorded original SHA"
+    },
+    {
+      "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/docs/evidence/agent-discovery/integration/sec-base/discovery/result.json",
+      "sha256": "b144ca7d05552b1c0e2f9688afee4872f65b7433773921457fe344c7642dd90d",
+      "claim": "final merged root command actual exit0 at its recorded original SHA"
+    },
+    {
+      "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/docs/evidence/agent-discovery/integration/sec-base/task-search/result.json",
+      "sha256": "6a4f7697de1517166e71b9a0f124d9197b0ca219b105dc5ed1b01ef2fc5f56f0",
+      "claim": "final merged root command actual exit0 at its recorded original SHA"
+    },
+    {
+      "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/docs/evidence/agent-discovery/integration/sec-base/electron-discovery-corrected/result.json",
+      "sha256": "dd29af93acc8f5c6c82d6b66e3d15f78563a3ec53c053730234744d15778e9f7",
+      "claim": "final merged root command actual exit0 at its recorded original SHA"
+    },
+    {
+      "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/docs/evidence/agent-discovery/integration/sec-base/electron-report-errors/result.json",
+      "sha256": "8318f58180a2b8605194209e602c3a38ecf734c891502708dd17c06be18f9352",
+      "claim": "final merged root command actual exit0 at its recorded original SHA"
+    },
+    {
+      "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/docs/evidence/agent-discovery/integration/sec-base/electron-stale401/result.json",
+      "sha256": "0c9b61805d221c60f17bdabd489afa69fd39d805f4a23457cf570fbada2449ca",
+      "claim": "final merged root command actual exit0 at its recorded original SHA"
+    },
+    {
+      "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/docs/evidence/agent-discovery/integration/sec-base/swift-state/result.json",
+      "sha256": "aabb61fcf1eb35aa0471d63fae8154c28b5f505d91ae112c31c05a07b4b630df",
+      "claim": "final merged root command actual exit0 at its recorded original SHA"
+    },
+    {
+      "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/docs/evidence/agent-discovery/integration/sec-base/swift-unsigned/result.json",
+      "sha256": "0e1d39edfa5c32f9781984da0c5265d81346cf64dcc8fc4380ef6f4693e20ddf",
+      "claim": "final merged root command actual exit0 at its recorded original SHA"
+    },
+    {
+      "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/docs/evidence/agent-discovery/integration/sec-base/swift-design-search/result.json",
+      "sha256": "c266c3d598d0c8f50bbf83290bf8f9e13ef53f981e6ae93db9f27bf26f6b6639",
+      "claim": "final merged root command actual exit0 at its recorded original SHA"
+    },
+    {
+      "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/docs/evidence/agent-discovery/integration/sec-base/swift-design-discovery/result.json",
+      "sha256": "233aa8e82e39f0e14750943daa47c8c390451ddedda614bc8e705db977d67e54",
+      "claim": "final merged root command actual exit0 at its recorded original SHA"
+    },
+    {
+      "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/docs/evidence/agent-discovery/integration/sec-base/electron-task-search-corrected-3/result.json",
+      "sha256": "5f7bb74da8018432628c52f3576f36e3eb58dd2263ffd246c3a8a7ba2a1da880",
+      "claim": "final merged root command actual exit0 at its recorded original SHA"
+    },
+    {
+      "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/docs/evidence/agent-discovery/integration/full-check-sec36f9/runtime-equivalence.json",
+      "sha256": "3fba9b0e427d6d2ffeae4f21ccf7368a31d11e45548673150c32d7165705ce91",
+      "claim": "fixed merged source/build provenance"
+    },
+    {
+      "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/docs/evidence/agent-discovery/integration/sec-base/electron-task-search-corrected-3/drive/result.json",
+      "sha256": "f5a26377c8c7af55a24b264d065a6b3f08ffe58d7e188d8ed59449085b41323d",
+      "claim": "fixed merged source/build provenance"
+    },
+    {
+      "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/docs/evidence/agent-discovery/integration/sec-base/electron-task-search-corrected-3/drive/task-search.json",
+      "sha256": "7423f9fcd29b45ead0c857a93186759d7fe8e1b88ec7303458989c81b3260f6a",
+      "claim": "fixed merged source/build provenance"
+    },
+    {
+      "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/docs/evidence/agent-discovery/integration/sec-base/electron-task-search-corrected-3/drive/reuse-proof.json",
+      "sha256": "a73dddd179e48be392588cd4476015cb75a4721aa22785da9c7e051f856ff73f",
+      "claim": "fixed merged source/build provenance"
+    },
+    {
+      "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/docs/evidence/agent-discovery/integration/sec-base/electron-task-search-corrected-3/drive/binary-provenance.json",
+      "sha256": "6bd546ba6518296b08d2317bc6b5c7c994adeb86211639e18fb5075d663ef590",
+      "claim": "fixed merged source/build provenance"
     }
   ],
-  "scope": "carried reviewed production regressions by immutable input equivalence, not executions at c488; not new covered-source hashes"
+  "scope": "Final merged root gates carried by source equivalence to f85; c488 and original C/D receipts remain historical, never relabeled",
+  "previousCheckpoint": {
+    "candidateCommit": "c4882258d95bb8d8e80315d2f3d5f88fd5bd9901",
+    "electronCommit": "75052d51f52d04b3c44e128d88be2540cdfef0f5",
+    "swiftProofCommit": "205dcbe9731baa0568f62a53a8488e8ff951979f",
+    "swiftProductCommit": "c4c1a9709b14dc4440ffcf6a35361d4df61f0fea",
+    "backend": {
+      "builtHead": "fad74437992ffdfe9d914d774400836057feedba",
+      "canonicalBSourceHash": "e76674ad89a63dabb3e603beae0fc2333264c29e47a659d9be9070ece95fa973",
+      "legacyAttachmentCacheLabel": "7f8462c827387e08e48456e1819152d4e36c00a7509b130a1d4923f5d12972dd",
+      "labelAlgorithmsAreDifferent": true,
+      "sourceEquivalencePaths": [
+        "apps/cli/src",
+        "apps/cli/scripts",
+        "apps/cli/test",
+        "apps/server/src",
+        "apps/server/scripts",
+        "packages/domain/src",
+        "packages/domain/test",
+        "packages/api/src",
+        "pnpm-lock.yaml",
+        "package.json"
+      ],
+      "binaries": {
+        "cli": {
+          "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/.scratch/bin/todo-7f8462c827387e08e48456e1819152d4e36c00a7509b130a1d4923f5d12972dd",
+          "sha256": "725152db259e21fd1adb62721005584a7d8aed56de780f6f95605bba819124b9"
+        },
+        "server": {
+          "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/.scratch/bin/todo-server-7f8462c827387e08e48456e1819152d4e36c00a7509b130a1d4923f5d12972dd",
+          "sha256": "92bb31f71e19f1dbda6c43ecbbb186eb36fdd2b5218857f5dec337d75a24e8c5"
+        },
+        "seed": {
+          "path": "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/.scratch/bin/seed-7f8462c827387e08e48456e1819152d4e36c00a7509b130a1d4923f5d12972dd",
+          "sha256": "fd4fb12c0e6318d34e581b3ba0b4342b964aa92bb436dae555a76ff2cdbdeb10"
+        }
+      }
+    },
+    "scope": "historical c488 checkpoint only; no final source-equivalence claim"
+  },
+  "productCommit": "36f9c56e200048aa2ca16186aaf713bea8d5454e",
+  "integrationCommit": "81cdef8ec257a8ca7e1cbfb1ab2b3ff3afcbbf14"
 }

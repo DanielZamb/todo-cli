@@ -1,6 +1,6 @@
 ---
 name: verify-discovery-formal
-description: Check bounded discovery publication and Show provenance with TLA+, reviewed C/D source mapping, and independent real-code controls. Use after discovery credential, dialog, submission, prefix edit, Close, Retry, Show or authorization-epoch changes. TaskSearch renewal is separately held for final SEC integration.
+description: Check bounded discovery publication and Show provenance with TLA+, reviewed C/D source mapping, and independent real-code controls. Use after discovery credential, dialog, submission, prefix edit, Close, Retry, Show or authorization-epoch changes. Use the final merged immutable candidate for both discovery and TaskSearch; no mechanical refinement claim.
 ---
 
 # Verify discovery publication
@@ -11,14 +11,13 @@ From the checkout root, run:
 bun .agents/skills/verify-discovery-formal/check.ts
 ```
 
-A pass checks the approved contract model within the exact bounds below and
-the explicitly named real-source controls. This is a discovery-only checkpoint
-at c4882258, before the final SEC base. [SOURCE-MAPPING.md](SOURCE-MAPPING.md)
-maps the actual C/D functions, awaits, guards, synchronous publication and UI
-dispatch. [REPORT.md](REPORT.md) distinguishes original carried regressions,
-fresh controls and outstanding gates. No mechanical refinement is claimed.
-TaskSearch semantic reproof and hash renewal remain on coordinator HOLD until
-the final SEC SHA is integrated by L1. Do not merge/rebase this worktree yourself.
+A pass checks bounded model safety, immutable reviewed source mapping, carried
+root regressions and independent real-source sensitivity/restoration. Both
+formal mappings now name f85aef6faf7d93be80feef930554206e09d61be3, product exact
+36f9c56e200048aa2ca16186aaf713bea8d5454e, root proof integration 81c. The final
+SEC handoff released the TaskSearch hold before its single semantic renewal.
+SOURCE-MAPPING.md names actual awaits, guards, publication and UI dispatch.
+REPORT.md records current and historical receipts without relabeling them.
 
 Created using the create-formal-verification-skill workflow. TLA+ fits this
 question because late replies can publish under a different credential or dialog.
@@ -150,7 +149,8 @@ Every mutant needs an actual Swift Testing expectation failure, byte restoration
 and a fresh-database clean rerun. A final combined clean run follows. This is
 headless execution, not native alert activation or hosted XCTest.
 
-Before every Swift series and command, swift-command.sh checks df against 30GiB
+Before every Swift series and command, swift-command.sh checks its default
+30GiB floor or the scoped E-final exception below
 and runs disk-guard inside the shared swift-slot. Exit3 means stop and report;
 never delete foreign files or override the floor. Every SwiftPM argv contains
 --disable-automatic-resolution and is recorded with stdout/stderr/actual exit.
@@ -161,11 +161,11 @@ integration cache; no C/D worktree path is used. An optional third argument to
 check-swift.ts reuses only this E worktree's already restored independent source
 and build cache. It validates every source against a new immutable archive first.
 
-carried-inputs.json pins original C/D text receipts, review verdicts and root
-full-check-c488 fixed binary paths/hashes/build provenance. check-inputs.ts
+carried-inputs.json pins final merged root36f9/81c receipts and fixed B9
+binary paths/hashes/build provenance. Original C/D/c488 text remains historical. check-inputs.ts
 checks source equivalence and receipt hashes; it never reads a mutable cache
-manifest. The canonical B source hash and legacy Attachment cache label are
-different algorithms and remain separately named. Carried proofs keep their
+manifest. Historical canonical B and legacy Attachment cache labels use different
+algorithms; the current merged source hash is separately named. Carried proofs keep their
 original SHA and exit, including old red/setup/notification failures. They do
 not become new c488 executions. Archives contain text and artifact hash metadata;
 this skill does not require the removed C/D binaries or screenshots.
@@ -173,11 +173,32 @@ this skill does not require the removed C/D binaries or screenshots.
 Before advancing covered source hashes, inspect every mapped await/publication
 boundary, prove controls/restoration and retain production regression receipts.
 On a changed candidate, fail closed and review the change before renewal.
-TaskSearch whole-file coverage remains independently held for the coordinator's
-final SEC integration. AtomicCAS source drift and renewal remain L1-owned.
+TaskSearch coverage must name the same immutable merged candidate and rerun
+its separate model/matcher command after semantic review. AtomicCAS remains
+L1-owned and is not modified by this workflow.
 Never weaken an invariant to accommodate a product defect.
 
 The relative .claude/skills/verify-discovery-formal link enables filesystem
 skill discovery. Fresh-session discovery is not established by that link alone.
 The unit forbids children, so no-comments is audited locally. Independent audit
 belongs to the permitted seat-1 review. No extra child is launched.
+
+## E-final resource authorization
+
+The default Swift soft floor remains 30 GiB. An explicit coordinator exception
+for this E-final run permits 25 GiB (26,214,400KiB) only for remaining f85 controls,
+the final discovery command and frozen proof/check steps. The wrapper accepts
+TODO_E_FINAL_ORDER29_EXCEPTION=f85aef6faf7d93be80feef930554206e09d61be3 only in
+this bound E worktree; unset it for unrelated/future work. The hard disk-guard
+floor is unchanged. Authorization and preflight receipts are local under
+final-order29-exception. Do not generalize this exception.
+
+An explicit SOFT-DISK-HOLD file under docs/evidence/discovery-formal blocks the
+wrapper regardless of free space. Clear that owned latch only after explicit
+resume plus a fresh authorized preflight. Every command records its applicable
+floor and disabled-resolution/pin receipts. Reuse the current E f85 cache with
+TODO_DISCOVERY_SWIFT_REUSE pointing to its attempt directory; do not rebuild
+unchanged producer/API dependencies. Adapter/manifest writes are content-checked
+to avoid invalidating unchanged cached inputs. After each test/control the
+helper records an order-30 Bun-temporary census and fails on unexpected files
+requiring ownership/lsof review. It never deletes foreign temporaries.

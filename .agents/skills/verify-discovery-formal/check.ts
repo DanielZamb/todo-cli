@@ -297,17 +297,18 @@ try {
   record("result", {
     passed: true,
     scope:
-      "bounded discovery safety, reviewed c488 source mapping and real C/D controls",
+      "bounded discovery safety, reviewed final merged source mapping and real C/D controls",
     productionConformance:
-      "manually mapped and regression/sensitivity checked at c488; no mechanical refinement or future SEC coverage",
+      "manually mapped and regression/sensitivity checked at the named immutable merged candidate; no mechanical refinement",
     candidateCommit: coverage.candidateCommit,
-    taskSearch: "HOLD until coordinator final SEC SHA and L1 integration",
+    taskSearch:
+      "separate final merged model/matcher/source-mapping command; same candidate",
     head: head.out.trim(),
     stages,
     evidence,
   });
   console.log(
-    "PASS: discovery-only c488 mapping, bounded safety and real C/D sensitivity; TaskSearch HOLD",
+    "PASS: final merged discovery mapping, bounded safety and real C/D sensitivity",
   );
 } catch (error) {
   record("result", { passed: false, stages, error: String(error), evidence });

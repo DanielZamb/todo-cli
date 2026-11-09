@@ -1,3 +1,47 @@
+# Final merged discovery mapping
+
+Final source candidate `f85aef6faf7d93be80feef930554206e09d61be3` has product
+bytes equal to reviewed merged `36f9c56e200048aa2ca16186aaf713bea8d5454e`.
+Root81c adds only parent-owned AtomicCAS proof closure and one Electron test
+literal. Both discovery and TaskSearch covered mappings now name this same candidate
+after semantic review, current root regression receipts and real-source controls.
+
+DiscoveryStateController, Discovery.swift, DiscoveryView, ClientErrors, Electron
+main and unsigned write-host are byte-identical to c488. The manual mapping
+below still names their actual awaits, epoch checks and synchronous publication.
+In the changed whole renderer/TodoModel/AppViews files, SEC adds structured search
+refusal state, applied-context presentation and Project/Tag forwarding. E reviewed
+those complete search functions together with Show, auth invalidation and final
+publication. No discovery acceptance, Close/Retry, per-attempt UUID, shared
+credentialEpoch, stale401 side-effect guard or Save/Discard/Cancel guard changed.
+
+Show's All/full-id refresh now also passes through taskSearchQuery or Swift's
+name forwarding. Show clears Project/Tag, so no inferred name predicate can hide
+its result. Same-navigation-key refresh remains explicit; changed navigation
+uses the ordinary guarded refresh. Neither path relies on SSE to repair it.
+Structured lookup errors and report recovery keep the same origin dismissal,
+prefill and explicit Find boundary. SearchTooBroad carries the shared exit pair;
+no new client exit registry or agent-message rewriting was added.
+
+The domain's prefix-only discovery read still calls synchronous filterTaskRecords
+inside one readSnapshot. SEC's Effect/yielding text path belongs outside that
+transaction; no text query or await was introduced into directory/lookup. Server
+scope and snapshot properties remain separate real-code properties, never client
+TLC conclusions. Root's final compiled discovery, TaskSearch, renderer/report,
+stale401, Swift110+21 state, unsigned and60+116 offscreen gates retain actual0
+at their original36f9 source; the corrected Electron search drive is at81c with
+unchanged product inputs. Their fixed receipt hashes and backend provenance are
+in carried-inputs.json. Historical C/D and c488 evidence is not relabeled.
+
+All four fresh merged Swift controls passed with intended behavioral failures,
+byte restoration, clean reruns and final combined clean in swift-nT6h4U. Fresh
+Electron controls passed in electron-rr9Ojq. Old c488 receipts remain historical.
+TaskSearch's single semantic renewal followed matcher-wrLTPA; its complete
+model/matcher command check-4n4nBS passed on the same immutable candidate.
+Native HOLD and all model bounds/assumptions below remain unchanged.
+
+## Historical c488 checkpoint mapping
+
 # Discovery source mapping
 
 This is the discovery-only checkpoint at immutable integration
