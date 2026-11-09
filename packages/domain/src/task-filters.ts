@@ -137,18 +137,46 @@ export function filterTaskRecords(
   return step.value;
 }
 
+export function runTaskRecordSteps<E = never>(
+  steps: Generator<void, TaskRead[]>,
+  checkpoint: Effect.Effect<void, E> = Effect.promise(
+    () => new Promise<void>((resolve) => setImmediate(resolve)),
+  ),
+) {
+  let completed = false;
+  const next = () => {
+    try {
+      const step = steps.next();
+      completed = step.done === true;
+      return step;
+    } catch (error) {
+      completed = true;
+      throw error;
+    }
+  };
+  return Effect.gen(function* () {
+    let step = next();
+    while (!step.done) {
+      yield* checkpoint;
+      step = next();
+    }
+    return step.value;
+  }).pipe(
+    Effect.ensuring(
+      Effect.sync(() => {
+        if (!completed) {
+          completed = true;
+          steps.return([]);
+        }
+      }),
+    ),
+  );
+}
+
 export function filterTaskRecordsEffect(
   ...args: Parameters<typeof filterTaskRecordSteps>
 ) {
-  return Effect.gen(function* () {
-    const steps = filterTaskRecordSteps(...args);
-    let step = steps.next();
-    while (!step.done) {
-      yield* Effect.promise(
-        () => new Promise<void>((resolve) => setImmediate(resolve)),
-      );
-      step = steps.next();
-    }
-    return step.value;
-  });
+  return Effect.suspend(() =>
+    runTaskRecordSteps(filterTaskRecordSteps(...args)),
+  );
 }
