@@ -259,7 +259,7 @@ try {
   }
   const url = `http://127.0.0.1:${proxy.port}`;
   if (surface === "swift") {
-    const buildPath = join(root, "apps/macos/DerivedData/RefreshBefore");
+    const buildPath = join(root, "apps/macos/DerivedData/StateProof");
     const activeBundle = join(
       buildPath,
       "debug/TodoStateProofPackageTests.xctest/Contents/MacOS/TodoStateProofPackageTests",

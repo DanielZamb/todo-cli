@@ -80,13 +80,17 @@ struct TaskSearchFilterRecoveryTests {
         #expect(await model.retrySearch() == .applied)
         let ordinary = try #require(await transport.latestSearch())
         for project in [true, false] {
-            model.selectedProject = project ? selected.project_id : nil
-            model.selectedTag = project ? nil : selected.tags.first
-            #expect(await model.retrySearch() == .applied)
-            #expect(model.appliedSearchSnapshot?.rows.map(\.title) == ["Scope probe 0"])
-            #expect(model.appliedSearchSnapshot?.rows.first?.search_matches == [.init(field: .title, start: 6, end: 11)])
-            let after = try #require(await transport.latestSearch())
-            #expect(try canonicalRows(after.data, id: selected.id) == canonicalRows(ordinary.data, id: selected.id))
+            for full in [false, true] {
+                model.selectedProject = project ? selected.project_id : nil
+                model.selectedTag = project ? nil : selected.tags.first
+                if full { await model.refreshAfterWrite("F1 full-path proof") }
+                else { #expect(await model.retrySearch() == .applied) }
+                #expect(model.appliedSearchSnapshot?.rows.map(\.title) == ["Scope probe 0"])
+                #expect(model.appliedSearchSnapshot?.rows.first?.search_matches == [.init(field: .title, start: 6, end: 11)])
+                let after = try #require(await transport.latestSearch())
+                #expect(try canonicalRows(after.data, id: selected.id) == canonicalRows(ordinary.data, id: selected.id))
+                #expect(URLComponents(string: after.path)?.queryItems?.contains { $0.name == (project ? "project" : "tag") && $0.value == (project ? "Small" : "keep") } == true)
+            }
         }
         for task in tasks {
             let data = try JSONSerialization.data(withJSONObject: ["from_version": 1, "changes": ["description": String(repeating: "\u{FDFA}", count: 100000)]])
@@ -98,15 +102,18 @@ struct TaskSearchFilterRecoveryTests {
         #expect(await model.retrySearch() == .failed)
         #expect(model.searchError?.canRetry == false)
         for project in [true, false] {
-            model.selectedProject = project ? selected.project_id : nil
-            model.selectedTag = project ? nil : selected.tags.first
-            #expect(await model.retrySearch() == .applied)
-            #expect(model.searchError == nil)
-            #expect(model.appliedSearchSnapshot?.rows.map(\.title) == ["Scope probe 0"])
-            #expect(model.appliedSearchSnapshot?.rows.first?.search_matches == [.init(field: .title, start: 6, end: 11)])
-            let read = try #require(await transport.latestSearch())
-            let query = URLComponents(string: read.path)?.queryItems ?? []
-            #expect(query.contains { $0.name == (project ? "project" : "tag") && $0.value == (project ? "Small" : "keep") })
+            for full in [false, true] {
+                model.selectedProject = project ? selected.project_id : nil
+                model.selectedTag = project ? nil : selected.tags.first
+                if full { await model.refreshAfterWrite("F1 full-path recovery proof") }
+                else { #expect(await model.retrySearch() == .applied) }
+                #expect(model.searchError == nil)
+                #expect(model.appliedSearchSnapshot?.rows.map(\.title) == ["Scope probe 0"])
+                #expect(model.appliedSearchSnapshot?.rows.first?.search_matches == [.init(field: .title, start: 6, end: 11)])
+                let read = try #require(await transport.latestSearch())
+                let query = URLComponents(string: read.path)?.queryItems ?? []
+                #expect(query.contains { $0.name == (project ? "project" : "tag") && $0.value == (project ? "Small" : "keep") })
+            }
         }
         for task in tasks {
             let payload = try JSONDecoder().decode(Operations.tasks_period_edit.Input.Body.jsonPayload.self, from: Data(#"{"from_version":2,"changes":{"description":"ordinary"}}"#.utf8))
@@ -142,7 +149,8 @@ struct TaskSearchFilterRecoveryTests {
         }
         model.selectedTag = nil
         await transport.useSyntheticSameNameProjects()
-        #expect(await model.retrySearch() == .applied)
+        await model.refreshAfterWrite("Synthetic Project catalog changed")
+        #expect(model.searchError == nil)
         #expect(model.projects.filter { $0.name == "Small" }.count == 2)
         for row in collisions {
             model.selectedProject = row.project_id
@@ -157,7 +165,7 @@ struct TaskSearchFilterRecoveryTests {
             #expect(try canonicalRows(after.data, id: row.id) == canonicalRows(collisionJSON.data, id: row.id))
         }
         if let path = ProcessInfo.processInfo.environment["TODO_W06_RECEIPT"] {
-            try JSONSerialization.data(withJSONObject: ["projectRecovery": true, "tagRecovery": true, "ordinaryRowsAndSpansByteIdentical": true, "rawAppendOrOldDataCaseFoldTagSuperset": true, "syntheticSameNameProjectSuperset": true]).write(to: URL(fileURLWithPath: path).deletingLastPathComponent().appendingPathComponent("search-filter-recovery.json"))
+            try JSONSerialization.data(withJSONObject: ["fullAndQueryPaths": true, "projectRecovery": true, "tagRecovery": true, "ordinaryRowsAndSpansByteIdentical": true, "rawAppendOrOldDataCaseFoldTagSuperset": true, "syntheticSameNameProjectSuperset": true]).write(to: URL(fileURLWithPath: path).deletingLastPathComponent().appendingPathComponent("search-filter-recovery.json"))
         }
     }
 }

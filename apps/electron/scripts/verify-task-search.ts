@@ -35,7 +35,11 @@ writeFileSync(
 );
 const receipts: unknown[] = [];
 const checks: unknown[] = [];
-const filteredReplies: { text: string; tasks: readonly TaskRead[] }[] = [];
+const filteredReplies: {
+  text: string;
+  path: string;
+  tasks: readonly TaskRead[];
+}[] = [];
 let log = "";
 const server = spawn(join(scratch, "server"), [], {
   env,
@@ -146,6 +150,7 @@ const proxy = Bun.serve({
     if (filtered && status === 200)
       filteredReplies.push({
         text,
+        path: url.pathname + url.search,
         tasks: Schema.decodeUnknownSync(Schema.Array(TaskRead))(
           JSON.parse(body),
         ),
@@ -1301,6 +1306,72 @@ try {
   if (!scope) throw new Error("Missing scoped Task");
   await field.fill("probe");
   await showing("probe");
+  const selectScope = async (selector: string, id: string, text: string) => {
+    const control = page.getByLabel(selector);
+    if ((await control.inputValue()) !== id) await control.selectOption(id);
+    await showing(text);
+  };
+  const scopeDesktop = desktop;
+  const fullScopeRefresh = async (text: string) => {
+    const start = receipts.length;
+    await scopeDesktop.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0]?.webContents.send("todo:notice", {
+        _tag: "connection",
+        profile: "work",
+        state: "connected",
+      });
+    });
+    await expect
+      .poll(() =>
+        receipts
+          .slice(start)
+          .some(
+            (entry) =>
+              typeof entry === "object" &&
+              entry !== null &&
+              "path" in entry &&
+              entry.path === "/profiles/work/projects",
+          ),
+      )
+      .toBe(true);
+    await showing(text);
+  };
+  const bothScopeFilters = async (
+    text: string,
+    name: string,
+    value: string,
+  ) => {
+    await fullScopeRefresh(text);
+    const full = filteredReplies.findLast((reply) => reply.text === text);
+    expect(new URL(`http://scratch${full?.path}`).searchParams.get(name)).toBe(
+      value,
+    );
+    const start = receipts.length;
+    await field.fill(`${text} `);
+    await showing(`${text} `);
+    await field.fill(text);
+    await showing(text);
+    const query = filteredReplies.findLast((reply) => reply.text === text);
+    expect(new URL(`http://scratch${query?.path}`).searchParams.get(name)).toBe(
+      value,
+    );
+    expect(
+      receipts
+        .slice(start)
+        .some(
+          (entry) =>
+            typeof entry === "object" &&
+            entry !== null &&
+            "path" in entry &&
+            entry.path === "/profiles/work/projects",
+        ),
+    ).toBe(false);
+    checks.push({
+      forwarding: { name, value },
+      fullPath: true,
+      queryPath: true,
+    });
+  };
   const ordinary = filteredReplies.findLast(
     (reply) => reply.text === "probe",
   )?.tasks;
@@ -1310,12 +1381,14 @@ try {
     ["Filter by Tag", "keep", scope.tags[0]],
   ] as const) {
     if (!id) throw new Error("Missing definition id");
-    await page.getByLabel("Filter by Project").selectOption("");
-    await showing("probe");
-    await page.getByLabel("Filter by Tag").selectOption("");
-    await showing("probe");
-    await page.getByLabel(selector).selectOption(id);
-    await showing("probe");
+    await selectScope("Filter by Project", "", "probe");
+    await selectScope("Filter by Tag", "", "probe");
+    await selectScope(selector, id, "probe");
+    await bothScopeFilters(
+      "probe",
+      selector === "Filter by Project" ? "project" : "tag",
+      label,
+    );
     expect(await titles()).toEqual(["Scope probe 0"]);
     expect(await page.locator(".task-title mark").allTextContents()).toEqual([
       "probe",
@@ -1330,8 +1403,7 @@ try {
   }
   await field.fill("");
   await showing("");
-  await page.getByLabel("Filter by Tag").selectOption("");
-  await showing("");
+  await selectScope("Filter by Tag", "", "");
   for (const task of scopeTasks)
     await api(`/profiles/work/tasks/${task.id}`, "PATCH", {
       from_version: 1,
@@ -1346,14 +1418,16 @@ try {
     if (!id) throw new Error("Missing definition id");
     await field.fill("");
     await showing("");
-    await page.getByLabel("Filter by Project").selectOption("");
-    await showing("");
-    await page.getByLabel("Filter by Tag").selectOption("");
-    await showing("");
-    await page.getByLabel(selector).selectOption(id);
-    await showing("");
+    await selectScope("Filter by Project", "", "");
+    await selectScope("Filter by Tag", "", "");
+    await selectScope(selector, id, "");
     await field.fill("probe");
     await showing("probe");
+    await bothScopeFilters(
+      "probe",
+      selector === "Filter by Project" ? "project" : "tag",
+      selector === "Filter by Project" ? "Small" : "keep",
+    );
     expect(await titles()).toEqual(["Scope probe 0"]);
     await expect(page.getByLabel("Search failed")).toHaveCount(0);
     expect(
@@ -1396,10 +1470,8 @@ try {
   checks.push({ projectAndTagRecoverMeteredWork: true });
   await field.fill("");
   await showing("");
-  await page.getByLabel("Filter by Project").selectOption("");
-  await showing("");
-  await page.getByLabel("Filter by Tag").selectOption("");
-  await showing("");
+  await selectScope("Filter by Project", "", "");
+  await selectScope("Filter by Tag", "", "");
   for (const task of scopeTasks)
     await api(`/profiles/work/tasks/${task.id}`, "PATCH", {
       from_version: 2,
@@ -1438,7 +1510,12 @@ try {
   });
   expect(seeded.status).toBe(0);
   const collision = Schema.decodeUnknownSync(
-    Schema.Array(Schema.Struct({ task: Task })),
+    Schema.Array(
+      Schema.Struct({
+        task: Task,
+        tag: Schema.Struct({ name: Schema.String }),
+      }),
+    ),
   )(JSON.parse(seeded.stdout));
   await field.fill("collision");
   await showing("collision");
@@ -1452,6 +1529,7 @@ try {
     if (!tagId) throw new Error("Missing case-fold Tag id");
     await page.getByLabel("Filter by Tag").selectOption(tagId);
     await showing("collision");
+    await bothScopeFilters("collision", "tag", item.tag.name);
     expect(await titles()).toEqual([item.task.title]);
     expect(await page.locator(".task-title mark").allTextContents()).toEqual([
       "Collision",
@@ -1470,6 +1548,7 @@ try {
   await page.getByLabel("Filter by Tag").selectOption("");
   await showing("collision");
   syntheticProjectSuperset = true;
+  await fullScopeRefresh("collision");
   await field.fill("");
   await showing("");
   await field.fill("collision");
@@ -1480,6 +1559,7 @@ try {
       .getByLabel("Filter by Project")
       .selectOption(item.task.project_id);
     await showing("collision");
+    await bothScopeFilters("collision", "project", "Small");
     expect(await titles()).toEqual([item.task.title]);
     expect(await page.locator(".task-title mark").allTextContents()).toEqual([
       "Collision",
