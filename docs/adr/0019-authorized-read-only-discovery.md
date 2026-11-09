@@ -93,3 +93,25 @@ Authorization header, and both apps use one owner Session. Neither needs another
 UI control. We rejected credential-file fallback because it silently chooses a
 key the caller did not name. The compiled regression uses a source login and a
 destination logout, then proves that source lookup's printed Show command works.
+
+## Amendment, 2026-11-09: authorized Profile resolution preserves History
+
+Authentication owns one `resolveProfile({ credential, profile, action })`
+operation. It resolves a name or id only within the credential's authorized
+Profiles and returns id and name. An unauthorized target and an absent target
+have identical caller outcomes. Credential rejection records one
+AuthAttemptRejected with the Profile and action that the selected operation
+would have recorded, matching CLI and HTTP. It never adds a preliminary
+null-Profile discovery rejection. Owner-only History may retain the target id.
+
+CLI target selection uses this operation with the real command action. Task
+lookup-error enrichment uses it after the authorized Task operation returns
+not-found, avoiding a full Task-data read merely to obtain a Profile name.
+The authorized-set predicate remains shared with Authentication.profiles.
+A missing Attachment on an existing Task keeps Attachment recovery. Only a
+missing authorized Task receives Task discovery hints.
+
+Printed commands protect every dash-leading flag value with `--flag=value`.
+A dash-leading Task id follows an argument delimiter after all flags, such as
+`todo show --profile work -- -ab`. One domain shell-quoting implementation
+formats CLI discovery commands and recovery hints, including colons and quotes.

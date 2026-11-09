@@ -48,3 +48,25 @@ Initial failure evidence stays local at docs/evidence/agent-discovery/recovery-c
 The UI request-order contract is unchanged. The model-ready proof at E's immutable
 checkpoint remains a proof of those bounded states, with production mapping still
 unproven. Its final mapping will reference the integrated contract and source.
+
+## Shared resolution and command-boundary corrections
+
+The coordinator's review correction requires one domain
+`Authentication.resolveProfile({credential, profile: nameOrId, action})`.
+It returns id and name from the authorized set and preserves the real
+operation's rejected-auth Profile and action. Absent and unauthorized targets
+have identical caller outcomes. CLI show and edit compare one revoked or expired
+credential rejection each against HTTP, including attribution and row counts.
+No public Profile-discovery authentication occurs first and no extra null-Profile
+rejection is recorded.
+
+The selector is validated at the command boundary before prompts, sign-in or
+Profile creation. Correct and incorrect passphrases with an empty selector both
+fail with exit 2 and leave auth attempts, Profiles and Sessions unchanged.
+This early validation applies to logout and every command taking the global flag.
+
+Every dash-leading flag value uses flag=value. Every dash-leading Task id follows
+`--` after the flags. Both Markdown and table commands are executed literally in
+a shell for ordinary and dash-leading ids and Profile names with a colon and a
+single quote. Root's integration reuses the domain quote and flag functions and
+deletes the CLI duplicate.

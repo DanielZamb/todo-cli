@@ -1005,8 +1005,8 @@ const discoveryFrames = [
     id: "agent-lookup-errors", name: "Selected Profile in Task errors", x: 2800, y: 16000,
     subtitle: "Proposed recovery contract. Exact-id reads and mutations never search other Profiles.",
     nodes: [
-      ["request", "selectProfile / HTTP :profile", "readTasks / Authentication.read\nexisting exact Task id or mutation\nselected Profile stays unchanged"],
-      ["auth", "Authentication.requireCredential", "read or write scope succeeds\nselected Profile id is authorized\notherwise keep existing auth error"],
+      ["request", "selectProfile / HTTP :profile", "CLI resolveProfile with real operation action\nHTTP authorizes the selected route operation\nselected Profile stays unchanged"],
+      ["auth", "Authentication.resolveProfile / operation auth", "authorized set / return only {id,name}\none rejected-auth row / real Profile and action\nno preliminary null-Profile discovery rejection"],
       ["missing", "Task not found", "commands.cliResult / show / History\nnot_found exit 3 / HTTP NotFound 404\nno cross-Profile probe"],
       ["recover", "task-lookup-error.ts / proposed", "details.profile {id,name} / task_id\nlist --profile <id> --prefix <p> [--credential-profile <used>]\nlookup --prefix <p> --credential-profile <used> / HTTP both routes"],
     ],
@@ -1017,7 +1017,7 @@ const discoveryFrames = [
       ["recover", "request", "explicit user recovery / retain draft", "left", "bottom"],
     ],
     notes: [
-      "1. Enrich only after authorization. Unknown, deleted and forbidden Profiles disclose no foreign names, ids, counts or existence.",
+      "1. Enrich only an authorized missing Task, never a missing Attachment on an existing Task. Absent and unauthorized Profile outcomes are identical.",
       "2. Both hints query nothing. Mutations need full ids and an explicit Profile. Human detail uses error 3 - not found or auth missing.",
     ],
   },
