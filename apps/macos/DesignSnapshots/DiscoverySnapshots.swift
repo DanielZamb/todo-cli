@@ -122,14 +122,18 @@ import TodoAPI
                     host.layoutSubtreeIfNeeded()
                     if name.contains("not-found") && !name.hasPrefix("editor") && !name.hasPrefix("history") {
                         func scrollViews(_ view: NSView) -> [NSScrollView] { (view as? NSScrollView).map { [$0] } ?? view.subviews.flatMap(scrollViews) }
-                        let scroller = try #require(scrollViews(host).max { ($0.documentView?.frame.height ?? 0) < ($1.documentView?.frame.height ?? 0) })
+                        let target = try #require(frames.reportFrames["viewport"])
+                        func distance(_ scroll: NSScrollView) -> CGFloat { abs(scroll.bounds.width - target.width) + abs(scroll.bounds.height - target.height) }
+                        let scroller = try #require(scrollViews(host).min { distance($0) < distance($1) })
                         let document = try #require(scroller.documentView)
-                        let maximum = max(0, document.frame.height - scroller.contentView.bounds.height)
-                        let offset = name.hasSuffix("-end") ? maximum : min(56, maximum)
-                        scroller.contentView.scroll(to: .init(x: 0, y: document.isFlipped ? offset : maximum - offset))
-                        scroller.reflectScrolledClipView(scroller.contentView)
-                        host.layoutSubtreeIfNeeded()
-                        try await Task.sleep(for: .milliseconds(100))
+                        for fraction in name.hasSuffix("-end") ? [CGFloat(0), 0.25, 0.5, 0.75, 1] : [CGFloat(0)] {
+                            let maximum = max(0, document.frame.height - scroller.contentView.bounds.height)
+                            let offset = name.hasSuffix("-end") ? maximum * fraction : min(56, maximum)
+                            scroller.contentView.scroll(to: .init(x: 0, y: document.isFlipped ? offset : maximum - offset))
+                            scroller.reflectScrolledClipView(scroller.contentView)
+                            host.layoutSubtreeIfNeeded()
+                            try await Task.sleep(for: .milliseconds(60))
+                        }
                         if name.hasSuffix("-end") {
                             let last = try #require(frames.reportFrames["row-ordinary-after"])
                             let viewport = try #require(frames.reportFrames["viewport"])
