@@ -1283,6 +1283,7 @@ const mutation = (name: Mutation) =>
                   Prompt.Confirm({
                     message: "Delete Task and remove these Dependencies?",
                     initial: false,
+                    placeholder: { defaultDeny: "[y/N]" },
                   }),
                 ).pipe(Effect.catch(() => Effect.succeed(false)));
                 if (!confirmed)

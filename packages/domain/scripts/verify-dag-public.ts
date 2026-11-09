@@ -1,8 +1,10 @@
 import { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -22,6 +24,7 @@ import {
 import { TaskResponse } from "../src/presentation.ts";
 import { openStore } from "../src/store/store.ts";
 import { create, task } from "./dag-proof.ts";
+import { proveTtyDelete } from "./tty-delete-proof.ts";
 
 const [cli, serverBinary, evidence] = process.argv.slice(2);
 if (
@@ -75,6 +78,14 @@ const state = () => {
         .all(),
       history: db.query("SELECT * FROM op_log ORDER BY seq").all(),
       checkpoints: db.query("SELECT * FROM snapshots ORDER BY seq").all(),
+      owner_snapshots: existsSync(join(scratch, "snapshots"))
+        ? readdirSync(join(scratch, "snapshots"))
+            .sort()
+            .map((name) => [
+              name,
+              readFileSync(join(scratch, "snapshots", name)).toString("base64"),
+            ])
+        : [],
     };
   } finally {
     db.close();
@@ -425,6 +436,7 @@ try {
   });
   assert.equal(mermaid.exitCode, 0);
   assert.match(mermaid.stdout.toString(), /^flowchart TD\n/);
+  await proveTtyDelete({ cli, env, evidence, run, state });
   writeFileSync(
     join(evidence, "result.json"),
     JSON.stringify(
