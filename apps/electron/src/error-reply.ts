@@ -9,17 +9,24 @@ export function exitDetail(error: unknown): string | undefined {
     : undefined;
 }
 
+export function taskLookupDetails(
+  error: unknown,
+): typeof TaskLookupDetails.Type | null {
+  const parsed = Schema.decodeUnknownExit(
+    Schema.Struct({ details: TaskLookupDetails }),
+  )(error);
+  return parsed._tag === "Success" ? parsed.value.details : null;
+}
+
 const Message = Schema.Struct({ message: Schema.String });
 export function errorReply(error: unknown): Extract<Reply, { _tag: "error" }> {
   const message = Schema.decodeUnknownExit(Message)(error);
-  const details = Schema.decodeUnknownExit(
-    Schema.Struct({ details: TaskLookupDetails }),
-  )(error);
-  if (details._tag === "Success")
+  const details = taskLookupDetails(error);
+  if (details)
     return {
       _tag: "error",
-      message: `Task not found in ${details.value.details.profile.name}.`,
-      details: details.value.details,
+      message: `Task not found in ${details.profile.name}.`,
+      details,
     };
   return {
     _tag: "error",

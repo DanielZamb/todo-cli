@@ -3,6 +3,7 @@ import { type PlanningView, seriesForTask, type TaskId } from "@todo/domain";
 import { Effect } from "effect";
 import type { HttpClient } from "effect/http";
 import { HttpApiClient } from "effect/http-api";
+import { errorReply } from "./error-reply.ts";
 import type { NativeAttachmentRequest, Reply, Request } from "./protocol.ts";
 import { historyTaskIds, seriesFromHistory, seriesKey } from "./recurrence.ts";
 
@@ -102,10 +103,9 @@ export const taskRequest = (
                 },
               }),
             };
-          return {
-            _tag: "error",
-            message: row.error?.message ?? "Attachments were rejected.",
-          };
+          return errorReply(
+            row.error ?? { message: "Attachments were rejected." },
+          );
         }
         return {
           _tag: "task",

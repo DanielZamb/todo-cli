@@ -1299,6 +1299,13 @@ function App() {
       </DropdownMenuItem>
     </>
   );
+  const findLookupTask = (details: typeof TaskLookupDetails.Type) =>
+    openDiscovery(
+      "lookup",
+      Schema.is(LookupQuery.fields.prefix)(details.task_id)
+        ? details.task_id
+        : "",
+    );
   const lookupStatus = lookupError && (
     <TaskLookupStatus
       details={lookupError}
@@ -1547,6 +1554,13 @@ function App() {
             setAppliedSearch(null);
             unfilteredSearch.current = null;
             setApplyingFilters(true);
+            if (
+              profile === task.profile_id &&
+              view === "tasks" &&
+              project === null &&
+              tag === null
+            )
+              void refresh();
           },
         }}
       />
@@ -1582,6 +1596,7 @@ function App() {
           profile={profile}
           request={request}
           canWrite={!readOnly}
+          onFindTask={findLookupTask}
           onClose={() => setBatchEditOpen(false)}
           onApplied={() => {
             void refresh();
@@ -1597,6 +1612,7 @@ function App() {
               profile,
           )}
           compact={compact}
+          onFindTask={findLookupTask}
           canWrite={connection === "connected" && !pending}
           onClose={() => setImportOpen(false)}
           onApplied={() => {
@@ -2827,6 +2843,7 @@ function App() {
               }
               readOnly={readOnly || latest !== null}
               request={request}
+              onFindTask={findLookupTask}
               onAccepted={(accepted) => {
                 if (
                   active.current === accepted.profile_id &&

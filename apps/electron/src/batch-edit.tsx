@@ -15,7 +15,9 @@ import {
 } from "./components/ui/dialog.tsx";
 import { Input } from "./components/ui/input.tsx";
 import { NativeSelect } from "./components/ui/native-select.tsx";
+import { taskLookupDetails } from "./error-reply.ts";
 import type { Reply, Request } from "./protocol.ts";
+import { type FindTask, TaskLookupStatus } from "./task-lookup-status.tsx";
 
 const fields = [
   ["priority", "Priority"],
@@ -56,12 +58,14 @@ export function BatchEditDialog({
   request,
   canWrite,
   onClose,
+  onFindTask,
   onApplied,
 }: {
   profile: ProfileId;
   request: (request: Request) => Promise<Reply>;
   canWrite: boolean;
   onClose: () => void;
+  onFindTask?: FindTask | undefined;
   onApplied: () => void;
 }) {
   const [tasks, setTasks] = useState<readonly Task[]>([]);
@@ -250,9 +254,11 @@ export function BatchEditDialog({
           ) : (
             tasks.map((task) => {
               const row = report?.items.find((row) => row.task_id === task.id);
+              const details = taskLookupDetails(row?.error);
               return (
-                <label key={task.id} className="batch-edit-row">
+                <div key={task.id} className="batch-edit-row">
                   <input
+                    id={`${fieldId}-${task.id}`}
                     className="batch-edit-checkbox"
                     type="checkbox"
                     aria-label={`Select ${task.title}`}
@@ -266,21 +272,41 @@ export function BatchEditDialog({
                       setReport(null);
                     }}
                   />
-                  <span>
-                    <span title={task.title}>{task.title}</span>
-                    <small role={row?.error ? "alert" : undefined}>
-                      {row?.error
-                        ? row.error.code === "occ_conflict"
-                          ? `Conflict · Version ${row.current_version}. Reload Tasks.`
-                          : row.error.message
-                        : row
-                          ? report?.dry_run
-                            ? `Ready · Version ${task.row_version}`
-                            : `Updated · Version ${row.current_version}`
-                          : `P${task.priority.slice(1)} · Version ${task.row_version}`}
-                    </small>
-                  </span>
-                </label>
+                  <div className="grid min-w-0 gap-1">
+                    <label
+                      htmlFor={`${fieldId}-${task.id}`}
+                      className="truncate"
+                      title={task.title}
+                    >
+                      {task.title}
+                    </label>
+                    {details ? (
+                      <TaskLookupStatus
+                        details={details}
+                        onFind={
+                          onFindTask
+                            ? () => {
+                                onClose();
+                                onFindTask(details);
+                              }
+                            : undefined
+                        }
+                      />
+                    ) : (
+                      <small role={row?.error ? "alert" : undefined}>
+                        {row?.error
+                          ? row.error.code === "occ_conflict"
+                            ? `Conflict · Version ${row.current_version}. Reload Tasks.`
+                            : row.error.message
+                          : row
+                            ? report?.dry_run
+                              ? `Ready · Version ${task.row_version}`
+                              : `Updated · Version ${row.current_version}`
+                            : `P${task.priority.slice(1)} · Version ${task.row_version}`}
+                      </small>
+                    )}
+                  </div>
+                </div>
               );
             })
           )}

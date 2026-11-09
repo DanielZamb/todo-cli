@@ -15,8 +15,10 @@ import {
   DialogTitle,
 } from "./components/ui/dialog.tsx";
 import { Input } from "./components/ui/input.tsx";
+import { taskLookupDetails } from "./error-reply.ts";
 import { importChangesText } from "./import-presentation.ts";
 import { countTasks } from "./presentation.ts";
+import { type FindTask, TaskLookupStatus } from "./task-lookup-status.tsx";
 
 type Preview = Omit<ImportReport, "items"> & {
   items: readonly (ImportReport["items"][number] & { key: string })[];
@@ -30,6 +32,7 @@ export function ImportDialog({
   compact,
   canWrite,
   onClose,
+  onFindTask,
   onApplied,
 }: {
   profile: ProfileId;
@@ -37,6 +40,7 @@ export function ImportDialog({
   compact: boolean;
   canWrite: boolean;
   onClose: () => void;
+  onFindTask?: FindTask | undefined;
   onApplied: () => void;
 }) {
   const [items, setItems] = useState<ImportRequest["items"]>([]);
@@ -175,7 +179,10 @@ export function ImportDialog({
         row.error?.code === "occ_conflict"
           ? "Conflict"
           : row.outcome.charAt(0).toUpperCase() + row.outcome.slice(1),
-      changes: row.error?.message ?? importChangesText(row),
+      details: taskLookupDetails(row.error),
+      changes: taskLookupDetails(row.error)
+        ? ""
+        : (row.error?.message ?? importChangesText(row)),
     };
   });
   const count = (report?.totals.created ?? 0) + (report?.totals.updated ?? 0);
@@ -275,7 +282,7 @@ export function ImportDialog({
             <div className="import-list-scroll">
               {compact ? (
                 <ul className="import-stack" aria-label="Import preview">
-                  {rows?.map(({ row, title, outcome, changes }) => (
+                  {rows?.map(({ row, title, outcome, changes, details }) => (
                     <li className="import-row" key={row.key}>
                       <div className="import-row-heading">
                         <span className="import-row-title" title={title}>
@@ -283,7 +290,9 @@ export function ImportDialog({
                         </span>
                         <span
                           className={
-                            row.outcome === "rejected" ? "import-rejected" : ""
+                            row.outcome === "rejected" && !details
+                              ? "import-rejected"
+                              : ""
                           }
                         >
                           {outcome}
@@ -292,16 +301,30 @@ export function ImportDialog({
                       <small className="import-row-id" title={row.external_id}>
                         {row.external_id || "Missing external id"}
                       </small>
-                      <p
-                        title={changes}
-                        className={
-                          row.error
-                            ? "import-rejected import-row-changes"
-                            : "import-row-changes"
-                        }
-                      >
-                        {changes}
-                      </p>
+                      {details ? (
+                        <TaskLookupStatus
+                          details={details}
+                          onFind={
+                            onFindTask
+                              ? () => {
+                                  onClose();
+                                  onFindTask(details);
+                                }
+                              : undefined
+                          }
+                        />
+                      ) : (
+                        <p
+                          title={changes}
+                          className={
+                            row.error
+                              ? "import-rejected import-row-changes"
+                              : "import-row-changes"
+                          }
+                        >
+                          {changes}
+                        </p>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -315,7 +338,7 @@ export function ImportDialog({
                     </tr>
                   </thead>
                   <tbody>
-                    {rows?.map(({ row, title, outcome, changes }) => (
+                    {rows?.map(({ row, title, outcome, changes, details }) => (
                       <tr key={row.key}>
                         <td>
                           <span>{title}</span>
@@ -325,12 +348,30 @@ export function ImportDialog({
                         </td>
                         <td
                           className={
-                            row.outcome === "rejected" ? "import-rejected" : ""
+                            row.outcome === "rejected" && !details
+                              ? "import-rejected"
+                              : ""
                           }
                         >
                           {outcome}
                         </td>
-                        <td>{changes}</td>
+                        <td>
+                          {details ? (
+                            <TaskLookupStatus
+                              details={details}
+                              onFind={
+                                onFindTask
+                                  ? () => {
+                                      onClose();
+                                      onFindTask(details);
+                                    }
+                                  : undefined
+                              }
+                            />
+                          ) : (
+                            changes
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

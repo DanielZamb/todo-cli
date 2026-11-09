@@ -88,3 +88,54 @@ u1-id-style-parity.json. The proof compares the shared type-code class, computed
 mono font family, size, color and square Copy button dimensions. U5 captures
 Show-gone, prefilled lookup and editor-gone states in both appearances/layouts.
 Invalid input has no divider beneath its FieldError.
+
+## Stale Unauthorized replies at the host boundary
+
+The standalone production write-host regression uses a delayed-response proxy
+and real revoked scratch Sessions. Build unsigned host mode first:
+
+```sh
+sh scripts/disk-guard.sh
+TODO_ELECTRON_VERIFY_HOST=1 /usr/bin/lockf -k /tmp/todo-search-electron.lock pnpm --filter @todo/electron build
+bun apps/electron/scripts/verify-host-unauthorized.ts "$PWD/docs/evidence/agent-discovery/host-unauthorized-new"
+```
+
+The host stays hidden and holds its Session in memory. It never imports
+safeStorage or launches the installed Todo app. The drive records only
+credential labels A, B and C, not bearer values. It sends lookup with A, holds
+that request, signs out A, forwards the held request to receive its real 401,
+signs in B, then releases A's 401. B must still restore as signedIn, the old
+request must return error, and no signedOut notice may follow B's signedIn.
+The independent current-credential control signs in C, revokes C directly
+through scratch HTTP and sends another lookup. It must return signedOut, emit
+signedOut and restore as signedOut. result.json records literal expected and
+observed replies/notices; receipts.json records upstream 401 and credential
+labels. Both main.ts and write-host.ts compare the captured credential value
+and credential generation before clearing authentication on Unauthorized.
+
+## Same-Profile Show and report-row recovery
+
+The full offscreen drive also shows a Task in the current Profile while already
+in All tasks with no Project or Tag selection. It asserts one new list request,
+the full-id applied identity, a visible Task row, and cleared Applying filters.
+Show explicitly calls the existing guarded refresh when navigation keys do not
+change. Changed navigation keys retain the ordinary view refresh effect.
+
+Run `TODO_VERIFY_REPORT_ERRORS=1` with the offscreen command for the separate
+report-row matrix. It uses the complete production renderer, creates Tasks via
+the compiled CLI, selects them, deletes each through CLI before Preview, and
+checks the real batch-edit and Attachment batch not_found rows with exit 3.
+It also calls the production single-item attachMany adapter against a deleted
+Task and checks its retained structured details. Each status has one Find
+button, which closes its parent dialog and prefills lookup without a request
+until explicit Find. The shared status is `task-lookup-status`.
+
+Import's real stale Task is task_deleted with exit 2 in this fixture. Record its
+actual response and capture it as import-real-rejection. The not-found import
+presentation is an explicit ImportReport schema-decoded UI fixture, captured
+as import-not-found-TYPED-FIXTURE. It is not real backend not-found evidence.
+report-errors.json labels every source. Compact light/dark screenshots cover
+all report errors, and requests are counted at dispatch to prove prefill does
+not submit. An optional TODO_DISCOVERY_RENDERER_ROOT selects an immutable
+source-only renderer extraction for a before proof. It does not change the
+server or the current checkout.

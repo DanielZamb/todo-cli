@@ -35,6 +35,7 @@ app.setPath("userData", process.env.TODO_ELECTRON_DATA);
 async function boot() {
   await app.whenReady();
   let credential = "";
+  let credentialGeneration = 0;
   const run = <A, E>(effect: Effect.Effect<A, E, HttpClient.HttpClient>) =>
     Effect.runPromise(effect.pipe(Effect.provide(FetchHttpClient.layer)));
   const client = await run(
@@ -234,6 +235,8 @@ async function boot() {
       }
       if (isNativeAttachmentRequest(request))
         return nativeAttachmentRequest(request);
+      const requestedCredential = credential;
+      const requestedCredentialGeneration = credentialGeneration;
       switch (request._tag) {
         case "openDiagnostics":
           diagnosticsWindow.show();
@@ -268,6 +271,7 @@ async function boot() {
         case "signOut":
           await run(client.credentials.signOut());
           credential = "";
+          credentialGeneration++;
           authentication("signedOut");
           return { _tag: "signedOut" };
         case "signIn": {
@@ -278,6 +282,7 @@ async function boot() {
               }),
             )
           ).credential;
+          credentialGeneration++;
           const outdated = await run(compatibility.check());
           if (outdated) return outdated;
           authentication("signedIn");
@@ -296,8 +301,15 @@ async function boot() {
                   "_tag" in error &&
                   error._tag === "Unauthorized"
                 ) {
+                  if (
+                    !requestedCredential ||
+                    requestedCredential !== credential ||
+                    requestedCredentialGeneration !== credentialGeneration
+                  )
+                    return Effect.succeed<Reply>(errorReply(error));
                   stopStream();
                   credential = "";
+                  credentialGeneration++;
                   authentication("signedOut");
                   return Effect.succeed<Reply>({
                     _tag: "signedOut",

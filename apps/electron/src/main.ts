@@ -52,6 +52,7 @@ if (
   throw new Error("Expected a loopback Todo server URL");
 const compatibility = serverCompatibility(server.origin);
 let credential: string | undefined;
+let credentialGeneration = 0;
 let window: BrowserWindow;
 let layout: ReturnType<typeof createWindowLayout>;
 let tray: Tray;
@@ -278,6 +279,7 @@ const handle = (
           writeFileSync(sessionFile, encrypted, { mode: 0o600 });
         });
         credential = session.credential;
+        credentialGeneration++;
         const outdated = yield* compatibility.check();
         if (outdated) {
           send(outdated);
@@ -293,6 +295,7 @@ const handle = (
         yield* http.credentials.signOut();
         stopStream();
         credential = undefined;
+        credentialGeneration++;
         rmSync(sessionFile, { force: true });
         send({ _tag: "signedOut" });
         return { _tag: "signedOut" };
@@ -376,6 +379,8 @@ async function boot() {
         parsed.value._tag !== "diagnostics"
       )
         return { _tag: "error", message: "Diagnostics is read only" };
+      const requestedCredential = credential;
+      const requestedCredentialGeneration = credentialGeneration;
       return run(
         handle(parsed.value).pipe(
           Effect.catch((error) => {
@@ -397,8 +402,15 @@ async function boot() {
                   message: `Incorrect owner passphrase.\n${exitDetail(error) ?? ""}`,
                 });
               if (error._tag === "Unauthorized") {
+                if (
+                  !requestedCredential ||
+                  requestedCredential !== credential ||
+                  requestedCredentialGeneration !== credentialGeneration
+                )
+                  return Effect.succeed<Reply>(errorReply(error));
                 stopStream();
                 credential = undefined;
+                credentialGeneration++;
                 rmSync(sessionFile, { force: true });
                 send({ _tag: "signedOut" });
                 return Effect.succeed<Reply>({

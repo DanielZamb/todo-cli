@@ -2,12 +2,14 @@ import type { TaskLookupDetails } from "@todo/domain";
 import { Alert, AlertDescription } from "./components/ui/alert.tsx";
 import { Button } from "./components/ui/button.tsx";
 
+export type FindTask = (details: typeof TaskLookupDetails.Type) => void;
+
 export function TaskLookupStatus({
   details,
   onFind,
 }: {
   details: typeof TaskLookupDetails.Type;
-  onFind: () => void;
+  onFind?: (() => void) | undefined;
 }) {
   return (
     <Alert role="status" data-testid="task-lookup-status">
@@ -16,7 +18,7 @@ export function TaskLookupStatus({
         <p className="text-muted-foreground">
           error 3 - not found or auth missing
         </p>
-        <Button variant="outline" onClick={onFind}>
+        <Button variant="outline" onClick={onFind} disabled={!onFind}>
           Find Task by id
         </Button>
       </AlertDescription>
