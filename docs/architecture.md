@@ -126,8 +126,10 @@ buffer. The synchronous CLI and the server share one generator core. The server
 drains it through `filterTaskRecordsEffect`, yielding between Tasks and after
 512 evaluated word occurrences. `TaskCommands.list` starts that drain after
 `auth.read` has returned its authorized in-memory view, with no SQLite read
-transaction open. Field preparation remains synchronous. No search cache
-survives the request.
+transaction open. Field preparation uses the same generator, yielding after
+512 graphemes or segmented parts while preserving normalization across chunks.
+Client disconnect interrupts the HTTP fiber at a checkpoint through the Bun
+HTTP adapter's request abort listener. No search cache survives the request.
 
 Each client retains one applied response snapshot while requesting a newer
 identity. Search text survives Profile and view switches. Failed reads offer

@@ -80,7 +80,7 @@ export function parseTaskSearch(value: string): readonly SearchClause[] {
   return clauses;
 }
 
-function fieldWords(value: string): readonly Word[] {
+export function fieldWords(value: string): readonly Word[] {
   let normalized = "";
   const origins: { start: number; end: number }[] = [];
   for (const part of graphemes.segment(value)) {

@@ -56,7 +56,11 @@ pairs, including repeated words and clauses that exercise request-local memoizat
 `task-search-yield.test.ts` requires an event-loop callback to run before a large
 search publishes its complete result. The shared core yields after 512 word
 occurrences; the server also yields between Tasks. The synchronous CLI drains
-the same core. Preparation and response serialization remain synchronous.
+the same core. `task-search-preparation.test.ts` compares preparation with the
+original evaluator at chunk sizes 1, 7 and 512, including expansion seams and
+whole grapheme origins. Preparation now yields too. The interruption regression
+requires an interrupted drain to publish nothing and prepare no further Task.
+Response serialization remains synchronous.
 
 Use `todo man list` and `todo schema list` to inspect syntax and response shape.
 HTTP remains `GET /profiles/work/tasks?text=...&prefix=...`. Closed quotes are

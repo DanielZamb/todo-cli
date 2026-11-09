@@ -82,9 +82,13 @@ export function parseTaskSearch(value: string): readonly SearchClause[] {
   return Array.from(unique.values());
 }
 
-function fieldWords(value: string): readonly Word[] {
+export function* fieldWords(
+  value: string,
+  chunkSize = 512,
+): Generator<void, readonly Word[]> {
   let normalized = "";
   const origins: { start: number; end: number }[] = [];
+  let processed = 0;
   for (const part of graphemes.segment(value)) {
     const folded = normalizeTaskSearch(part.segment);
     normalized += folded;
@@ -93,15 +97,19 @@ function fieldWords(value: string): readonly Word[] {
         start: part.index,
         end: part.index + part.segment.length,
       });
+    if (++processed % chunkSize === 0) yield;
   }
-  return Array.from(words.segment(normalized)).flatMap((part) => {
-    if (!part.isWordLike) return [];
-    const first = origins[part.index];
-    const last = origins[part.index + part.segment.length - 1];
-    return first && last
-      ? [{ text: part.segment, start: first.start, end: last.end }]
-      : [];
-  });
+  const result: Word[] = [];
+  for (const part of words.segment(normalized)) {
+    if (part.isWordLike) {
+      const first = origins[part.index];
+      const last = origins[part.index + part.segment.length - 1];
+      if (first && last)
+        result.push({ text: part.segment, start: first.start, end: last.end });
+    }
+    if (++processed % chunkSize === 0) yield;
+  }
+  return result;
 }
 
 function prefixMatcher(query: string, budget: number) {
@@ -243,8 +251,8 @@ export function* matchTaskSearchSteps(
 > {
   if (clauses.length === 0) return { accepted: true, matches: [] };
   const fields = [
-    { field: "title", words: fieldWords(task.title) },
-    { field: "description", words: fieldWords(task.description ?? "") },
+    { field: "title", words: yield* fieldWords(task.title) },
+    { field: "description", words: yield* fieldWords(task.description ?? "") },
   ] satisfies { field: SearchMatch["field"]; words: readonly Word[] }[];
   const matches: SearchMatch[] = [];
   for (const clause of clauses) {
