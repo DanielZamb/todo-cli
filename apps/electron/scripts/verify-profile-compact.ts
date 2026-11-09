@@ -27,6 +27,7 @@ export async function verifyProfileCompact({
       ),
     )
     .toEqual([393, 426]);
+  await expect(page.locator(".shell")).toHaveClass(/\bcompact\b/);
   const profileMenu = page.getByRole("button", {
     name: "Profile",
     exact: true,

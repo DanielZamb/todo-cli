@@ -42,6 +42,7 @@ export function taskFilterSummary(filters: TaskFilters) {
         ? "Not scheduled"
         : `Scheduled ${filters.scheduled}`),
     filters.attachment && `Attachment: ${filters.attachment}`,
+    filters.prefix && `Id starts with ${filters.prefix}`,
     filters.energy &&
       (filters.energy === "none" ? "No Energy" : `Energy ${filters.energy}`),
     filters.estimate &&
@@ -69,8 +70,13 @@ export function TaskFilterDialog({
     scheduled: dateDraft(filters.scheduled),
   }));
   const [error, setError] = useState("");
-  const change = (field: keyof TaskFilters, value: string) =>
+  const prefixInvalid =
+    Boolean(draft.prefix) &&
+    !Schema.is(TaskFilters.fields.prefix)(draft.prefix);
+  const change = (field: keyof TaskFilters, value: string) => {
+    setError("");
     setDraft((current) => ({ ...current, [field]: value }));
+  };
   const select = (
     field: "status" | "priority" | "energy",
     label: string,
@@ -176,6 +182,12 @@ export function TaskFilterDialog({
           onSubmit={(event) => {
             event.preventDefault();
             try {
+              if (prefixInvalid) {
+                setError(
+                  "Id starts with accepts 1 to 36 hex digits or hyphens.",
+                );
+                return;
+              }
               const value = Schema.decodeUnknownSync(TaskFilters)({
                 ...Object.fromEntries(
                   Object.entries(draft).filter(
@@ -202,7 +214,34 @@ export function TaskFilterDialog({
             }
           }}
         >
-          <FieldGroup className="task-filter-grid">
+          <FieldGroup
+            className="task-filter-grid"
+            onFocusCapture={(event) => {
+              if (event.currentTarget.contains(event.target))
+                event.target.scrollIntoView({
+                  block: "nearest",
+                  inline: "nearest",
+                });
+            }}
+          >
+            <Field data-invalid={prefixInvalid || undefined}>
+              <FieldLabel htmlFor="filter-prefix">Id starts with</FieldLabel>
+              <Input
+                id="filter-prefix"
+                value={draft.prefix ?? ""}
+                placeholder="Any Task id"
+                aria-invalid={prefixInvalid}
+                aria-describedby={
+                  prefixInvalid ? "filter-prefix-error" : undefined
+                }
+                onChange={(event) => change("prefix", event.target.value)}
+              />
+              {prefixInvalid && (
+                <p id="filter-prefix-error" role="alert">
+                  Use 1 to 36 hex digits or hyphens.
+                </p>
+              )}
+            </Field>
             {select("status", "Status", [
               ["open", "Open"],
               ["closed", "Closed"],

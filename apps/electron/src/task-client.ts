@@ -197,9 +197,7 @@ export const taskRequest = (
         return {
           _tag: "tasks",
           tasks,
-          ...(matching === null
-            ? {}
-            : { matching_task_ids: matching.map((task) => task.id) }),
+          ...(matching === null ? {} : { matching_tasks: matching }),
           profiles,
           projects: [...projects].sort((a, b) =>
             a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),

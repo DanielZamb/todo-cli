@@ -16,6 +16,9 @@ export async function nativeAttachmentRequest(
 ): Promise<Reply> {
   try {
     switch (request._tag) {
+      case "copyTaskId":
+        await clipboard.writeText(request.task);
+        return { _tag: "ok" };
       case "attachmentClipboard":
         return {
           _tag: "attachmentClipboard",
