@@ -198,3 +198,17 @@ or suppressions; independent audit belongs to parent seat1. Native UI/alert
 activation, Keychain/persistence, OS clipboard, focus/glass/VoiceOver and native
 notification delivery remain unproven. No mechanical refinement, unbounded
 request/counter theorem or discovery liveness guarantee is claimed.
+
+## Final documentation-only closure
+
+At frozen proof commit c8584cef6b47a8efc1e6f9961639d7d10384963a, BOTH formal
+commands, the actual locked full check, doc links and product/OCC equivalence
+all exited 0. Exact receipts remain in final-frozen-checks. The full check
+passed 350 domain, 68 CLI, 31 server and 67 Electron tests with one held skip.
+The final documentation follow-up adds PREREQUISITES.md and its skill link to
+make external ignored metadata/B9/Swift dependency paths and optional reuse
+explicit for a cold caller. No executable, model, mapping hash, fixture or
+product input changes. Final-doc-checks records the changed-path allowlist and
+actual locked check/doc-link execution at that final documentation head. Formal
+results carry from c858 solely by byte-identical proof inputs; they are not
+relabeled as new executions. Fresh-session discovery remains parent-owned.

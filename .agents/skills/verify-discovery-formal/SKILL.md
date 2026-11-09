@@ -5,6 +5,10 @@ description: Check bounded discovery publication and Show provenance with TLA+, 
 
 # Verify discovery publication
 
+Read [the explicit prerequisites](PREREQUISITES.md) first. Carried metadata,
+fixed root B9 binaries and the exact installed Swift dependency seed are external
+local inputs. A previous E build is optional; cache reuse has separate prerequisites.
+
 From the checkout root, run:
 
 ```sh
