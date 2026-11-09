@@ -37,7 +37,17 @@ enum TaskSearchPresentation {
         guard !spans.contains(where: { $0.field == .title }), let first = spans.first(where: { $0.field == .description }),
               let text = task.description, first.start >= 0, first.end <= text.utf16.count,
               let match = Range(NSRange(location: first.start, length: first.end - first.start), in: text) else { return nil }
-        let start = text.index(match.lowerBound, offsetBy: -28, limitedBy: text.startIndex) ?? text.startIndex
+        let earliest = text.index(match.lowerBound, offsetBy: -28, limitedBy: text.startIndex) ?? text.startIndex
+        var start = text.startIndex
+        if earliest > text.startIndex {
+            start = match.lowerBound
+            text.enumerateSubstrings(in: text.startIndex..<match.lowerBound, options: .byWords) { _, range, _, stop in
+                if range.lowerBound >= earliest {
+                    start = range.lowerBound
+                    stop = true
+                }
+            }
+        }
         let end = text.index(match.upperBound, offsetBy: 40, limitedBy: text.endIndex) ?? text.endIndex
         var result = highlighted(text, spans: spans, field: .description)
         guard let a = AttributedString.Index(start, within: result), let b = AttributedString.Index(end, within: result) else { return nil }

@@ -312,7 +312,7 @@ struct Snapshots {
             }
             if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" {
                 for compact in [true, false] {
-                    for state in ["ready", "typing", "requesting", "empty", "error", "initial-error", "offline", "prefix", "prefix-invalid", "detail", "quick-add", "copied", "copy-failed"] {
+                    for state in ["ready", "excerpt-trimmed", "typing", "requesting", "empty", "error", "initial-error", "offline", "prefix", "prefix-invalid", "detail", "quick-add", "copied", "copy-failed"] {
                         let searchModel = fixture()
                         searchModel.selectedView = "all"
                         searchModel.searchText = "rent"
@@ -320,7 +320,11 @@ struct Snapshots {
                         var descriptionTask = try JSONDecoder().decode(TaskSnapshot.self, from: Data(raw.replacingOccurrences(of: "Pay rent today", with: "Transfer receipt").replacingOccurrences(of: "Make the transfer before Friday", with: "A receipt for the rent payment before Friday").replacingOccurrences(of: "6aa2647d", with: "7aa2647d").replacingOccurrences(of: #"{"field":"title","start":4,"end":8}"#, with: #"{"field":"description","start":18,"end":22}"#).utf8))
                         descriptionTask.search_matches = [.init(field: .description, start: 18, end: 22)]
                         let titleTask = try JSONDecoder().decode(TaskSnapshot.self, from: Data(raw.utf8))
-                        let rows = state == "empty" ? [] : [titleTask, descriptionTask]
+                        var rows = state == "empty" ? [] : [titleTask, descriptionTask]
+                        if state == "excerpt-trimmed" {
+                            searchModel.searchText = "cancion"
+                            rows = [try JSONDecoder().decode(TaskSnapshot.self, from: Data(#"{"id":"long-excerpt","profile_id":"work","row_version":1,"title":"Receipt","description":"This is a deliberately long introductory phrase. Find the blue Canción receipt in the cabinet.","priority":"P3","source":"manual","status":"open","project_id":null,"tags":[],"due_at":null,"scheduled_at":null,"energy":null,"estimate_min":null,"occurrence":null,"legacy_series_detached":true,"deleted_at":null,"search_matches":[{"field":"description","start":63,"end":70}]}"#.utf8))]
+                        }
                         searchModel.tasks = rows
                         searchModel.appliedSearchSnapshot = .init(appliedIdentity: searchModel.requestedIdentity, rows: rows, groups: [])
                         searchModel.searchPhase = .showing
@@ -940,7 +944,7 @@ struct Snapshots {
         try JSONEncoder().encode(importLayouts).write(to: directory.appendingPathComponent("import-layout.json"))
         try JSONEncoder().encode(transferLayouts).write(to: directory.appendingPathComponent("transfer-layout.json"))
         try JSONSerialization.data(withJSONObject: compactLayouts, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("compact-layout.json"))
-        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" ? 52 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 346))
+        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" ? 56 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 346))
     }
 
     private func fixture() -> TodoModel {

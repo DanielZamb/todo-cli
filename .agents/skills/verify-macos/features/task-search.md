@@ -60,7 +60,7 @@ Run Compact first in both appearances, then full-window:
 TODO_SNAPSHOT_SEARCH_ONLY=1 /Users/zambamon/Work/todo-cli/scripts/swift-slot.sh apps/macos/scripts/verify-design.py "$PWD/docs/evidence/task-search-swift/design-new"
 ```
 
-Require 52 PNGs and exit 0. Inspect every `search-compact-*-light.png`, then
+Require 56 PNGs and exit 0. Inspect every `search-compact-*-light.png`, then
 `search-compact-*-dark.png`, followed by the full-window captures. States are
 ready with title highlights and a description-only excerpt, typing, requesting,
 empty with one Clear search action, Error with Retry and retained highlights,
@@ -73,6 +73,9 @@ Offline search offers only Reconnect; its search Retry appears while live.
 Detail places the secondary monospace id and icon-only Copy below the title.
 Both appearances resolve the shared search-highlight token to literal sRGB
 values, and geometry assertions require the id below the title.
+The excerpt-trimmed state starts its long description at a whole word with a
+leading ellipsis, and retains the original highlighted Canción span. Its literal
+compiled regression also checks the complete displayed excerpt.
 The full-window fixture uses
 the production search-field content because unordered NSHostingView cannot
 capture native `.searchable` toolbar chrome. Compact retains `compact-search`.

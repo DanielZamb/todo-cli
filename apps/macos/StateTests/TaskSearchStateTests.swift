@@ -177,6 +177,10 @@ struct TaskSearchStateTests {
         let excerpt = try #require(TaskSearchPresentation.descriptionExcerpt(multiline))
         #expect(String(excerpt.characters) == "First line Pay rent today")
         #expect(excerpt.runs.filter { $0.backgroundColor != nil }.map { String(excerpt[$0.range].characters) } == ["rent"])
+        let longDescription = try JSONDecoder().decode(TaskSnapshot.self, from: Data(#"{"id":"long-excerpt","profile_id":"work","row_version":1,"title":"Receipt","description":"This is a deliberately long introductory phrase. Find the blue Canción receipt in the cabinet.","priority":"P3","source":"manual","status":"open","project_id":null,"tags":[],"due_at":null,"scheduled_at":null,"energy":null,"estimate_min":null,"occurrence":null,"legacy_series_detached":true,"deleted_at":null,"search_matches":[{"field":"description","start":63,"end":70}]}"#.utf8))
+        let trimmed = try #require(TaskSearchPresentation.descriptionExcerpt(longDescription))
+        #expect(String(trimmed.characters) == "…phrase. Find the blue Canción receipt in the cabinet.")
+        #expect(trimmed.runs.filter { $0.backgroundColor != nil }.map { String(trimmed[$0.range].characters) } == ["Canción"])
     }
 
     @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_W06_SERVER"] != nil))
