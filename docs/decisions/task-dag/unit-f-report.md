@@ -502,3 +502,98 @@ not model Move, Purge, creation, auth, checkpoints or filesystem transactions.
 Concrete tests cover the stated finite cases only. There is no unbounded,
 liveness, SQLite-engine, power-loss, renderer or client-runtime claim. This
 checkpoint stops after required notifications and waits for final integration.
+
+
+## Housekeeping-only continuation, 2026-11-09
+
+Applied the coordinator's disk order in the existing feat/task-dag-f-formal
+worktree, starting at ed0da09b9b20395b44d897cdd59390031107f1f7. This continuation
+ran no compiler, proof command, server or client. Product/model/driver behavior,
+candidate pins and previous proof claims are unchanged. Corrected-candidate
+conformance still waits for L1's explicit later task. The disk guard is required
+before every future compile under the new order; no compile was needed here.
+
+Cleanup plan and reference/in-use audit:
+`/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/cleanup-2026-11-09-Bs6ybF/plan.json`.
+Completed cleanup receipt:
+`/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/cleanup-2026-11-09-Bs6ybF/receipt.json`.
+
+Disk guard exits were 0 before the inventory, immediately before unlinking and
+after cleanup. Observed available capacity was 26.69656883 GB before and
+27.05827840 GB after, using decimal GB from df's available KiB.
+The observed increase was 0.36170957 GB. Unlinked 40 regular binary files,
+3626846672 logical bytes, whose pre-unlink stat blocks reported
+3626942464 bytes. Logical file size and observed APFS free capacity
+are separate measurements; shared blocks and concurrent activity prevent equating
+them. No DISK STOP occurred.
+
+Kept the e7170510a376b51eaf3525bb9933cb0dd588b233 CLI/server pair with source hash
+`1aa1db7f8ede6a9401d4f9eaf5e52823ed8ec52a3275cd02b71e71040c95713b`.
+Both remain in this worktree's .scratch/bin. The protected corrected B prefix
+3cceb41e was checked in the owned cache inventory; no such binary was present
+there. No other worktree was traversed, modified or cleaned.
+
+Each removed binary had F-created provenance, the expected SHA-256, matching
+inode/device/owner/size, a completed isolated-mutant command reference and no
+baseline, clean or restored-command reference. Its source hash differed from
+the retained current hash. Both ps and lsof were checked before unlinking; no
+selected binary was in use. Every adjacent provenance manifest was retained.
+The receipt preserves the exact paths, hashes, byte counts and referring command
+receipts, so those historical command paths now identify deliberately pruned,
+rebuildable cache payloads. Their original manifests and proof results remain.
+
+Preserved all 42 cache provenance manifests and all 51 existing evidence
+directories in full. The audit checked current tracked text, historical committed
+versions of this report and local receipt references without following symlinks.
+Every cited directory was kept. Other evidence directories were protected for
+historical manifests or unproven references; none qualified for removal in this
+housekeeping pass. No evidence file, historical proof manifest, cited report,
+current proof run or preserved malformed-Version witness was deleted.
+
+Removed paths, all relative to this worktree:
+
+- `.scratch/bin/dag-f-todo-09c9b284a90e767cc66a17e3aba212e8bf083ec3a98af7465f81eafe3018567b` (90679010 bytes)
+- `.scratch/bin/dag-f-todo-0a63cee08fa60695deb76caf152b6c597ab67c692c071b664e0015fa7fcfe2e6` (90679010 bytes)
+- `.scratch/bin/dag-f-todo-0afdde407f79765a53ae663297335843a7b6c52543696d81050f23796a2e7505` (90679010 bytes)
+- `.scratch/bin/dag-f-todo-1375c01ad4f0edf9e5509c006f2f98c48bc9b6e88b466afb8bdc1b965a99aed5` (90679010 bytes)
+- `.scratch/bin/dag-f-todo-1b7c6aaa65045e1b7d273fdc16a8b3c698ad1ee6378238dc8eb46670f7727b60` (90679010 bytes)
+- `.scratch/bin/dag-f-todo-1f8ae3dbec7dbdc7fde758cf1495217568900b9e3802bee685922869dd31c93f` (90679010 bytes)
+- `.scratch/bin/dag-f-todo-23640bc5cb708eac80099d50693a71398b2a32487c09da08f4422f9dda361cc2` (90679010 bytes)
+- `.scratch/bin/dag-f-todo-272fec394fce1724eff33702460007d86d19f2869079deae76097187f73c5c35` (90679010 bytes)
+- `.scratch/bin/dag-f-todo-297116f154f43d86d1e25476a097326a7dd1b7a49f0370db18cfb40536e13808` (90679010 bytes)
+- `.scratch/bin/dag-f-todo-31453fcf879621245434f57217cb03006511eedf0a411e789d96344bc6223af1` (90679010 bytes)
+- `.scratch/bin/dag-f-todo-4854877b92ffea0c484aadc3dd10f993bcdafb0b5971c1e55c629c2244cc3f95` (90679010 bytes)
+- `.scratch/bin/dag-f-todo-4991640c07ef109dc0886cf0973d6d564c569a46f5942561593fa5967b34325f` (90679010 bytes)
+- `.scratch/bin/dag-f-todo-6884fb896237f81b7fb544f72ff929576f49da4a4bda4cbcd2d2d143aa705878` (90679010 bytes)
+- `.scratch/bin/dag-f-todo-998b84c5a2a2c55144f4f66c7751f77a3d038c1675f61db11b095a51aaba9317` (90679010 bytes)
+- `.scratch/bin/dag-f-todo-a00ab36ed861c98addd97094d1b8c1e05c8b383562c413c774fe08d6ea25e54c` (90679010 bytes)
+- `.scratch/bin/dag-f-todo-b439c723b19a17232f9516afebb3e950226061cfc6c67d1acc0be13e9a73f361` (90679010 bytes)
+- `.scratch/bin/dag-f-todo-b643479ae21e4bc31a5a524bc2a5344f2e8d631ec01917cdadbff1f6f4dbbf89` (90679010 bytes)
+- `.scratch/bin/dag-f-todo-b7654d2d6597e6a87bc32590fedf748029b2664b1e6d4ab96aa90c117976d5dd` (90679010 bytes)
+- `.scratch/bin/dag-f-todo-cc34669ee94c7d8b920e9892c752f68cdc5fa197f07f592e83dcd774919816f7` (90679010 bytes)
+- `.scratch/bin/dag-f-todo-ed669e6fc8883df24316f96b58fc2f61d0633659fe3bc61e1d529c6851eaa302` (90679010 bytes)
+- `.scratch/bin/dag-f-todo-fd711be40aa6dcb38ef30f8a78cab2cace6cf2607544f8155d652311457cee02` (90679010 bytes)
+- `.scratch/bin/dag-f-todo-server-0a63cee08fa60695deb76caf152b6c597ab67c692c071b664e0015fa7fcfe2e6` (90662498 bytes)
+- `.scratch/bin/dag-f-todo-server-0afdde407f79765a53ae663297335843a7b6c52543696d81050f23796a2e7505` (90662498 bytes)
+- `.scratch/bin/dag-f-todo-server-1375c01ad4f0edf9e5509c006f2f98c48bc9b6e88b466afb8bdc1b965a99aed5` (90662498 bytes)
+- `.scratch/bin/dag-f-todo-server-1b7c6aaa65045e1b7d273fdc16a8b3c698ad1ee6378238dc8eb46670f7727b60` (90662498 bytes)
+- `.scratch/bin/dag-f-todo-server-1f8ae3dbec7dbdc7fde758cf1495217568900b9e3802bee685922869dd31c93f` (90662498 bytes)
+- `.scratch/bin/dag-f-todo-server-23640bc5cb708eac80099d50693a71398b2a32487c09da08f4422f9dda361cc2` (90662498 bytes)
+- `.scratch/bin/dag-f-todo-server-272fec394fce1724eff33702460007d86d19f2869079deae76097187f73c5c35` (90662498 bytes)
+- `.scratch/bin/dag-f-todo-server-297116f154f43d86d1e25476a097326a7dd1b7a49f0370db18cfb40536e13808` (90662498 bytes)
+- `.scratch/bin/dag-f-todo-server-31453fcf879621245434f57217cb03006511eedf0a411e789d96344bc6223af1` (90662498 bytes)
+- `.scratch/bin/dag-f-todo-server-4854877b92ffea0c484aadc3dd10f993bcdafb0b5971c1e55c629c2244cc3f95` (90662498 bytes)
+- `.scratch/bin/dag-f-todo-server-4991640c07ef109dc0886cf0973d6d564c569a46f5942561593fa5967b34325f` (90662498 bytes)
+- `.scratch/bin/dag-f-todo-server-6884fb896237f81b7fb544f72ff929576f49da4a4bda4cbcd2d2d143aa705878` (90662498 bytes)
+- `.scratch/bin/dag-f-todo-server-a00ab36ed861c98addd97094d1b8c1e05c8b383562c413c774fe08d6ea25e54c` (90662498 bytes)
+- `.scratch/bin/dag-f-todo-server-b439c723b19a17232f9516afebb3e950226061cfc6c67d1acc0be13e9a73f361` (90662498 bytes)
+- `.scratch/bin/dag-f-todo-server-b643479ae21e4bc31a5a524bc2a5344f2e8d631ec01917cdadbff1f6f4dbbf89` (90662498 bytes)
+- `.scratch/bin/dag-f-todo-server-b7654d2d6597e6a87bc32590fedf748029b2664b1e6d4ab96aa90c117976d5dd` (90662498 bytes)
+- `.scratch/bin/dag-f-todo-server-cc34669ee94c7d8b920e9892c752f68cdc5fa197f07f592e83dcd774919816f7` (90662498 bytes)
+- `.scratch/bin/dag-f-todo-server-f0228c0d6cbd6297514cb425f52282d99ade99f48723650d240574af70129599` (90662498 bytes)
+- `.scratch/bin/dag-f-todo-server-fd711be40aa6dcb38ef30f8a78cab2cace6cf2607544f8155d652311457cee02` (90662498 bytes)
+
+Only the report changed in Git. A local prose/no-comments audit found no added
+code comments or suppressions. No child agent, checkout change, merge, rebase,
+push, native app, signing, Keychain, real Todo data or arbitrary cleanup occurred.
+The terminal notification names the report's full housekeeping delivery SHA.
