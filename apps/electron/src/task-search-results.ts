@@ -22,9 +22,12 @@ export function taskSearchQuery(
   const project =
     identity.filters.project ??
     definitions.projects.find((value) => value.id === identity.project)?.name;
+  const tagName = definitions.tags.find(
+    (value) => value.id === identity.tag,
+  )?.name;
   const tag =
     identity.filters.tag ??
-    definitions.tags.find((value) => value.id === identity.tag)?.name;
+    (tagName !== undefined && tagName === tagName.trim() ? tagName : undefined);
   return {
     ...identity.filters,
     ...(project === undefined ? {} : { project }),

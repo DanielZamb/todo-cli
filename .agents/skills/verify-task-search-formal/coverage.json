@@ -1,6 +1,6 @@
 {
-  "sourceCommit": "5d42f32b0b3b5b84ca82df0a07af2d4fe0ae9887",
-  "status": "worker-reviewed-F1-request-narrowing; independent-seats-pending",
+  "sourceCommit": "c14371075593a4a163f15797c495ac821510a449",
+  "status": "sec-l1-reviewed-F1a-F1b-catalog-lifetime-and-tag-representability; independent-seats-pending",
   "files": [
     {
       "path": "apps/electron/src/renderer.tsx",
@@ -11,9 +11,10 @@
         "activateProfile",
         "activateView",
         "clearFilters",
-        "changed/connection notice handlers"
+        "endAuthentication",
+        "changed/connection/reload notice handlers"
       ],
-      "sha256": "aefd84e517da6c7ea6d6ae99525896c8af86f5799756010c1aac28222119f66e"
+      "sha256": "694b5c90572436b93dd18619b7728209adbf00d053e8f9ae5205bda3966d27fb"
     },
     {
       "path": "apps/electron/src/task-search-results.ts",
@@ -24,7 +25,7 @@
         "searchGroups",
         "taskSearchQuery"
       ],
-      "sha256": "bbb664ff484bfb8782f8b2422bf31fccb71b4a67eecea68c989eba8e354dcf05"
+      "sha256": "764b89fbeaca10894d7346a916719453416d8aff1c89608e3411ec674265c0ae"
     },
     {
       "path": "apps/electron/src/task-client.ts",
@@ -55,7 +56,7 @@
         "followChanges",
         "applyTaskFilters"
       ],
-      "sha256": "a9859dd9f62e9c18d1a612c7cba27b196f3abc773d44d132c8f0af15918e585c"
+      "sha256": "f321afdea1fa9b9f8a6ace8ba1f312c021fb6ea245f5656e457de0bbbde1d35e"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -161,7 +162,8 @@
     "electron": "codedf13e2a8 + visuale8178e24; integratedbc288b30",
     "security": "SEC-W1 local source review, literal client/core proofs, immutable real matcher properties and all five behavioral mutations passed at0a2eef1c in matcher-zwScvg. Covered source bytes unchanged at this product commit. Seat1 held for SEC-L1 to launch; seat2 coordinator.",
     "v1": "Reviewed display-only diff against CLIENT-MAPPING.md: shared applied-context helpers, unchanged refusal sentence, secondary context, no state transition/publication guard/generation/identity changes. Immutable matcher properties and all five behavioral mutations passed at064b2667 in matcher-1eyrdt before these four hashes were renewed. Seat1/visual review pending.",
-    "f1": "Reviewed F1 against CLIENT-MAPPING.md: catalog-name request narrowing only; explicit dialog names win, unresolved ids add no name, same-response id joins remain. No state transition, publication guard, generation, identity, snapshot or SSE recovery change. Immutable real matcher properties and all five behavioral mutations passed at5d42f32b in matcher-uo9W7V before renewing only the three changed source hashes. Compiled Electron/Swift recovery, ordinary JSON, real raw-append case-fold Tags and synthetic same-name Projects passed."
+    "f1": "Reviewed F1 against CLIENT-MAPPING.md: catalog-name request narrowing only; explicit dialog names win, unresolved ids add no name, same-response id joins remain. No state transition, publication guard, generation, identity, snapshot or SSE recovery change. Immutable real matcher properties and all five behavioral mutations passed at5d42f32b in matcher-uo9W7V before renewing only the three changed source hashes. Compiled Electron/Swift recovery, ordinary JSON, real raw-append case-fold Tags and synthetic same-name Projects passed.",
+    "f1ab": "Reviewed F1a/F1b against CLIENT-MAPPING.md: Electron keeps a Profile-keyed name catalog ref refreshed from each published result and cleared on Profile switch, endAuthentication and reload, used only for a matching Profile; both clients infer a Tag name only when trimming leaves it unchanged (Swift: whitespacesAndNewlines plus U+FEFF, a superset of JS trim), Project names stay exact. Request narrowing only: no state transition, publication guard, generation, identity, snapshot or SSE recovery change. Immutable real matcher properties and all five behavioral mutations passed at c1437107 in matcher-qRXiUP before renewing only the three changed source hashes."
   },
   "productionMatcher": "Immutable real source with generated properties, behavioral mutations and byte restoration; final-tip command uses its explicit full SHA.",
   "recovery": "Transient errors offer Retry; search_too_broad hides Retry and retains text/snapshot. Current-Profile SSE op/reconnect remains available. Liveness is conditional on a later affordable successful response and a fair available recovery source.",
