@@ -4,7 +4,7 @@ Status: the finite model, committed algorithm/replay corpus and real-source
 sensitivity pass. Final public commands, client mapping and final F acceptance
 remain pending. Branch: feat/task-dag-f-formal. Product candidate:
 `f140c7b09bcb1db48ce4ccaee797ecfe60019ce4`.
-F proof invocation HEAD: `5047fada5f42e23e3226f0bf4c55aaaabf02d760`. Verification-source hashes are retained
+F proof invocation HEAD: `271002712a62b15ba30e379918fcd23c5c23c7f2`. Verification-source hashes are retained
 in provenance.json and verification-inputs.json; the terminal notification names
 the final local delivery SHA. No product files were changed or added.
 
@@ -27,8 +27,8 @@ checkout/worktree. Candidate AtomicCAS's own git-head receipt names the F branch
 because it runs beneath this worktree; candidate-inputs.json and file hashes
 bind the actual production source to f140. No checkout switch or merge occurred.
 
-Combined evidence: `docs/evidence/dag-formal/check-dIijGx`.
-Production evidence: `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/conformance-X5UBoK`.
+Combined evidence: `docs/evidence/dag-formal/check-tE8Zr7`.
+Production evidence: `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/conformance-11Cw1a`.
 The directories preserve commands, actual exits/signals/PIDs, compiler results
 and loaded source hashes, model/config copies, counterexamples, corpus inputs,
 mutation source copies, restoration receipts and final results. Output is local
@@ -254,7 +254,7 @@ Candidate AtomicCAS's unchanged one command exited 0.
 Its model has 86,631 generated / 37,036 distinct / depth 15 / queue 0; both
 controls exit 12 at AtomicCAS; 216 concrete cases, 432 replay comparisons,
 seven process kills and the competing-writer/rollback checks pass. Evidence:
-`/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/conformance-X5UBoK/candidate/docs/evidence/fv01/fv01-check-sJ0tl2`. B owns its maintenance and prior sensitivity. F did not edit
+`/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/conformance-11Cw1a/candidate/docs/evidence/fv01/fv01-check-QQRSDd`. B owns its maintenance and prior sensitivity. F did not edit
 that skill or renew its pins. It remains single-Task/no-edge proof.
 
 `pnpm check` on the F worktree exited 0.
