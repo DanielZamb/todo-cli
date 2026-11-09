@@ -1,5 +1,46 @@
 export const searchCases = [
   {
+    text: "\ufdfa".repeat(200),
+    title: "Expansion probe",
+    description: "\ufdfa".repeat(1000),
+    matches: [{ field: "description", start: 0, end: 1000 }],
+  },
+  {
+    text: "alpha ALPHA -beta -BETA",
+    title: "Alpha alphabet",
+    matches: [
+      { field: "title", start: 0, end: 5 },
+      { field: "title", start: 6, end: 14 },
+    ],
+  },
+  {
+    text: "abxde abxde -abxde -ABXDE",
+    title: "abcde",
+    matches: [{ field: "title", start: 0, end: 5 }],
+  },
+  { text: "pay pay -pay -PAY", title: "Pay rent", matches: null },
+  {
+    text: '"pay pay" "PAY PAY"',
+    title: "Pay pay pay",
+    matches: [
+      { field: "title", start: 0, end: 3 },
+      { field: "title", start: 4, end: 7 },
+      { field: "title", start: 8, end: 11 },
+    ],
+  },
+  { text: '"pay pay" "PAY PAY"', title: "Pay rent", matches: null },
+  { text: '"pay re" "pay re', title: "Pay rent", matches: null },
+  { text: '-"pay re" -"PAY RE"', title: "Pay rent", matches: [] },
+  { text: '-"pay re" -"pay re', title: "Pay rent", matches: null },
+  {
+    text: "ﬃ FFI Straße STRASSE",
+    title: "ﬃ Straße",
+    matches: [
+      { field: "title", start: 0, end: 1 },
+      { field: "title", start: 2, end: 8 },
+    ],
+  },
+  {
     text: "صلى الله",
     title: "ﷺ",
     matches: [{ field: "title", start: 0, end: 1 }],

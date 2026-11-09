@@ -25,6 +25,70 @@ for (const entry of searchCases) {
     );
   });
 }
+it("executes each distinct normalized expansion clause once", () => {
+  const text = "\ufdfa".repeat(200);
+  expect(text.length).toBe(200);
+  expect(Schema.is(TaskFilters)({ text })).toBe(true);
+  expect(parseTaskSearch(text)).toEqual([
+    { kind: "word", word: "صلى" },
+    { kind: "word", word: "الله" },
+    { kind: "word", word: "عليه" },
+    { kind: "word", word: "وسلمصلى" },
+    { kind: "word", word: "وسلم" },
+  ]);
+});
+it("deduplicates whole clauses while retaining signs, phrase kinds and word order", () => {
+  expect(
+    parseTaskSearch(
+      'CAFÉ cafe -cafe -CAFÉ "pay pay" "PAY PAY" -"pay pay" -"PAY PAY" "pay" "pay rent" "rent pay" "pay re',
+    ),
+  ).toEqual([
+    { kind: "word", word: "cafe" },
+    { kind: "exclude-word", word: "cafe" },
+    { kind: "phrase", words: ["pay", "pay"] },
+    {
+      kind: "exclude-phrase",
+      phrase: { kind: "phrase", words: ["pay", "pay"] },
+    },
+    { kind: "phrase", words: ["pay"] },
+    { kind: "phrase", words: ["pay", "rent"] },
+    { kind: "phrase", words: ["rent", "pay"] },
+    { kind: "open-phrase", words: ["pay", "re"] },
+  ]);
+});
+it("keeps repeated normalized clauses behaviorally equivalent", () => {
+  for (const [single, repeated, title, expected] of [
+    ["rent", "rent RENT rent", "Rent", [{ field: "title", start: 0, end: 4 }]],
+    [
+      '"pay pay"',
+      '"pay pay" "PAY PAY"',
+      "Pay pay",
+      [
+        { field: "title", start: 0, end: 3 },
+        { field: "title", start: 4, end: 7 },
+      ],
+    ],
+    ["-draft", "-draft -DRAFT", "Ready", []],
+    ["-draft", "-draft -DRAFT", "Draft", null],
+    [
+      "abxde -abxde",
+      "abxde abxde -abxde -ABXDE",
+      "abcde",
+      [{ field: "title", start: 0, end: 5 }],
+    ],
+    ["pay -pay", "pay pay -pay -PAY", "Pay", null],
+    ["ffi", "ﬃ FFI ﬃ", "ﬃ", [{ field: "title", start: 0, end: 1 }]],
+  ] as const) {
+    for (const text of [single, repeated])
+      expect(
+        matchTaskSearch({ title, description: null }, parseTaskSearch(text)),
+      ).toEqual(
+        expected === null
+          ? { accepted: false, matches: [] }
+          : { accepted: true, matches: expected },
+      );
+  }
+});
 it("enforces UTF-16 text and literal prefix boundaries", () => {
   for (const text of [" ", "", "x".repeat(200), "😀".repeat(100)])
     expect(Schema.is(TaskFilters)({ text })).toBe(true);

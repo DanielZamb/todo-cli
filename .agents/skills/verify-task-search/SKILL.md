@@ -40,6 +40,15 @@ spans from the same response, checks omitted metadata without text, invalid
 flags and HTTP queries, empty success, stable order and exact-id commands.
 The parent filter matrix also combines text with every existing filter.
 
+The reusable `task-search-cases.ts` corpus includes the SEC-L1-1 input:
+`"\ufdfa".repeat(200)` against description `"\ufdfa".repeat(1000)`. Both
+compiled surfaces must return exactly `[{field:"description",start:0,end:1000}]`.
+The parser regression requires the five distinct normalized execution clauses
+in first-occurrence order. Repeated words, phrases, exclusions, mixed signs and
+fold expansions retain literal acceptance and span checks. Phrase word order
+and repetition inside a phrase remain significant. These are behavior checks
+without wall-clock thresholds; HTTP health responsiveness is measured separately.
+
 Use `todo man list` and `todo schema list` to inspect syntax and response shape.
 HTTP remains `GET /profiles/work/tasks?text=...&prefix=...`. Closed quotes are
 whole-word phrases. An unclosed phrase permits its last word to prefix-match.

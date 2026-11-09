@@ -77,7 +77,9 @@ export function parseTaskSearch(value: string): readonly SearchClause[] {
       }
     }
   }
-  return clauses;
+  const unique = new Map<string, SearchClause>();
+  for (const clause of clauses) unique.set(JSON.stringify(clause), clause);
+  return Array.from(unique.values());
 }
 
 function fieldWords(value: string): readonly Word[] {
