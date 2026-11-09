@@ -287,16 +287,11 @@ const selectProfile = Effect.fn(function* (
   cfg: Settings,
 ) {
   const credential = yield* io(() => loadCredential(cfg.profile));
-  const profiles = yield* store.auth.profiles({ credential });
+  const profiles = yield* store.profiles();
   const profile = profiles.find(
     (p) => p.name === cfg.profile || p.id === cfg.profile,
   );
   if (!profile) {
-    yield* store.auth.authenticate({
-      credential,
-      profile: profileId(cfg.profile),
-      access: "read",
-    });
     return yield* Effect.fail(
       new CommandError(
         3,
@@ -859,15 +854,10 @@ const transfer = (kind: "move" | "copy") =>
         yield* withStore(cfg, (store) =>
           Effect.gen(function* () {
             const request = yield* selectProfile(store, cfg);
-            const destination = (yield* store.auth.profiles(request)).find(
+            const destination = (yield* store.profiles()).find(
               (p) => p.id === input.to || p.name === input.to,
             );
             if (!destination) {
-              yield* store.auth.authenticate({
-                ...request,
-                profile: profileId(input.to),
-                access: "write",
-              });
               return yield* Effect.fail(
                 new CommandError(
                   3,

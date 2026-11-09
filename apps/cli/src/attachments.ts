@@ -25,10 +25,12 @@ const resultTask = (result: TaskCommandResult, id: string) => {
       new CommandError(
         3,
         "not_found",
-        "Task or Attachment not found; read todo show <id>",
+        result.missing === "attachment"
+          ? "Attachment not found; read todo show <id>"
+          : "Task not found; read todo list",
         undefined,
         undefined,
-        id,
+        result.missing === "attachment" ? undefined : id,
       ),
     );
   if (result.outcome === "rejected")

@@ -253,7 +253,7 @@ type CommandOptions = {
 };
 type Target = AccessRequest & { readonly task_id: TaskId };
 export type TaskCommandResult =
-  | { readonly outcome: "not-found" }
+  | { readonly outcome: "not-found"; readonly missing?: "attachment" }
   | { readonly outcome: "committed"; readonly task: Task }
   | {
       readonly outcome: "rejected";

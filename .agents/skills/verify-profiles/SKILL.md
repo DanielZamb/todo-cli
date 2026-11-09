@@ -79,8 +79,9 @@ one immediate transaction.
 
 ## Error context isolation
 
-CLI selection reads Authentication.profiles before resolving names. A scoped
-credential cannot enrich an error with another Profile's display name. HTTP
+A scoped credential cannot enrich an error with another Profile's display
+name. Do not add a discovery-auth preflight to a selected-Profile operation:
+it changes rejected History attribution. HTTP
 Profile-not-found and Profile-delete refusal errors retain generated_at, code,
 message and details, with the additive equivalent exit pair. The compiled
 apps/cli/test/error-list.test.ts checks foreign exact-id failures through both

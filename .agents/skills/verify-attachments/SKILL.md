@@ -92,3 +92,10 @@ Missing Task batch rows retain current_version and add authorized Profile,
 task_id and recovery context. Errors also carry exit_code and exit_meaning.
 The compiled CLI error-list test covers missing Task Attachment writes and
 HTTP lookup recovery; the normal drives continue to prove Attachment lifecycle.
+
+The compiled error-list regression distinguishes a missing Attachment on an
+existing authorized Task from a missing Task. It drives detach apply, detach
+dry-run, label, and HTTP detach/label. Existing Tasks keep the Attachment error
+and recovery without Task-not-found context. The domain reports the missing
+Attachment from its authorized transaction; adapters do not probe auth again
+to classify it. Missing Tasks retain the selected-Profile lookup context.

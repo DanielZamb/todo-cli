@@ -385,4 +385,80 @@ it("keeps HTTP error tags, adds matching pairs at decoding boundaries and hides 
     status: 200,
     body: [],
   });
+  const attachmentTask = run(["add", "Attachment target", "--format", "json"]);
+  expect(attachmentTask.status).toBe(0);
+  const attachmentTaskId: string = JSON.parse(attachmentTask.stdout).task.id;
+  for (const [target, taskMissing] of [
+    [attachmentTaskId, false],
+    ["missing-task", true],
+  ] as const) {
+    for (const args of [
+      ["detach", target, "missing-attachment", "--expected-version", "1"],
+      [
+        "detach",
+        target,
+        "missing-attachment",
+        "--expected-version",
+        "1",
+        "--dry-run",
+      ],
+      [
+        "label-attachment",
+        target,
+        "missing-attachment",
+        "--label",
+        "new",
+        "--expected-version",
+        "1",
+      ],
+    ]) {
+      const result = run([...args, "--format", "json"]);
+      expect(result.status).toBe(3);
+      const body = JSON.parse(result.stdout);
+      expect(body).toMatchObject({
+        code: "not_found",
+        exit_code: 3,
+        exit_meaning: "not found or auth missing",
+      });
+      if (taskMissing) {
+        expect(body.details.profile).toEqual({
+          id: "default",
+          name: "default",
+        });
+        expect(body.details.task_id).toBe("missing-task");
+      } else {
+        expect(body.message).toBe("Attachment not found; read todo show <id>");
+        expect(body.details).toBeUndefined();
+      }
+    }
+    for (const operation of ["detach", "label"] as const) {
+      const result = await request(
+        "POST",
+        `/profiles/default/tasks/${target}/attachments/${operation}`,
+        {
+          from_version: 1,
+          attachment_id: "missing-attachment",
+          ...(operation === "label" ? { label: "new" } : {}),
+        },
+      );
+      expect(result.status).toBe(404);
+      expect(result.body).toMatchObject({
+        _tag: "NotFound",
+        exit_code: 3,
+        exit_meaning: "not found or auth missing",
+      });
+      if (taskMissing) {
+        expect(result.body.details.profile).toEqual({
+          id: "default",
+          name: "default",
+        });
+        expect(result.body.details.task_id).toBe("missing-task");
+      } else {
+        expect(result.body.message).toBe(
+          "Attachment not found; read the Task and use a current Attachment id.",
+        );
+        expect(result.body.details).toBeUndefined();
+      }
+    }
+  }
 }, 90000);

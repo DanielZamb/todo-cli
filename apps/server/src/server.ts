@@ -69,7 +69,14 @@ const taskResult = (
     case "committed":
       return Effect.succeed(result.task);
     case "not-found":
-      return Effect.fail(new NotFound({ message: "Task not found" }));
+      return Effect.fail(
+        new NotFound({
+          message:
+            result.missing === "attachment"
+              ? "Attachment not found; read the Task and use a current Attachment id."
+              : "Task not found",
+        }),
+      );
     case "rejected":
       return result.reason === "conflict"
         ? Effect.fail(new Conflict({ latest: result.latest }))
@@ -254,7 +261,11 @@ export const serverLayer = (options: {
         (params: { profile: ProfileId; task?: TaskId }) =>
         (result: TaskCommandResult) =>
           Effect.gen(function* () {
-            if (result.outcome === "not-found" && params.task !== undefined)
+            if (
+              result.outcome === "not-found" &&
+              result.missing !== "attachment" &&
+              params.task !== undefined
+            )
               return yield* Effect.fail(
                 yield* missingTask({
                   profile: params.profile,

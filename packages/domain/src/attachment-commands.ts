@@ -100,7 +100,10 @@ export class AttachmentCommands {
             !attachments.some((value) => value.id === input.attachment_id)
           ) {
             yield* reject("attachment_not_found");
-            return { outcome: "not-found" } satisfies TaskCommandResult;
+            return {
+              outcome: "not-found",
+              missing: "attachment",
+            } satisfies TaskCommandResult;
           }
           const resolved =
             "attachment_id" in input
