@@ -2,7 +2,7 @@
 
 All five generated-input properties pass against real candidate
 `be876581ea9d4c024fab3b0bc2c8358051c6d2b4`. Each also fails on a scratch
-production-code break and passes after byte-for-byte restoration. L1 subsequently repeated the checks at reviewed integration 8272b610, documented below. Final client mapping remains PENDING.
+production-code break and passes after byte-for-byte restoration. L1 subsequently repeated the checks at reviewed integration 8272b610, documented below. Production client mapping is recorded in CLIENT-MAPPING.md; the final L1 ledger records the exact integration-tip recheck.
 
 The standalone command exits 0:
 
@@ -95,9 +95,9 @@ cannot satisfy sensitivity. `clean`, `restored`, `typecheck-properties`, and
 this checkout's product directories is changed.
 
 After the candidate is reviewed and integrated, rerun this command with the
-approved full integration SHA. Then review and map the revised clients. Neither
-candidate properties nor the C1 design model claim that final client work exists.
+approved full integration SHA. Then review and map the revised clients. The client mapping and compiled regression proofs remain separate from these
+matcher properties. Neither is a mechanical source refinement.
 
 ## Reviewed integration recheck
 
-L1 ran check-matcher.ts against 8272b610f6e0d4723c52a7906a2583d12721d6af after coordinator seat-2 approval and merge of unit 1. Exit 0. Evidence is /Users/zambamon/.t3/worktrees/todo-cli/t3-9a98d7a3/docs/evidence/task-search-formal/matcher-HtP4C8. The same five properties, behavioral sensitivity and byte restoration passed on the corrected source. matcher-candidate.json now defaults to that reviewed immutable integration commit. Final client mapping remains pending.
+L1 ran check-matcher.ts against 8272b610f6e0d4723c52a7906a2583d12721d6af after coordinator seat-2 approval and merge of unit 1. Exit 0. Evidence is /Users/zambamon/.t3/worktrees/todo-cli/t3-9a98d7a3/docs/evidence/task-search-formal/matcher-HtP4C8. The same five properties, behavioral sensitivity and byte restoration passed on the corrected source. matcher-candidate.json now defaults to that reviewed immutable integration commit. Production client mapping is recorded in CLIENT-MAPPING.md; the final L1 ledger records the exact integration-tip recheck.

@@ -311,14 +311,14 @@ try {
     join(skill, "tsconfig.json"),
   ]);
   assert.equal(typecheck.exit, 0, "Verification runner typecheck failed");
-  const files = coverage.baselineFiles.map((file) => ({
+  const files = coverage.files.map((file) => ({
     ...file,
     observed: sha256(join(root, file.path)),
   }));
   record("source-mapping", { ...coverage, files });
   assert.ok(
     files.every((file) => file.sha256 === file.observed),
-    "Baseline mapping drifted. Review the actual functions before renewing coverage.json.",
+    "Reviewed production mapping drifted. Inspect the actual functions before renewing coverage.json.",
   );
   assert.equal(
     sha256(join(skill, "TaskSearch.tla")),
@@ -333,17 +333,17 @@ try {
   const matcherOutcome: unknown = JSON.parse(matcher.out);
   record("result", {
     passed: true,
-    scope: "approved-C1-design-and-candidate-matcher",
+    scope: coverage.status,
     sourceCommit: head.out.trim(),
     stages,
     productionMatcher:
-      "generated-inputs-passed on recorded immutable commit; final client refinement PENDING",
+      "generated-inputs-passed on the recorded immutable commit",
     matcherOutcome,
-    finalClientRefinement: "PENDING",
+    clientMapping: coverage.clientRefinement,
     evidence,
   });
   console.log(
-    "PASS: C1 design safety/liveness and real matcher properties; final client mapping PENDING",
+    "PASS: bounded C1 safety/liveness, reviewed production mapping and real matcher properties",
   );
 } catch (error) {
   record("result", { passed: false, stages, error: String(error), evidence });

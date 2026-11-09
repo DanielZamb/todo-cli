@@ -1,6 +1,6 @@
 ---
 name: verify-task-search-formal
-description: Check the approved Task search response-order design with TLA+ and generated properties against an immutable real matcher candidate. Use after matcher, debounce, generation, snapshot, rollback, Profile or view reset changes. Final client refinement remains pending.
+description: Check the approved Task search response-order design with TLA+ and generated properties against an immutable real matcher candidate. Use after matcher, debounce, generation, snapshot, rollback, Profile or view reset changes. Production source mapping is hash-guarded; this is bounded model checking, not a mechanical source refinement.
 ---
 
 # Verify Task search response ordering
@@ -12,9 +12,11 @@ bun .agents/skills/verify-task-search-formal/check.ts
 ```
 
 The command exits 0 only after the design model, real candidate matcher,
-deliberate broken variants, restored checks, typechecks, and reviewed baseline
-source hashes pass. The default matcher commit is reviewed unit-1 integration. The final line marks final client mapping PENDING.
-This command does not certify the implemented feature.
+deliberate broken variants, restored checks, typechecks, and reviewed production
+source hashes pass. The default matcher commit is the reviewed product-source
+commit in matcher-candidate.json. For final integration, pass its exact full SHA.
+The command checks the model, source mapping and matcher separately; client
+behavior also requires the compiled verification recipes.
 
 Prerequisites are Java 11 or newer, Bun, curl, and dependencies from the existing
 pnpm lockfile. Follow the active run's disk guard before `pnpm install`.
@@ -142,28 +144,20 @@ The disabled-debounce control must find a lasso with stable stale input.
 
 ## Keep the source mapping honest
 
-[coverage.json](coverage.json) records the inspected baseline commit and file
-hashes. Its status is `approved-design-only`. Before advancing it, inspect the
-actual functions below, update the model where required, and rerun sensitivity.
-Advancing hashes alone does not establish a client refinement proof.
+[coverage.json](coverage.json) records the reviewed production commit, complete
+file hashes and inspected functions. [CLIENT-MAPPING.md](CLIENT-MAPPING.md)
+maps Input, launch, both response branches, rollback, resets, stale state and
+SSE recovery to both implemented clients and their production regressions.
+It also names the boundaries: selector dimensions, cached offline clear,
+authentication, Snapshot reload, UI focus and pixels are not separate TLC
+transitions. Read those limits before treating a pass as evidence.
 
-| Model area | Baseline code at `605b84aa85e4be4e9386365b97cf64ddef2639c6` | Coverage status |
-| --- | --- | --- |
-| Latest issued request | `apps/electron/src/renderer.tsx`, `refresh`, `refreshGeneration`, `activeQuery` | Existing success and error share the Profile/view and refresh-generation guard after `request`. |
-| Identity capture and rollback | Electron `advancedFiltersRef`, `appliedFiltersRef`, `filterApplyError`, `clearFilters` | Existing dialog policy inspected. Complete requested search identity and atomic search snapshot are approved design. |
-| Latest issued request | `apps/macos/Sources/TodoModel.swift`, `refresh(generation:)` | Success checks `generation`, `refreshGeneration`, Profile, selected view, requested filters, and cancellation. Error omits the filter equality check. |
-| Identity capture and rollback | Swift `requestedTaskFilters`, `taskFilters`, `applyTaskFilters` | Existing rollback inspected. Separate typed text and search snapshot are approved design. |
-| Reset and SSE recovery | Electron `activateProfile`, planning navigation, `changed` notice; Swift `activateProfile`, `selectView`, `disconnect`, `followChanges` | Baseline inspected. Swift view changes clear planning and filters but retain its Task array. The model abstracts the approved cleared selection results, not each array assignment. |
-| Search debounce, spans, complete-identity guards | Both clients | PENDING. These transitions describe the approved C1 design only. |
-| Matcher generated-input checks | Candidate `be876581ea9d4c024fab3b0bc2c8358051c6d2b4`, `normalizeTaskSearch`, `parseTaskSearch`, `matchTaskSearch`, and `filterTaskRecords` | Proven on captured real source. Unit 1 is reviewed and integrated at 8272b610f6e0d4723c52a7906a2583d12721d6af; L1 repeated properties with exit 0. See [matcher report](MATCHER-REPORT.md). |
-
-The 2026-11-09 coordinator decision adds Error -> Requesting on a current-Profile SSE reconnection or op. Electron connection notices already carry connected state; its renderer must request current search on recovery. Swift followChanges already refreshes on ready and operation. These hooks are inspected baseline facts, not proof that revised client search state is implemented.
-
-The hash check fails after any change to either covered client file. Once clients
-land, replace the baseline mapping with reviewed actual functions, preserve the
-distinction between atomic synchronous assignments and awaited HTTP reads, and
-add production delayed-response assertions through the existing verification
-recipes. No formal refinement from TypeScript or Swift is claimed here.
+The checker fails after any covered client or matcher source changes. Inspect
+the affected functions, update the model or regressions where needed, and
+repeat sensitivity before renewing hashes. Advancing hashes alone does not
+establish a client refinement. Preserve the distinction between awaited reads
+and the synchronous publication of one snapshot. No mechanical refinement from
+TypeScript or Swift is claimed.
 
 ## Reproduce sensitivity and continue the unit
 
@@ -193,7 +187,7 @@ bun .agents/skills/verify-task-search-formal/check-matcher.ts <full-integration-
 
 The argument must be a full immutable commit SHA. The command records it as an
 explicit commit check. The caller establishes that it is the approved integration
-tip. The main command accepts the same optional SHA after the baseline client
+tip. The main command accepts the same optional SHA after the production source
 mapping is renewed. No branch name is resolved implicitly. Mutation anchors
 that change fail closed and require a new source review. The domain worker owns
 `verify-task-search`, the matcher, and all product edits.

@@ -3,14 +3,16 @@
 The approved response-order model, including SSE recovery, semantic ShowingIsCurrent and text-retaining reset, passes the R1 amendment run within the bounds below. The original SSE model was reviewed at code commit f42fc7f5. Generated
 checks against the real unit 1 candidate also pass, with production-code
 sensitivity. The reviewed Unit 1 integration recheck at `8272b610` passed.
-The final integration recheck and production client mapping are PENDING.
-This is not a complete Task search feature proof.
+Production client mapping is complete in CLIENT-MAPPING.md and hash-guarded by
+coverage.json at product-source commit 0d5b2198. The final L1 ledger records the
+exact tip command, process result and compiled client proofs. This bounded model
+and generated matcher check is not a complete native feature proof.
 
 The model's first delivery before Phase 2 is local commit
 `1cdb35340b7df59882f979880e622dec8308a444`. Candidate matcher results are recorded
 separately in [MATCHER-REPORT.md](MATCHER-REPORT.md).
 
-The inspected base is `605b84aa85e4be4e9386365b97cf64ddef2639c6` on worker branch
+The original model unit inspected base `605b84aa85e4be4e9386365b97cf64ddef2639c6` on worker branch
 `t3/task-search-tests`. All additions belong to `verify-task-search-formal` and
 its relative Claude symlink. No product file or domain file is added or changed.
 
@@ -30,7 +32,7 @@ The completed model run is under this ignored absolute evidence directory:
 
 Each stage records its command, PID, actual exit, model, config, stdout, stderr,
 state counts, and queue length. `result.json` records the overall command result.
-The runner also checks its TypeScript and the baseline client source hashes.
+The runner also checks its TypeScript and the reviewed production source hashes.
 
 Tool pin is TLA+ tools v1.7.4, TLC 2.19 of 08 August 2024. The jar SHA-256 is
 `936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88`.
@@ -86,40 +88,38 @@ No sensitivity receipt relies on parsing, compilation, hashes, or timeouts.
 The unchanged model passes after the controls. The runner never edits the
 checked-in model or any product source during these checks.
 
-## Code mapping and pending work
+## Production mapping
 
-The baseline mapping is recorded in [SKILL.md](SKILL.md) and
-[coverage.json](coverage.json). Electron `refresh` checks `activeQuery` and
-`refreshGeneration` before handling either success or error. Swift
-`refresh(generation:)` checks generation, refresh generation, Profile, view,
-requested filters, and cancellation on success. Its error branch omits filter
-equality. Existing dialog rollback and Profile and view reset paths were read.
-The new complete identity, immediate input invalidation, atomic rows and spans,
-and search debounce remain approved design transitions at this base.
+[CLIENT-MAPPING.md](CLIENT-MAPPING.md) records the implemented functions and
+atomicity boundaries. Both clients now invalidate immediately, capture complete
+identities and publish strings/spans/identity together under their latest-request
+guards. Swift success and error share canPublishSearch; the baseline missing
+error guard is fixed and covered by a delayed-error regression. Profile/view
+reset retains text. Manual Retry and current-Profile SSE recovery are implemented.
 
-Coordinator R3 narrows Reset to retain toolbar search text. Coordinator R1 adds
-`ShowingIsCurrent`, which reads phase and applied/requested identities without
-the publication ghost. The separate `broken-latest-showing` sensitivity run
-disables the ghost invariant and must violate this semantic invariant. The amendment check-CslMY5 exits 0; both BrokenLatest checks exit 12, and the
-no-recovery fairness control exits 13. The counts above include these amendments.
-Final production client mapping and the final-tip recheck remain pending.
-Swift's baseline view reset retains the Task array while clearing planning and
-filters. The model's empty selection snapshot represents the approved visible
-reset, not a claim that those baseline assignments already implement C1.
+Coordinator R1 adds ShowingIsCurrent independently of publicationOK. The
+broken-latest-showing control omits the ghost invariant and fails the semantic
+invariant with exit12. R3 retains toolbar text in Reset. The amendment run
+check-CslMY5 exits0, including both safety graphs, liveness, deliberate breaks,
+restoration and real matcher checks. Counts above describe that unchanged model.
+The final integration run is recorded separately in the ignored L1 ledger.
 
-The following work requires the implementation commits arranged by L1:
+The finite model has no separate Project/Tag dimension, cached-clear transition,
+authentication or Snapshot-reload protocol, editor draft or OS focus state.
+Complete production guards and compiled regressions cover the stated client
+cases. No source-language refinement theorem or universal Unicode proof is
+claimed. See CLIENT-MAPPING.md for the exact abstraction boundaries.
 
-- Repeat the matcher checks at the final integration tip. The original candidate checks used be876581; L1 repeated every property and sensitivity at reviewed integration 8272b610 with exit 0. The amended model command also uses that reviewed integration. No fake matcher or invented export is present.
-- Final mapping of both clients' request, refresh, debounce, error, rollback,
-  and reset functions. Delayed-response tests must drive production state
-  through the existing compiled scratch verification recipes.
-- L1's permitted correctness review and the coordinator's review. No child
-  was launched by this worker. The local no-comments audit found no comments
-  or lint/type suppressions in the added runner or model. Independent comment
-  review remains part of L1's permitted review.
+Both unit review seats are complete. L1 independently reviewed the integrated
+mapping. Run the final-tip command after committing this mapping; the final
+evidence ledger under
+`docs/evidence/task-search/final` records its immutable SHA, exit and absolute
+paths. Source hashes are renewed only after inspecting the actual functions.
 
-No native app, signing, Keychain, installed binary, real Todo database, owner
-Task, branch switch, merge, rebase, push, or PR is used in this unit.
+The original worker and later L1 changes use a local no-comments audit under
+the run's restricted review count; permitted seat1 reviews include comments.
+No extra comments child was launched. Native HOLD and owner-data restrictions
+remain in force.
 
 ## Coordinator recovery amendment
 

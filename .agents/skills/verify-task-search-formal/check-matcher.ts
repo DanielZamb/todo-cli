@@ -250,15 +250,15 @@ try {
       exit: 1,
       restored: true,
     })),
-    finalIntegrationRecheck: "PENDING",
-    finalClientRefinement: "PENDING",
+    integrationCheck: process.argv[2] === undefined ? "pinned-reviewed-commit" : "explicit-immutable-commit",
+    clientOrdering: "Separate bounded model and production mapping in check.ts",
   });
   console.log(
     JSON.stringify({
       passed: true,
       commit,
       evidence,
-      finalClientRefinement: "PENDING",
+      clientOrdering: "Separate bounded model and production mapping in check.ts",
     }),
   );
 } catch (error) {

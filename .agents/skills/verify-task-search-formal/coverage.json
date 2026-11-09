@@ -1,35 +1,152 @@
 {
-  "baselineCommit": "605b84aa85e4be4e9386365b97cf64ddef2639c6",
-  "status": "approved-design-only",
-  "baselineFiles": [
+  "sourceCommit": "0d5b2198e5728565a57ff3170b84182ff776a148",
+  "status": "mapped-production-clients-and-real-matcher",
+  "files": [
     {
       "path": "apps/electron/src/renderer.tsx",
-      "sha256": "e85066086ad8f042018ec40b948542b937e6a0a5404f2bd4b5460fe7db2688c3",
       "functions": [
+        "requestedIdentity",
         "refresh",
+        "changeSearch",
         "activateProfile",
+        "activateView",
         "clearFilters",
-        "changed notice handler",
-        "planning navigation handlers",
-        "connection notice handler"
+        "changed/connection notice handlers"
       ],
-      "status": "baseline guards inspected; complete search identity and snapshot are approved design only"
+      "sha256": "91c45ab023ecb0d7a720982a3494f4d904322aab56717b4c46e5a10c4d3f2a84"
+    },
+    {
+      "path": "apps/electron/src/task-search-results.ts",
+      "functions": [
+        "SearchIdentity",
+        "AppliedSearch",
+        "identityKey",
+        "searchGroups"
+      ],
+      "sha256": "32fcb14d4790e2a67af432419c26d8e25bae63d6950993afe906813892f89ae6"
+    },
+    {
+      "path": "apps/electron/src/task-client.ts",
+      "functions": [
+        "taskRequest list branch"
+      ],
+      "sha256": "571097dd0ddf9e9d0327260f81a948d0ab60ef6f1c60270a0f02fdff57fc2ebd"
+    },
+    {
+      "path": "apps/electron/src/protocol.ts",
+      "functions": [
+        "Reply tasks TaskRead decoder"
+      ],
+      "sha256": "8ed36ad2c29d493e595f4c05ee742b5237fce3ad26331945e53ce0d79df3d4ff"
     },
     {
       "path": "apps/macos/Sources/TodoModel.swift",
-      "sha256": "f1034979cd8238efc392839205f834405a1614ff0c972b1df1eac3055c3efaa5",
       "functions": [
+        "requestedIdentity",
         "refresh(generation:)",
+        "canPublishSearch",
+        "invalidateSearch",
+        "scheduleSearch",
+        "retrySearch",
         "activateProfile",
         "selectView",
-        "disconnect",
         "followChanges",
         "applyTaskFilters"
       ],
-      "status": "baseline guards inspected; complete search identity and snapshot are approved design only"
+      "sha256": "9e3750b02515438ef433ffe70e87791e8f4f7e9e7c2b49f16c916e22389ee520"
+    },
+    {
+      "path": "apps/macos/Sources/TaskSearch.swift",
+      "functions": [
+        "TaskSearchIdentity",
+        "TaskSearchSnapshot",
+        "TaskSearchRefreshOutcome",
+        "TaskSearchPresentation"
+      ],
+      "sha256": "52cdca8acf5335822cc8f9c81fdd61fb0e7cf0935d4e1059054e39edae567b73"
+    },
+    {
+      "path": "apps/macos/Sources/AppViews.swift",
+      "functions": [
+        "visibleTasks",
+        "taskGroups",
+        "row",
+        "taskContent",
+        "searchField"
+      ],
+      "sha256": "2c2d2eded27f1c9adefb280adaaeac458aeb995fc5f3ef0777548d2c4859b6f3"
+    },
+    {
+      "path": "apps/macos/Sources/TaskSnapshot.swift",
+      "functions": [
+        "TaskSnapshot",
+        "TaskSearchMatch"
+      ],
+      "sha256": "3aeaf11c97f30c7788b36b8f0bb6ac4deecaae237eecd6cb7f3538fbde7a9a31"
+    },
+    {
+      "path": "packages/domain/src/task-search.ts",
+      "functions": [
+        "normalizeTaskSearch",
+        "parseTaskSearch",
+        "matchTaskSearch"
+      ],
+      "sha256": "196d91957dc059666cca0414aa0d73204349a0075f054732479358f6061230c5"
+    },
+    {
+      "path": "packages/domain/src/task-search-case-fold.ts",
+      "functions": [
+        "taskSearchCaseFold"
+      ],
+      "sha256": "4f44913d63f3de2d65ecbee037b8810388945f0514d76079e7b24cc6141fe08e"
+    },
+    {
+      "path": "packages/domain/src/task-filters.ts",
+      "functions": [
+        "TaskFilters",
+        "filterTaskRecords"
+      ],
+      "sha256": "7fc28cec9f3f8a21a63ebb89fe7603b434ffc61a910e3c16db249143c05962a4"
+    },
+    {
+      "path": "packages/domain/src/task-read.ts",
+      "functions": [
+        "TaskRead"
+      ],
+      "sha256": "615f8ff950f34bbd0c8ffc34caf21f8879b2036adc7bcf4c748e0750df8cf89f"
+    },
+    {
+      "path": "packages/domain/src/limits.ts",
+      "functions": [
+        "inputLimits.searchText"
+      ],
+      "sha256": "2845803b1fb0fc6e3984bfc83fccc59cd3e0356e0f61a70a432672633f102767"
+    },
+    {
+      "path": "packages/domain/src/presentation.ts",
+      "functions": [
+        "TaskViewSchema",
+        "taskView"
+      ],
+      "sha256": "de1787bdb5f3907c568cb53e76f39ec79cead23074953cf608b2003755a13b58"
+    },
+    {
+      "path": "packages/domain/src/commands.ts",
+      "functions": [
+        "readTasks"
+      ],
+      "sha256": "7d181acc3033fb26f0d5d02fe3493f425174840b6042309510dd96937a8e92d6"
     }
   ],
-  "productionMatcher": "Generated-input properties and production-code sensitivity pass on original be876581 and reviewed integration 8272b610f6e0d4723c52a7906a2583d12721d6af. Final client mapping PENDING.",
-  "finalClientRefinement": "PENDING: clients still use pre-search guards",
-  "recoveryDesign": "Coordinator 2026-11-09: Error -> Requesting on manual Retry or current-Profile SSE connected/ready/op; WF of recovery disjunction, no timer-based retry. Final client mapping pending."
+  "mapping": "CLIENT-MAPPING.md",
+  "scope": "Finite design model plus manually reviewed synchronous publication boundaries and compiled production regressions; no mechanical source refinement.",
+  "reviews": {
+    "domain": "unit1 a1987fd4 integrated8272b610; both seats complete",
+    "formal": "4c8c6932; both seats complete; R1/reset amendment228e3485",
+    "swift": "code76035210 + visual8fd49f25; integratedc19fd669; approved presentation alignment0d5b2198",
+    "electron": "codedf13e2a8 + visuale8178e24; integratedbc288b30"
+  },
+  "productionMatcher": "Immutable real source with generated properties, behavioral mutations and byte restoration; final-tip command uses its explicit full SHA.",
+  "recovery": "Manual Retry or current-Profile SSE reconnect/op, no search retry timer. Conditional liveness assumptions are in CLIENT-MAPPING.md and REPORT.md.",
+  "clientRefinement": "Mapped and regression-checked; no mechanical TypeScript/Swift refinement theorem."
 }
