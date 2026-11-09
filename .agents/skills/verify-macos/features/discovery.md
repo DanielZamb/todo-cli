@@ -97,3 +97,10 @@ occ_conflict (4), preserving each meaningful message and current Version. Sixtee
 additional captures show those generic outcomes in both sizes and appearances.
 Contextual not_found retains its structured neutral card and prefilled Find;
 generic errors retain their message and show the server pair as secondary text.
+
+Retry requires the failed submitted lookup identity and Error or Offline state.
+Prefix edits clear that identity, so an obsolete Retry callback sends no request
+for an unsubmitted field value. Offline advances publication generation, clears
+rows, and retains the prior submission only as a Retry template. An unsubmitted
+lookup has no Offline Retry action. The compiled regression preserves its red
+request-count/phase failures and requires both to pass after the fix.

@@ -42,9 +42,10 @@ import TodoAPI
                     model.connection = phase == .offline ? .offline : .live
                     model.discovery.dialog = dialog
                     model.discovery.phase = phase
-                    model.discovery.prefix = phase == .invalid ? "invalid!" : "aaaa"
+                    model.discovery.prefix = phase == .invalid ? "invalid!" : dialog == .lookup ? "aaaa" : ""
                     model.discovery.error = phase == .invalid ? "Enter 1 to 36 hexadecimal digits or hyphens." : model.describe(RequestFailure(status: 500, message: "Couldn't read discovery. Try again.", exitCode: 1, exitMeaning: "runtime failure"), at: .discovery)
-                    let identity = DiscoveryIdentity(credentialEpoch: 0, generation: 0, dialog: dialog, prefix: "aaaa")
+                    let identity = DiscoveryIdentity(credentialEpoch: 0, generation: 0, dialog: dialog, prefix: model.discovery.prefix)
+                    if phase == .error || phase == .requesting || phase == .showing || phase == .empty { model.discovery.requestedIdentity = identity }
                     let projects = [DiscoveryName(id: "63bbdd22-1111-4222-8333-444444444444", name: "ARG")]
                     let profiles = [ProfileDirectoryEntry(id: "work", name: "Work", projects: projects), ProfileDirectoryEntry(id: "personal", name: "Personal", projects: [])]
                     model.discovery.appliedSnapshot = .init(appliedIdentity: identity, profiles: name == "directory-dense" ? (0..<12).map { ProfileDirectoryEntry(id: "profile-\($0)", name: "Profile \($0)", projects: projects) } : profiles, matches: name == "lookup-dense" ? (0..<12).map { TaskLookupMatch(profile: profile, task_id: "aaaaaaaa-1111-4222-8333-4444444444\(String(format: "%02d", $0))", title: "Review report \($0)", project: nil) } : [match])

@@ -64,7 +64,7 @@ struct DiscoveryView: View {
             Text(state.error ?? "Enter a valid id prefix.").foregroundStyle(TodoColors.color("destructive")).accessibilityIdentifier("discovery-error")
         case .offline:
             Text("Offline. Reconnect to search Profiles.").foregroundStyle(.secondary)
-            if model.connection == .live { retry }
+            if model.connection == .live && (state.dialog == .directory || state.requestedIdentity != nil) { retry }
         case .error:
             ClientErrorNotice(model: model, text: state.error ?? "Couldn't read discovery.", position: .discovery)
                 .accessibilityIdentifier("discovery-error")

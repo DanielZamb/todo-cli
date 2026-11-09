@@ -173,6 +173,20 @@ private actor DiscoveryTransport: ClientTransport {
         #expect(model.discovery.error == "Task not found in Profile Work (work).\nerror 3 - not found or auth missing")
         await model.requestDiscovery(retry: true)
         #expect(model.discovery.appliedSnapshot?.matches.map(\.task_id) == [done.id])
+        await transport.hold("reads.lookup", failing: true)
+        let obsoleteFailure = Task { await model.requestDiscovery() }
+        held += 1
+        try await wait { await transport.heldCount == held }
+        await transport.release(); await obsoleteFailure.value
+        #expect(model.discovery.phase == .error)
+        let oldRetry = { await model.requestDiscovery(retry: true) }
+        model.editDiscoveryPrefix("b")
+        let lookupCount = await transport.requests.filter { $0 == "reads.lookup" }.count
+        await oldRetry()
+        #expect(await transport.requests.filter { $0 == "reads.lookup" }.count == lookupCount)
+        #expect(model.discovery.phase == .editing)
+        model.editDiscoveryPrefix(done.id)
+        await model.requestDiscovery()
 
         for failing in [false, true] {
             model.signedIn = true

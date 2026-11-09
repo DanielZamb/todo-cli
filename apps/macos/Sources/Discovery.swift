@@ -99,13 +99,22 @@ extension TodoModel {
 
     func discoveryWentOffline() {
         guard discovery.dialog != nil || discovery.showIntent != nil else { return }
+        let submitted = discovery.requestedIdentity
         discovery.invalidate()
+        discovery.requestedIdentity = submitted
         discovery.phase = .offline
     }
 
     func requestDiscovery(retry: Bool = false) async {
         guard let dialog = discovery.dialog, discovery.phase != .requesting else { return }
-        let prefix = retry ? discovery.requestedIdentity?.prefix ?? discovery.prefix : discovery.prefix
+        if retry && discovery.phase != .error && discovery.phase != .offline { return }
+        let prefix: String
+        if retry && dialog == .lookup {
+            guard let submitted = discovery.requestedIdentity,
+                  submitted.credentialEpoch == discovery.credentialEpoch,
+                  submitted.dialog == dialog, submitted.prefix == discovery.prefix else { return }
+            prefix = submitted.prefix
+        } else { prefix = discovery.prefix }
         if dialog == .lookup && !discovery.validPrefix {
             discovery.invalidate()
             discovery.phase = .invalid
