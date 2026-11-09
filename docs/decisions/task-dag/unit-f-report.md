@@ -1435,7 +1435,8 @@ previously missing boundary; guard counts alone are not the proof.
 
 Pre-rerun inventory and the 16:20 follow-up inventory removed zero files and zero
 bytes. Only current/review baselines and a currently active mutant were present;
-the later inventory found zero .bun-build temporaries. Cited/ambiguous evidence
+the initial prefix-based inventory reported zero runtime temporaries. The exact
+order-30 scan corrected that historical category count below. Cited/ambiguous evidence
 and all manifests were retained. Exact inventories and available observations:
 `docs/evidence/dag-formal/f1-closure-5PIxSP/preflight-cleanup.json` and
 `cleanup-order-1620.json` in that directory.
@@ -1517,3 +1518,56 @@ binaries cited by old receipts, after this documentation-only handoff commit.
 Text/source/config/receipts and the 18 current plus four review baselines stay
 protected. The post-handoff retirement manifest will be next to inventory-order29.json;
 this cleanup does not alter the committed proof source or successful proof receipts.
+
+
+## Post-handoff authorized historical retirement
+
+The documentation-only F1 handoff was committed first at
+`0fe0e8686e5d9fba5ced794d83c1c4f3b091959b`. The coordinator then explicitly
+authorized retirement of superseded historical binaries even when an old
+receipt cites them. Every old text receipt, source/config and manifest remains
+unchanged. Committed proof source `0d9145443dc46ec4c6b75decee8be0b133d530ee`
+and the coherent full default 0 / locked check 0 receipts are unchanged.
+No compile batch was started for cleanup.
+
+All 168 authorized files were proven to belong to runs before current run9:
+166 historical driver/server/CLI/runtime copies plus two historical mutants,
+15,089,714,616 logical bytes. No candidate was retained as an ambiguous or
+in-use exception. Each row records absolute path, binary SHA-256, size, source
+hash and its derivation, citing receipt, owning run and the owning run/receipt
+creation times preceding current run9. Runtime identity uses the actual Bun
+runtime SHA-256 rather than its old embedded modification timestamp. All paths
+were regular owned files with no symlink traversal; identity was checked again
+and lsof returned no open-file records before unlink. No process was signalled.
+Manifest: `docs/evidence/dag-formal/f1-closure-5PIxSP/historical-binary-retirement.json`.
+The complete before-retirement plan is adjacent.
+
+All 18 current proof baselines/drivers/probes and all four historical immutable
+review baselines passed the unchanged SHA-256 audit. Current executable binary
+holdings are therefore 22 files, 1,982,669,804 logical bytes; remaining completed
+mutants 0 and actual compiler/runtime copies 0. Protected archive bytes remain
+994,298,712, separate from executable holdings. The existing L1 archive was
+neither modified nor attributed to F's cleanup. Post-inventory receipt:
+`docs/evidence/dag-formal/f1-closure-5PIxSP/post-retirement-inventory.json`.
+
+The exact order-30 find initially found 28 matching paths. Twelve were old Bun
+runtime copies, 1,063,930,368 bytes, already included in the 166 authorized
+files and now retired. My initial category inventory had included those twelve
+in other compiled drivers and incorrectly reported zero total runtime copies;
+the 190-file/17,072,384,420-byte total was correct. The other sixteen matches
+are tiny literal text fixtures used by compiler cleanup tests, not generated
+runtime copies. They remain protected as source/proof inputs. Current run9
+left no real runtime copy behind. Exact find outputs and the category correction:
+`docs/evidence/dag-formal/f1-closure-5PIxSP/order30-runtime-retirement.json` and
+`order30-find-before.txt` / `order30-find-after.txt` there.
+
+Observed df Available immediately before retirement was 57,429,968 KiB and
+immediately after was 68,632,984 KiB. A later post-inventory observation was
+68,530,972 KiB. These are filesystem capacity observations, separate from
+15,089,714,616 logical bytes unlinked. No capacity reclaim is inferred from
+logical size. Every current/cited source/text receipt and protected review item
+is retained; only the explicitly authorized rebuildable historical binaries
+were removed. Orders 28/29/30 and the immediate hard 10 GB compiler guard remain
+binding for the fresh closure review and any later work. Below 30 GB before a
+new >5-binary batch, do not start: own safe retirement, report capacity, wait.
+Both renewed independent reviews remain pending; L1 arranges them.
