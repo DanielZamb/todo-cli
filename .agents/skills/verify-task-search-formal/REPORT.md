@@ -1,4 +1,44 @@
-# PERF-refresh R1 proof before SEC integration
+# Integrated PERF-refresh proof
+
+The SEC and R1 merge at `51711cf41e19b9fcd654c19ae24b957e13591940` passes
+`bun .agents/skills/verify-task-search-formal/check.ts 51711cf41e19b9fcd654c19ae24b957e13591940`
+with exit 0. Evidence is `docs/evidence/task-search-formal/check-s5gvyO`; the
+immutable real matcher, its generated properties and production mutation
+controls pass at `matcher-mMiugN`. All reviewed source hashes match the merge.
+
+The full safety graph has 3,053,160 distinct states and 29,482,849 generated
+successors. The three-request graph has 1,954,050 distinct states and 20,570,013
+successors. Conditional liveness and restoration each have 44,922 states and
+378,091 successors. Every passing queue is empty. All nine controls fail with
+their intended behavioral counterexample and TLC exit 12 or 13, including
+early catalog-debt clearing and missing full-scope promotion. The tool pin,
+identity/request bounds and absence of state constraints remain unchanged.
+
+The merged clients retain SEC's typed refusal, applied context and hidden Retry,
+alongside R1's obligation to publish a full catalog. Refusal leaves that
+obligation set; a later affordable full publication clears it. Conditional
+convergence still requires a fair available recovery source and a later success.
+There is no promise that an unchanged refused query eventually succeeds.
+
+Integrated compiled receipts are under `docs/evidence/perf-refresh/r1/`.
+`sec-swift-state-correct` passes 104 state tests and generated contracts;
+`sec-swift-snapshots` proves restore, reload and the later write. Their real
+server runs include literal refusal/SSE recovery and the catalog-debt races.
+`sec-electron-search` passes those search and catalog cases without page errors.
+`sec-electron-writes-settled` passes the broader write/Compact/offline drive.
+Its original `sec-electron-writes` attempt failed the inherited Retry assertion
+because failure injection raced reconnect's full read. The verifier now requires
+current Showing after reconnect before arming that one-shot failure; the Retry
+assertions and five-second deadline are unchanged. Both receipts are retained.
+
+The integrated offscreen proof has 60 PNGs, and the unsigned xcodebuild exits 0.
+Both use production source without launching Todo.app or accessing Keychain.
+Final paired input receipts, the same-head locked check and both fresh review
+seats are recorded by the unit delivery report. The proof remains a finite
+design model plus reviewed mapping and compiled regressions, not a mechanical
+TypeScript/Swift refinement theorem. Historical proofs below keep their scopes.
+
+# Historical PERF-refresh R1 proof before SEC integration
 
 The catalog-debt correction passes at product source
 `47aa4f10cfff6255f2108bf79a8b0608965f2ab8`. The exact command

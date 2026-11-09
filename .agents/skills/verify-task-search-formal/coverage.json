@@ -1,6 +1,6 @@
 {
-  "sourceCommit": "47aa4f10cfff6255f2108bf79a8b0608965f2ab8",
-  "status": "reviewed-merged-SEC-and-catalog-debt; compiled-integration-proof-pending",
+  "sourceCommit": "51711cf41e19b9fcd654c19ae24b957e13591940",
+  "status": "mapped-production-clients-and-real-matcher",
   "files": [
     {
       "path": "apps/electron/src/renderer.tsx",
@@ -169,7 +169,7 @@
     "formal": "4c8c6932; both seats complete; R1/reset amendment228e3485",
     "swift": "code76035210 + visual8fd49f25; integratedc19fd669; approved presentation alignment0d5b2198",
     "electron": "codedf13e2a8 + visuale8178e24; integratedbc288b30",
-    "refresh": "PERF-refresh R1 product 47aa4f10: catalog debt survives superseded and failed full reads. Compiled client regressions and model sensitivity renewed; fresh correctness seats pending. UI seat2 passed unchanged presentation at 2041ed44.",
+    "refresh": "Integrated SEC492d9453 plus refresh/R1 at51711cf4: catalog debt survives superseded and failed full reads. Full model, controls, immutable matcher, compiled Swift104 and unsigned Electron regressions pass. Fresh correctness seats pending; UI seat2 passed prior presentation at2041ed44, with integrated60 renders available.",
     "security": "SEC-W1 local source review, literal client/core proofs, immutable real matcher properties and all five behavioral mutations passed at0a2eef1c in matcher-zwScvg. Covered source bytes unchanged at this product commit. Seat1 held for SEC-L1 to launch; seat2 coordinator.",
     "v1": "Reviewed display-only diff against CLIENT-MAPPING.md: shared applied-context helpers, unchanged refusal sentence, secondary context, no state transition/publication guard/generation/identity changes. Immutable matcher properties and all five behavioral mutations passed at064b2667 in matcher-1eyrdt before these four hashes were renewed. Seat1/visual review pending."
   },
