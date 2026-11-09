@@ -241,6 +241,9 @@ final class TodoModel {
             signedIn = false
             diagnostics = nil
             tasks = []
+            appliedSearchSnapshot = nil
+            searchError = nil
+            searchPhase = .idle
             editor = nil
             quickAdd = false
             newTitle = ""
@@ -1147,6 +1150,9 @@ final class TodoModel {
         diagnostics = nil
         credential = ""
         tasks = []
+        appliedSearchSnapshot = nil
+        searchError = nil
+        searchPhase = .idle
         message = "Your Session ended. Sign in again."
     }
 

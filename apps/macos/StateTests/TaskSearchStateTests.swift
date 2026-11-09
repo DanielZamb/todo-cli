@@ -188,6 +188,10 @@ struct TaskSearchStateTests {
         #expect(model.taskIDCopyFeedback == "Copied")
         #expect(model.appliedSearchSnapshot?.rows.first?.row_version == 1)
         try await wait { model.taskIDCopyFeedback == nil }
+        await model.retrySearch()
+        #expect(model.appliedSearchSnapshot?.rows.first?.row_version == 1)
+        let afterCopy = try await direct.tasks_period_show(path: .init(profile: profile, task: receipt.id)).ok.body.json
+        #expect(afterCopy.row_version == 1)
 
         model.applyTaskFilters(.init())
         try await wait { model.searchPhase == .showing }
