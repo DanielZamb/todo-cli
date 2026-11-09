@@ -1,11 +1,11 @@
 {
-  "status": "final merged discovery mapping and independent real C/D controls passed; parent final exact-SHA seats pending",
+  "status": "Current merged-source mapping reviewed with fresh Electron and Swift behavioral controls/restoration; full command pending",
   "contractCommit": "f85aef6faf7d93be80feef930554206e09d61be3",
   "contract": {
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "f85aef6faf7d93be80feef930554206e09d61be3",
+  "productionSyncCommit": "dc43db3f16e3e1591793bf13b18127acd2be939d",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -40,7 +40,7 @@
         "draftForTask",
         "same-key refresh and changed-navigation effect"
       ],
-      "sha256": "cfe784fd328701e1ec78f19eeabc03899cd5058c2a1ade9f631946185af9cf83",
+      "sha256": "6aff737ee78fc37dda9127449a504ef984ba2228a1b2e0ef26d22ec190583eb4",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -56,7 +56,7 @@
       "functions": [
         "unsigned IPC captured credential/generation and Unauthorized side effects"
       ],
-      "sha256": "f282f321258d6968061a8588509067b6d58706f1de8d7f491bd36fb51c4b18e7",
+      "sha256": "ac7ee516e6ce9c3f8593c9f1889568474d587dc0cbad3f9bddad01dc3dbb6f78",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -66,7 +66,7 @@
         "lookup",
         "showTask"
       ],
-      "sha256": "d68195d2d032bc28efae95e9245b8ce3e39d3333fe452bdc67d50325ffb0def2",
+      "sha256": "028faf302f5ca8c6ab9bc87e6e4825f02c59d328abed06ec1de0d85f6a66ab04",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -74,7 +74,7 @@
       "functions": [
         "discovery Request/Reply decoders"
       ],
-      "sha256": "934e10da89bb576db7b691c29d63a9ea78b2069013d9f74dcafb7ca1c0263555",
+      "sha256": "b5a43619a9e5c668df820cc9941e7b7d48fe8f3209416cbeafe1881fad4dba9a",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -155,7 +155,7 @@
         "followChanges Unauthorized",
         "metadata/parse/History/Series/import invalidation"
       ],
-      "sha256": "4bdc53b33e56a66a0a7b8e7dc5c37b65515f9cc9e65661b1a81a365a7798612f",
+      "sha256": "8307d4d8305aa31b9d8ed0cb1d11107b7a1aee9fa01c5fcca8c27c450425ef52",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -214,15 +214,20 @@
     }
   ],
   "mapping": "SOURCE-MAPPING.md",
-  "pending": "Parent-owned final same-SHA correctness/coordinator seats; final frozen commands recorded in final-locked-proof; native HOLD limitations remain.",
-  "candidateCommit": "f85aef6faf7d93be80feef930554206e09d61be3",
+  "pending": "Final full discovery command, same-head locked workspace check and the two conflict-delta seats; separate offscreen Import geometry finding reported to coordinator",
+  "candidateCommit": "dc43db3f16e3e1591793bf13b18127acd2be939d",
   "classification": {
     "model": "bounded safety only; Discovery.tla bytes unchanged from500cdc38",
     "domain": "separate verify-discovery generated projection/snapshot properties, not model conclusions",
-    "regressions": "current root36f9/81c and earlier reviewed C75052/D205 regressions carried by immutable product-input equivalence; original SHA/exits retained",
-    "sensitivity": "Fresh f85 Electron7 and Swift4 intended behavioral failures, every byte restoration/clean rerun and final clean; own independent copies only",
+    "regressions": "Fresh current prepare-JP0mLs runs domain/scope-removal and compiled discovery/credential/boundary/enrichment-history drives; no historical receipt is reopened",
+    "sensitivity": "Fresh current Electron7 controls at electron-LzUdLa and Swift4 controls at swift-pb8ruR; every intended failure, byte restoration, clean rerun and final clean passed",
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "c4882258d95bb8d8e80315d2f3d5f88fd5bd9901"
+  "previousProductionSyncCommit": "c4882258d95bb8d8e80315d2f3d5f88fd5bd9901",
+  "integrationReview": {
+    "main": "4c904d96277853c60692c685c6d4ea3b3e655bc4",
+    "source": "dc43db3f16e3e1591793bf13b18127acd2be939d",
+    "scope": "Full/query catalog debt composed with Show and credential epochs; current controller/Swift controls and compiled state drives passed before hash renewal"
+  }
 }

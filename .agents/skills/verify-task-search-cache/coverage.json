@@ -1,6 +1,6 @@
 {
-  "productCommit": "65033c86ec00889f84642fb76289094a23762ebb",
-  "scope": "Confirmed fixed source65033: whole-cache Purge/restore epoch fencing, incremental committed hygiene and indexed restore headers; same-source matching, literal charged bounds and bounded formal evidence",
+  "productCommit": "dc43db3f16e3e1591793bf13b18127acd2be939d",
+  "scope": "Confirmed main4c composition: exact-text memo and global erasure fences, current generated/meter/admission/model controls, compiled lifecycle and structured CLI errors",
   "seed": "0x5ea2c001",
   "files": [
     {
@@ -13,11 +13,11 @@
     },
     {
       "path": "task-filters.ts",
-      "sha256": "59b835514b51dc7c301cefabce5954c77160857ace8b75a6d994f83b6925369d"
+      "sha256": "8cd2744d66656987286a0d179b37ec41f1424f9d4dce13418d8d6f3c5bdec890"
     },
     {
       "path": "commands.ts",
-      "sha256": "ac3f0bd632b5f8e2d3f871ca3b2d403b1306d4149f5d2b8089ffe6b7e871121d"
+      "sha256": "6d4c1e4b478d4fc62e9c1c115ddb693cf28f09558cc0260610b1682be9e47e12"
     },
     {
       "path": "store/store.ts",
@@ -32,7 +32,7 @@
       "sha256": "4f0276e1953a56db0a31844c51faec02835eea134b04a06ed2ba6e9231d6d600"
     }
   ],
-  "review": "Exact immutable65033 one-command verify-2pGXUu passed generated/meter/store controls, seven model mutants, eleven real Effect mutants, three hygiene/query mutants and restoration/strict checks; compiled lifecycle, moved-Purge/Profile delete1000ms and CLI defect envelope passed. Official search/CLI goldens/op-log/Profile/Snapshot/HTTP/SSE/scheduler and AtomicCAS clean/sensitivity passed. Protected SEC matcher/runner/evaluator unchanged. Final metadata head has identical covered source bytes; no retiming.",
+  "review": "Reviewed CLI boundary preserves typed2 and catchDefect1 through shared Agent rendering. TaskCommands Read capture remains before auth; TaskIdPrefix schema extraction is unchanged predicate. Server cache fork captures cursor before handlers alongside discovery routes; observer/store epochs unchanged. Fresh generated and observer controls reached strict restoration then intentionally failed the old source-hash gate. Immutable compiled erasure and Agent-shaped defect witnesses passed. No retiming. Full one-command verify-sK6L84 passed after the reviewed renewal; fixed source is not retimed.",
   "reviewedCandidate": false,
   "hygieneFiles": [
     {
@@ -41,7 +41,7 @@
     },
     {
       "path": "apps/server/src/server.ts",
-      "sha256": "fba09e7f897593561059c4e074d3030156b1854794576144d5a26ece9560e02f"
+      "sha256": "676c49611faad9688938b4992cc855c26b888fb647fc3850f8ed63c841f14006"
     },
     {
       "path": "packages/domain/src/store/search-cache-events.ts",
@@ -57,7 +57,7 @@
     },
     {
       "path": "apps/cli/src/main.ts",
-      "sha256": "2bd03f2abd052dcb284009652539808c47916db1dfea3aea29fac512006077f4"
+      "sha256": "31a42e05fb2ae90829b2b9981cfb2ffcc4ba10e2738d47a058a3dc426f1d2b29"
     }
   ]
 }

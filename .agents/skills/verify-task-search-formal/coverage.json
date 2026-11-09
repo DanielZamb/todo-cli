@@ -1,6 +1,6 @@
 {
-  "sourceCommit": "464af1038d64eefdac875fab7268dbc3976371f5",
-  "status": "main4c integration under review; final source-gate renewal pending",
+  "sourceCommit": "dc43db3f16e3e1591793bf13b18127acd2be939d",
+  "status": "Current main4c composition: bounded safety/liveness, intended controls/restoration, fresh matcher properties and compiled full/query client drives passed",
   "files": [
     {
       "path": "apps/electron/src/renderer.tsx",
@@ -19,7 +19,7 @@
         "endAuthentication",
         "changed/connection/reload notice handlers"
       ],
-      "sha256": "b91a4e29671d200dd74b4522de03321dbbbeb788c2c34d71b27b4ee3d7e2d8d8"
+      "sha256": "6aff737ee78fc37dda9127449a504ef984ba2228a1b2e0ef26d22ec190583eb4"
     },
     {
       "path": "apps/electron/src/task-search-results.ts",
@@ -38,7 +38,7 @@
         "taskRequest list branch",
         "taskRequest search branch"
       ],
-      "sha256": "d632a2d7b7b4ac1e03c5409c2cf9e2a8271feea42bf18812146ecce587de3ab4"
+      "sha256": "028faf302f5ca8c6ab9bc87e6e4825f02c59d328abed06ec1de0d85f6a66ab04"
     },
     {
       "path": "apps/electron/src/protocol.ts",
@@ -48,7 +48,7 @@
         "Reply tasks TaskRead decoder",
         "Reply error code decoder"
       ],
-      "sha256": "ea7af70c9ce170ef0bfc69915d0acd9d33cd3d0b48234405e4aa820957479c34"
+      "sha256": "b5a43619a9e5c668df820cc9941e7b7d48fe8f3209416cbeafe1881fad4dba9a"
     },
     {
       "path": "apps/macos/Sources/TodoModel.swift",
@@ -69,7 +69,7 @@
         "readSearchPlanning",
         "readSearchCatalog"
       ],
-      "sha256": "c610116cba2f148cde375cef8e1c3320082336dd376ce454af2df1d7069e01bd"
+      "sha256": "8307d4d8305aa31b9d8ed0cb1d11107b7a1aee9fa01c5fcca8c27c450425ef52"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -163,7 +163,7 @@
         "readTasks",
         "TaskCommands.list"
       ],
-      "sha256": "ac3f0bd632b5f8e2d3f871ca3b2d403b1306d4149f5d2b8089ffe6b7e871121d"
+      "sha256": "6d4c1e4b478d4fc62e9c1c115ddb693cf28f09558cc0260610b1682be9e47e12"
     },
     {
       "path": "apps/electron/src/task-search-presentation.tsx",
@@ -192,7 +192,8 @@
     "main9deRefresh": "Reviewed final main F1a/F1b through the shared full/query request construction. Profile-keyed metadata survives view clearing and resets on Profile/auth/reload. Swift trim-invariance guard is inside readSearchRows used by both filtered scopes. Catalog debt and guarded publication are unchanged. Immutable main matcher properties, five behavioral controls and strict checks passed in matcher-6dcbM8 before renewing only these three client hashes. Compiled F1a/F1b and final C3 proofs remain pending.",
     "perfFinal": "Product ada9f319, verifier-only12124354. Full TaskSearch check-XmY6pO passed immutable matcher, all finite safety/liveness bounds and nine expected-failure controls. Swift105 plus contracts/diagnostics, real Snapshot5/reload, Electron F1a/F1b and R1, unsigned Xcode and346offscreen renders passed. Both full/query paths forward names safely. Main9de baseline versus current product on identical SEC+Tag D1 backend3f88: five alternating pairs per client,25 successful query actions each, Swift215 to45 and Electron225 to45 data requests; health/full/warmup/controlled-errors separate. Exact pin guards passed. Delivery check and independent verdicts are recorded in the local PERF-refresh report and final receipt.",
     "rootIntegration": "Both seats approved refresh f1c5f221 and cache7f63b0e2. The integrated source preserves their reviewed bodies and all mapped hashes. Exact-tip TaskSearch, cache, AtomicCAS and locked-check results are recorded locally in docs/evidence/perf-integration/final-root. These are finite/model and real-code checks, not a mechanical source-refinement theorem.",
-    "finalIntegration": "E final semantic review at f85, product exact36f9, proof-only integration81c. Publication guards/snapshot pairing/debounce/reset/SSE unchanged. Discovery SignOut/replacement invalidates lifecycle/search generations and guards auth errors; Show explicitly refreshes same navigation key and selects full-id. SEC refusal retains applied context plus shared error2 line; filtered query forwarding/Profile-keyed catalog/trim-invariant Tags retain id joins. Real matcher5 mutation controls and per-property restored checks passed at f85 in matcher-wrLTPA BEFORE this single renewal. Root merged client drives and final corrected Electron TaskSearch drive actual0, all carried by immutable input equivalence. Parent final E seats remain pending."
+    "finalIntegration": "E final semantic review at f85, product exact36f9, proof-only integration81c. Publication guards/snapshot pairing/debounce/reset/SSE unchanged. Discovery SignOut/replacement invalidates lifecycle/search generations and guards auth errors; Show explicitly refreshes same navigation key and selects full-id. SEC refusal retains applied context plus shared error2 line; filtered query forwarding/Profile-keyed catalog/trim-invariant Tags retain id joins. Real matcher5 mutation controls and per-property restored checks passed at f85 in matcher-wrLTPA BEFORE this single renewal. Root merged client drives and final corrected Electron TaskSearch drive actual0, all carried by immutable input equivalence. Parent final E seats remain pending.",
+    "main4c": "Reviewed full/query publication, retained catalog debt, Show navigation and credential reset composition. Fresh matcher-Lyo5Sz mutants/restoration0; Electron task-search full drive0,170receipts/no page errors including R1 and both F1 paths; Swift full112state suite, diagnostics and generated contracts0 with pin diff0. No formula or product policy change. Full TaskSearch command check-uMSuJ8 passed after the single semantic/hash renewal, including required path controls and restored finite model."
   },
   "productionMatcher": "Immutable real source with generated properties, behavioral mutations and byte restoration; final-tip command uses its explicit full SHA.",
   "recovery": "Transient errors offer Retry; search_too_broad hides Retry and retains text/snapshot. Current-Profile SSE op/reconnect remains available. Liveness requires a later affordable successful response and a fair available recovery source.",
@@ -206,11 +207,12 @@
     "cache": "7f63b0e20ad2f8c3a47db4e0d10f5594d97f9ed9",
     "cacheCode": "65033c86ec00889f84642fb76289094a23762ebb",
     "securityBase": "9de893454cb6e3f5729407e9313c73e56bfd0481",
-    "sourceAnchor": "464af1038d64eefdac875fab7268dbc3976371f5"
+    "sourceAnchor": "dc43db3f16e3e1591793bf13b18127acd2be939d",
+    "agentDiscoveryMain": "4c904d96277853c60692c685c6d4ea3b3e655bc4"
   },
   "integrationReview": {
     "base": "7c1326bd5ecd1d84cdd9a6426b18e8c380e5d336",
     "main": "4c904d96277853c60692c685c6d4ea3b3e655bc4",
-    "status": "Merged source under semantic review; hybrid-file hashes have not been renewed"
+    "status": "Covered bodies reviewed; current matcher controls and both compiled client drives passed before hash renewal"
   }
 }

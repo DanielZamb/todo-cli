@@ -1,9 +1,48 @@
+# Ready/retry fixture review
+
+The original final-clean failure and the actual HTTP/SSE reproduction are kept.
+A ready full refresh legitimately supersedes a held manual retry. The fixture
+awaits the model connection becoming live after ready publication before keeping
+its original .applied assertion. A named regression checks .superseded plus
+newer rows, cleared error, preserved draft and a subsequent query-only read.
+No product source or generation guard changed. The warm8-test run passed;
+repeated and final immutable proofs remain required.
+
 # Performance/main integration verification maintenance
 
 The former carried receipts below are historical provenance only. Current commands
 never open those paths. Fresh merged-source proofs are pending at this checkpoint;
 no old C/D execution is relabeled. See the current skill prerequisites and the
 integration report for fresh command exits and the explicitly unproved limits.
+
+## Current merged-source review
+
+The immutable product candidate is dc43db3f16e3e1591793bf13b18127acd2be939d.
+DiscoveryStateController and Discovery.swift retain the reviewed credential,
+dialog, generation, Show source and per-attempt guards. The combined renderer
+keeps discovery errors scoped and list/search publication behind its shared
+generation and identity guard. Sign-out and replacement invalidate discovery
+and search before old callbacks can publish. Full/query catalog debt changes
+only which list reads are needed; Show still issues an explicit full refresh
+when its navigation key is unchanged.
+
+TodoModel captures the shared credentialEpoch for authorization failures.
+replaceCredential calls disconnect, increments the lifecycle generation and
+invalidates search. Both refresh scopes retain canPublishSearch, and catalog
+debt clears only on current full publication. The independent auth-epoch control
+proves a stale unauthorized response cannot expire a replacement Session.
+
+Fresh merged-source inputs come from prepare-JP0mLs, not the historical JSON.
+Electron's seven real-controller controls passed at electron-LzUdLa; Swift's
+four controls passed at swift-pb8ruR, including exact expected failures, restored
+bytes and final clean. The earlier clean Swift attempt stopped at its temporary
+file census after our other compile batches; that failure is retained. Closed
+owned copies were removed with lsof receipts before the restored proof.
+Swift112 state tests and the production Electron search drive passed. The
+separate full offscreen run found twelve Compact Import geometry assertions
+on unchanged main code and is reported without weakening expectations.
+The full discovery model command remains required and retains the finite bounds
+and non-refinement limits below. Native apps and Keychain remain untested.
 
 ## Historical record
 

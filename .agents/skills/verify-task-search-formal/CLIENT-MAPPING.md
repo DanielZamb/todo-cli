@@ -1,9 +1,35 @@
 # Performance/main integration verification maintenance
 
 The former carried receipts below are historical provenance only. Current commands
-never open those paths. Fresh merged-source proofs are pending at this checkpoint;
+never open those paths. Fresh merged-source controls and client drives are recorded below;
 no old C/D execution is relabeled. See the current skill prerequisites and the
 integration report for fresh command exits and the explicitly unproved limits.
+
+## Current main4c composition review
+
+The reviewed product source is dc43db3f16e3e1591793bf13b18127acd2be939d.
+Electron retains catalogOwedRef across failed and superseded full requests,
+promotes query scope while owed, and clears it only on guarded full publication.
+Discovery request errors remain scoped to their controller. List/search replies
+use the same generation and complete-identity guard. Sign-out, reload, Profile
+selection and Show navigation invalidate that generation before old publication.
+The Profile-keyed name definitions feed both full and query requests.
+
+Swift captures discovery.credentialEpoch for authorization error handling.
+replaceCredential calls disconnect, which increments the lifecycle generation
+and invalidates search. Successful full and query publications still require
+canPublishSearch's lifecycle, request generation, identity and cancellation
+guards. catalogStale clears only inside that publication. Both read paths use
+readSearchRows for inferred Project and trim-invariant Tag names. Show's explicit
+same-navigation refresh remains full and participates in the catalog debt.
+
+Fresh matcher-Lyo5Sz properties and real-code controls passed. The production
+Electron search drive passed with 170 receipts and no page errors, including
+obsolete full success/error and failed-full recovery. The Swift state drive
+passed 112 tests, generated contracts and diagnostics against scratch HTTP,
+including R1 and both F1 paths. Every Swift pin comparison exited zero.
+The finite TaskSearch model is unchanged. Its separate current command and
+limits remain required; these drives are not a mechanical source refinement.
 
 ## Historical record
 

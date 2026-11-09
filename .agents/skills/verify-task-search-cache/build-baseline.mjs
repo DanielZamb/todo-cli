@@ -14,7 +14,9 @@ import { join, resolve } from "node:path";
 const root = resolve(import.meta.dirname, "../../..");
 const commit = process.argv[2];
 assert.match(commit ?? "", /^[a-f0-9]{40}$/);
-const directory = join(root, ".scratch", `cache-baseline-${commit}`);
+const projectionCommit = process.argv[3];
+if (projectionCommit) assert.match(projectionCommit, /^[a-f0-9]{40}$/);
+const directory = join(root, ".scratch", `cache-baseline-${commit}${projectionCommit ? `-${projectionCommit}` : ""}`);
 mkdirSync(directory, { recursive: true });
 const archive = join(directory, "source.tar");
 if (!existsSync(archive)) {
@@ -36,6 +38,11 @@ if (!existsSync(archive)) {
     { cwd: root },
   );
   execFileSync("tar", ["-xf", archive, "-C", directory]);
+  if (projectionCommit)
+    writeFileSync(
+      join(directory, "packages/domain/src/store/projection.ts"),
+      execFileSync("git", ["show", `${projectionCommit}:packages/domain/src/store/projection.ts`], { cwd: root }),
+    );
   symlinkSync(join(root, "node_modules"), join(directory, "node_modules"));
   for (const unit of [
     "apps/cli",
@@ -96,7 +103,7 @@ for (const [key, source] of [
   ["server", "apps/server/src/main.ts"],
 ]) {
   if (existsSync(binaries[key])) continue;
-  execFileSync("sh", ["/Users/zambamon/Work/todo-cli/scripts/disk-guard.sh"], {
+  execFileSync("sh", [join(root, "scripts/disk-guard.sh")], {
     stdio: "inherit",
   });
   execFileSync(
@@ -119,6 +126,11 @@ writeFileSync(
     {
       ...binaries,
       head: commit,
+      projectionOverlay: projectionCommit ? {
+        commit: projectionCommit,
+        path: "packages/domain/src/store/projection.ts",
+        purpose: "Keep the separately reviewed Tag relink optimization identical in both inputs; matcher and CLI remain the uncached base source",
+      } : null,
       sourceHash,
       archiveSha256: createHash("sha256")
         .update(readFileSync(archive))

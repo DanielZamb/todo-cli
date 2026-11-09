@@ -24,7 +24,12 @@ proof requires a clean committed product source matching those binaries.
 
 Prepare the uncached baseline first with
 `bun .agents/skills/verify-task-search-cache/build-baseline.mjs <full-base-SHA>`.
-For this integration the base is 2077c80248dc0879ae0d14fcc10e74be848256b2.
+The optional second SHA overlays only the reviewed Tag projection from that
+immutable commit. For the Agent-discovery integration, use main
+`4c904d96277853c60692c685c6d4ea3b3e655bc4` and Tag product
+`d83d61863b95d2482ca9281a34d5db4494abffbb`. The manifest records both origins.
+The earlier 2077c802 baseline remains historical. This oracle preparation is
+verification; it does not repeat the frozen performance measurements.
 The helper archives that immutable SEC+Tag source and links workspace packages
 inside the capture. It never creates or changes a checkout. The one-command
 checker requires the baseline manifest and identical protected matcher, runner

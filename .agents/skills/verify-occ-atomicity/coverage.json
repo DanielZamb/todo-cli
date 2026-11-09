@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "65033c86ec00889f84642fb76289094a23762ebb",
+  "confirmedCommit": "dc43db3f16e3e1591793bf13b18127acd2be939d",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
@@ -71,10 +71,10 @@
     }
   ],
   "reviewedCandidate": false,
-  "review": "Confirmed immutable65033 covered source. Pure cache clear replaced historical cache eviction; restore callback and read-only metadata tail do not change Validate/Record/Apply/WriteVersion/Commit/rejection/replay/crash boundaries. Actual-worktree AtomicCAS one-command0 at fv01-check-ciYXwL; two isolated source sensitivity breaks fail1/restored0 at sensitivity-CW3gRs. Other covered hashes unchanged. No model change.",
+  "review": "Current merged-source AtomicCAS one-command passed at fv01-check-H5HU7k. Every covered body is byte-identical to the previously reviewed PERF source; Authentication discovery snapshot and CLI recovery changes do not alter Validate/Record/Apply/WriteVersion/Commit, rejection or replay. No model change or hash-only renewal of changed bodies.",
   "integrationReview": {
     "base": "7c1326bd5ecd1d84cdd9a6426b18e8c380e5d336",
     "main": "4c904d96277853c60692c685c6d4ea3b3e655bc4",
-    "status": "Merged source under semantic review; hybrid-file hashes have not been renewed"
+    "status": "Reviewed identical covered bodies; fresh actual-worktree model, production and sensitivity stages passed"
   }
 }

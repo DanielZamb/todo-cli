@@ -1,3 +1,32 @@
+# Main4c verification maintenance
+
+Product merge dc43db3f composes main4c with the reviewed Performance units.
+This is verification maintenance shipped with the Performance PR. Required
+formal inputs are repo-relative. Historical input paths are provenance only,
+never runtime dependencies. Fresh domain, compiled discovery, required-path
+controls, TaskSearch formal/matcher, cache, AtomicCAS, API/SSE, both client
+full/query drives,112 Swift state tests and the unsigned build passed. All
+dependency pin comparisons passed.
+
+The full design suite fails identically on clean main4c:12 Compact Import
+geometry assertions across6 screens. It is pre-existing and tracked as an owner
+Task. All347 candidate PNGs and baseline logs remain. Search60 and discovery116
+offscreen subsets pass. The Performance PR does not claim full design-suite
+success. No UI or geometry assertion was changed.
+
+Discovery check-4NWI2S passed its model/controls but its final clean fixture
+expected a manual retry to publish while a ready full refresh could supersede
+it. The real HTTP/SSE probe ready-probe-confirmed reproduces that accepted
+interleaving, with actual assertion exit1 and proof exit0, then restores its
+independent source. The fixture now awaits observed ready completion and keeps
+.applied. A named regression separately requires .superseded, the revealed row,
+cleared error and preserved draft, then a one-read query proving cleared catalog
+debt. A fresh8-test warm run passed. The20 consecutive runs, final immutable
+formal commands, full state suite and locked workspace check remain pending.
+No product guard, dependency pin or performance measurement changed.
+
+## Historical records
+
 # Performance/main integration verification maintenance
 
 The former carried receipts below are historical provenance only. Current commands

@@ -1,3 +1,4 @@
+import Observation
 import AppKit
 import Foundation
 import HTTPTypes
@@ -13,19 +14,40 @@ private actor DiscoveryTransport: ClientTransport {
     private var holdOperation: String?
     private var failHeld = false
     private var waiting: CheckedContinuation<Void, Never>?
+    private var manual: CheckedContinuation<Void, Never>?
+    private var readyOnManual = false
+    private var streamHeld = false
+    private var streamWaiters: [CheckedContinuation<Void, Never>] = []
+    private var manualWaiters: [CheckedContinuation<Void, Never>] = []
+    func awaitStreamHeld() async { if streamHeld { return }; await withCheckedContinuation { streamWaiters.append($0) } }
+    func armReadyDuringManual() { readyOnManual = true }
+    func awaitManualHeld() async { if manual != nil { return }; await withCheckedContinuation { manualWaiters.append($0) } }
+    func releaseManual() { manual?.resume(); manual = nil }
     private(set) var heldCount = 0
     private(set) var requests: [String] = []
     func hold(_ operation: String, failing: Bool = false) { holdOperation = operation; failHeld = failing }
     func release() { waiting?.resume(); waiting = nil }
     func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
         requests.append(operationID)
+        let isManual = operationID == "tasks.list" && readyOnManual
+        if isManual { readyOnManual = false }
         let shouldHold = operationID == holdOperation
         let failing = failHeld
         if shouldHold { holdOperation = nil }
         let response = try await live.send(request, body: body, baseURL: baseURL, operationID: operationID)
+        if isManual {
+            await withCheckedContinuation { continuation in
+                manual = continuation
+                waiting?.resume(); waiting = nil
+                manualWaiters.forEach { $0.resume() }; manualWaiters.removeAll()
+            }
+        }
         if shouldHold {
             heldCount += 1
-            await withCheckedContinuation { waiting = $0 }
+            await withCheckedContinuation { continuation in
+                waiting = continuation
+                if operationID == "changes.stream" { streamHeld = true; streamWaiters.forEach { $0.resume() }; streamWaiters.removeAll() }
+            }
             if failing { throw RequestFailure(status: 404, message: "Task not found in Profile Work (work).", exitCode: 3, exitMeaning: "not found or auth missing") }
         }
         return response
@@ -33,12 +55,64 @@ private actor DiscoveryTransport: ClientTransport {
 }
 
 @MainActor struct DiscoveryStateTests {
+    private func observeUntil(_ predicate: () -> Bool) async {
+        while !predicate() {
+            await withCheckedContinuation { continuation in
+                withObservationTracking { _ = predicate() } onChange: { continuation.resume() }
+            }
+        }
+    }
     private func wait(_ predicate: () async -> Bool) async throws {
         for _ in 0..<6000 {
             if await predicate() { return }
             try await Task.sleep(for: .milliseconds(10))
         }
         throw URLError(.timedOut)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_W06_SERVER"] != nil))
+    func readyFullRefreshSupersedesRetryAndKeepsRevealDraftAndCatalog() async throws {
+        let server = try #require(ProcessInfo.processInfo.environment["TODO_W06_SERVER"].flatMap(URL.init(string:)))
+        let credential = try await todoClient(server: server, credential: "").signIn_period_signIn(body: .json(.init(passphrase: "scratch verification passphrase"))).ok.body.json.credential
+        let direct = todoClient(server: server, credential: credential)
+        let body = try JSONDecoder().decode(Operations.tasks_period_create.Input.Body.jsonPayload.self, from: Data(#"{"title":"Ready reveal target"}"#.utf8))
+        let destination = try await TaskSnapshot.decode(direct.tasks_period_create(path: .init(profile: "personal"), body: .json(body)).ok.body.json)
+        let gate = DiscoveryTransport()
+        await gate.hold("changes.stream")
+        let model = TodoModel(configuration: .init(server: server, initialProfile: "work", vaultService: "unused-ready-retry-\(UUID())"), clientFactory: { url, _ in
+            Client(serverURL: url, transport: gate, middlewares: [BearerMiddleware(credential: credential)])
+        })
+        defer { model.signedIn = false; model.connect(); Task { await gate.release(); await gate.releaseManual() } }
+        model.replaceCredential(credential)
+        model.signedIn = true
+        model.connection = .live
+        await model.openDiscovery(.lookup)
+        model.editDiscoveryPrefix(destination.id)
+        await model.requestDiscovery()
+        let match = try #require(model.discovery.appliedSnapshot?.matches.first)
+        #expect(await model.showDiscoveryMatch(match))
+        await gate.awaitStreamHeld()
+        await observeUntil { model.searchPhase == .showing && !model.loading }
+        model.editor?.title = "Retained reveal draft"
+        model.searchError = .transient("Retained retry error")
+        #expect(model.searchError != nil)
+        await gate.armReadyDuringManual()
+        let retry = Task { await model.retrySearch() }
+        await gate.awaitManualHeld()
+        await observeUntil { model.connection == .live && model.searchPhase == .showing && !model.loading }
+        #expect(model.appliedSearchSnapshot?.rows.map(\.id) == [destination.id])
+        #expect(model.searchError == nil)
+        #expect(model.editor?.title == "Retained reveal draft")
+        await gate.releaseManual()
+        #expect(await retry.value == .superseded)
+        #expect(model.appliedSearchSnapshot?.rows.map(\.id) == [destination.id])
+        #expect(model.searchError == nil)
+        #expect(model.editor?.title == "Retained reveal draft")
+        let before = await gate.requests.count
+        #expect(await model.retrySearch() == .applied)
+        #expect(Array((await gate.requests).dropFirst(before)) == ["tasks.list"])
+        #expect(model.appliedSearchSnapshot?.rows.map(\.id) == [destination.id])
+        #expect(model.editor?.title == "Retained reveal draft")
     }
 
     @Test func errorDetailUsesActualServerPairAndPreservesContext() {
@@ -98,7 +172,7 @@ private actor DiscoveryTransport: ClientTransport {
                 #expect(model.discovery.showIntent?.id == attempt.id)
                 let revealed = await action.value
                 #expect(revealed == true)
-                if revealed { try await wait { model.searchPhase == .showing && !model.loading } }
+                if revealed { await observeUntil { model.connection == .live && model.searchPhase == .showing && !model.loading } }
                 #expect(model.profile == "personal")
                 #expect(model.selectedView == "all")
                 #expect(model.taskFilters.prefix == destination.id)
