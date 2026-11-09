@@ -208,4 +208,44 @@ it("resolves synthetic same-name Projects and raw-append case-fold Tags while pr
       definitions,
     ),
   ).toEqual({ status: "open", text: "probe" });
+  const catalogWith = (
+    projects: readonly unknown[],
+    tags: readonly unknown[],
+  ) => {
+    const decoded = Schema.decodeUnknownSync(Reply)({
+      ...catalog(),
+      projects,
+      tags,
+    });
+    if (decoded._tag !== "tasks") throw new Error("Expected Task catalog");
+    return decoded;
+  };
+  for (const name of [" keep ", "keep\t", "﻿keep", " keep", " "])
+    expect(
+      taskSearchQuery(
+        { ...identity, project: null, tag: "padded" },
+        catalogWith(
+          [],
+          [{ id: "padded", profile_id: "work", name, open_task_count: 1 }],
+        ),
+      ),
+    ).toEqual({ status: "open", text: "probe" });
+  expect(
+    taskSearchQuery(
+      { ...identity, project: "padded-project" },
+      catalogWith(
+        [
+          {
+            id: "padded-project",
+            profile_id: "work",
+            name: " Small ",
+            created_at: task.created_at,
+            updated_at: task.created_at,
+            open_task_count: 1,
+          },
+        ],
+        definitions.tags,
+      ),
+    ),
+  ).toEqual({ project: " Small ", tag: "KEEP", status: "open", text: "probe" });
 });

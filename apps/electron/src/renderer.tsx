@@ -127,6 +127,7 @@ import {
   identityKey,
   type SearchIdentity,
   searchGroups,
+  type TaskCatalog,
   taskSearchQuery,
 } from "./task-search-results.ts";
 import { TaskTags } from "./task-tags.tsx";
@@ -318,14 +319,17 @@ function App() {
     null,
   );
   const catalog = appliedSearch?.catalog ?? null;
-  const searchDefinitions = useRef({
-    projects: catalog?.projects ?? [],
-    tags: catalog?.tags ?? [],
-  });
-  searchDefinitions.current = {
-    projects: catalog?.projects ?? [],
-    tags: catalog?.tags ?? [],
-  };
+  const searchDefinitions = useRef<
+    Pick<TaskCatalog, "projects" | "tags"> & {
+      profile: typeof ProfileId.Type | null;
+    }
+  >({ profile: null, projects: [], tags: [] });
+  if (appliedSearch)
+    searchDefinitions.current = {
+      profile: appliedSearch.appliedIdentity.profile,
+      projects: appliedSearch.catalog.projects,
+      tags: appliedSearch.catalog.tags,
+    };
   const unfilteredSearch = useRef<AppliedSearch | null>(null);
   const tasks = catalog?.tasks ?? [];
   const [searchText, setSearchText] = useState("");
@@ -452,6 +456,7 @@ function App() {
     setWriteIntent(null);
     setAppliedSearch(null);
     unfilteredSearch.current = null;
+    searchDefinitions.current = { profile: null, projects: [], tags: [] };
     setSearchPhase("Idle");
     clearTimeout(debounce.current);
     setProject(null);
@@ -483,6 +488,7 @@ function App() {
     setConnection("offline");
     setAppliedSearch(null);
     unfilteredSearch.current = null;
+    searchDefinitions.current = { profile: null, projects: [], tags: [] };
     setSearchPhase("Idle");
     clearTimeout(debounce.current);
     setEditor(null);
@@ -577,7 +583,12 @@ function App() {
       _tag: "list",
       profile,
       view,
-      filters: taskSearchQuery(identity, searchDefinitions.current),
+      filters: taskSearchQuery(
+        identity,
+        searchDefinitions.current.profile === identity.profile
+          ? searchDefinitions.current
+          : { projects: [], tags: [] },
+      ),
     });
     if (
       active.current !== profile ||
@@ -788,6 +799,7 @@ function App() {
         refreshGeneration.current++;
         setAppliedSearch(null);
         unfilteredSearch.current = null;
+        searchDefinitions.current = { profile: null, projects: [], tags: [] };
         setSearchPhase("Idle");
         clearTimeout(debounce.current);
         setEditor(null);
