@@ -119,6 +119,7 @@ import { TaskIdCopy } from "./task-id-copy.tsx";
 import {
   DescriptionMatch,
   descriptionMatch,
+  SearchErrorMessage,
   SearchHighlight,
 } from "./task-search-presentation.tsx";
 import {
@@ -371,7 +372,11 @@ function App() {
     "connected" | "reconnecting" | "offline"
   >("reconnecting");
   const [error, setError] = useState("");
-  const [loadError, setLoadError] = useState("");
+  const [loadFailure, setLoadFailure] = useState<{
+    kind: "transient" | "search_too_broad";
+    message: string;
+  } | null>(null);
+  const loadError = loadFailure?.message ?? "";
   const [announcement, setAnnouncement] = useState("");
   const [transferResult, setTransferResult] = useState<
     | ({ task: Task; profileName: string } & (
@@ -452,7 +457,7 @@ function App() {
     setProfile(next);
     localStorage.setItem("profile", next);
     setError("");
-    setLoadError("");
+    setLoadFailure(null);
     setTransferResult(null);
   }, []);
   const activateEditor = (next: Editor) => {
@@ -575,7 +580,7 @@ function App() {
     )
       return;
     if (result._tag === "tasks") {
-      setLoadError("");
+      setLoadFailure(null);
       setAppliedSearch({ catalog: result, appliedIdentity: identity });
       unfilteredSearch.current = {
         catalog: { ...result, matching_tasks: result.tasks },
@@ -601,14 +606,20 @@ function App() {
       advancedFiltersRef.current = appliedFiltersRef.current;
       setApplyingFilters(false);
       if (changingFilters) {
-        setError(filterApplyError);
+        if (result.code !== "search_too_broad") setError(filterApplyError);
         activeQuery.current = {
           ...identity,
           filters: appliedFiltersRef.current,
         };
       }
       setPhase("Error");
-      setLoadError(changingFilters ? "" : result.message);
+      setLoadFailure(
+        result.code === "search_too_broad"
+          ? { kind: "search_too_broad", message: result.message }
+          : changingFilters
+            ? null
+            : { kind: "transient", message: result.message },
+      );
     }
   }, [profile, project, tag, request, view, setPhase]);
   const refreshRef = useRef(refresh);
@@ -619,7 +630,7 @@ function App() {
     searchTextRef.current = text;
     activeQuery.current = { ...activeQuery.current, text };
     setSearchText(text);
-    setLoadError("");
+    setLoadFailure(null);
     setPhase("Debouncing");
     debounce.current = setTimeout(() => {
       void refreshRef.current();
@@ -1246,7 +1257,7 @@ function App() {
     setEditor(null);
     setHistory(null);
     setLatest(null);
-    setLoadError("");
+    setLoadFailure(null);
     setProject(nextProject);
     setTag(null);
     advancedFiltersRef.current = {};
@@ -1988,7 +1999,7 @@ function App() {
             <Button
               onClick={() => {
                 setError("");
-                setLoadError("");
+                setLoadFailure(null);
                 void request({ _tag: "watch", profile });
                 void refresh();
               }}
@@ -2001,25 +2012,27 @@ function App() {
           <Alert
             role="status"
             className="search-error"
+            data-code={loadFailure?.kind}
             aria-label="Search failed"
           >
             <CircleAlert />
             <AlertDescription>
-              <span>
-                {appliedSearch?.appliedIdentity.text
-                  ? `Couldn't search. Showing results for "${appliedSearch.appliedIdentity.text}".`
-                  : "Couldn't search. Showing tasks without search."}
-              </span>
-              {connection === "connected" && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    void refresh();
-                  }}
-                >
-                  Retry
-                </Button>
-              )}
+              <SearchErrorMessage
+                kind={loadFailure?.kind ?? "transient"}
+                message={loadError}
+                appliedText={appliedSearch?.appliedIdentity.text}
+              />
+              {connection === "connected" &&
+                loadFailure?.kind !== "search_too_broad" && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      void refresh();
+                    }}
+                  >
+                    Retry
+                  </Button>
+                )}
             </AlertDescription>
           </Alert>
         )}
@@ -2032,7 +2045,7 @@ function App() {
                 variant="ghost"
                 onClick={() => {
                   setError("");
-                  setLoadError("");
+                  setLoadFailure(null);
                   void refresh();
                 }}
               >

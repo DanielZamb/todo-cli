@@ -127,6 +127,9 @@ struct Snapshots {
                         _ = try #require(frames["state-action"])
                         #expect(frames.keys.allSatisfy { !$0.hasPrefix("row-") })
                     }
+                    if name.hasSuffix("budget-error") {
+                        #expect(frames["search-retry"] == nil)
+                    }
                     if name == "search-compact-offline" {
                         let row = try #require(frames["row-6aa2647d-1234-4567-89ab-0123456789ab"])
                         #expect(row.maxY > 0 && row.minY < height)
@@ -312,7 +315,7 @@ struct Snapshots {
             }
             if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" {
                 for compact in [true, false] {
-                    for state in ["ready", "excerpt-trimmed", "typing", "requesting", "empty", "error", "initial-error", "offline", "prefix", "prefix-invalid", "detail", "quick-add", "copied", "copy-failed"] {
+                    for state in ["ready", "excerpt-trimmed", "typing", "requesting", "empty", "error", "budget-error", "initial-error", "offline", "prefix", "prefix-invalid", "detail", "quick-add", "copied", "copy-failed"] {
                         let searchModel = fixture()
                         searchModel.selectedView = "all"
                         searchModel.searchText = "rent"
@@ -331,7 +334,12 @@ struct Snapshots {
                         if ["typing", "requesting", "error"].contains(state) { searchModel.searchText = "rent friday" }
                         if state == "typing" { searchModel.searchPhase = .debouncing }
                         if state == "requesting" { searchModel.searchPhase = .requesting }
-                        if state == "error" { searchModel.searchPhase = .error; searchModel.searchError = "Couldn't search. Showing results for \"rent\"." }
+                        if state == "error" { searchModel.searchPhase = .error; searchModel.searchError = .transient("Couldn't search. Showing results for \"rent\".") }
+                        if state == "budget-error" {
+                            searchModel.searchText = "probe"
+                            searchModel.searchPhase = .error
+                            searchModel.searchError = .tooBroad("Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.", context: TaskSearchPresentation.appliedContext(searchModel.appliedSearchSnapshot?.appliedIdentity.text))
+                        }
                         if state == "initial-error" {
                             searchModel.searchText = ""
                             searchModel.appliedSearchSnapshot = nil
@@ -343,7 +351,7 @@ struct Snapshots {
                             searchModel.connection = .offline
                             searchModel.searchText = "rent friday"
                             searchModel.searchPhase = .error
-                            searchModel.searchError = "Couldn't search. Showing results for \"rent\"."
+                            searchModel.searchError = .transient("Couldn't search. Showing results for \"rent\".")
                         }
                         if ["detail", "copied", "copy-failed"].contains(state) { searchModel.beginEditing(titleTask) }
                         if state == "quick-add" { searchModel.quickAdd = true; searchModel.newTitle = "Keep this draft" }
@@ -944,7 +952,7 @@ struct Snapshots {
         try JSONEncoder().encode(importLayouts).write(to: directory.appendingPathComponent("import-layout.json"))
         try JSONEncoder().encode(transferLayouts).write(to: directory.appendingPathComponent("transfer-layout.json"))
         try JSONSerialization.data(withJSONObject: compactLayouts, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("compact-layout.json"))
-        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" ? 56 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 346))
+        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" ? 60 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 346))
     }
 
     private func fixture() -> TodoModel {

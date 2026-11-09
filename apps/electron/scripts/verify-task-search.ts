@@ -999,6 +999,107 @@ try {
   await page.getByRole("button", { name: "Retry", exact: true }).click();
   await showing("cancion");
   checks.push({ currentDialogFailureRollsBackAndRetainsText: true });
+  await page
+    .getByRole("button", { name: "Clear filters", exact: true })
+    .click();
+  await field.fill("");
+  await showing("");
+  const broadTasks = [];
+  for (let index = 0; index < 3; index++)
+    broadTasks.push(
+      Schema.decodeUnknownSync(Task)(
+        await api("/profiles/work/tasks", "POST", {
+          title: `Budget probe ${index}`,
+          description: "\ufdfa".repeat(100000),
+        }),
+      ),
+    );
+  await expect
+    .poll(
+      async () =>
+        (await titles()).filter((title) => title.startsWith("Budget probe "))
+          .length,
+    )
+    .toBe(3);
+  const unsearchedTitles = await titles();
+  await field.fill("probe");
+  await expect(pane).toHaveAttribute("data-search-phase", "Error");
+  await expect(field).toBeFocused();
+  const recovery =
+    "Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.";
+  const expectRefusal = async (context: string) => {
+    await expect(page.getByLabel("Search failed").locator("span")).toHaveText(
+      recovery,
+    );
+    await expect(
+      page.getByLabel("Search failed").locator(".search-error-context"),
+    ).toHaveText(context);
+    await expect(
+      page
+        .getByLabel("Search failed")
+        .getByRole("button", { name: "Retry", exact: true }),
+    ).toHaveCount(0);
+  };
+  await expectRefusal("Showing tasks without search.");
+  expect(await titles()).toEqual(unsearchedTitles);
+  let shrinking = broadTasks[0];
+  if (!shrinking) throw new Error("Missing budget recovery Task");
+  const resizeDescription = async (description: string) => {
+    if (!shrinking) throw new Error("Missing budget recovery Task");
+    shrinking = Schema.decodeUnknownSync(Task)(
+      await api(`/profiles/work/tasks/${shrinking.id}`, "PATCH", {
+        from_version: shrinking.row_version,
+        changes: { description },
+      }),
+    );
+  };
+  await resizeDescription("Small description");
+  await showing("probe");
+  await field.fill("rent");
+  await showing("rent");
+  const retainedTitles = await titles();
+  expect(retainedTitles.length).toBeGreaterThan(0);
+  await resizeDescription("\ufdfa".repeat(100000));
+  await expect(pane).toHaveAttribute("data-search-phase", "Error");
+  await field.fill("probe");
+  await expect(pane).toHaveAttribute("data-search-phase", "Error");
+  await expect(field).toBeFocused();
+  for (const compact of [false, true]) {
+    if (compact)
+      await page
+        .getByRole("button", { name: "Compact mode", exact: true })
+        .click();
+    for (const theme of ["light", "dark"] as const) {
+      await setAppearance(page, theme);
+      await expectRefusal('Showing results for "rent".');
+      await expect(field).toHaveValue("probe");
+      expect(
+        await page
+          .getByLabel("Search failed")
+          .locator("span")
+          .evaluate((element) => element.scrollHeight <= element.clientHeight),
+      ).toBe(true);
+      expect(await titles()).toEqual(retainedTitles);
+      await shot(`${compact ? "compact" : "full"}-${theme}-budget-error`);
+    }
+  }
+  await resizeDescription("Small description");
+  await showing("probe");
+  expect((await titles()).toSorted()).toEqual([
+    "Budget probe 0",
+    "Budget probe 1",
+    "Budget probe 2",
+  ]);
+  await expect(page.getByLabel("Search failed")).toHaveCount(0);
+  checks.push({
+    deterministicRefusal: true,
+    retryAbsent: true,
+    typedText: "probe",
+    contextWithoutSearch: "Showing tasks without search.",
+    contextWithSearch: 'Showing results for "rent".',
+    retainedTitles,
+    recoveryBySseAfterShrink: true,
+  });
   expect(pageErrors).toEqual([]);
   await page.screenshot({
     path: join(evidence, "tasks.png"),

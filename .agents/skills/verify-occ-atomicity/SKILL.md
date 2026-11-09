@@ -229,3 +229,22 @@ keeps every atomicity boundary unchanged. Fresh sensitivity again rejected both
 real-code defects with exit 1 and passed the restored command with exit 0.
 Evidence is `docs/evidence/perf-tags/d1/sensitivity.log` and
 `docs/evidence/fv01/sensitivity-d7gc1J/`. The source hashes now identify `d83d6186`.
+
+## SEC limits mapping review at its pre-Tag base
+
+This section records SEC's review of its pre-Tag base. Its projection comparison does not describe the integrated Tag optimization above.
+
+
+The source gate failed against `ed4e2423`, which is not an ancestor of `main`. The drift in `store.ts`, `events.ts` and `attachments.ts` came from the input-limits and sign-in-lockout work already on `main`. `projection.ts`, `entities.ts` and `ids.ts` are byte-identical. The reviewed product commit is `main` at `f709549c30d7f76543b103f6d31b7c78d2840664`. Its covered files are byte-identical to `feat/task-search` at `c11f7ec9`.
+
+- `events.ts` adds the `resetPassphrase` auth action and the `sign_in_locked` and `sign_in_busy` auth rejection reasons. No Task event schema changed.
+- `recordRejection` now replaces an over-long `occurred_at` with the recording time. It stores a Task id longer than 200 units as null and bounds the received payload with `rejectedInputForHistory`. The model omits timestamps and rejection details from History entries. `RejectRecord` still inserts only `TaskAttemptRejected` in its own transaction, with no Task change.
+- `validate` gains Tag and Attachment list-limit checks. They read Series rows and resolved predecessors under the writer lock and throw `Rejection("validation")` before any write. `Resolve` already assumes other metadata and schema checks are valid, and a failure takes the existing rollback-then-reject path. The Series exclusion-date and Tag checks and the Move arrival checks are outside the model's scope.
+- `attachments.ts` adds input-side length limits and moves the link member into the stored `AttachmentLocation`. The stored `Attachment` and `validAttachmentLocation` are unchanged, so the one-HTTP-link fixture still fits.
+- The external reason passed to rejection recording is now capped at 64 units. The driver's reasons are short codes.
+
+No transition, invariant or fixture changed. The check exited 0 with 37,036 distinct states. `prove-sensitivity.ts` exited 0: both store breaks failed the enumeration, and the restored source passed. One earlier candidate run exited 1 when `kill-validated` exceeded its 15-second readiness timer at host load 41. A rerun on the same source exited 0.
+
+## PERF and SEC base integration
+
+The merged covered source files are byte-identical to the reviewed Tag mapping at `d83d61863b95d2482ca9281a34d5db4494abffbb`. SEC changes search preparation, filtering and command reads outside these covered store files. The combined mapping retains the distinct-Tag fast path, duplicate rollback, transaction boundaries and both prior sensitivity receipts. The integration runs the unchanged atomicity command again; no source hash is advanced.

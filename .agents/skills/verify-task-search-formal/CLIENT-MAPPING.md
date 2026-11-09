@@ -71,3 +71,77 @@ actions, long-description trimming, both appearances and Compact first.
 - Finite generation colors preserve outstanding/applied equality relationships.
   They do not prove unbounded concurrency or counter overflow. No native app,
   signing, Keychain, VoiceOver or operating-system focus proof is claimed.
+
+## Search work refusal and cooperative execution (2026-11-09)
+
+The SEC source review maps `search_too_broad` to the existing `ResponseError`
+path. The server does not publish accumulated partial rows. The shared CLI core
+throws the same error; its boundary returns exit 2, while HTTP returns 422 with
+the shared code and recovery text. Literal tests cover integer-tenths checks,
+positive/excluded word occurrences and phrase starts, memo hits, cumulative
+non-text narrowing, and identical cold, stored/warm and uncached work totals and
+refusal outcomes. The budget and weight are one shared domain policy.
+
+`fieldWords` yields from one generator core after bounded grapheme/word work,
+returning unchanged words, original offsets and exact folded `preparedUnits`.
+Evaluation also yields and meters each field once, each computed banded DP cell,
+and each visited occurrence/phrase start. The CLI drains that core synchronously.
+`TaskCommands.list` uses the Effect driver for supplied text **after**
+`store.auth.read` has returned its complete in-memory view. No SQLite read is open
+across those matcher yields. The already-captured rows and ADR-0015 client
+freshness rules are unchanged. No-text command reads stay synchronous for
+transactional import/Attachment callers. Eager whole-Profile read/serialization
+cost is a separate pre-existing residual, not a matcher-yield guarantee.
+
+`runTaskRecordSteps` checks at checkpoints and before return. Refusal is an
+Effect failure; other thrown faults remain defects. Its completion flag makes
+`steps.return([])` run exactly once on a suspended non-completion exit, including
+interruption or runner failure, and never after completion or a throwing `next`.
+The Bun HTTP adapter already interrupts the handler fiber from the request abort
+signal; the next cooperative checkpoint stops work. Literal interruption and
+finalizer tests and the compiled abort/CPU samples cover this boundary. The model
+abstracts a reply; it does not model CPU scheduling, chunk duration, cancellation
+latency, caching, work arithmetic, heap size or HTTP serialization.
+
+Both clients preserve the same current-generation/current-identity guard before
+handling this error. Electron preserves its code through `taskRequest` and `Reply`;
+Swift uses `TaskSearchFailure.tooBroad`. Both retain typed text and the applied
+snapshot, show the complete server message in the existing neutral search-error
+status, and hide Retry for this code. Transient errors keep Retry. Search focus
+structure and existing Clear search controls remain. The compiled Electron drive
+and Swift production-model test require refusal, a real Task description shrink,
+an SSE operation and successful results without Retry. Offscreen renders require
+no Retry element in full/Compact and light/dark views. OS keyboard focus and
+VoiceOver remain outside this bounded proof.
+
+The finite model intentionally does not distinguish error codes. Its abstract
+`Retry` is unavailable in the deterministic-refusal presentation; `SSEOp` and
+`SSEReconnect` still implement `Recovery`. Convergence applies only when an
+available recovery source is fair and later data/criteria admit a successful
+reply. A query that remains over budget may remain in Error indefinitely; no
+claim says it must succeed without input or data changing. This mapping renews
+source hashes after review and successful real-matcher sensitivity. TLA+ is
+unchanged because publication, rollback and SSE transitions are unchanged.
+
+## V1 applied context display review (2026-11-09)
+
+V1 adds display text only. It changes no state transition, publication guard,
+generation, identity, rollback or recovery source. The current-response guards
+still run before either error branch can publish. The existing applied snapshot
+still owns the displayed rows and spans.
+
+Electron's pure `appliedSearchContext` and Swift's
+`TaskSearchPresentation.appliedContext` format that snapshot's text once per
+client for both error kinds. Transient messages retain their literal wording.
+For `search_too_broad`, the unchanged refusal sentence stays first; a secondary
+line says `Showing results for "rent".` or `Showing tasks without search.`.
+Swift's `TaskSearchFailure.tooBroad` stores the context captured from the applied
+snapshot when the guarded error is handled. The typed query is not its source.
+No search-error identifier, status role, Retry policy or focus structure changes.
+
+Literal presentation tests and compiled client drives cover both contexts,
+including typed `probe` over retained `rent` spans and later SSE recovery.
+Pixels and status wording remain outside the model's state transitions. The
+four existing changed source hashes were renewed after this diff review and
+successful immutable matcher sensitivity at V1 product commit `064b2667`.
+TLA+ remains unchanged.

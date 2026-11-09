@@ -197,3 +197,16 @@ only a local audit in this unit, with independent comment review left to L1's
 permitted reviewer. No child or native app is launched by this check. The relative
 `.claude/skills/verify-task-search-formal` link resolves to this skill. Fresh
 session skill discovery is not proven by that filesystem check.
+
+## Work-budget and yielding mapping
+
+Read the 2026-11-09 section in CLIENT-MAPPING.md before renewing SEC source hashes.
+The shared work refusal follows Error without partial publication. The server
+cooperatively drains the same generator as the synchronous CLI after the complete
+in-memory view read; it never yields a SQLite read snapshot. Preparation and
+evaluation checkpoints are interruptible and the runner closes suspended generators.
+`search_too_broad` hides Retry; SSE recovery remains. Conditional convergence
+requires an affordable later response and a fair available recovery source. TLC
+does not prove a CPU, heap, health-latency, cancellation or serialization bound.
+The literal budget/cache-equivalence, finalizer, compiled abort and client SSE
+regressions complement the unchanged response-order model.

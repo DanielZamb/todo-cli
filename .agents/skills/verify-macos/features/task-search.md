@@ -1,5 +1,20 @@
 # Task search
 
+`deterministicRefusalRetainsSnapshotAndRecoversFromSse` creates three maximum-size
+U+FDFA descriptions on compiled scratch HTTP. It requires `search_too_broad`,
+the server recovery text, retained typed text and applied rows, and `canRetry ==
+false`. Shrinking one description must recover through a real SSE operation
+without Retry. Search-only offscreen renders include `budget-error` in light/dark,
+full/Compact; their bounds check requires no `search-retry` element. Existing
+transient errors retain Retry and the search-error identifier stays unchanged.
+
+The refusal shows its unchanged recovery sentence first, then secondary applied
+context: `Showing results for "rent".` or `Showing tasks without search.`. Both
+error branches use `TaskSearchPresentation.appliedContext`. State tests cover
+both contexts and retained `rent` spans while the field contains `probe`.
+The budget-error captures show that applied search context below the message.
+No sub-identifier is added; `search-error` and the Retry identifiers stay intact.
+
 Search the toolbar with title or description words, quoted phrases or exclusions.
 Cmd+F focuses search and Esc clears it. The toolbar text survives Profile and view
 switches. Filters adds Id starts with. Clear all in that dialog affects its draft;
