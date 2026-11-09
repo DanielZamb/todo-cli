@@ -220,7 +220,7 @@ const guides = {
       "todo import tasks.json --format json",
     ],
     output:
-      "One import report with generated_at, dry_run, items and totals. Outcomes are created, updated, unchanged or rejected. Fields omitted by an item stay untouched. Explicit null clears nullable fields.",
+      "One import report with generated_at, dry_run, items and totals. Outcomes are created, updated, unchanged or rejected, in file order. Fields omitted by an item stay untouched. Explicit null clears nullable fields. depends_on contains external ids in this Profile, including later file rows; an empty array removes Dependencies. Each Task applies atomically. Dependency refusals retain details.current_version and the full details.dependency_error.",
     concurrency:
       "Preview captures from_version. Apply rejects stale Versions per Task. JSON exits 4 for any Conflict, 2 for other rejected Tasks and 0 when all Tasks are accepted. Apply creates an owner Snapshot first.",
   }),
@@ -516,7 +516,7 @@ const guides = {
       "todo export --format json",
     ],
     output:
-      "md renders the selected Markdown template. json includes generated_at, filters, and Tasks. table retains the Markdown export contract. --output writes that content; json also returns the same response on stdout, while md and table print the file path.",
+      "md renders the selected Markdown template. json includes generated_at, filters, and Tasks, with depends_on only when nonempty. Dependencies use full Task ids. table retains the Markdown export contract. --output writes that content; json also returns the same response on stdout, while md and table print the file path.",
   }),
   sync: reference({
     purpose:
@@ -546,7 +546,7 @@ const guides = {
       "todo sync obsidian --vault ./vault --file Tasks.md",
     ],
     output:
-      "Writes a Markdown projection. json returns generated_at and path; md and table print the path. No import occurs. Empty vault paths and paths outside the vault exit 2 without writing a projection.",
+      "Writes one Markdown projection note. Dependencies add stable ^task-full-id blocks, same-note Depends on wiki links and a Mermaid graph. json returns generated_at and path, plus outside_projection ids when needed; md and table print the path. Surrounding text is preserved. Empty vault paths and paths outside the vault exit 2 without writing a projection.",
   }),
   config: reference({
     purpose:

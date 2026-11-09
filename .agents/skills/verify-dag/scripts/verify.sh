@@ -7,9 +7,10 @@ mkdir -p "$evidence" "$root/.scratch/bin"
 scratch=$(mktemp -d -t todo-dag-verify)
 trap 'rm -rf "$scratch"' EXIT HUP INT TERM
 cd "$root"
-hash=$(find packages/domain/src packages/domain/scripts -name '*.ts' -type f -exec shasum -a 256 {} + | shasum -a 256 | cut -d ' ' -f 1)
+hash=$(rg --files packages/domain/src packages/domain/scripts | LC_ALL=C sort | xargs shasum -a 256 | shasum -a 256 | cut -d ' ' -f 1)
 binary="$root/.scratch/bin/verify-dag-$hash"
 if [ ! -x "$binary" ]; then
+  sh scripts/disk-guard.sh > "$evidence/disk.log"
   bun build --compile packages/domain/scripts/verify-dag.ts --outfile "$binary" > "$evidence/build.log" 2>&1
 fi
 printf '%s\n' "$binary drive $scratch $evidence" > "$evidence/commands.log"

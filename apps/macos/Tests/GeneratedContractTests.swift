@@ -28,6 +28,12 @@ final class GeneratedContractTests: XCTestCase {
         XCTAssertEqual(query.prefix, "6AA2")
     }
 
+    func testDependencyCommandsAndImportWitnessSurviveGeneratedCoding() throws {
+        try roundTrip(Operations.tasks_period_create.Input.Body.jsonPayload.self, #"{"title":"Dependent","depends_on":["blocker"]}"#)
+        try roundTrip(Operations.tasks_period_depend.Input.Body.jsonPayload.self, #"{"blocker_id":"blocker","from_version":7}"#)
+        try roundTrip(Operations.tasks_period_importTasks.Output.Ok.Body.jsonPayload.self, #"{"generated_at":"2026-11-09T06:00:00Z","dry_run":false,"items":[{"external_id":"dependent","outcome":"rejected","task_id":"task","from_version":7,"changed_fields":[],"error":{"code":"dependency_cycle","message":"Remove a Dependency in this loop, then try again.","details":{"current_version":7,"dependency_error":{"generated_at":"2026-11-09T06:00:00Z","code":"dependency_cycle","message":"Remove a Dependency in this loop, then try again.","details":{"dependent_id":"task","blocker_id":"blocker","path":["task","blocker","task"]}}}}}],"totals":{"created":0,"updated":0,"unchanged":0,"rejected":1}}"#)
+    }
+
     func testExistingAndDependencyOperationsDecodeAtTheLiveClientBoundary() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
         let fixture = root.appendingPathComponent("API/Fixtures/dag-operations.json")

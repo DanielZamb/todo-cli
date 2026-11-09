@@ -8,6 +8,15 @@ description: Verify combined Task filters through the compiled Todo CLI and auth
 Created with `create-verification-skill`.
 Read [the feature map](features/README.md) before choosing coverage.
 
+Ready and Blocked are true-only switches. False must return CLI exit 2 or HTTP
+400 with --blocked or --status recovery. Whole-Profile topo/lightest ranking
+precedes filtering. Run [verify-dag public proof](../verify-dag/features/public.md)
+for those cases, including cancelled Tasks behind open blockers.
+The Electron draft boundary regression is
+`pnpm --filter @todo/electron test task-filter-draft.test.ts`; it preserves
+prefix/text and all existing values, true-or-absent readiness and omission
+clearing. It adds no filter controls.
+
 ## Launch
 
 From the checkout root, run:

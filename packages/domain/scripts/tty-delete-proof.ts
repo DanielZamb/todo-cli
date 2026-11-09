@@ -127,7 +127,7 @@ export async function proveTtyDelete(input: {
       ]);
     });
     assert.match(refusal, /has_dependencies/);
-    assert.match(refusal, /--with-dependencies/);
+    assert.match(refusal, /preview changed/);
     run(["show", race.id]);
     const pipe = Bun.spawnSync(
       [cli, "rm", race.id, "--expected-version", "1", "--format", "md"],

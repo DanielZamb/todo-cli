@@ -1,7 +1,7 @@
-import { Schema } from "effect";
+import { Schema, Struct } from "effect";
 import { AttachmentStatus } from "./attachments.ts";
 import { isInboxTask } from "./client-reads.ts";
-import { DependencyError } from "./dependencies.ts";
+import { DependencyError, type Edge } from "./dependencies.ts";
 import { DependencyWarning } from "./dependency-contract.ts";
 import type { DiagnosticsSnapshot } from "./diagnostics.ts";
 import {
@@ -15,7 +15,8 @@ import {
   TaskStatus,
 } from "./entities.ts";
 import { OpLogEntry } from "./events.ts";
-import { ProfileId } from "./ids.ts";
+import { graphMermaid } from "./graph-mermaid.ts";
+import { ProfileId, TaskId } from "./ids.ts";
 import { DependencyReadFields, type TaskRead } from "./task-read.ts";
 import { SearchMatches } from "./task-search.ts";
 import type { TaskTime } from "./time.ts";
@@ -137,6 +138,23 @@ export const TasksResponse = Schema.Struct({
   generated_at: Schema.String,
   filters: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
   tasks: Schema.optionalKey(Schema.Array(TaskViewSchema)),
+});
+export const ExportTaskViewSchema = Schema.Struct({
+  ...Struct.omit(TaskViewSchema.fields, [
+    "depends_on",
+    "blocks",
+    "ready",
+    "blocked",
+    "remaining_energy",
+    "search_matches",
+  ]),
+  depends_on: Schema.optionalKey(
+    Schema.Array(TaskId).check(Schema.isMinLength(1)),
+  ),
+});
+export const ExportResponse = Schema.Struct({
+  ...TasksResponse.fields,
+  tasks: Schema.optionalKey(Schema.Array(ExportTaskViewSchema)),
 });
 export const ExternalIdConflictDetails = Schema.Struct({
   external_id: Schema.String,
@@ -316,12 +334,62 @@ export function renderExport(
   scope: string,
   template: string,
 ) {
+  const exported = tasks.map(
+    ({
+      blocks: _blocks,
+      ready: _ready,
+      blocked: _blocked,
+      remaining_energy: _energy,
+      search_matches: _matches,
+      depends_on,
+      ...task
+    }) => ({ ...task, ...(depends_on?.length ? { depends_on } : {}) }),
+  );
   if (format === "json")
-    return renderTasks(tasks, format, now, { scope, template });
-  const body = markdownTasks(tasks);
+    return encodeResponse(ExportResponse, {
+      generated_at: iso(now),
+      filters: { scope, template },
+      ...(exported.length ? { tasks: exported } : {}),
+    });
+  const body = exported.some((task) => task.depends_on?.length)
+    ? `# Tasks\n\n${exported.map((task) => `${taskLine(task)}${task.depends_on?.length ? `\n  Depends on: ${task.depends_on.join(", ")}` : ""}`).join("\n")}\n`
+    : markdownTasks(exported);
   return template === "jira-context"
     ? `# Jira Context\n\n## Summary\n\n- total_tasks: ${tasks.length}\n\n## Tasks\n\n${body}\n## Agent Instructions\n\nUse this context and transform into Jira markdown.\n`
     : body;
+}
+const wikiLabel = (title: string) =>
+  title
+    .replace(/[\r\n]+/gu, " ")
+    .replace(/[&|[\]<>"\\]/gu, (character) => `&#${character.charCodeAt(0)};`);
+export function projectionDependencies(tasks: readonly TaskView[]) {
+  const nodes = tasks.map((task) => ({
+    id: Schema.decodeUnknownSync(TaskId)(task.id),
+    title: task.title,
+  }));
+  const known = new Set(nodes.map((node) => node.id));
+  const edges = new Map<string, Edge>();
+  const add = (edge: Edge) => edges.set(JSON.stringify(edge), edge);
+  for (const task of tasks) {
+    const id = Schema.decodeUnknownSync(TaskId)(task.id);
+    const profile_id = Schema.decodeUnknownSync(ProfileId)(task.user_id);
+    for (const blocker_id of task.depends_on ?? [])
+      add({ profile_id, dependent_id: id, blocker_id });
+    for (const dependent_id of task.blocks ?? [])
+      add({ profile_id, dependent_id, blocker_id: id });
+  }
+  const outside = [
+    ...new Set(
+      [...edges.values()]
+        .flatMap((edge) => [edge.dependent_id, edge.blocker_id])
+        .filter((id) => !known.has(id)),
+    ),
+  ].sort();
+  return {
+    tasks: [...nodes, ...outside.map((id) => ({ id, title: id }))],
+    edges: [...edges.values()],
+    outside,
+  };
 }
 export function obsidianProjection(
   body: string,
@@ -330,7 +398,11 @@ export function obsidianProjection(
 ) {
   const start = "<!-- todo-cli:begin -->";
   const end = "<!-- todo-cli:end -->";
-  const managed = `${start}\n# CLI Tasks\n\nLast synced: ${iso(now)}\n\n${markdownTasks(tasks)}${end}\n`;
+  const dependencies = projectionDependencies(tasks);
+  const content = dependencies.edges.length
+    ? `# Tasks\n\n${tasks.map((task) => `${taskLine(task)} ^task-${task.id}${task.depends_on?.length ? `\n  Depends on: ${task.depends_on.map((id) => `[[#^task-${id}|${wikiLabel(tasks.find((candidate) => candidate.id === id)?.title ?? id)}]]`).join(", ")}` : ""}`).join("\n")}\n\n${dependencies.outside.length ? `Dependencies outside this projection:\n${dependencies.outside.map((id) => `- ${id} ^task-${id}`).join("\n")}\n\n` : ""}\`\`\`mermaid\n${graphMermaid(dependencies)}\`\`\`\n`
+    : markdownTasks(tasks);
+  const managed = `${start}\n# CLI Tasks\n\nLast synced: ${iso(now)}\n\n${content}${end}\n`;
   const s = body.indexOf(start);
   const e = body.indexOf(end, s);
   if (s >= 0 && e > s)

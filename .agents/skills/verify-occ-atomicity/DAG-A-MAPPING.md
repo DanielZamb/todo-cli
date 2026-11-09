@@ -127,3 +127,18 @@ public edge Revert, fingerprints and graph batch operations remain outside this
 single-Task model and are exercised by compiled verify-dag public commands.
 Renew the store source pin only with this review, real-code sensitivity and the
 clean full check. Do not infer a grouped graph proof from AtomicCAS.
+
+## Unit B import and public schema review
+
+Compared dependencies.ts with public checkpoint dc35c131. DependencyError now
+has a shared schema identity and literal nonempty evidence constraints: cycle
+paths have at least two ids, blocked/done-dependent lists have at least one
+Task, counts are nonnegative and counted advice follows the approved exact text.
+has_dependencies may carry an empty incident set after a confirmed preview
+changes. These affect captured error decoding, not Task CAS or SQL boundaries.
+No covered transaction, projection, Event, Task or Version implementation changed.
+The one-Task/no-edge AtomicCAS fixtures produce no DependencyError and preserve
+all 216 literal outcomes. Import resolves successful external-id mappings under
+the existing writer transaction and rolls back each failed Task; its multi-Task
+planning is outside this finite model and has separate compiled public proof.
+Advance this schema pin only with fresh real-code sensitivity and clean check.

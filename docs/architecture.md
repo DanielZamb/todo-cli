@@ -241,3 +241,13 @@ an authenticated in-memory fork without source History or Snapshot changes.
 TTY md Delete prompts show both directions, default No, and submit the reviewed
 fingerprint. JSON and non-TTY requests use explicit confirmation. Client feature
 UI and renderer integration remain later units under ADR-0009.
+
+import-dependencies plans external-id references over the proposed Profile graph,
+including later file rows. Import applies in dependency order and reports in
+file order. Each Task resolves successful mappings again under its writer lock;
+failure rolls back that Task's payload, edges and History. Import errors preserve
+current_version and an optional complete nested dependency_error.
+Export reads one consistent graph snapshot and emits depends_on only when
+nonempty. Obsidian keeps one managed note with stable Task blocks, same-note
+wiki links and pure Mermaid formatting. GraphNode.mermaid_id maps diagram nodes
+to full Task identity without relying on labels or diagram parsing.

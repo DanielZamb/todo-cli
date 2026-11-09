@@ -1,4 +1,5 @@
-import type { TaskGraph } from "./graph-model.ts";
+import type { Edge } from "./dependencies.ts";
+import type { Task } from "./entities.ts";
 import type { TaskId } from "./ids.ts";
 
 const label = (title: string) =>
@@ -8,11 +9,18 @@ const label = (title: string) =>
       ? `#${code};`
       : character;
   }).join("");
-export function graphMermaid(graph: TaskGraph): string {
-  const tasks = [...graph.tasks].sort((a, b) => a.id.localeCompare(b.id));
-  const names = new Map<TaskId, string>(
-    tasks.map((task, index) => [task.id, `n${index}`]),
+export const mermaidNodeIds = (tasks: readonly Pick<Task, "id">[]) =>
+  new Map<TaskId, string>(
+    [...tasks]
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .map((task, index) => [task.id, `n${index}`]),
   );
+export function graphMermaid(graph: {
+  readonly tasks: readonly Pick<Task, "id" | "title">[];
+  readonly edges: readonly Edge[];
+}): string {
+  const tasks = [...graph.tasks].sort((a, b) => a.id.localeCompare(b.id));
+  const names = mermaidNodeIds(tasks);
   const lines = [
     "flowchart TD",
     ...tasks.map((task) => `  ${names.get(task.id)}["${label(task.title)}"]`),

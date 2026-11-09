@@ -2,7 +2,7 @@ import { Effect } from "effect";
 import type { AccessRequest } from "./auth/model.ts";
 import type { GraphReport } from "./graph-contract.ts";
 import { graphEnergy } from "./graph-energy.ts";
-import { graphMermaid } from "./graph-mermaid.ts";
+import { graphMermaid, mermaidNodeIds } from "./graph-mermaid.ts";
 import {
   dependencyState,
   indexGraph,
@@ -74,7 +74,11 @@ export function queryGraph(
     );
   const energy = graphEnergy(graph);
   const depths = new Map<TaskId, number>();
+  const mermaidIds = mermaidNodeIds(tasks);
   const nodes = tasks.map((task) => {
+    const mermaid_id = mermaidIds.get(task.id);
+    if (mermaid_id === undefined)
+      throw new Error("Task missing its Mermaid identity");
     const blockers = index.upstream.get(task.id) ?? [];
     const depth = blockers.reduce(
       (max, id) => Math.max(max, (depths.get(id) ?? 0) + 1),
@@ -84,6 +88,7 @@ export function queryGraph(
     const ancestors = reachable(task.id, index.upstream);
     const descendants = reachable(task.id, index.downstream);
     return {
+      mermaid_id,
       task,
       in_degree: blockers.length,
       out_degree: index.downstream.get(task.id)?.length ?? 0,

@@ -8,6 +8,10 @@ description: Verify the Todo local authenticated HttpApi through curl against a 
 Created with `create-verification-skill`.
 Read the [feature map](features/README.md) before choosing coverage.
 
+Dependency commands, true-only Ready/Blocked filters, graph reports and import
+witnesses also require [verify-dag's public drive](../verify-dag/features/public.md).
+It drives the compiled HttpApi alongside CLI and preserves structured evidence.
+
 ## Launch
 
 From the checkout root, run this exact compiled-server scratch-DB HTTP command:

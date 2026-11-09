@@ -150,7 +150,13 @@ export const DependencyRejected = DependencyError.annotate({
   httpApiStatus: 422,
   identifier: "DependencyError",
 });
+export const FilterUsageError = Schema.Struct({
+  generated_at: Schema.String,
+  code: Schema.Literal("invalid_args"),
+  message: Schema.String,
+}).annotate({ httpApiStatus: 400, identifier: "FilterUsageError" });
 const taskErrors = [
+  FilterUsageError,
   DependencyRejected,
   HttpApiError.BadRequestNoContent,
   Forbidden,

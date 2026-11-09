@@ -237,22 +237,45 @@ const executeBatch = Effect.fn(function* (
   const commands = new DependencyCommands(store);
   const results: BatchEdgeReport["results"][number][] = [];
   for (const [index, item] of input.items.entries()) {
-    const result = yield* commands.change(
-      { ...request, task_id: item.dependent_id },
-      { blocker_id: item.blocker_id, from_version: item.from_version },
-      item.action,
-    );
-    results.push(
-      result.outcome === "success"
-        ? {
+    const row = yield* commands
+      .change(
+        { ...request, task_id: item.dependent_id },
+        { blocker_id: item.blocker_id, from_version: item.from_version },
+        item.action,
+      )
+      .pipe(
+        Effect.match({
+          onSuccess: (result): BatchEdgeReport["results"][number] =>
+            result.outcome === "success"
+              ? {
+                  index,
+                  result: {
+                    ...result.report,
+                    ...(input.dry_run ? { dry_run: true } : {}),
+                  },
+                }
+              : { index, ...edgeFailure(result, generated_at) },
+          onFailure: (error): BatchEdgeReport["results"][number] => ({
             index,
-            result: {
-              ...result.report,
-              ...(input.dry_run ? { dry_run: true } : {}),
+            error: {
+              generated_at,
+              code:
+                error._tag === "AuthError"
+                  ? error.detail === "write_scope" ||
+                    error.detail === "profile_scope"
+                    ? "forbidden"
+                    : "auth_required"
+                  : "runtime",
+              message:
+                error._tag === "AuthError"
+                  ? "Authorization changed. Sign in or choose an authorized Profile before retrying this item."
+                  : "Storage failed. Check server status and retry this item.",
             },
-          }
-        : { index, ...edgeFailure(result, generated_at) },
-    );
+            exit_code: error._tag === "AuthError" ? 3 : 1,
+          }),
+        }),
+      );
+    results.push(row);
   }
   return {
     generated_at,

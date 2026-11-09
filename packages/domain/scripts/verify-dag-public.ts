@@ -24,6 +24,8 @@ import {
 import { TaskResponse } from "../src/presentation.ts";
 import { openStore } from "../src/store/store.ts";
 import { create, task } from "./dag-proof.ts";
+import { proveGraphPublic } from "./graph-public-proof.ts";
+import { proveImportExportPublic } from "./import-export-public-proof.ts";
 import { proveTtyDelete } from "./tty-delete-proof.ts";
 
 const [cli, serverBinary, evidence] = process.argv.slice(2);
@@ -437,6 +439,16 @@ try {
   assert.equal(mermaid.exitCode, 0);
   assert.match(mermaid.stdout.toString(), /^flowchart TD\n/);
   await proveTtyDelete({ cli, env, evidence, run, state });
+  await proveImportExportPublic({
+    cli,
+    env,
+    scratch,
+    evidence,
+    run,
+    http,
+    state,
+  });
+  await proveGraphPublic({ path, evidence, run, http });
   writeFileSync(
     join(evidence, "result.json"),
     JSON.stringify(

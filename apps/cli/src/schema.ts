@@ -4,9 +4,11 @@ import {
   SnapshotManifest,
   SnapshotPruneReport,
   SnapshotRestoreReport,
+  TaskId,
 } from "@todo/domain";
 import {
   ErrorResponse,
+  ExportResponse,
   HistoryResponse,
   TaskResponse,
   TasksResponse,
@@ -53,6 +55,7 @@ export const PassphraseResetResponse = Schema.Struct({
 });
 export type PathResponse = typeof PathResponse.Type;
 export const PathResponse = Schema.Struct({
+  outside_projection: Schema.optionalKey(Schema.Array(TaskId)),
   generated_at: Schema.String,
   path: Schema.String,
 });
@@ -105,7 +108,7 @@ export function commandSchema(name: string) {
 
 for (const name of ["add", "show", "edit", "done", "cancel", "reopen"])
   registerCommandSchema(name, TaskResponse);
-for (const name of ["list", "review daily", "review weekly", "export"])
+for (const name of ["list", "review daily", "review weekly"])
   registerCommandSchema(name, TasksResponse);
 registerCommandSchema("history", HistoryResponse);
 registerCommandSchema("error", ErrorResponse);
@@ -157,3 +160,5 @@ registerCommandSchema(
     }),
   ]),
 );
+
+registerCommandSchema("export", ExportResponse);

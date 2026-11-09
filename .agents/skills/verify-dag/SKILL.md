@@ -6,8 +6,8 @@ description: Verify Task Dependency storage, authoritative graph rules and repla
 # Verify Dependencies
 
 Created with create-verification-skill. Read the [feature map](features/README.md).
-Unit A's entry point is the OperationStore library. CLI and HTTP graph commands
-belong to Unit B and are not claimed by this drive.
+The library drive checks OperationStore and shared algorithms. The separate
+public drive checks compiled CLI commands and authenticated HTTP routes.
 
 ## Launch
 
@@ -60,11 +60,11 @@ scripts/verify.sh is executable and takes an absolute evidence path.
 The .claude/skills/verify-dag link is relative to this checkout. Check it with
 `realpath .claude/skills/verify-dag`. Runtime Claude discovery requires a fresh
 Claude session and is not established by the symlink alone.
-Use /maintain-verification-skill when B adds public graph commands.
+Use /maintain-verification-skill when graph behavior changes.
 
 The compiled drive also invokes graph-proof.ts, which imports the production
 query/order/energy/format exports. See queries.md for its literal fixtures.
-It remains compiled library proof until the public command drive is added.
+The public drive below separately exercises the production command boundaries.
 
 ## Public commands and routes
 
@@ -77,4 +77,14 @@ without credentials; cleanup.json records the owned server PID and real exit.
 The current corpus covers edge no-ops/Conflicts, cycles, redundant warnings,
 9/13/14, Ready/Blocked, atomic creation, public edge Revert, blocked completion,
 Delete previews/refusals/fingerprint changes, batch previews, Series inheritance,
-and move/copy. TTY and import/export proof are added in the final B unit.
+and move/copy. Real PTYs check No, EOF, default No, Yes and a competing-edge
+confirmation race. State comparisons include History, replay checkpoints and
+owner Snapshot file bytes. Import uses dependencies-forward.json to check later
+file references, Version-1 initial edges, report order, atomic refusal and failed
+adoption. CLI/HTTP encoding must retain the complete nested DependencyError.
+Export checks nonempty-only depends_on and absent response metadata; Obsidian
+checks one managed note, preserved surrounding text, stable block links and
+Mermaid. The public graph corpus also checks a 105-Task cycle with its full
+shortest witness, terminal-pruned energy, terminal-node ordering and changed-to-
+empty preview fingerprints. graph-public.json and import-export.json retain
+literal observations. Client feature UI and both-client proof remain separate.

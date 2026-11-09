@@ -27,6 +27,11 @@ export const emptyDependencies = (): DependencyChanges => ({
   removed: [],
   versions: [],
 });
+export const DependencyAdvice = Schema.String.check(
+  Schema.isPattern(
+    /^This Task depends on [0-9]+ Tasks[.] That's a lot for one Task[.] It might be a whole Project, or it might be clearer split under a few more parent Tasks[.]$/u,
+  ),
+);
 const errorFields = { generated_at: Instant, message: Schema.NonEmptyString };
 export const DependencyError = Schema.Union([
   Schema.Struct({
@@ -35,29 +40,33 @@ export const DependencyError = Schema.Union([
     details: Schema.Struct({
       dependent_id: TaskId,
       blocker_id: TaskId,
-      path: Schema.Array(TaskId),
+      path: Schema.Array(TaskId).check(Schema.isMinLength(2)),
     }),
   }),
   Schema.Struct({
     ...errorFields,
     code: Schema.Literal("too_many_dependencies"),
+    message: DependencyAdvice,
     details: Schema.Struct({
       dependent_id: TaskId,
-      count: Schema.Int,
+      count: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
       limit: Schema.Literal(13),
     }),
   }),
   Schema.Struct({
     ...errorFields,
     code: Schema.Literal("blocked"),
-    details: Schema.Struct({ task_id: TaskId, blockers: Schema.Array(Task) }),
+    details: Schema.Struct({
+      task_id: TaskId,
+      blockers: Schema.Array(Task).check(Schema.isMinLength(1)),
+    }),
   }),
   Schema.Struct({
     ...errorFields,
     code: Schema.Literal("blocks_done_task"),
     details: Schema.Struct({
       task_id: TaskId,
-      done_dependents: Schema.Array(Task),
+      done_dependents: Schema.Array(Task).check(Schema.isMinLength(1)),
       follow_up_depends_on: TaskId,
     }),
   }),
@@ -79,7 +88,7 @@ export const DependencyError = Schema.Union([
       profile_id: ProfileId,
     }),
   }),
-]);
+]).annotate({ identifier: "DependencyError" });
 export type DependencyError = typeof DependencyError.Type;
 export const RejectionDetails = Schema.Union([
   Schema.Struct({

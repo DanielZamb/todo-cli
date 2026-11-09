@@ -1,5 +1,10 @@
 import { Schema } from "effect";
-import { DependencyError, Edge, VersionChange } from "./dependencies.ts";
+import {
+  DependencyAdvice,
+  DependencyError,
+  Edge,
+  VersionChange,
+} from "./dependencies.ts";
 import { Task } from "./entities.ts";
 import { Sequence, TaskId, Version } from "./ids.ts";
 import { limitedItems, TaskIdInput } from "./limits.ts";
@@ -14,16 +19,16 @@ export type DependRequest = typeof DependRequest.Type;
 export const DependencyWarning = Schema.Union([
   Schema.Struct({
     code: Schema.Literal("many_dependencies"),
-    message: Schema.String,
+    message: DependencyAdvice,
     dependent_id: TaskId,
-    count: Schema.Int,
+    count: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
   }),
   Schema.Struct({
     code: Schema.Literal("redundant_dependency"),
-    message: Schema.String,
+    message: Schema.NonEmptyString,
     dependent_id: TaskId,
     blocker_id: TaskId,
-    path: Schema.Array(TaskId),
+    path: Schema.Array(TaskId).check(Schema.isMinLength(3)),
   }),
 ]);
 export type DependencyWarning = typeof DependencyWarning.Type;
@@ -73,7 +78,10 @@ export const BatchEdgeReport = Schema.Struct({
   dry_run: Schema.Boolean,
   results: Schema.Array(
     Schema.Union([
-      Schema.Struct({ index: Schema.Int, result: EdgeReport }),
+      Schema.Struct({
+        index: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+        result: EdgeReport,
+      }),
       Schema.Struct({
         index: Schema.Int,
         error: EdgeFailure,

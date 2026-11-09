@@ -48,6 +48,7 @@ import {
   RecurrenceEditInput,
   RecurrenceInput,
   type RevertTask,
+  resolveTaskCreation,
   TaskPatch,
   type TransitionTask,
 } from "./task-commands.ts";
@@ -139,10 +140,12 @@ const numberValue = (value: string) => {
 export const readTasks = Effect.fn(function* (
   store: OperationStore,
   request: AccessRequest,
+  filters: TaskFilters = {},
 ) {
   const data = yield* store.auth.read(request);
-  const tasks = data.tasks
-    .filter((t) => t.profile_id === request.profile && t.deleted_at === null)
+  const graph = yield* store.graph(request.profile);
+  const ordered = graph.tasks
+    .filter((t) => t.deleted_at === null)
     .sort(
       (a, b) =>
         a.priority.localeCompare(b.priority) ||
@@ -161,6 +164,10 @@ export const readTasks = Effect.fn(function* (
         a.created_at.localeCompare(b.created_at) ||
         a.id.localeCompare(b.id),
     );
+  const context = graph.edges.length || filters.ready || filters.blocked || filters.order ? graph : undefined;
+  const tasks = yield* filters.text === undefined
+    ? Effect.sync(() => filterTaskRecords(ordered, filters, data, undefined, context))
+    : filterTaskRecordsEffect(ordered, filters, data, undefined, context);
   return {
     ...data,
     tasks,
@@ -256,6 +263,7 @@ type Definitions = {
   readonly tags: readonly Tag[];
 };
 type CommandOptions = {
+  readonly task_id?: TaskId;
   readonly definitions?: Definitions;
   readonly recurrence?: Recurrence | null;
   readonly deletion?: DeleteTask;
@@ -457,29 +465,13 @@ export class TaskCommands {
                 "Invalid Attachment URI or file path. Check every Attachment and retry.",
             } satisfies TaskCommandResult;
           }
-          const initial = Schema.decodeUnknownSync(Task)({
-            description: null,
-            project_id: null,
-            priority: "P3",
-            scheduled_at: null,
-            due_at: null,
-            energy: null,
-            estimate_min: null,
-            source: "manual",
-            tags: [],
-            ...input,
-            ...(attachments === undefined ? {} : { attachments }),
-            id: taskId(),
-            profile_id: identity.profile,
-            entity_version: 1,
-            row_version: 1,
-            status: "open",
-            occurrence: null,
-            created_at: time,
-            updated_at: time,
-            completed_at: null,
-            deleted_at: null,
-          });
+          const initial = resolveTaskCreation(
+            input,
+            identity.profile,
+            options.task_id ?? taskId(),
+            time,
+            attachments,
+          );
           const { task, definitions } = yield* this.resolveMetadata(
             initial,
             input,
@@ -657,7 +649,10 @@ export class TaskCommands {
                 generated_at: time,
                 code: "has_dependencies",
                 message:
-                  "Use --with-dependencies to delete this Task and remove these Dependencies. Review the current Dependencies and confirm again.",
+                  options.deletion?.dependency_fingerprint !== undefined &&
+                  options.deletion.dependency_fingerprint !== fingerprint
+                    ? "The Dependency preview changed. Preview this Task again and confirm the current set before deleting it."
+                    : "Use --with-dependencies to delete this Task and remove these Dependencies. Review the current Dependencies and confirm again.",
                 details: {
                   task_id: before.id,
                   dependencies: edges,

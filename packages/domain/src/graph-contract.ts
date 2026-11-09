@@ -10,6 +10,7 @@ export const RemainingEnergySchema = Schema.Struct({
   unweighted: count,
 });
 export const GraphNode = Schema.Struct({
+  mermaid_id: Schema.String.check(Schema.isPattern(/^n[0-9]+$/u)),
   task: Task,
   in_degree: count,
   out_degree: count,
@@ -25,12 +26,12 @@ const graphFields = {
   generated_at: Instant,
   profile_id: ProfileId,
   task_id: TaskId,
-  nodes: Schema.Array(GraphNode),
+  nodes: Schema.Array(GraphNode).check(Schema.isMinLength(1)),
   edges: Schema.Array(Edge),
   sources: Schema.Array(TaskId),
   sinks: Schema.Array(TaskId),
   topological_order: Schema.Array(TaskId),
-  mermaid: Schema.String,
+  mermaid: Schema.NonEmptyString,
 };
 export const GraphReport = Schema.Union([
   Schema.Struct({

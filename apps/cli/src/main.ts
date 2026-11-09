@@ -31,11 +31,12 @@ import {
   batchDepend,
   batchEditTasks,
   ClientReads,
+  CreateTask,
+  DeleteTask,
   DependencyCommands,
   DependRequest,
   EdgeReport,
   edgeFailure,
-  filterTaskRecords,
   GraphReport,
   inputLimits,
   ProfileDeletionReport,
@@ -80,6 +81,7 @@ import {
   type Format,
   iso,
   obsidianProjection,
+  projectionDependencies,
   renderError,
   renderExport,
   renderHistory,
@@ -714,17 +716,11 @@ const list = Command.make(
       yield* withStore(cfg, (store) =>
         Effect.gen(function* () {
           const request = yield* selectProfile(store, cfg);
-          const data = yield* readTasks(store, request);
-          const graph = yield* store.graph(request.profile);
-          const records = yield* io(() =>
-            filterTaskRecords(data.tasks, filters, data, undefined, graph),
-          );
+          const data = yield* readTasks(store, request, filters);
           yield* write(
             renderTasks(
               filterTasks(
-                records.map((task) =>
-                  taskView(task, data.projects, data.tags, data.series),
-                ),
+                data.views,
                 {
                   today: input.today,
                   overdue: input.overdue,
@@ -1346,6 +1342,9 @@ let graphMermaidOutput = false;
 registerCommandSchema("depend", EdgeReport);
 registerCommandSchema("undepend", EdgeReport);
 registerCommandSchema("depend-input", DependRequest, "input");
+registerCommandSchema("list-input", TaskFilters, "input");
+registerCommandSchema("add-input", CreateTask, "input");
+registerCommandSchema("rm-input", DeleteTask, "input");
 registerCommandSchema("undepend-input", DependRequest, "input");
 registerCommandSchema("graph", GraphReport);
 registerCommandSchema("batch-depend", BatchEdgeReport);
@@ -1660,7 +1659,16 @@ const sync = Command.make("sync").pipe(
               yield* response(
                 cfg.format,
                 PathResponse,
-                { generated_at: iso(nowInstant()), path: target },
+                {
+                  generated_at: iso(nowInstant()),
+                  path: target,
+                  ...(projectionDependencies(data.views).outside.length
+                    ? {
+                        outside_projection: projectionDependencies(data.views)
+                          .outside,
+                      }
+                    : {}),
+                },
                 `${target}\n`,
               );
             }),

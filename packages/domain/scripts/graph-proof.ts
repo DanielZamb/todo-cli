@@ -35,6 +35,15 @@ export function proveGraphAlgorithms() {
   assert.ok(report);
   assert.equal(Schema.is(GraphReport)(report), true);
   assert.equal(report.shape, "dag");
+  assert.deepEqual(
+    report.nodes.map((node) => [node.task.id, node.mermaid_id]),
+    [
+      ["A", "n0"],
+      ["B", "n1"],
+      ["C", "n2"],
+      ["D", "n3"],
+    ],
+  );
   assert.deepEqual(report.sources, ["A"]);
   assert.deepEqual(report.sinks, ["D"]);
   assert.deepEqual(
