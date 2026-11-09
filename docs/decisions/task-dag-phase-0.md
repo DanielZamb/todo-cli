@@ -70,10 +70,10 @@ cancelled nodes stop this weighted walk. A resolved root has zero remaining
 energy and zero unweighted. An unresolved node without energy contributes one
 to unweighted and still permits upstream traversal. A 1,2,3,4 diamond totals 10.
 Profile-wide ranking uses temporary ancestor bitsets and weight masks, never
-stored sums. `lightest_next` contains the Ready Tasks in T's remaining set,
-including T itself, sorted by their own energy, unknown last, then whole-Profile
-topological position. A Ready unresolved T gives [T]. A done or cancelled T
-gives []. No estimates or critical path are exposed.
+stored sums. GraphReport's `lightest_next` contains the Ready Tasks in T's
+remaining set, including T itself, in whole-Profile topological order. A Ready
+unresolved T gives [T]. A done or cancelled T gives []. No estimates or critical
+path are exposed. This response ordering follows coordinator correction G11.
 
 The connected group is the weakly connected visible component. Sources have
 in-degree zero; sinks have out-degree zero. Ancestors and descendants are
@@ -84,6 +84,15 @@ Tree results also carry orientation: converging when every Task blocks at most
 one other Task, diverging when every Task has at most one blocker, or mixed.
 The single and chain cases take precedence, so those two tree orientations
 cannot overlap. Redundant stored edges affect the shape.
+
+GraphNode carries only mermaid_id, task, in_degree, out_degree, ready, blocked,
+depth and remaining_energy. GraphReport carries ancestors, descendants and
+lightest_next for the requested Task only, each in whole-Profile topological
+order. Clients request another Task's graph for that Task's sets. The response
+contains O(n+m) graph data plus O(a+z) root sets, rather than every node's
+transitive sets. A literal 1,000-Task chain must prove the exact node keys and
+root ancestors. Record actual serialized response bytes before and after on
+scratch SQLite. This is coordinator seat 2's G11 contract amendment for B.
 
 ## Wire and CLI contract
 

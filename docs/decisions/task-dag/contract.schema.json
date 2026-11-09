@@ -1267,6 +1267,10 @@
     "GraphNode": {
       "type": "object",
       "properties": {
+        "mermaid_id": {
+          "type": "string",
+          "minLength": 1
+        },
         "task": {
           "$ref": "#/$defs/Task"
         },
@@ -1286,20 +1290,6 @@
         "blocked": {
           "type": "boolean"
         },
-        "ancestors": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "descendants": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
         "depth": {
           "type": "integer",
           "minimum": 0,
@@ -1307,27 +1297,17 @@
         },
         "remaining_energy": {
           "$ref": "#/$defs/Energy"
-        },
-        "lightest_next": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "description": "Ready Tasks in this Task's remaining set, including itself. A Ready unresolved Task returns itself; terminal Tasks return an empty array."
         }
       },
       "required": [
+        "mermaid_id",
         "task",
         "in_degree",
         "out_degree",
         "ready",
         "blocked",
-        "ancestors",
-        "descendants",
         "depth",
-        "remaining_energy",
-        "lightest_next"
+        "remaining_energy"
       ],
       "additionalProperties": false
     },
@@ -1381,6 +1361,28 @@
                 "minLength": 1
               }
             },
+            "ancestors": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "descendants": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "lightest_next": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Ready Tasks in the requested Task's remaining set, including itself, in whole-Profile topological order. A Ready unresolved Task returns itself; terminal Tasks return an empty array."
+            },
             "mermaid": {
               "type": "string",
               "minLength": 1
@@ -1405,6 +1407,9 @@
             "sources",
             "sinks",
             "topological_order",
+            "ancestors",
+            "descendants",
+            "lightest_next",
             "mermaid",
             "shape",
             "orientation"
@@ -1459,6 +1464,28 @@
                 "minLength": 1
               }
             },
+            "ancestors": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "descendants": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "lightest_next": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Ready Tasks in the requested Task's remaining set, including itself, in whole-Profile topological order. A Ready unresolved Task returns itself; terminal Tasks return an empty array."
+            },
             "mermaid": {
               "type": "string",
               "minLength": 1
@@ -1476,6 +1503,9 @@
             "sources",
             "sinks",
             "topological_order",
+            "ancestors",
+            "descendants",
+            "lightest_next",
             "mermaid",
             "shape"
           ],
@@ -1528,6 +1558,28 @@
                 "type": "string",
                 "minLength": 1
               }
+            },
+            "ancestors": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "descendants": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "lightest_next": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Ready Tasks in the requested Task's remaining set, including itself, in whole-Profile topological order. A Ready unresolved Task returns itself; terminal Tasks return an empty array."
             },
             "mermaid": {
               "type": "string",
@@ -1546,6 +1598,9 @@
             "sources",
             "sinks",
             "topological_order",
+            "ancestors",
+            "descendants",
+            "lightest_next",
             "mermaid",
             "shape"
           ],
@@ -1599,6 +1654,28 @@
                 "minLength": 1
               }
             },
+            "ancestors": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "descendants": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "lightest_next": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Ready Tasks in the requested Task's remaining set, including itself, in whole-Profile topological order. A Ready unresolved Task returns itself; terminal Tasks return an empty array."
+            },
             "mermaid": {
               "type": "string",
               "minLength": 1
@@ -1616,6 +1693,9 @@
             "sources",
             "sinks",
             "topological_order",
+            "ancestors",
+            "descendants",
+            "lightest_next",
             "mermaid",
             "shape"
           ],

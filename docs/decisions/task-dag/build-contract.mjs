@@ -34,8 +34,8 @@ defs.DependencyError = { oneOf: [
   error("dependency_profile_mismatch", obj({ dependent_id: str, blocker_id: str, profile_id: str })),
 ] };
 defs.Energy = obj({ energy: count, unweighted: count });
-defs.GraphNode = obj({ task: ref("Task"), in_degree: count, out_degree: count, ready: { type: "boolean" }, blocked: { type: "boolean" }, ancestors: arr(str), descendants: arr(str), depth: count, remaining_energy: ref("Energy"), lightest_next: { ...arr(str), description: "Ready Tasks in this Task's remaining set, including itself. A Ready unresolved Task returns itself; terminal Tasks return an empty array." } });
-const graphFields = { generated_at: stamp, profile_id: str, task_id: str, nodes: arr(ref("GraphNode"), { minItems: 1 }), edges: arr(ref("Edge")), sources: arr(str), sinks: arr(str), topological_order: arr(str), mermaid: str };
+defs.GraphNode = obj({ mermaid_id: str, task: ref("Task"), in_degree: count, out_degree: count, ready: { type: "boolean" }, blocked: { type: "boolean" }, depth: count, remaining_energy: ref("Energy") });
+const graphFields = { generated_at: stamp, profile_id: str, task_id: str, nodes: arr(ref("GraphNode"), { minItems: 1 }), edges: arr(ref("Edge")), sources: arr(str), sinks: arr(str), topological_order: arr(str), ancestors: arr(str), descendants: arr(str), lightest_next: { ...arr(str), description: "Ready Tasks in the requested Task's remaining set, including itself, in whole-Profile topological order. A Ready unresolved Task returns itself; terminal Tasks return an empty array." }, mermaid: str };
 defs.GraphReport = { oneOf: [obj({ ...graphFields, shape: lit("tree"), orientation: { enum: ["converging", "diverging", "mixed"] } }), ...["single", "chain", "dag"].map(shape => obj({ ...graphFields, shape: lit(shape) }))] };
 defs.DeleteReport = obj({ generated_at: stamp, task: ref("Task"), removed_dependencies: arr(ref("Edge")), affected_versions: arr(ref("VersionChange")), dependency_fingerprint: { type: "string", pattern: "^[a-f0-9]{64}$" }, dry_run: { type: "boolean" } });
 defs.BatchEdgeItem = obj({ action: { enum: ["depend", "undepend"] }, dependent_id: inputId, blocker_id: inputId, from_version: version });
@@ -65,7 +65,8 @@ const findKind = (v, kind) => {
 for (const kind of ["TaskCreated", "TaskMovedOut", "TaskReverted"]) {
   const original = findKind(v1,kind);
   if (!original) throw new Error("Missing existing event " + kind);
-  defs[kind + "V2"] = obj({...original.properties, entity_version: lit(2), dependencies: ref("DependencyChanges")}, Object.keys(original.properties).filter(k=>!original.required.includes(k)));
+  const properties = Object.fromEntries(Object.entries(original.properties).filter(([key]) => key !== "dependencies"));
+  defs[kind + "V2"] = obj({...properties, entity_version: lit(2), dependencies: ref("DependencyChanges")}, Object.keys(properties).filter(k=>!original.required.includes(k)));
 }
 defs.RejectionDetails = {oneOf: [obj({witness: ref("DependencyError"), truncated: lit(false), total: count}), obj({witness: {type: "null"}, truncated: lit(true), total: count})]};
 const taskJson = JSON.stringify(defs.Task);

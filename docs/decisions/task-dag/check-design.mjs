@@ -14,6 +14,13 @@ expect(shapes.map(s=>s.properties.shape.const), ["tree","single","chain","dag"],
 expect(shapes[0].properties.orientation.enum, ["converging","diverging","mixed"], "tree orientations");
 expect(shapes[0].required.includes("orientation"), true, "tree orientation required");
 expect(shapes.slice(1).every(s=>!("orientation" in s.properties)), true, "only trees have orientation");
+expect(Object.keys(schemas.GraphNode.properties).sort(), ["mermaid_id", "task", "in_degree", "out_degree", "ready", "blocked", "depth", "remaining_energy"].sort(), "graph nodes have only constant-count fields");
+for (const field of ["ancestors", "descendants", "lightest_next"]) {
+  expect(shapes.every(s=>s.required.includes(field) && s.properties[field].type === "array"), true, `${field} belongs to the requested Task report`);
+}
+for (const kind of ["TaskCreated", "TaskDeleted", "TaskMovedOut", "TaskReverted"]) {
+  expect(schemas[kind + "V2"].required.includes("dependencies"), true, `${kind} v2 requires its resolved Dependency delta`);
+}
 for(const n of [9,14]) expect(new RegExp(schemas.DependencyAdvice.pattern).test(`This Task depends on ${n} Tasks. That's a lot for one Task. It might be a whole Project, or it might be clearer split under a few more parent Tasks.`), true, "counted advice");
 const scene = JSON.parse(readFileSync(new URL("../../diagrams/todo.excalidraw", import.meta.url)));
 const all = new Map(scene.elements.map((e) => [e.id, e]));
