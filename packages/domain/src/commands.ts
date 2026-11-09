@@ -46,7 +46,11 @@ import {
   TaskPatch,
   type TransitionTask,
 } from "./task-commands.ts";
-import { filterTaskRecordsEffect, type TaskFilters } from "./task-filters.ts";
+import {
+  filterTaskRecords,
+  filterTaskRecordsEffect,
+  type TaskFilters,
+} from "./task-filters.ts";
 import type { TaskRead } from "./task-read.ts";
 import type { SearchTooBroad } from "./task-search.ts";
 import { CalendarDate, Instant, TaskTime } from "./time.ts";
@@ -280,16 +284,15 @@ export class TaskCommands {
   ): Effect.Effect<TaskRead[], AuthError | StoreError | SearchTooBroad>;
   list(request: AccessRequest, filters: TaskFilters = {}) {
     return this.store.auth.read(request).pipe(
-      Effect.flatMap((view) =>
-        filterTaskRecordsEffect(
-          view.tasks.filter(
-            (task) =>
-              task.profile_id === request.profile && task.deleted_at === null,
-          ),
-          filters,
-          view,
-        ),
-      ),
+      Effect.flatMap((view) => {
+        const tasks = view.tasks.filter(
+          (task) =>
+            task.profile_id === request.profile && task.deleted_at === null,
+        );
+        return filters.text === undefined
+          ? Effect.sync(() => filterTaskRecords(tasks, filters, view))
+          : filterTaskRecordsEffect(tasks, filters, view);
+      }),
     );
   }
 
