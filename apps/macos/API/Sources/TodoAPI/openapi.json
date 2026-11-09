@@ -4098,7 +4098,42 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InvalidTaskEncoded"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidTaskEncoded"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [2]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["validation or usage"]
+                        },
+                        "generated_at": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": ["search_too_broad"]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
                 }
               }
             }

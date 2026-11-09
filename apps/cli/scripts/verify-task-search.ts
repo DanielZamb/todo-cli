@@ -71,7 +71,12 @@ export async function verifyTaskSearch(
   ]) {
     assert.ok(name !== undefined && value !== undefined);
     const failure = Schema.decodeUnknownSync(
-      Schema.Struct({ code: Schema.String, message: Schema.String }),
+      Schema.Struct({
+        code: Schema.String,
+        message: Schema.String,
+        exit_code: Schema.Number,
+        exit_meaning: Schema.String,
+      }),
     )(cli(["list", `--${name}=${value}`], undefined, 2));
     assert.equal(failure.code, "invalid_args");
     assert.ok(failure.message.includes(`--${name}`));
@@ -166,6 +171,124 @@ export async function verifyTaskSearch(
   assert.equal(unchanged.row_version, 1);
   for (const created of [first, second])
     cli(["rm", created.id, "--expected-version", "1"]);
+  const budgetTasks = Array.from(
+    { length: 3 },
+    (_, index) =>
+      Schema.decodeUnknownSync(TaskResponse)(
+        cli([
+          "add",
+          `Budget probe ${index}`,
+          "--desc",
+          "\ufdfa".repeat(100000),
+        ]),
+      ).task,
+  );
+  const budgetText = "\ufdfa".repeat(200);
+  const broad = Schema.decodeUnknownSync(
+    Schema.Struct({
+      code: Schema.String,
+      message: Schema.String,
+      exit_code: Schema.Number,
+      exit_meaning: Schema.String,
+    }),
+  )(cli(["list", "--text", budgetText], undefined, 2));
+  const expectedBroad = {
+    exit_code: 2,
+    exit_meaning: "validation or usage",
+    code: "search_too_broad",
+    message:
+      "Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.",
+  };
+  assert.deepEqual(
+    {
+      code: broad.code,
+      message: broad.message,
+      exit_code: broad.exit_code,
+      exit_meaning: broad.exit_meaning,
+    },
+    expectedBroad,
+  );
+  const remoteBroad = Schema.decodeUnknownSync(
+    Schema.Struct({
+      exit_code: Schema.Number,
+      exit_meaning: Schema.String,
+      generated_at: Schema.String,
+      code: Schema.String,
+      message: Schema.String,
+    }),
+  )(
+    await request(
+      `/profiles/work/tasks?${new URLSearchParams({ text: budgetText })}`,
+      "GET",
+      undefined,
+      422,
+    ),
+  );
+  assert.deepEqual(
+    {
+      code: remoteBroad.code,
+      message: remoteBroad.message,
+      exit_code: remoteBroad.exit_code,
+      exit_meaning: remoteBroad.exit_meaning,
+    },
+    expectedBroad,
+  );
+  const budgetFirst = budgetTasks[0];
+  const budgetLast = budgetTasks[2];
+  assert.ok(budgetFirst && budgetLast);
+  const narrowed = Schema.decodeUnknownSync(TasksResponse)(
+    cli(["list", "--text", budgetText, "--prefix", budgetFirst.id]),
+  );
+  assert.deepEqual(
+    narrowed.tasks?.map(({ title, search_matches }) => ({
+      title,
+      search_matches,
+    })),
+    [
+      {
+        title: "Budget probe 0",
+        search_matches: [{ field: "description", start: 0, end: 100000 }],
+      },
+    ],
+  );
+  cli([
+    "edit",
+    budgetLast.id,
+    "--desc",
+    "Small description",
+    "--expected-version",
+    "1",
+  ]);
+  const recovered = Schema.decodeUnknownSync(TasksResponse)(
+    cli(["list", "--text", budgetText]),
+  );
+  assert.deepEqual(recovered.tasks?.map(({ title }) => title).sort(), [
+    "Budget probe 0",
+    "Budget probe 1",
+  ]);
+  const remoteRecovered = Schema.decodeUnknownSync(Schema.Array(TaskRead))(
+    await request(
+      `/profiles/work/tasks?${new URLSearchParams({ text: budgetText })}`,
+    ),
+  );
+  assert.deepEqual(remoteRecovered.map(({ title }) => title).sort(), [
+    "Budget probe 0",
+    "Budget probe 1",
+  ]);
+  for (const created of budgetTasks)
+    cli([
+      "rm",
+      created.id,
+      "--expected-version",
+      created.id === budgetLast.id ? "2" : "1",
+    ]);
+  receipts.push({
+    budget: {
+      cli: broad,
+      http: remoteBroad,
+      recoveredTitles: recovered.tasks?.map((task) => task.title),
+    },
+  });
   writeFileSync(
     join(evidence, "task-search.json"),
     JSON.stringify(

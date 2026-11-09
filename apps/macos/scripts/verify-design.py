@@ -51,7 +51,7 @@ assert (resources / 'Assets.car').is_file(), 'actool did not compile the product
 environment = dict(os.environ, TODO_SNAPSHOT_DIR=str(evidence))
 run(['swift', 'test', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--skip-build', '--disable-automatic-resolution', '--filter', 'Snapshots'], 'render.log', environment)
 manifest = json.loads((evidence / 'manifest.json').read_text())
-assert len(manifest['files']) == (116 if os.environ.get('TODO_SNAPSHOT_DISCOVERY_ONLY') == '1' else 56 if os.environ.get('TODO_SNAPSHOT_SEARCH_ONLY') == '1' else 2 if os.environ.get('TODO_SNAPSHOT_QUICK_ONLY') == '1' else 18 if os.environ.get('TODO_SNAPSHOT_PRIORITY_ONLY') == '1' else 28 if os.environ.get('TODO_SNAPSHOT_BATCH_EDIT_ONLY') == '1' else 346)
+assert len(manifest['files']) == (116 if os.environ.get('TODO_SNAPSHOT_DISCOVERY_ONLY') == '1' else 60 if os.environ.get('TODO_SNAPSHOT_SEARCH_ONLY') == '1' else 2 if os.environ.get('TODO_SNAPSHOT_QUICK_ONLY') == '1' else 18 if os.environ.get('TODO_SNAPSHOT_PRIORITY_ONLY') == '1' else 28 if os.environ.get('TODO_SNAPSHOT_BATCH_EDIT_ONLY') == '1' else 346)
 assert all((evidence / name).is_file() for name in manifest['files'])
 (evidence / 'result.json').write_text(json.dumps({'status': 'PASS', 'pngs': len(manifest['files']), 'appLaunched': False, 'signed': False, 'keychainAccess': False, 'nativeGlassVerified': False}, indent=2) + '\n')
 print(f"PASS: {len(manifest['files'])} offscreen PNGs in {evidence}")

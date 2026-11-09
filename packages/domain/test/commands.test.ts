@@ -62,6 +62,27 @@ const usingStore = <A, E>(
   );
 
 it.effect(
+  "keeps unfiltered command reads synchronous for transactional callers",
+  () =>
+    usingStore((store) =>
+      Effect.gen(function* () {
+        const session = yield* store.auth
+          .signIn("scratch commands passphrase")
+          .pipe(Effect.provideService(Clock.Clock, Clock.Clock.defaultValue()));
+        const request = { credential: session.credential, profile };
+        yield* createTask(store, request, { title: "Synchronous read" });
+        const commands = new TaskCommands(store);
+        const rows = yield* Effect.sync(() =>
+          Effect.runSync(commands.list(request)),
+        );
+        expect(rows.map((task) => [task.title, task.status])).toEqual([
+          ["Synchronous read", "open"],
+        ]);
+      }),
+    ),
+);
+
+it.effect(
   "Revert of a redacted completion returns task_purged for its surviving Occurrence",
   () =>
     usingStore((store) =>

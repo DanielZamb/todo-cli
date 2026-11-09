@@ -1,6 +1,34 @@
 import type { TaskRead } from "@todo/domain";
 import { Fragment } from "react";
 
+export function appliedSearchContext(text: string | undefined) {
+  return text
+    ? `Showing results for "${text}".`
+    : "Showing tasks without search.";
+}
+
+export function SearchErrorMessage({
+  kind,
+  message,
+  appliedText,
+}: {
+  kind: "transient" | "search_too_broad";
+  message: string;
+  appliedText: string | undefined;
+}) {
+  const context = appliedSearchContext(appliedText);
+  return (
+    <>
+      <span className="whitespace-pre-line">
+        {kind === "search_too_broad" ? message : `Couldn't search. ${context}`}
+      </span>
+      {kind === "search_too_broad" && (
+        <small className="search-error-context">{context}</small>
+      )}
+    </>
+  );
+}
+
 export function SearchHighlight({
   text,
   matches,

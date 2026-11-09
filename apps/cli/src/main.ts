@@ -41,6 +41,7 @@ import {
   parseQuickAdd,
   QuickAddDraft,
   QuickAddInput,
+  SearchTooBroad,
   SnapshotError,
   TaskFilters,
   TaskId,
@@ -165,7 +166,9 @@ const io = <A>(run: () => A) =>
     catch: (error) =>
       error instanceof CommandError
         ? error
-        : new CommandError(1, "runtime_error", String(error)),
+        : error instanceof SearchTooBroad
+          ? new CommandError(2, error.code, error.message)
+          : new CommandError(1, "runtime_error", String(error)),
   });
 const localDir = join(homedir(), ".todo-cli");
 const Config = Schema.Struct({ db_path: Schema.optionalKey(Schema.String) });
@@ -762,10 +765,13 @@ const list = Command.make(
             store,
             yield* selectProfile(store, cfg, "read"),
           );
+          const records = yield* io(() =>
+            filterTaskRecords(data.tasks, filters, data),
+          );
           yield* write(
             renderList(
               filterTasks(
-                filterTaskRecords(data.tasks, filters, data).map((task) =>
+                records.map((task) =>
                   taskView(task, data.projects, data.tags, data.series),
                 ),
                 {

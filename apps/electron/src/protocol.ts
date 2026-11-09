@@ -234,6 +234,7 @@ export const Reply = Schema.Union([
   Schema.TaggedStruct("error", {
     message: Schema.String,
     details: Schema.optionalKey(TaskLookupDetails),
+    code: Schema.optionalKey(Schema.Literal("search_too_broad")),
   }),
 ]);
 export type Reply = typeof Reply.Type;

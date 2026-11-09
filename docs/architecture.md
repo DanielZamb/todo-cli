@@ -119,6 +119,28 @@ metadata. CLI JSON and HTTP list results carry the same matched strings and
 spans; clients highlight those spans without repeating matching. No migration
 or FTS index is needed. See [ADR-0014](adr/0014-task-search.md).
 
+Normalized duplicate clauses execute once. Word clauses memoize acceptance for
+each distinct folded word within one field evaluation and retain every original
+occurrence for spans. Typo prefixes use a reusable banded unrestricted Damerau
+buffer. The synchronous CLI and the server share one generator core. The server
+drains it through `filterTaskRecordsEffect`, yielding between Tasks and after
+512 evaluated word occurrences. `TaskCommands.list` starts that drain after
+`auth.read` has returned its authorized in-memory view, with no SQLite read
+transaction open. Field preparation uses the same generator, yielding after
+512 graphemes or segmented parts while preserving normalization across chunks.
+Client disconnect interrupts the HTTP fiber at a checkpoint through the Bun
+HTTP adapter's request abort listener. No search cache survives the request.
+
+`PreparedField` carries words and the exact folded UTF-16 field length.
+Search charges that length after each field is ready, including supplied stored
+PreparedFields, and charges evaluated Damerau cells plus walked word occurrences
+and tested phrase start positions with one shared rational
+weight. The request meter spans Tasks that pass the other TaskFilters and checks
+at checkpoints and before publication. A refusal returns `search_too_broad`,
+CLI exit 2 or HTTP 422, with no partial rows. The limits and owner decision are
+in the [ADR-0014 budget amendment](adr/0014-task-search.md#search-work-budget-owner-2026-11-09).
+The Effect driver closes a suspended generator on interruption or failure.
+
 Each client retains one applied response snapshot while requesting a newer
 identity. Search text survives Profile and view switches. Failed reads offer
 Retry and recover on current-Profile SSE reconnection or operations, without
