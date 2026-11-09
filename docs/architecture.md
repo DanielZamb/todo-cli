@@ -124,6 +124,16 @@ identity. Search text survives Profile and view switches. Failed reads offer
 Retry and recover on current-Profile SSE reconnection or operations, without
 a search retry timer. See [ADR-0015](adr/0015-search-text-retention-and-recovery.md).
 
+## Agent discovery contract
+
+The approved [agent discovery contract](decisions/agent-discovery-phase-0.md)
+adds a Profile-to-Project directory and explicit read-only Task prefix lookup
+over `Authentication.profiles`. Implementation follows the approved Phase 0 gate.
+[ADR-0019](adr/0019-authorized-read-only-discovery.md) records the boundary.
+Normal Task lookup and mutations remain Profile-scoped. The workflow
+frames are `agent-errors`, `agent-lookup-errors`, `agent-directory`, `agent-prefix`,
+and `agent-list` in the shared Excalidraw scene.
+
 ## Live updates
 
 ![Live updates: a desktop client, the SSE route, op_log, and a CLI writer](diagrams/live.png)

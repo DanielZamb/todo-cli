@@ -16,3 +16,17 @@ Agents and the owner both use Todo every day, so neither gets a second-class pat
 
 - Electron and SwiftUI both get the capability, designed to their own systems (design/electron, design/macos), and reviewed for taste by the coordinator.
 - Markdown stays the CLI default for people. A capability that is live or for monitoring also gets a TTY view in the terminal, with color, layout and keyboard control, that falls back to the agent output when stdout is not a TTY.
+
+## Amendment, 2026-11-09: errors explain their exit status
+
+Errors add exit_code and exit_meaning without changing existing fields, error
+codes, details, or exit statuses. The shared domain mapping keys on the actual
+exit code, so later error names inherit it. The published error schema constrains
+each code to its matching meaning. HTTP errors add the equivalent pair and keep
+their existing tags and fields, including explicit framework-decode handling.
+Markdown and both apps use one human line, such as
+`error 3 - not found or auth missing`. JSON retains the two named fields.
+The mapping is 0 success, 1 runtime failure, 2 validation or usage,
+3 not found or auth missing, and 4 Conflict. Success responses remain unchanged.
+See [ADR-0019](0019-authorized-read-only-discovery.md) for authorized lookup
+context and the approved recovery paths.
