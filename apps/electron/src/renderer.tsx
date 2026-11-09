@@ -127,6 +127,7 @@ import {
   identityKey,
   type SearchIdentity,
   searchGroups,
+  taskSearchQuery,
 } from "./task-search-results.ts";
 import { TaskTags } from "./task-tags.tsx";
 import "./index.css";
@@ -317,6 +318,14 @@ function App() {
     null,
   );
   const catalog = appliedSearch?.catalog ?? null;
+  const searchDefinitions = useRef({
+    projects: catalog?.projects ?? [],
+    tags: catalog?.tags ?? [],
+  });
+  searchDefinitions.current = {
+    projects: catalog?.projects ?? [],
+    tags: catalog?.tags ?? [],
+  };
   const unfilteredSearch = useRef<AppliedSearch | null>(null);
   const tasks = catalog?.tasks ?? [];
   const [searchText, setSearchText] = useState("");
@@ -568,10 +577,7 @@ function App() {
       _tag: "list",
       profile,
       view,
-      filters: {
-        ...identity.filters,
-        text: identity.text,
-      },
+      filters: taskSearchQuery(identity, searchDefinitions.current),
     });
     if (
       active.current !== profile ||

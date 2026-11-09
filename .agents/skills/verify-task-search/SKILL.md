@@ -114,6 +114,14 @@ The script checks that the PASS result and search receipt still exist.
 
 ## Helpers
 
+`seed-recovery.ts` is a compiled-domain fixture for desktop Project/Tag recovery.
+It requires an explicit `TODO_DB` beneath a `todo-s01-verify-` scratch directory
+and a Profile id argument. It appends two ordinary Tasks in Small/Other with
+keep/KEEP Tags. Public commands lowercase Tag names; raw append preserves this
+case-fold collision. The desktop verification recipes use real HTTP to prove
+the selected-id join after server name narrowing. Project duplicates remain
+forbidden; their name-superset transport is labeled synthetic in both recipes.
+
 Executable `scripts/verify.sh <fresh-absolute-evidence-directory>` resolves its
 checkout and runs domain tests plus the compiled filter drive. It reuses
 `TODO_CLI_BINARY` and `TODO_SERVER_BINARY` from the cache manifest.
