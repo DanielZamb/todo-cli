@@ -1,5 +1,5 @@
 {
-  "sourceCommit": "ada9f31907322f626c90224573dba283b1d5f254",
+  "sourceCommit": "464af1038d64eefdac875fab7268dbc3976371f5",
   "status": "main9de plus reviewed Tag, refresh and cache components; exact-root results recorded locally",
   "files": [
     {
@@ -180,7 +180,8 @@
     "f1": "Reviewed F1 against CLIENT-MAPPING.md: catalog-name request narrowing only; explicit dialog names win, unresolved ids add no name, same-response id joins remain. No state transition, publication guard, generation, identity, snapshot or SSE recovery change. Immutable real matcher properties and all five behavioral mutations passed at5d42f32b in matcher-uo9W7V before renewing only the three changed source hashes. Compiled Electron/Swift recovery, ordinary JSON, real raw-append case-fold Tags and synthetic same-name Projects passed.",
     "f1ab": "Reviewed F1a/F1b against CLIENT-MAPPING.md: Electron keeps a Profile-keyed name catalog ref refreshed from each published result and cleared on Profile switch, endAuthentication and reload, used only for a matching Profile; both clients infer a Tag name only when trimming leaves it unchanged (Swift: whitespacesAndNewlines plus U+FEFF, a superset of JS trim), Project names stay exact. Request narrowing only: no state transition, publication guard, generation, identity, snapshot or SSE recovery change. Immutable real matcher properties and all five behavioral mutations passed at c1437107 in matcher-qRXiUP before renewing only the three changed source hashes.",
     "main9deRefresh": "Reviewed final main F1a/F1b through the shared full/query request construction. Profile-keyed metadata survives view clearing and resets on Profile/auth/reload. Swift trim-invariance guard is inside readSearchRows used by both filtered scopes. Catalog debt and guarded publication are unchanged. Immutable main matcher properties, five behavioral controls and strict checks passed in matcher-6dcbM8 before renewing only these three client hashes. Compiled F1a/F1b and final C3 proofs remain pending.",
-    "perfFinal": "Product ada9f319, verifier-only12124354. Full TaskSearch check-XmY6pO passed immutable matcher, all finite safety/liveness bounds and nine expected-failure controls. Swift105 plus contracts/diagnostics, real Snapshot5/reload, Electron F1a/F1b and R1, unsigned Xcode and346offscreen renders passed. Both full/query paths forward names safely. Main9de baseline versus current product on identical SEC+Tag D1 backend3f88: five alternating pairs per client,25 successful query actions each, Swift215 to45 and Electron225 to45 data requests; health/full/warmup/controlled-errors separate. Exact pin guards passed. Delivery check and independent verdicts are recorded in the local PERF-refresh report and final receipt."
+    "perfFinal": "Product ada9f319, verifier-only12124354. Full TaskSearch check-XmY6pO passed immutable matcher, all finite safety/liveness bounds and nine expected-failure controls. Swift105 plus contracts/diagnostics, real Snapshot5/reload, Electron F1a/F1b and R1, unsigned Xcode and346offscreen renders passed. Both full/query paths forward names safely. Main9de baseline versus current product on identical SEC+Tag D1 backend3f88: five alternating pairs per client,25 successful query actions each, Swift215 to45 and Electron225 to45 data requests; health/full/warmup/controlled-errors separate. Exact pin guards passed. Delivery check and independent verdicts are recorded in the local PERF-refresh report and final receipt.",
+    "rootIntegration": "Both seats approved refresh f1c5f221 and cache7f63b0e2. The integrated source preserves their reviewed bodies and all mapped hashes. Exact-tip TaskSearch, cache, AtomicCAS and locked-check results are recorded locally in docs/evidence/perf-integration/final-root. These are finite/model and real-code checks, not a mechanical source-refinement theorem."
   },
   "productionMatcher": "Immutable real source with generated properties, behavioral mutations and byte restoration; final-tip command uses its explicit full SHA.",
   "recovery": "Transient errors offer Retry; search_too_broad hides Retry and retains text/snapshot. Current-Profile SSE op/reconnect remains available. Liveness requires a later affordable successful response and a fair available recovery source.",
@@ -191,6 +192,6 @@
     "cache": "7f63b0e20ad2f8c3a47db4e0d10f5594d97f9ed9",
     "cacheCode": "65033c86ec00889f84642fb76289094a23762ebb",
     "securityBase": "9de893454cb6e3f5729407e9313c73e56bfd0481",
-    "sourceAnchor": "Prior client anchor retained until the integration code commit exists."
+    "sourceAnchor": "464af1038d64eefdac875fab7268dbc3976371f5"
   }
 }
