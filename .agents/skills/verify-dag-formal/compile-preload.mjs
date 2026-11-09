@@ -1,4 +1,5 @@
 import { guardedCompiler } from "./compile-artifacts.mjs";
+import { installNestedRuntime } from "./nested-runtime.mjs";
 import assert from "node:assert/strict";
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -6,6 +7,7 @@ import { DiskStop } from "./compile-safety.mjs";
 import { digest } from "./candidate-inputs.mjs";
 const build = Bun.build.bind(Bun),
   candidate = process.cwd();
+installNestedRuntime();
 let index = 0;
 Bun.build = async (options) => {
   const label = `nested-${process.pid}-${index++}`,

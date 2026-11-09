@@ -6,6 +6,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   realpathSync,
   symlinkSync,
@@ -205,6 +206,8 @@ try {
       "compile-safety.mjs",
       "compile-artifacts.mjs",
       "compile-preload.mjs",
+      "nested-runtime.mjs",
+      "nested-guard-check.mjs",
       "guarded-runtime.mjs",
       "graph-properties.ts",
       "replay-properties.ts",
@@ -318,6 +321,7 @@ try {
     );
     process.env.DAG_F_GUARD_EVIDENCE = evidence;
     process.env.DAG_F_REAL_BUN = process.execPath;
+    beforeCompile({ evidence, label: "atomiccas-launch" });
     const atomic = await run("candidate-atomiccas", "bun", [
       join(skill, "guarded-runtime.mjs"),
       "--preload",
@@ -329,6 +333,33 @@ try {
       0,
       "Candidate AtomicCAS command failed; maintenance belongs to B",
     );
+    const nestedTsc = readdirSync(evidence)
+      .filter(
+        (name) => name.startsWith("runtime-command-") && name.endsWith(".json"),
+      )
+      .map((name) => ({
+        path: join(evidence, name),
+        ...JSON.parse(readFileSync(join(evidence, name), "utf8")),
+      }))
+      .filter((row) =>
+        row.args.some((arg) => arg.includes("typescript/bin/tsc")),
+      );
+    assert.equal(
+      nestedTsc.length,
+      1,
+      "AtomicCAS real nested tsc must have exactly one command receipt",
+    );
+    const tsc = nestedTsc[0];
+    assert.equal(tsc.parentExit, 0);
+    assert.equal(tsc.effectiveExit, 0);
+    assert.equal(tsc.guard.exitCode, 0);
+    assert.ok(tsc.guard.time <= tsc.startedAt);
+    assert.equal(realpathSync(tsc.executable), realpathSync(process.execPath));
+    assert.equal(
+      JSON.parse(readFileSync(tsc.guard.receiptPath, "utf8")).exitCode,
+      0,
+    );
+    record("candidate-atomiccas-typecheck-guard", tsc);
     const n1 = await build(
       "candidate-migrations",
       "../packages/domain/scripts/verify-import-migrations.ts",

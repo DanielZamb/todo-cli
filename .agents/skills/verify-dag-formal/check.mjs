@@ -243,6 +243,11 @@ try {
   let production = null;
   let publicConformance = null;
   if (!modelOnly) {
+    const nestedGuard = await execute("nested-compiler-guard-check", "bun", [
+      join(skill, "nested-guard-check.mjs"),
+      evidence,
+    ]);
+    assert.equal(nestedGuard.exitCode, 0);
     const artifactCheck = await execute("compiler-artifacts-check", "bun", [
       join(skill, "compiler-artifacts-check.mjs"),
       evidence,

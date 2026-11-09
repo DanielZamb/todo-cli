@@ -3,7 +3,7 @@ name: verify-dag-formal
 description: Check finite Task dependency safety and immutable production conformance. Use after graph, transaction, replay or public Dependency changes. The active immutable product pin is merged integration 0f7a1948; final client/runtime mapping remains pending.
 ---
 
-Latest completed merged-B checkpoint: default one command exited 0 at F proof source 71a29afc764e2db32ed109c9314b1a8290460d46, product 0f7a19488f15ec1f8d4c4dad14749de7720f17d0. All 36 library and 53 public/read source-control executions passed sensitivity and exact clean restore. Receipt: /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/resume-default-nTbjKr/completion.json. F-worktree VITEST_MAX_WORKERS=1 pnpm check exited 0 with unchanged per-test deadlines; default-worker timing failures are retained. Final E/S runtime mapping, fresh Claude discovery and independent F review seats remain pending.
+Historical merged-B behavioral checkpoint (F1 nested compiler guard gap; closure below): default one command exited 0 at F proof source 71a29afc764e2db32ed109c9314b1a8290460d46, product 0f7a19488f15ec1f8d4c4dad14749de7720f17d0. All 36 library and 53 public/read source-control executions passed sensitivity and exact clean restore. Receipt: /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/resume-default-nTbjKr/completion.json. F-worktree VITEST_MAX_WORKERS=1 pnpm check exited 0 with unchanged per-test deadlines; default-worker timing failures are retained. Final E/S runtime mapping, fresh Claude discovery and independent F review seats remain pending.
 
 # Verify Task dependency safety and production conformance
 
@@ -83,8 +83,15 @@ Exit 3 latches DISK STOP across the run. Isolated source restores byte-for-byte
 in finally, then no further proof or compile begins. Source/compiler/hash
 failures and timeouts never count as successful sensitivity.
 
-compile-preload.mjs guards nested Bun.build calls while running the unchanged
-AtomicCAS skill and enforces immutable import resolution. B owns AtomicCAS
+compile-preload.mjs guards nested Bun.build calls and installs an AtomicCAS-local
+PATH shim for nested Bun/TypeScript compiler children while running the unchanged
+AtomicCAS skill. It preserves the original resolved executable, argv and stdio,
+uses an absolute host Bun to avoid recursion, and enforces immutable import resolution.
+The outer wrapper checks the shared stop latch after parent exit, so an unchanged
+parent assertion that converts child 3 to parent 1 still returns DISK STOP 3.
+The default nested-guard check installs a synthetic stop after preload initialization,
+proves no fake compiler entry, and separately runs a real nested TypeScript compile.
+AtomicCAS’s real nested TypeScript command and immediate guard are also recorded. B owns AtomicCAS
 maintenance. The synthetic stop-sentinel check proves a prior stop prevents
 compiler entry and permits exact isolated restoration; it is not a physical
 low-disk observation or a product sensitivity control. The default path executes nested AtomicCAS through the guarded wrapper.

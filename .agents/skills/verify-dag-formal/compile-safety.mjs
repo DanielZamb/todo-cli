@@ -47,13 +47,11 @@ export function beforeCompile({ evidence, label }) {
     stdout: result.stdout,
     stderr: result.stderr,
   };
-  writeFileSync(
-    join(
-      evidence,
-      `guard-${label.replaceAll(/[^a-zA-Z0-9_.-]/g, "_")}-${process.pid}-${Date.now()}.json`,
-    ),
-    JSON.stringify(receipt, null, 2) + "\n",
+  const receiptPath = join(
+    evidence,
+    `guard-${label.replaceAll(/[^a-zA-Z0-9_.-]/g, "_")}-${process.pid}-${Date.now()}.json`,
   );
+  writeFileSync(receiptPath, JSON.stringify(receipt, null, 2) + "\n");
   if (exitCode === 3) {
     writeFileSync(
       process.env.DAG_F_DISK_STOP_FILE,
@@ -63,6 +61,7 @@ export function beforeCompile({ evidence, label }) {
   }
   assert.equal(result.error, undefined);
   assert.equal(exitCode, 0, "Disk guard failed before compile");
+  return { ...receipt, receiptPath };
 }
 export function retiredArtifact({ root, evidence, label, binary, keep = [] }) {
   if (!binary || keep.includes(binary) || !existsSync(binary)) return;

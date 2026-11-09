@@ -1,3 +1,9 @@
+## Current status for F1 closure in progress
+
+Merged product remains `0f7a19488f15ec1f8d4c4dad14749de7720f17d0`. Seat 1 found a missing immediate guard on AtomicCAS's nested TypeScript child. The previous full default exit 0 establishes its recorded behavior, but does not establish the universal compiler-guard claim. The unchanged fake-child reproduction exits 1, with nested child 0 and its entry marker present; the direct wrapper returns 3 without entry. Preserved receipts: `docs/evidence/dag-formal/f1-closure-5PIxSP`. Corrected committed-source closure and renewed independent reviews are pending.
+
+The Prepared/unproven and DISK STOP sections below are superseded historical checkpoints; their original failures and counts remain unchanged. Final E/S runtime, native, fresh Claude discovery and independent review gates remain open.
+
 # Unit F public continuation under G11 hold
 
 This is a partial implementation checkpoint. The unaffected public/replay subset
@@ -656,7 +662,7 @@ pipeline or any merged-source property.
   an isolated scratch copy exactly. It is not an actual low-disk observation
   or a product sensitivity pass. pnpm check was not rerun in this continuation.
 
-### Prepared and explicitly unproven
+### Prepared and explicitly unproven (superseded history)
 
 The full command now has the intended library/public pipeline, guarded actual
 compiler calls, a cross-process disk-stop latch and safe exact restoration.
@@ -725,7 +731,7 @@ installed binary, dependency or checkout change was made. git diff --check
 passed. Local prose/no-comments audit added no code comments or suppressions.
 
 
-## Merged-source execution and DISK STOP, 2026-11-09
+## Merged-source execution and DISK STOP, 2026-11-09 (superseded history)
 
 The default full command did not finish clean. It exited 3 after the canonical
 per-compiler guard returned DISK STOP at 10.0 GB free, below its floor. No
@@ -1214,9 +1220,10 @@ THIN_PASS_NATIVE_BLOCKED receipts are inspected historical evidence only.
 
 ### Cleanup, failed attempts and review handoff
 
-Every actual internal compiler call ran the canonical guard immediately before
-entry. The successful full proof and F-worktree check contain 151 canonical
-compiler-guard receipts, all exit 0. The final separate guard also returned 0,
+The previous successful full proof and F-worktree check contain 151 canonical
+compiler-guard receipts, all exit 0. F1 established that these omit the nested
+AtomicCAS TypeScript child: the earlier claim that every compiler was guarded
+was false. These historical receipts establish only the calls they record. The final separate guard also returned 0,
 reporting 97.6 GB free. The final df observation is 97.633673216 GB available.
 The owner's resume observation was 148.7 GB. Concurrent activity and APFS sharing
 prevent attributing capacity changes to this worker's logical unlinks.
