@@ -297,7 +297,6 @@ try {
     small,
     true,
     "BrokenProgress",
-  "BrokenFallback",
     "Temporal properties were violated",
   );
   await tlc(

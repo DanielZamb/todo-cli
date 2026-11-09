@@ -499,7 +499,7 @@ function App() {
           (request._tag === "restore" && reply._tag === "signedOut")
         )
           setOutdated(null);
-        if (reply._tag === "signedIn" || reply._tag === "tasks")
+        if (reply._tag === "signedIn")
           for (const entry of reply.profiles)
             profileNames.current.set(entry.id, entry.name);
 
@@ -595,7 +595,9 @@ function App() {
       if (next) {
         setLoadError("");
         setAppliedSearch({ catalog: next, appliedIdentity: identity });
-        if (result._tag === "tasks")
+        if (result._tag === "tasks") {
+          for (const entry of result.profiles)
+            profileNames.current.set(entry.id, entry.name);
           unfilteredSearch.current = {
             catalog: { ...result, matching_tasks: result.tasks },
             appliedIdentity: {
@@ -606,6 +608,7 @@ function App() {
               text: "",
             },
           };
+        }
         appliedFiltersRef.current = identity.filters;
         setAdvancedFilters(identity.filters);
         setApplyingFilters(false);
