@@ -71,8 +71,9 @@ already match.
 
 The report proof selects real batch edit and Attachment targets, deletes them
 through the compiled scratch CLI before Preview, and requires contextual
-not-found rows and prefilled Find without another lookup request. A stale import
-Task is refused as Conflict by its Version guard. The import not-found screenshot
+not-found rows and prefilled Find without another lookup request. A Deleted import
+Task is refused as task_deleted. After a scratch CLI Purge, the same stale id
+and Version are refused as Conflict. The import not-found screenshot
 is explicitly a typed UI fixture; it proves shared notice rendering, not a live
 import not-found path. Raw row details survive decoding and re-encoding, while
 agent message/recovery commands and routes stay out of the human notice. Opening

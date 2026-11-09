@@ -57,7 +57,7 @@ private actor DiscoveryWithoutSSE: ClientTransport {
 
     @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_W06_SERVER"] != nil))
     func sameProfileShowRefreshesAllTasksWithoutNavigationChangeOrSSE() async throws {
-        let (model, client, _) = try await environment("d-current-show")
+        let (model, client, _) = try await environment("zzz-d-current-show")
         #expect(await model.retrySearch() == .applied)
         #expect(model.selectedView == "all")
         #expect(model.selectedProject == nil && model.selectedTag == nil)
@@ -69,7 +69,7 @@ private actor DiscoveryWithoutSSE: ClientTransport {
         let match = try #require(model.discovery.appliedSnapshot?.matches.first)
         #expect(await model.showDiscoveryMatch(match))
         try await wait { model.searchPhase == .showing && !model.loading && model.appliedSearchSnapshot?.appliedIdentity.filters.prefix == task.id }
-        #expect(model.profile == "d-current-show")
+        #expect(model.profile == "zzz-d-current-show")
         #expect(model.selectedView == "all")
         #expect(model.viewCounts["all"] == 1)
         #expect(model.tasks.map(\.id) == [task.id])
@@ -84,7 +84,7 @@ private actor DiscoveryWithoutSSE: ClientTransport {
 
     @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_W06_SERVER"] != nil))
     func removedSelectedTasksProduceStructuredBatchRowsAndImportConflict() async throws {
-        let (model, client, transport) = try await environment("d-report-rows")
+        let (model, client, transport) = try await environment("zzz-d-report-rows")
         let profile = model.profile
         let batch = try await TaskSnapshot.decode(client.tasks_period_create(path: .init(profile: profile), body: .json(.init(title: "D removed batch target"))).ok.body.json)
         await model.beginBatchEdit()
@@ -92,7 +92,7 @@ private actor DiscoveryWithoutSSE: ClientTransport {
         #expect(try cli(["rm", batch.id, "--profile", profile, "--expected-version", "1", "--format", "json"]) == 0)
         await model.applyBatchEdit(dryRun: true)
         let batchFailure = try #require(model.batchEdit?.report?.items.first?.error)
-        #expect(batchFailure.primaryMessage == "Task not found in d-report-rows.")
+        #expect(batchFailure.primaryMessage == "Task not found in zzz-d-report-rows.")
         #expect(batchFailure.exitDetail == "error 3 - not found or auth missing")
         #expect(batchFailure.details?.task_id == batch.id)
         #expect(batchFailure.details?.profile?.id == profile)
@@ -111,7 +111,7 @@ private actor DiscoveryWithoutSSE: ClientTransport {
         #expect(try cli(["rm", attachment.id, "--profile", profile, "--expected-version", "1", "--format", "json"]) == 0)
         await model.applyAttachmentBatch(dryRun: true)
         let attachmentFailure = try #require(model.attachmentBatch?.report?.items.first?.error)
-        #expect(attachmentFailure.primaryMessage == "Task not found in d-report-rows.")
+        #expect(attachmentFailure.primaryMessage == "Task not found in zzz-d-report-rows.")
         #expect(attachmentFailure.exitDetail == "error 3 - not found or auth missing")
         #expect(attachmentFailure.details?.task_id == attachment.id)
         let beforeAttachmentFind = await transport.lookupRequests
@@ -128,11 +128,14 @@ private actor DiscoveryWithoutSSE: ClientTransport {
         model.loadImport(data: input, name: "removed.json")
         #expect(try cli(["rm", imported.id, "--profile", profile, "--expected-version", "1", "--format", "json"]) == 0)
         await model.previewImport()
+        #expect(model.importReport?.items.first?.error?.code == "task_deleted")
+        #expect(try cli(["rm", imported.id, "--profile", profile, "--expected-version", "2", "--force", "--format", "json"]) == 0)
+        await model.previewImport()
         #expect(model.importReport?.items.first?.error?.code == "occ_conflict")
         #expect(model.importDocument?.title(at: 0) == "Keep imported draft")
-        let literal = #"{"code":"not_found","message":"Run todo lookup --prefix aa. HTTP: GET /tasks/lookup?prefix=aa.","exit_code":3,"exit_meaning":"not found or auth missing","details":{"profile":{"id":"d-report-rows","name":"d-report-rows"},"task_id":"aa","recovery":"agent-only recovery","extra":"preserved"}}"#
+        let literal = #"{"code":"not_found","message":"Run todo lookup --prefix aa. HTTP: GET /tasks/lookup?prefix=aa.","exit_code":3,"exit_meaning":"not found or auth missing","details":{"profile":{"id":"zzz-d-report-rows","name":"zzz-d-report-rows"},"task_id":"aa","recovery":"agent-only recovery","extra":"preserved"}}"#
         let fixture = try JSONDecoder().decode(ServerFailure.self, from: Data(literal.utf8))
-        #expect(fixture.humanMessage == "Task not found in d-report-rows.\nerror 3 - not found or auth missing")
+        #expect(fixture.humanMessage == "Task not found in zzz-d-report-rows.\nerror 3 - not found or auth missing")
         let details = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(fixture.details)) as? [String: Any])
         #expect(details["recovery"] as? String == "agent-only recovery")
         #expect(details["extra"] as? String == "preserved")
@@ -144,6 +147,6 @@ private actor DiscoveryWithoutSSE: ClientTransport {
         #expect(await transport.lookupRequests == beforeImportFind)
         #expect(model.importDocument?.title(at: 0) == "Keep imported draft")
         model.closeDiscovery()
-        try record("discovery-report-rows-http.json", ["batch": "not_found", "attachment": "not_found", "import": "occ_conflict", "importNotFoundNotice": "typed UI fixture", "findRequests": 0, "detailsPreserved": true])
+        try record("discovery-report-rows-http.json", ["batch": "not_found", "attachment": "not_found", "deletedImport": "task_deleted", "purgedImport": "occ_conflict", "importNotFoundNotice": "typed UI fixture", "findRequests": 0, "detailsPreserved": true])
     }
 }
