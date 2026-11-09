@@ -51,6 +51,25 @@ import TodoAPI
                     }
                     let contextual = name == "show-gone" || name.hasSuffix("not-found")
                     let failure = ServerFailure(message: "Run todo list --prefix aa. HTTP: GET /tasks/lookup?prefix=aa.", code: "not_found", exitCode: 3, exitMeaning: "not found or auth missing", details: .init(profile: .init(id: "work", name: "Work"), taskID: match.task_id))
+                    let reportTask = TaskSnapshot(id: match.task_id, profile_id: "work", row_version: 1, title: "Removed selected Task", description: nil, priority: "P3", source: "manual", status: "open", project_id: nil, tags: [], due_at: nil, scheduled_at: nil, energy: nil, estimate_min: nil, occurrence: nil, legacy_series_detached: nil, deleted_at: nil)
+                    if name == "batch-not-found" {
+                        model.batchEdit = BatchEditDraft(profile: "work")
+                        model.batchEdit?.targets = [reportTask]
+                        model.batchEdit?.selected = [reportTask.id]
+                        model.batchEdit?.loading = false
+                        model.batchEdit?.report = .init(dry_run: true, items: [.init(task_id: reportTask.id, from_version: 1, current_version: nil, outcome: "rejected", error: failure)])
+                    }
+                    if name == "attachment-not-found" {
+                        model.attachmentBatch = .init(profile: "work", reference: .init(id: "reference", location: .link(URL(string: "https://example.com/report")!), added_at: "2026-11-09T00:00:00Z"))
+                        model.attachmentBatch?.targets = [reportTask]
+                        model.attachmentBatch?.selected = [reportTask.id]
+                        model.attachmentBatch?.loading = false
+                        model.attachmentBatch?.report = .init(dry_run: true, items: [.init(task_id: reportTask.id, outcome: "rejected", current_version: nil, error: failure)])
+                    }
+                    if name == "import-not-found" {
+                        model.loadImport(data: Data(#"[{"external_id":"fixture:a","title":"Removed selected Task"}]"#.utf8), name: "Typed UI fixture; live import returns Conflict")
+                        model.importReport = .init(generated_at: "2026-11-09T00:00:00Z", dry_run: true, items: [.init(external_id: "fixture:a", outcome: "rejected", task_id: reportTask.id, from_version: 1, changed_fields: [], error: failure)], totals: .init(created: 0, updated: 0, unchanged: 0, rejected: 1))
+                    }
                     let frames = DiscoveryFrames()
                     let width: CGFloat = compact ? 393 : 1024
                     let height: CGFloat = compact ? 426 : 720
@@ -63,12 +82,18 @@ import TodoAPI
                             }.frame(width: width, height: height)
                             Color.black.opacity(0.08)
                         }
-                        if contextual {
+                        if name == "batch-not-found" {
+                            BatchEditView(model: model, compact: compact).background(.background)
+                        } else if name == "attachment-not-found" {
+                            AttachmentBatchView(model: model).background(.background)
+                        } else if name == "import-not-found" {
+                            ImportView(model: model, compact: compact).background(.background)
+                        } else if contextual {
                             VStack(alignment: .leading, spacing: 16) {
                                 Text(name == "show-gone" ? "All tasks" : name.replacingOccurrences(of: "-not-found", with: "").capitalized).font(.headline)
                                 ServerErrorNotice(model: model, failure: failure)
                                 Spacer()
-                            }.padding(16).frame(width: compact ? 393 : 560, height: compact ? 426 : 600)
+                            }.padding(16).frame(width: compact ? 393 : 560, height: compact ? 426 : 600, alignment: .topLeading)
                                 .background(.background, in: RoundedRectangle(cornerRadius: compact ? 0 : 12))
                         } else {
                             DiscoveryView(model: model, compact: compact).background(.background, in: RoundedRectangle(cornerRadius: compact ? 0 : 12))

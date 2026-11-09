@@ -105,6 +105,10 @@ struct DiscoveryView: View {
         List {
             ForEach(Array((state.appliedSnapshot?.profiles ?? []).enumerated()), id: \.element.id) { index, profile in
                 Section {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(profile.name).font(.body.weight(.semibold)).foregroundStyle(.primary).textSelection(.enabled)
+                        if profile.id != profile.name { labeledID(profile.id) }
+                    }.accessibilityAddTraits(.isHeader).listRowSeparator(.hidden)
                     if profile.projects.isEmpty {
                         Text("No Projects").foregroundStyle(.secondary).listRowSeparator(.hidden)
                     } else {
@@ -117,11 +121,6 @@ struct DiscoveryView: View {
                         }
                     }
                     if index < (state.appliedSnapshot?.profiles.count ?? 0) - 1 { Divider().listRowSeparator(.hidden) }
-                } header: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(profile.name).font(.body.weight(.semibold)).foregroundStyle(.primary).textSelection(.enabled)
-                        if profile.id != profile.name { labeledID(profile.id) }
-                    }
                 }.listSectionSeparator(.hidden)
             }
         }.listStyle(.inset).accessibilityIdentifier("discovery-directory-list")

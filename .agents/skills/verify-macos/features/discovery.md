@@ -62,3 +62,19 @@ production HTTP drive also removes a found Task before Show, rejects Save and
 History for a missing Task, preserves its draft and proves recovery opens without
 a request. A cancelled Show callback stays rejected even after another Show on
 the same applied row, because each intent has a distinct id.
+
+The same-Profile All tasks proof suppresses SSE entirely. It starts with zero
+Tasks, creates a Task through compiled scratch HTTP, performs explicit Show, then
+requires count 1, that exact full-id applied identity and visible row, and no
+Applying state. selectView("all") explicitly refreshes even when navigation keys
+already match.
+
+The report proof selects real batch edit and Attachment targets, deletes them
+through the compiled scratch CLI before Preview, and requires contextual
+not-found rows and prefilled Find without another lookup request. A stale import
+Task is refused as Conflict by its Version guard. The import not-found screenshot
+is explicitly a typed UI fixture; it proves shared notice rendering, not a live
+import not-found path. Raw row details survive decoding and re-encoding, while
+agent message/recovery commands and routes stay out of the human notice. Opening
+Find dismisses the originating report sheet and preserves the editor/import draft.
+Deleted Task History remains readable and is asserted as such.

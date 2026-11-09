@@ -14,6 +14,7 @@ extension TodoModel {
   private func changeAttachment(_ operation: (Client, TaskDraft) async throws -> AttachmentResult)
     async
   {
+    let credentialEpoch = discovery.credentialEpoch
     guard canWrite, let draft = editor, conflict == nil else { return }
     busy = true
     editorError = nil
@@ -22,7 +23,7 @@ extension TodoModel {
       var attachmentDraft = draft
       attachmentDraft.base = attachmentTask ?? draft.base
       let result = try await operation(client, attachmentDraft)
-      guard profile == draft.base.profile_id, editor?.id == draft.id else { return }
+      guard isCurrentCredential(credentialEpoch), profile == draft.base.profile_id, editor?.id == draft.id else { return }
       switch result {
       case .accepted(let task):
         editor = editor?.acceptingAttachmentChange(task)
@@ -33,8 +34,9 @@ extension TodoModel {
         editorError = "Task changed. Your draft is preserved. Retry the Attachment action."
       }
     } catch {
+      guard isCurrentCredential(credentialEpoch) else { return }
       editorError = describe(error, at: .editor)
-      handleAuthorization(error)
+      handleAuthorization(error, credentialEpoch: credentialEpoch)
     }
   }
 

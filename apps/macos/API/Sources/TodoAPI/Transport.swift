@@ -58,8 +58,24 @@ public struct FailureDetails: Codable, Sendable {
     public let profile: Profile?
     public let task_id: String?
     public let current_version: Int?
+    private let raw: OpenAPIValueContainer?
+    private enum CodingKeys: String, CodingKey { case profile, task_id, current_version }
     public init(profile: Profile? = nil, taskID: String? = nil, currentVersion: Int? = nil) {
-        self.profile = profile; task_id = taskID; current_version = currentVersion
+        self.profile = profile; task_id = taskID; current_version = currentVersion; raw = nil
+    }
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        profile = try values.decodeIfPresent(Profile.self, forKey: .profile)
+        task_id = try values.decodeIfPresent(String.self, forKey: .task_id)
+        current_version = try values.decodeIfPresent(Int.self, forKey: .current_version)
+        raw = try OpenAPIValueContainer(from: decoder)
+    }
+    public func encode(to encoder: Encoder) throws {
+        if let raw { try raw.encode(to: encoder); return }
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encodeIfPresent(profile, forKey: .profile)
+        try values.encodeIfPresent(task_id, forKey: .task_id)
+        try values.encodeIfPresent(current_version, forKey: .current_version)
     }
 }
 

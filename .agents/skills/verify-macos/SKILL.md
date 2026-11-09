@@ -375,3 +375,8 @@ decisions, reads the exact Task under the current credential epoch, and reveals
 completed Tasks through All tasks with a full-id prefix. No native app, hosted
 XCTest, signing or Keychain is involved. Coordinator visual approval remains
 required before integration.
+
+The [Session recipe](features/session.md#credential-epochs-during-hold) adds a
+standalone production-model proof for a delayed Unauthorized response across
+sign-out/sign-in. It uses only a memory Session adapter and scratch HTTP, with a
+current-credential control. Run it through the active shared Swift slot.

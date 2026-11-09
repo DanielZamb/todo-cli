@@ -77,23 +77,25 @@ extension TodoModel {
     await reloadBatchEditTargets()
   }
   func reloadBatchEditTargets() async {
+    let credentialEpoch = discovery.credentialEpoch
     guard let draft = batchEdit, !busy else { return }
     batchEdit?.loading = true
     batchEdit?.report = nil
     batchEdit?.error = nil
     do {
       let values = try await client.tasks_period_list(path: .init(profile: draft.profile)).ok.body.json.map(TaskSnapshot.decode).sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
-      guard batchEdit?.id == draft.id, profile == draft.profile else { return }
+      guard isCurrentCredential(credentialEpoch), batchEdit?.id == draft.id, profile == draft.profile else { return }
       batchEdit?.targets = values
       batchEdit?.selected.formIntersection(Set(values.map(\.id)))
     } catch {
-      guard batchEdit?.id == draft.id else { return }
+      guard isCurrentCredential(credentialEpoch), batchEdit?.id == draft.id else { return }
       batchEdit?.error = describe(error, at: .batchEdit)
-      handleAuthorization(error)
+      handleAuthorization(error, credentialEpoch: credentialEpoch)
     }
     if batchEdit?.id == draft.id { batchEdit?.loading = false }
   }
   func applyBatchEdit(dryRun: Bool) async {
+    let credentialEpoch = discovery.credentialEpoch
     guard canWrite, !busy, let draft = batchEdit, !draft.loading, draft.valid, !draft.selected.isEmpty else { return }
     busy = true
     batchEdit?.error = nil
@@ -103,13 +105,13 @@ extension TodoModel {
       let payload = try JSONDecoder().decode(Operations.tasks_period_batchEdit.Input.Body.jsonPayload.self, from: JSONSerialization.data(withJSONObject: ["items": items, "changes": draft.change, "dry_run": dryRun]))
       let response = try await client.tasks_period_batchEdit(path: .init(profile: draft.profile), body: .json(payload)).ok.body.json
       let report = try JSONDecoder().decode(BatchEditReport.self, from: JSONEncoder().encode(response))
-      guard batchEdit?.id == draft.id, profile == draft.profile else { return }
+      guard isCurrentCredential(credentialEpoch), batchEdit?.id == draft.id, profile == draft.profile else { return }
       batchEdit?.report = report
       if !dryRun { await refreshAfterWrite("Tasks updated") }
     } catch {
-      guard batchEdit?.id == draft.id else { return }
+      guard isCurrentCredential(credentialEpoch), batchEdit?.id == draft.id else { return }
       batchEdit?.error = describe(error, at: .batchEdit)
-      handleAuthorization(error)
+      handleAuthorization(error, credentialEpoch: credentialEpoch)
     }
   }
 }

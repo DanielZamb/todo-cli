@@ -152,7 +152,7 @@ struct ImportView: View {
                                             Text(row.changesText).font(.caption).foregroundStyle(.secondary).lineLimit(compact ? 1 : nil).help(row.changesText)
                                         }
                                     }.frame(maxWidth: .infinity, alignment: .leading)
-                                    Text(row.outcomeText).font(.callout).foregroundStyle(row.outcome == "rejected" ? TodoColors.color("destructive") : .primary).fixedSize()
+                                    Text(row.outcomeText).font(.callout).foregroundStyle(row.outcome == "rejected" && row.error?.isTaskLookup != true ? TodoColors.color("destructive") : .primary).fixedSize()
                                 }.padding(.top, compact ? 0 : 12).padding(.bottom, compact ? 8 : 12)
                                     .frame(height: compact ? 56 : nil, alignment: .top).importFrame(.row(index))
                                     .overlay(alignment: .bottom) { if compact { Divider() } }
@@ -175,7 +175,7 @@ struct ImportView: View {
                 Spacer(minLength: 0)
             }
             if compact && model.importReport != nil { Spacer(minLength: 0) }
-            if let error = model.importError { Text(error).foregroundStyle(TodoColors.color("destructive")).font(.callout).accessibilityIdentifier("import-error") }
+            if let error = model.importError { ClientErrorNotice(model: model, text: error, position: .importTasks).font(.callout).accessibilityIdentifier("import-error") }
             if !model.canWrite && !model.busy { Text("Offline. Reconnect to preview or apply.").font(.callout).foregroundStyle(.secondary) }
             VStack(alignment: .leading, spacing: compact ? 8 : 12) {
                 if let report = model.importReport {

@@ -135,7 +135,7 @@ extension TodoModel {
             guard canPublishDiscovery(identity) else { return }
             discovery.error = describe(error, at: .discovery)
             discovery.phase = .error
-            handleAuthorization(error)
+            handleAuthorization(error, credentialEpoch: identity.credentialEpoch)
         }
     }
 
@@ -181,7 +181,7 @@ extension TodoModel {
             guard canShowDiscovery(intent) else { return false }
             discovery.showIntent = nil
             message = describe(error)
-            handleAuthorization(error)
+            handleAuthorization(error, credentialEpoch: intent.identity.credentialEpoch)
             return false
         }
     }

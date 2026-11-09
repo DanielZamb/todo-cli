@@ -242,12 +242,12 @@ private actor DiscoveryTransport: ClientTransport {
         #expect(model.editor?.title == "Keep missing Task draft")
         model.closeDiscovery()
         await model.loadHistory()
-        #expect(model.historyError == "Task not found in Work.\nerror 3 - not found or auth missing")
-        #expect(model.lookupError(at: .history, text: model.historyError)?.details?.task_id == unavailable.id)
+        #expect(model.historyError == nil)
+        #expect(model.history.map { $0.event.kind }.contains("TaskDeleted"))
         model.closeDiscovery()
         model.signedIn = false
         model.connect()
         let receipt = try #require(ProcessInfo.processInfo.environment["TODO_W06_RECEIPT"]).replacingOccurrences(of: "http-receipt.json", with: "discovery-http.json")
-        try Data(#"{"status":"PASS","completedTaskRevealed":true,"reload":true,"invalidRequests":0,"lateSuccessAndErrorResets":10,"showCredentialResets":2,"savedDraftCredentialReset":true,"cancelledShowCallbackRejectedAfterReclick":true,"showGoneRecoveryPrefillsWithoutRequest":true,"missingEditorDraftPreserved":true,"missingHistoryContext":true}"#.utf8).write(to: URL(fileURLWithPath: receipt))
+        try Data(#"{"status":"PASS","completedTaskRevealed":true,"reload":true,"invalidRequests":0,"lateSuccessAndErrorResets":10,"showCredentialResets":2,"savedDraftCredentialReset":true,"cancelledShowCallbackRejectedAfterReclick":true,"showGoneRecoveryPrefillsWithoutRequest":true,"missingEditorDraftPreserved":true,"deletedTaskHistoryRemainsReadable":true}"#.utf8).write(to: URL(fileURLWithPath: receipt))
     }
 }

@@ -10,7 +10,13 @@ extension TodoModel {
     }
 
     func findTaskAfterLookupError(_ failure: ServerFailure) async {
-        guard failure.isTaskLookup else { return }
+        guard signedIn, failure.isTaskLookup else { return }
+        let credentialEpoch = discovery.credentialEpoch
+        batchEdit = nil
+        attachmentBatch = nil
+        showingImport = false
+        await Task.yield()
+        guard signedIn, discovery.credentialEpoch == credentialEpoch else { return }
         await openDiscovery(.lookup)
         if let prefix = failure.details?.task_id, !prefix.isEmpty, TaskListFilters(prefix: prefix).prefixIsValid {
             editDiscoveryPrefix(prefix)
