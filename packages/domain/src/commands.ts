@@ -47,6 +47,8 @@ import {
   type TransitionTask,
 } from "./task-commands.ts";
 import { filterTaskRecordsEffect, type TaskFilters } from "./task-filters.ts";
+import type { TaskRead } from "./task-read.ts";
+import type { SearchTooBroad } from "./task-search.ts";
 import { CalendarDate, Instant, TaskTime } from "./time.ts";
 
 export class CommandError extends Error {
@@ -269,8 +271,15 @@ const now = Clock.currentTimeMillis.pipe(
 export class TaskCommands {
   constructor(private readonly store: OperationStore) {}
 
-  readonly list = (request: AccessRequest, filters: TaskFilters = {}) =>
-    this.store.auth.read(request).pipe(
+  list(
+    request: AccessRequest,
+  ): Effect.Effect<TaskRead[], AuthError | StoreError>;
+  list(
+    request: AccessRequest,
+    filters: TaskFilters,
+  ): Effect.Effect<TaskRead[], AuthError | StoreError | SearchTooBroad>;
+  list(request: AccessRequest, filters: TaskFilters = {}) {
+    return this.store.auth.read(request).pipe(
       Effect.flatMap((view) =>
         filterTaskRecordsEffect(
           view.tasks.filter(
@@ -282,6 +291,7 @@ export class TaskCommands {
         ),
       ),
     );
+  }
 
   readonly get = (request: Target) =>
     this.list(request).pipe(

@@ -2657,7 +2657,7 @@ public struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Components.Schemas.InvalidTaskEncoded.self,
+                            Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)

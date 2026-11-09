@@ -29,6 +29,42 @@ export type PreparedField = {
   readonly words: readonly Word[];
   readonly preparedUnits: number;
 };
+export const taskSearchWorkLimits = {
+  budget: 5_000_000,
+  damerauCellWeight: { numerator: 1, denominator: 10 },
+} as const;
+export const searchTooBroadMessage =
+  "Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.";
+export class SearchTooBroad extends Error {
+  readonly _tag = "SearchTooBroad";
+  readonly code = "search_too_broad";
+  constructor(readonly work: number) {
+    super(searchTooBroadMessage);
+  }
+}
+export class TaskSearchWork {
+  preparedUnits = 0;
+  damerauCells = 0;
+  constructor(readonly limit: number = taskSearchWorkLimits.budget) {}
+  get units() {
+    const { numerator, denominator } = taskSearchWorkLimits.damerauCellWeight;
+    return (
+      (this.preparedUnits * denominator + this.damerauCells * numerator) /
+      denominator
+    );
+  }
+  check() {
+    if (this.units > this.limit) throw new SearchTooBroad(this.units);
+  }
+}
+export type TaskSearchExecution = {
+  readonly work: TaskSearchWork;
+  readonly prepare: (value: string) => Generator<void, PreparedField>;
+};
+export const taskSearchExecution = (): TaskSearchExecution => ({
+  work: new TaskSearchWork(),
+  prepare: fieldWords,
+});
 const words = new Intl.Segmenter("und", { granularity: "word" });
 const graphemes = new Intl.Segmenter("und", { granularity: "grapheme" });
 
@@ -96,11 +132,8 @@ export function* fieldWords(
   for (const part of graphemes.segment(value)) {
     const folded = normalizeTaskSearch(part.segment);
     normalized += folded;
-    for (let index = 0; index < folded.length; index++)
-      origins.push({
-        start: part.index,
-        end: part.index + part.segment.length,
-      });
+    const origin = { start: part.index, end: part.index + part.segment.length };
+    for (let index = 0; index < folded.length; index++) origins.push(origin);
     if (++processed % chunkSize === 0) yield;
   }
   const result: Word[] = [];
@@ -116,7 +149,7 @@ export function* fieldWords(
   return { words: result, preparedUnits: normalized.length };
 }
 
-function prefixMatcher(query: string, budget: number) {
+function prefixMatcher(query: string, budget: number, work: TaskSearchWork) {
   const source = Array.from(query);
   const width = 2 * budget + 1;
   const rows = budget + 2;
@@ -161,6 +194,7 @@ function prefixMatcher(query: string, budget: number) {
         if (target[column - 1] === character) lastMatch = column;
       let minimum = infinity;
       for (let column = first; column <= last; column++) {
+        work.damerauCells++;
         const other = target[column - 1] ?? "";
         const previousRow = seen.get(other) ?? 0;
         const previousColumn = lastMatch;
@@ -199,6 +233,7 @@ const searchChunkWords = 512;
 function* clauseMatches(
   clause: SearchClause,
   field: readonly Word[],
+  work: TaskSearchWork,
 ): Generator<void, readonly Word[]> {
   const matches: Word[] = [];
   if (clause.kind === "word" || clause.kind === "exclude-word") {
@@ -212,6 +247,7 @@ function* clauseMatches(
           : length >= 5
             ? 1
             : 0,
+      work,
     );
     const evaluated = new Map<string, boolean>();
     for (const [index, word] of field.entries()) {
@@ -225,6 +261,7 @@ function* clauseMatches(
     }
   } else {
     const phrase = clause.kind === "exclude-phrase" ? clause.phrase : clause;
+    const matchedWords = new Set<Word>();
     for (let start = 0; start < field.length; start++) {
       const candidate = field.slice(start, start + phrase.words.length);
       if (
@@ -239,30 +276,38 @@ function* clauseMatches(
           );
         })
       )
-        matches.push(...candidate);
+        for (const word of candidate) matchedWords.add(word);
       if ((start + 1) % searchChunkWords === 0) yield;
     }
+    return Array.from(matchedWords);
   }
   return matches;
 }
 
-export function* matchTaskSearchSteps(
+function* evaluateTaskSearchSteps(
   task: { readonly title: string; readonly description: string | null },
   clauses: readonly SearchClause[],
+  execution: TaskSearchExecution,
 ): Generator<
   void,
   { readonly accepted: boolean; readonly matches: readonly SearchMatch[] }
 > {
   if (clauses.length === 0) return { accepted: true, matches: [] };
-  const fields = [
-    { field: "title", ...(yield* fieldWords(task.title)) },
-    { field: "description", ...(yield* fieldWords(task.description ?? "")) },
-  ] satisfies (PreparedField & { field: SearchMatch["field"] })[];
+  const fields: (PreparedField & { field: SearchMatch["field"] })[] = [];
+  for (const [field, value] of [
+    ["title", task.title],
+    ["description", task.description ?? ""],
+  ] as const) {
+    const prepared = yield* execution.prepare(value);
+    execution.work.preparedUnits += prepared.preparedUnits;
+    execution.work.check();
+    fields.push({ field, ...prepared });
+  }
   const matches: SearchMatch[] = [];
   for (const clause of clauses) {
     const occurrences: SearchMatch[] = [];
     for (const { field, words } of fields) {
-      const matched = yield* clauseMatches(clause, words);
+      const matched = yield* clauseMatches(clause, words, execution.work);
       for (const { start, end } of matched)
         occurrences.push({ field, start, end });
     }
@@ -297,11 +342,41 @@ export function* matchTaskSearchSteps(
   return { accepted: true, matches: merged };
 }
 
+export function* matchTaskSearchSteps(
+  task: { readonly title: string; readonly description: string | null },
+  clauses: readonly SearchClause[],
+  execution: TaskSearchExecution = taskSearchExecution(),
+): Generator<
+  void,
+  { readonly accepted: boolean; readonly matches: readonly SearchMatch[] }
+> {
+  const steps = evaluateTaskSearchSteps(task, clauses, execution);
+  let completed = false;
+  try {
+    while (true) {
+      let step: ReturnType<typeof steps.next>;
+      try {
+        step = steps.next();
+        completed = step.done === true;
+      } catch (error) {
+        completed = true;
+        throw error;
+      }
+      execution.work.check();
+      if (step.done) return step.value;
+      yield;
+    }
+  } finally {
+    if (!completed) steps.return({ accepted: false, matches: [] });
+  }
+}
+
 export function matchTaskSearch(
   task: { readonly title: string; readonly description: string | null },
   clauses: readonly SearchClause[],
+  execution: TaskSearchExecution = taskSearchExecution(),
 ) {
-  const steps = matchTaskSearchSteps(task, clauses);
+  const steps = matchTaskSearchSteps(task, clauses, execution);
   let step = steps.next();
   while (!step.done) step = steps.next();
   return step.value;

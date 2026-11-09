@@ -6,7 +6,7 @@ case "$evidence" in /*) ;; *) echo 'Evidence must be absolute' >&2; exit 2 ;; es
 [ ! -e "$evidence" ] || { echo 'Choose a fresh evidence directory' >&2; exit 2; }
 mkdir -p "$evidence"
 cd "$root"
-pnpm --filter @todo/domain test task-search.test.ts task-search-yield.test.ts task-search-equivalence.test.ts task-search-preparation.test.ts > "$evidence/domain.log" 2>&1
+pnpm --filter @todo/domain test task-search.test.ts task-search-yield.test.ts task-search-equivalence.test.ts task-search-preparation.test.ts task-search-finalizer.test.ts task-search-budget.test.ts > "$evidence/domain.log" 2>&1
 bun .agents/skills/verify-cli/scripts/cache-binaries.ts > "$evidence/build.log" 2>&1
 cp .scratch/bin/build.json "$evidence/binary-provenance.json"
 TODO_CLI_BINARY=$(bun -e 'process.stdout.write(JSON.parse(require("node:fs").readFileSync(".scratch/bin/build.json","utf8")).cli)')

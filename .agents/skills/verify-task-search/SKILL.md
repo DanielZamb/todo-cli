@@ -62,6 +62,24 @@ whole grapheme origins. Preparation now yields too. The interruption regression
 requires an interrupted drain to publish nothing and prepare no further Task.
 Response serialization remains synchronous.
 
+`task-search-budget.test.ts` checks the shared deterministic meter, exact cell
+counts, refusal without partial publication, non-text narrowing, and identical
+cold, warm and uncached totals. Warm preparation returns a stored PreparedField.
+`task-search-finalizer.test.ts` requires exactly one generator return on suspended
+interruption or runner failure, and no extra return after completion or a thrown
+next call. The compiled drive creates three maximum-size U+FDFA descriptions,
+requires CLI exit 2 and HTTP 422 with `search_too_broad`, narrows successfully,
+then shrinks a description and requires the search to succeed again.
+
+The frozen PERF measurement JSON and seed are preserved unchanged as
+`fixtures/perf-measurement-fixture.json` and `seed-perf-fixtures.ts`. The seed
+requires its fixture argument and an explicit scratch TODO_DB. It writes
+through `openStore` and `store.append`. Measurement receipts record process CPU,
+wall time, host load, work, outcome and concurrent health responses separately.
+The budget and weight live in `taskSearchWorkLimits`. Raw input boundaries and
+all accepted response spans remain unchanged. The span-cap owner question is
+outside this verification change.
+
 Use `todo man list` and `todo schema list` to inspect syntax and response shape.
 HTTP remains `GET /profiles/work/tasks?text=...&prefix=...`. Closed quotes are
 whole-word phrases. An unclosed phrase permits its last word to prefix-match.

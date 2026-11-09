@@ -2,7 +2,13 @@ import { Effect, Schema } from "effect";
 import { type Project, type Tag, type Task, TaskPriority } from "./entities.ts";
 import { inputLimits } from "./limits.ts";
 import type { TaskRead } from "./task-read.ts";
-import { matchTaskSearchSteps, parseTaskSearch } from "./task-search.ts";
+import {
+  matchTaskSearchSteps,
+  parseTaskSearch,
+  SearchTooBroad,
+  type TaskSearchExecution,
+  taskSearchExecution,
+} from "./task-search.ts";
 import { CalendarDate, type TaskTime } from "./time.ts";
 
 const dateFilter = Schema.String.check(
@@ -69,6 +75,7 @@ function* filterTaskRecordSteps(
   tasks: readonly Task[],
   filters: TaskFilters,
   definitions: { projects: readonly Project[]; tags: readonly Tag[] },
+  execution: TaskSearchExecution = taskSearchExecution(),
 ): Generator<void, TaskRead[]> {
   const search =
     filters.text === undefined ? undefined : parseTaskSearch(filters.text);
@@ -119,12 +126,13 @@ function* filterTaskRecordSteps(
   for (const task of selected) {
     if (search === undefined) records.push(task);
     else {
-      const result = yield* matchTaskSearchSteps(task, search);
+      const result = yield* matchTaskSearchSteps(task, search, execution);
       if (result.accepted)
         records.push({ ...task, search_matches: result.matches });
     }
     yield;
   }
+  execution.work.check();
   return records;
 }
 
@@ -144,21 +152,31 @@ export function runTaskRecordSteps<E = never>(
   ),
 ) {
   let completed = false;
-  const next = () => {
-    try {
-      const step = steps.next();
-      completed = step.done === true;
-      return step;
-    } catch (error) {
-      completed = true;
-      throw error;
-    }
-  };
+  const next = () =>
+    Effect.try({
+      try: () => {
+        try {
+          const step = steps.next();
+          completed = step.done === true;
+          return step;
+        } catch (error) {
+          completed = true;
+          throw error;
+        }
+      },
+      catch: (error) => error,
+    }).pipe(
+      Effect.catch((error) =>
+        error instanceof SearchTooBroad
+          ? Effect.fail(error)
+          : Effect.die(error),
+      ),
+    );
   return Effect.gen(function* () {
-    let step = next();
+    let step = yield* next();
     while (!step.done) {
       yield* checkpoint;
-      step = next();
+      step = yield* next();
     }
     return step.value;
   }).pipe(
