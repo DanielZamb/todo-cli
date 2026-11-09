@@ -36,6 +36,7 @@ private struct TransferLayoutReceipt: Codable {
 struct Snapshots {
     @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DIR"] != nil))
     func renderScreens() async throws {
+        if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DISCOVERY_ONLY"] == "1" { return }
         NSApplication.shared.setActivationPolicy(.prohibited)
         let directory = URL(fileURLWithPath: try #require(ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DIR"]))
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

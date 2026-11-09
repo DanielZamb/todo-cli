@@ -77,11 +77,13 @@ final class TodoModel {
     private var importGeneration = 0
     private var parseGeneration = 0
     private var historyGeneration = 0
-    var signedIn = false
+    var serverErrors: [ClientErrorPosition: ServerFailure] = [:]
+    let discovery = DiscoveryState()
+    var signedIn = false { didSet { if !signedIn { discovery.credentialChanged() } } }
     var canRestore = false
     var busy = false
     var loading = false
-    var connection = Connection.connecting
+    var connection = Connection.connecting { didSet { if connection == .offline { discoveryWentOffline() } } }
     var outdatedServerBuild: String?
     var message: String?
     var taskLoadError: String?
@@ -94,6 +96,7 @@ final class TodoModel {
         case copy(TaskSnapshot, to: String)
         case profile(String)
         case openTransfer(TaskTransferResult)
+        case showDiscovery(DiscoveryShowIntent)
     }
     var pendingNavigation: EditorNavigation?
     var deletionNotice: String?
@@ -112,6 +115,16 @@ final class TodoModel {
     var restoreGeneration = "initial"
     var restoreReloadCount = 0
     private var credential = ""
+    func replaceCredential(_ value: String) {
+        discovery.credentialChanged()
+        disconnect()
+        importGeneration += 1
+        parseGeneration += 1
+        historyGeneration += 1
+        seriesGeneration += 1
+        serverErrors = [:]
+        credential = value
+    }
     private var streamTask: Task<Void, Never>?
     private var restored = false
     private var generation = 0
@@ -152,6 +165,7 @@ final class TodoModel {
     func applyImport() async { await runImport(dryRun: false) }
 
     private func runImport(dryRun: Bool) async {
+        let credentialEpoch = discovery.credentialEpoch
         guard canWrite, let document = importDocument else { return }
         if !dryRun && importReport?.dry_run != true { return }
         let requestedProfile = profile
@@ -174,13 +188,15 @@ final class TodoModel {
             importReport = report
             if !dryRun { await refreshAfterWrite("Import applied") }
         } catch {
+            guard isCurrentCredential(credentialEpoch) else { return }
             guard profile == requestedProfile, importGeneration == requestedGeneration else { return }
-            handleAuthorization(error)
-            importError = describe(error)
+            handleAuthorization(error, credentialEpoch: credentialEpoch)
+            importError = describe(error, at: .importTasks)
         }
     }
 
     func restore() async {
+        var credentialEpoch = discovery.credentialEpoch
         guard !restored, !busy, !signedIn else { return }
         busy = true
         canRestore = false
@@ -189,13 +205,16 @@ final class TodoModel {
         do {
             guard try await checkServerContract() else { return }
             if let value = try vault.load() {
-                credential = value
+                replaceCredential(value)
+                credentialEpoch = discovery.credentialEpoch
                 try await discoverProfiles()
+                guard isCurrentCredential(credentialEpoch) else { return }
                 signedIn = true
                 connect()
             }
         } catch {
-            if failure(error)?.status == 401 { expireSession() }
+            guard isCurrentCredential(credentialEpoch) else { return }
+            if failure(error)?.status == 401 { expireSession(credentialEpoch: credentialEpoch) }
             else if error is VaultError { message = describe(error) }
             else {
                 restored = false
@@ -206,6 +225,7 @@ final class TodoModel {
     }
 
     func signIn(_ passphrase: String) async -> Bool {
+        var credentialEpoch = discovery.credentialEpoch
         guard !busy else { return false }
         busy = true
         defer { busy = false }
@@ -213,17 +233,20 @@ final class TodoModel {
             guard try await checkServerContract() else { return false }
             let response = try await client.signIn_period_signIn(body: .json(.init(passphrase: passphrase)))
             let session = try response.ok.body.json
-            guard try await checkServerContract() else { return false }
+            guard try await checkServerContract(), isCurrentCredential(credentialEpoch) else { return false }
             try vault.save(session.credential)
-            credential = session.credential
+            replaceCredential(session.credential)
+            credentialEpoch = discovery.credentialEpoch
             message = nil
             try await discoverProfiles()
+            guard isCurrentCredential(credentialEpoch) else { return false }
             signedIn = true
             restored = true
             canRestore = false
             connect()
             return true
         } catch {
+            guard isCurrentCredential(credentialEpoch) else { return false }
             message = describe(error)
             return false
         }
@@ -231,13 +254,17 @@ final class TodoModel {
 
     func signOut() async {
         guard !busy else { return }
+        discovery.credentialChanged()
+        disconnect()
+        let credentialEpoch = discovery.credentialEpoch
         busy = true
         defer { busy = false }
         do {
             _ = try await client.credentials_period_signOut()
+            guard isCurrentCredential(credentialEpoch) else { return }
             try vault.delete()
             disconnect()
-            credential = ""
+            replaceCredential("")
             signedIn = false
             diagnostics = nil
             tasks = []
@@ -248,7 +275,12 @@ final class TodoModel {
             quickAdd = false
             newTitle = ""
             message = nil
-        } catch { message = describe(error) }
+        } catch {
+            guard isCurrentCredential(credentialEpoch) else { return }
+            message = describe(error)
+            handleAuthorization(error, credentialEpoch: credentialEpoch)
+            if signedIn { connect() }
+        }
     }
 
     func beginProfileDeletion() {
@@ -258,6 +290,7 @@ final class TodoModel {
     }
 
     func deleteProfile() async {
+        let credentialEpoch = discovery.credentialEpoch
         guard let prompt = profileDeletion, canWrite, editor == nil else { return }
         let deleted = profile
         let run = generation
@@ -270,8 +303,9 @@ final class TodoModel {
             profileDeletion = nil
             try await leaveDeletedProfile(named: prompt.name)
         } catch {
+            guard isCurrentCredential(credentialEpoch) else { return }
             guard profile == deleted, generation == run, !Task.isCancelled else { return }
-            handleAuthorization(error)
+            handleAuthorization(error, credentialEpoch: credentialEpoch)
             if let values = try? await client.reads_period_profiles().ok.body.json,
                let latest = try? decode([DiscoveryEntry].self, values) {
                 guard profile == deleted, generation == run, !Task.isCancelled else { return }
@@ -307,7 +341,7 @@ final class TodoModel {
         activateProfile(value)
     }
 
-    private func activateProfile(_ value: String) {
+    func activateProfile(_ value: String) {
         profileDeletion = nil
         profileDeletionError = nil
         disconnect()
@@ -352,6 +386,7 @@ final class TodoModel {
     }
 
     private func refresh(generation run: Int) async -> TaskSearchRefreshOutcome {
+        let credentialEpoch = discovery.credentialEpoch
         guard outdatedServerBuild == nil, generation == run, !Task.isCancelled else { return .superseded }
         searchDebounce?.cancel()
         refreshGeneration += 1
@@ -405,6 +440,7 @@ final class TodoModel {
             searchPhase = .showing
             return .applied
         } catch {
+            guard isCurrentCredential(credentialEpoch) else { return .superseded }
             guard canPublishSearch(run: run, request: request, identity: identity) else { return .superseded }
             if taskFilters != identity.filters {
                 requestedTaskFilters = taskFilters
@@ -413,11 +449,11 @@ final class TodoModel {
                 let applied = appliedSearchSnapshot?.appliedIdentity.text ?? ""
                 searchError = applied.isEmpty ? "Couldn't search. Showing tasks without search." : "Couldn't search. Showing results for \"\(applied)\"."
             } else {
-                taskLoadError = describe(error)
+                taskLoadError = describe(error, at: .taskLoad)
             }
             loading = false
             searchPhase = .error
-            handleAuthorization(error)
+            handleAuthorization(error, credentialEpoch: credentialEpoch)
             return .failed
         }
     }
@@ -471,6 +507,7 @@ final class TodoModel {
     }
 
     private func followChanges(generation run: Int) async {
+        let credentialEpoch = discovery.credentialEpoch
         var attempt = 0
         while !Task.isCancelled && generation == run {
             do {
@@ -543,24 +580,29 @@ final class TodoModel {
                             lastSequence = id
                             UserDefaults.standard.set(id, forKey: cursorKey)
                         } else if event.name == "effect/http-api/stream/failure" {
-                            if event.data.contains("Unauthorized") { expireSession(); return }
+                            if event.data.contains("Unauthorized") { expireSession(credentialEpoch: credentialEpoch); return }
                             throw StreamError.closed
                         }
                     }
                 }
                 throw StreamError.closed
             } catch {
+            guard isCurrentCredential(credentialEpoch) else { return }
                 if Task.isCancelled || generation != run { return }
-                if failure(error)?.status == 401 { expireSession(); return }
+                if failure(error)?.status == 401 { expireSession(credentialEpoch: credentialEpoch); return }
                 if failure(error)?.status == 404 {
-                    do { try await leaveDeletedProfile(); if generation != run { return } } catch { message = describe(error) }
+                    do { try await leaveDeletedProfile(); if generation != run { return } } catch {
+            guard isCurrentCredential(credentialEpoch) else { return }
+            message = describe(error) }
                 }
                 connection = .offline
                 loading = false
                 message = describe(error)
                 attempt += 1
                 reconnectCount += 1
-                do { try await Task.sleep(for: .seconds(min(8, attempt))) } catch { return }
+                do { try await Task.sleep(for: .seconds(min(8, attempt))) } catch {
+            guard isCurrentCredential(credentialEpoch) else { return }
+            return }
                 guard generation == run else { return }
                 connection = .connecting
             }
@@ -568,6 +610,7 @@ final class TodoModel {
     }
 
     func create(openEditor: Bool) async -> Bool {
+        let credentialEpoch = discovery.credentialEpoch
         guard canWrite else { return false }
         let title = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty else { return false }
@@ -596,11 +639,14 @@ final class TodoModel {
             await refreshAfterWrite("Task added")
             announce("Task added to \(profileName)")
             return true
-        } catch { quickAddError = describe(error); handleAuthorization(error); return false }
+        } catch {
+            guard isCurrentCredential(credentialEpoch) else { return false }
+            quickAddError = describe(error, at: .quickAdd); handleAuthorization(error, credentialEpoch: credentialEpoch); return false }
     }
 
     @discardableResult
     func save() async -> TaskSnapshot? {
+        let credentialEpoch = discovery.credentialEpoch
         guard canWrite, let draft = editor else { return nil }
         writeIntent = nil
         busy = true
@@ -623,19 +669,24 @@ final class TodoModel {
             await refreshAfterWrite("Task saved")
             announce("Task saved")
             return saved
-        } catch { editorError = describe(error); handleAuthorization(error); return nil }
+        } catch {
+            guard isCurrentCredential(credentialEpoch) else { return nil }
+            editorError = describe(error, at: .editor); handleAuthorization(error, credentialEpoch: credentialEpoch); return nil }
     }
 
     func refreshConflictDefinitions() async {
+        let credentialEpoch = discovery.credentialEpoch
         guard outdatedServerBuild == nil else { return }
         let requestedProfile = profile
         do {
             let projectValues = try await client.reads_period_projects(path: .init(profile: requestedProfile)).ok.body.json
             let tagValues = try await client.reads_period_tags(path: .init(profile: requestedProfile)).ok.body.json
-            guard profile == requestedProfile, conflict != nil else { return }
+            guard isCurrentCredential(credentialEpoch), profile == requestedProfile, conflict != nil else { return }
             projects = try decode([DiscoveryEntry].self, projectValues).sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
             tags = try decode([DiscoveryEntry].self, tagValues).sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-        } catch { editorError = describe(error); handleAuthorization(error) }
+        } catch {
+            guard isCurrentCredential(credentialEpoch) else { return }
+            editorError = describe(error, at: .editor); handleAuthorization(error, credentialEpoch: credentialEpoch) }
     }
 
     var hasUnsavedEditor: Bool {
@@ -645,6 +696,7 @@ final class TodoModel {
     @discardableResult
     func navigate(_ target: EditorNavigation) async -> Bool {
         guard !busy else { return false }
+        if case .showDiscovery(let intent) = target, !canShowDiscovery(intent) { return false }
         switch target {
         case .edit(let task) where editor?.id == task.id: return true
         case .profile(let destination) where destination == profile: return true
@@ -660,6 +712,7 @@ final class TodoModel {
     @discardableResult
     func discardAndNavigate(_ target: EditorNavigation) async -> Bool {
         guard !busy else { return false }
+        if case .showDiscovery(let intent) = target, !canShowDiscovery(intent) { return false }
         if case .move = target, !canWrite { return false }
         if case .copy = target, !canWrite { return false }
         pendingNavigation = nil
@@ -670,6 +723,7 @@ final class TodoModel {
     @discardableResult
     func saveAndNavigate(_ target: EditorNavigation) async -> Bool {
         guard canWrite, conflict == nil, let draft = editor else { return false }
+        if case .showDiscovery(let intent) = target, !canShowDiscovery(intent) { return false }
         pendingNavigation = nil
         let saved: TaskSnapshot
         if let recurrence = recurrenceDraft {
@@ -680,6 +734,7 @@ final class TodoModel {
             guard let task = await save() else { return false }
             saved = task
         } else { saved = draft.base }
+        if case .showDiscovery(let intent) = target, !canShowDiscovery(intent) { return false }
         if case .move(let task, let destination) = target, task.id == draft.id, saved.id == task.id {
             return await applyNavigation(.move(saved, to: destination))
         }
@@ -692,6 +747,8 @@ final class TodoModel {
     private func applyNavigation(_ target: EditorNavigation) async -> Bool {
         pendingNavigation = nil
         switch target {
+        case .showDiscovery(let intent):
+            return await applyDiscoveryShow(intent)
         case .edit(let task):
             if editor?.id != task.id { beginEditing(task) }
         case .move(let task, let destination):
@@ -722,6 +779,15 @@ final class TodoModel {
             changeProfile(destination)
         }
         return true
+    }
+
+    func dismissNavigationPrompt() {
+        pendingNavigation = nil
+    }
+
+    func cancelNavigation() {
+        dismissNavigationPrompt()
+        discovery.showIntent = nil
     }
 
     func beginEditing(_ task: TaskSnapshot, focusTitle: Bool = false) {
@@ -755,6 +821,7 @@ final class TodoModel {
     }
 
     func transition(_ task: TaskSnapshot, action: String) async {
+        let credentialEpoch = discovery.credentialEpoch
         guard canWrite else { return }
         busy = true
         defer { busy = false }
@@ -772,10 +839,13 @@ final class TodoModel {
             if editor?.id == task.id { editor = nil }
             await refreshAfterWrite("Task updated")
             announce("Task updated")
-        } catch { message = describe(error); editorError = message; handleAuthorization(error) }
+        } catch {
+            guard isCurrentCredential(credentialEpoch) else { return }
+            message = describe(error); editorError = describe(error, at: .editor); handleAuthorization(error, credentialEpoch: credentialEpoch) }
     }
 
     func deleteTask(_ task: TaskSnapshot) async {
+        let credentialEpoch = discovery.credentialEpoch
         guard canWrite else { return }
         busy = true
         defer { busy = false }
@@ -798,13 +868,15 @@ final class TodoModel {
             }
             await refreshAfterWrite("Task deleted")
         } catch {
-            if editor?.id == task.id { editorError = describe(error) }
+            guard isCurrentCredential(credentialEpoch) else { return }
+            if editor?.id == task.id { editorError = describe(error, at: .editor) }
             else { message = describe(error) }
-            handleAuthorization(error)
+            handleAuthorization(error, credentialEpoch: credentialEpoch)
         }
     }
 
     func write(_ intent: TaskWriteIntent) async {
+        let credentialEpoch = discovery.credentialEpoch
         guard canWrite, let draft = editor else { return }
         transferResult = nil
         busy = true
@@ -880,9 +952,10 @@ final class TodoModel {
             }
             announce("Task updated")
         } catch {
-            editorError = describe(error)
+            guard isCurrentCredential(credentialEpoch) else { return }
+            editorError = describe(error, at: .editor)
             if intent.transfer != nil { writeIntent = intent }
-            handleAuthorization(error)
+            handleAuthorization(error, credentialEpoch: credentialEpoch)
         }
     }
 
@@ -918,6 +991,7 @@ final class TodoModel {
     }
 
     func openSeries(presenting: Bool = true) async {
+        let credentialEpoch = discovery.credentialEpoch
         guard outdatedServerBuild == nil else { return }
         guard canWrite, let draft = editor else { return }
         seriesGeneration += 1
@@ -947,13 +1021,15 @@ final class TodoModel {
             series = definition
             showingSeries = presenting
         } catch {
+            guard isCurrentCredential(credentialEpoch) else { return }
             guard !Task.isCancelled, seriesGeneration == request, profile == requestedProfile, editor?.id == draft.id else { return }
-            editorError = describe(error)
-            handleAuthorization(error)
+            editorError = describe(error, at: .editor)
+            handleAuthorization(error, credentialEpoch: credentialEpoch)
         }
     }
 
     func saveSeries(_ recurrence: Recurrence) async {
+        let credentialEpoch = discovery.credentialEpoch
         guard canWrite else { return }
         recurrenceDraft = recurrence
         if series == nil, editor?.base.occurrence != nil {
@@ -976,11 +1052,15 @@ final class TodoModel {
             }
             await refreshAfterWrite("Series created")
             announce("Series created")
-        } catch { editorError = describe(error); handleAuthorization(error) }
+        } catch {
+            guard isCurrentCredential(credentialEpoch) else { return }
+            editorError = describe(error, at: .editor); handleAuthorization(error, credentialEpoch: credentialEpoch) }
     }
 
     private func discoverProfiles() async throws {
+        let credentialEpoch = discovery.credentialEpoch
         let value = try await client.reads_period_profiles().ok.body.json
+        guard isCurrentCredential(credentialEpoch) else { return }
         profiles = try decode([DiscoveryEntry].self, value)
         if !profiles.contains(where: { $0.id == profile }), let first = profiles.first { profile = first.id }
     }
@@ -1048,7 +1128,7 @@ final class TodoModel {
             parsedInput = text
         } catch {
             guard run == parseGeneration, !Task.isCancelled else { return }
-            parseError = describe(error)
+            parseError = describe(error, at: .parse)
         }
     }
 
@@ -1095,7 +1175,7 @@ final class TodoModel {
             history = try decode([HistoryEntry].self, value)
         } catch {
             guard historyGeneration == request, generation == run, profile == requestedProfile, editor?.id == task.id else { return }
-            historyError = describe(error)
+            historyError = describe(error, at: .history)
         }
     }
 
@@ -1104,53 +1184,70 @@ final class TodoModel {
     }
 
     func loadSnapshots() async {
+        let credentialEpoch = discovery.credentialEpoch
         guard outdatedServerBuild == nil else { return }
         snapshotError = nil
         do {
             let wire = try await client.snapshots_period_list().ok.body.json
+            guard isCurrentCredential(credentialEpoch) else { return }
             ownerSnapshots = try decode(SnapshotCatalog.self, wire).snapshots
             snapshotsLoaded = true
-        } catch { snapshotError = describe(error) }
+        } catch {
+            guard isCurrentCredential(credentialEpoch) else { return }
+            snapshotError = describe(error, at: .snapshot) }
     }
 
     func createSnapshot() async {
+        let credentialEpoch = discovery.credentialEpoch
         guard canWrite else { return }
         busy = true
         defer { busy = false }
         do {
             _ = try await client.snapshots_period_create(body: .json(.init(reason: "manual"))).ok
+            guard isCurrentCredential(credentialEpoch) else { return }
             await loadSnapshots()
-        } catch { snapshotError = describe(error) }
+        } catch {
+            guard isCurrentCredential(credentialEpoch) else { return }
+            snapshotError = describe(error, at: .snapshot) }
     }
 
     func previewSnapshotRestore(_ snapshot: OwnerSnapshot) async {
+        let credentialEpoch = discovery.credentialEpoch
         guard canWrite else { return }
         busy = true
         defer { busy = false }
         do {
             let wire = try await client.snapshots_period_restore(path: .init(snapshot: snapshot.id), body: .json(.init(dry_run: true))).ok.body.json
+            guard isCurrentCredential(credentialEpoch) else { return }
             snapshotRestore = try decode(SnapshotRestorePreview.self, wire)
             snapshotRestoreTarget = snapshot
-        } catch { snapshotError = describe(error) }
+        } catch {
+            guard isCurrentCredential(credentialEpoch) else { return }
+            snapshotError = describe(error, at: .snapshot) }
     }
 
     func confirmSnapshotRestore() async {
+        let credentialEpoch = discovery.credentialEpoch
         guard canWrite, let target = snapshotRestoreTarget, snapshotRestore != nil else { return }
         busy = true
         defer { busy = false }
         do {
             _ = try await client.snapshots_period_restore(path: .init(snapshot: target.id), body: .json(.init(dry_run: false))).ok
+            guard isCurrentCredential(credentialEpoch) else { return }
             snapshotRestore = nil; snapshotRestoreTarget = nil
             await loadSnapshots()
-        } catch { snapshotError = describe(error) }
+        } catch {
+            guard isCurrentCredential(credentialEpoch) else { return }
+            snapshotError = describe(error, at: .snapshot) }
     }
 
-    private func expireSession() {
+    private func expireSession(credentialEpoch: Int) {
+        guard isCurrentCredential(credentialEpoch) else { return }
         disconnect()
         try? vault.delete()
         signedIn = false
         diagnostics = nil
-        credential = ""
+        replaceCredential("")
         tasks = []
         appliedSearchSnapshot = nil
         searchError = nil
@@ -1183,12 +1280,19 @@ final class TodoModel {
         } catch { message = describe(error) }
     }
 
-    func handleAuthorization(_ error: Error) { if failure(error)?.status == 401 { expireSession() } }
+    func isCurrentCredential(_ credentialEpoch: Int) -> Bool {
+        discovery.credentialEpoch == credentialEpoch && !Task.isCancelled
+    }
+    func handleAuthorization(_ error: Error, credentialEpoch: Int) {
+        if failure(error)?.status == 401 { expireSession(credentialEpoch: credentialEpoch) }
+    }
     private func failure(_ error: Error) -> RequestFailure? {
         (error as? RequestFailure) ?? (error as? ClientError)?.underlyingError as? RequestFailure
     }
-    func describe(_ error: Error) -> String {
-        if let failure = failure(error) { return failure.status == 401 ? "Sign in again with your owner passphrase." : failure.message }
+    func describe(_ error: Error, at position: ClientErrorPosition = .message) -> String {
+        let server = failure(error)?.body ?? (error as? ServerFailure)
+        serverErrors[position] = server
+        if let server { return server.humanMessage }
         if error is DecodingError { return "The server response could not be read. Your draft is preserved." }
         if let draft = error as? DraftError { return draft.localizedDescription }
         if let vault = error as? VaultError { return vault.localizedDescription }

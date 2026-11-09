@@ -7,6 +7,13 @@ import OpenAPIRuntime
 #endif
 
 final class GeneratedContractTests: XCTestCase {
+    func testDiscoveryDirectoryAndLookupKeepFullIdsAndNullProject() throws {
+        try roundTrip(Operations.reads_period_profiles.Output.Ok.Body.jsonPayload.self, #"[{"id":"work","name":"Work","created_at":"2026-10-27T00:00:00Z","updated_at":"2026-10-27T00:00:00Z","open_task_count":0,"inbox_task_count":0,"visible_task_count":0,"projects":[{"id":"project-full-id","name":"Empty Project"}]}]"#)
+        try roundTrip(Operations.reads_period_lookup.Output.Ok.Body.jsonPayload.self, #"[{"profile":{"id":"personal","name":"Personal"},"task_id":"aaaaaaaa-1111-4222-8333-444444444444","title":"Done Task","project":null}]"#)
+        XCTAssertEqual(Operations.reads_period_profiles.Input.Query(include_projects: ._true).include_projects, ._true)
+        XCTAssertEqual(Operations.reads_period_lookup.Input.Query(prefix: "AAa").prefix, "AAa")
+    }
+
     func testSearchReadKeepsOriginalUTF16Spans() throws {
         let json = #"{"id":"task-1","profile_id":"work","entity_version":1,"row_version":7,"title":"🎵 Canción","description":"Pay rent today","project_id":null,"priority":"P3","scheduled_at":null,"due_at":null,"energy":null,"estimate_min":null,"source":"manual","tags":[],"status":"open","occurrence":null,"created_at":"2026-10-27T00:00:00Z","updated_at":"2026-10-27T00:00:00Z","completed_at":null,"deleted_at":null,"search_matches":[{"field":"title","start":3,"end":10},{"field":"description","start":4,"end":8}]}"#
         try roundTrip(Operations.tasks_period_list.Output.Ok.Body.jsonPayloadPayload.self, json)
@@ -20,7 +27,7 @@ final class GeneratedContractTests: XCTestCase {
     func testBatchEditKeepsPerTaskVersionsAndSharedChange() throws {
       try roundTrip(Operations.tasks_period_batchEdit.Input.Body.jsonPayload.self, #"{"items":[{"task_id":"first","from_version":2},{"task_id":"second","from_version":7}],"changes":{"priority":"P1"},"dry_run":true}"#)
       try roundTrip(Operations.tasks_period_batchEdit.Input.Body.jsonPayload.self, #"{"items":[{"task_id":"first","from_version":2}],"changes":{"due_at":null}}"#)
-      try roundTrip(Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.self, #"{"generated_at":"2026-11-04T00:00:00Z","dry_run":false,"items":[{"task_id":"first","from_version":2,"current_version":3,"outcome":"updated"},{"task_id":"second","from_version":7,"current_version":8,"outcome":"rejected","error":{"generated_at":"2026-11-04T00:00:00Z","code":"occ_conflict","message":"Reload Tasks","details":{"current_version":8}}}],"totals":{"updated":1,"rejected":1}}"#)
+      try roundTrip(Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.self, #"{"generated_at":"2026-11-04T00:00:00Z","dry_run":false,"items":[{"task_id":"first","from_version":2,"current_version":3,"outcome":"updated"},{"task_id":"second","from_version":7,"current_version":8,"outcome":"rejected","error":{"generated_at":"2026-11-04T00:00:00Z","code":"occ_conflict","exit_code":4,"exit_meaning":"Conflict","message":"Reload Tasks","details":{"current_version":8}}}],"totals":{"updated":1,"rejected":1}}"#)
     }
 
     func testDiagnosticsReadPreservesNullableMetadata() async throws {
@@ -62,7 +69,7 @@ final class GeneratedContractTests: XCTestCase {
         try roundTrip(Operations.tasks_period_importTasks.Input.Body.jsonPayload.self,
           #"{"file_name":"repository-sync.json","items":[{"external_id":"repo:a","title":"Imported","description":null,"project_name":null,"tag_names":null,"from_version":null}],"dry_run":true,"close_missing":true,"close_missing_candidates":[{"external_id":"repo:missing","task_id":"task-2","from_version":3}]}"#)
         try roundTrip(Operations.tasks_period_importTasks.Output.Ok.Body.jsonPayload.self,
-          #"{"generated_at":"2026-10-29T00:00:00Z","dry_run":false,"items":[{"external_id":"repo:a","outcome":"rejected","task_id":"task-1","from_version":1,"changed_fields":[],"error":{"code":"occ_conflict","message":"Preview again.","details":{"current_version":2}}}],"totals":{"created":0,"updated":0,"unchanged":0,"rejected":1}}"#)
+          #"{"generated_at":"2026-10-29T00:00:00Z","dry_run":false,"items":[{"external_id":"repo:a","outcome":"rejected","task_id":"task-1","from_version":1,"changed_fields":[],"error":{"code":"occ_conflict","exit_code":4,"exit_meaning":"Conflict","message":"Preview again.","details":{"current_version":2}}}],"totals":{"created":0,"updated":0,"unchanged":0,"rejected":1}}"#)
     }
 
 
@@ -186,7 +193,7 @@ final class GeneratedContractTests: XCTestCase {
 
     func testMoveIdentityErrorPreservesMachineReadableDetails() throws {
         try roundTrip(Components.Schemas.InvalidTaskEncoded.self,
-                      #"{"_tag":"InvalidTask","message":"\"Personal\" already has a Task with external id \"repo:move\". Choose another Profile.","details":{"external_id":"repo:move","profile_id":"personal"}}"#)
+                      #"{"_tag":"InvalidTask","exit_code":2,"exit_meaning":"validation or usage","message":"\"Personal\" already has a Task with external id \"repo:move\". Choose another Profile.","details":{"external_id":"repo:move","profile_id":"personal"}}"#)
     }
 
     private func fields<Value: Encodable>(_ value: Value) throws -> [String: Any] {

@@ -21,7 +21,7 @@ enum BatchEditField: String, CaseIterable, Identifiable {
 }
 struct BatchEditReport: Decodable, Sendable {
   struct Row: Decodable, Sendable {
-    struct Failure: Decodable, Sendable { let code: String; let message: String }
+    typealias Failure = ServerFailure
     let task_id: String
     let from_version: Int
     let current_version: Int?
@@ -77,23 +77,25 @@ extension TodoModel {
     await reloadBatchEditTargets()
   }
   func reloadBatchEditTargets() async {
+    let credentialEpoch = discovery.credentialEpoch
     guard let draft = batchEdit, !busy else { return }
     batchEdit?.loading = true
     batchEdit?.report = nil
     batchEdit?.error = nil
     do {
       let values = try await client.tasks_period_list(path: .init(profile: draft.profile)).ok.body.json.map(TaskSnapshot.decode).sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
-      guard batchEdit?.id == draft.id, profile == draft.profile else { return }
+      guard isCurrentCredential(credentialEpoch), batchEdit?.id == draft.id, profile == draft.profile else { return }
       batchEdit?.targets = values
       batchEdit?.selected.formIntersection(Set(values.map(\.id)))
     } catch {
-      guard batchEdit?.id == draft.id else { return }
-      batchEdit?.error = describe(error)
-      handleAuthorization(error)
+      guard isCurrentCredential(credentialEpoch), batchEdit?.id == draft.id else { return }
+      batchEdit?.error = describe(error, at: .batchEdit)
+      handleAuthorization(error, credentialEpoch: credentialEpoch)
     }
     if batchEdit?.id == draft.id { batchEdit?.loading = false }
   }
   func applyBatchEdit(dryRun: Bool) async {
+    let credentialEpoch = discovery.credentialEpoch
     guard canWrite, !busy, let draft = batchEdit, !draft.loading, draft.valid, !draft.selected.isEmpty else { return }
     busy = true
     batchEdit?.error = nil
@@ -103,13 +105,13 @@ extension TodoModel {
       let payload = try JSONDecoder().decode(Operations.tasks_period_batchEdit.Input.Body.jsonPayload.self, from: JSONSerialization.data(withJSONObject: ["items": items, "changes": draft.change, "dry_run": dryRun]))
       let response = try await client.tasks_period_batchEdit(path: .init(profile: draft.profile), body: .json(payload)).ok.body.json
       let report = try JSONDecoder().decode(BatchEditReport.self, from: JSONEncoder().encode(response))
-      guard batchEdit?.id == draft.id, profile == draft.profile else { return }
+      guard isCurrentCredential(credentialEpoch), batchEdit?.id == draft.id, profile == draft.profile else { return }
       batchEdit?.report = report
       if !dryRun { await refreshAfterWrite("Tasks updated") }
     } catch {
-      guard batchEdit?.id == draft.id else { return }
-      batchEdit?.error = describe(error)
-      handleAuthorization(error)
+      guard isCurrentCredential(credentialEpoch), batchEdit?.id == draft.id else { return }
+      batchEdit?.error = describe(error, at: .batchEdit)
+      handleAuthorization(error, credentialEpoch: credentialEpoch)
     }
   }
 }
@@ -154,15 +156,19 @@ struct BatchEditView: View {
               })) {
                 VStack(alignment: .leading, spacing: 4) {
                   Text(task.title).font(.callout).lineLimit(1).help(task.title)
-                  Text(row.map { row in row.error.map { error in error.code == "occ_conflict" ? "Conflict · Version \(row.current_version ?? 0). Reload Tasks." : error.message } ?? (draft.report?.dry_run == true ? "Ready · Version \(task.row_version)" : "Updated · Version \(row.current_version ?? 0)") } ?? "\(task.priority) · Version \(task.row_version)")
-                    .font(.caption).foregroundStyle(row?.error == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(TodoColors.color("destructive")))
+                  if let failure = row?.error {
+                    ServerErrorNotice(model: model, failure: failure, currentVersion: row?.current_version)
+                  } else {
+                    Text(row.map { row in draft.report?.dry_run == true ? "Ready · Version \(task.row_version)" : "Updated · Version \(row.current_version ?? 0)" } ?? "\(task.priority) · Version \(task.row_version)")
+                      .font(.caption).foregroundStyle(.secondary)
+                  }
                 }.frame(maxWidth: .infinity, alignment: .leading)
-              }.toggleStyle(.checkbox).frame(minHeight: 56).disabled(model.busy || draft.loading).accessibilityLabel("Select \(task.title)")
+              }.toggleStyle(.checkbox).frame(minHeight: 56).disabled(model.busy || draft.loading).accessibilityLabel("Select \(task.title)").reportErrorBounds("row-" + task.id)
             }
           }.frame(maxWidth: .infinity, alignment: .leading)
-        }.frame(height: compact ? 112 : 224).accessibilityLabel("Tasks to edit")
+        }.frame(height: compact ? 112 : 224).accessibilityLabel("Tasks to edit").reportErrorBounds("viewport")
         Divider()
-        if let error = draft.error { Text(error).font(.caption).foregroundStyle(TodoColors.color("destructive")) }
+        if let error = draft.error { ClientErrorNotice(model: model, text: error, position: .batchEdit) }
         HStack(spacing: 8) {
           if hasConflicts(draft) { reloadButton(draft).buttonStyle(.borderedProminent) }
           else { reloadButton(draft).buttonStyle(.bordered) }
