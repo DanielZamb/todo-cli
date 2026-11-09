@@ -1,6 +1,6 @@
 import { Effect, Schema } from "effect";
 import { type Project, type Tag, type Task, TaskPriority } from "./entities.ts";
-import { inputLimits } from "./limits.ts";
+import { inputLimits, TaskIdPrefix } from "./limits.ts";
 import type { TaskRead } from "./task-read.ts";
 import {
   matchTaskSearchSteps,
@@ -27,16 +27,7 @@ export const TaskFilters = Schema.Struct({
         "Search title and description with word prefixes, typo tolerance, quoted phrases and exclusions. Blank text returns empty search_matches.",
     }),
   ),
-  prefix: Schema.optionalKey(
-    Schema.String.check(
-      Schema.isMinLength(1),
-      Schema.isMaxLength(36),
-      Schema.isPattern(/^[0-9A-Fa-f-]+$/u),
-    ).annotate({
-      description:
-        "Case-insensitive literal Task id prefix. Hex digits and hyphens only.",
-    }),
-  ),
+  prefix: Schema.optionalKey(TaskIdPrefix),
   project: Schema.optionalKey(Schema.String),
   tag: Schema.optionalKey(Schema.String),
   status: Schema.optionalKey(

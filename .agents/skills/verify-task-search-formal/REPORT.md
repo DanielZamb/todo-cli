@@ -1,3 +1,7 @@
+# Combined main integration under verification
+
+The following records retain their original source candidates. New combined-source mapping review and proof results are pending and will be recorded separately. No carried result is relabeled as a run on the new merge.
+
 # Current main-based performance integration
 
 Product `ada9f31907322f626c90224573dba283b1d5f254` merges final main
@@ -165,6 +169,82 @@ SHAs. This remains a bounded design proof with manually reviewed source
 mapping, not a TypeScript or Swift refinement theorem. PERF-refresh correctness
 and coordinator UI review seats are pending L1's final handoff.
 
+# Final merged TaskSearch proof
+
+TaskSearch semantic review and its single source-hash renewal now name immutable
+candidate `f85aef6faf7d93be80feef930554206e09d61be3`. Product source is the reviewed
+merged 36f9; root 81c adds only proof changes. The hold was released before this
+review. No production/API/dependency/pin change, merge or rebase is made by E.
+
+The actual one-command check exits 0 in
+`docs/evidence/task-search-formal/check-4n4nBS`, including both safety graphs,
+conditional liveness, every intended model control, restoration, strict runner
+checking, current production hash gate and real immutable matcher properties.
+The model/tool/bounds are unchanged. Generated successors include duplicates;
+none of these counts is a distinct-edge count.
+
+| Stage | Actual exit | Generated | Distinct | Queue |
+| --- | ---: | ---: | ---: | ---: |
+| safety-full | 0 | 16,355,233 | 1,710,504 | 0 |
+| safety-three-requests | 0 | 10,791,549 | 1,026,978 | 0 |
+| conditional liveness | 0 | 202,987 | 24,186 | 0 |
+| broken snapshot | 12 | 35 | 17 | 13 |
+| broken latest | 12 | 159 | 65 | 50 |
+| broken latest, semantic Showing invariant | 12 | 159 | 65 | 50 |
+| broken stale | 12 | 179 | 77 | 59 |
+| broken progress | 13 | 196,579 | 24,186 | 0 |
+| missing recovery fairness | 13 | 202,987 | 24,186 | 0 |
+| restored | 0 | 202,987 | 24,186 | 0 |
+
+The four invariant controls retain expected nonempty queues because they stop
+at their intended counterexamples. The temporal controls find the intended
+lassos. Parser/compiler/hash-drift/timeout/interruption is never sensitivity.
+Bounds, generation equality abstraction, complete queue requirements and
+conditional fairness assumptions remain in SKILL.md and the historical report.
+SEC's deterministic refusal maps to Error. Conditional convergence requires a
+later affordable successful response and a fair available recovery source.
+There is no CPU, heap, output size, arbitrary network or native-event theorem.
+
+Standalone real matcher run `matcher-wrLTPA` exits 0 at f85 before coverage
+renewal. The one-command run repeats the same immutable candidate in its linked
+matcher receipt. Every generated property passes; all five copied-source
+mutants exit1 at the intended behavior assertion, restore exact bytes and now
+run the corresponding clean property after EACH mutation. The full restored
+corpus and driver/runner strict checks exit0. Captured source is extracted into
+regular files with different inodes from live source. Only installed dependency
+links are shared. Corpus/seed/bounds remain as recorded in MATCHER-REPORT.md.
+
+CLIENT-MAPPING.md records the final whole-file semantic review: current guards,
+debounce, snapshot pairing, rollback, resets, Profile-keyed metadata lifetime,
+trim-representable inferred Tag names, applied refusal context, shared error2
+line, explicit Show refresh and auth generation invalidation. Domain matcher
+bytes match reviewed SEC c143. TaskIdPrefix is the same schema moved to limits;
+list response arrays and exit pairs are additive. Synchronous/Effect matcher
+paths share the generator; async evaluation occurs after the auth view read.
+Server authorization/read-snapshot properties remain separate from TLC.
+
+Root merged full-check, CLI/HTTP discovery and search, Electron discovery/report/
+stale401, Swift 110+21 state, unsigned and 60+116 design gates all retain their
+actual36f9 exits 0. The corrected Electron TaskSearch drive retains actual81c
+exit0, production-input diff0 and fresh scratch. Its original literal failure 1
+and two ignored wrapper setup failures 1 remain failures. The actual UI refusal
+contains the shared newline `error 2 - validation or usage`; no product defect
+or runtime-policy change was needed. Fixed B9 backend binaries retain builtHead
+36f9 and their recorded hashes. No mutable cache manifest is used.
+
+This is finite model safety/conditional liveness, generated matcher properties,
+manual source mapping and carried real-client regressions, not mechanical
+refinement or unbounded correctness. Discovery conformance is tracked separately
+against the SAME f85 candidate. Parent-owned AtomicCAS proof closure at 81c is
+untouched. Final E source/report freeze, exact-SHA check receipts and independent
+seats are reported in the discovery REPORT and final handoff. Native UI,
+Keychain/persistence, OS clipboard, focus/glass/VoiceOver and notifications stay
+under HOLD. No domain files or visuals are added; no child is launched.
+
+## Historical TaskSearch report
+
+The earlier records below retain their original candidates and outcomes.
+
 # C1 design model proof
 
 The approved response-order model, including SSE recovery, semantic ShowingIsCurrent and text-retaining reset, passes the R1 amendment run within the bounds below. The original SSE model was reviewed at code commit f42fc7f5. Generated
@@ -267,7 +347,7 @@ reset retains text. Manual Retry and current-Profile SSE recovery are implemente
 Coordinator R1 adds ShowingIsCurrent independently of publicationOK. The
 broken-latest-showing control omits the ghost invariant and fails the semantic
 invariant with exit12. R3 retains toolbar text in Reset. The amendment run
-check-CslMY5 exits0, including both safety graphs, liveness, deliberate breaks,
+check-CslMY5 exits 0, including both safety graphs, liveness, deliberate breaks,
 restoration and real matcher checks. Counts above describe that unchanged model.
 The final integration run is recorded separately in the ignored L1 ledger.
 

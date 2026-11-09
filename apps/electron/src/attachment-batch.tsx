@@ -13,7 +13,9 @@ import {
   DialogTitle,
 } from "./components/ui/dialog.tsx";
 import { Input } from "./components/ui/input.tsx";
+import { errorReply, taskLookupDetails } from "./error-reply.ts";
 import type { Reply, Request } from "./protocol.ts";
+import { type FindTask, TaskLookupStatus } from "./task-lookup-status.tsx";
 
 export function AttachmentBatchDialog({
   attachment,
@@ -21,6 +23,7 @@ export function AttachmentBatchDialog({
   request,
   canWrite,
   onClose,
+  onFindTask,
   sourceTaskId,
   onAccepted,
 }: {
@@ -29,6 +32,7 @@ export function AttachmentBatchDialog({
   request: (request: Request) => Promise<Reply>;
   canWrite: boolean;
   onClose: () => void;
+  onFindTask?: FindTask | undefined;
   sourceTaskId: Task["id"];
   onAccepted: (task: Task) => void;
 }) {
@@ -169,9 +173,11 @@ export function AttachmentBatchDialog({
               const result = report?.items.find(
                 (row) => row.task_id === task.id,
               );
+              const details = taskLookupDetails(result?.error);
               return (
-                <label key={task.id} className="attachment-batch-row">
+                <div key={task.id} className="attachment-batch-row">
                   <input
+                    id={`${labelId}-${task.id}`}
                     type="checkbox"
                     aria-label={`Select ${task.title}`}
                     checked={selected.has(task.id)}
@@ -184,26 +190,44 @@ export function AttachmentBatchDialog({
                       setReport(null);
                     }}
                   />
-                  <span>
-                    <span>{task.title}</span>
-                    {result && (
-                      <small
-                        role={
-                          result.outcome === "rejected" ? "alert" : undefined
+                  <div className="grid min-w-0 gap-1">
+                    <label htmlFor={`${labelId}-${task.id}`}>
+                      {task.title}
+                    </label>
+                    {details ? (
+                      <TaskLookupStatus
+                        details={details}
+                        onFind={
+                          onFindTask
+                            ? () => {
+                                onClose();
+                                onFindTask(details);
+                              }
+                            : undefined
                         }
-                      >
-                        {result.error?.message ??
-                          (report?.dry_run
-                            ? result.outcome === "attached"
-                              ? "Ready to attach"
-                              : "Already attached"
-                            : result.outcome === "attached"
-                              ? "Attached"
-                              : "Already attached")}
-                      </small>
+                      />
+                    ) : (
+                      result && (
+                        <small
+                          className="whitespace-pre-line"
+                          role={
+                            result.outcome === "rejected" ? "alert" : undefined
+                          }
+                        >
+                          {result.error
+                            ? errorReply(result.error).message
+                            : report?.dry_run
+                              ? result.outcome === "attached"
+                                ? "Ready to attach"
+                                : "Already attached"
+                              : result.outcome === "attached"
+                                ? "Attached"
+                                : "Already attached"}
+                        </small>
+                      )
                     )}
-                  </span>
-                </label>
+                  </div>
+                </div>
               );
             })
           )}

@@ -1,10 +1,12 @@
 import { Effect, Schema } from "effect";
 import type { AccessRequest } from "./auth/model.ts";
 import { TaskCommands } from "./commands.ts";
+import { exitStatus } from "./exit-status.ts";
 import { TaskId, Version } from "./ids.ts";
 import { limitedItems, TaskIdInput } from "./limits.ts";
 import type { OperationStore } from "./store/store.ts";
 import { TaskPatch } from "./task-commands.ts";
+import { TaskLookupDetails, taskLookupError } from "./task-lookup-error.ts";
 import { Instant } from "./time.ts";
 
 export const BatchEditItem = Schema.Struct({
@@ -41,10 +43,22 @@ export const BatchEditRow = Schema.Struct({
   outcome: Schema.Literals(["updated", "rejected"]),
   error: Schema.optionalKey(
     Schema.Struct({
+      exit_code: Schema.Literals([1, 2, 3, 4]),
+      exit_meaning: Schema.Literals([
+        "runtime failure",
+        "validation or usage",
+        "not found or auth missing",
+        "Conflict",
+      ]),
       generated_at: Instant,
       code: Schema.String,
       message: Schema.String,
-      details: Schema.Struct({ current_version: Schema.NullOr(Version) }),
+      details: Schema.Struct({
+        current_version: Schema.NullOr(Version),
+        profile: Schema.optionalKey(TaskLookupDetails.fields.profile),
+        task_id: Schema.optionalKey(Schema.String),
+        recovery: Schema.optionalKey(Schema.String),
+      }),
     }),
   ),
 });
@@ -91,6 +105,12 @@ const execute = Effect.fn(function* (
             ? "occ_conflict"
             : result.reason
           : null;
+    const context =
+      code === "not_found"
+        ? yield* taskLookupError(store, request, item.task_id, "http", {
+            action: "authenticate",
+          })
+        : undefined;
     items.push({
       ...item,
       current_version,
@@ -99,15 +119,19 @@ const execute = Effect.fn(function* (
         ? {}
         : {
             error: {
+              ...exitStatus(
+                code === "occ_conflict" ? 4 : code === "not_found" ? 3 : 2,
+              ),
               generated_at,
               code,
               message:
-                code === "occ_conflict"
+                context?.message ??
+                (code === "occ_conflict"
                   ? "Conflict. Reload Tasks, preview and apply with the current Version."
                   : code === "not_found"
                     ? "Task not found in this Profile. Reload Tasks and select again."
-                    : "Change rejected. Check the field value and preview again.",
-              details: { current_version },
+                    : "Change rejected. Check the field value and preview again."),
+              details: { current_version, ...context?.details },
             },
           }),
     });

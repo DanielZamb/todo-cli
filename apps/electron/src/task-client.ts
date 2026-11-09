@@ -3,6 +3,7 @@ import { type PlanningView, seriesForTask, type TaskId } from "@todo/domain";
 import { Effect, Schema } from "effect";
 import type { HttpClient } from "effect/http";
 import { HttpApiClient } from "effect/http-api";
+import { errorReply, exitDetail } from "./error-reply.ts";
 import type { NativeAttachmentRequest, Reply, Request } from "./protocol.ts";
 import { historyTaskIds, seriesFromHistory, seriesKey } from "./recurrence.ts";
 
@@ -96,9 +97,11 @@ export const taskRequest = (
         });
         const row = report.items[0];
         if (row?.outcome === "rejected") {
-          if (row.error?.code === "occ_conflict")
+          if (row.error?.code === "occ_conflict") {
+            const exit_detail = exitDetail(row.error);
             return {
               _tag: "conflict",
+              ...(exit_detail === undefined ? {} : { exit_detail }),
               latest: yield* http.tasks.show({
                 params: {
                   profile: request.profile,
@@ -106,10 +109,10 @@ export const taskRequest = (
                 },
               }),
             };
-          return {
-            _tag: "error",
-            message: row.error?.message ?? "Attachments were rejected.",
-          };
+          }
+          return errorReply(
+            row.error ?? { message: "Attachments were rejected." },
+          );
         }
         return {
           _tag: "task",
@@ -153,8 +156,32 @@ export const taskRequest = (
             payload: request.payload,
           }),
         };
+      case "directory":
+        return {
+          _tag: "directory",
+          profiles: yield* http.reads.profiles({
+            query: { include_projects: "true" },
+          }),
+        };
+      case "lookup":
+        return {
+          _tag: "lookup",
+          matches: yield* http.reads.lookup({
+            query: { prefix: request.prefix },
+          }),
+        };
+      case "showTask":
+        return {
+          _tag: "task",
+          task: yield* http.tasks.show({
+            params: { profile: request.profile, task: request.task },
+          }),
+        };
       case "profiles":
-        return { _tag: "signedIn", profiles: yield* http.reads.profiles() };
+        return {
+          _tag: "signedIn",
+          profiles: yield* http.reads.profiles({ query: {} }),
+        };
       case "deleteProfile":
         return {
           _tag: "profileDeleted",
@@ -185,7 +212,7 @@ export const taskRequest = (
           yield* Effect.all(
             [
               http.tasks.list({ params, query: {} }),
-              http.reads.profiles(),
+              http.reads.profiles({ query: {} }),
               http.reads.projects({ params }),
               http.reads.tags({ params }),
               Effect.all(
@@ -377,9 +404,8 @@ export const taskRequest = (
   }).pipe(
     Effect.catchIf(Schema.is(SearchTooBroadResponse), (error) =>
       Effect.succeed<Reply>({
-        _tag: "error",
+        ...errorReply(error),
         code: error.code,
-        message: error.message,
       }),
     ),
   );

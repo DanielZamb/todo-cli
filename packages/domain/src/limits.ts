@@ -93,3 +93,12 @@ export const rejectedInputForHistory = (value: unknown): unknown => {
     ? value
     : { truncated: true, characters: text.length };
 };
+
+export const TaskIdPrefix = Schema.String.check(
+  Schema.isMinLength(1),
+  Schema.isMaxLength(36),
+  Schema.isPattern(/^[0-9A-Fa-f-]+$/u),
+).annotate({
+  description:
+    "Case-insensitive literal Task id prefix. Hex digits and hyphens only.",
+});

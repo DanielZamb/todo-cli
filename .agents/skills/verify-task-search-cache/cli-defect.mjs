@@ -70,6 +70,8 @@ try {
     {
       generated_at: "<clock>",
       code: "runtime_error",
+      exit_code: 1,
+      exit_meaning: "runtime failure",
       message: "Error: seat1 injected preparation defect",
     },
   );

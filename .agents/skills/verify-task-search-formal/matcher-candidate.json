@@ -1,9 +1,14 @@
 {
   "commit": "ada9f31907322f626c90224573dba283b1d5f254",
-  "status": "Reviewed immutable main9de plus Tag D1 and PERF-refresh/R1 integration; real matcher and all sensitivity checks passed in check-XmY6pO.",
+  "status": "main4c integration under review; final source-gate renewal pending",
   "normalization": "normalizeTaskSearch",
   "parsing": "parseTaskSearch",
   "matching": "matchTaskSearch",
   "prefix": "filterTaskRecords",
-  "integrationRecheck": "Use an explicit full final-tip SHA; the L1 final ledger records its process result."
+  "integrationRecheck": "Use an explicit full final-tip SHA; the L1 final ledger records its process result.",
+  "integrationReview": {
+    "base": "7c1326bd5ecd1d84cdd9a6426b18e8c380e5d336",
+    "main": "4c904d96277853c60692c685c6d4ea3b3e655bc4",
+    "status": "Merged source under semantic review; hybrid-file hashes have not been renewed"
+  }
 }

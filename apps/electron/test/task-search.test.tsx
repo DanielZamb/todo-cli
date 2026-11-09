@@ -2,6 +2,7 @@ import { expect, it } from "@effect/vitest";
 import { TaskRead } from "@todo/domain";
 import { Schema } from "effect";
 import { renderToStaticMarkup } from "react-dom/server";
+import { errorReply } from "../src/error-reply.ts";
 import { Reply } from "../src/protocol.ts";
 import {
   DescriptionMatch,
@@ -45,7 +46,7 @@ it("shows the refusal first and names the retained search snapshot", () => {
       />,
     ),
   ).toBe(
-    '<span>Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.</span><small class="search-error-context">Showing results for &quot;rent&quot;.</small>',
+    '<span class="whitespace-pre-line">Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.</span><small class="search-error-context">Showing results for &quot;rent&quot;.</small>',
   );
 });
 
@@ -59,7 +60,7 @@ it("shows the refusal first and identifies an unsearched snapshot", () => {
       />,
     ),
   ).toBe(
-    '<span>Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.</span><small class="search-error-context">Showing tasks without search.</small>',
+    '<span class="whitespace-pre-line">Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.</span><small class="search-error-context">Showing tasks without search.</small>',
   );
 });
 
@@ -248,4 +249,27 @@ it("resolves synthetic same-name Projects and raw-append case-fold Tags while pr
       ),
     ),
   ).toEqual({ project: " Small ", tag: "KEEP", status: "open", text: "probe" });
+});
+
+it("keeps the exit meaning in a deterministic refusal", () => {
+  const reply = errorReply({
+    code: "search_too_broad",
+    message: "Narrow the search.",
+    exit_code: 2,
+    exit_meaning: "validation or usage",
+  });
+  expect(reply.message).toBe(
+    "Narrow the search.\nerror 2 - validation or usage",
+  );
+  expect(
+    renderToStaticMarkup(
+      <SearchErrorMessage
+        kind="search_too_broad"
+        message={reply.message}
+        appliedText="rent"
+      />,
+    ),
+  ).toBe(
+    '<span class="whitespace-pre-line">Narrow the search.\nerror 2 - validation or usage</span><small class="search-error-context">Showing results for &quot;rent&quot;.</small>',
+  );
 });

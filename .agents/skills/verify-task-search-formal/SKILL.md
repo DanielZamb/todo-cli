@@ -18,6 +18,13 @@ commit in matcher-candidate.json. For final integration, pass its exact full SHA
 The command checks the model, source mapping and matcher separately; client
 behavior also requires the compiled verification recipes.
 
+All required paths resolve from `git rev-parse --show-toplevel`. The optional
+`TODO_TASK_SEARCH_TOOL_CACHE` names a repo-relative cache directory; its default
+is `docs/evidence/task-search-formal/tool-cache`. Absolute paths, paths above
+the checkout and symlinks escaping it fail before TLC starts. The command runs
+each bad-input control and a restored preflight. Historical discovery receipt
+paths in the mapping are provenance text; this workflow does not open them.
+
 Prerequisites are Java 11 or newer, Bun, curl, and dependencies from the existing
 pnpm lockfile. Follow the active run's disk guard before `pnpm install`.
 The Git object named in `matcher-candidate.json` must exist locally. The command

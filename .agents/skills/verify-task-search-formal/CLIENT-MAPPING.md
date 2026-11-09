@@ -1,3 +1,60 @@
+# Performance/main integration verification maintenance
+
+The former carried receipts below are historical provenance only. Current commands
+never open those paths. Fresh merged-source proofs are pending at this checkpoint;
+no old C/D execution is relabeled. See the current skill prerequisites and the
+integration report for fresh command exits and the explicitly unproved limits.
+
+## Historical record
+
+# Final merged-source review
+
+The final candidate is `f85aef6faf7d93be80feef930554206e09d61be3`, with product
+source exactly `36f9c56e200048aa2ca16186aaf713bea8d5454e` and proof-only root
+integration `81cdef8ec257a8ca7e1cbfb1ab2b3ff3afcbbf14`. Main `9de89345` includes
+reviewed SEC `07750418`. This review occurs after the coordinator released the
+TaskSearch hold and L1 updated E's bound worktree. E did not merge or rebase.
+The c488 discovery checkpoint is separate historical evidence.
+
+The mapping below remains valid on the merged code. E inspected the complete
+search functions in the changed renderer, TodoModel, task-client, protocol,
+AppViews, TaskSearch, task-search-results, task-filters, limits, presentation and
+commands files, and the full matcher. Immutable real matcher checks at f85,
+including all five behavioral mutations and a targeted clean rerun after each
+restoration, passed in matcher-wrLTPA before the single coverage renewal.
+
+| Merged path | Concrete review result |
+| --- | --- |
+| Electron refresh | Captures Profile/view/filters/Project/Tag/text, increments refreshGeneration, awaits IPC, then checks active Profile, identityKey and generation before either branch. Success installs catalog+identity together. Error retains the snapshot/text, restores applied dialog filters and enters Error. |
+| Electron input/reset/recovery | changeSearch invalidates generation before debounce. activateProfile clears result/catalog definitions, while activateView retains Profile-keyed name definitions and toolbar text. Retry and current-Profile SSE changed/connected launch refresh. endAuthentication/reload invalidate generations and clear private catalogs. |
+| Electron forwarding | taskSearchQuery uses explicit dialog names first; a missing catalog id adds no name predicate. Inferred Tag names must equal trim(); Project names remain exact. The metadata ref is keyed by Profile, updated from published snapshots, cleared on Profile/auth/reload and retained across view reset. Final id joins still intersect the same-response Tasks. |
+| Swift refresh | Captures identity/lifecycle/request generation, awaits complete reads, then canPublishSearch checks lifecycle, request, complete identity and cancellation. The catch additionally checks the captured shared authorization epoch. Rows/spans derive from filteredResponse; planning contributes ids/order. Final snapshot and presentation assignments are synchronous on MainActor. |
+| Swift forwarding | Project/Tag names narrow only the requested HTTP search. Explicit dialog names win. Tag edge scalars reject whitespace/newline/U+FEFF so unrepresentable names omit the inferred predicate. Selected id joins remain after the response. Metadata survives selectView, while Profile changes clear it. |
+| Refusal/presentation | Both guarded error branches retain text/applied snapshot and restore dialog filters. search_too_broad hides Retry, retains the applied-context line and keeps Clear/edit/SSE recovery. The shared server pair adds the required newline `error 2 - validation or usage`; refusal and applied context remain distinct. There is no client code-to-exit registry. |
+| Discovery/auth integration | Show clears selectors/text and explicitly refreshes the unchanged navigation key, or uses the normal changed-key refresh. Replacement/sign-out invalidates lifecycle/request generations; Unauthorized side effects use captured epochs. These authentication and Show protocols are separate from TaskSearch.tla. |
+| Matcher/filters | SEC matcher bytes equal the reviewed c143 source. Pure/synchronous and Effect paths drain the same generator. Work is cumulative preparation plus weighted DP cells/clause visits; interruption closes suspended generators. Non-text filters, including literal prefix, narrow first. TaskIdPrefix is the same schema moved to limits. readTasks and TaskCommands.list retain Profile filtering/order; only text list uses cooperative yielding after auth.read. |
+
+TaskSearch.tla and its bounds/tool pin are unchanged. A deterministic work
+refusal maps to Error without partial publication. The conditional liveness
+property assumes later affordable successful responses and a fair available
+recovery source. It proves no CPU/heap/output bound, matcher completeness,
+unbounded concurrency, native event delivery or mechanical refinement.
+
+Root's final compiled client and domain regressions are pinned in the discovery
+skill's HISTORICAL-INPUTS.json and checked by its one-command input gate. The root
+full check and all discovery/search/state/unsigned/design drives retain their
+actual product SHA 36f9. The corrected Electron TaskSearch drive retains its
+actual proof SHA 81c, equal production input and fresh scratch database. Its
+initial literal failure and two wrapper setup failures remain failures, not
+sensitivity. No binary's builtHead is relabeled to f85 or E's proof commit.
+
+The fixed backend source hash is
+`b9ec2d8ebf6eed046577134dccdc4a4004a10d76a5409a44af4e2f8b62f19ced`, builtHead 36f9.
+AtomicCAS's additive Attachment mapping and sensitivity closure are parent-owned
+at 81c and untouched by E. Final E exact-SHA seats remain parent-owned.
+
+## Earlier production mapping and reviewed amendments
+
 # Production client mapping
 
 The immutable source commit and whole-file hashes are in `coverage.json`.

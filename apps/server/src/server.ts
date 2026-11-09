@@ -1,6 +1,7 @@
 import { BunHttpServer } from "@effect/platform-bun";
 import {
   Authorization,
+  BadRequest,
   BearerCredential,
   BUILD_ID,
   CONTRACT_ID,
@@ -9,6 +10,7 @@ import {
   InvalidTask,
   NotFound,
   ProfileNotFound,
+  RequestDecoding,
   SearchTooBroadResponse,
   TodoApi,
   TooManySignIns,
@@ -16,15 +18,19 @@ import {
   ValidationHistory,
 } from "@todo/api";
 import {
+  type AuthAction,
   batchEditTasks,
   ClientReads,
+  Discovery,
   ExpectedVersion,
+  exitStatus,
   ProfileId,
   parseQuickAdd,
   SnapshotError,
   type Task,
   TaskId,
   type TaskMutationKind,
+  taskLookupError,
 } from "@todo/domain";
 import { AttachmentCommands } from "@todo/domain/attachments";
 import {
@@ -67,7 +73,14 @@ const taskResult = (
     case "committed":
       return Effect.succeed(result.task);
     case "not-found":
-      return Effect.fail(new NotFound({ message: "Task not found" }));
+      return Effect.fail(
+        new NotFound({
+          message:
+            result.missing === "attachment"
+              ? "Attachment not found; read the Task and use a current Attachment id."
+              : "Task not found",
+        }),
+      );
     case "rejected":
       return result.reason === "conflict"
         ? Effect.fail(new Conflict({ latest: result.latest }))
@@ -132,6 +145,7 @@ export const rejectUnknownQuery = <E, R>(
       ? Effect.succeed(
           HttpServerResponse.jsonUnsafe(
             {
+              ...exitStatus(2),
               generated_at: new Date().toISOString(),
               code: "invalid_query",
               message: `Unknown query parameter${unknown.length === 1 ? "" : "s"}: ${unknown.join(", ")}`,
@@ -145,7 +159,12 @@ const loopbackHosts = new Set(["127.0.0.1", "localhost", "[::1]"]);
 const refuse = (status: number, code: string, message: string) =>
   Effect.succeed(
     HttpServerResponse.jsonUnsafe(
-      { generated_at: new Date().toISOString(), code, message },
+      {
+        generated_at: new Date().toISOString(),
+        code,
+        message,
+        ...exitStatus(status === 403 ? 3 : 2),
+      },
       { status },
     ),
   );
@@ -230,9 +249,48 @@ export const serverLayer = (options: {
       yield* cacheHygiene.run.pipe(Effect.forkScoped);
       yield* scheduler(store).pipe(Effect.forkScoped);
       const commands = new TaskCommands(store);
+      const missingTask = (
+        params: { profile: ProfileId; task: TaskId },
+        action: AuthAction,
+      ) =>
+        Effect.gen(function* () {
+          const credential = yield* BearerCredential;
+          return new NotFound(
+            yield* translate(
+              taskLookupError(
+                store,
+                { credential, profile: params.profile },
+                params.task,
+                "http",
+                { action },
+              ),
+            ),
+          );
+        });
+      const taskResultFor =
+        (params: { profile: ProfileId; task?: TaskId }, action: AuthAction) =>
+        (result: TaskCommandResult) =>
+          Effect.gen(function* () {
+            if (
+              result.outcome === "not-found" &&
+              result.missing !== "attachment" &&
+              params.task !== undefined
+            )
+              return yield* Effect.fail(
+                yield* missingTask(
+                  {
+                    profile: params.profile,
+                    task: params.task,
+                  },
+                  action,
+                ),
+              );
+            return yield* taskResult(result);
+          });
       const diagnostics = store.diagnostics;
       const attachments = new AttachmentCommands(store);
       const reads = new ClientReads(store);
+      const discovery = new Discovery(store);
       const ValidationHistoryLive = HttpApiMiddleware.layerSchemaErrorTransform(
         ValidationHistory,
         (error, { endpoint }) =>
@@ -316,7 +374,11 @@ export const serverLayer = (options: {
                 ),
               );
             }
-            return yield* Effect.fail(error);
+            return yield* Effect.fail(
+              new BadRequest({
+                message: `Invalid request ${error.kind.toLowerCase()}; check the endpoint schema and retry.`,
+              }),
+            );
           }),
       );
       const AuthorizationLive = Layer.succeed(
@@ -360,7 +422,7 @@ export const serverLayer = (options: {
                   },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResult));
+              ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
             }),
           detach: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -373,7 +435,7 @@ export const serverLayer = (options: {
                   },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResult));
+              ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
             }),
           labelAttachment: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -386,7 +448,7 @@ export const serverLayer = (options: {
                   },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResult));
+              ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
             }),
           uploadAttachment: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -399,7 +461,7 @@ export const serverLayer = (options: {
                   },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResult));
+              ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
             }),
           attachmentImage: ({ params }) =>
             Effect.gen(function* () {
@@ -413,9 +475,18 @@ export const serverLayer = (options: {
                   params.attachment,
                 ),
               );
-              return (
-                image ??
-                (yield* new NotFound({ message: "Managed image not found" }))
+              if (image) return image;
+              const task = yield* translate(
+                commands.get({
+                  credential: yield* BearerCredential,
+                  profile: params.profile,
+                  task_id: params.task,
+                }),
+              );
+              return yield* Effect.fail(
+                task === null
+                  ? yield* missingTask(params, "read")
+                  : new NotFound({ message: "Managed image not found" }),
               );
             }),
           attachMany: ({ params, payload }) =>
@@ -467,6 +538,7 @@ export const serverLayer = (options: {
                       error._tag === "SearchTooBroad"
                         ? Effect.fail(
                             Schema.decodeUnknownSync(SearchTooBroadResponse)({
+                              ...exitStatus(2),
                               generated_at: new Date().toISOString(),
                               code: error.code,
                               message: error.message,
@@ -487,7 +559,7 @@ export const serverLayer = (options: {
                 }),
               );
               return (
-                task ?? (yield* new NotFound({ message: "Task not found" }))
+                task ?? (yield* Effect.fail(yield* missingTask(params, "read")))
               );
             }),
           create: ({ params, payload }) =>
@@ -498,7 +570,7 @@ export const serverLayer = (options: {
                   { credential, profile: params.profile },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResult));
+              ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
             }),
           edit: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -508,7 +580,7 @@ export const serverLayer = (options: {
                   { credential, profile: params.profile, task_id: params.task },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResult));
+              ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
             }),
           transition: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -518,7 +590,7 @@ export const serverLayer = (options: {
                   { credential, profile: params.profile, task_id: params.task },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResult));
+              ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
             }),
           move: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -529,7 +601,7 @@ export const serverLayer = (options: {
                   { credential, profile: params.profile, task_id: params.task },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResult));
+              ).pipe(Effect.flatMap(taskResultFor(params, "authenticate")));
             }),
           copy: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -540,7 +612,7 @@ export const serverLayer = (options: {
                   { credential, profile: params.profile, task_id: params.task },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResult));
+              ).pipe(Effect.flatMap(taskResultFor(params, "authenticate")));
             }),
           revert: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -551,7 +623,7 @@ export const serverLayer = (options: {
                   { credential, profile: params.profile, task_id: params.task },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResult));
+              ).pipe(Effect.flatMap(taskResultFor(params, "read")));
             }),
           createSeries: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -562,7 +634,7 @@ export const serverLayer = (options: {
                   { credential, profile: params.profile },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResult));
+              ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
             }),
           editSeries: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -573,7 +645,7 @@ export const serverLayer = (options: {
                   { credential, profile: params.profile, task_id: params.task },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResult));
+              ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
             }),
           skipOccurrence: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -584,7 +656,7 @@ export const serverLayer = (options: {
                   { credential, profile: params.profile, task_id: params.task },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResult));
+              ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
             }),
           delete: ({ params, query }) =>
             Effect.gen(function* () {
@@ -594,7 +666,7 @@ export const serverLayer = (options: {
                   { credential, profile: params.profile, task_id: params.task },
                   query,
                 ),
-              ).pipe(Effect.flatMap(taskResult));
+              ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
             }),
         }),
       ).pipe(
@@ -615,14 +687,28 @@ export const serverLayer = (options: {
               if (result.outcome === "refused")
                 return yield* Effect.fail(
                   result.error.code === "not_found"
-                    ? Schema.decodeUnknownSync(ProfileNotFound)(result.error)
-                    : result.error,
+                    ? Schema.decodeUnknownSync(ProfileNotFound)({
+                        ...result.error,
+                        ...exitStatus(3),
+                      })
+                    : { ...result.error, ...exitStatus(2) },
                 );
               return result.report;
             }),
-          profiles: () =>
+          lookup: ({ query }) =>
             Effect.gen(function* () {
-              return yield* translate(reads.profiles(yield* BearerCredential));
+              return yield* translate(
+                discovery.lookup(yield* BearerCredential, query),
+              );
+            }),
+          profiles: ({ query }) =>
+            Effect.gen(function* () {
+              const credential = yield* BearerCredential;
+              return yield* translate(
+                query.include_projects === "true"
+                  ? discovery.directory(credential)
+                  : reads.profiles(credential),
+              );
             }),
           projects: ({ params }) =>
             Effect.gen(function* () {
@@ -676,7 +762,11 @@ export const serverLayer = (options: {
               );
               return yield* parseQuickAdd(payload).pipe(
                 Effect.catchTag("QuickAddError", (error) =>
-                  Effect.fail(new InvalidTask({ message: error.message })),
+                  Effect.fail(
+                    new InvalidTask({
+                      message: error.message,
+                    }),
+                  ),
                 ),
               );
             }),
@@ -807,6 +897,17 @@ export const serverLayer = (options: {
           SnapshotsLive,
           changesLayer(store).pipe(Layer.provide(AuthorizationLive)),
         ]),
+        Layer.provide(
+          HttpApiMiddleware.layerSchemaErrorTransform(
+            RequestDecoding,
+            (error) =>
+              Effect.fail(
+                new BadRequest({
+                  message: `Invalid request ${error.kind.toLowerCase()}; check the endpoint schema and retry.`,
+                }),
+              ),
+          ),
+        ),
       );
       return HttpRouter.serve(routes, {
         middleware: (effect) =>

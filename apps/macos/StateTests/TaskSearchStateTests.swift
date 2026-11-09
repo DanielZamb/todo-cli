@@ -311,7 +311,7 @@ struct TaskSearchStateTests {
         #expect(model.appliedSearchSnapshot?.rows.map(\.title).sorted() == ["probe 0", "probe 1", "probe 2"])
         model.setSearchText("probe")
         try await wait { model.searchPhase == .error }
-        let recovery = "Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase."
+        let recovery = "Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.\nerror 2 - validation or usage"
         #expect(model.searchError == .tooBroad(recovery, context: "Showing tasks without search."))
         #expect(model.searchError?.message == recovery)
         #expect(model.searchError?.context == "Showing tasks without search.")
@@ -356,7 +356,7 @@ struct TaskSearchStateTests {
     }
 
     @Test func searchRefusalKeepsLiteralMessageAndAppliedContext() {
-        let recovery = "Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase."
+        let recovery = "Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.\nerror 2 - validation or usage"
         let contexts: [(String?, String)] = [(nil, "Showing tasks without search."), ("rent", "Showing results for \"rent\".")]
         for (text, expected) in contexts {
             let failure = TaskSearchFailure.tooBroad(recovery, context: TaskSearchPresentation.appliedContext(text))

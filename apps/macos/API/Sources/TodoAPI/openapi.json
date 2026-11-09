@@ -35,6 +35,16 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           }
         }
       }
@@ -106,7 +116,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -125,6 +142,14 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "exit_code": {
+                      "type": "number",
+                      "enum": [3]
+                    },
+                    "exit_meaning": {
+                      "type": "string",
+                      "enum": ["not found or auth missing"]
+                    },
                     "generated_at": {
                       "type": "string"
                     },
@@ -136,7 +161,13 @@
                       "type": "string"
                     }
                   },
-                  "required": ["generated_at", "code", "message"],
+                  "required": [
+                    "exit_code",
+                    "exit_meaning",
+                    "generated_at",
+                    "code",
+                    "message"
+                  ],
                   "additionalProperties": false
                 }
               }
@@ -199,7 +230,14 @@
             "description": "<No Content>"
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -228,6 +266,14 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "exit_code": {
+                      "type": "number",
+                      "enum": [3]
+                    },
+                    "exit_meaning": {
+                      "type": "string",
+                      "enum": ["not found or auth missing"]
+                    },
                     "generated_at": {
                       "type": "string"
                     },
@@ -239,7 +285,13 @@
                       "type": "string"
                     }
                   },
-                  "required": ["generated_at", "code", "message"],
+                  "required": [
+                    "exit_code",
+                    "exit_meaning",
+                    "generated_at",
+                    "code",
+                    "message"
+                  ],
                   "additionalProperties": false
                 }
               }
@@ -329,7 +381,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -358,6 +417,14 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "exit_code": {
+                      "type": "number",
+                      "enum": [3]
+                    },
+                    "exit_meaning": {
+                      "type": "string",
+                      "enum": ["not found or auth missing"]
+                    },
                     "generated_at": {
                       "type": "string"
                     },
@@ -369,7 +436,13 @@
                       "type": "string"
                     }
                   },
-                  "required": ["generated_at", "code", "message"],
+                  "required": [
+                    "exit_code",
+                    "exit_meaning",
+                    "generated_at",
+                    "code",
+                    "message"
+                  ],
                   "additionalProperties": false
                 }
               }
@@ -489,7 +562,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -518,6 +598,14 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "exit_code": {
+                      "type": "number",
+                      "enum": [3]
+                    },
+                    "exit_meaning": {
+                      "type": "string",
+                      "enum": ["not found or auth missing"]
+                    },
                     "generated_at": {
                       "type": "string"
                     },
@@ -529,7 +617,13 @@
                       "type": "string"
                     }
                   },
-                  "required": ["generated_at", "code", "message"],
+                  "required": [
+                    "exit_code",
+                    "exit_meaning",
+                    "generated_at",
+                    "code",
+                    "message"
+                  ],
                   "additionalProperties": false
                 }
               }
@@ -573,7 +667,14 @@
             "description": "<No Content>"
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -602,6 +703,14 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "exit_code": {
+                      "type": "number",
+                      "enum": [3]
+                    },
+                    "exit_meaning": {
+                      "type": "string",
+                      "enum": ["not found or auth missing"]
+                    },
                     "generated_at": {
                       "type": "string"
                     },
@@ -613,7 +722,13 @@
                       "type": "string"
                     }
                   },
-                  "required": ["generated_at", "code", "message"],
+                  "required": [
+                    "exit_code",
+                    "exit_meaning",
+                    "generated_at",
+                    "code",
+                    "message"
+                  ],
                   "additionalProperties": false
                 }
               }
@@ -700,6 +815,19 @@
                           "error": {
                             "type": "object",
                             "properties": {
+                              "exit_code": {
+                                "type": "number",
+                                "enum": [1, 2, 3, 4]
+                              },
+                              "exit_meaning": {
+                                "type": "string",
+                                "enum": [
+                                  "runtime failure",
+                                  "validation or usage",
+                                  "not found or auth missing",
+                                  "Conflict"
+                                ]
+                              },
                               "code": {
                                 "type": "string"
                               },
@@ -714,13 +842,38 @@
                                     "minimum": 1,
                                     "maximum": 9007199254740991,
                                     "nullable": true
+                                  },
+                                  "profile": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["id", "name"],
+                                    "additionalProperties": false
+                                  },
+                                  "task_id": {
+                                    "type": "string"
+                                  },
+                                  "recovery": {
+                                    "type": "string"
                                   }
                                 },
                                 "required": ["current_version"],
                                 "additionalProperties": false
                               }
                             },
-                            "required": ["code", "message"],
+                            "required": [
+                              "exit_code",
+                              "exit_meaning",
+                              "code",
+                              "message"
+                            ],
                             "additionalProperties": false
                           }
                         },
@@ -764,7 +917,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -795,6 +955,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -806,7 +974,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -1136,7 +1310,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -1167,6 +1348,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -1178,7 +1367,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -1537,7 +1732,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -1568,6 +1770,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -1579,7 +1789,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -1912,7 +2128,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -1943,6 +2166,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -1954,7 +2185,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -2293,7 +2530,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -2324,6 +2568,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -2335,7 +2587,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -2488,7 +2746,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -2519,6 +2784,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -2530,7 +2803,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -2635,6 +2914,19 @@
                           "error": {
                             "type": "object",
                             "properties": {
+                              "exit_code": {
+                                "type": "number",
+                                "enum": [1, 2, 3, 4]
+                              },
+                              "exit_meaning": {
+                                "type": "string",
+                                "enum": [
+                                  "runtime failure",
+                                  "validation or usage",
+                                  "not found or auth missing",
+                                  "Conflict"
+                                ]
+                              },
                               "generated_at": {
                                 "type": "string"
                               },
@@ -2652,6 +2944,26 @@
                                     "minimum": 1,
                                     "maximum": 9007199254740991,
                                     "nullable": true
+                                  },
+                                  "profile": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["id", "name"],
+                                    "additionalProperties": false
+                                  },
+                                  "task_id": {
+                                    "type": "string"
+                                  },
+                                  "recovery": {
+                                    "type": "string"
                                   }
                                 },
                                 "required": ["current_version"],
@@ -2659,6 +2971,8 @@
                               }
                             },
                             "required": [
+                              "exit_code",
+                              "exit_meaning",
                               "generated_at",
                               "code",
                               "message",
@@ -2701,7 +3015,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -2732,6 +3053,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -2743,7 +3072,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -3016,6 +3351,19 @@
                           "error": {
                             "type": "object",
                             "properties": {
+                              "exit_code": {
+                                "type": "number",
+                                "enum": [1, 2, 3, 4]
+                              },
+                              "exit_meaning": {
+                                "type": "string",
+                                "enum": [
+                                  "runtime failure",
+                                  "validation or usage",
+                                  "not found or auth missing",
+                                  "Conflict"
+                                ]
+                              },
                               "code": {
                                 "type": "string"
                               },
@@ -3030,13 +3378,38 @@
                                     "minimum": 1,
                                     "maximum": 9007199254740991,
                                     "nullable": true
+                                  },
+                                  "profile": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["id", "name"],
+                                    "additionalProperties": false
+                                  },
+                                  "task_id": {
+                                    "type": "string"
+                                  },
+                                  "recovery": {
+                                    "type": "string"
                                   }
                                 },
                                 "required": ["current_version"],
                                 "additionalProperties": false
                               }
                             },
-                            "required": ["code", "message"],
+                            "required": [
+                              "exit_code",
+                              "exit_meaning",
+                              "code",
+                              "message"
+                            ],
                             "additionalProperties": false
                           }
                         },
@@ -3090,7 +3463,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -3121,6 +3501,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -3132,7 +3520,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -3615,7 +4009,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -3646,6 +4047,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -3657,7 +4066,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -3690,6 +4105,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [2]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["validation or usage"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -3701,7 +4124,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     }
                   ]
@@ -3976,7 +4405,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -4007,6 +4443,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -4018,7 +4462,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -4500,7 +4950,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -4531,6 +4988,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -4542,7 +5007,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -4849,7 +5320,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -4880,6 +5358,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -4891,7 +5377,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -5366,7 +5858,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -5397,6 +5896,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -5408,7 +5915,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -5717,7 +6230,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -5748,6 +6268,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -5759,7 +6287,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -6091,7 +6625,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -6122,6 +6663,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -6133,7 +6682,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -6465,7 +7020,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -6496,6 +7058,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -6507,7 +7077,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -6839,7 +7415,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -6870,6 +7453,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -6881,7 +7472,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -7205,7 +7802,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -7236,6 +7840,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -7247,7 +7859,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -7786,7 +8404,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -7817,6 +8442,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -7828,7 +8461,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -8345,7 +8984,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -8376,6 +9022,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -8387,7 +9041,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -8704,9 +9364,22 @@
                                     },
                                     "message": {
                                       "type": "string"
+                                    },
+                                    "exit_code": {
+                                      "type": "number",
+                                      "enum": [3]
+                                    },
+                                    "exit_meaning": {
+                                      "type": "string",
+                                      "enum": ["not found or auth missing"]
                                     }
                                   },
-                                  "required": ["_tag", "message"],
+                                  "required": [
+                                    "_tag",
+                                    "message",
+                                    "exit_code",
+                                    "exit_meaning"
+                                  ],
                                   "additionalProperties": false
                                 },
                                 {
@@ -8718,14 +9391,35 @@
                                     },
                                     "message": {
                                       "type": "string"
+                                    },
+                                    "exit_code": {
+                                      "type": "number",
+                                      "enum": [3]
+                                    },
+                                    "exit_meaning": {
+                                      "type": "string",
+                                      "enum": ["not found or auth missing"]
                                     }
                                   },
-                                  "required": ["_tag", "message"],
+                                  "required": [
+                                    "_tag",
+                                    "message",
+                                    "exit_code",
+                                    "exit_meaning"
+                                  ],
                                   "additionalProperties": false
                                 },
                                 {
                                   "type": "object",
                                   "properties": {
+                                    "exit_code": {
+                                      "type": "number",
+                                      "enum": [3]
+                                    },
+                                    "exit_meaning": {
+                                      "type": "string",
+                                      "enum": ["not found or auth missing"]
+                                    },
                                     "generated_at": {
                                       "type": "string"
                                     },
@@ -8738,6 +9432,8 @@
                                     }
                                   },
                                   "required": [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -8753,9 +9449,22 @@
                                     },
                                     "message": {
                                       "type": "string"
+                                    },
+                                    "exit_code": {
+                                      "type": "number",
+                                      "enum": [1]
+                                    },
+                                    "exit_meaning": {
+                                      "type": "string",
+                                      "enum": ["runtime failure"]
                                     }
                                   },
-                                  "required": ["_tag", "message"],
+                                  "required": [
+                                    "_tag",
+                                    "message",
+                                    "exit_code",
+                                    "exit_meaning"
+                                  ],
                                   "additionalProperties": false
                                 }
                               ]
@@ -8805,6 +9514,14 @@
                       {
                         "type": "object",
                         "properties": {
+                          "exit_code": {
+                            "type": "number",
+                            "enum": [3]
+                          },
+                          "exit_meaning": {
+                            "type": "string",
+                            "enum": ["not found or auth missing"]
+                          },
                           "generated_at": {
                             "type": "string"
                           },
@@ -8816,7 +9533,13 @@
                             "type": "string"
                           }
                         },
-                        "required": ["generated_at", "code", "message"],
+                        "required": [
+                          "exit_code",
+                          "exit_meaning",
+                          "generated_at",
+                          "code",
+                          "message"
+                        ],
                         "additionalProperties": false
                       },
                       {
@@ -8839,7 +9562,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -8868,6 +9598,14 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "exit_code": {
+                      "type": "number",
+                      "enum": [3]
+                    },
+                    "exit_meaning": {
+                      "type": "string",
+                      "enum": ["not found or auth missing"]
+                    },
                     "generated_at": {
                       "type": "string"
                     },
@@ -8879,8 +9617,189 @@
                       "type": "string"
                     }
                   },
-                  "required": ["generated_at", "code", "message"],
+                  "required": [
+                    "exit_code",
+                    "exit_meaning",
+                    "generated_at",
+                    "code",
+                    "message"
+                  ],
                   "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "InternalError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalErrorEncoded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks/lookup": {
+      "get": {
+        "tags": ["reads"],
+        "operationId": "reads.lookup",
+        "parameters": [
+          {
+            "name": "prefix",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 36,
+              "pattern": "^[0-9A-Fa-f-]+$",
+              "description": "Case-insensitive literal Task id prefix. Hex digits and hyphens only."
+            },
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "profile": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": ["id", "name"],
+                        "additionalProperties": false
+                      },
+                      "task_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "project": {
+                        "type": "string",
+                        "nullable": true
+                      }
+                    },
+                    "required": ["profile", "task_id", "title", "project"],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
+                        "generated_at": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": ["not_found"]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "$ref": "#/components/schemas/NotFoundEncoded"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "InvalidTask",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidTaskEncoded"
                 }
               }
             }
@@ -8982,7 +9901,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -9013,6 +9939,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -9024,7 +9958,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -9057,6 +9997,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [2]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["validation or usage"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -9080,6 +10028,8 @@
                         }
                       },
                       "required": [
+                        "exit_code",
+                        "exit_meaning",
                         "generated_at",
                         "code",
                         "message",
@@ -9129,7 +10079,17 @@
       "get": {
         "tags": ["reads"],
         "operationId": "reads.profiles",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "include_projects",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["true", "false"]
+            },
+            "required": false
+          }
+        ],
         "security": [
           {
             "bearer": []
@@ -9173,6 +10133,25 @@
                         "type": "integer",
                         "minimum": 0,
                         "maximum": 9007199254740991
+                      },
+                      "projects": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          },
+                          "required": ["id", "name"],
+                          "additionalProperties": false
+                        },
+                        "description": "Present with --projects or include_projects=true. Includes defined Projects even without visible Tasks; an empty Profile has []."
                       }
                     },
                     "required": [
@@ -9190,7 +10169,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -9221,6 +10207,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -9232,7 +10226,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -9345,7 +10345,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -9376,6 +10383,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -9387,7 +10402,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -9487,7 +10508,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -9518,6 +10546,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -9529,7 +10565,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -9888,7 +10930,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -9919,6 +10968,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -9930,7 +10987,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -10032,7 +11095,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -10063,6 +11133,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -10074,7 +11152,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -10253,7 +11337,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -10284,6 +11375,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -10295,7 +11394,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -10967,6 +12072,16 @@
               }
             }
           },
+          "400": {
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Unauthorized",
             "content": {
@@ -10994,6 +12109,14 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "exit_code": {
+                      "type": "number",
+                      "enum": [3]
+                    },
+                    "exit_meaning": {
+                      "type": "string",
+                      "enum": ["not found or auth missing"]
+                    },
                     "generated_at": {
                       "type": "string"
                     },
@@ -11005,7 +12128,13 @@
                       "type": "string"
                     }
                   },
-                  "required": ["generated_at", "code", "message"],
+                  "required": [
+                    "exit_code",
+                    "exit_meaning",
+                    "generated_at",
+                    "code",
+                    "message"
+                  ],
                   "additionalProperties": false
                 }
               }
@@ -11127,7 +12256,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -11158,6 +12294,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -11169,7 +12313,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -11299,7 +12449,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -11330,6 +12487,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -11341,7 +12506,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -11501,7 +12672,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -11532,6 +12710,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -11543,7 +12729,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -11751,7 +12943,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -11782,6 +12981,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -11793,7 +13000,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -11960,7 +13173,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -11991,6 +13211,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -12002,7 +13230,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -12075,9 +13309,17 @@
           },
           "message": {
             "type": "string"
+          },
+          "exit_code": {
+            "type": "number",
+            "enum": [3]
+          },
+          "exit_meaning": {
+            "type": "string",
+            "enum": ["not found or auth missing"]
           }
         },
-        "required": ["_tag", "message"],
+        "required": ["_tag", "message", "exit_code", "exit_meaning"],
         "additionalProperties": false
       },
       "InternalErrorEncoded": {
@@ -12089,9 +13331,17 @@
           },
           "message": {
             "type": "string"
+          },
+          "exit_code": {
+            "type": "number",
+            "enum": [1]
+          },
+          "exit_meaning": {
+            "type": "string",
+            "enum": ["runtime failure"]
           }
         },
-        "required": ["_tag", "message"],
+        "required": ["_tag", "message", "exit_code", "exit_meaning"],
         "additionalProperties": false
       },
       "InvalidTaskEncoded": {
@@ -12100,6 +13350,14 @@
           "_tag": {
             "type": "string",
             "enum": ["InvalidTask"]
+          },
+          "exit_code": {
+            "type": "number",
+            "enum": [2]
+          },
+          "exit_meaning": {
+            "type": "string",
+            "enum": ["validation or usage"]
           },
           "message": {
             "type": "string"
@@ -12119,7 +13377,7 @@
             "additionalProperties": false
           }
         },
-        "required": ["_tag", "message"],
+        "required": ["_tag", "exit_code", "exit_meaning", "message"],
         "additionalProperties": false
       },
       "ConflictEncoded": {
@@ -12356,9 +13614,17 @@
             ],
             "additionalProperties": false,
             "nullable": true
+          },
+          "exit_code": {
+            "type": "number",
+            "enum": [4]
+          },
+          "exit_meaning": {
+            "type": "string",
+            "enum": ["Conflict"]
           }
         },
-        "required": ["_tag", "latest"],
+        "required": ["_tag", "latest", "exit_code", "exit_meaning"],
         "additionalProperties": false
       },
       "Attachment": {
@@ -12391,9 +13657,44 @@
           },
           "message": {
             "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "properties": {
+              "profile": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": ["id", "name"],
+                "additionalProperties": false
+              },
+              "task_id": {
+                "type": "string"
+              },
+              "recovery": {
+                "type": "string"
+              }
+            },
+            "required": ["profile", "task_id", "recovery"],
+            "additionalProperties": false
+          },
+          "exit_code": {
+            "type": "number",
+            "enum": [3]
+          },
+          "exit_meaning": {
+            "type": "string",
+            "enum": ["not found or auth missing"]
           }
         },
-        "required": ["_tag", "message"],
+        "required": ["_tag", "message", "exit_code", "exit_meaning"],
         "additionalProperties": false
       },
       "ForbiddenEncoded": {
@@ -12405,9 +13706,39 @@
           },
           "message": {
             "type": "string"
+          },
+          "exit_code": {
+            "type": "number",
+            "enum": [3]
+          },
+          "exit_meaning": {
+            "type": "string",
+            "enum": ["not found or auth missing"]
           }
         },
-        "required": ["_tag", "message"],
+        "required": ["_tag", "message", "exit_code", "exit_meaning"],
+        "additionalProperties": false
+      },
+      "BadRequestEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["BadRequest"]
+          },
+          "message": {
+            "type": "string"
+          },
+          "exit_code": {
+            "type": "number",
+            "enum": [2]
+          },
+          "exit_meaning": {
+            "type": "string",
+            "enum": ["validation or usage"]
+          }
+        },
+        "required": ["_tag", "message", "exit_code", "exit_meaning"],
         "additionalProperties": false
       },
       "TooManySignInsEncoded": {
@@ -12423,9 +13754,23 @@
           "locked_until": {
             "type": "string",
             "nullable": true
+          },
+          "exit_code": {
+            "type": "number",
+            "enum": [3]
+          },
+          "exit_meaning": {
+            "type": "string",
+            "enum": ["not found or auth missing"]
           }
         },
-        "required": ["_tag", "message", "locked_until"],
+        "required": [
+          "_tag",
+          "message",
+          "locked_until",
+          "exit_code",
+          "exit_meaning"
+        ],
         "additionalProperties": false
       },
       "CommittedOperation": {

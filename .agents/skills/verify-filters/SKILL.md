@@ -76,3 +76,7 @@ checkout and runs the TypeScript driver through pnpm. No server stays running.
 ## Version guardrails
 
 The compiled CLI and HTTP drive asserts exact Open and Closed Task titles and rejects an unknown HTTP filter name. See [the feature recipe](features/tasks.md) for commands and expected evidence.
+
+List JSON now always includes tasks, including [] for every empty intersection.
+The shared prefix schema lives in limits.ts as TaskIdPrefix and is reused by
+TaskFilters and lookup error recovery. The matching and input bounds are unchanged.

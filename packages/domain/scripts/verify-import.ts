@@ -367,6 +367,8 @@ try {
       assert.equal(response.status, 404);
       assert.deepEqual(response.body, {
         generated_at: response.body.generated_at,
+        exit_code: 3,
+        exit_meaning: "not found or auth missing",
         code: "not_found",
         message: "Profile not found; choose a Profile from GET /profiles",
       });

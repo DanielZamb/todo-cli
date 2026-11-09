@@ -1,5 +1,5 @@
 import { Schema, Struct } from "effect";
-import type { AuthAttemptRejected } from "../events.ts";
+import type { AuthAction, AuthAttemptRejected } from "../events.ts";
 import { ProfileId } from "../ids.ts";
 import { InstantInput, NonEmptyNameInput } from "../limits.ts";
 import { FinishTask, StartSeries } from "../recurrence.ts";
@@ -17,6 +17,20 @@ export class AuthError extends Error {
     super("Authentication or authorization failed");
   }
 }
+
+export class ProfileResolutionError extends Error {
+  readonly _tag = "ProfileResolutionError";
+  readonly code = "not_found";
+  constructor() {
+    super("Profile not found");
+  }
+}
+
+export type ResolveProfileRequest = {
+  readonly credential: string;
+  readonly profile: string;
+  readonly action: AuthAction;
+};
 
 export const AccessScope = Schema.Literals(["read-only", "read-write"]);
 export type AccessScope = typeof AccessScope.Type;

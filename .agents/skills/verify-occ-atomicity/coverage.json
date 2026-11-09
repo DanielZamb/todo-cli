@@ -63,7 +63,7 @@
     },
     {
       "path": "packages/domain/src/attachments.ts",
-      "sha256": "d6ba1579e84f5db261ecae9c12b9000757c42514ae99192b97c6da5a31668e26",
+      "sha256": "7094e663ad7a34dc38de76529a471c6f1b1d9c52c2f29883666b408603e1962e",
       "functions": [
         "Attachment",
         "validAttachmentLocation"
@@ -71,5 +71,10 @@
     }
   ],
   "reviewedCandidate": false,
-  "review": "Confirmed immutable65033 covered source. Pure cache clear replaced historical cache eviction; restore callback and read-only metadata tail do not change Validate/Record/Apply/WriteVersion/Commit/rejection/replay/crash boundaries. Actual-worktree AtomicCAS one-command0 at fv01-check-ciYXwL; two isolated source sensitivity breaks fail1/restored0 at sensitivity-CW3gRs. Other covered hashes unchanged. No model change."
+  "review": "Confirmed immutable65033 covered source. Pure cache clear replaced historical cache eviction; restore callback and read-only metadata tail do not change Validate/Record/Apply/WriteVersion/Commit/rejection/replay/crash boundaries. Actual-worktree AtomicCAS one-command0 at fv01-check-ciYXwL; two isolated source sensitivity breaks fail1/restored0 at sensitivity-CW3gRs. Other covered hashes unchanged. No model change.",
+  "integrationReview": {
+    "base": "7c1326bd5ecd1d84cdd9a6426b18e8c380e5d336",
+    "main": "4c904d96277853c60692c685c6d4ea3b3e655bc4",
+    "status": "Merged source under semantic review; hybrid-file hashes have not been renewed"
+  }
 }

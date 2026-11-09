@@ -1,0 +1,20 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": [
+      "bun"
+    ],
+    "typeRoots": [
+      "../../../packages/domain/node_modules/@types",
+      "../../../node_modules/@types"
+    ]
+  },
+  "include": [
+    "./check.ts",
+    "./check-electron.ts",
+    "./check-swift.ts",
+    "./check-inputs.ts",
+    "./prepare-inputs.ts",
+    "../../../scripts/check-verification-paths.ts"
+  ]
+}

@@ -145,6 +145,57 @@ public enum Operations {
                     }
                 }
             }
+            public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/health/GET/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/health/GET/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.system_period_health.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.system_period_health.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// BadRequest
+            ///
+            /// - Remark: Generated from `#/paths//health/get(system.health)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.system_period_health.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            public var badRequest: Operations.system_period_health.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
             /// Undocumented response.
             ///
             /// A response with a code that is not documented in the OpenAPI document.
@@ -451,8 +502,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/auth/sessions/POST/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/auth/sessions/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.signIn_period_signIn.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.signIn_period_signIn.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -460,14 +535,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.signIn_period_signIn.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//auth/sessions/post(signIn.signIn)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -543,6 +610,14 @@ public enum Operations {
                     public struct jsonPayload: Codable, Hashable, Sendable {
                         private var _explicitNullKeys: Set<String> = []
 
+                        /// - Remark: Generated from `#/paths/auth/sessions/POST/responses/404/content/json/exit_code`.
+                        public var exit_code: Swift.Double
+                        /// - Remark: Generated from `#/paths/auth/sessions/POST/responses/404/content/json/exit_meaning`.
+                        @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                        }
+                        /// - Remark: Generated from `#/paths/auth/sessions/POST/responses/404/content/json/exit_meaning`.
+                        public var exit_meaning: Operations.signIn_period_signIn.Output.NotFound.Body.jsonPayload.exit_meaningPayload
                         /// - Remark: Generated from `#/paths/auth/sessions/POST/responses/404/content/json/generated_at`.
                         public var generated_at: Swift.String
                         /// - Remark: Generated from `#/paths/auth/sessions/POST/responses/404/content/json/code`.
@@ -556,19 +631,27 @@ public enum Operations {
                         /// Creates a new `jsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - exit_code:
+                        ///   - exit_meaning:
                         ///   - generated_at:
                         ///   - code:
                         ///   - message:
                         public init(
+                            exit_code: Swift.Double,
+                            exit_meaning: Operations.signIn_period_signIn.Output.NotFound.Body.jsonPayload.exit_meaningPayload,
                             generated_at: Swift.String,
                             code: Operations.signIn_period_signIn.Output.NotFound.Body.jsonPayload.codePayload,
                             message: Swift.String
                         ) {
+                            self.exit_code = exit_code
+                            self.exit_meaning = exit_meaning
                             self.generated_at = generated_at
                             self.code = code
                             self.message = message
                         }
                         public enum CodingKeys: String, CodingKey {
+                            case exit_code
+                            case exit_meaning
                             case generated_at
                             case code
                             case message
@@ -576,6 +659,14 @@ public enum Operations {
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
                             self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.exit_code = try container.decode(
+                                Swift.Double.self,
+                                forKey: .exit_code
+                            )
+                            self.exit_meaning = try container.decode(
+                                Operations.signIn_period_signIn.Output.NotFound.Body.jsonPayload.exit_meaningPayload.self,
+                                forKey: .exit_meaning
+                            )
                             self.generated_at = try container.decode(
                                 Swift.String.self,
                                 forKey: .generated_at
@@ -589,6 +680,8 @@ public enum Operations {
                                 forKey: .message
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "exit_code",
+                                "exit_meaning",
                                 "generated_at",
                                 "code",
                                 "message"
@@ -597,6 +690,8 @@ public enum Operations {
 
                         public func encode(to encoder: any Swift.Encoder) throws {
                             var container = encoder.container(keyedBy: CodingKeys.self)
+                            try container.encode(self.exit_code, forKey: .exit_code)
+                            try container.encode(self.exit_meaning, forKey: .exit_meaning)
                             try container.encode(self.generated_at, forKey: .generated_at)
                             try container.encode(self.code, forKey: .code)
                             try container.encode(self.message, forKey: .message)
@@ -845,8 +940,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/auth/session/DELETE/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/auth/session/DELETE/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.credentials_period_signOut.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.credentials_period_signOut.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -854,14 +973,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.credentials_period_signOut.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//auth/session/delete(credentials.signOut)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -988,6 +1099,14 @@ public enum Operations {
                     public struct jsonPayload: Codable, Hashable, Sendable {
                         private var _explicitNullKeys: Set<String> = []
 
+                        /// - Remark: Generated from `#/paths/auth/session/DELETE/responses/404/content/json/exit_code`.
+                        public var exit_code: Swift.Double
+                        /// - Remark: Generated from `#/paths/auth/session/DELETE/responses/404/content/json/exit_meaning`.
+                        @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                        }
+                        /// - Remark: Generated from `#/paths/auth/session/DELETE/responses/404/content/json/exit_meaning`.
+                        public var exit_meaning: Operations.credentials_period_signOut.Output.NotFound.Body.jsonPayload.exit_meaningPayload
                         /// - Remark: Generated from `#/paths/auth/session/DELETE/responses/404/content/json/generated_at`.
                         public var generated_at: Swift.String
                         /// - Remark: Generated from `#/paths/auth/session/DELETE/responses/404/content/json/code`.
@@ -1001,19 +1120,27 @@ public enum Operations {
                         /// Creates a new `jsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - exit_code:
+                        ///   - exit_meaning:
                         ///   - generated_at:
                         ///   - code:
                         ///   - message:
                         public init(
+                            exit_code: Swift.Double,
+                            exit_meaning: Operations.credentials_period_signOut.Output.NotFound.Body.jsonPayload.exit_meaningPayload,
                             generated_at: Swift.String,
                             code: Operations.credentials_period_signOut.Output.NotFound.Body.jsonPayload.codePayload,
                             message: Swift.String
                         ) {
+                            self.exit_code = exit_code
+                            self.exit_meaning = exit_meaning
                             self.generated_at = generated_at
                             self.code = code
                             self.message = message
                         }
                         public enum CodingKeys: String, CodingKey {
+                            case exit_code
+                            case exit_meaning
                             case generated_at
                             case code
                             case message
@@ -1021,6 +1148,14 @@ public enum Operations {
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
                             self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.exit_code = try container.decode(
+                                Swift.Double.self,
+                                forKey: .exit_code
+                            )
+                            self.exit_meaning = try container.decode(
+                                Operations.credentials_period_signOut.Output.NotFound.Body.jsonPayload.exit_meaningPayload.self,
+                                forKey: .exit_meaning
+                            )
                             self.generated_at = try container.decode(
                                 Swift.String.self,
                                 forKey: .generated_at
@@ -1034,6 +1169,8 @@ public enum Operations {
                                 forKey: .message
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "exit_code",
+                                "exit_meaning",
                                 "generated_at",
                                 "code",
                                 "message"
@@ -1042,6 +1179,8 @@ public enum Operations {
 
                         public func encode(to encoder: any Swift.Encoder) throws {
                             var container = encoder.container(keyedBy: CodingKeys.self)
+                            try container.encode(self.exit_code, forKey: .exit_code)
+                            try container.encode(self.exit_meaning, forKey: .exit_meaning)
                             try container.encode(self.generated_at, forKey: .generated_at)
                             try container.encode(self.code, forKey: .code)
                             try container.encode(self.message, forKey: .message)
@@ -1398,8 +1537,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/auth/tokens/GET/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/auth/tokens/GET/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.credentials_period_listTokens.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.credentials_period_listTokens.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -1407,14 +1570,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.credentials_period_listTokens.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//auth/tokens/get(credentials.listTokens)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -1541,6 +1696,14 @@ public enum Operations {
                     public struct jsonPayload: Codable, Hashable, Sendable {
                         private var _explicitNullKeys: Set<String> = []
 
+                        /// - Remark: Generated from `#/paths/auth/tokens/GET/responses/404/content/json/exit_code`.
+                        public var exit_code: Swift.Double
+                        /// - Remark: Generated from `#/paths/auth/tokens/GET/responses/404/content/json/exit_meaning`.
+                        @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                        }
+                        /// - Remark: Generated from `#/paths/auth/tokens/GET/responses/404/content/json/exit_meaning`.
+                        public var exit_meaning: Operations.credentials_period_listTokens.Output.NotFound.Body.jsonPayload.exit_meaningPayload
                         /// - Remark: Generated from `#/paths/auth/tokens/GET/responses/404/content/json/generated_at`.
                         public var generated_at: Swift.String
                         /// - Remark: Generated from `#/paths/auth/tokens/GET/responses/404/content/json/code`.
@@ -1554,19 +1717,27 @@ public enum Operations {
                         /// Creates a new `jsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - exit_code:
+                        ///   - exit_meaning:
                         ///   - generated_at:
                         ///   - code:
                         ///   - message:
                         public init(
+                            exit_code: Swift.Double,
+                            exit_meaning: Operations.credentials_period_listTokens.Output.NotFound.Body.jsonPayload.exit_meaningPayload,
                             generated_at: Swift.String,
                             code: Operations.credentials_period_listTokens.Output.NotFound.Body.jsonPayload.codePayload,
                             message: Swift.String
                         ) {
+                            self.exit_code = exit_code
+                            self.exit_meaning = exit_meaning
                             self.generated_at = generated_at
                             self.code = code
                             self.message = message
                         }
                         public enum CodingKeys: String, CodingKey {
+                            case exit_code
+                            case exit_meaning
                             case generated_at
                             case code
                             case message
@@ -1574,6 +1745,14 @@ public enum Operations {
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
                             self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.exit_code = try container.decode(
+                                Swift.Double.self,
+                                forKey: .exit_code
+                            )
+                            self.exit_meaning = try container.decode(
+                                Operations.credentials_period_listTokens.Output.NotFound.Body.jsonPayload.exit_meaningPayload.self,
+                                forKey: .exit_meaning
+                            )
                             self.generated_at = try container.decode(
                                 Swift.String.self,
                                 forKey: .generated_at
@@ -1587,6 +1766,8 @@ public enum Operations {
                                 forKey: .message
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "exit_code",
+                                "exit_meaning",
                                 "generated_at",
                                 "code",
                                 "message"
@@ -1595,6 +1776,8 @@ public enum Operations {
 
                         public func encode(to encoder: any Swift.Encoder) throws {
                             var container = encoder.container(keyedBy: CodingKeys.self)
+                            try container.encode(self.exit_code, forKey: .exit_code)
+                            try container.encode(self.exit_meaning, forKey: .exit_meaning)
                             try container.encode(self.generated_at, forKey: .generated_at)
                             try container.encode(self.code, forKey: .code)
                             try container.encode(self.message, forKey: .message)
@@ -2056,8 +2239,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/auth/tokens/POST/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/auth/tokens/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.credentials_period_issueToken.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.credentials_period_issueToken.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -2065,14 +2272,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.credentials_period_issueToken.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//auth/tokens/post(credentials.issueToken)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -2199,6 +2398,14 @@ public enum Operations {
                     public struct jsonPayload: Codable, Hashable, Sendable {
                         private var _explicitNullKeys: Set<String> = []
 
+                        /// - Remark: Generated from `#/paths/auth/tokens/POST/responses/404/content/json/exit_code`.
+                        public var exit_code: Swift.Double
+                        /// - Remark: Generated from `#/paths/auth/tokens/POST/responses/404/content/json/exit_meaning`.
+                        @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                        }
+                        /// - Remark: Generated from `#/paths/auth/tokens/POST/responses/404/content/json/exit_meaning`.
+                        public var exit_meaning: Operations.credentials_period_issueToken.Output.NotFound.Body.jsonPayload.exit_meaningPayload
                         /// - Remark: Generated from `#/paths/auth/tokens/POST/responses/404/content/json/generated_at`.
                         public var generated_at: Swift.String
                         /// - Remark: Generated from `#/paths/auth/tokens/POST/responses/404/content/json/code`.
@@ -2212,19 +2419,27 @@ public enum Operations {
                         /// Creates a new `jsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - exit_code:
+                        ///   - exit_meaning:
                         ///   - generated_at:
                         ///   - code:
                         ///   - message:
                         public init(
+                            exit_code: Swift.Double,
+                            exit_meaning: Operations.credentials_period_issueToken.Output.NotFound.Body.jsonPayload.exit_meaningPayload,
                             generated_at: Swift.String,
                             code: Operations.credentials_period_issueToken.Output.NotFound.Body.jsonPayload.codePayload,
                             message: Swift.String
                         ) {
+                            self.exit_code = exit_code
+                            self.exit_meaning = exit_meaning
                             self.generated_at = generated_at
                             self.code = code
                             self.message = message
                         }
                         public enum CodingKeys: String, CodingKey {
+                            case exit_code
+                            case exit_meaning
                             case generated_at
                             case code
                             case message
@@ -2232,6 +2447,14 @@ public enum Operations {
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
                             self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.exit_code = try container.decode(
+                                Swift.Double.self,
+                                forKey: .exit_code
+                            )
+                            self.exit_meaning = try container.decode(
+                                Operations.credentials_period_issueToken.Output.NotFound.Body.jsonPayload.exit_meaningPayload.self,
+                                forKey: .exit_meaning
+                            )
                             self.generated_at = try container.decode(
                                 Swift.String.self,
                                 forKey: .generated_at
@@ -2245,6 +2468,8 @@ public enum Operations {
                                 forKey: .message
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "exit_code",
+                                "exit_meaning",
                                 "generated_at",
                                 "code",
                                 "message"
@@ -2253,6 +2478,8 @@ public enum Operations {
 
                         public func encode(to encoder: any Swift.Encoder) throws {
                             var container = encoder.container(keyedBy: CodingKeys.self)
+                            try container.encode(self.exit_code, forKey: .exit_code)
+                            try container.encode(self.exit_meaning, forKey: .exit_meaning)
                             try container.encode(self.generated_at, forKey: .generated_at)
                             try container.encode(self.code, forKey: .code)
                             try container.encode(self.message, forKey: .message)
@@ -2468,8 +2695,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/auth/tokens/{name}/DELETE/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/auth/tokens/{name}/DELETE/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.credentials_period_revokeToken.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.credentials_period_revokeToken.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -2477,14 +2728,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.credentials_period_revokeToken.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//auth/tokens/{name}/delete(credentials.revokeToken)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -2611,6 +2854,14 @@ public enum Operations {
                     public struct jsonPayload: Codable, Hashable, Sendable {
                         private var _explicitNullKeys: Set<String> = []
 
+                        /// - Remark: Generated from `#/paths/auth/tokens/{name}/DELETE/responses/404/content/json/exit_code`.
+                        public var exit_code: Swift.Double
+                        /// - Remark: Generated from `#/paths/auth/tokens/{name}/DELETE/responses/404/content/json/exit_meaning`.
+                        @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                        }
+                        /// - Remark: Generated from `#/paths/auth/tokens/{name}/DELETE/responses/404/content/json/exit_meaning`.
+                        public var exit_meaning: Operations.credentials_period_revokeToken.Output.NotFound.Body.jsonPayload.exit_meaningPayload
                         /// - Remark: Generated from `#/paths/auth/tokens/{name}/DELETE/responses/404/content/json/generated_at`.
                         public var generated_at: Swift.String
                         /// - Remark: Generated from `#/paths/auth/tokens/{name}/DELETE/responses/404/content/json/code`.
@@ -2624,19 +2875,27 @@ public enum Operations {
                         /// Creates a new `jsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - exit_code:
+                        ///   - exit_meaning:
                         ///   - generated_at:
                         ///   - code:
                         ///   - message:
                         public init(
+                            exit_code: Swift.Double,
+                            exit_meaning: Operations.credentials_period_revokeToken.Output.NotFound.Body.jsonPayload.exit_meaningPayload,
                             generated_at: Swift.String,
                             code: Operations.credentials_period_revokeToken.Output.NotFound.Body.jsonPayload.codePayload,
                             message: Swift.String
                         ) {
+                            self.exit_code = exit_code
+                            self.exit_meaning = exit_meaning
                             self.generated_at = generated_at
                             self.code = code
                             self.message = message
                         }
                         public enum CodingKeys: String, CodingKey {
+                            case exit_code
+                            case exit_meaning
                             case generated_at
                             case code
                             case message
@@ -2644,6 +2903,14 @@ public enum Operations {
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
                             self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.exit_code = try container.decode(
+                                Swift.Double.self,
+                                forKey: .exit_code
+                            )
+                            self.exit_meaning = try container.decode(
+                                Operations.credentials_period_revokeToken.Output.NotFound.Body.jsonPayload.exit_meaningPayload.self,
+                                forKey: .exit_meaning
+                            )
                             self.generated_at = try container.decode(
                                 Swift.String.self,
                                 forKey: .generated_at
@@ -2657,6 +2924,8 @@ public enum Operations {
                                 forKey: .message
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "exit_code",
+                                "exit_meaning",
                                 "generated_at",
                                 "code",
                                 "message"
@@ -2665,6 +2934,8 @@ public enum Operations {
 
                         public func encode(to encoder: any Swift.Encoder) throws {
                             var container = encoder.container(keyedBy: CodingKeys.self)
+                            try container.encode(self.exit_code, forKey: .exit_code)
+                            try container.encode(self.exit_meaning, forKey: .exit_meaning)
                             try container.encode(self.generated_at, forKey: .generated_at)
                             try container.encode(self.code, forKey: .code)
                             try container.encode(self.message, forKey: .message)
@@ -2939,6 +3210,17 @@ public enum Operations {
                             public struct errorPayload: Codable, Hashable, Sendable {
                                 private var _explicitNullKeys: Set<String> = []
 
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/error/exit_code`.
+                                public var exit_code: Swift.Double
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/error/exit_meaning`.
+                                @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case runtime_space_failure = "runtime failure"
+                                    case validation_space_or_space_usage = "validation or usage"
+                                    case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                                    case Conflict = "Conflict"
+                                }
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/error/exit_meaning`.
+                                public var exit_meaning: Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.exit_meaningPayload
                                 /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/error/code`.
                                 public var code: Swift.String
                                 /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/error/message`.
@@ -2949,15 +3231,82 @@ public enum Operations {
 
                                     /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/error/details/current_version`.
                                     public var current_version: Swift.Int?
+                                    /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/error/details/profile`.
+                                    public struct profilePayload: Codable, Hashable, Sendable {
+                                        private var _explicitNullKeys: Set<String> = []
+
+                                        /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/error/details/profile/id`.
+                                        public var id: Swift.String
+                                        /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/error/details/profile/name`.
+                                        public var name: Swift.String
+                                        /// Creates a new `profilePayload`.
+                                        ///
+                                        /// - Parameters:
+                                        ///   - id:
+                                        ///   - name:
+                                        public init(
+                                            id: Swift.String,
+                                            name: Swift.String
+                                        ) {
+                                            self.id = id
+                                            self.name = name
+                                        }
+                                        public enum CodingKeys: String, CodingKey {
+                                            case id
+                                            case name
+                                        }
+                                        public init(from decoder: any Swift.Decoder) throws {
+                                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                            self.id = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .id
+                                            )
+                                            self.name = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .name
+                                            )
+                                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                                "id",
+                                                "name"
+                                            ])
+                                        }
+
+                                        public func encode(to encoder: any Swift.Encoder) throws {
+                                            var container = encoder.container(keyedBy: CodingKeys.self)
+                                            try container.encode(self.id, forKey: .id)
+                                            try container.encode(self.name, forKey: .name)
+                                        }
+                                    }
+                                    /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/error/details/profile`.
+                                    public var profile: Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.detailsPayload.profilePayload?
+                                    /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/error/details/task_id`.
+                                    public var task_id: Swift.String?
+                                    /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/error/details/recovery`.
+                                    public var recovery: Swift.String?
                                     /// Creates a new `detailsPayload`.
                                     ///
                                     /// - Parameters:
                                     ///   - current_version:
-                                    public init(current_version: Swift.Int? = nil) {
+                                    ///   - profile:
+                                    ///   - task_id:
+                                    ///   - recovery:
+                                    public init(
+                                        current_version: Swift.Int? = nil,
+                                        profile: Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.detailsPayload.profilePayload? = nil,
+                                        task_id: Swift.String? = nil,
+                                        recovery: Swift.String? = nil
+                                    ) {
                                         self.current_version = current_version
+                                        self.profile = profile
+                                        self.task_id = task_id
+                                        self.recovery = recovery
                                     }
                                     public enum CodingKeys: String, CodingKey {
                                         case current_version
+                                        case profile
+                                        case task_id
+                                        case recovery
                                     }
                                     public init(from decoder: any Swift.Decoder) throws {
                                         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -2966,8 +3315,23 @@ public enum Operations {
                                             Swift.Int.self,
                                             forKey: .current_version
                                         )
+                                        self.profile = try container.decodeIfPresent(
+                                            Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.detailsPayload.profilePayload.self,
+                                            forKey: .profile
+                                        )
+                                        self.task_id = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .task_id
+                                        )
+                                        self.recovery = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .recovery
+                                        )
                                         try decoder.ensureNoAdditionalProperties(knownKeys: [
-                                            "current_version"
+                                            "current_version",
+                                            "profile",
+                                            "task_id",
+                                            "recovery"
                                         ])
                                     }
 
@@ -2978,6 +3342,21 @@ public enum Operations {
                                         } else {
                                             try container.encodeIfPresent(self.current_version, forKey: .current_version)
                                         }
+                                        if self.profile == nil && _explicitNullKeys.contains(CodingKeys.profile.stringValue) {
+                                            try container.encodeNil(forKey: .profile)
+                                        } else {
+                                            try container.encodeIfPresent(self.profile, forKey: .profile)
+                                        }
+                                        if self.task_id == nil && _explicitNullKeys.contains(CodingKeys.task_id.stringValue) {
+                                            try container.encodeNil(forKey: .task_id)
+                                        } else {
+                                            try container.encodeIfPresent(self.task_id, forKey: .task_id)
+                                        }
+                                        if self.recovery == nil && _explicitNullKeys.contains(CodingKeys.recovery.stringValue) {
+                                            try container.encodeNil(forKey: .recovery)
+                                        } else {
+                                            try container.encodeIfPresent(self.recovery, forKey: .recovery)
+                                        }
                                     }
                                 }
                                 /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/itemsPayload/error/details`.
@@ -2985,19 +3364,27 @@ public enum Operations {
                                 /// Creates a new `errorPayload`.
                                 ///
                                 /// - Parameters:
+                                ///   - exit_code:
+                                ///   - exit_meaning:
                                 ///   - code:
                                 ///   - message:
                                 ///   - details:
                                 public init(
+                                    exit_code: Swift.Double,
+                                    exit_meaning: Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.exit_meaningPayload,
                                     code: Swift.String,
                                     message: Swift.String,
                                     details: Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.detailsPayload? = nil
                                 ) {
+                                    self.exit_code = exit_code
+                                    self.exit_meaning = exit_meaning
                                     self.code = code
                                     self.message = message
                                     self.details = details
                                 }
                                 public enum CodingKeys: String, CodingKey {
+                                    case exit_code
+                                    case exit_meaning
                                     case code
                                     case message
                                     case details
@@ -3005,6 +3392,14 @@ public enum Operations {
                                 public init(from decoder: any Swift.Decoder) throws {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
                                     self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.exit_code = try container.decode(
+                                        Swift.Double.self,
+                                        forKey: .exit_code
+                                    )
+                                    self.exit_meaning = try container.decode(
+                                        Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.exit_meaningPayload.self,
+                                        forKey: .exit_meaning
+                                    )
                                     self.code = try container.decode(
                                         Swift.String.self,
                                         forKey: .code
@@ -3018,6 +3413,8 @@ public enum Operations {
                                         forKey: .details
                                     )
                                     try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "exit_code",
+                                        "exit_meaning",
                                         "code",
                                         "message",
                                         "details"
@@ -3026,6 +3423,8 @@ public enum Operations {
 
                                 public func encode(to encoder: any Swift.Encoder) throws {
                                     var container = encoder.container(keyedBy: CodingKeys.self)
+                                    try container.encode(self.exit_code, forKey: .exit_code)
+                                    try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                     try container.encode(self.code, forKey: .code)
                                     try container.encode(self.message, forKey: .message)
                                     if self.details == nil && _explicitNullKeys.contains(CodingKeys.details.stringValue) {
@@ -3305,8 +3704,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_attachMany.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_attachMany.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -3314,14 +3737,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.tasks_period_attachMany.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/attachments/batch/post(tasks.attachMany)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -3450,6 +3865,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.tasks_period_attachMany.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/404/content/json/value1/code`.
@@ -3463,19 +3886,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.tasks_period_attachMany.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.tasks_period_attachMany.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -3483,6 +3914,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.tasks_period_attachMany.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -3496,6 +3935,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -3504,6 +3945,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -4809,8 +5252,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/POST/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_attach.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_attach.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -4818,14 +5285,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.tasks_period_attach.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/attachments/post(tasks.attach)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -4954,6 +5413,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/POST/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/POST/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/POST/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.tasks_period_attach.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/POST/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/POST/responses/404/content/json/value1/code`.
@@ -4967,19 +5434,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.tasks_period_attach.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.tasks_period_attach.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -4987,6 +5462,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.tasks_period_attach.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -5000,6 +5483,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -5008,6 +5493,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -6238,8 +6725,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/detach/POST/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/detach/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_detach.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_detach.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -6247,14 +6758,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.tasks_period_detach.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/attachments/detach/post(tasks.detach)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -6383,6 +6886,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/detach/POST/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/detach/POST/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/detach/POST/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.tasks_period_detach.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/detach/POST/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/detach/POST/responses/404/content/json/value1/code`.
@@ -6396,19 +6907,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.tasks_period_detach.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.tasks_period_detach.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -6416,6 +6935,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.tasks_period_detach.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -6429,6 +6956,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -6437,6 +6966,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -7683,8 +8214,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/label/POST/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/label/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_labelAttachment.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_labelAttachment.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -7692,14 +8247,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.tasks_period_labelAttachment.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/attachments/label/post(tasks.labelAttachment)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -7828,6 +8375,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/label/POST/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/label/POST/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/label/POST/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.tasks_period_labelAttachment.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/label/POST/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/label/POST/responses/404/content/json/value1/code`.
@@ -7841,19 +8396,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.tasks_period_labelAttachment.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.tasks_period_labelAttachment.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -7861,6 +8424,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.tasks_period_labelAttachment.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -7874,6 +8445,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -7882,6 +8455,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -9163,8 +9738,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/upload/POST/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/upload/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_uploadAttachment.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_uploadAttachment.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -9172,14 +9771,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.tasks_period_uploadAttachment.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/attachments/upload/post(tasks.uploadAttachment)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -9308,6 +9899,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/upload/POST/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/upload/POST/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/upload/POST/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.tasks_period_uploadAttachment.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/upload/POST/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/upload/POST/responses/404/content/json/value1/code`.
@@ -9321,19 +9920,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.tasks_period_uploadAttachment.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.tasks_period_uploadAttachment.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -9341,6 +9948,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.tasks_period_uploadAttachment.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -9354,6 +9969,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -9362,6 +9979,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -9804,8 +10423,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/{attachment}/image/GET/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/{attachment}/image/GET/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_attachmentImage.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_attachmentImage.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -9813,14 +10456,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.tasks_period_attachmentImage.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/attachments/{attachment}/image/get(tasks.attachmentImage)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -9949,6 +10584,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/{attachment}/image/GET/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/{attachment}/image/GET/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/{attachment}/image/GET/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.tasks_period_attachmentImage.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/{attachment}/image/GET/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/attachments/{attachment}/image/GET/responses/404/content/json/value1/code`.
@@ -9962,19 +10605,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.tasks_period_attachmentImage.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.tasks_period_attachmentImage.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -9982,6 +10633,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.tasks_period_attachmentImage.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -9995,6 +10654,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -10003,6 +10664,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -10972,6 +11635,17 @@ public enum Operations {
                             public struct errorPayload: Codable, Hashable, Sendable {
                                 private var _explicitNullKeys: Set<String> = []
 
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/error/exit_code`.
+                                public var exit_code: Swift.Double
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/error/exit_meaning`.
+                                @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case runtime_space_failure = "runtime failure"
+                                    case validation_space_or_space_usage = "validation or usage"
+                                    case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                                    case Conflict = "Conflict"
+                                }
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/error/exit_meaning`.
+                                public var exit_meaning: Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.exit_meaningPayload
                                 /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/error/generated_at`.
                                 public var generated_at: Swift.String
                                 /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/error/code`.
@@ -10984,15 +11658,82 @@ public enum Operations {
 
                                     /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/error/details/current_version`.
                                     public var current_version: Swift.Int?
+                                    /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/error/details/profile`.
+                                    public struct profilePayload: Codable, Hashable, Sendable {
+                                        private var _explicitNullKeys: Set<String> = []
+
+                                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/error/details/profile/id`.
+                                        public var id: Swift.String
+                                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/error/details/profile/name`.
+                                        public var name: Swift.String
+                                        /// Creates a new `profilePayload`.
+                                        ///
+                                        /// - Parameters:
+                                        ///   - id:
+                                        ///   - name:
+                                        public init(
+                                            id: Swift.String,
+                                            name: Swift.String
+                                        ) {
+                                            self.id = id
+                                            self.name = name
+                                        }
+                                        public enum CodingKeys: String, CodingKey {
+                                            case id
+                                            case name
+                                        }
+                                        public init(from decoder: any Swift.Decoder) throws {
+                                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                            self.id = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .id
+                                            )
+                                            self.name = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .name
+                                            )
+                                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                                "id",
+                                                "name"
+                                            ])
+                                        }
+
+                                        public func encode(to encoder: any Swift.Encoder) throws {
+                                            var container = encoder.container(keyedBy: CodingKeys.self)
+                                            try container.encode(self.id, forKey: .id)
+                                            try container.encode(self.name, forKey: .name)
+                                        }
+                                    }
+                                    /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/error/details/profile`.
+                                    public var profile: Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.detailsPayload.profilePayload?
+                                    /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/error/details/task_id`.
+                                    public var task_id: Swift.String?
+                                    /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/error/details/recovery`.
+                                    public var recovery: Swift.String?
                                     /// Creates a new `detailsPayload`.
                                     ///
                                     /// - Parameters:
                                     ///   - current_version:
-                                    public init(current_version: Swift.Int? = nil) {
+                                    ///   - profile:
+                                    ///   - task_id:
+                                    ///   - recovery:
+                                    public init(
+                                        current_version: Swift.Int? = nil,
+                                        profile: Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.detailsPayload.profilePayload? = nil,
+                                        task_id: Swift.String? = nil,
+                                        recovery: Swift.String? = nil
+                                    ) {
                                         self.current_version = current_version
+                                        self.profile = profile
+                                        self.task_id = task_id
+                                        self.recovery = recovery
                                     }
                                     public enum CodingKeys: String, CodingKey {
                                         case current_version
+                                        case profile
+                                        case task_id
+                                        case recovery
                                     }
                                     public init(from decoder: any Swift.Decoder) throws {
                                         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -11001,8 +11742,23 @@ public enum Operations {
                                             Swift.Int.self,
                                             forKey: .current_version
                                         )
+                                        self.profile = try container.decodeIfPresent(
+                                            Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.detailsPayload.profilePayload.self,
+                                            forKey: .profile
+                                        )
+                                        self.task_id = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .task_id
+                                        )
+                                        self.recovery = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .recovery
+                                        )
                                         try decoder.ensureNoAdditionalProperties(knownKeys: [
-                                            "current_version"
+                                            "current_version",
+                                            "profile",
+                                            "task_id",
+                                            "recovery"
                                         ])
                                     }
 
@@ -11013,6 +11769,21 @@ public enum Operations {
                                         } else {
                                             try container.encodeIfPresent(self.current_version, forKey: .current_version)
                                         }
+                                        if self.profile == nil && _explicitNullKeys.contains(CodingKeys.profile.stringValue) {
+                                            try container.encodeNil(forKey: .profile)
+                                        } else {
+                                            try container.encodeIfPresent(self.profile, forKey: .profile)
+                                        }
+                                        if self.task_id == nil && _explicitNullKeys.contains(CodingKeys.task_id.stringValue) {
+                                            try container.encodeNil(forKey: .task_id)
+                                        } else {
+                                            try container.encodeIfPresent(self.task_id, forKey: .task_id)
+                                        }
+                                        if self.recovery == nil && _explicitNullKeys.contains(CodingKeys.recovery.stringValue) {
+                                            try container.encodeNil(forKey: .recovery)
+                                        } else {
+                                            try container.encodeIfPresent(self.recovery, forKey: .recovery)
+                                        }
                                     }
                                 }
                                 /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/itemsPayload/error/details`.
@@ -11020,22 +11791,30 @@ public enum Operations {
                                 /// Creates a new `errorPayload`.
                                 ///
                                 /// - Parameters:
+                                ///   - exit_code:
+                                ///   - exit_meaning:
                                 ///   - generated_at:
                                 ///   - code:
                                 ///   - message:
                                 ///   - details:
                                 public init(
+                                    exit_code: Swift.Double,
+                                    exit_meaning: Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.exit_meaningPayload,
                                     generated_at: Swift.String,
                                     code: Swift.String,
                                     message: Swift.String,
                                     details: Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.detailsPayload
                                 ) {
+                                    self.exit_code = exit_code
+                                    self.exit_meaning = exit_meaning
                                     self.generated_at = generated_at
                                     self.code = code
                                     self.message = message
                                     self.details = details
                                 }
                                 public enum CodingKeys: String, CodingKey {
+                                    case exit_code
+                                    case exit_meaning
                                     case generated_at
                                     case code
                                     case message
@@ -11044,6 +11823,14 @@ public enum Operations {
                                 public init(from decoder: any Swift.Decoder) throws {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
                                     self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.exit_code = try container.decode(
+                                        Swift.Double.self,
+                                        forKey: .exit_code
+                                    )
+                                    self.exit_meaning = try container.decode(
+                                        Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.exit_meaningPayload.self,
+                                        forKey: .exit_meaning
+                                    )
                                     self.generated_at = try container.decode(
                                         Swift.String.self,
                                         forKey: .generated_at
@@ -11061,6 +11848,8 @@ public enum Operations {
                                         forKey: .details
                                     )
                                     try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "exit_code",
+                                        "exit_meaning",
                                         "generated_at",
                                         "code",
                                         "message",
@@ -11070,6 +11859,8 @@ public enum Operations {
 
                                 public func encode(to encoder: any Swift.Encoder) throws {
                                     var container = encoder.container(keyedBy: CodingKeys.self)
+                                    try container.encode(self.exit_code, forKey: .exit_code)
+                                    try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                     try container.encode(self.generated_at, forKey: .generated_at)
                                     try container.encode(self.code, forKey: .code)
                                     try container.encode(self.message, forKey: .message)
@@ -11316,8 +12107,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_batchEdit.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_batchEdit.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -11325,14 +12140,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.tasks_period_batchEdit.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/batch-edit/post(tasks.batchEdit)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -11461,6 +12268,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.tasks_period_batchEdit.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/404/content/json/value1/code`.
@@ -11474,19 +12289,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.tasks_period_batchEdit.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.tasks_period_batchEdit.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -11494,6 +12317,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.tasks_period_batchEdit.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -11507,6 +12338,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -11515,6 +12348,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -12044,6 +12879,17 @@ public enum Operations {
                             public struct errorPayload: Codable, Hashable, Sendable {
                                 private var _explicitNullKeys: Set<String> = []
 
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/200/content/json/itemsPayload/error/exit_code`.
+                                public var exit_code: Swift.Double
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/200/content/json/itemsPayload/error/exit_meaning`.
+                                @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case runtime_space_failure = "runtime failure"
+                                    case validation_space_or_space_usage = "validation or usage"
+                                    case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                                    case Conflict = "Conflict"
+                                }
+                                /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/200/content/json/itemsPayload/error/exit_meaning`.
+                                public var exit_meaning: Operations.tasks_period_importTasks.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.exit_meaningPayload
                                 /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/200/content/json/itemsPayload/error/code`.
                                 public var code: Swift.String
                                 /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/200/content/json/itemsPayload/error/message`.
@@ -12054,15 +12900,82 @@ public enum Operations {
 
                                     /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/200/content/json/itemsPayload/error/details/current_version`.
                                     public var current_version: Swift.Int?
+                                    /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/200/content/json/itemsPayload/error/details/profile`.
+                                    public struct profilePayload: Codable, Hashable, Sendable {
+                                        private var _explicitNullKeys: Set<String> = []
+
+                                        /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/200/content/json/itemsPayload/error/details/profile/id`.
+                                        public var id: Swift.String
+                                        /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/200/content/json/itemsPayload/error/details/profile/name`.
+                                        public var name: Swift.String
+                                        /// Creates a new `profilePayload`.
+                                        ///
+                                        /// - Parameters:
+                                        ///   - id:
+                                        ///   - name:
+                                        public init(
+                                            id: Swift.String,
+                                            name: Swift.String
+                                        ) {
+                                            self.id = id
+                                            self.name = name
+                                        }
+                                        public enum CodingKeys: String, CodingKey {
+                                            case id
+                                            case name
+                                        }
+                                        public init(from decoder: any Swift.Decoder) throws {
+                                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                            self.id = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .id
+                                            )
+                                            self.name = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .name
+                                            )
+                                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                                "id",
+                                                "name"
+                                            ])
+                                        }
+
+                                        public func encode(to encoder: any Swift.Encoder) throws {
+                                            var container = encoder.container(keyedBy: CodingKeys.self)
+                                            try container.encode(self.id, forKey: .id)
+                                            try container.encode(self.name, forKey: .name)
+                                        }
+                                    }
+                                    /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/200/content/json/itemsPayload/error/details/profile`.
+                                    public var profile: Operations.tasks_period_importTasks.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.detailsPayload.profilePayload?
+                                    /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/200/content/json/itemsPayload/error/details/task_id`.
+                                    public var task_id: Swift.String?
+                                    /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/200/content/json/itemsPayload/error/details/recovery`.
+                                    public var recovery: Swift.String?
                                     /// Creates a new `detailsPayload`.
                                     ///
                                     /// - Parameters:
                                     ///   - current_version:
-                                    public init(current_version: Swift.Int? = nil) {
+                                    ///   - profile:
+                                    ///   - task_id:
+                                    ///   - recovery:
+                                    public init(
+                                        current_version: Swift.Int? = nil,
+                                        profile: Operations.tasks_period_importTasks.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.detailsPayload.profilePayload? = nil,
+                                        task_id: Swift.String? = nil,
+                                        recovery: Swift.String? = nil
+                                    ) {
                                         self.current_version = current_version
+                                        self.profile = profile
+                                        self.task_id = task_id
+                                        self.recovery = recovery
                                     }
                                     public enum CodingKeys: String, CodingKey {
                                         case current_version
+                                        case profile
+                                        case task_id
+                                        case recovery
                                     }
                                     public init(from decoder: any Swift.Decoder) throws {
                                         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -12071,8 +12984,23 @@ public enum Operations {
                                             Swift.Int.self,
                                             forKey: .current_version
                                         )
+                                        self.profile = try container.decodeIfPresent(
+                                            Operations.tasks_period_importTasks.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.detailsPayload.profilePayload.self,
+                                            forKey: .profile
+                                        )
+                                        self.task_id = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .task_id
+                                        )
+                                        self.recovery = try container.decodeIfPresent(
+                                            Swift.String.self,
+                                            forKey: .recovery
+                                        )
                                         try decoder.ensureNoAdditionalProperties(knownKeys: [
-                                            "current_version"
+                                            "current_version",
+                                            "profile",
+                                            "task_id",
+                                            "recovery"
                                         ])
                                     }
 
@@ -12083,6 +13011,21 @@ public enum Operations {
                                         } else {
                                             try container.encodeIfPresent(self.current_version, forKey: .current_version)
                                         }
+                                        if self.profile == nil && _explicitNullKeys.contains(CodingKeys.profile.stringValue) {
+                                            try container.encodeNil(forKey: .profile)
+                                        } else {
+                                            try container.encodeIfPresent(self.profile, forKey: .profile)
+                                        }
+                                        if self.task_id == nil && _explicitNullKeys.contains(CodingKeys.task_id.stringValue) {
+                                            try container.encodeNil(forKey: .task_id)
+                                        } else {
+                                            try container.encodeIfPresent(self.task_id, forKey: .task_id)
+                                        }
+                                        if self.recovery == nil && _explicitNullKeys.contains(CodingKeys.recovery.stringValue) {
+                                            try container.encodeNil(forKey: .recovery)
+                                        } else {
+                                            try container.encodeIfPresent(self.recovery, forKey: .recovery)
+                                        }
                                     }
                                 }
                                 /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/200/content/json/itemsPayload/error/details`.
@@ -12090,19 +13033,27 @@ public enum Operations {
                                 /// Creates a new `errorPayload`.
                                 ///
                                 /// - Parameters:
+                                ///   - exit_code:
+                                ///   - exit_meaning:
                                 ///   - code:
                                 ///   - message:
                                 ///   - details:
                                 public init(
+                                    exit_code: Swift.Double,
+                                    exit_meaning: Operations.tasks_period_importTasks.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.exit_meaningPayload,
                                     code: Swift.String,
                                     message: Swift.String,
                                     details: Operations.tasks_period_importTasks.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.detailsPayload? = nil
                                 ) {
+                                    self.exit_code = exit_code
+                                    self.exit_meaning = exit_meaning
                                     self.code = code
                                     self.message = message
                                     self.details = details
                                 }
                                 public enum CodingKeys: String, CodingKey {
+                                    case exit_code
+                                    case exit_meaning
                                     case code
                                     case message
                                     case details
@@ -12110,6 +13061,14 @@ public enum Operations {
                                 public init(from decoder: any Swift.Decoder) throws {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
                                     self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.exit_code = try container.decode(
+                                        Swift.Double.self,
+                                        forKey: .exit_code
+                                    )
+                                    self.exit_meaning = try container.decode(
+                                        Operations.tasks_period_importTasks.Output.Ok.Body.jsonPayload.itemsPayloadPayload.errorPayload.exit_meaningPayload.self,
+                                        forKey: .exit_meaning
+                                    )
                                     self.code = try container.decode(
                                         Swift.String.self,
                                         forKey: .code
@@ -12123,6 +13082,8 @@ public enum Operations {
                                         forKey: .details
                                     )
                                     try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "exit_code",
+                                        "exit_meaning",
                                         "code",
                                         "message",
                                         "details"
@@ -12131,6 +13092,8 @@ public enum Operations {
 
                                 public func encode(to encoder: any Swift.Encoder) throws {
                                     var container = encoder.container(keyedBy: CodingKeys.self)
+                                    try container.encode(self.exit_code, forKey: .exit_code)
+                                    try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                     try container.encode(self.code, forKey: .code)
                                     try container.encode(self.message, forKey: .message)
                                     if self.details == nil && _explicitNullKeys.contains(CodingKeys.details.stringValue) {
@@ -12418,8 +13381,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_importTasks.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_importTasks.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -12427,14 +13414,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.tasks_period_importTasks.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/import/post(tasks.importTasks)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -12563,6 +13542,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.tasks_period_importTasks.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/404/content/json/value1/code`.
@@ -12576,19 +13563,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.tasks_period_importTasks.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.tasks_period_importTasks.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -12596,6 +13591,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.tasks_period_importTasks.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -12609,6 +13612,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -12617,6 +13622,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -13962,8 +14969,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_list.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_list.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -13971,14 +15002,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.tasks_period_list.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/get(tasks.list)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -14107,6 +15130,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.tasks_period_list.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/404/content/json/value1/code`.
@@ -14120,19 +15151,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.tasks_period_list.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.tasks_period_list.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -14140,6 +15179,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.tasks_period_list.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -14153,6 +15200,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -14161,6 +15210,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -14319,6 +15370,14 @@ public enum Operations {
                         public struct Value2Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json/value2/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json/value2/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case validation_space_or_space_usage = "validation or usage"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json/value2/exit_meaning`.
+                            public var exit_meaning: Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload.Value2Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json/value2/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json/value2/code`.
@@ -14332,19 +15391,27 @@ public enum Operations {
                             /// Creates a new `Value2Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload.Value2Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload.Value2Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -14352,6 +15419,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload.Value2Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -14365,6 +15440,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -14373,6 +15450,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -16064,8 +17143,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/POST/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_create.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_create.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -16073,14 +17176,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.tasks_period_create.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/post(tasks.create)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -16209,6 +17304,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/POST/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/POST/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/POST/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.tasks_period_create.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/POST/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/POST/responses/404/content/json/value1/code`.
@@ -16222,19 +17325,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.tasks_period_create.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.tasks_period_create.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -16242,6 +17353,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.tasks_period_create.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -16255,6 +17374,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -16263,6 +17384,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -17437,8 +18560,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/GET/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/GET/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_show.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_show.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -17446,14 +18593,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.tasks_period_show.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/get(tasks.show)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -17582,6 +18721,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/GET/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/GET/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/GET/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.tasks_period_show.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/GET/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/GET/responses/404/content/json/value1/code`.
@@ -17595,19 +18742,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.tasks_period_show.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.tasks_period_show.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -17615,6 +18770,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.tasks_period_show.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -17628,6 +18791,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -17636,6 +18801,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -19428,8 +20595,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/PATCH/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/PATCH/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_edit.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_edit.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -19437,14 +20628,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.tasks_period_edit.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/patch(tasks.edit)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -19573,6 +20756,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/PATCH/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/PATCH/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/PATCH/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.tasks_period_edit.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/PATCH/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/PATCH/responses/404/content/json/value1/code`.
@@ -19586,19 +20777,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.tasks_period_edit.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.tasks_period_edit.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -19606,6 +20805,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.tasks_period_edit.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -19619,6 +20826,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -19627,6 +20836,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -20817,8 +22028,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/DELETE/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/DELETE/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_delete.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_delete.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -20826,14 +22061,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.tasks_period_delete.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/delete(tasks.delete)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -20962,6 +22189,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/DELETE/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/DELETE/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/DELETE/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.tasks_period_delete.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/DELETE/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/DELETE/responses/404/content/json/value1/code`.
@@ -20975,19 +22210,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.tasks_period_delete.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.tasks_period_delete.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -20995,6 +22238,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.tasks_period_delete.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -21008,6 +22259,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -21016,6 +22269,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -22252,8 +23507,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/transition/POST/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/transition/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_transition.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_transition.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -22261,14 +23540,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.tasks_period_transition.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/transition/post(tasks.transition)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -22397,6 +23668,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/transition/POST/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/transition/POST/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/transition/POST/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.tasks_period_transition.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/transition/POST/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/transition/POST/responses/404/content/json/value1/code`.
@@ -22410,19 +23689,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.tasks_period_transition.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.tasks_period_transition.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -22430,6 +23717,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.tasks_period_transition.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -22443,6 +23738,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -22451,6 +23748,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -23681,8 +24980,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/move/POST/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/move/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_move.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_move.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -23690,14 +25013,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.tasks_period_move.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/move/post(tasks.move)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -23826,6 +25141,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/move/POST/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/move/POST/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/move/POST/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.tasks_period_move.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/move/POST/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/move/POST/responses/404/content/json/value1/code`.
@@ -23839,19 +25162,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.tasks_period_move.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.tasks_period_move.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -23859,6 +25190,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.tasks_period_move.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -23872,6 +25211,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -23880,6 +25221,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -25110,8 +26453,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/copy/POST/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/copy/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_copy.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_copy.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -25119,14 +26486,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.tasks_period_copy.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/copy/post(tasks.copy)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -25255,6 +26614,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/copy/POST/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/copy/POST/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/copy/POST/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.tasks_period_copy.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/copy/POST/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/copy/POST/responses/404/content/json/value1/code`.
@@ -25268,19 +26635,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.tasks_period_copy.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.tasks_period_copy.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -25288,6 +26663,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.tasks_period_copy.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -25301,6 +26684,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -25309,6 +26694,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -26539,8 +27926,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/revert/POST/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/revert/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_revert.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_revert.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -26548,14 +27959,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.tasks_period_revert.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/revert/post(tasks.revert)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -26684,6 +28087,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/revert/POST/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/revert/POST/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/revert/POST/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.tasks_period_revert.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/revert/POST/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/revert/POST/responses/404/content/json/value1/code`.
@@ -26697,19 +28108,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.tasks_period_revert.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.tasks_period_revert.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -26717,6 +28136,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.tasks_period_revert.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -26730,6 +28157,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -26738,6 +28167,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -28715,8 +30146,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/series/POST/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/series/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_createSeries.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_createSeries.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -28724,14 +30179,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.tasks_period_createSeries.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/series/post(tasks.createSeries)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -28860,6 +30307,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/series/POST/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/series/POST/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/series/POST/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.tasks_period_createSeries.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/series/POST/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/series/POST/responses/404/content/json/value1/code`.
@@ -28873,19 +30328,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.tasks_period_createSeries.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.tasks_period_createSeries.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -28893,6 +30356,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.tasks_period_createSeries.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -28906,6 +30377,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -28914,6 +30387,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -30853,8 +32328,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/series/PATCH/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/series/PATCH/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_editSeries.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_editSeries.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -30862,14 +32361,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.tasks_period_editSeries.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/series/patch(tasks.editSeries)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -30998,6 +32489,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/series/PATCH/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/series/PATCH/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/series/PATCH/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.tasks_period_editSeries.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/series/PATCH/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/series/PATCH/responses/404/content/json/value1/code`.
@@ -31011,19 +32510,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.tasks_period_editSeries.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.tasks_period_editSeries.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -31031,6 +32538,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.tasks_period_editSeries.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -31044,6 +32559,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -31052,6 +32569,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -32268,8 +33787,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/skip/POST/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/skip/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.tasks_period_skipOccurrence.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.tasks_period_skipOccurrence.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -32277,14 +33820,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.tasks_period_skipOccurrence.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/skip/post(tasks.skipOccurrence)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -32413,6 +33948,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/skip/POST/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/skip/POST/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/skip/POST/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.tasks_period_skipOccurrence.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/skip/POST/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/skip/POST/responses/404/content/json/value1/code`.
@@ -32426,19 +33969,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.tasks_period_skipOccurrence.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.tasks_period_skipOccurrence.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -32446,6 +33997,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.tasks_period_skipOccurrence.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -32459,6 +34018,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -32467,6 +34028,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -32889,8 +34452,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/events/GET/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/events/GET/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.changes_period_stream.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.changes_period_stream.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -32898,14 +34485,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.changes_period_stream.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/events/get(changes.stream)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -33032,6 +34611,14 @@ public enum Operations {
                     public struct jsonPayload: Codable, Hashable, Sendable {
                         private var _explicitNullKeys: Set<String> = []
 
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/events/GET/responses/404/content/json/exit_code`.
+                        public var exit_code: Swift.Double
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/events/GET/responses/404/content/json/exit_meaning`.
+                        @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                        }
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/events/GET/responses/404/content/json/exit_meaning`.
+                        public var exit_meaning: Operations.changes_period_stream.Output.NotFound.Body.jsonPayload.exit_meaningPayload
                         /// - Remark: Generated from `#/paths/profiles/{profile}/events/GET/responses/404/content/json/generated_at`.
                         public var generated_at: Swift.String
                         /// - Remark: Generated from `#/paths/profiles/{profile}/events/GET/responses/404/content/json/code`.
@@ -33045,19 +34632,27 @@ public enum Operations {
                         /// Creates a new `jsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - exit_code:
+                        ///   - exit_meaning:
                         ///   - generated_at:
                         ///   - code:
                         ///   - message:
                         public init(
+                            exit_code: Swift.Double,
+                            exit_meaning: Operations.changes_period_stream.Output.NotFound.Body.jsonPayload.exit_meaningPayload,
                             generated_at: Swift.String,
                             code: Operations.changes_period_stream.Output.NotFound.Body.jsonPayload.codePayload,
                             message: Swift.String
                         ) {
+                            self.exit_code = exit_code
+                            self.exit_meaning = exit_meaning
                             self.generated_at = generated_at
                             self.code = code
                             self.message = message
                         }
                         public enum CodingKeys: String, CodingKey {
+                            case exit_code
+                            case exit_meaning
                             case generated_at
                             case code
                             case message
@@ -33065,6 +34660,14 @@ public enum Operations {
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
                             self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.exit_code = try container.decode(
+                                Swift.Double.self,
+                                forKey: .exit_code
+                            )
+                            self.exit_meaning = try container.decode(
+                                Operations.changes_period_stream.Output.NotFound.Body.jsonPayload.exit_meaningPayload.self,
+                                forKey: .exit_meaning
+                            )
                             self.generated_at = try container.decode(
                                 Swift.String.self,
                                 forKey: .generated_at
@@ -33078,6 +34681,8 @@ public enum Operations {
                                 forKey: .message
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "exit_code",
+                                "exit_meaning",
                                 "generated_at",
                                 "code",
                                 "message"
@@ -33086,6 +34691,8 @@ public enum Operations {
 
                         public func encode(to encoder: any Swift.Encoder) throws {
                             var container = encoder.container(keyedBy: CodingKeys.self)
+                            try container.encode(self.exit_code, forKey: .exit_code)
+                            try container.encode(self.exit_meaning, forKey: .exit_meaning)
                             try container.encode(self.generated_at, forKey: .generated_at)
                             try container.encode(self.code, forKey: .code)
                             try container.encode(self.message, forKey: .message)
@@ -33222,6 +34829,749 @@ public enum Operations {
             public static var allCases: [Self] {
                 [
                     .text_event_hyphen_stream,
+                    .json
+                ]
+            }
+        }
+    }
+    /// - Remark: HTTP `GET /tasks/lookup`.
+    /// - Remark: Generated from `#/paths//tasks/lookup/get(reads.lookup)`.
+    public enum reads_period_lookup {
+        public static let id: Swift.String = "reads.lookup"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/tasks/lookup/GET/query`.
+            public struct Query: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/tasks/lookup/GET/query/prefix`.
+                public var prefix: Swift.String
+                /// Creates a new `Query`.
+                ///
+                /// - Parameters:
+                ///   - prefix:
+                public init(prefix: Swift.String) {
+                    self.prefix = prefix
+                }
+            }
+            public var query: Operations.reads_period_lookup.Input.Query
+            /// - Remark: Generated from `#/paths/tasks/lookup/GET/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.reads_period_lookup.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.reads_period_lookup.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.reads_period_lookup.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - query:
+            ///   - headers:
+            public init(
+                query: Operations.reads_period_lookup.Input.Query,
+                headers: Operations.reads_period_lookup.Input.Headers = .init()
+            ) {
+                self.query = query
+                self.headers = headers
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/200/content/jsonPayload`.
+                    public struct jsonPayloadPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                        /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/200/content/jsonPayload/profile`.
+                        public struct profilePayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/200/content/jsonPayload/profile/id`.
+                            public var id: Swift.String
+                            /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/200/content/jsonPayload/profile/name`.
+                            public var name: Swift.String
+                            /// Creates a new `profilePayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - id:
+                            ///   - name:
+                            public init(
+                                id: Swift.String,
+                                name: Swift.String
+                            ) {
+                                self.id = id
+                                self.name = name
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case id
+                                case name
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.id = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .id
+                                )
+                                self.name = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .name
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "id",
+                                    "name"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.id, forKey: .id)
+                                try container.encode(self.name, forKey: .name)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/200/content/jsonPayload/profile`.
+                        public var profile: Operations.reads_period_lookup.Output.Ok.Body.jsonPayloadPayload.profilePayload
+                        /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/200/content/jsonPayload/task_id`.
+                        public var task_id: Swift.String
+                        /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/200/content/jsonPayload/title`.
+                        public var title: Swift.String
+                        /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/200/content/jsonPayload/project`.
+                        public var project: Swift.String?
+                        /// Creates a new `jsonPayloadPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - profile:
+                        ///   - task_id:
+                        ///   - title:
+                        ///   - project:
+                        public init(
+                            profile: Operations.reads_period_lookup.Output.Ok.Body.jsonPayloadPayload.profilePayload,
+                            task_id: Swift.String,
+                            title: Swift.String,
+                            project: Swift.String? = nil
+                        ) {
+                            self.profile = profile
+                            self.task_id = task_id
+                            self.title = title
+                            self.project = project
+                        }
+                        public enum CodingKeys: String, CodingKey {
+                            case profile
+                            case task_id
+                            case title
+                            case project
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.profile = try container.decode(
+                                Operations.reads_period_lookup.Output.Ok.Body.jsonPayloadPayload.profilePayload.self,
+                                forKey: .profile
+                            )
+                            self.task_id = try container.decode(
+                                Swift.String.self,
+                                forKey: .task_id
+                            )
+                            self.title = try container.decode(
+                                Swift.String.self,
+                                forKey: .title
+                            )
+                            self.project = try container.decodeIfPresent(
+                                Swift.String.self,
+                                forKey: .project
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "profile",
+                                "task_id",
+                                "title",
+                                "project"
+                            ])
+                        }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.profile, forKey: .profile)
+                                try container.encode(self.task_id, forKey: .task_id)
+                                try container.encode(self.title, forKey: .title)
+                                if self.project == nil && _explicitNullKeys.contains(CodingKeys.project.stringValue) {
+                                    try container.encodeNil(forKey: .project)
+                                } else {
+                                    try container.encodeIfPresent(self.project, forKey: .project)
+                                }
+                            }
+                        }
+                    /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/200/content/json`.
+                    public typealias jsonPayload = [Operations.reads_period_lookup.Output.Ok.Body.jsonPayloadPayload]
+                    /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/200/content/application\/json`.
+                    case json(Operations.reads_period_lookup.Output.Ok.Body.jsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Operations.reads_period_lookup.Output.Ok.Body.jsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_lookup.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_lookup.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Success
+            ///
+            /// - Remark: Generated from `#/paths//tasks/lookup/get(reads.lookup)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.reads_period_lookup.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.reads_period_lookup.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_lookup.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_lookup.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// BadRequest
+            ///
+            /// - Remark: Generated from `#/paths//tasks/lookup/get(reads.lookup)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.reads_period_lookup.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            public var badRequest: Operations.reads_period_lookup.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/401/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/401/content/application\/json`.
+                    case json(Components.Schemas.UnauthorizedEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.UnauthorizedEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_lookup.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_lookup.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// Unauthorized
+            ///
+            /// - Remark: Generated from `#/paths//tasks/lookup/get(reads.lookup)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.reads_period_lookup.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            public var unauthorized: Operations.reads_period_lookup.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/403/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/403/content/application\/json`.
+                    case json(Components.Schemas.ForbiddenEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.ForbiddenEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_lookup.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_lookup.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// Forbidden
+            ///
+            /// - Remark: Generated from `#/paths//tasks/lookup/get(reads.lookup)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.reads_period_lookup.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            public var forbidden: Operations.reads_period_lookup.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct NotFound: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/404/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/404/content/json`.
+                    public struct jsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/404/content/json/value1`.
+                        public struct Value1Payload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.reads_period_lookup.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
+                            /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/404/content/json/value1/generated_at`.
+                            public var generated_at: Swift.String
+                            /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/404/content/json/value1/code`.
+                            @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_found = "not_found"
+                            }
+                            /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/404/content/json/value1/code`.
+                            public var code: Operations.reads_period_lookup.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload
+                            /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/404/content/json/value1/message`.
+                            public var message: Swift.String
+                            /// Creates a new `Value1Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
+                            ///   - generated_at:
+                            ///   - code:
+                            ///   - message:
+                            public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.reads_period_lookup.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
+                                generated_at: Swift.String,
+                                code: Operations.reads_period_lookup.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
+                                message: Swift.String
+                            ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
+                                self.generated_at = generated_at
+                                self.code = code
+                                self.message = message
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
+                                case generated_at
+                                case code
+                                case message
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.reads_period_lookup.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
+                                self.generated_at = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .generated_at
+                                )
+                                self.code = try container.decode(
+                                    Operations.reads_period_lookup.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
+                                    "generated_at",
+                                    "code",
+                                    "message"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
+                                try container.encode(self.generated_at, forKey: .generated_at)
+                                try container.encode(self.code, forKey: .code)
+                                try container.encode(self.message, forKey: .message)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/404/content/json/value1`.
+                        public var value1: Operations.reads_period_lookup.Output.NotFound.Body.jsonPayload.Value1Payload?
+                        /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/404/content/json/value2`.
+                        public var value2: Components.Schemas.NotFoundEncoded?
+                        /// Creates a new `jsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - value1:
+                        ///   - value2:
+                        public init(
+                            value1: Operations.reads_period_lookup.Output.NotFound.Body.jsonPayload.Value1Payload? = nil,
+                            value2: Components.Schemas.NotFoundEncoded? = nil
+                        ) {
+                            self.value1 = value1
+                            self.value2 = value2
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self.value1 = try .init(from: decoder)
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self.value2 = try .init(from: decoder)
+                            } catch {
+                                errors.append(error)
+                            }
+                            try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                [
+                                    self.value1,
+                                    self.value2
+                                ],
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
+                            )
+                        }
+                        public func encode(to encoder: any Swift.Encoder) throws {
+                            try self.value1?.encode(to: encoder)
+                            try self.value2?.encode(to: encoder)
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/404/content/application\/json`.
+                    case json(Operations.reads_period_lookup.Output.NotFound.Body.jsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Operations.reads_period_lookup.Output.NotFound.Body.jsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_lookup.Output.NotFound.Body
+                /// Creates a new `NotFound`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_lookup.Output.NotFound.Body) {
+                    self.body = body
+                }
+            }
+            /// NotFound
+            ///
+            /// - Remark: Generated from `#/paths//tasks/lookup/get(reads.lookup)/responses/404`.
+            ///
+            /// HTTP response code: `404 notFound`.
+            case notFound(Operations.reads_period_lookup.Output.NotFound)
+            /// The associated value of the enum case if `self` is `.notFound`.
+            ///
+            /// - Throws: An error if `self` is not `.notFound`.
+            /// - SeeAlso: `.notFound`.
+            public var notFound: Operations.reads_period_lookup.Output.NotFound {
+                get throws {
+                    switch self {
+                    case let .notFound(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "notFound",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct Conflict: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/409/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/409/content/application\/json`.
+                    case json(Components.Schemas.ConflictEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.ConflictEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_lookup.Output.Conflict.Body
+                /// Creates a new `Conflict`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_lookup.Output.Conflict.Body) {
+                    self.body = body
+                }
+            }
+            /// Conflict
+            ///
+            /// - Remark: Generated from `#/paths//tasks/lookup/get(reads.lookup)/responses/409`.
+            ///
+            /// HTTP response code: `409 conflict`.
+            case conflict(Operations.reads_period_lookup.Output.Conflict)
+            /// The associated value of the enum case if `self` is `.conflict`.
+            ///
+            /// - Throws: An error if `self` is not `.conflict`.
+            /// - SeeAlso: `.conflict`.
+            public var conflict: Operations.reads_period_lookup.Output.Conflict {
+                get throws {
+                    switch self {
+                    case let .conflict(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "conflict",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/422/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/422/content/application\/json`.
+                    case json(Components.Schemas.InvalidTaskEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.InvalidTaskEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_lookup.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_lookup.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// InvalidTask
+            ///
+            /// - Remark: Generated from `#/paths//tasks/lookup/get(reads.lookup)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.reads_period_lookup.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            public var unprocessableContent: Operations.reads_period_lookup.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct InternalServerError: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/500/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/500/content/application\/json`.
+                    case json(Components.Schemas.InternalErrorEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.InternalErrorEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_lookup.Output.InternalServerError.Body
+                /// Creates a new `InternalServerError`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_lookup.Output.InternalServerError.Body) {
+                    self.body = body
+                }
+            }
+            /// InternalError
+            ///
+            /// - Remark: Generated from `#/paths//tasks/lookup/get(reads.lookup)/responses/500`.
+            ///
+            /// HTTP response code: `500 internalServerError`.
+            case internalServerError(Operations.reads_period_lookup.Output.InternalServerError)
+            /// The associated value of the enum case if `self` is `.internalServerError`.
+            ///
+            /// - Throws: An error if `self` is not `.internalServerError`.
+            /// - SeeAlso: `.internalServerError`.
+            public var internalServerError: Operations.reads_period_lookup.Output.InternalServerError {
+                get throws {
+                    switch self {
+                    case let .internalServerError(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "internalServerError",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
                     .json
                 ]
             }
@@ -33545,8 +35895,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/DELETE/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/DELETE/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_deleteProfile.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_deleteProfile.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -33554,14 +35928,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.reads_period_deleteProfile.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/delete(reads.deleteProfile)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -33690,6 +36056,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/DELETE/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/DELETE/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/DELETE/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.reads_period_deleteProfile.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/DELETE/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/DELETE/responses/404/content/json/value1/code`.
@@ -33703,19 +36077,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.reads_period_deleteProfile.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.reads_period_deleteProfile.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -33723,6 +36105,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.reads_period_deleteProfile.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -33736,6 +36126,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -33744,6 +36136,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -33902,6 +36296,14 @@ public enum Operations {
                         public struct Value2Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/DELETE/responses/422/content/json/value2/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/DELETE/responses/422/content/json/value2/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case validation_space_or_space_usage = "validation or usage"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/DELETE/responses/422/content/json/value2/exit_meaning`.
+                            public var exit_meaning: Operations.reads_period_deleteProfile.Output.UnprocessableContent.Body.jsonPayload.Value2Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/DELETE/responses/422/content/json/value2/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/DELETE/responses/422/content/json/value2/code`.
@@ -33946,22 +36348,30 @@ public enum Operations {
                             /// Creates a new `Value2Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             ///   - details:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.reads_period_deleteProfile.Output.UnprocessableContent.Body.jsonPayload.Value2Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Swift.String,
                                 message: Swift.String,
                                 details: Operations.reads_period_deleteProfile.Output.UnprocessableContent.Body.jsonPayload.Value2Payload.detailsPayload
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                                 self.details = details
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -33970,6 +36380,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.reads_period_deleteProfile.Output.UnprocessableContent.Body.jsonPayload.Value2Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -33987,6 +36405,8 @@ public enum Operations {
                                     forKey: .details
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message",
@@ -33996,6 +36416,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -34178,6 +36600,24 @@ public enum Operations {
     public enum reads_period_profiles {
         public static let id: Swift.String = "reads.profiles"
         public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/profiles/GET/query`.
+            public struct Query: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/GET/query/include_projects`.
+                @frozen public enum include_projectsPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case _true = "true"
+                    case _false = "false"
+                }
+                /// - Remark: Generated from `#/paths/profiles/GET/query/include_projects`.
+                public var include_projects: Operations.reads_period_profiles.Input.Query.include_projectsPayload?
+                /// Creates a new `Query`.
+                ///
+                /// - Parameters:
+                ///   - include_projects:
+                public init(include_projects: Operations.reads_period_profiles.Input.Query.include_projectsPayload? = nil) {
+                    self.include_projects = include_projects
+                }
+            }
+            public var query: Operations.reads_period_profiles.Input.Query
             /// - Remark: Generated from `#/paths/profiles/GET/header`.
             public struct Headers: Sendable, Hashable {
                 public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.reads_period_profiles.AcceptableContentType>]
@@ -34193,8 +36633,13 @@ public enum Operations {
             /// Creates a new `Input`.
             ///
             /// - Parameters:
+            ///   - query:
             ///   - headers:
-            public init(headers: Operations.reads_period_profiles.Input.Headers = .init()) {
+            public init(
+                query: Operations.reads_period_profiles.Input.Query = .init(),
+                headers: Operations.reads_period_profiles.Input.Headers = .init()
+            ) {
+                self.query = query
                 self.headers = headers
             }
         }
@@ -34220,6 +36665,61 @@ public enum Operations {
                         public var inbox_task_count: Swift.Int
                         /// - Remark: Generated from `#/paths/profiles/GET/responses/200/content/jsonPayload/visible_task_count`.
                         public var visible_task_count: Swift.Int?
+                        /// - Remark: Generated from `#/paths/profiles/GET/responses/200/content/jsonPayload/projectsPayload`.
+                        public struct projectsPayloadPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/profiles/GET/responses/200/content/jsonPayload/projectsPayload/id`.
+                            public var id: Swift.String
+                            /// - Remark: Generated from `#/paths/profiles/GET/responses/200/content/jsonPayload/projectsPayload/name`.
+                            public var name: Swift.String
+                            /// Creates a new `projectsPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - id:
+                            ///   - name:
+                            public init(
+                                id: Swift.String,
+                                name: Swift.String
+                            ) {
+                                self.id = id
+                                self.name = name
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case id
+                                case name
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.id = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .id
+                                )
+                                self.name = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .name
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "id",
+                                    "name"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.id, forKey: .id)
+                                try container.encode(self.name, forKey: .name)
+                            }
+                        }
+                        /// Present with --projects or include_projects=true. Includes defined Projects even without visible Tasks; an empty Profile has [].
+                        ///
+                        /// - Remark: Generated from `#/paths/profiles/GET/responses/200/content/jsonPayload/projects`.
+                        public typealias projectsPayload = [Operations.reads_period_profiles.Output.Ok.Body.jsonPayloadPayload.projectsPayloadPayload]
+                        /// Present with --projects or include_projects=true. Includes defined Projects even without visible Tasks; an empty Profile has [].
+                        ///
+                        /// - Remark: Generated from `#/paths/profiles/GET/responses/200/content/jsonPayload/projects`.
+                        public var projects: Operations.reads_period_profiles.Output.Ok.Body.jsonPayloadPayload.projectsPayload?
                         /// Creates a new `jsonPayloadPayload`.
                         ///
                         /// - Parameters:
@@ -34230,6 +36730,7 @@ public enum Operations {
                         ///   - open_task_count:
                         ///   - inbox_task_count:
                         ///   - visible_task_count:
+                        ///   - projects: Present with --projects or include_projects=true. Includes defined Projects even without visible Tasks; an empty Profile has [].
                         public init(
                             id: Swift.String,
                             name: Swift.String,
@@ -34237,7 +36738,8 @@ public enum Operations {
                             updated_at: Swift.String,
                             open_task_count: Swift.Int,
                             inbox_task_count: Swift.Int,
-                            visible_task_count: Swift.Int? = nil
+                            visible_task_count: Swift.Int? = nil,
+                            projects: Operations.reads_period_profiles.Output.Ok.Body.jsonPayloadPayload.projectsPayload? = nil
                         ) {
                             self.id = id
                             self.name = name
@@ -34246,6 +36748,7 @@ public enum Operations {
                             self.open_task_count = open_task_count
                             self.inbox_task_count = inbox_task_count
                             self.visible_task_count = visible_task_count
+                            self.projects = projects
                         }
                         public enum CodingKeys: String, CodingKey {
                             case id
@@ -34255,6 +36758,7 @@ public enum Operations {
                             case open_task_count
                             case inbox_task_count
                             case visible_task_count
+                            case projects
                         }
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -34287,6 +36791,10 @@ public enum Operations {
                                 Swift.Int.self,
                                 forKey: .visible_task_count
                             )
+                            self.projects = try container.decodeIfPresent(
+                                Operations.reads_period_profiles.Output.Ok.Body.jsonPayloadPayload.projectsPayload.self,
+                                forKey: .projects
+                            )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
                                 "id",
                                 "name",
@@ -34294,7 +36802,8 @@ public enum Operations {
                                 "updated_at",
                                 "open_task_count",
                                 "inbox_task_count",
-                                "visible_task_count"
+                                "visible_task_count",
+                                "projects"
                             ])
                         }
 
@@ -34310,6 +36819,11 @@ public enum Operations {
                                 try container.encodeNil(forKey: .visible_task_count)
                             } else {
                                 try container.encodeIfPresent(self.visible_task_count, forKey: .visible_task_count)
+                            }
+                            if self.projects == nil && _explicitNullKeys.contains(CodingKeys.projects.stringValue) {
+                                try container.encodeNil(forKey: .projects)
+                            } else {
+                                try container.encodeIfPresent(self.projects, forKey: .projects)
                             }
                         }
                     }
@@ -34364,8 +36878,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/GET/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/GET/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_profiles.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_profiles.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -34373,14 +36911,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.reads_period_profiles.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/get(reads.profiles)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -34509,6 +37039,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/GET/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/GET/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/GET/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.reads_period_profiles.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/GET/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/GET/responses/404/content/json/value1/code`.
@@ -34522,19 +37060,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.reads_period_profiles.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.reads_period_profiles.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -34542,6 +37088,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.reads_period_profiles.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -34555,6 +37109,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -34563,6 +37119,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -35036,8 +37594,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/projects/GET/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/projects/GET/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_projects.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_projects.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -35045,14 +37627,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.reads_period_projects.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/projects/get(reads.projects)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -35181,6 +37755,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/projects/GET/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/projects/GET/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/projects/GET/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.reads_period_projects.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/projects/GET/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/projects/GET/responses/404/content/json/value1/code`.
@@ -35194,19 +37776,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.reads_period_projects.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.reads_period_projects.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -35214,6 +37804,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.reads_period_projects.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -35227,6 +37825,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -35235,6 +37835,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -35684,8 +38286,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/tags/GET/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tags/GET/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_tags.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_tags.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -35693,14 +38319,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.reads_period_tags.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/tags/get(reads.tags)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -35829,6 +38447,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tags/GET/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tags/GET/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tags/GET/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.reads_period_tags.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tags/GET/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tags/GET/responses/404/content/json/value1/code`.
@@ -35842,19 +38468,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.reads_period_tags.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.reads_period_tags.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -35862,6 +38496,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.reads_period_tags.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -35875,6 +38517,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -35883,6 +38527,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -37205,8 +39851,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/views/{view}/GET/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/views/{view}/GET/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_view.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_view.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -37214,14 +39884,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.reads_period_view.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/views/{view}/get(reads.view)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -37350,6 +40012,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/views/{view}/GET/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/views/{view}/GET/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/views/{view}/GET/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.reads_period_view.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/views/{view}/GET/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/views/{view}/GET/responses/404/content/json/value1/code`.
@@ -37363,19 +40033,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.reads_period_view.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.reads_period_view.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -37383,6 +40061,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.reads_period_view.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -37396,6 +40082,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -37404,6 +40092,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -37826,8 +40516,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/history/GET/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/history/GET/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_history.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_history.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -37835,14 +40549,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.reads_period_history.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/history/get(reads.history)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -37971,6 +40677,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/history/GET/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/history/GET/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/history/GET/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.reads_period_history.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/history/GET/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/history/GET/responses/404/content/json/value1/code`.
@@ -37984,19 +40698,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.reads_period_history.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.reads_period_history.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -38004,6 +40726,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.reads_period_history.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -38017,6 +40747,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -38025,6 +40757,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -38901,8 +41635,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/quick-add/parse/POST/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/quick-add/parse/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_quickAdd.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_quickAdd.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -38910,14 +41668,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.reads_period_quickAdd.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//profiles/{profile}/quick-add/parse/post(reads.quickAdd)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -39046,6 +41796,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/quick-add/parse/POST/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/quick-add/parse/POST/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/quick-add/parse/POST/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.reads_period_quickAdd.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/profiles/{profile}/quick-add/parse/POST/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/profiles/{profile}/quick-add/parse/POST/responses/404/content/json/value1/code`.
@@ -39059,19 +41817,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.reads_period_quickAdd.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.reads_period_quickAdd.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -39079,6 +41845,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.reads_period_quickAdd.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -39092,6 +41866,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -39100,6 +41876,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -41090,6 +43868,57 @@ public enum Operations {
                     }
                 }
             }
+            public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.diagnostics_period_snapshot.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.diagnostics_period_snapshot.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// BadRequest
+            ///
+            /// - Remark: Generated from `#/paths//diagnostics/get(diagnostics.snapshot)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.diagnostics_period_snapshot.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            public var badRequest: Operations.diagnostics_period_snapshot.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
             public struct Unauthorized: Sendable, Hashable {
                 /// - Remark: Generated from `#/paths/diagnostics/GET/responses/401/content`.
                 @frozen public enum Body: Sendable, Hashable {
@@ -41199,6 +44028,14 @@ public enum Operations {
                     public struct jsonPayload: Codable, Hashable, Sendable {
                         private var _explicitNullKeys: Set<String> = []
 
+                        /// - Remark: Generated from `#/paths/diagnostics/GET/responses/404/content/json/exit_code`.
+                        public var exit_code: Swift.Double
+                        /// - Remark: Generated from `#/paths/diagnostics/GET/responses/404/content/json/exit_meaning`.
+                        @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                        }
+                        /// - Remark: Generated from `#/paths/diagnostics/GET/responses/404/content/json/exit_meaning`.
+                        public var exit_meaning: Operations.diagnostics_period_snapshot.Output.NotFound.Body.jsonPayload.exit_meaningPayload
                         /// - Remark: Generated from `#/paths/diagnostics/GET/responses/404/content/json/generated_at`.
                         public var generated_at: Swift.String
                         /// - Remark: Generated from `#/paths/diagnostics/GET/responses/404/content/json/code`.
@@ -41212,19 +44049,27 @@ public enum Operations {
                         /// Creates a new `jsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - exit_code:
+                        ///   - exit_meaning:
                         ///   - generated_at:
                         ///   - code:
                         ///   - message:
                         public init(
+                            exit_code: Swift.Double,
+                            exit_meaning: Operations.diagnostics_period_snapshot.Output.NotFound.Body.jsonPayload.exit_meaningPayload,
                             generated_at: Swift.String,
                             code: Operations.diagnostics_period_snapshot.Output.NotFound.Body.jsonPayload.codePayload,
                             message: Swift.String
                         ) {
+                            self.exit_code = exit_code
+                            self.exit_meaning = exit_meaning
                             self.generated_at = generated_at
                             self.code = code
                             self.message = message
                         }
                         public enum CodingKeys: String, CodingKey {
+                            case exit_code
+                            case exit_meaning
                             case generated_at
                             case code
                             case message
@@ -41232,6 +44077,14 @@ public enum Operations {
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
                             self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.exit_code = try container.decode(
+                                Swift.Double.self,
+                                forKey: .exit_code
+                            )
+                            self.exit_meaning = try container.decode(
+                                Operations.diagnostics_period_snapshot.Output.NotFound.Body.jsonPayload.exit_meaningPayload.self,
+                                forKey: .exit_meaning
+                            )
                             self.generated_at = try container.decode(
                                 Swift.String.self,
                                 forKey: .generated_at
@@ -41245,6 +44098,8 @@ public enum Operations {
                                 forKey: .message
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "exit_code",
+                                "exit_meaning",
                                 "generated_at",
                                 "code",
                                 "message"
@@ -41253,6 +44108,8 @@ public enum Operations {
 
                         public func encode(to encoder: any Swift.Encoder) throws {
                             var container = encoder.container(keyedBy: CodingKeys.self)
+                            try container.encode(self.exit_code, forKey: .exit_code)
+                            try container.encode(self.exit_meaning, forKey: .exit_meaning)
                             try container.encode(self.generated_at, forKey: .generated_at)
                             try container.encode(self.code, forKey: .code)
                             try container.encode(self.message, forKey: .message)
@@ -41711,8 +44568,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/snapshots/GET/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/snapshots/GET/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.snapshots_period_list.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.snapshots_period_list.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -41720,14 +44601,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.snapshots_period_list.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//snapshots/get(snapshots.list)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -41856,6 +44729,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/snapshots/GET/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/snapshots/GET/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/snapshots/GET/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.snapshots_period_list.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/snapshots/GET/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/snapshots/GET/responses/404/content/json/value1/code`.
@@ -41869,19 +44750,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.snapshots_period_list.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.snapshots_period_list.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -41889,6 +44778,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.snapshots_period_list.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -41902,6 +44799,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -41910,6 +44809,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -42504,8 +45405,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/snapshots/POST/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/snapshots/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.snapshots_period_create.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.snapshots_period_create.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -42513,14 +45438,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.snapshots_period_create.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//snapshots/post(snapshots.create)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -42649,6 +45566,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/snapshots/POST/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/snapshots/POST/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/snapshots/POST/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.snapshots_period_create.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/snapshots/POST/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/snapshots/POST/responses/404/content/json/value1/code`.
@@ -42662,19 +45587,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.snapshots_period_create.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.snapshots_period_create.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -42682,6 +45615,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.snapshots_period_create.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -42695,6 +45636,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -42703,6 +45646,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -43271,8 +46216,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/snapshots/{snapshot}/GET/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/snapshots/{snapshot}/GET/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.snapshots_period_show.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.snapshots_period_show.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -43280,14 +46249,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.snapshots_period_show.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//snapshots/{snapshot}/get(snapshots.show)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -43416,6 +46377,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/snapshots/{snapshot}/GET/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/snapshots/{snapshot}/GET/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/snapshots/{snapshot}/GET/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.snapshots_period_show.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/snapshots/{snapshot}/GET/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/snapshots/{snapshot}/GET/responses/404/content/json/value1/code`.
@@ -43429,19 +46398,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.snapshots_period_show.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.snapshots_period_show.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -43449,6 +46426,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.snapshots_period_show.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -43462,6 +46447,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -43470,6 +46457,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -44276,8 +47265,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/snapshots/{snapshot}/restore/POST/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/snapshots/{snapshot}/restore/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.snapshots_period_restore.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.snapshots_period_restore.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -44285,14 +47298,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.snapshots_period_restore.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//snapshots/{snapshot}/restore/post(snapshots.restore)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -44421,6 +47426,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/snapshots/{snapshot}/restore/POST/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/snapshots/{snapshot}/restore/POST/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/snapshots/{snapshot}/restore/POST/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.snapshots_period_restore.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/snapshots/{snapshot}/restore/POST/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/snapshots/{snapshot}/restore/POST/responses/404/content/json/value1/code`.
@@ -44434,19 +47447,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.snapshots_period_restore.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.snapshots_period_restore.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -44454,6 +47475,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.snapshots_period_restore.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -44467,6 +47496,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -44475,6 +47506,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)
@@ -45130,8 +48163,32 @@ public enum Operations {
                 }
             }
             public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/snapshots/prune/POST/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/snapshots/prune/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.snapshots_period_prune.Output.BadRequest.Body
                 /// Creates a new `BadRequest`.
-                public init() {}
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.snapshots_period_prune.Output.BadRequest.Body) {
+                    self.body = body
+                }
             }
             /// BadRequest
             ///
@@ -45139,14 +48196,6 @@ public enum Operations {
             ///
             /// HTTP response code: `400 badRequest`.
             case badRequest(Operations.snapshots_period_prune.Output.BadRequest)
-            /// BadRequest
-            ///
-            /// - Remark: Generated from `#/paths//snapshots/prune/post(snapshots.prune)/responses/400`.
-            ///
-            /// HTTP response code: `400 badRequest`.
-            public static var badRequest: Self {
-                .badRequest(.init())
-            }
             /// The associated value of the enum case if `self` is `.badRequest`.
             ///
             /// - Throws: An error if `self` is not `.badRequest`.
@@ -45275,6 +48324,14 @@ public enum Operations {
                         public struct Value1Payload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/snapshots/prune/POST/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/snapshots/prune/POST/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/snapshots/prune/POST/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.snapshots_period_prune.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
                             /// - Remark: Generated from `#/paths/snapshots/prune/POST/responses/404/content/json/value1/generated_at`.
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/snapshots/prune/POST/responses/404/content/json/value1/code`.
@@ -45288,19 +48345,27 @@ public enum Operations {
                             /// Creates a new `Value1Payload`.
                             ///
                             /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
                             ///   - generated_at:
                             ///   - code:
                             ///   - message:
                             public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.snapshots_period_prune.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
                                 generated_at: Swift.String,
                                 code: Operations.snapshots_period_prune.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
                                 message: Swift.String
                             ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
                                 self.generated_at = generated_at
                                 self.code = code
                                 self.message = message
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
                                 case generated_at
                                 case code
                                 case message
@@ -45308,6 +48373,14 @@ public enum Operations {
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
                                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.snapshots_period_prune.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
                                 self.generated_at = try container.decode(
                                     Swift.String.self,
                                     forKey: .generated_at
@@ -45321,6 +48394,8 @@ public enum Operations {
                                     forKey: .message
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -45329,6 +48404,8 @@ public enum Operations {
 
                             public func encode(to encoder: any Swift.Encoder) throws {
                                 var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                                 try container.encode(self.generated_at, forKey: .generated_at)
                                 try container.encode(self.code, forKey: .code)
                                 try container.encode(self.message, forKey: .message)

@@ -8,7 +8,7 @@ case "$evidence" in /*) ;; *) echo 'Evidence must be absolute' >&2; exit 1 ;; es
 mkdir -p "$evidence"
 scratch=$(mktemp -d "${TMPDIR:-/tmp}/todo-w03-build-XXXXXX")
 trap 'rm -rf "$scratch"' EXIT HUP INT TERM
-xcodebuild -project "$root/apps/macos/Todo.xcodeproj" -scheme Todo -configuration Debug -destination platform=macOS -derivedDataPath "$scratch/DerivedData" build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO EXPANDED_CODE_SIGN_IDENTITY=- > "$evidence/build.log" 2>&1
+xcodebuild -project "$root/apps/macos/Todo.xcodeproj" -scheme Todo -configuration Debug -destination platform=macOS -derivedDataPath "$scratch/DerivedData" -disableAutomaticPackageResolution build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO EXPANDED_CODE_SIGN_IDENTITY=- > "$evidence/build.log" 2>&1
 python3 - "$scratch" "$evidence" <<'PY'
 import json
 from pathlib import Path

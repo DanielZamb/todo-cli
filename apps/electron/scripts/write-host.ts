@@ -11,6 +11,7 @@ import {
   nativeAttachmentRequest,
 } from "../src/attachment-native.ts";
 import { createDiagnosticsWindow } from "../src/diagnostics-window.ts";
+import { errorReply, exitDetail } from "../src/error-reply.ts";
 import { Reply, Request } from "../src/protocol.ts";
 import { serverCompatibility } from "../src/server-compatibility.ts";
 import {
@@ -34,6 +35,7 @@ app.setPath("userData", process.env.TODO_ELECTRON_DATA);
 async function boot() {
   await app.whenReady();
   let credential = "";
+  let credentialGeneration = 0;
   const run = <A, E>(effect: Effect.Effect<A, E, HttpClient.HttpClient>) =>
     Effect.runPromise(effect.pipe(Effect.provide(FetchHttpClient.layer)));
   const client = await run(
@@ -236,6 +238,8 @@ async function boot() {
       }
       if (isNativeAttachmentRequest(request))
         return nativeAttachmentRequest(request);
+      const requestedCredential = credential;
+      const requestedCredentialGeneration = credentialGeneration;
       switch (request._tag) {
         case "openDiagnostics":
           diagnosticsWindow.show();
@@ -260,7 +264,7 @@ async function boot() {
           if (!credential) return { _tag: "signedOut" };
           return {
             _tag: "signedIn",
-            profiles: await run(client.reads.profiles()),
+            profiles: await run(client.reads.profiles({ query: {} })),
           };
         case "watch":
           watch(request.profile);
@@ -270,6 +274,7 @@ async function boot() {
         case "signOut":
           await run(client.credentials.signOut());
           credential = "";
+          credentialGeneration++;
           authentication("signedOut");
           return { _tag: "signedOut" };
         case "signIn": {
@@ -280,12 +285,13 @@ async function boot() {
               }),
             )
           ).credential;
+          credentialGeneration++;
           const outdated = await run(compatibility.check());
           if (outdated) return outdated;
           authentication("signedIn");
           return {
             _tag: "signedIn",
-            profiles: await run(client.reads.profiles()),
+            profiles: await run(client.reads.profiles({ query: {} })),
           };
         }
         default:
@@ -298,10 +304,20 @@ async function boot() {
                   "_tag" in error &&
                   error._tag === "Unauthorized"
                 ) {
+                  if (
+                    !requestedCredential ||
+                    requestedCredential !== credential ||
+                    requestedCredentialGeneration !== credentialGeneration
+                  )
+                    return Effect.succeed<Reply>(errorReply(error));
                   stopStream();
                   credential = "";
+                  credentialGeneration++;
                   authentication("signedOut");
-                  return Effect.succeed<Reply>({ _tag: "signedOut" });
+                  return Effect.succeed<Reply>({
+                    _tag: "signedOut",
+                    message: errorReply(error).message,
+                  });
                 }
                 if (
                   error &&
@@ -314,15 +330,10 @@ async function boot() {
                     Schema.decodeUnknownSync(Reply)({
                       _tag: "conflict",
                       latest: error.latest,
+                      exit_detail: exitDetail(error),
                     }),
                   );
-                return Effect.succeed<Reply>({
-                  _tag: "error",
-                  message:
-                    error && typeof error === "object" && "message" in error
-                      ? String(error.message)
-                      : "Could not reach the Todo server. Your draft is saved. Retry when connected.",
-                });
+                return Effect.succeed<Reply>(errorReply(error));
               }),
             ),
           ).then((reply) => {

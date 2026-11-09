@@ -10,12 +10,17 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import coverage from "./coverage.json";
 import pin from "./tool.json";
+import {
+  repositoryInput,
+  repositoryPath,
+  verificationRoot,
+} from "../../../scripts/verification-inputs";
 
 const skill = import.meta.dirname;
-const root = resolve(skill, "../../..");
+const root = verificationRoot(skill);
 const base = join(root, "docs/evidence/task-search-formal");
 mkdirSync(base, { recursive: true });
 const evidence = mkdtempSync(join(base, "check-"));
@@ -99,7 +104,12 @@ const controls = [
   "BrokenCatalogOwed",
   "BrokenCatalogPromotion",
 ];
-function config(bounds: Bounds, live: boolean, broken = "", semanticOnly = false) {
+function config(
+  bounds: Bounds,
+  live: boolean,
+  broken = "",
+  semanticOnly = false,
+) {
   return [
     "CONSTANTS",
     `  Profiles = ${set(bounds.profiles)}`,
@@ -129,13 +139,30 @@ function config(bounds: Bounds, live: boolean, broken = "", semanticOnly = false
 const stages: unknown[] = [];
 try {
   console.log(`Evidence: ${evidence}`);
-  const jar = join(base, "tool-cache/tla2tools.jar");
+  const toolCache = repositoryPath(
+    root,
+    process.env.TODO_TASK_SEARCH_TOOL_CACHE ??
+      "docs/evidence/task-search-formal/tool-cache",
+    "TODO_TASK_SEARCH_TOOL_CACHE",
+  );
+  for (const file of coverage.files)
+    repositoryInput(root, file.path, "TaskSearch source mapping");
+  if (process.argv.includes("--inputs-only")) {
+    record("result", { passed: true, scope: "input validation only" });
+    process.exit(0);
+  }
+  const jar = join(toolCache, "tla2tools.jar");
+  const paths = await execute("input-path-controls", "bun", [
+    join(root, "scripts/check-verification-paths.ts"),
+    "task-search",
+  ]);
+  assert.equal(paths.exit, 0, "Required-input path controls failed");
   if (!existsSync(jar)) {
     const disk = await execute("disk-guard", "sh", [
-      "/Users/zambamon/Work/todo-cli/scripts/disk-guard.sh",
+      join(root, "scripts/disk-guard.sh"),
     ]);
     assert.equal(disk.exit, 0, "Disk guard refused the tool download");
-    mkdirSync(join(base, "tool-cache"), { recursive: true });
+    mkdirSync(toolCache, { recursive: true });
     const download = await execute("download", "curl", [
       "--fail",
       "--location",

@@ -11,14 +11,18 @@ import {
   DeleteProfile,
   DetachTask,
   DiagnosticsSnapshot,
+  DirectoryQuery,
   EditSeries,
   EditTask,
   ExpectedVersion,
+  exitStatusFields,
   ImageMime,
   ImportReport,
   ImportRequest,
   inputLimits,
   LabelAttachment,
+  LookupMatch,
+  LookupQuery,
   MoveTask,
   OpLogEntry,
   PlanningView,
@@ -41,6 +45,7 @@ import {
   Task,
   TaskFilters,
   TaskId,
+  TaskLookupDetails,
   TaskRead,
   TokenOptions,
   TransitionTask,
@@ -51,7 +56,6 @@ import { Context, Schema } from "effect";
 import {
   HttpApi,
   HttpApiEndpoint,
-  HttpApiError,
   HttpApiGroup,
   HttpApiMiddleware,
   HttpApiSchema,
@@ -60,17 +64,20 @@ import {
 } from "effect/http-api";
 
 export const ProfileNotFound = Schema.Struct({
+  ...exitStatusFields(3),
   generated_at: Schema.String,
   code: Schema.Literal("not_found"),
   message: Schema.String,
 }).annotate({ httpApiStatus: 404 });
 export const ProfileDeleteError = Schema.Struct({
+  ...exitStatusFields(2),
   generated_at: Schema.String,
   code: Schema.String,
   message: Schema.String,
   details: Schema.Struct({ visible_task_count: Schema.Int }),
 }).annotate({ httpApiStatus: 422 });
 export const SearchTooBroadResponse = Schema.Struct({
+  ...exitStatusFields(2),
   generated_at: Schema.String,
   code: Schema.Literal("search_too_broad"),
   message: Schema.String,
@@ -78,27 +85,32 @@ export const SearchTooBroadResponse = Schema.Struct({
 
 export class Unauthorized extends Schema.TaggedError<Unauthorized>()(
   "Unauthorized",
-  { message: Schema.String },
+  { message: Schema.String, ...exitStatusFields(3) },
   { httpApiStatus: 401 },
 ) {}
 export class Forbidden extends Schema.TaggedError<Forbidden>()(
   "Forbidden",
-  { message: Schema.String },
+  { message: Schema.String, ...exitStatusFields(3) },
   { httpApiStatus: 403 },
 ) {}
 export class NotFound extends Schema.TaggedError<NotFound>()(
   "NotFound",
-  { message: Schema.String },
+  {
+    message: Schema.String,
+    details: Schema.optionalKey(TaskLookupDetails),
+    ...exitStatusFields(3),
+  },
   { httpApiStatus: 404 },
 ) {}
 export class Conflict extends Schema.TaggedError<Conflict>()(
   "Conflict",
-  { latest: Schema.NullOr(Task) },
+  { latest: Schema.NullOr(Task), ...exitStatusFields(4) },
   { httpApiStatus: 409 },
 ) {}
 export class InvalidTask extends Schema.TaggedError<InvalidTask>()(
   "InvalidTask",
   {
+    ...exitStatusFields(2),
     message: Schema.String,
     details: Schema.optionalKey(ExternalIdConflictDetails),
   },
@@ -108,13 +120,26 @@ export class InvalidTask extends Schema.TaggedError<InvalidTask>()(
 // passphrases in a row (locked_until says when it reopens), or busy.
 export class TooManySignIns extends Schema.TaggedError<TooManySignIns>()(
   "TooManySignIns",
-  { message: Schema.String, locked_until: Schema.NullOr(Schema.String) },
+  {
+    message: Schema.String,
+    locked_until: Schema.NullOr(Schema.String),
+    ...exitStatusFields(3),
+  },
   { httpApiStatus: 429 },
 ) {}
 export class InternalError extends Schema.TaggedError<InternalError>()(
   "InternalError",
-  { message: Schema.String },
+  { message: Schema.String, ...exitStatusFields(1) },
   { httpApiStatus: 500 },
+) {}
+export class BadRequest extends Schema.TaggedError<BadRequest>()(
+  "BadRequest",
+  { message: Schema.String, ...exitStatusFields(2) },
+  { httpApiStatus: 400 },
+) {}
+export class RequestDecoding extends HttpApiMiddleware.Service<RequestDecoding>()(
+  "todo/api/RequestDecoding",
+  { error: BadRequest },
 ) {}
 export class BearerCredential extends Context.Service<
   BearerCredential,
@@ -132,13 +157,13 @@ export class ValidationHistory extends HttpApiMiddleware.Service<
   ValidationHistory,
   { requires: BearerCredential }
 >()("todo/api/ValidationHistory", {
-  error: [Unauthorized, Forbidden, ProfileNotFound, InternalError],
+  error: [Unauthorized, Forbidden, ProfileNotFound, InternalError, BadRequest],
 }) {}
 
 const profile = { profile: ProfileId };
 const target = { ...profile, task: TaskId };
 const taskErrors = [
-  HttpApiError.BadRequestNoContent,
+  BadRequest,
   Forbidden,
   ProfileNotFound,
   NotFound,
@@ -304,6 +329,11 @@ const Tasks = HttpApiGroup.make("tasks")
 
 const Reads = HttpApiGroup.make("reads")
   .add(
+    HttpApiEndpoint.get("lookup", "/tasks/lookup", {
+      query: LookupQuery,
+      success: Schema.Array(LookupMatch),
+      error: taskErrors,
+    }),
     HttpApiEndpoint.delete("deleteProfile", "/profiles/:profile", {
       params: profile,
       payload: DeleteProfile,
@@ -311,6 +341,7 @@ const Reads = HttpApiGroup.make("reads")
       error: [...taskErrors, ProfileDeleteError],
     }),
     HttpApiEndpoint.get("profiles", "/profiles", {
+      query: DirectoryQuery,
       success: Schema.Array(ProfileSummary),
       error: taskErrors,
     }),
@@ -394,12 +425,7 @@ const Changes = HttpApiGroup.make("changes")
         }),
         { "cache-control": Schema.Literal("no-store") },
       ),
-      error: [
-        HttpApiError.BadRequestNoContent,
-        Forbidden,
-        ProfileNotFound,
-        InternalError,
-      ],
+      error: [BadRequest, Forbidden, ProfileNotFound, InternalError],
     }),
   )
   .middleware(Authorization);
@@ -418,7 +444,7 @@ const SignIn = HttpApiGroup.make("signIn").add(
     payload: Passphrase,
     success: IssuedCredential,
     error: [
-      HttpApiError.BadRequestNoContent,
+      BadRequest,
       Unauthorized,
       TooManySignIns,
       ProfileNotFound,
@@ -429,40 +455,20 @@ const SignIn = HttpApiGroup.make("signIn").add(
 const Credentials = HttpApiGroup.make("credentials")
   .add(
     HttpApiEndpoint.delete("signOut", "/auth/session", {
-      error: [
-        HttpApiError.BadRequestNoContent,
-        Forbidden,
-        ProfileNotFound,
-        InternalError,
-      ],
+      error: [BadRequest, Forbidden, ProfileNotFound, InternalError],
     }),
     HttpApiEndpoint.post("issueToken", "/auth/tokens", {
       payload: TokenOptions,
       success: IssuedCredential,
-      error: [
-        HttpApiError.BadRequestNoContent,
-        Forbidden,
-        ProfileNotFound,
-        InternalError,
-      ],
+      error: [BadRequest, Forbidden, ProfileNotFound, InternalError],
     }),
     HttpApiEndpoint.get("listTokens", "/auth/tokens", {
       success: Schema.Array(CredentialInfo),
-      error: [
-        HttpApiError.BadRequestNoContent,
-        Forbidden,
-        ProfileNotFound,
-        InternalError,
-      ],
+      error: [BadRequest, Forbidden, ProfileNotFound, InternalError],
     }),
     HttpApiEndpoint.delete("revokeToken", "/auth/tokens/:name", {
       params: { name: Schema.NonEmptyString },
-      error: [
-        HttpApiError.BadRequestNoContent,
-        Forbidden,
-        ProfileNotFound,
-        InternalError,
-      ],
+      error: [BadRequest, Forbidden, ProfileNotFound, InternalError],
     }),
   )
   .middleware(Authorization);
@@ -532,6 +538,7 @@ export class TodoApi extends HttpApi.make("todo-api")
     Diagnostics,
     Snapshots,
   )
+  .middleware(RequestDecoding)
   .annotateMerge(
     OpenApi.annotations({ title: "Todo local API", version: "0.1.0" }),
   ) {}
