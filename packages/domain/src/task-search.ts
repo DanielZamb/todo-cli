@@ -25,6 +25,10 @@ type Word = {
   readonly start: number;
   readonly end: number;
 };
+export type PreparedField = {
+  readonly words: readonly Word[];
+  readonly preparedUnits: number;
+};
 const words = new Intl.Segmenter("und", { granularity: "word" });
 const graphemes = new Intl.Segmenter("und", { granularity: "grapheme" });
 
@@ -85,7 +89,7 @@ export function parseTaskSearch(value: string): readonly SearchClause[] {
 export function* fieldWords(
   value: string,
   chunkSize = 512,
-): Generator<void, readonly Word[]> {
+): Generator<void, PreparedField> {
   let normalized = "";
   const origins: { start: number; end: number }[] = [];
   let processed = 0;
@@ -109,7 +113,7 @@ export function* fieldWords(
     }
     if (++processed % chunkSize === 0) yield;
   }
-  return result;
+  return { words: result, preparedUnits: normalized.length };
 }
 
 function prefixMatcher(query: string, budget: number) {
@@ -251,9 +255,9 @@ export function* matchTaskSearchSteps(
 > {
   if (clauses.length === 0) return { accepted: true, matches: [] };
   const fields = [
-    { field: "title", words: yield* fieldWords(task.title) },
-    { field: "description", words: yield* fieldWords(task.description ?? "") },
-  ] satisfies { field: SearchMatch["field"]; words: readonly Word[] }[];
+    { field: "title", ...(yield* fieldWords(task.title)) },
+    { field: "description", ...(yield* fieldWords(task.description ?? "")) },
+  ] satisfies (PreparedField & { field: SearchMatch["field"] })[];
   const matches: SearchMatch[] = [];
   for (const clause of clauses) {
     const occurrences: SearchMatch[] = [];

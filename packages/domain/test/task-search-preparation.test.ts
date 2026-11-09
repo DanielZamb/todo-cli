@@ -50,10 +50,28 @@ it("keeps original words and UTF-16 origins across preparation checkpoints", () 
       const steps = fieldWords(text, size);
       let step = steps.next();
       while (!step.done) step = steps.next();
-      expect(step.value, JSON.stringify({ text, size })).toEqual(expected);
-      expect(JSON.stringify(step.value)).toBe(JSON.stringify(expected));
+      expect(step.value.words, JSON.stringify({ text, size })).toEqual(
+        expected,
+      );
+      expect(JSON.stringify(step.value.words)).toBe(JSON.stringify(expected));
     }
   }
   const first = fieldWords("ﷺ".repeat(1000), 1).next();
   expect(first).toEqual({ done: false, value: undefined });
+});
+
+it("counts folded UTF-16 units including whitespace and punctuation", () => {
+  const steps = fieldWords("ﷺ A!\n", 1);
+  let step = steps.next();
+  while (!step.done) step = steps.next();
+  expect(step.value).toEqual({
+    preparedUnits: 22,
+    words: [
+      { text: "صلى", start: 0, end: 1 },
+      { text: "الله", start: 0, end: 1 },
+      { text: "عليه", start: 0, end: 1 },
+      { text: "وسلم", start: 0, end: 1 },
+      { text: "a", start: 2, end: 3 },
+    ],
+  });
 });
