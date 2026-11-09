@@ -21,7 +21,7 @@ for name in graph-response dag-cli-input; do
   fi
   set +e
   if [ "$name" = graph-response ]; then
-    "$driver" after "$cli" "$evidence/$name" > "$evidence/$name.log" 2>&1
+    "$driver" "${TODO_GRAPH_RESPONSE_MODE:-after}" "$cli" "$evidence/$name" > "$evidence/$name.log" 2>&1
   else
     "$driver" "$cli" "$evidence/$name" > "$evidence/$name.log" 2>&1
   fi

@@ -23,9 +23,18 @@ const graphFields = {
   generated_at: Instant,
   profile_id: ProfileId,
   task_id: TaskId,
-  ancestors: Schema.Array(TaskId),
-  descendants: Schema.Array(TaskId),
-  lightest_next: Schema.Array(TaskId),
+  ancestors: Schema.Array(TaskId).annotate({
+    description:
+      "Strict ancestors of the requested Task in whole-Profile topological order.",
+  }),
+  descendants: Schema.Array(TaskId).annotate({
+    description:
+      "Strict descendants of the requested Task in whole-Profile topological order.",
+  }),
+  lightest_next: Schema.Array(TaskId).annotate({
+    description:
+      "Ready Tasks in the requested Task's remaining set, including a Ready root; own energy ascending, unknown energy last, then whole-Profile topological position.",
+  }),
   nodes: Schema.Array(GraphNode).check(Schema.isMinLength(1)),
   edges: Schema.Array(Edge),
   sources: Schema.Array(TaskId),

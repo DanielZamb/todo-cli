@@ -84,7 +84,7 @@ const guides = {
       "todo graph TASK --format mermaid",
     ],
     output:
-      "One typed graph report includes deterministic Mermaid. ancestors, descendants and lightest_next describe only the requested Task, in whole-Profile topological order. Query another Task to obtain its sets. Nodes carry identity, Task, degrees, readiness, depth and remaining energy. Shapes are single, chain, tree with orientation, and dag. Energy sums distinct unresolved ancestors and the root, pruning done/cancelled branches; missing weights are counted separately. No minutes or critical path.",
+      "One typed graph report includes deterministic Mermaid. ancestors and descendants describe only the requested Task, in whole-Profile topological order. lightest_next contains Ready members of its remaining set, including a Ready root, by own energy ascending, unknown energy last, then topological position. Query another Task to obtain its sets. Nodes carry identity, Task, degrees, readiness, depth and remaining energy. Shapes are single, chain, tree with orientation, and dag. Energy sums distinct unresolved ancestors and the root, pruning done/cancelled branches; missing weights are counted separately. No minutes or critical path.",
   }),
   "batch-depend": reference({
     purpose:

@@ -81,7 +81,7 @@ const setWindowMode = (compact: boolean) => {
   if (item) item.checked = layout.compact;
   send({ _tag: "windowMode", compact: layout.compact });
 };
-const client = () => taskHttpClient(server.origin, credential);
+const client = () => taskHttpClient(server.origin, () => credential);
 const run = <A, E>(effect: Effect.Effect<A, E, HttpClient.HttpClient>) =>
   Effect.runPromise(effect.pipe(Effect.provide(FetchHttpClient.layer)));
 const stopStream = () => {

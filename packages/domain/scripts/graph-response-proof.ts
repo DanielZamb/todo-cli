@@ -18,10 +18,31 @@ import { queryGraph } from "../src/graph-queries.ts";
 import { ActorId, ProfileId, TaskId } from "../src/ids.ts";
 import { openStore } from "../src/store/store.ts";
 import { Instant } from "../src/time.ts";
+import { proveGraphResponseOrder } from "./graph-proof.ts";
 
 const [mode, cli, evidence] = process.argv.slice(2);
-assert.ok(cli && evidence && (mode === "before" || mode === "after"));
+assert.ok(
+  cli &&
+    evidence &&
+    (mode === "before" || mode === "after" || mode === "order"),
+);
 mkdirSync(evidence, { recursive: true });
+if (mode === "order") {
+  const report = proveGraphResponseOrder();
+  writeFileSync(
+    join(evidence, "order.json"),
+    JSON.stringify(
+      {
+        passed: true,
+        report,
+        size_measurement: "not rerun; retained 3cceb41e chain receipt",
+      },
+      null,
+      2,
+    ),
+  );
+  process.exit(0);
+}
 const fixtureText = readFileSync(
   "packages/domain/test/fixtures/dag/chain-1000.json",
   "utf8",

@@ -15,9 +15,13 @@ Mermaid keeps redundant edges, uses safe identifiers and entity-escaped labels.
 No renderer, stored closure, minutes or critical path participates.
 
 G11 keeps only eight fields on each node. Strict ancestors,
-descendants and lightest_next describe the requested root at report level, in
-whole-Profile topological order. The literal branching case orders A,B,R,C,D
-topologically and B,A,R,D,C by energy, requiring root sets A,B / C,D / A,B.
+descendants and lightest_next describe the requested root at report level.
+Ancestors and descendants use whole-Profile topological order; lightest_next
+uses own energy ascending, unknown energy last, then topological position.
+The literal branch has topo A(4),B(1),U(unknown),R,C,D and requires root sets
+A,B,U / C,D / B,A,U. Direct, encoded, CLI, HTTP and both client decoders assert it.
+TODO_GRAPH_RESPONSE_MODE=order runs this graph-response regression without
+repeating or relabeling the retained candidate-specific chain measurement.
 The 1,000-node closure drive checks direct and encoded fields and retained bytes.
 
 Pure query behavior is L1 plus compiled library proof. Public CLI and HTTP

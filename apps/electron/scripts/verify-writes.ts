@@ -9,6 +9,7 @@ import { Schema } from "effect";
 import { openProfileDeletion, selectProfile } from "./profile-menu.ts";
 import { verifyCompact } from "./verify-compact.ts";
 import { verifyCompactPresentation } from "./verify-compact-presentation.ts";
+import { type AuthRequest, verifyHostAuth } from "./verify-host-auth.ts";
 import { verifyImport } from "./verify-import.ts";
 import { verifyMetadata } from "./verify-metadata.ts";
 import { verifyPresentationCorrectness } from "./verify-presentation-correctness.ts";
@@ -69,6 +70,7 @@ const stopServer = async () => {
   clearTimeout(timer);
 };
 const receipts: unknown[] = [];
+const authRequests: AuthRequest[] = [];
 let desktop: ElectronApplication | undefined;
 let upstream = "";
 const conflictRefresh = {
@@ -108,6 +110,13 @@ const proxy = Bun.serve({
       conflictRefresh.blocked = true;
       await conflictRefresh.release.promise;
     }
+    if (["/auth/sessions", "/auth/session", "/profiles"].includes(url.pathname))
+      authRequests.push({
+        method: request.method,
+        path: url.pathname,
+        has_authorization: request.headers.has("Authorization"),
+        status: response.status,
+      });
     if (url.pathname !== "/auth/sessions")
       receipts.push({
         method: request.method,
@@ -249,6 +258,7 @@ try {
   await expect(
     page.getByRole("heading", { name: "Tasks", exact: true }),
   ).toBeVisible();
+  await verifyHostAuth({ page, evidence, requests: authRequests });
   await verifyCompact({ desktop, page, scratch, evidence });
   await verifyCompactPresentation({ desktop, page, evidence, api });
   await verifyPresentationCorrectness({ desktop, page, evidence, api });

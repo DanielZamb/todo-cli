@@ -75,7 +75,6 @@ export function queryGraph(
   const energy = graphEnergy(graph);
   const ancestors = reachable(task_id, index.upstream);
   const descendants = reachable(task_id, index.downstream);
-  const next = new Set(energy.lightestNext(task_id));
   const depths = new Map<TaskId, number>();
   const mermaidIds = mermaidNodeIds(tasks);
   const nodes = tasks.map((task) => {
@@ -108,7 +107,7 @@ export function queryGraph(
     task_id,
     ancestors: wholeOrder.filter((id) => ancestors.has(id)),
     descendants: wholeOrder.filter((id) => descendants.has(id)),
-    lightest_next: wholeOrder.filter((id) => next.has(id)),
+    lightest_next: energy.lightestNext(task_id),
     nodes,
     edges,
     sources: nodes

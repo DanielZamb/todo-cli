@@ -281,7 +281,16 @@ reruns the actual filter feature after its own rebase.
 
 G11 protocol proof uses scripts/verify-graph-contract.ts against the compiled
 scratch server through taskHttpClient, the production Electron HttpApiClient
-factory also used by main.ts. It asserts the branching root's topologically
-ordered sets, eight decoded node fields and encoded facts. The shared
+factory also used by main.ts. It asserts topo ancestors/descendants and
+lightest_next by own energy, unknown last, then topo position. The literal
+branch distinguishes all orders and checks eight decoded node fields and encoding. The shared
 verify-history-unions.sh drive invokes it with TODO_DAG_CONTRACT_TESTS=1.
 No Electron/native UI, safeStorage or Keychain starts for this decoder proof.
+
+The transport factory reads a credential getter inside every request mapping.
+Run scripts/verify-auth-sequence.ts as a compiled proof against scratch binaries;
+one client is created signed out, signs in, reads Profiles with a bearer, signs
+out, clears the credential, then reads without a bearer. The proxy records only
+header presence and statuses. The unsigned host write drive now reuses this
+production factory and verify-host-auth.ts signs out/in through the actual
+renderer. Native safeStorage/session.enc restoration remains held.

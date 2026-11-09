@@ -65,43 +65,7 @@ export function proveGraphAlgorithms() {
   assert.deepEqual(report.ancestors, ["A", "B", "C"]);
   assert.deepEqual(report.descendants, []);
   assert.deepEqual(report.lightest_next, ["A"]);
-  const branching = {
-    tasks: [
-      task("A", { priority: "P1", energy: 5 }),
-      task("B", { priority: "P2", energy: 1 }),
-      task("R", { priority: "P3", energy: 2 }),
-      task("C", { priority: "P1", energy: 4 }),
-      task("D", { priority: "P2", energy: 1 }),
-    ],
-    edges: [edge("R", "A"), edge("R", "B"), edge("C", "R"), edge("D", "R")],
-  };
-  const branch = queryGraph(branching, task("R").id, at);
-  assert.ok(branch);
-  assert.deepEqual(branch.topological_order, ["A", "B", "R", "C", "D"]);
-  assert.deepEqual(topologicalOrder(branching, graphEnergy(branching).values), [
-    "B",
-    "A",
-    "R",
-    "D",
-    "C",
-  ]);
-  assert.deepEqual(branch.ancestors, ["A", "B"]);
-  assert.deepEqual(branch.descendants, ["C", "D"]);
-  assert.deepEqual(branch.lightest_next, ["A", "B"]);
-  for (const node of branch.nodes)
-    assert.deepEqual(Object.keys(node).sort(), [
-      "blocked",
-      "depth",
-      "in_degree",
-      "mermaid_id",
-      "out_degree",
-      "ready",
-      "remaining_energy",
-      "task",
-    ]);
-  assert.deepEqual(queryGraph(branching, task("A").id, at)?.lightest_next, [
-    "A",
-  ]);
+  proveGraphResponseOrder();
   const missing = {
     ...diamond,
     tasks: diamond.tasks.map((t) =>
@@ -230,6 +194,64 @@ export function proveGraphAlgorithms() {
     'flowchart TD\n  n0["end #34;x#34; #91;bad#93; #60;tag#62;#38;#35; #92; #124;"]\n',
   );
   assert.equal(queryGraph(diamond, task("missing").id, at), null);
+}
+
+export function proveGraphResponseOrder() {
+  const branching = {
+    tasks: [
+      task("A", { priority: "P1", energy: 4 }),
+      task("B", { priority: "P2", energy: 1 }),
+      task("U", { priority: "P3", energy: null }),
+      task("R", { priority: "P4", energy: 2 }),
+      task("C", { priority: "P1", energy: 4 }),
+      task("D", { priority: "P2", energy: 1 }),
+    ],
+    edges: [
+      edge("R", "A"),
+      edge("R", "B"),
+      edge("R", "U"),
+      edge("C", "R"),
+      edge("D", "R"),
+    ],
+  };
+  const branch = queryGraph(branching, task("R").id, at);
+  assert.ok(branch);
+  assert.deepEqual(branch.topological_order, ["A", "B", "U", "R", "C", "D"]);
+  assert.deepEqual(topologicalOrder(branching, graphEnergy(branching).values), [
+    "U",
+    "B",
+    "A",
+    "R",
+    "D",
+    "C",
+  ]);
+  assert.deepEqual(branch.ancestors, ["A", "B", "U"]);
+  assert.deepEqual(branch.descendants, ["C", "D"]);
+  assert.deepEqual(branch.lightest_next, ["B", "A", "U"]);
+  for (const node of branch.nodes)
+    assert.deepEqual(Object.keys(node).sort(), [
+      "blocked",
+      "depth",
+      "in_degree",
+      "mermaid_id",
+      "out_degree",
+      "ready",
+      "remaining_energy",
+      "task",
+    ]);
+  assert.deepEqual(queryGraph(branching, task("A").id, at)?.lightest_next, [
+    "A",
+  ]);
+  const encoded = Schema.encodeSync(GraphReport)(branch);
+  assert.deepEqual(encoded.ancestors, ["A", "B", "U"]);
+  assert.deepEqual(encoded.descendants, ["C", "D"]);
+  assert.deepEqual(encoded.lightest_next, ["B", "A", "U"]);
+  for (const node of encoded.nodes)
+    assert.deepEqual(
+      Object.keys(node).sort(),
+      Object.keys(branch.nodes[0] ?? {}).sort(),
+    );
+  return branch;
 }
 
 import { CalendarDate as TaskDate, TimeZoneId } from "../src/time.ts";

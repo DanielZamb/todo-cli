@@ -11,23 +11,27 @@ const output = process.argv[2];
 assert.ok(origin && credential && output);
 const report = await Effect.runPromise(
   Effect.gen(function* () {
-    const http = yield* taskHttpClient(origin, credential);
+    const http = yield* taskHttpClient(origin, () => credential);
     const profile = Schema.decodeUnknownSync(ProfileId)("work");
     const a = yield* http.tasks.create({
       params: { profile },
-      payload: { title: "Graph A", priority: "P1", energy: 5 },
+      payload: { title: "Graph A", priority: "P1", energy: 4 },
     });
     const b = yield* http.tasks.create({
       params: { profile },
       payload: { title: "Graph B", priority: "P2", energy: 1 },
     });
+    const unknown = yield* http.tasks.create({
+      params: { profile },
+      payload: { title: "Graph unknown", priority: "P3" },
+    });
     const root = yield* http.tasks.create({
       params: { profile },
       payload: {
         title: "Graph root",
-        priority: "P3",
+        priority: "P4",
         energy: 2,
-        depends_on: [a.id, b.id],
+        depends_on: [a.id, b.id, unknown.id],
       },
     });
     const c = yield* http.tasks.create({
@@ -54,13 +58,14 @@ const report = await Effect.runPromise(
     assert.deepEqual(graph.topological_order, [
       a.id,
       b.id,
+      unknown.id,
       root.id,
       c.id,
       d.id,
     ]);
-    assert.deepEqual(graph.ancestors, [a.id, b.id]);
+    assert.deepEqual(graph.ancestors, [a.id, b.id, unknown.id]);
     assert.deepEqual(graph.descendants, [c.id, d.id]);
-    assert.deepEqual(graph.lightest_next, [a.id, b.id]);
+    assert.deepEqual(graph.lightest_next, [b.id, a.id, unknown.id]);
     for (const node of graph.nodes)
       assert.deepEqual(Object.keys(node).sort(), [
         "blocked",
@@ -73,9 +78,9 @@ const report = await Effect.runPromise(
         "task",
       ]);
     const encoded = Schema.encodeSync(GraphReport)(graph);
-    assert.deepEqual(encoded.ancestors, [a.id, b.id]);
+    assert.deepEqual(encoded.ancestors, [a.id, b.id, unknown.id]);
     assert.deepEqual(encoded.descendants, [c.id, d.id]);
-    assert.deepEqual(encoded.lightest_next, [a.id, b.id]);
+    assert.deepEqual(encoded.lightest_next, [b.id, a.id, unknown.id]);
     return graph;
   }).pipe(Effect.provide(FetchHttpClient.layer)),
 );

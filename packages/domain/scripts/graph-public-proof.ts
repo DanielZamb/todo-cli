@@ -329,6 +329,30 @@ export async function proveGraphPublic(input: {
       title: "Shape C",
       depends_on: ["shape-a", "shape-b"],
     },
+    { external_id: "order-a", title: "Order A", priority: "P1", energy: 4 },
+    { external_id: "order-b", title: "Order B", priority: "P2", energy: 1 },
+    { external_id: "order-u", title: "Order unknown", priority: "P3" },
+    {
+      external_id: "order-root",
+      title: "Order root",
+      priority: "P4",
+      energy: 2,
+      depends_on: ["order-a", "order-b", "order-u"],
+    },
+    {
+      external_id: "order-c",
+      title: "Order C",
+      priority: "P1",
+      energy: 4,
+      depends_on: ["order-root"],
+    },
+    {
+      external_id: "order-d",
+      title: "Order D",
+      priority: "P2",
+      energy: 1,
+      depends_on: ["order-root"],
+    },
     ...Array.from({ length: 105 }, (_, index) => ({
       external_id: `long-${index}`,
       title: `Long ${index}`,
@@ -338,7 +362,7 @@ export async function proveGraphPublic(input: {
   const imported = Schema.decodeUnknownSync(ImportReport)(
     await http("POST", "/profiles/default/import", { items }),
   );
-  assert.equal(imported.totals.created, 111);
+  assert.equal(imported.totals.created, 117);
   const id = (external: string) => {
     const value = imported.items.find(
       (row) => row.external_id === external,
@@ -346,6 +370,45 @@ export async function proveGraphPublic(input: {
     assert.ok(value);
     return value;
   };
+  const orderCli = run(["graph", id("order-root")]);
+  const orderHttp = await http(
+    "GET",
+    `/profiles/default/tasks/${id("order-root")}/graph`,
+  );
+  for (const raw of [orderCli, orderHttp]) {
+    const report = Schema.decodeUnknownSync(GraphReport)(raw);
+    assert.deepEqual(
+      report.topological_order,
+      ["order-a", "order-b", "order-u", "order-root", "order-c", "order-d"].map(
+        id,
+      ),
+    );
+    assert.deepEqual(
+      report.ancestors,
+      ["order-a", "order-b", "order-u"].map(id),
+    );
+    assert.deepEqual(report.descendants, ["order-c", "order-d"].map(id));
+    assert.deepEqual(
+      report.lightest_next,
+      ["order-b", "order-a", "order-u"].map(id),
+    );
+    const wire = Schema.decodeUnknownSync(
+      Schema.Struct({
+        nodes: Schema.Array(Schema.Record(Schema.String, Schema.Json)),
+      }),
+    )(raw);
+    for (const node of wire.nodes)
+      assert.deepEqual(Object.keys(node).sort(), [
+        "blocked",
+        "depth",
+        "in_degree",
+        "mermaid_id",
+        "out_degree",
+        "ready",
+        "remaining_energy",
+        "task",
+      ]);
+  }
   run(["cancel", id("rank-terminal"), "--expected-version", "1"]);
   const graph = Schema.decodeUnknownSync(GraphReport)(
     await http("GET", `/profiles/default/tasks/${id("rank-goal")}/graph`),
@@ -464,6 +527,8 @@ export async function proveGraphPublic(input: {
       {
         passed: true,
         empty_changed: emptyChanged,
+        order_cli: orderCli,
+        order_http: orderHttp,
         terminal,
         goal,
         shape,

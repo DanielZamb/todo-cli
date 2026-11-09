@@ -255,7 +255,10 @@ to full Task identity without relying on labels or diagram parsing.
 Under approved G11, GraphNode carries only mermaid_id, task, in_degree,
 out_degree, ready, blocked, depth and remaining_energy. GraphReport carries
 strict ancestors, strict descendants and lightest_next for its requested Task
-only, each in whole-Profile topological order. Query another Task for its sets.
+only. Ancestors and descendants use whole-Profile topological order. lightest_next
+contains Ready members of the remaining set, including a Ready root, sorted by
+own energy ascending, unknown energy last, then whole-Profile topological
+position. Query another Task for its sets.
 Reachability and Ready-set membership are computed outside node assembly, so
 the serialized report has O(n+m) content plus the requested root's sets.
 Shared ranking energy and unknown-energy tie behavior are unchanged.

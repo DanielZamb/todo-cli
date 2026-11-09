@@ -290,30 +290,33 @@ final class GeneratedContractTests: XCTestCase {
         for key in ["description", "project_id", "due_at", "scheduled_at", "energy", "estimate_min"] { XCTAssertTrue(clearedFields[key] is NSNull, key) }
         XCTAssertEqual(clearedFields["row_version"] as? Int, 3)
         XCTAssertEqual(clearedFields["title"] as? String, "Omitted fields preserved")
-        func graphTask(_ title: String, _ priority: String, _ energy: Int, _ blockers: [String] = []) async throws -> Components.Schemas.TaskWrite {
-            let data = try JSONSerialization.data(withJSONObject: ["title": title, "priority": priority, "energy": energy, "depends_on": blockers])
+        func graphTask(_ title: String, _ priority: String, _ energy: Int?, _ blockers: [String] = []) async throws -> Components.Schemas.TaskWrite {
+            var fields: [String: Any] = ["title": title, "priority": priority, "depends_on": blockers]
+            if let energy { fields["energy"] = energy }
+            let data = try JSONSerialization.data(withJSONObject: fields)
             let input = try JSONDecoder().decode(Operations.tasks_period_create.Input.Body.jsonPayload.self, from: data)
             return try await client.tasks_period_create(path: .init(profile: "work"), body: .json(input)).ok.body.json
         }
-        let a = try await graphTask("Swift graph A", "P1", 5)
+        let a = try await graphTask("Swift graph A", "P1", 4)
         let b = try await graphTask("Swift graph B", "P2", 1)
-        let root = try await graphTask("Swift graph root", "P3", 2, [a.id, b.id])
+        let unknown = try await graphTask("Swift graph unknown", "P3", nil)
+        let root = try await graphTask("Swift graph root", "P4", 2, [a.id, b.id, unknown.id])
         let c = try await graphTask("Swift graph C", "P1", 4, [root.id])
         let d = try await graphTask("Swift graph D", "P2", 1, [root.id])
         let graph = try await client.tasks_period_graph(path: .init(profile: "work", task: root.id)).ok.body.json
         let typed = try XCTUnwrap(graph.value1)
         XCTAssertEqual(typed.orientation, .mixed)
-        XCTAssertEqual(typed.topological_order, [a.id, b.id, root.id, c.id, d.id])
-        XCTAssertEqual(typed.ancestors, [a.id, b.id])
+        XCTAssertEqual(typed.topological_order, [a.id, b.id, unknown.id, root.id, c.id, d.id])
+        XCTAssertEqual(typed.ancestors, [a.id, b.id, unknown.id])
         XCTAssertEqual(typed.descendants, [c.id, d.id])
-        XCTAssertEqual(typed.lightest_next, [a.id, b.id])
+        XCTAssertEqual(typed.lightest_next, [b.id, a.id, unknown.id])
         for node in typed.nodes {
             XCTAssertEqual(Set(try fields(node).keys), Set(["mermaid_id", "task", "in_degree", "out_degree", "ready", "blocked", "depth", "remaining_energy"]))
         }
         let graphFields = try fields(graph)
-        XCTAssertEqual(graphFields["ancestors"] as? [String], [a.id, b.id])
+        XCTAssertEqual(graphFields["ancestors"] as? [String], [a.id, b.id, unknown.id])
         XCTAssertEqual(graphFields["descendants"] as? [String], [c.id, d.id])
-        XCTAssertEqual(graphFields["lightest_next"] as? [String], [a.id, b.id])
+        XCTAssertEqual(graphFields["lightest_next"] as? [String], [b.id, a.id, unknown.id])
         let singleGraph = try await client.tasks_period_graph(path: .init(profile: "work", task: cleared.id)).ok.body.json
         let single = try XCTUnwrap(singleGraph.value2)
         XCTAssertEqual(single.ancestors, [])
