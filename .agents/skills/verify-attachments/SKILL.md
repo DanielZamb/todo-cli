@@ -87,3 +87,15 @@ label to several Tasks, and reports every Task's result. The Swift state and
 offscreen recipes live in verify-macos. The Electron headless renderer recipe
 lives in verify-electron and calls the production HTTP adapter. No native app,
 Keychain or signed build is needed for these bounded proofs.
+
+Missing Task batch rows retain current_version and add authorized Profile,
+task_id and recovery context. Errors also carry exit_code and exit_meaning.
+The compiled CLI error-list test covers missing Task Attachment writes and
+HTTP lookup recovery; the normal drives continue to prove Attachment lifecycle.
+
+The compiled error-list regression distinguishes a missing Attachment on an
+existing authorized Task from a missing Task. It drives detach apply, detach
+dry-run, label, and HTTP detach/label. Existing Tasks keep the Attachment error
+and recovery without Task-not-found context. The domain reports the missing
+Attachment from its authorized transaction; adapters do not probe auth again
+to classify it. Missing Tasks retain the selected-Profile lookup context.

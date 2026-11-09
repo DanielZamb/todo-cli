@@ -76,3 +76,26 @@ must show exits [0, 0, 0] and exactly one pre-migration Snapshot at schema 3.
 The domain concurrent-open regression uses three real Bun processes and the
 same held-writer scenario. Version inspection, Snapshot and migration share
 one immediate transaction.
+
+## Error context isolation
+
+A scoped credential cannot enrich an error with another Profile's display
+name. Do not add a discovery-auth preflight to a selected-Profile operation:
+it changes rejected History attribution. HTTP
+Profile-not-found and Profile-delete refusal errors retain generated_at, code,
+message and details, with the additive equivalent exit pair. The compiled
+apps/cli/test/error-list.test.ts checks foreign exact-id failures through both
+CLI and HTTP and selected-Profile-only Task recovery. Keep the two cached
+binaries on the same source hash when running that test.
+
+Selected CLI operations resolve names and ids with auth.resolveProfile. Pass the
+real AuthAction before reading Task data. Revoked or expired show/edit requests
+must produce one rejection for the selected Profile, matching HTTP's read/mutate
+action. Run apps/cli/test/auth-history.test.ts with the compiled binary overrides;
+auth-history-actions.json records the twelve literal CLI/HTTP cases. The
+error-list test compares a spaced foreign name and No Such under one scoped
+credential and requires identical generic Profile-not-found responses.
+Its move/copy matrix requires byte-identical table errors for both destinations,
+including dry-run, and the unchanged owner absent-target response. Destination
+resolution calls auth.resolveProfile with authenticate; the source and destination
+write-access checks still run afterward. Revoked move/copy History matches HTTP.

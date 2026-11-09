@@ -131,3 +131,42 @@ The install verifier requires --version to report build and contract without cha
 ## Batch edit
 
 Read [Edit several Tasks](features/batch-edit.md) for the shared batch-edit contract and the compiled scratch proof. Both client flows retain selections and loaded Versions through preview, apply and Conflict reload.
+
+## Exit meanings and empty lists
+
+`test/error-list.test.ts` drives cached compiled CLI and server binaries on its
+own scratch HOME. Set TODO_CLI_BINARY and TODO_SERVER_BINARY to the binaries
+built from the same source hash. It checks actual process exits, every empty
+list filter mode, the matching exit pair, selected Profile context, both generic
+recovery commands, transfer rows and unauthorized Profile isolation. Its HTTP
+cases cover Task, Attachment and Series failures, batch context, malformed
+requests, missing authentication and forbidden Profile access. Evidence includes
+error-list-actions.json. The server is stopped before the test removes scratch.
+`todo schema error` constrains matching exit_code/exit_meaning pairs. List uses
+its own required-tasks schema; export and review keep their original schemas.
+
+Lookup recovery also names the credential key used by the failed CLI call.
+`taskLookupError` takes an optional fifth `{credentialProfile}` argument after
+transport. CLI lookup hints always include --credential-profile; scoped list
+hints include it when the credential key differs from the target Profile id.
+HTTP hints are unchanged. `cliLookupError` in main.ts is the single integration
+point for B's credentialProfileName(cfg); this isolated unit uses cfg.profile.
+Batch edit, attach-many and import preserve their row fields while reusing that
+same CLI presentation path for missing Tasks. Domain commands and authorization
+do not resolve credential names.
+
+`test/auth-history.test.ts` drives revoked and expired Sessions through compiled
+CLI show/edit and HTTP GET/PATCH on fresh scratch databases. Each request must
+leave exactly one rejected auth History row for default, with read for show and
+mutate for edit, and keep the Task at Version 1. Profile selection calls the
+shared auth.resolveProfile with the operation's action before any Task pre-read.
+The error-list test also requires a scoped credential to receive the same generic
+Profile-not-found response for a spaced foreign name and the absent name No Such.
+Neither case may expose another Profile's name or Task data.
+
+Move and copy resolve the destination through the same authorized Profile
+resolver, then retain both write-access checks. The error-list regression compares
+the exact table output and process exit for a scoped credential targeting Private
+Profile or No Such, in apply and dry-run modes. Owner requests for No Such keep
+the existing target Profile-not-found response. The auth-history regression also
+checks one authenticate rejection for revoked move/copy through CLI and HTTP.

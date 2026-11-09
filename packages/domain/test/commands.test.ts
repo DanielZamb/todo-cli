@@ -12,6 +12,7 @@ import {
   TaskId,
   TaskPatch,
   TimeZoneId,
+  taskLookupError,
   Version,
 } from "@todo/domain";
 import {
@@ -1588,6 +1589,38 @@ it.effect(
           (yield* store.projects()).find((p) => p.id === edited.task.project_id)
             ?.name,
         ).toBe("New Project");
+      }),
+    ),
+);
+
+it.effect(
+  "keeps lookup recovery on the actual credential key without changing HTTP hints",
+  () =>
+    usingStore((store) =>
+      Effect.gen(function* () {
+        const session = yield* store.auth
+          .signIn("scratch commands passphrase")
+          .pipe(Effect.provideService(Clock.Clock, Clock.Clock.defaultValue()));
+        const request = { credential: session.credential, profile };
+        const explicit = yield* taskLookupError(store, request, "45A3", "cli", {
+          credentialProfile: "source key",
+        });
+        expect(explicit.details).toEqual({
+          profile: { id: "work", name: "Work" },
+          task_id: "45A3",
+          recovery:
+            "Run todo list --profile work --prefix 45A3 --credential-profile 'source key' for this Profile, or todo lookup --prefix 45A3 --credential-profile 'source key' across Profiles this credential can access. Mutations need the full Task id and an explicit Profile.",
+        });
+        const legacy = yield* taskLookupError(store, request, "45A3");
+        expect(legacy.details?.recovery).toBe(
+          "Run todo list --profile work --prefix 45A3 for this Profile, or todo lookup --prefix 45A3 --credential-profile work across Profiles this credential can access. Mutations need the full Task id and an explicit Profile.",
+        );
+        const http = yield* taskLookupError(store, request, "45A3", "http", {
+          credentialProfile: "source key",
+        });
+        expect(http.details?.recovery).toBe(
+          "Run todo list --profile work --prefix 45A3 for this Profile, or todo lookup --prefix 45A3 across Profiles this credential can access. HTTP: GET /profiles/work/tasks?prefix=45A3 or GET /tasks/lookup?prefix=45A3. Mutations need the full Task id and an explicit Profile.",
+        );
       }),
     ),
 );

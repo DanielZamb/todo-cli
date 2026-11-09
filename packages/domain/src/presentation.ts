@@ -13,7 +13,9 @@ import {
   TaskStatus,
 } from "./entities.ts";
 import { OpLogEntry } from "./events.ts";
+import { type ExitCode, ExitStatus, exitStatus } from "./exit-status.ts";
 import { ProfileId } from "./ids.ts";
+import { TaskLookupDetails } from "./task-lookup-error.ts";
 import type { TaskRead } from "./task-read.ts";
 import { SearchMatches } from "./task-search.ts";
 import type { TaskTime } from "./time.ts";
@@ -127,13 +129,17 @@ export const TasksResponse = Schema.Struct({
   filters: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
   tasks: Schema.optionalKey(Schema.Array(TaskViewSchema)),
 });
+export const ListResponse = Schema.Struct({
+  ...TasksResponse.fields,
+  tasks: Schema.Array(TaskViewSchema),
+});
 export const ExternalIdConflictDetails = Schema.Struct({
   external_id: Schema.String,
   profile_id: ProfileId,
 });
 export type ExternalIdConflictDetails = typeof ExternalIdConflictDetails.Type;
 export type ErrorResponse = typeof ErrorResponse.Type;
-export const ErrorResponse = Schema.Struct({
+const errorFields = {
   generated_at: Schema.String,
   code: Schema.String,
   message: Schema.String,
@@ -145,9 +151,18 @@ export const ErrorResponse = Schema.Struct({
       }),
       Schema.Struct({ visible_task_count: Schema.Int }),
       ExternalIdConflictDetails,
+      TaskLookupDetails,
     ]),
   ),
-});
+};
+export const ErrorResponse = Schema.Union([
+  Schema.Struct({ ...errorFields, ...ExitStatus.members[0].fields }),
+  Schema.Struct({ ...errorFields, ...ExitStatus.members[1].fields }),
+  Schema.Struct({ ...errorFields, ...ExitStatus.members[2].fields }),
+  Schema.Struct({ ...errorFields, ...ExitStatus.members[3].fields }),
+  Schema.Struct({ ...errorFields, ...ExitStatus.members[4].fields }),
+]);
+export const ErrorDetails = errorFields.details;
 export type HistoryResponse = typeof HistoryResponse.Type;
 export const HistoryResponse = Schema.Struct({
   generated_at: Schema.String,
@@ -190,6 +205,20 @@ export function renderTasks(
     });
   return format === "table" ? tableTasks(tasks) : markdownTasks(tasks);
 }
+export function renderList(
+  tasks: readonly TaskView[],
+  format: Format,
+  now: string,
+  filters: Record<string, string> = {},
+) {
+  return format === "json"
+    ? encodeResponse(ListResponse, {
+        generated_at: iso(now),
+        ...(Object.keys(filters).length ? { filters } : {}),
+        tasks,
+      })
+    : renderTasks(tasks, format, now, filters);
+}
 export function renderTask(task: TaskView, format: Format, now: string) {
   if (format === "json")
     return encodeResponse(TaskResponse, { generated_at: iso(now), task });
@@ -197,6 +226,7 @@ export function renderTask(task: TaskView, format: Format, now: string) {
   return `# Task\n\n${taskLine(task)}\n\n- status: ${task.status}\n- entity_version: ${task.entity_version}\n- created_at: ${task.created_at}\n- updated_at: ${task.updated_at}\n${task.description ? `\n## Description\n\n${task.description}\n` : ""}${task.attachments?.length ? `\n## Attachments\n\n${task.attachments.map((value) => `- ${value.label ? `[${value.label}] ` : ""}${value.kind === "link" ? value.url : value.path}${value.exists === false ? " (missing file)" : ""} (id: ${value.id})`).join("\n")}\n` : ""}`;
 }
 export function renderError(
+  exit: ExitCode,
   code: string,
   message: string,
   format: Format,
@@ -206,6 +236,7 @@ export function renderError(
 ) {
   if (format === "json")
     return encodeResponse(ErrorResponse, {
+      ...exitStatus(exit),
       generated_at: iso(now),
       code,
       message,
@@ -217,8 +248,8 @@ export function renderError(
     });
   const error =
     format === "table"
-      ? `ERROR\t${code}\t${message}\n`
-      : `# Error\n\n- code: ${code}\n- message: ${message}\n`;
+      ? `error ${exit} - ${exitStatus(exit).exit_meaning}\nERROR\t${code}\t${message}\n`
+      : `# Error\n\nerror ${exit} - ${exitStatus(exit).exit_meaning}\n\n- code: ${code}\n- message: ${message}\n`;
   return (
     error +
     (latest

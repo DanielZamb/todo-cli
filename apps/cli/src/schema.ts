@@ -7,6 +7,7 @@ import {
 import {
   ErrorResponse,
   HistoryResponse,
+  ListResponse,
   TaskResponse,
   TasksResponse,
 } from "@todo/domain/presentation";
@@ -103,7 +104,8 @@ export function commandSchema(name: string) {
 
 for (const name of ["add", "show", "edit", "done", "cancel", "reopen"])
   registerCommandSchema(name, TaskResponse);
-for (const name of ["list", "review daily", "review weekly", "export"])
+registerCommandSchema("list", ListResponse);
+for (const name of ["review daily", "review weekly", "export"])
   registerCommandSchema(name, TasksResponse);
 registerCommandSchema("history", HistoryResponse);
 registerCommandSchema("error", ErrorResponse);

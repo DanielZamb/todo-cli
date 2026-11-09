@@ -23,9 +23,11 @@ import {
 import type { AccessRequest } from "./auth/model.ts";
 import { type TaskCommandResult, TaskCommands } from "./commands.ts";
 import { Task } from "./entities.ts";
+import { exitStatus } from "./exit-status.ts";
 import { AttachmentId, TaskId, Version } from "./ids.ts";
 import { StoreError } from "./store/error.ts";
 import type { OperationStore } from "./store/store.ts";
+import { taskLookupError } from "./task-lookup-error.ts";
 import { Instant } from "./time.ts";
 
 type Target = AccessRequest & { readonly task_id: TaskId };
@@ -98,7 +100,10 @@ export class AttachmentCommands {
             !attachments.some((value) => value.id === input.attachment_id)
           ) {
             yield* reject("attachment_not_found");
-            return { outcome: "not-found" } satisfies TaskCommandResult;
+            return {
+              outcome: "not-found",
+              missing: "attachment",
+            } satisfies TaskCommandResult;
           }
           const resolved =
             "attachment_id" in input
@@ -299,6 +304,7 @@ export class AttachmentCommands {
             outcome: "rejected",
             attached: 0,
             error: {
+              ...exitStatus(2),
               code: "invalid_args",
               message:
                 "Invalid Attachment input. Check todo schema attach-many-input.",
@@ -364,62 +370,82 @@ export class AttachmentCommands {
             }),
           )
           .pipe(
-            Effect.catchTag("StoreError", (error) => {
-              const failure =
-                error instanceof AttachManyFailure
-                  ? error
-                  : error.cause instanceof AttachManyFailure
-                    ? error.cause
-                    : null;
-              if (!failure) return Effect.fail(error);
-              const result = failure.result;
-              const current =
-                result.outcome === "rejected" ? result.latest : null;
-              const reason =
-                result.outcome === "rejected" ? result.reason : "not_found";
-              return this.store.auth
-                .mutate(request, (identity) =>
-                  this.store.reject({
-                    ...identity,
-                    reason,
-                    from_version: item.from_version,
-                    event: {
-                      kind: "AttachmentAdded",
-                      task_id: item.task_id,
-                      occurred_at: new Date().toISOString(),
-                      input: raw,
-                    },
-                  }),
-                )
-                .pipe(
-                  Effect.map(
-                    () =>
-                      ({
-                        ...base,
-                        current_version: current?.row_version ?? null,
-                        outcome: "rejected",
-                        attached: 0,
-                        error: {
-                          code:
-                            reason === "conflict"
-                              ? "occ_conflict"
-                              : reason === "not_found"
-                                ? "not_found"
-                                : "invalid_args",
-                          message:
-                            reason === "conflict"
-                              ? "Task changed. Read its current Version and retry."
-                              : reason === "not_found"
-                                ? "Task not found in this Profile."
-                                : "Invalid Attachment URI or file path. Check every Attachment and retry.",
-                          details: {
-                            current_version: current?.row_version ?? null,
+            Effect.catchTag("StoreError", (error) =>
+              Effect.gen({ self: this }, function* () {
+                const failure =
+                  error instanceof AttachManyFailure
+                    ? error
+                    : error.cause instanceof AttachManyFailure
+                      ? error.cause
+                      : null;
+                if (!failure) return yield* Effect.fail(error);
+                const result = failure.result;
+                const current =
+                  result.outcome === "rejected" ? result.latest : null;
+                const reason =
+                  result.outcome === "rejected" ? result.reason : "not_found";
+                const context =
+                  reason === "not_found"
+                    ? yield* taskLookupError(
+                        this.store,
+                        request,
+                        item.task_id,
+                        "http",
+                      )
+                    : undefined;
+                return yield* this.store.auth
+                  .mutate(request, (identity) =>
+                    this.store.reject({
+                      ...identity,
+                      reason,
+                      from_version: item.from_version,
+                      event: {
+                        kind: "AttachmentAdded",
+                        task_id: item.task_id,
+                        occurred_at: new Date().toISOString(),
+                        input: raw,
+                      },
+                    }),
+                  )
+                  .pipe(
+                    Effect.map(
+                      () =>
+                        ({
+                          ...base,
+                          current_version: current?.row_version ?? null,
+                          outcome: "rejected",
+                          attached: 0,
+                          error: {
+                            ...exitStatus(
+                              reason === "conflict"
+                                ? 4
+                                : reason === "not_found"
+                                  ? 3
+                                  : 2,
+                            ),
+                            code:
+                              reason === "conflict"
+                                ? "occ_conflict"
+                                : reason === "not_found"
+                                  ? "not_found"
+                                  : "invalid_args",
+                            message:
+                              context?.message ??
+                              (reason === "conflict"
+                                ? "Task changed. Read its current Version and retry."
+                                : reason === "not_found"
+                                  ? "Task not found in this Profile."
+                                  : "Invalid Attachment URI or file path. Check every Attachment and retry."),
+                            details: {
+                              ...context?.details,
+                              current_version: current?.row_version ?? null,
+                            },
                           },
-                        },
-                      }) satisfies AttachManyRow,
-                  ),
-                );
-            }),
+                        }) satisfies AttachManyRow,
+                    ),
+                  );
+              }),
+            ),
           );
         rows.push(result);
       }

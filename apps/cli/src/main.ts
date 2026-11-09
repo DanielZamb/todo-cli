@@ -21,13 +21,16 @@ import {
 import { BunServices } from "@effect/platform-bun";
 import { BUILD_ID, CONTRACT_ID } from "@todo/api";
 import {
+  type AccessRequest,
   AttachManyItem,
   AttachManyReport,
   AttachManyRequest,
+  type AuthAction,
   BatchEditReport,
   BatchEditRequest,
   batchEditTasks,
   ClientReads,
+  exitStatus,
   filterTaskRecords,
   inputLimits,
   ProfileDeletionReport,
@@ -39,6 +42,7 @@ import {
   TaskFilters,
   TaskId,
   TaskStatus,
+  taskLookupError,
   Version,
 } from "@todo/domain";
 import { attachmentInput } from "@todo/domain/attachment-input";
@@ -70,9 +74,9 @@ import {
   renderError,
   renderExport,
   renderHistory,
+  renderList,
   renderReview,
   renderTask,
-  renderTasks,
   taskView,
 } from "@todo/domain/presentation";
 import { type OperationStore, openStore, StoreError } from "@todo/domain/store";
@@ -240,8 +244,38 @@ const withStore = <A, E, R>(
     yield* io(() =>
       mkdirSync(dirname(resolve(path)), { recursive: true, mode: 0o700 }),
     );
-    return yield* Effect.acquireUseRelease(openStore({ path }), use, (store) =>
-      Effect.orDie(store.close()),
+    return yield* Effect.acquireUseRelease(
+      openStore({ path }),
+      (store) =>
+        use(store).pipe(
+          Effect.catch((error) =>
+            Effect.gen(function* () {
+              if (
+                !(error instanceof CommandError) ||
+                error.code !== "not_found" ||
+                error.task_id === undefined
+              )
+                return yield* Effect.fail(error);
+              const request = yield* selectProfile(store, cfg);
+              const context = yield* cliLookupError(
+                store,
+                cfg,
+                request,
+                error.task_id,
+              );
+              return yield* Effect.fail(
+                new CommandError(
+                  error.exit,
+                  error.code,
+                  context.message,
+                  error.latest,
+                  context.details,
+                ),
+              );
+            }),
+          ),
+        ),
+      (store) => Effect.orDie(store.close()),
     );
   });
 const access = (cfg: Settings) =>
@@ -252,21 +286,53 @@ const access = (cfg: Settings) =>
 const selectProfile = Effect.fn(function* (
   store: OperationStore,
   cfg: Settings,
+  action: AuthAction = "read",
 ) {
   const credential = yield* io(() => loadCredential(cfg.profile));
-  const profiles = yield* store.profiles();
-  const profile = profiles.find(
-    (p) => p.name === cfg.profile || p.id === cfg.profile,
-  );
-  if (!profile)
-    return yield* Effect.fail(
-      new CommandError(
-        3,
-        "not_found",
-        "Profile not found; run todo init --profile <name>",
+  const profile = yield* store.auth
+    .resolveProfile({ credential, profile: cfg.profile, action })
+    .pipe(
+      Effect.catchTag("ProfileResolutionError", () =>
+        Effect.fail(
+          new CommandError(
+            3,
+            "not_found",
+            "Profile not found; run todo init --profile <name>",
+          ),
+        ),
       ),
     );
   return { credential, profile: profile.id };
+});
+const cliLookupError = (
+  store: OperationStore,
+  cfg: Settings,
+  request: AccessRequest,
+  task_id: string,
+) =>
+  taskLookupError(store, request, task_id, "cli", {
+    credentialProfile: cfg.profile,
+  });
+const cliLookupRowError = Effect.fn(function* <
+  E extends {
+    readonly code: string;
+    readonly message: string;
+    readonly details?: object;
+  },
+>(
+  store: OperationStore,
+  cfg: Settings,
+  request: AccessRequest,
+  task_id: string | null,
+  error: E,
+) {
+  if (error.code !== "not_found" || task_id === null) return error;
+  const context = yield* cliLookupError(store, cfg, request, task_id);
+  return {
+    ...error,
+    ...context,
+    details: { ...error.details, ...context.details },
+  };
 });
 const taskOptions = {
   title: stringFlag("title").pipe(Flag.optional),
@@ -489,7 +555,7 @@ const whoami = Command.make("whoami", {}, () =>
     const cfg = yield* root;
     yield* withStore(cfg, (store) =>
       Effect.gen(function* () {
-        const request = yield* selectProfile(store, cfg);
+        const request = yield* selectProfile(store, cfg, "authenticate");
         const credential = yield* store.auth.authenticate({
           ...request,
           access: "read",
@@ -578,7 +644,7 @@ const add = Command.make(
       const flags = taskInput({ ...input, title: Option.none() });
       yield* withStore(cfg, (store) =>
         Effect.gen(function* () {
-          const request = yield* selectProfile(store, cfg);
+          const request = yield* selectProfile(store, cfg, "mutate");
           const result = yield* createTask(
             store,
             request,
@@ -695,7 +761,7 @@ const list = Command.make(
             yield* selectProfile(store, cfg),
           );
           yield* write(
-            renderTasks(
+            renderList(
               filterTasks(
                 filterTaskRecords(data.tasks, filters, data).map((task) =>
                   taskView(task, data.projects, data.tags, data.series),
@@ -789,16 +855,22 @@ const transfer = (kind: "move" | "copy") =>
           );
         yield* withStore(cfg, (store) =>
           Effect.gen(function* () {
-            const request = yield* selectProfile(store, cfg);
-            const destination = (yield* store.profiles()).find(
-              (p) => p.id === input.to || p.name === input.to,
-            );
-            if (!destination)
-              return yield* Effect.fail(
-                new CommandError(
-                  3,
-                  "not_found",
-                  "target Profile not found; run todo init --profile <name>",
+            const request = yield* selectProfile(store, cfg, "authenticate");
+            const destination = yield* store.auth
+              .resolveProfile({
+                credential: request.credential,
+                profile: input.to,
+                action: "authenticate",
+              })
+              .pipe(
+                Effect.catchTag("ProfileResolutionError", () =>
+                  Effect.fail(
+                    new CommandError(
+                      3,
+                      "not_found",
+                      "target Profile not found; run todo init --profile <name>",
+                    ),
+                  ),
                 ),
               );
             if (kind === "move" && destination.id === request.profile)
@@ -832,7 +904,7 @@ const transfer = (kind: "move" | "copy") =>
                   target_id: null,
                   outcome: "not-found",
                   occurrence_as_plain_task: false,
-                  message: "Task not found in the selected Profile and filters",
+                  ...(yield* cliLookupError(store, cfg, request, id)),
                 });
                 continue;
               }
@@ -883,6 +955,9 @@ const transfer = (kind: "move" | "copy") =>
                       ...copyStats,
                     }
                   : {
+                      ...(result.outcome === "not-found"
+                        ? yield* cliLookupError(store, cfg, request, id)
+                        : {}),
                       source_id: id,
                       target_id: null,
                       outcome:
@@ -909,12 +984,18 @@ const transfer = (kind: "move" | "copy") =>
             const rejectionDetails = results.find(
               (result) => result.details,
             )?.details;
+            const exit = conflict
+              ? 4
+              : results.some((r) => r.outcome === "not-found")
+                ? 3
+                : 2;
             const report = {
               generated_at: iso(nowInstant()),
               dry_run: input.dryRun,
               results,
               ...(failed
                 ? {
+                    ...exitStatus(exit),
                     code: conflict
                       ? "occ_conflict"
                       : results.some((r) => r.outcome === "not-found")
@@ -945,14 +1026,13 @@ const transfer = (kind: "move" | "copy") =>
                       (r) =>
                         `${r.source_id}: ${r.outcome}${r.message ? `: ${r.message}` : ""}${r.target_id ? ` -> ${r.target_id}` : ""}${r.occurrence_as_plain_task ? " (Occurrence becomes a plain Task)" : ""}${r.current_version ? ` (current Version ${r.current_version})` : ""}${r.managed_image_count === undefined ? "" : ` (${r.managed_image_count} managed images, ${r.managed_image_bytes} bytes)`}`,
                     )
-                    .join("\n") + "\n",
+                    .join("\n") +
+                    "\n" +
+                    (failed
+                      ? `error ${exit} - ${exitStatus(exit).exit_meaning}\n`
+                      : ""),
             );
-            if (failed)
-              process.exitCode = conflict
-                ? 4
-                : results.some((r) => r.outcome === "not-found")
-                  ? 3
-                  : 2;
+            if (failed) process.exitCode = exit;
           }),
         );
       }),
@@ -972,7 +1052,14 @@ const show = Command.make(
           const task = data.views.find((t) => t.id === id);
           if (!task)
             return yield* Effect.fail(
-              new CommandError(3, "not_found", "task not found"),
+              new CommandError(
+                3,
+                "not_found",
+                "task not found",
+                undefined,
+                undefined,
+                id,
+              ),
             );
           yield* write(
             renderTask(
@@ -1014,15 +1101,34 @@ const batchEditCommand = Command.make(
       });
       yield* withStore(cfg, (store) =>
         Effect.gen(function* () {
-          const report = yield* batchEditTasks(
-            store,
-            yield* selectProfile(store, cfg),
-            { ...body, dry_run: input.dryRun || body.dry_run || false },
-          );
+          const request = yield* selectProfile(store, cfg, "authenticate");
+          const result = yield* batchEditTasks(store, request, {
+            ...body,
+            dry_run: input.dryRun || body.dry_run || false,
+          });
+          const report = {
+            ...result,
+            items: yield* Effect.forEach(result.items, (row) =>
+              Effect.gen(function* () {
+                return row.error
+                  ? {
+                      ...row,
+                      error: yield* cliLookupRowError(
+                        store,
+                        cfg,
+                        request,
+                        row.task_id,
+                        row.error,
+                      ),
+                    }
+                  : row;
+              }),
+            ),
+          };
           yield* write(
             cfg.format === "json"
               ? encodeResponse(BatchEditReport, report)
-              : `${report.dry_run ? "Dry run\n" : ""}${report.items.map((row) => `${row.task_id}\t${row.outcome}\t${row.error?.message ?? `Version ${row.current_version}`}`).join("\n")}\n`,
+              : `${report.dry_run ? "Dry run\n" : ""}${report.items.map((row) => `${row.task_id}\t${row.outcome}\t${row.error ? `${row.error.message}\nerror ${row.error.exit_code} - ${row.error.exit_meaning}` : `Version ${row.current_version}`}`).join("\n")}\n`,
           );
           if (report.totals.rejected)
             process.exitCode = report.items.some(
@@ -1069,18 +1175,37 @@ const attachManyCommand = Command.make(
       });
       yield* withStore(cfg, (store) =>
         Effect.gen(function* () {
-          const request = yield* selectProfile(store, cfg);
-          const report = yield* new AttachmentCommands(store).attachMany(
+          const request = yield* selectProfile(store, cfg, "authenticate");
+          const result = yield* new AttachmentCommands(store).attachMany(
             request,
             {
               ...requestBody,
               dry_run: input.dryRun || (requestBody.dry_run ?? false),
             },
           );
+          const report = {
+            ...result,
+            items: yield* Effect.forEach(result.items, (row) =>
+              Effect.gen(function* () {
+                return row.error
+                  ? {
+                      ...row,
+                      error: yield* cliLookupRowError(
+                        store,
+                        cfg,
+                        request,
+                        row.task_id,
+                        row.error,
+                      ),
+                    }
+                  : row;
+              }),
+            ),
+          };
           yield* write(
             cfg.format === "json"
               ? encodeResponse(AttachManyReport, report)
-              : `${report.dry_run ? "Dry run\n" : ""}${report.items.map((row) => `${row.task_id ?? "?"}\t${row.outcome}\t${row.error?.message ?? row.attached}`).join("\n")}\n`,
+              : `${report.dry_run ? "Dry run\n" : ""}${report.items.map((row) => `${row.task_id ?? "?"}\t${row.outcome}\t${row.error ? `${row.error.message}\nerror ${row.error.exit_code} - ${row.error.exit_meaning}` : row.attached}`).join("\n")}\n`,
           );
           if (report.totals.rejected)
             process.exitCode = report.items.some(
@@ -1107,8 +1232,12 @@ const attachmentCommand = (detach: boolean) =>
         const cfg = yield* root;
         yield* withStore(cfg, (store) =>
           Effect.gen(function* () {
-            const request = yield* selectProfile(store, cfg);
             const dryRun = "dryRun" in input && input.dryRun === true;
+            const request = yield* selectProfile(
+              store,
+              cfg,
+              dryRun ? "authenticate" : "mutate",
+            );
             const task = yield* changeAttachment(store, request, {
               id: input.id,
               value: input.value,
@@ -1152,7 +1281,7 @@ const labelAttachmentCommand = Command.make(
       const cfg = yield* root;
       yield* withStore(cfg, (store) =>
         Effect.gen(function* () {
-          const request = yield* selectProfile(store, cfg);
+          const request = yield* selectProfile(store, cfg, "mutate");
           const task = yield* labelAttachment(
             store,
             request,
@@ -1211,7 +1340,7 @@ const mutation = (name: Mutation) =>
         const cfg = yield* root;
         yield* withStore(cfg, (store) =>
           Effect.gen(function* () {
-            const request = yield* selectProfile(store, cfg);
+            const request = yield* selectProfile(store, cfg, "mutate");
             yield* mutateTask(
               store,
               request,
@@ -1406,13 +1535,32 @@ const importCommand = makeImportCommand((input) =>
     const items = yield* readImportFile(input.file);
     yield* withStore(cfg, (store) =>
       Effect.gen(function* () {
-        const request = yield* selectProfile(store, cfg);
-        const report = yield* importTasks(store, request, {
+        const request = yield* selectProfile(store, cfg, "authenticate");
+        const result = yield* importTasks(store, request, {
           items,
           file_name: input.file === "-" ? "stdin" : basename(input.file),
           dry_run: input.dryRun,
           close_missing: input.closeMissing,
         });
+        const report = {
+          ...result,
+          items: yield* Effect.forEach(result.items, (row) =>
+            Effect.gen(function* () {
+              return row.error
+                ? {
+                    ...row,
+                    error: yield* cliLookupRowError(
+                      store,
+                      cfg,
+                      request,
+                      row.task_id ?? row.error.details?.task_id ?? null,
+                      row.error,
+                    ),
+                  }
+                : row;
+            }),
+          ),
+        };
         yield* write(renderImport(report, cfg.format));
         if (report.totals.rejected)
           process.exitCode = report.items.some(
@@ -1561,16 +1709,15 @@ const profiles = Command.make("profile").pipe(
               });
               if (result.outcome === "refused") {
                 yield* write(
-                  cfg.format === "json"
-                    ? renderError(
-                        result.error.code,
-                        result.error.message,
-                        cfg.format,
-                        result.error.generated_at,
-                        undefined,
-                        result.error.details,
-                      )
-                    : result.error.message + "\n",
+                  renderError(
+                    result.error.code === "not_found" ? 3 : 2,
+                    result.error.code,
+                    result.error.message,
+                    cfg.format,
+                    result.error.generated_at,
+                    undefined,
+                    result.error.details,
+                  ),
                 );
                 yield* Effect.sync(() => {
                   process.exitCode = result.error.code === "not_found" ? 3 : 2;
@@ -1885,11 +2032,13 @@ const program = Effect.gen(function* () {
       (format === "json" && !follow ? process.stdout : process.stderr).write(
         terminalSafe(
           renderError(
+            failure.exit,
             failure.code,
             failure.message,
             follow ? "json" : format,
             nowInstant(),
             failure.latest,
+            failure.details,
           ),
         ),
       );

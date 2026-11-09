@@ -46,6 +46,9 @@ with (evidence / 'server.log').open('w') as log:
             value = json.loads(body) if body else None
             actions.append({'method': method, 'path': path, 'request': redacted(payload), 'credential_kind': credential[:4] if credential else None, 'status': int(code), 'response': redacted(value)})
             assert int(code) == status, (method, path, code, status, value)
+            if status >= 400:
+                expected_exit = {400: (2, 'validation or usage'), 401: (3, 'not found or auth missing'), 403: (3, 'not found or auth missing'), 404: (3, 'not found or auth missing'), 409: (4, 'Conflict')}[status]
+                assert (value['exit_code'], value['exit_meaning']) == expected_exit
             return value
 
         health_identity = request('GET', '/health', 200)
@@ -64,7 +67,7 @@ with (evidence / 'server.log').open('w') as log:
         assert request('GET', path, 200, credential=session) == created
         edited = request('PATCH', path, 200, {'from_version': 1, 'changes': {'title': 'Ship the HTTP API'}}, session)
         conflict = request('PATCH', path, 409, {'from_version': 1, 'changes': {'title': 'Stale edit'}}, session)
-        assert conflict == {'_tag': 'Conflict', 'latest': edited}
+        assert conflict == {'_tag': 'Conflict', 'latest': edited, 'exit_code': 4, 'exit_meaning': 'Conflict'}
         reader = request('POST', '/auth/tokens', 200, {'name': 'reader', 'profile': 'work', 'scope': 'read-only'}, session)['credential']
         writer = request('POST', '/auth/tokens', 200, {'name': 'writer', 'profile': 'work', 'scope': 'read-write'}, session)['credential']
         assert request('GET', '/profiles/work/tasks', 200, credential=reader) == [edited]

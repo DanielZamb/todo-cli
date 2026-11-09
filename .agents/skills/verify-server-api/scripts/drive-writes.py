@@ -57,7 +57,7 @@ with (evidence / 'server.log').open('w') as log:
         writer = request('POST', '/auth/tokens', 200, {'name': 's05-writer', 'profile': 'work', 'scope': 'read-write'}, session)['credential']
         personal_writer = request('POST', '/auth/tokens', 200, {'name': 's05-personal', 'profile': 'personal', 'scope': 'read-write'}, session)['credential']
         stale_move_latest = request('PATCH', '/profiles/work/tasks/inbox', 200, {'from_version': 1, 'changes': {'title': 'Keep stale move unchanged'}}, writer)
-        assert request('POST', '/profiles/work/tasks/inbox/move', 409, {'from_version': 1, 'destination_profile': 'personal'}, session) == {'_tag': 'Conflict', 'latest': stale_move_latest}
+        assert request('POST', '/profiles/work/tasks/inbox/move', 409, {'from_version': 1, 'destination_profile': 'personal'}, session) == {'_tag': 'Conflict', 'exit_code': 4, 'exit_meaning': 'Conflict', 'latest': stale_move_latest}
         target = '/profiles/work/tasks/inbox-project' 
         before = request('GET', target, 200, credential=session)
         for invalid in [{'title': ' \t'}, {'title': 'Task', 'source': 'other'}]:
@@ -75,7 +75,7 @@ with (evidence / 'server.log').open('w') as log:
         request('POST', target + '/move', 400, {'destination_profile': 'personal'}, session)
         request('POST', target + '/move', 422, {**move, 'destination_profile': 'missing'}, session)
         stale = request('POST', target + '/move', 409, {**move, 'from_version': 2}, session)
-        assert stale == {'_tag': 'Conflict', 'latest': before}
+        assert stale == {'_tag': 'Conflict', 'exit_code': 4, 'exit_meaning': 'Conflict', 'latest': before}
         moved = request('POST', target + '/move', 200, move, session)
         assert [moved['id'], moved['profile_id'], moved['row_version'], moved['occurrence']] == ['inbox-project', 'personal', 2, None]
         assert [p['name'] for p in request('GET', '/profiles/personal/projects', 200, credential=session) if p['id'] == moved['project_id']] == ['Work Project']
@@ -103,11 +103,11 @@ with (evidence / 'server.log').open('w') as log:
         revert = {'from_version': 4, 'seq': seq}
         request('POST', target + '/revert', 401, revert)
         request('POST', target + '/revert', 403, revert, reader)
-        assert request('POST', target + '/revert', 409, {**revert, 'from_version': 3}, writer) == {'_tag': 'Conflict', 'latest': edited}
+        assert request('POST', target + '/revert', 409, {**revert, 'from_version': 3}, writer) == {'_tag': 'Conflict', 'exit_code': 4, 'exit_meaning': 'Conflict', 'latest': edited}
         request('POST', '/profiles/personal/tasks/personal/revert', 422, {'from_version': 1, 'seq': seq}, session)
         reverted = request('POST', target + '/revert', 200, revert, writer)
         assert [reverted['title'], reverted['row_version']] == ['Inbox with Project', 5]
-        assert request('POST', target + '/revert', 409, {'from_version': 5, 'seq': seq}, writer) == {'_tag': 'Conflict', 'latest': reverted}
+        assert request('POST', target + '/revert', 409, {'from_version': 5, 'seq': seq}, writer) == {'_tag': 'Conflict', 'exit_code': 4, 'exit_meaning': 'Conflict', 'latest': reverted}
         deleted = request('DELETE', target + '?from_version=5', 200, credential=writer)
         seq_delete = request('GET', target + '/history', 200, credential=reader)[-1]['seq']
         recovered = request('POST', target + '/revert', 200, {'from_version': 6, 'seq': seq_delete}, writer)
@@ -130,14 +130,14 @@ with (evidence / 'server.log').open('w') as log:
         request('PATCH', occurrence + '/series', 422, {**edit, 'recurrence': {**rule, 'rrule': 'BAD'}}, writer)
         series_edit = request('PATCH', occurrence + '/series', 200, edit, writer)
         assert [series_edit['title'], series_edit['row_version']] == ['Weekly Series', 2]
-        assert request('PATCH', occurrence + '/series', 409, edit, writer) == {'_tag': 'Conflict', 'latest': series_edit}
+        assert request('PATCH', occurrence + '/series', 409, edit, writer) == {'_tag': 'Conflict', 'exit_code': 4, 'exit_meaning': 'Conflict', 'latest': series_edit}
         request('POST', occurrence + '/skip', 401, {'from_version': 2})
         request('POST', occurrence + '/skip', 403, {'from_version': 2}, reader)
         request('POST', occurrence.replace('/work/', '/personal/') + '/skip', 404, {'from_version': 2}, session)
-        assert request('POST', occurrence + '/skip', 409, {'from_version': 1}, writer) == {'_tag': 'Conflict', 'latest': series_edit}
+        assert request('POST', occurrence + '/skip', 409, {'from_version': 1}, writer) == {'_tag': 'Conflict', 'exit_code': 4, 'exit_meaning': 'Conflict', 'latest': series_edit}
         skipped = request('POST', occurrence + '/skip', 200, {'from_version': 2}, writer)
         assert [skipped['status'], skipped['row_version']] == ['cancelled', 3]
-        assert request('POST', occurrence + '/skip', 409, {'from_version': 2}, writer) == {'_tag': 'Conflict', 'latest': skipped}
+        assert request('POST', occurrence + '/skip', 409, {'from_version': 2}, writer) == {'_tag': 'Conflict', 'exit_code': 4, 'exit_meaning': 'Conflict', 'latest': skipped}
         request('POST', occurrence + '/skip', 422, {'from_version': 3}, writer)
         successors = [t for t in request('GET', '/profiles/work/tasks', 200, credential=writer) if t['occurrence'] and t['occurrence']['series_id'] == first['occurrence']['series_id'] and t['status'] == 'open']
         assert len(successors) == 1

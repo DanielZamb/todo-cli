@@ -148,3 +148,14 @@ The compiled HTTP recipes compare health with CONTRACT_ID and reject unknown que
 ## Batch edit
 
 Read [Edit several Tasks](features/batch-edit.md) for the shared batch-edit contract and the compiled scratch proof. Both client flows retain selections and loaded Versions through preview, apply and Conflict reload.
+
+## Exit meanings and lookup context
+
+Every HTTP error carries the equivalent CLI exit_code and exit_meaning while
+retaining its status, tag and existing details. Framework decoding failures use
+BadRequest with the validation pair, including sign-in and non-Task routes.
+Validation History still authenticates and records rejected mutation inputs.
+The compiled test in apps/cli/test/error-list.test.ts covers decoding, missing
+credentials, Profile-scope denial, selected Profile lookup context and both
+recovery routes. Run it with TODO_CLI_BINARY and TODO_SERVER_BINARY pointing to
+same-source cached binaries. No error probes another Profile for a Task.
