@@ -23,7 +23,7 @@ describe("Dependency storage and replay", () => {
   for (const endpoint of ["A", "B"] as const)
     it.effect(`Purge endpoint ${endpoint}`, () =>
       scratch((path) =>
-        runDagCase(path, (store) => provePurgeEndpoint(store, endpoint)),
+        runDagCase(path, (store) => provePurgeEndpoint(store, endpoint, path)),
       ),
     );
   it.effect("migration twice, Snapshot before upgrade and SQL refusals", () =>

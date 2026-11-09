@@ -19,3 +19,9 @@ full replay and checkpoint replay.
 Never use the owner's Todo directory. Keep each scratch database in its own
 parent directory so its Purge journal cannot contaminate another case.
 This drive does not prove public graph commands, UI or formal unbounded safety.
+
+The Purge endpoint cases install a scratch SQLite AFTER DELETE audit trigger.
+They require Delete itself to remove the literal incident edge set, then require
+Purge to add zero audit rows. The defensive production cleanup stays enabled.
+A missing Delete cleanup fails before Purge could hide it. The audit connection
+closes in finally; no production flag or test hook changes Purge behavior.

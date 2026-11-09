@@ -94,3 +94,10 @@ The compiled driver also proves that Purge redacts rejected imports attributed t
 Import items accept the same `attachments` array as Task creation. Each reference has `kind`, `path` or `url`, and optional `label` and `name`. Omitted Attachments stay attached. Invalid URIs or missing paths reject that item before its Task changes commit. Repeated references do not duplicate Attachments.
 
 An unlinked existing Task is adopted by `task_id`, `from_version` and a free `external_id`. Omitted fields stay unchanged. A stale adoption reports that the Task has no external id yet. A later import matches that external id normally. The shared CLI01 compiled drive in verify-attachments proves these cases through CLI and HTTP; `packages/domain/test/import.test.ts` also checks replay and first-Occurrence-only references.
+
+The compiled migration drive requires projection creation to preserve an existing
+user_version 1, then migrates the legacy fixture through 0003 through 0007. It
+asserts literal Task ids/titles/Versions, auth and Profile-deletion tables,
+external-id column/index, Attachment cleanup and Dependency tables, plus the
+version-1 pre-migration Snapshot. Versions 2 through 5 retain concurrent migration
+and byte-identical saved schema/rows checks.

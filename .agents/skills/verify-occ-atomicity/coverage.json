@@ -19,7 +19,7 @@
     },
     {
       "path": "packages/domain/src/store/projection.ts",
-      "sha256": "bc79d5b8a50a07f4d5f9ca225de6bd5a0f961300ad36934253bb1272d6817573",
+      "sha256": "7c82ea08bacbb1358a809dd7b3acac0092d78ad6e137b9645971fce486604544",
       "functions": [
         "changes",
         "applyEvent",

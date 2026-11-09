@@ -95,3 +95,20 @@ in the compiled DAG drive covers it. Renew the event source pin only after
 reviewing these changes and rerunning behavioral sensitivity and the clean check.
 
 Closure reviewed product source: 50ef7c3dccd50d427bb8dfa2bfff8915c49b907e.
+
+## Unit B N1/N2 mapping review
+
+Reviewed the N1 diff from integration base 9f2ec0fb798dfbb7fa7cd1ccd666cbabbb1a7d89.
+Only createProjection changes among covered production functions. It creates
+exactly the same dependency tables, indexes and guards through dependencySchemaSql,
+without executing a schema-version pragma. Migration 0007 still creates that
+schema and advances to 7 inside the existing constructor migration transaction.
+Legacy migration order and pre-migration Snapshot placement stay in migrate.
+Task writes, before-value and Version checks, History publication, projection
+application and seven crash boundaries are unchanged. Rebuild no longer changes
+user_version as a side effect of recreating projections. The compiled migration
+driver asserts preservation of version 1, the full legacy 0003 through 0007
+schema and literal migrated Tasks. N2 changes verification only, observing actual
+SQLite DELETE effects with a scratch audit trigger around Delete then Purge.
+AtomicCAS retains its one-Task/no-edge bounds. Renew the projection pin only
+with this review and fresh real-code sensitivity plus the clean one command.

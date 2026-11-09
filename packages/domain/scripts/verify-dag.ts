@@ -92,7 +92,7 @@ if (mode === "A" || mode === "B") {
     mkdirSync(caseDirectory);
     await Effect.runPromise(
       runDagCase(join(caseDirectory, "scratch.db"), (store) =>
-        provePurgeEndpoint(store, target),
+        provePurgeEndpoint(store, target, join(caseDirectory, "scratch.db")),
       ),
     );
     receipts.push({ name: `purge-${target}`, outcome: "passed" });
