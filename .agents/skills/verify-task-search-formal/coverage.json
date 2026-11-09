@@ -1,6 +1,6 @@
 {
-  "sourceCommit": "0d5b2198e5728565a57ff3170b84182ff776a148",
-  "status": "mapped-production-clients-and-real-matcher",
+  "sourceCommit": "c14371075593a4a163f15797c495ac821510a449",
+  "status": "sec-l1-reviewed-F1a-F1b-catalog-lifetime-and-tag-representability; independent-seats-pending",
   "files": [
     {
       "path": "apps/electron/src/renderer.tsx",
@@ -11,9 +11,10 @@
         "activateProfile",
         "activateView",
         "clearFilters",
-        "changed/connection notice handlers"
+        "endAuthentication",
+        "changed/connection/reload notice handlers"
       ],
-      "sha256": "91c45ab023ecb0d7a720982a3494f4d904322aab56717b4c46e5a10c4d3f2a84"
+      "sha256": "694b5c90572436b93dd18619b7728209adbf00d053e8f9ae5205bda3966d27fb"
     },
     {
       "path": "apps/electron/src/task-search-results.ts",
@@ -21,23 +22,25 @@
         "SearchIdentity",
         "AppliedSearch",
         "identityKey",
-        "searchGroups"
+        "searchGroups",
+        "taskSearchQuery"
       ],
-      "sha256": "32fcb14d4790e2a67af432419c26d8e25bae63d6950993afe906813892f89ae6"
+      "sha256": "764b89fbeaca10894d7346a916719453416d8aff1c89608e3411ec674265c0ae"
     },
     {
       "path": "apps/electron/src/task-client.ts",
       "functions": [
         "taskRequest list branch"
       ],
-      "sha256": "571097dd0ddf9e9d0327260f81a948d0ab60ef6f1c60270a0f02fdff57fc2ebd"
+      "sha256": "82f28b053590d063679cc5fde5d5e54a2db84fc6519a198d4d0f207ae5400329"
     },
     {
       "path": "apps/electron/src/protocol.ts",
       "functions": [
-        "Reply tasks TaskRead decoder"
+        "Reply tasks TaskRead decoder",
+        "Reply error code decoder"
       ],
-      "sha256": "8ed36ad2c29d493e595f4c05ee742b5237fce3ad26331945e53ce0d79df3d4ff"
+      "sha256": "822a023127ec533577f6d05f5ed6d86592d27fd676761ebf9eaa4a8fe6119e62"
     },
     {
       "path": "apps/macos/Sources/TodoModel.swift",
@@ -53,7 +56,7 @@
         "followChanges",
         "applyTaskFilters"
       ],
-      "sha256": "9e3750b02515438ef433ffe70e87791e8f4f7e9e7c2b49f16c916e22389ee520"
+      "sha256": "f321afdea1fa9b9f8a6ace8ba1f312c021fb6ea245f5656e457de0bbbde1d35e"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -61,9 +64,10 @@
         "TaskSearchIdentity",
         "TaskSearchSnapshot",
         "TaskSearchRefreshOutcome",
+        "TaskSearchFailure",
         "TaskSearchPresentation"
       ],
-      "sha256": "52cdca8acf5335822cc8f9c81fdd61fb0e7cf0935d4e1059054e39edae567b73"
+      "sha256": "6742564f220867bce552b686b7efc9e8072d94df3aaa30fb512f1cec52019a00"
     },
     {
       "path": "apps/macos/Sources/AppViews.swift",
@@ -74,7 +78,7 @@
         "taskContent",
         "searchField"
       ],
-      "sha256": "2c2d2eded27f1c9adefb280adaaeac458aeb995fc5f3ef0777548d2c4859b6f3"
+      "sha256": "cbd1ab46f108718e7bbf9e6a5f6faf64089d6656225686c9dd1ceb3ff9a931da"
     },
     {
       "path": "apps/macos/Sources/TaskSnapshot.swift",
@@ -88,10 +92,17 @@
       "path": "packages/domain/src/task-search.ts",
       "functions": [
         "normalizeTaskSearch",
+        "PreparedField",
+        "taskSearchWorkLimits",
+        "TaskSearchWork",
+        "fieldWords",
         "parseTaskSearch",
+        "prefixMatcher",
+        "clauseMatches",
+        "matchTaskSearchSteps",
         "matchTaskSearch"
       ],
-      "sha256": "196d91957dc059666cca0414aa0d73204349a0075f054732479358f6061230c5"
+      "sha256": "1a82bab698508fe98c1d7de11fddbaf910454d69c3f6534e45e8b0ce9203c23c"
     },
     {
       "path": "packages/domain/src/task-search-case-fold.ts",
@@ -104,9 +115,12 @@
       "path": "packages/domain/src/task-filters.ts",
       "functions": [
         "TaskFilters",
-        "filterTaskRecords"
+        "filterTaskRecordSteps",
+        "filterTaskRecords",
+        "runTaskRecordSteps",
+        "filterTaskRecordsEffect"
       ],
-      "sha256": "7fc28cec9f3f8a21a63ebb89fe7603b434ffc61a910e3c16db249143c05962a4"
+      "sha256": "59b835514b51dc7c301cefabce5954c77160857ace8b75a6d994f83b6925369d"
     },
     {
       "path": "packages/domain/src/task-read.ts",
@@ -128,14 +142,15 @@
         "TaskViewSchema",
         "taskView"
       ],
-      "sha256": "de1787bdb5f3907c568cb53e76f39ec79cead23074953cf608b2003755a13b58"
+      "sha256": "f1063952fb0fbe58f09ce3464fad6ed93784b019db261fe0e21abe81d5b293c5"
     },
     {
       "path": "packages/domain/src/commands.ts",
       "functions": [
-        "readTasks"
+        "readTasks",
+        "TaskCommands.list"
       ],
-      "sha256": "7d181acc3033fb26f0d5d02fe3493f425174840b6042309510dd96937a8e92d6"
+      "sha256": "970d2db6c8631c3819138451c778fb79b462e079a1ccb556f5dfcca5dfbd3078"
     }
   ],
   "mapping": "CLIENT-MAPPING.md",
@@ -144,9 +159,13 @@
     "domain": "unit1 a1987fd4 integrated8272b610; both seats complete",
     "formal": "4c8c6932; both seats complete; R1/reset amendment228e3485",
     "swift": "code76035210 + visual8fd49f25; integratedc19fd669; approved presentation alignment0d5b2198",
-    "electron": "codedf13e2a8 + visuale8178e24; integratedbc288b30"
+    "electron": "codedf13e2a8 + visuale8178e24; integratedbc288b30",
+    "security": "SEC-W1 local source review, literal client/core proofs, immutable real matcher properties and all five behavioral mutations passed at0a2eef1c in matcher-zwScvg. Covered source bytes unchanged at this product commit. Seat1 held for SEC-L1 to launch; seat2 coordinator.",
+    "v1": "Reviewed display-only diff against CLIENT-MAPPING.md: shared applied-context helpers, unchanged refusal sentence, secondary context, no state transition/publication guard/generation/identity changes. Immutable matcher properties and all five behavioral mutations passed at064b2667 in matcher-1eyrdt before these four hashes were renewed. Seat1/visual review pending.",
+    "f1": "Reviewed F1 against CLIENT-MAPPING.md: catalog-name request narrowing only; explicit dialog names win, unresolved ids add no name, same-response id joins remain. No state transition, publication guard, generation, identity, snapshot or SSE recovery change. Immutable real matcher properties and all five behavioral mutations passed at5d42f32b in matcher-uo9W7V before renewing only the three changed source hashes. Compiled Electron/Swift recovery, ordinary JSON, real raw-append case-fold Tags and synthetic same-name Projects passed.",
+    "f1ab": "Reviewed F1a/F1b against CLIENT-MAPPING.md: Electron keeps a Profile-keyed name catalog ref refreshed from each published result and cleared on Profile switch, endAuthentication and reload, used only for a matching Profile; both clients infer a Tag name only when trimming leaves it unchanged (Swift: whitespacesAndNewlines plus U+FEFF, a superset of JS trim), Project names stay exact. Request narrowing only: no state transition, publication guard, generation, identity, snapshot or SSE recovery change. Immutable real matcher properties and all five behavioral mutations passed at c1437107 in matcher-qRXiUP before renewing only the three changed source hashes."
   },
   "productionMatcher": "Immutable real source with generated properties, behavioral mutations and byte restoration; final-tip command uses its explicit full SHA.",
-  "recovery": "Manual Retry or current-Profile SSE reconnect/op, no search retry timer. Conditional liveness assumptions are in CLIENT-MAPPING.md and REPORT.md.",
+  "recovery": "Transient errors offer Retry; search_too_broad hides Retry and retains text/snapshot. Current-Profile SSE op/reconnect remains available. Liveness is conditional on a later affordable successful response and a fair available recovery source.",
   "clientRefinement": "Mapped and regression-checked; no mechanical TypeScript/Swift refinement theorem."
 }

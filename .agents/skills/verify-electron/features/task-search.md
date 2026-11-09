@@ -1,5 +1,27 @@
 # Task search and id prefix
 
+The Task-search drive also creates three maximum-size U+FDFA descriptions and
+requires a real `search_too_broad` response. It retains typed text, focus and the
+applied rows, shows the complete server recovery text in the neutral `Search
+failed` status, and requires no Retry button. Four `*-budget-error.png` captures
+cover Compact/full and light/dark. Shrinking one description through HTTP must
+make SSE publish the results without Retry. Transient-error Retry and the Copy
+step remain covered by the same drive.
+
+The refusal keeps its recovery sentence first, followed by secondary
+`.search-error-context` text from the applied snapshot: `Showing results for
+"rent".` or `Showing tasks without search.`. The drive asserts both lines and
+captures the typed `probe` query over retained `rent` results. The focused
+presentation tests assert literal markup for both contexts. The existing status
+role announces both lines, and Retry remains absent for this code.
+
+`attachment-native.test.ts` mocks the clipboard at the Electron main boundary.
+It checks the exact valid id write and rejects newline, oversized and non-string
+payloads without clipboard calls, plus UTF-16 and forbidden-control boundaries.
+The main boundary requires no control characters and no format characters;
+literal RLO (U+202E), LRI (U+2066) and ZWSP (U+200B) payloads must be rejected.
+The production Copy step in the unsigned Task-search drive must still pass.
+
 Run the production renderer, task-client, IPC decoder and sandboxed preload in
 an unsigned host against fresh compiled scratch CLI/server data:
 
@@ -68,6 +90,27 @@ The offline recovery-action capture uses a current-Profile connection notice
 fixture; real stream-close and operation recovery remain separate checks.
 
 ## Coverage and evidence
+
+The drive compiles the shared recovery fixture
+`.agents/skills/verify-task-search/seed-recovery.ts` into its scratch directory
+before using it. Set `SEC_SEARCH_RECOVERY_SEED` to an absolute compiled path
+only to reuse an existing build.
+
+The drive seeds three Tasks with 100,000 U+FDFA descriptions. `probe` is refused;
+selecting Project Small or Tag keep sends its catalog name and returns only
+Scope probe 0 with the title span `[6, 11)`. Compiled CLI `--project Small` and
+`--tag keep` assert the same literal result. Ordinary rows and spans are compared
+byte-for-byte after the selected-id join. Explicit dialog names win over catalog
+names; an unresolved id adds no server name filter.
+
+The raw-append fixture supplies real keep/KEEP Tags over scratch HTTP. Public
+commands lowercase Tag names; this collision represents raw append or old data.
+The server's case-folded response contains both Tasks, but the selected-id join
+keeps one. The same-name Project transport is **synthetic**: it relabels Other as
+Small in discovery and forwards the read to real scratch HTTP without a Project
+predicate to supply a name superset. `UNIQUE(profile_id, name)` remains binding;
+real Project name filtering is 1:1 with its id inside a Profile. The Project join
+is defense in depth. No production schema or stored Project name is changed.
 
 `apps/electron/scripts/verify-task-search.ts` drives Compact 393 × 426 FIRST,
 then full, in light/dark. It captures ready, typing, Requesting, description,

@@ -15362,13 +15362,149 @@ public enum Operations {
             public struct UnprocessableContent: Sendable, Hashable {
                 /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content`.
                 @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json`.
+                    public struct jsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json/value1`.
+                        public var value1: Components.Schemas.InvalidTaskEncoded?
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json/value2`.
+                        public struct Value2Payload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json/value2/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json/value2/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case validation_space_or_space_usage = "validation or usage"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json/value2/exit_meaning`.
+                            public var exit_meaning: Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload.Value2Payload.exit_meaningPayload
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json/value2/generated_at`.
+                            public var generated_at: Swift.String
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json/value2/code`.
+                            @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case search_too_broad = "search_too_broad"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json/value2/code`.
+                            public var code: Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload.Value2Payload.codePayload
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json/value2/message`.
+                            public var message: Swift.String
+                            /// Creates a new `Value2Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
+                            ///   - generated_at:
+                            ///   - code:
+                            ///   - message:
+                            public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload.Value2Payload.exit_meaningPayload,
+                                generated_at: Swift.String,
+                                code: Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload.Value2Payload.codePayload,
+                                message: Swift.String
+                            ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
+                                self.generated_at = generated_at
+                                self.code = code
+                                self.message = message
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
+                                case generated_at
+                                case code
+                                case message
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload.Value2Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
+                                self.generated_at = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .generated_at
+                                )
+                                self.code = try container.decode(
+                                    Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload.Value2Payload.codePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
+                                    "generated_at",
+                                    "code",
+                                    "message"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
+                                try container.encode(self.generated_at, forKey: .generated_at)
+                                try container.encode(self.code, forKey: .code)
+                                try container.encode(self.message, forKey: .message)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json/value2`.
+                        public var value2: Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload.Value2Payload?
+                        /// Creates a new `jsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - value1:
+                        ///   - value2:
+                        public init(
+                            value1: Components.Schemas.InvalidTaskEncoded? = nil,
+                            value2: Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload.Value2Payload? = nil
+                        ) {
+                            self.value1 = value1
+                            self.value2 = value2
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self.value1 = try .init(from: decoder)
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self.value2 = try .init(from: decoder)
+                            } catch {
+                                errors.append(error)
+                            }
+                            try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                [
+                                    self.value1,
+                                    self.value2
+                                ],
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
+                            )
+                        }
+                        public func encode(to encoder: any Swift.Encoder) throws {
+                            try self.value1?.encode(to: encoder)
+                            try self.value2?.encode(to: encoder)
+                        }
+                    }
                     /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/application\/json`.
-                    case json(Components.Schemas.InvalidTaskEncoded)
+                    case json(Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.InvalidTaskEncoded {
+                    public var json: Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload {
                         get throws {
                             switch self {
                             case let .json(body):

@@ -141,7 +141,11 @@ export type ExternalIdConflictDetails = typeof ExternalIdConflictDetails.Type;
 export type ErrorResponse = typeof ErrorResponse.Type;
 const errorFields = {
   generated_at: Schema.String,
-  code: Schema.String,
+  code: Schema.String.annotate({
+    examples: ["search_too_broad"],
+    description:
+      "Error code. search_too_broad means the deterministic search work budget was exceeded; narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.",
+  }),
   message: Schema.String,
   details: Schema.optionalKey(
     Schema.Union([

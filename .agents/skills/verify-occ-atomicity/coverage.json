@@ -1,9 +1,9 @@
 {
-  "confirmedCommit": "ed4e2423d696d0321bb0e19674bba1865bd2541d",
+  "confirmedCommit": "36f9c56e200048aa2ca16186aaf713bea8d5454e",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "4b3ac6159c75eba4abe0fa74d92d73e5163c60232c6fb22b30ec8c8157984d4f",
+      "sha256": "7121f6621af44a03846124ccbffc6b9841b903e1047eb6b2464ef842caf15353",
       "functions": [
         "OperationStore.constructor",
         "OperationStore.transaction",
@@ -32,7 +32,7 @@
     },
     {
       "path": "packages/domain/src/events.ts",
-      "sha256": "c8bb9ed964da0028df89eca9997294d2e5a768bf3addc05a4a772c7bd2e3556b",
+      "sha256": "145376a77e9dfb7e451d73169159fc0af672b0fff767f176b7a70e710719439b",
       "functions": [
         "TaskCreated",
         "TaskEdited",
@@ -46,17 +46,28 @@
     {
       "path": "packages/domain/src/entities.ts",
       "sha256": "ee505f78a6434528dbfe5f072463ec77cd6823bab1781f3f656d01c77f2d52f9",
-      "functions": ["Task", "Profile"]
+      "functions": [
+        "Task",
+        "Profile"
+      ]
     },
     {
       "path": "packages/domain/src/ids.ts",
       "sha256": "c1081994f401f4898f950348587ff4633fd36eb822628ca00d3d215e73defd0f",
-      "functions": ["ActorId", "ProfileId", "TaskId", "Version"]
+      "functions": [
+        "ActorId",
+        "ProfileId",
+        "TaskId",
+        "Version"
+      ]
     },
     {
       "path": "packages/domain/src/attachments.ts",
-      "sha256": "a894806ccf22b2262e2d783b602e5540e3122e44d85d1c08fae9225f746a5aca",
-      "functions": ["Attachment", "validAttachmentLocation"]
+      "sha256": "7094e663ad7a34dc38de76529a471c6f1b1d9c52c2f29883666b408603e1962e",
+      "functions": [
+        "Attachment",
+        "validAttachmentLocation"
+      ]
     }
   ]
 }

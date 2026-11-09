@@ -2,10 +2,12 @@ import { expect, it } from "@effect/vitest";
 import { TaskRead } from "@todo/domain";
 import { Schema } from "effect";
 import { renderToStaticMarkup } from "react-dom/server";
+import { errorReply } from "../src/error-reply.ts";
 import { Reply } from "../src/protocol.ts";
 import {
   DescriptionMatch,
   descriptionMatch,
+  SearchErrorMessage,
   SearchHighlight,
 } from "../src/task-search-presentation.tsx";
 import { searchGroups } from "../src/task-search-results.ts";
@@ -32,6 +34,48 @@ const task = Schema.decodeUnknownSync(TaskRead)({
   completed_at: null,
   deleted_at: null,
   search_matches: [{ field: "title", start: 0, end: 7 }],
+});
+
+it("shows the refusal first and names the retained search snapshot", () => {
+  expect(
+    renderToStaticMarkup(
+      <SearchErrorMessage
+        kind="search_too_broad"
+        message="Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase."
+        appliedText="rent"
+      />,
+    ),
+  ).toBe(
+    '<span class="whitespace-pre-line">Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.</span><small class="search-error-context">Showing results for &quot;rent&quot;.</small>',
+  );
+});
+
+it("shows the refusal first and identifies an unsearched snapshot", () => {
+  expect(
+    renderToStaticMarkup(
+      <SearchErrorMessage
+        kind="search_too_broad"
+        message="Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase."
+        appliedText={undefined}
+      />,
+    ),
+  ).toBe(
+    '<span class="whitespace-pre-line">Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.</span><small class="search-error-context">Showing tasks without search.</small>',
+  );
+});
+
+it("preserves a deterministic search refusal through IPC", () => {
+  expect(
+    Schema.decodeUnknownSync(Reply)({
+      _tag: "error",
+      code: "search_too_broad",
+      message: "Narrow the search with a Project, Tag or Status filter.",
+    }),
+  ).toEqual({
+    _tag: "error",
+    code: "search_too_broad",
+    message: "Narrow the search with a Project, Tag or Status filter.",
+  });
 });
 
 it("starts a trimmed description at a whole word and marks the original match", () => {
@@ -109,4 +153,123 @@ it("renders original UTF-16 spans without normalization or matching", () => {
     }),
   ).toEqual({ field: "description", start: 8, end: 12 });
   expect(descriptionMatch(task)).toBeNull();
+});
+
+it("resolves synthetic same-name Projects and raw-append case-fold Tags while preserving dialog names", async () => {
+  const { taskSearchQuery } = await import("../src/task-search-results.ts");
+  const definitions = Schema.decodeUnknownSync(Reply)({
+    ...catalog(),
+    projects: [
+      {
+        id: "small-a",
+        profile_id: "work",
+        name: "Small",
+        created_at: task.created_at,
+        updated_at: task.created_at,
+        open_task_count: 1,
+      },
+      {
+        id: "small-b",
+        profile_id: "work",
+        name: "Small",
+        created_at: task.created_at,
+        updated_at: task.created_at,
+        open_task_count: 1,
+      },
+    ],
+    tags: [
+      { id: "keep-a", profile_id: "work", name: "keep", open_task_count: 1 },
+      { id: "keep-b", profile_id: "work", name: "KEEP", open_task_count: 1 },
+    ],
+  });
+  if (definitions._tag !== "tasks") throw new Error("Expected Task catalog");
+  const identity = {
+    profile: task.profile_id,
+    view: "tasks",
+    filters: { status: "open" },
+    project: "small-b",
+    tag: "keep-b",
+    text: "probe",
+  } satisfies import("../src/task-search-results.ts").SearchIdentity;
+  expect(taskSearchQuery(identity, definitions)).toEqual({
+    project: "Small",
+    tag: "KEEP",
+    status: "open",
+    text: "probe",
+  });
+  expect(
+    taskSearchQuery(
+      { ...identity, filters: { project: "Dialog", tag: "explicit" } },
+      definitions,
+    ),
+  ).toEqual({ project: "Dialog", tag: "explicit", text: "probe" });
+  expect(
+    taskSearchQuery(
+      { ...identity, project: "deleted", tag: "deleted" },
+      definitions,
+    ),
+  ).toEqual({ status: "open", text: "probe" });
+  const catalogWith = (
+    projects: readonly unknown[],
+    tags: readonly unknown[],
+  ) => {
+    const decoded = Schema.decodeUnknownSync(Reply)({
+      ...catalog(),
+      projects,
+      tags,
+    });
+    if (decoded._tag !== "tasks") throw new Error("Expected Task catalog");
+    return decoded;
+  };
+  for (const name of [" keep ", "keep\t", "﻿keep", " keep", " "])
+    expect(
+      taskSearchQuery(
+        { ...identity, project: null, tag: "padded" },
+        catalogWith(
+          [],
+          [{ id: "padded", profile_id: "work", name, open_task_count: 1 }],
+        ),
+      ),
+    ).toEqual({ status: "open", text: "probe" });
+  expect(
+    taskSearchQuery(
+      { ...identity, project: "padded-project" },
+      catalogWith(
+        [
+          {
+            id: "padded-project",
+            profile_id: "work",
+            name: " Small ",
+            created_at: task.created_at,
+            updated_at: task.created_at,
+            open_task_count: 1,
+          },
+        ],
+        definitions.tags,
+      ),
+    ),
+  ).toEqual({ project: " Small ", tag: "KEEP", status: "open", text: "probe" });
+});
+
+it("keeps the exit meaning in a deterministic refusal", () => {
+  const reply = errorReply({
+    code: "search_too_broad",
+    message: "Narrow the search.",
+    exit_code: 2,
+    exit_meaning: "validation or usage",
+  });
+  expect(reply.message).toBe(
+    "Narrow the search.\nerror 2 - validation or usage",
+  );
+  expect(
+    renderToStaticMarkup(
+      <SearchErrorMessage
+        kind="search_too_broad"
+        message={reply.message}
+        appliedText="rent"
+      />,
+    ),
+  ).toBe(
+    '<span class="whitespace-pre-line">Narrow the search.\nerror 2 - validation or usage</span><small class="search-error-context">Showing results for &quot;rent&quot;.</small>',
+  );
 });

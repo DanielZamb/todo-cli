@@ -137,7 +137,13 @@ with scratch_directory() as temporary:
             health = json.load(response)
             contract = re.search(r'CONTRACT_ID\s*=\s*"([a-f0-9]+)"', (root / 'packages/api/src/contract.ts').read_text())[1]
             assert health == {'service': 'todo-server', 'contract': contract, 'build': health['build']}
+        recovery_seed = os.environ.get('SEC_SEARCH_RECOVERY_SEED')
+        if not recovery_seed and not snapshots_only:
+            run(['bun', 'build', '--compile', str(root / '.agents/skills/verify-task-search/seed-recovery.ts'), '--outfile', str(scratch / 'search-recovery-seed')], 'compile-search-recovery-seed.log')
+            recovery_seed = str(scratch / 'search-recovery-seed')
         test_env = dict(env, TODO_DB=str(scratch / "scratch.db"), TODO_F10_CLI=str(scratch / "todo"), TODO_W06_SERVER=url, TODO_W06_RECEIPT=str(evidence / 'http-receipt.json'), TODO_W06_PROVISIONER=str(scratch / 'seed'), TODO_W06_SCRATCH=str(scratch))
+        if recovery_seed:
+            test_env['SEC_SEARCH_RECOVERY_SEED'] = recovery_seed
         if snapshots_only:
             test_env['TODO_F13_SNAPSHOTS'] = '1'
         build_path = Path(os.environ.get('TODO_SWIFT_BUILD_PATH', str(root / 'apps/macos/DerivedData/StateProof'))).resolve()

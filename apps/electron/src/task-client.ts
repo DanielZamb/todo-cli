@@ -1,6 +1,6 @@
-import { TodoApi } from "@todo/api";
+import { SearchTooBroadResponse, TodoApi } from "@todo/api";
 import { type PlanningView, seriesForTask, type TaskId } from "@todo/domain";
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
 import type { HttpClient } from "effect/http";
 import { HttpApiClient } from "effect/http-api";
 import { errorReply, exitDetail } from "./error-reply.ts";
@@ -30,7 +30,11 @@ export const taskRequest = (
   request: TaskRequest,
   draft = "",
 ): Effect.Effect<Reply, unknown, HttpClient.HttpClient> =>
-  Effect.gen(function* () {
+  Effect.gen(function* (): Effect.gen.Return<
+    Reply,
+    unknown,
+    HttpClient.HttpClient
+  > {
     switch (request._tag) {
       case "diagnostics":
         return {
@@ -113,7 +117,10 @@ export const taskRequest = (
         return {
           _tag: "task",
           task: yield* http.tasks.show({
-            params: { profile: request.profile, task: request.payload.task_id },
+            params: {
+              profile: request.profile,
+              task: request.payload.task_id,
+            },
           }),
         };
       }
@@ -378,4 +385,11 @@ export const taskRequest = (
           }),
         };
     }
-  });
+  }).pipe(
+    Effect.catchIf(Schema.is(SearchTooBroadResponse), (error) =>
+      Effect.succeed<Reply>({
+        ...errorReply(error),
+        code: error.code,
+      }),
+    ),
+  );

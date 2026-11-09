@@ -15,6 +15,26 @@ export type AppliedSearch = {
   catalog: TaskCatalog;
   appliedIdentity: SearchIdentity;
 };
+export function taskSearchQuery(
+  identity: SearchIdentity,
+  definitions: Pick<TaskCatalog, "projects" | "tags">,
+): TaskFilters {
+  const project =
+    identity.filters.project ??
+    definitions.projects.find((value) => value.id === identity.project)?.name;
+  const tagName = definitions.tags.find(
+    (value) => value.id === identity.tag,
+  )?.name;
+  const tag =
+    identity.filters.tag ??
+    (tagName !== undefined && tagName === tagName.trim() ? tagName : undefined);
+  return {
+    ...identity.filters,
+    ...(project === undefined ? {} : { project }),
+    ...(tag === undefined ? {} : { tag }),
+    text: identity.text,
+  };
+}
 export const identityKey = (identity: SearchIdentity) =>
   JSON.stringify({
     ...identity,

@@ -11,6 +11,7 @@ import {
   NotFound,
   ProfileNotFound,
   RequestDecoding,
+  SearchTooBroadResponse,
   TodoApi,
   TooManySignIns,
   Unauthorized,
@@ -520,9 +521,29 @@ export const serverLayer = (options: {
           list: ({ params, query }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
-              return yield* translate(
-                commands.list({ credential, profile: params.profile }, query),
-              );
+              return yield* commands
+                .list({ credential, profile: params.profile }, query)
+                .pipe(
+                  Effect.catch(
+                    (
+                      error,
+                    ): Effect.Effect<
+                      never,
+                      | Effect.Error<ReturnType<typeof translate>>
+                      | typeof SearchTooBroadResponse.Type
+                    > =>
+                      error._tag === "SearchTooBroad"
+                        ? Effect.fail(
+                            Schema.decodeUnknownSync(SearchTooBroadResponse)({
+                              ...exitStatus(2),
+                              generated_at: new Date().toISOString(),
+                              code: error.code,
+                              message: error.message,
+                            }),
+                          )
+                        : translate(Effect.fail(error)),
+                  ),
+                );
             }),
           show: ({ params }) =>
             Effect.gen(function* () {

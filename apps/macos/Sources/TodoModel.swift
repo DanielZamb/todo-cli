@@ -24,6 +24,7 @@ final class TodoModel {
     var profileDeletionError: String?
     var projects: [DiscoveryEntry] = []
     var tags: [DiscoveryEntry] = []
+    private static let tagNameEdges = CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "\u{FEFF}"))
     var planning: PlanningResult?
     var viewCounts: [String: Int] = [:]
     var profileName: String { profiles.first { $0.id == profile }?.name ?? "Profile" }
@@ -51,7 +52,7 @@ final class TodoModel {
     var searchText = ""
     var searchPhase = TaskSearchPhase.idle
     var appliedSearchSnapshot: TaskSearchSnapshot?
-    var searchError: String?
+    var searchError: TaskSearchFailure?
     @ObservationIgnored private var searchDebounce: Task<Void, Never>?
     var requestedIdentity: TaskSearchIdentity {
         .init(profile: profile, view: selectedView, filters: requestedTaskFilters, text: searchText, project: selectedProject, tag: selectedTag)
@@ -398,6 +399,12 @@ final class TodoModel {
             let decoded = try values.map(TaskSnapshot.decode)
             var query = identity.filters.query
             query.text = identity.text.isEmpty ? nil : identity.text
+            if query.project == nil { query.project = projects.first { $0.id == identity.project }?.name }
+            if query.tag == nil, let name = tags.first(where: { $0.id == identity.tag })?.name,
+               let first = name.unicodeScalars.first, let last = name.unicodeScalars.last,
+               !Self.tagNameEdges.contains(first), !Self.tagNameEdges.contains(last) {
+                query.tag = name
+            }
             let filteredResponse: [TaskSnapshot]
             if identity.filters.isEmpty && identity.text.isEmpty && identity.project == nil && identity.tag == nil {
                 filteredResponse = decoded
@@ -442,12 +449,15 @@ final class TodoModel {
         } catch {
             guard isCurrentCredential(credentialEpoch) else { return .superseded }
             guard canPublishSearch(run: run, request: request, identity: identity) else { return .superseded }
-            if taskFilters != identity.filters {
+            if let refusal = failure(error), refusal.code == "search_too_broad" {
+                requestedTaskFilters = taskFilters
+                taskLoadError = nil
+                searchError = .tooBroad(refusal.humanMessage, context: TaskSearchPresentation.appliedContext(appliedSearchSnapshot?.appliedIdentity.text))
+            } else if taskFilters != identity.filters {
                 requestedTaskFilters = taskFilters
                 taskLoadError = "Could not apply filters. Your previous filters are still active."
             } else if !identity.text.isEmpty || appliedSearchSnapshot?.appliedIdentity.text.isEmpty == false {
-                let applied = appliedSearchSnapshot?.appliedIdentity.text ?? ""
-                searchError = applied.isEmpty ? "Couldn't search. Showing tasks without search." : "Couldn't search. Showing results for \"\(applied)\"."
+                searchError = .transient("Couldn't search. \(TaskSearchPresentation.appliedContext(appliedSearchSnapshot?.appliedIdentity.text))")
             } else {
                 taskLoadError = describe(error, at: .taskLoad)
             }

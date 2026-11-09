@@ -89,7 +89,7 @@ Do not relax `AtomicCAS`, change a pin, or update hashes to obtain a pass.
 ## Check the model against the code
 
 The mapping was confirmed at commit
-`ed4e2423d696d0321bb0e19674bba1865bd2541d`.
+`f709549c30d7f76543b103f6d31b7c78d2840664`.
 [coverage.json](coverage.json) records exact source hashes and covered functions.
 The gate covers whole files conservatively, even when only one function matters.
 
@@ -191,3 +191,21 @@ unchanged source within these bounds. [REPORT.md](REPORT.md) records the run.
 At product commit `ed4e2423d696d0321bb0e19674bba1865bd2541d`, only `attachments.ts` changed among the covered files. Its URI validator accepts absolute URIs, including HTTP user information, and its new input and report schemas describe Attachment groups. The store transaction, before-value comparison, Version check, projection, event schemas and replay are byte-identical to the earlier mapping. The model already treats the whole resolved Task payload as content. URI locations therefore fit the same abstract content values without changing a transition or invariant.
 
 Batch groups and import adoption compose existing commands within the existing immediate transaction. The model still excludes command-input handoff and multiple operations in an outer transaction. The compiled CLI01 drive, import tests and Attachment verification cover those behaviors separately.
+
+## Limits mapping review
+
+The source gate failed against `ed4e2423`, which is not an ancestor of `main`. The drift in `store.ts`, `events.ts` and `attachments.ts` came from the input-limits and sign-in-lockout work already on `main`. `projection.ts`, `entities.ts` and `ids.ts` are byte-identical. The reviewed product commit is `main` at `f709549c30d7f76543b103f6d31b7c78d2840664`. Its covered files are byte-identical to `feat/task-search` at `c11f7ec9`.
+
+- `events.ts` adds the `resetPassphrase` auth action and the `sign_in_locked` and `sign_in_busy` auth rejection reasons. No Task event schema changed.
+- `recordRejection` now replaces an over-long `occurred_at` with the recording time. It stores a Task id longer than 200 units as null and bounds the received payload with `rejectedInputForHistory`. The model omits timestamps and rejection details from History entries. `RejectRecord` still inserts only `TaskAttemptRejected` in its own transaction, with no Task change.
+- `validate` gains Tag and Attachment list-limit checks. They read Series rows and resolved predecessors under the writer lock and throw `Rejection("validation")` before any write. `Resolve` already assumes other metadata and schema checks are valid, and a failure takes the existing rollback-then-reject path. The Series exclusion-date and Tag checks and the Move arrival checks are outside the model's scope.
+- `attachments.ts` adds input-side length limits and moves the link member into the stored `AttachmentLocation`. The stored `Attachment` and `validAttachmentLocation` are unchanged, so the one-HTTP-link fixture still fits.
+- The external reason passed to rejection recording is now capped at 64 units. The driver's reasons are short codes.
+
+No transition, invariant or fixture changed. The check exited 0 with 37,036 distinct states. `prove-sensitivity.ts` exited 0: both store breaks failed the enumeration, and the restored source passed. One earlier candidate run exited 1 when `kill-validated` exceeded its 15-second readiness timer at host load 41. A rerun on the same source exited 0.
+
+## Agent discovery mapping review
+
+The reviewed product is `36f9c56e200048aa2ca16186aaf713bea8d5454e`, after the final SEC base merge. Only `attachments.ts` differs from the covered SEC source at `f709549c`. It imports `TaskLookupDetails` and adds the exit pair and authorized Task context to `AttachManyRow.error`. The stored `Attachment`, `validAttachmentLocation`, Task events, transaction, validation, projection, Version, rejection recording, and replay functions are unchanged. These report fields do not change the modeled Task content or a transaction boundary.
+
+The one command passed on the merged source. Both real store mutations then failed their intended enumeration assertions, and the byte-restored source passed the same command. The model, invariants, fixtures, bounds, and exclusions are unchanged. [REPORT.md](REPORT.md) records the renewal receipts.
