@@ -39,7 +39,7 @@ struct ClientErrorNotice: View {
         if let failure = model.lookupError(at: position, text: text) {
             TaskLookupErrorNotice(model: model, failure: failure)
         } else {
-            Text(text).foregroundStyle(TodoColors.color("destructive")).fixedSize(horizontal: false, vertical: true)
+            Text(text).foregroundStyle(position == .discovery ? Color.primary : TodoColors.color("destructive")).fixedSize(horizontal: false, vertical: true)
         }
     }
 }

@@ -34,6 +34,7 @@ import TodoAPI
                 NSApplication.shared.appearance = appearance
                 for (name, dialog, phase) in states {
                     let model = TodoModel(configuration: .init(server: URL(string: "http://127.0.0.1:1")!, initialProfile: "work", vaultService: "unused-discovery-snapshot"))
+                    model.profiles = [.init(id: "work", name: "Work", open_task_count: 0, inbox_task_count: 0), .init(id: "personal", name: "Personal", open_task_count: 0, inbox_task_count: 0)]
                     model.signedIn = true
                     model.connection = phase == .offline ? .offline : .live
                     model.discovery.dialog = dialog

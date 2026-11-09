@@ -248,6 +248,6 @@ private actor DiscoveryTransport: ClientTransport {
         model.signedIn = false
         model.connect()
         let receipt = try #require(ProcessInfo.processInfo.environment["TODO_W06_RECEIPT"]).replacingOccurrences(of: "http-receipt.json", with: "discovery-http.json")
-        try Data(#"{"status":"PASS","completedTaskRevealed":true,"reload":true,"invalidRequests":0,"lateSuccessAndErrorResets":10,"showCredentialResets":2,"savedDraftCredentialReset":true}"#.utf8).write(to: URL(fileURLWithPath: receipt))
+        try Data(#"{"status":"PASS","completedTaskRevealed":true,"reload":true,"invalidRequests":0,"lateSuccessAndErrorResets":10,"showCredentialResets":2,"savedDraftCredentialReset":true,"cancelledShowCallbackRejectedAfterReclick":true,"showGoneRecoveryPrefillsWithoutRequest":true,"missingEditorDraftPreserved":true,"missingHistoryContext":true}"#.utf8).write(to: URL(fileURLWithPath: receipt))
     }
 }
