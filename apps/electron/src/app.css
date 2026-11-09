@@ -1133,6 +1133,11 @@ nav {
   padding-bottom: 8px;
   box-shadow: inset 0 -1px var(--border);
 }
+.import-row:has(> [data-slot="alert"]),
+.import-row:has(> .import-row-changes.import-rejected) {
+  height: auto;
+  min-height: 56px;
+}
 .import-row-heading {
   display: flex;
   align-items: baseline;
@@ -1172,6 +1177,8 @@ nav {
 }
 .import-row-changes.import-rejected {
   color: var(--destructive);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 .import-file-heading {
   display: flex;

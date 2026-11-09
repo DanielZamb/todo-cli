@@ -33,3 +33,7 @@ Missing paths have no Reveal control. Middle truncation keeps the basename.
 Compact bounds receipts require all three rows and their header inside the
 393×426 viewport, targets at least 32 px and no visible control crossing the opaque
 editor header. Rows use 16 px spacing and related name/path text uses 4 px.
+
+[Discovery report recovery](discovery.md#same-profile-show-and-report-row-recovery)
+checks real missing targets before Attachment batch Preview and retained
+structured details from the single-item attachMany adapter.
