@@ -167,3 +167,15 @@ behavioral counterexamples (12 or 13). Immutable real-matcher properties and all
 five matcher mutations passed at that same product source in `matcher-BddZka`.
 TLA+ source remained byte-identical. These local receipts do not replace either
 independent review seat.
+
+## V1 applied context renewal (2026-11-09)
+
+V1 product commit `064b2667` adds display text only. It changes no transition,
+publication guard, generation or identity. CLIENT-MAPPING.md records that review.
+Only the four changed guarded client-file hashes were renewed, after immutable
+matcher properties and all five behavioral mutations passed in `matcher-1eyrdt`.
+The full command then exited 0 in `check-LDjXLP`, with a fresh matcher sensitivity
+pass in `matcher-ogr9wb`. Both safety graphs, conditional liveness, expected
+broken controls, restoration and source-hash checks passed. TLA+ is unchanged.
+Client literal tests and the compiled drives check both applied-context lines;
+the finite model does not evaluate their display text or pixels.

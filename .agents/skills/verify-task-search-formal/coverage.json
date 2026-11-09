@@ -1,5 +1,5 @@
 {
-  "sourceCommit": "c240677ec3b381ca1411e955847f75d064600067",
+  "sourceCommit": "064b266753446b6bc36bc88d05da5acf0fb328fb",
   "status": "worker-reviewed-budget-yielding-and-client-error-mapping; independent-seats-pending",
   "files": [
     {
@@ -13,7 +13,7 @@
         "clearFilters",
         "changed/connection notice handlers"
       ],
-      "sha256": "711376d50d00f1a4f1c8699f97569a3e5c53278938735f3846ae6bb087a6db70"
+      "sha256": "614644df958d31a89a300a6243fc5ee4be557806db43f5ed080653141a5c03ee"
     },
     {
       "path": "apps/electron/src/task-search-results.ts",
@@ -54,7 +54,7 @@
         "followChanges",
         "applyTaskFilters"
       ],
-      "sha256": "3569a4f47b21627c002a8e4968d7a141ee519cc444537ef5218ede689afdfed8"
+      "sha256": "2dd3b94b7d41599192dade7626a5e274cd80e501d5aba1a7c4c28dbd072529d4"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -65,7 +65,7 @@
         "TaskSearchFailure",
         "TaskSearchPresentation"
       ],
-      "sha256": "36dccdc0159061c9ef38fcb1ada9c3a4f0e9d3c9b5e4050990a3c179bb714f38"
+      "sha256": "6742564f220867bce552b686b7efc9e8072d94df3aaa30fb512f1cec52019a00"
     },
     {
       "path": "apps/macos/Sources/AppViews.swift",
@@ -76,7 +76,7 @@
         "taskContent",
         "searchField"
       ],
-      "sha256": "889bcc376370a224728dcfba416256ad4b77f1be9ac7845a367f41e05d870f87"
+      "sha256": "cbd1ab46f108718e7bbf9e6a5f6faf64089d6656225686c9dd1ceb3ff9a931da"
     },
     {
       "path": "apps/macos/Sources/TaskSnapshot.swift",
@@ -158,7 +158,8 @@
     "formal": "4c8c6932; both seats complete; R1/reset amendment228e3485",
     "swift": "code76035210 + visual8fd49f25; integratedc19fd669; approved presentation alignment0d5b2198",
     "electron": "codedf13e2a8 + visuale8178e24; integratedbc288b30",
-    "security": "SEC-W1 local source review, literal client/core proofs, immutable real matcher properties and all five behavioral mutations passed at0a2eef1c in matcher-zwScvg. Covered source bytes unchanged at this product commit. Seat1 held for SEC-L1 to launch; seat2 coordinator."
+    "security": "SEC-W1 local source review, literal client/core proofs, immutable real matcher properties and all five behavioral mutations passed at0a2eef1c in matcher-zwScvg. Covered source bytes unchanged at this product commit. Seat1 held for SEC-L1 to launch; seat2 coordinator.",
+    "v1": "Reviewed display-only diff against CLIENT-MAPPING.md: shared applied-context helpers, unchanged refusal sentence, secondary context, no state transition/publication guard/generation/identity changes. Immutable matcher properties and all five behavioral mutations passed at064b2667 in matcher-1eyrdt before these four hashes were renewed. Seat1/visual review pending."
   },
   "productionMatcher": "Immutable real source with generated properties, behavioral mutations and byte restoration; final-tip command uses its explicit full SHA.",
   "recovery": "Transient errors offer Retry; search_too_broad hides Retry and retains text/snapshot. Current-Profile SSE op/reconnect remains available. Liveness is conditional on a later affordable successful response and a fair available recovery source.",
