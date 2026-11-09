@@ -1,10 +1,32 @@
-## Current status for F1 closure in progress
+# Unit F verification report
 
-Merged product remains `0f7a19488f15ec1f8d4c4dad14749de7720f17d0`. Seat 1 found a missing immediate guard on AtomicCAS's nested TypeScript child. The previous full default exit 0 establishes its recorded behavior, but does not establish the universal compiler-guard claim. The unchanged fake-child reproduction exits 1, with nested child 0 and its entry marker present; the direct wrapper returns 3 without entry. Preserved receipts: `docs/evidence/dag-formal/f1-closure-5PIxSP`. Corrected committed-source closure and renewed independent reviews are pending.
+## Current status
 
-The Prepared/unproven and DISK STOP sections below are superseded historical checkpoints; their original failures and counts remain unchanged. Final E/S runtime, native, fresh Claude discovery and independent review gates remain open.
+F1 implementation closure is complete at committed verifier source
+`0d9145443dc46ec4c6b75decee8be0b133d530ee`, branch `feat/task-dag-f-formal`.
+The complete default command and full locked F-worktree check both exited 0.
+Immutable product remains `0f7a19488f15ec1f8d4c4dad14749de7720f17d0`;
+actual CLI and HTTP health build is `0f7a1948`, contract
+`58c0026725f2d846fd4f80bd7cabaff73994d6603d04ed501c82cfa1fa6f1fe9`.
+This is implementation/proof delivery for renewed max seat 1 and coordinator
+review. It is not final F, client or whole-feature approval.
 
-# Unit F public continuation under G11 hold
+Current machine receipt: [f1-completion.json](/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f1-default-8vDMKq/f1-completion.json).
+Full counts, exact commands, cleanup paths and source-control results are in
+[completion.json](/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f1-default-8vDMKq/completion.json),
+[model-counts.tsv](/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f1-default-8vDMKq/model-counts.tsv) and
+[source-controls.tsv](/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f1-default-8vDMKq/source-controls.tsv).
+The documentation-only delivery SHA is written after commit to
+`/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f1-default-8vDMKq/f1-delivery.json` and both terminal notifications.
+
+The Prepared/unproven and DISK STOP sections below are superseded historical
+checkpoints. Their failed and stopped exits remain unchanged. The prior
+`71a29afc` behavioral default 0 remains valid for its recorded behavior;
+F1 invalidated its universal compiler-guard claim. The corrected guard proof
+is the current committed-source run below. Final E/S runtime mapping, native
+checks, fresh Claude discovery and renewed independent F reviews remain pending.
+
+## Historical e717 public continuation under G11 hold
 
 This is a partial implementation checkpoint. The unaffected public/replay subset
 passes at immutable B product source `e7170510a376b51eaf3525bb9933cb0dd588b233`.
@@ -1288,3 +1310,210 @@ No code comments or suppressions were added. The local no-comments audit used
 no child, as explicitly ordered. The delivery is documentation only; verifier
 code, model, pins and coverage bytes match the committed proof source. Review
 seats, fresh Claude discovery and final client/runtime mapping remain gates.
+
+
+## F1 nested compiler guard closure, 2026-11-09
+
+The initial reviewed delivery was `1d68458b87e787f087c4541646b3e8ff9fb38ea0`,
+with proof source `71a29afc764e2db32ed109c9314b1a8290460d46`.
+The preload guarded Bun.build but missed AtomicCAS's later bare
+`bun --bun node_modules/typescript/bin/tsc -p ...` child. The initial
+review's full default 0 therefore did not prove every compiler was guarded.
+The old claim in Cleanup, failed attempts and review handoff is corrected above.
+
+The original review report is now at
+`/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/seat1-initial-F1-20261109-b16e5cac/review.md`, SHA-256
+`08e0c6aaea02d6b21ea47395b549f84affbc1720d26e33edb625cf2cc6dd737e`.
+Its direct results/reproduction and the existing complete archive remain protected
+under `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/seat1-initial-F1-20261109-b16e5cac`.
+The coordinator verified the archive's 3,002 entries and archive SHA-256
+`76ea042e65856d869419cd54a1263928ffa81c4ab907de61b84a77ac0bf3219d`; F verified the direct report hash.
+No new execution depends on the removed original review worktree.
+
+### Before and after traces
+
+Before edits, F copied the review probe into owned evidence, changing only
+runner/evidence destinations. It ran against the unchanged verifier and exited 1:
+the nested fake compiler returned 0 and created its entry marker. The direct
+wrapper returned 3 and created no marker. No real compiler ran in that probe.
+The byte-preserved original probe, provenance, stdout, stderr, exit and result
+are under `docs/evidence/dag-formal/f1-closure-5PIxSP`.
+The same probe at committed source `0d9145443dc46ec4c6b75decee8be0b133d530ee`
+exited 0; both nested and direct cases returned 3 without entry markers.
+See `before.exit`, `before.stdout`, `after-committed.exit`,
+`after-committed.stdout` and their per-case result receipts there.
+
+F's compile-preload installs a PATH shim only in the AtomicCAS child and its
+descendants. The shim calls an absolute host Bun and F's guarded-runtime,
+then delegates to the original PATH-resolved executable with the original
+arguments and inherited stdio. The manifest records the actual delegate and
+shim hash. This avoids recursive shim execution. B's checker, pins, mapping
+and product source are unchanged; immutable source/import checks remain active.
+
+The committed default regression installs a synthetic stop after preload
+initialization. It proves nested child 3/no marker, direct 3/no marker,
+raw asserting parent 1 after child 3, and wrapped asserting parent 3 after
+that same raw parent 1. The outer wrapper rereads the shared stop latch after
+the parent exits. F's default then handles exit 3 as DISK STOP and starts no
+later stage. The regression result is 0, with all four expected refusal traces.
+It does not fill disk or count a compiler failure as product sensitivity.
+Receipt: `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/check-bTuPZy/nested-guard-cntoWH/summary.json`.
+
+A separate positive regression ran the real installed TypeScript compiler
+through the shim, with immediate canonical guard 0 and compiler 0. The real
+unchanged AtomicCAS command also completed its nested tsc with guard 0 and
+child 0. Its command is `bun --bun node_modules/typescript/bin/tsc -p`
+followed by the materialized AtomicCAS tsconfig path. The canonical guard time
+was `2026-11-09T16:14:27.136Z`; compiler entry was
+`2026-11-09T16:14:27.137Z`.
+The executable, full argv, immediate guard path and actual child exit are in
+`/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/conformance-OBzB92/runtime-command-17143-1794240868020.json`.
+
+### Complete committed-source rerun
+
+| Command | Actual exit | Evidence |
+| --- | --- | --- |
+| bun .agents/skills/verify-dag-formal/check.mjs | 0 | `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f1-default-8vDMKq/default.exit`, stdout and stderr |
+| VITEST_MAX_WORKERS=1 /usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check | 0 | `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f1-worktree-check-1KKiai/pnpm-check.exit`, stdout and stderr |
+| Original copied F1 probe before edits | 1, expected failing assertion | `f1-closure-5PIxSP/before.exit` |
+| Same probe at committed fix | 0 | `f1-closure-5PIxSP/after-committed.exit` |
+
+The default used no subset flags. All 36 library and 53 public/read source-control
+executions compiled successfully, failed the intended behavioral assertion with
+exit 1, restored source byte-for-byte and passed with exit 0. The final clean
+checks passed. All 317 materialized production input files across the two input
+sets match their original hashes after restoration. Public baseline and clean
+each completed 147 CLI/HTTP actions; B's literal 31-case input matrix also passed.
+The malformed Version-0/no-op boundaries now pass cleanly at merged product 0f7.
+
+The actual-source graph corpus used seed 260911: 4,165 directed graphs through
+four nodes, 572 DAGs, 140,660 status cases, 709,242 weight cases, 342,838 scalar
+reference cases, 2,304,885 cycle pairs and 30,624,590 assertions. Status and
+weight dimensions are separate, not a full Cartesian product. It also ran
+256 seeded DAGs through 40 nodes and a 103-edge loop. Independent replay passed
+93 cases and 186 beginning/checkpoint rebuilds, including 64 seeded graphs
+through 12 nodes. Concrete lifecycle/FK/migration integration passed 19 checks.
+
+The real-source read/public checks reran eight-field direct and encoded/public
+GraphNodes, strict root500 ancestors/descendants in a 1,000-Task chain, G4
+energy/unknown-last/topo ties, Ready-root inclusion and terminal exclusion,
+Mermaid typed identity and whole-Profile ordering before membership. Both
+1,000-chain fixtures were independently driven, with exact before/after bytes
+in `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/public-2WT9xJ/graph-response/result.json`. These are response-size
+observations, not latency, HTTP-before or total-query-time claims.
+The one-client HTTP credential-getter sequence observed sign-in/Profiles200,
+sign-out/Profiles401 with no bearer header, then re-sign-in/Profiles200.
+
+The unchanged finite model ran 25 positive configurations plus a clean recheck,
+all exit 0 and empty queues. Five intended model controls exited 12 on Acyclic,
+NoReopenUnderDone or AtomicGraphHistory; seven reachability witnesses exited 12
+on their intended predicates. The statuses/clean run had 64 initial states,
+32,816 generated, 19,784 distinct, depth 27 and queue 0. Default bounds remain
+three Tasks, one Profile, CLI/server, four statuses, Versions 1..4 and one
+operation per writer followed by bounded Revert. Separate four-Task degree-two,
+two-Profile and 15-Task single-add 13/14 configurations remain explicit.
+All configurations, states, depths, queues and counterexample outcomes are in
+model-counts.tsv. TLC remains tla2tools 1.7.4, SHA-256
+`936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88`,
+768 MiB, one worker, fp 0, seed 26 and 120-second per-configuration limits.
+No state constraint or silent truncation was added.
+AtomicCAS remains B-maintained, a separate finite one-Task/no-edge proof.
+
+The locked pnpm check covers this F worktree's existing repository tree, not a
+new integration-root check. It passed 298 domain, 46 CLI, 30 server and 32
+Electron tests, with the existing one Electron skip. It retained three lint
+warnings and 17 informational messages. VITEST_MAX_WORKERS=1 was set; original
+per-test deadlines were unchanged. No product/domain file was changed or added.
+
+### Guard and cleanup receipts
+
+The current default/check contain 153 flat canonical guard receipts plus six
+canonical guard receipts in the nested regression, all actual 0. The separate
+synthetic stop traces are expected refusals and are not counted as canonical
+low-disk observations. Per-command real nested compiler receipts establish the
+previously missing boundary; guard counts alone are not the proof.
+
+Pre-rerun inventory and the 16:20 follow-up inventory removed zero files and zero
+bytes. Only current/review baselines and a currently active mutant were present;
+the later inventory found zero .bun-build temporaries. Cited/ambiguous evidence
+and all manifests were retained. Exact inventories and available observations:
+`docs/evidence/dag-formal/f1-closure-5PIxSP/preflight-cleanup.json` and
+`cleanup-order-1620.json` in that directory.
+
+During the completed default and locked check, owned cleanup retired 136 new
+actual compiler/runtime copies, 12,057,877,504 logical bytes; one synthetic
+owned-copy fixture, 89,159,906 bytes; and 107 superseded own mutant binaries,
+9,651,631,990 bytes. Exact paths, hashes, ownership/open-file checks and actions
+are in `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f1-default-8vDMKq/cleanup.tsv` and linked per-artifact receipts.
+No cited evidence/source/provenance or protected e717/3cce/0f7 baseline was deleted.
+Observed free capacity was about 74.7 GB before the run, about 61.5 GB at the
+16:20 inventory and 59.536 GB after completion.
+APFS sharing and other activity prevent equating these observations with logical
+unlinks. L1's separate review archive/removal is excluded from F cleanup totals.
+
+Never signal a process this run did not start. Shared CUA/node_repl helpers are
+unowned regardless of cwd. Real open files require skipping a worktree removal
+and reporting it; cwd alone does not block removal. F's cleanup only inspects
+process/open-file state and retires proven owned artifacts; it signalled no
+unowned helper. Future archives keep text evidence, receipts, source/config
+inputs and provenance, omit rebuildable binaries/mutant/runtime copies, and
+record exclusions with hashes. The existing protected review archive is intact.
+
+Local no-comments/prose/structure audit used the explicit no-child exception:
+no added source comments, suppressions, product modules or B skill/pin changes.
+Coverage hashes remain `3f590f78a831490fc3e98e72d1931872b766cbc4a8a93b52bf6ceacefea38e48` and
+`5f9e3138453c51b2d371d236c3b01fcf061f0212b8afa01764a3b9872dd08986`. This proof covers finite model
+safety and the specified merged-B conformance only. It makes no unbounded,
+liveness, SQLite-engine, power-loss, native/safeStorage/restoration/Keychain or
+notification claim. Final E/S feature/runtime mapping, fresh Claude discovery
+and both renewed independent F review seats remain pending. L1 arranges reviews;
+F does not self-approve or merge.
+
+
+### Orders 28 and 29 and current binary inventory
+
+Standing orders 28 and 29 arrived during documentation handoff, after both full
+commands had completed. No compile batch was restarted. Before any future batch
+compiling more than five binaries, run `df -k /System/Volumes/Data`.
+Below 30 GB free, do not start it. Retire only proven owned superseded artifacts,
+keep receipts, report observed free capacity to the coordinator and wait. The
+immediate canonical hard-floor guard before every compiler remains 10 GB.
+Order 28's process-ownership and text-only future archive rules apply as stated
+above; no shared helper may be signalled, regardless of cwd.
+
+The immediate inventory covered own .scratch/bin and docs/evidence executable
+binary copies without following symlinks. It was sent to both L1 and coordinator.
+Counts and logical bytes at that observation:
+
+| Category | Files | Logical bytes |
+| --- | ---: | ---: |
+| Active/current proof baselines, drivers and compiler probes | 18 | 1,619,970,276 |
+| Historical immutable review baselines | 4 | 362,699,528 |
+| Other compiled drivers/server/CLI in cited or ambiguous historical evidence | 166 | 14,910,965,492 |
+| Historical completed mutant copies, conservatively retained | 2 | 178,749,124 |
+| Compiler/runtime temporaries | 0 | 0 |
+| Total executable binary copies | 190 | 17,072,384,420 |
+
+The two historical mutant copies are conformance-8GOtar/mutant-bfs-lifo and
+conformance-GDiQ1u/mutant-kahn-degrees. They are not current-run leftovers;
+citation/ownership ambiguity prevents deletion. Every mutant in this completed
+F1 rerun was retired after its behavioral control and exact clean restoration.
+Compressed archives are separate, 994,298,712 logical bytes, including the
+protected existing L1 review archive. Per-file logical sizes count hard-linked
+names separately. Observed filesystem Available was 57,086,968 KiB,
+58,457,055,232 bytes. No file was removed by the inventory. Complete paths,
+category reasons, inode/device fields and df output are in
+`/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f1-closure-5PIxSP/inventory-order29.json`.
+
+Standing order 30 also requires a no-symlink find for owned hidden .*.bun-build
+files after each compile batch and while no compiler is running. Skip open
+files and unproven ownership; record safe removals with paths/hashes/bytes and
+separate capacity observations. Never signal unowned/shared helpers. The
+completed run has no active compiler, and the exact-pattern find receipt is
+under f1-closure-5PIxSP/order30-find-before.txt.
+
+The coordinator subsequently authorized retirement of superseded historical
+binaries cited by old receipts, after this documentation-only handoff commit.
+Text/source/config/receipts and the 18 current plus four review baselines stay
+protected. The post-handoff retirement manifest will be next to inventory-order29.json;
+this cleanup does not alter the committed proof source or successful proof receipts.

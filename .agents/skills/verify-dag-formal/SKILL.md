@@ -3,6 +3,8 @@ name: verify-dag-formal
 description: Check finite Task dependency safety and immutable production conformance. Use after graph, transaction, replay or public Dependency changes. The active immutable product pin is merged integration 0f7a1948; final client/runtime mapping remains pending.
 ---
 
+Current F1 implementation closure: full default and locked F-worktree check exited 0 at committed verifier 0d9145443dc46ec4c6b75decee8be0b133d530ee, product 0f7a19488f15ec1f8d4c4dad14749de7720f17d0. The nested compiler shim, post-parent stop-latch propagation, fake-child refusal traces and real AtomicCAS tsc guard0/child0 are proven in /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f1-default-8vDMKq/f1-completion.json. All 36 library and 53 public controls and final clean passed. Renewed independent reviews, final E/S runtime and fresh Claude discovery remain pending.
+
 Historical merged-B behavioral checkpoint (F1 nested compiler guard gap; closure below): default one command exited 0 at F proof source 71a29afc764e2db32ed109c9314b1a8290460d46, product 0f7a19488f15ec1f8d4c4dad14749de7720f17d0. All 36 library and 53 public/read source-control executions passed sensitivity and exact clean restore. Receipt: /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/resume-default-nTbjKr/completion.json. F-worktree VITEST_MAX_WORKERS=1 pnpm check exited 0 with unchanged per-test deadlines; default-worker timing failures are retained. Final E/S runtime mapping, fresh Claude discovery and independent F review seats remain pending.
 
 # Verify Task dependency safety and production conformance
@@ -65,6 +67,18 @@ Authorization header; a 401 by itself is insufficient. The same client must then
 presence is observed through a real HTTP forwarding endpoint.
 
 ## Compile, disk and cleanup discipline
+
+Standing orders 28/29 also bind future runs. Before starting this full default
+or any batch compiling more than five binaries, run df -k /System/Volumes/Data.
+Under 30 GB, do not start the batch: retire only proven owned superseded
+artifacts while keeping receipts, report capacity to the coordinator and wait.
+The immediate per-compiler canonical guard still enforces the hard 10 GB floor.
+Never signal an unowned process or shared CUA/node_repl helper. Cwd alone does
+not block worktree removal; real open files require skipping removal and
+reporting. Future archives contain text/source/config/receipts and binary hash
+exclusion manifests, not rebuildable binaries/runtime copies. Existing archives
+remain protected. These orders arrived after the completed F1 proof; no batch
+was restarted.
 
 The owner's resume lifts the prior disk stop. The stopped exit 3 remains in
 its original receipt. compile-artifacts.mjs snapshots only owned directories
@@ -182,3 +196,10 @@ discovery and independent review seats remain pending.
 The relative .claude/skills/verify-dag-formal symlink resolves here. Use
 /maintain-formal-verification-skill when requesting a later mapping review;
 that maintenance skill is not installed by this work.
+
+Standing order 30 also requires a no-symlink find for owned hidden .*.bun-build
+files after each compile batch and while no compiler is running. Skip open
+files and unproven ownership; record safe removals with paths/hashes/bytes and
+separate capacity observations. Never signal unowned/shared helpers. The
+completed run has no active compiler, and the exact-pattern find receipt is
+under f1-closure-5PIxSP/order30-find-before.txt.
