@@ -44,7 +44,9 @@ The Task search matrix also checks literal query clauses, Unicode spans, blank
 text metadata, limits, stable order and exact-id command behavior. It is mapped
 in [verify-task-search](../verify-task-search/SKILL.md).
 The emitted OpenAPI parameter schemas must retain literal Status, Priority and
-Energy choices and date/minute patterns. `filter-parameters.json` records them.
+Energy choices, date/minute patterns, the literal hex-prefix pattern and its
+1/36 length bounds, and the 200-code-unit text limit. `filter-parameters.json`
+records them.
 
 For both desktop entry points, also run the existing
 [Electron](../verify-electron/SKILL.md) compiled host and

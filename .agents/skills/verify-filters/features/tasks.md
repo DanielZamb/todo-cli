@@ -20,6 +20,8 @@ Run the parent skill helper. Require every expected title array to match through
 both interfaces, all active CLI filters to be reported, and invalid values to
 fail with CLI exit 2 and HTTP 400. The scratch fixture includes unplanned,
 scheduled, dated, closed, unassigned and unrelated Tasks.
+The actual server's OpenAPI must publish prefix pattern `^[0-9A-Fa-f-]+$`,
+prefix length 1 through 36, and text maximum length 200.
 
 ## Gotchas
 

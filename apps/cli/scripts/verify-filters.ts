@@ -196,6 +196,8 @@ try {
                 schema: Schema.Struct({
                   enum: Schema.optionalKey(Schema.Array(Schema.String)),
                   pattern: Schema.optionalKey(Schema.String),
+                  minLength: Schema.optionalKey(Schema.Int),
+                  maxLength: Schema.optionalKey(Schema.Int),
                 }),
               }),
             ),
@@ -205,6 +207,14 @@ try {
     }),
   )(await request("/openapi.json"));
   const parameters = contract.paths["/profiles/{profile}/tasks"].get.parameters;
+  assert.deepEqual(
+    parameters.find((parameter) => parameter.name === "prefix")?.schema,
+    { minLength: 1, maxLength: 36, pattern: "^[0-9A-Fa-f-]+$" },
+  );
+  assert.deepEqual(
+    parameters.find((parameter) => parameter.name === "text")?.schema,
+    { maxLength: 200 },
+  );
   assert.deepEqual(
     parameters.find((parameter) => parameter.name === "status")?.schema.enum,
     ["open", "done", "cancelled", "snoozed", "closed"],

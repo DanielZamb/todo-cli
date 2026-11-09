@@ -1,5 +1,6 @@
 import { Schema } from "effect";
 import { type Project, type Tag, type Task, TaskPriority } from "./entities.ts";
+import { inputLimits } from "./limits.ts";
 import type { TaskRead } from "./task-read.ts";
 import { matchTaskSearch, parseTaskSearch } from "./task-search.ts";
 import { CalendarDate, type TaskTime } from "./time.ts";
@@ -15,7 +16,7 @@ const dateFilter = Schema.String.check(
 });
 export const TaskFilters = Schema.Struct({
   text: Schema.optionalKey(
-    Schema.String.check(Schema.isMaxLength(200)).annotate({
+    Schema.String.check(Schema.isMaxLength(inputLimits.searchText)).annotate({
       description:
         "Search title and description with word prefixes, typo tolerance, quoted phrases and exclusions. Blank text returns empty search_matches.",
     }),
@@ -24,7 +25,7 @@ export const TaskFilters = Schema.Struct({
     Schema.String.check(
       Schema.isMinLength(1),
       Schema.isMaxLength(36),
-      Schema.isPattern(/^[0-9a-f-]+$/iu),
+      Schema.isPattern(/^[0-9A-Fa-f-]+$/u),
     ).annotate({
       description:
         "Case-insensitive literal Task id prefix. Hex digits and hyphens only.",

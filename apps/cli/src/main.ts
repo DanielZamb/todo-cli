@@ -29,6 +29,7 @@ import {
   batchEditTasks,
   ClientReads,
   filterTaskRecords,
+  inputLimits,
   ProfileDeletionReport,
   ProfileSummary,
   parseQuickAdd,
@@ -673,7 +674,7 @@ const list = Command.make(
               2,
               "invalid_args",
               name === "text"
-                ? "--text must be at most 200 UTF-16 characters"
+                ? `--text must be at most ${inputLimits.searchText} UTF-16 code units`
                 : "--prefix must contain 1 to 36 hex digits or hyphens",
             ),
           );
