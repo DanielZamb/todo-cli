@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 export const rootResponsePlan = {
   status:
-    "pending amended G4/G11 source; lightest_next uses own energy, unknown last, then whole-Profile topo",
+    "merged G4/G11 fixture; lightest_next uses own energy, unknown last, then whole-Profile topo",
   nodes: 1000,
   requestedIndex: 500,
   allowedNodeKeys: [

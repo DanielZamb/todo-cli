@@ -93,6 +93,9 @@ async function build(
   const sourceHash = digest(
     JSON.stringify({
       commit: pin.commit,
+      compiler: Bun.version,
+      defines: { TODO_BUILD_ID: pin.commit.slice(0, 8) },
+      contract: pin.contract,
       inputs,
       ...(options.temporary ? { entry } : {}),
     }),
@@ -296,6 +299,7 @@ try {
       "compile-preload.mjs",
       "contract-properties.mjs",
       "response-mutants.mjs",
+      "client-mutants.mjs",
       "graph-response-properties.ts",
       "production-mutants.mjs",
       "public-properties.ts",
@@ -587,17 +591,18 @@ try {
       "Source bytes changed",
     );
   record("result", {
-    status: "diagnostic-pass",
+    status: mode === "all" ? "pass" : "diagnostic-pass",
     productCommit: pin.commit,
     commands: records,
     sensitivity,
     baseline: JSON.parse(baseline.stdout),
-    knownFailure:
-      "malformed CLI Version 0 usage boundary remains failing in default all mode",
-    graphResponse:
-      "paused for root-only amendment; not final public acceptance",
+    scope: "merged public/read conformance; final E/S runtime mapping and F review pending",
   });
-  console.log("PASS diagnostic public checkpoint: " + evidence);
+  console.log(
+    (mode === "all"
+      ? "PASS corrected public/read conformance checkpoint: "
+      : "PASS diagnostic public checkpoint: ") + evidence,
+  );
 } catch (error) {
   record("result", {
     status:

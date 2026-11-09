@@ -1,7 +1,7 @@
 {
-  "confirmedCommit": "3cceb41efc08b8cd835d5c883c3d370709865c3f",
+  "confirmedCommit": "0f7a19488f15ec1f8d4c4dad14749de7720f17d0",
   "source": "immutable git objects; current worktree product files are not candidates",
-  "scope": "Active CLI/read/replay mapping; G4 response ordering awaits amended committed source",
+  "scope": "Reviewed immutable merged product functions; full committed conformance execution required.",
   "modelBaselineCommit": "a91dcf8917e242bce6c0f3521a1b2727114d0ef7",
   "modelRefinement": "Revert expected Versions come from the original resolved event, not a fresh observation",
   "modelSha256": "54254524caf9a30e95bc1e12b01018eafc28ea88c4a211a46228eb137a802c48",
@@ -9,22 +9,37 @@
     {
       "path": "packages/domain/src/graph-model.ts",
       "sha256": "fa7c42485d9576e5e29dad921ad310008cf7cb2cb3a9aea425ee159d4395d6d0",
-      "functions": ["indexGraph", "dependencyState", "reachable"]
+      "functions": [
+        "indexGraph",
+        "dependencyState",
+        "reachable"
+      ]
     },
     {
       "path": "packages/domain/src/graph-order.ts",
       "sha256": "24c509a82fffad1c43176e1f307b296775702f2d3c182c04448c6edc561c3675",
-      "functions": ["compareGraphTasks", "TaskHeap", "topologicalOrder"]
+      "functions": [
+        "compareGraphTasks",
+        "TaskHeap",
+        "topologicalOrder"
+      ]
     },
     {
       "path": "packages/domain/src/graph-energy.ts",
       "sha256": "163f46423f38c733c4cf0a250231c0ee64a441177a2636e32c47a88e15656a68",
-      "functions": ["graphEnergy", "contains", "lightestNext"]
+      "functions": [
+        "graphEnergy",
+        "contains",
+        "lightestNext"
+      ]
     },
     {
       "path": "packages/domain/src/graph-queries.ts",
-      "sha256": "d372368bdd8f2b6c15b4c8abdc431a153781e405954788ccadcae03c54fbd39e",
-      "functions": ["graphShape", "queryGraph component/shape fields"]
+      "sha256": "402257e1773144a0570582ade9dca80efd25f265bac9f2de212b5ca626760213",
+      "functions": [
+        "graphShape",
+        "queryGraph component/shape fields"
+      ]
     },
     {
       "path": "packages/domain/src/dependency-rules.ts",
@@ -51,7 +66,9 @@
     {
       "path": "packages/domain/src/entities.ts",
       "sha256": "ee505f78a6434528dbfe5f072463ec77cd6823bab1781f3f656d01c77f2d52f9",
-      "functions": ["Task"]
+      "functions": [
+        "Task"
+      ]
     },
     {
       "path": "packages/domain/src/events.ts",
@@ -109,27 +126,40 @@
     {
       "path": "packages/domain/src/store/dependency-validation.ts",
       "sha256": "e73b9367e7aa93689a28e5e9e83fd53cac6dcbf949a6c50f0122ac28213ba0d5",
-      "functions": ["validateDependencies"]
+      "functions": [
+        "validateDependencies"
+      ]
     },
     {
       "path": "packages/domain/src/store/0007.ts",
       "sha256": "cf131218f8803d698d6429187546fa7be6b25010ec393bd652075a8a8c77976e",
-      "functions": ["dependencySchemaSql", "dependencyMigrationSql"]
+      "functions": [
+        "dependencySchemaSql",
+        "dependencyMigrationSql"
+      ]
     },
     {
       "path": "packages/domain/src/store/migration.ts",
       "sha256": "0080e2630e4c5b1cbe741e25285c2b360a559794ab224b3b6868422c37c4643d",
-      "functions": ["migrate"]
+      "functions": [
+        "migrate"
+      ]
     },
     {
       "path": "packages/domain/src/store/purge.ts",
       "sha256": "12d8f3861ed8dcc891704108318668a9ef63e0afaefe81bf388497ce32716465",
-      "functions": ["redactTaskHistory", "mentions"]
+      "functions": [
+        "redactTaskHistory",
+        "mentions"
+      ]
     },
     {
       "path": "packages/domain/src/auth/auth.ts",
       "sha256": "619020f5555ac7a8714abf3d61719a6de541a75eccbe57703ffb46654b50c61d",
-      "functions": ["Authentication.startSeries", "Authentication.append"]
+      "functions": [
+        "Authentication.startSeries",
+        "Authentication.append"
+      ]
     }
   ]
 }

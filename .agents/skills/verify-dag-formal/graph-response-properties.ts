@@ -685,6 +685,22 @@ try {
           observed.map((row) => [row.authorization, row.status]),
           [[null, 401]],
         );
+        phase = "re-sign-in";
+        const renewed = yield* http.signIn.signIn({
+          payload: { passphrase: "F root response passphrase" },
+        });
+        current = renewed.credential;
+        phase = "re-signed-in";
+        const again = yield* Effect.exit(http.reads.profiles());
+        property = "client-credential-refresh";
+        assert.ok(Exit.isSuccess(again));
+        same(
+          property,
+          telemetry
+            .filter((row) => row.phase === "re-signed-in" && row.path === "/profiles")
+            .map((row) => [row.authorization, row.status]),
+          [["current bearer", 200]],
+        );
       }).pipe(Effect.provide(FetchHttpClient.layer)),
     );
     same(

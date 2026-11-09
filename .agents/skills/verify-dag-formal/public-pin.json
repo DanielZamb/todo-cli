@@ -1,6 +1,6 @@
 {
-  "commit": "3cceb41efc08b8cd835d5c883c3d370709865c3f",
-  "scope": "Preparation only; last inspected 3cceb41e. Await exact merged integration SHA; leaf 6486 is not pinned.",
+  "commit": "0f7a19488f15ec1f8d4c4dad14749de7720f17d0",
+  "scope": "Immutable merged integration source, reviewed after both B seats and pnpm check0. Final client/runtime acceptance pending.",
   "scopes": [
     "packages/domain",
     "packages/api",
@@ -17,7 +17,9 @@
     "apps/macos/API/Sources/TodoAPI/openapi.json",
     "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift",
     "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Operations.swift",
-    "apps/macos/Tests/GeneratedContractTests.swift"
+    "apps/macos/Tests/GeneratedContractTests.swift",
+    "apps/electron/scripts/verify-auth-sequence.ts",
+    "apps/electron/scripts/write-host.ts"
   ],
   "manifests": [
     "package.json",
@@ -28,10 +30,7 @@
     "apps/server/package.json",
     "apps/electron/package.json"
   ],
-  "pendingCorrections": [
-    "await L1 exact merged integration SHA after B held closure and merge",
-    "G4 getter/read/client fixtures prepared but uncompiled and unproven"
-  ],
-  "contract": "825e73aec777703499d20a728dd93ba41d92c20a9f75f4beb9da82a170702dfc",
-  "awaitMergedIntegration": true
+  "pendingCorrections": [],
+  "contract": "58c0026725f2d846fd4f80bd7cabaff73994d6603d04ed501c82cfa1fa6f1fe9",
+  "awaitMergedIntegration": false
 }

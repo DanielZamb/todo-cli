@@ -81,6 +81,15 @@ export function verifyContractArtifacts(candidate, evidence) {
     /taskHttpClient\(server.origin,\s*\(\)\s*=>\s*credential\)/,
   );
   assert.match(taskClient, /taskHttpClient/);
+  const callers = [
+    "apps/electron/scripts/verify-auth-sequence.ts",
+    "apps/electron/scripts/verify-graph-contract.ts",
+    "apps/electron/scripts/write-host.ts",
+  ].map((path) => {
+    const bytes = readFileSync(join(candidate, path), "utf8");
+    assert.match(bytes, /taskHttpClient\([\s\S]*?\(\)\s*=>/);
+    return { path, sha256: digest(bytes), scope: "inspected getter caller" };
+  });
   const receipt = {
     status: "pass",
     scope:
@@ -90,6 +99,7 @@ export function verifyContractArtifacts(candidate, evidence) {
     factorySha256: digest(factory),
     mainSha256: digest(main),
     taskClientSha256: digest(taskClient),
+    callers,
   };
   writeFileSync(
     join(evidence, "contract-source-map.json"),

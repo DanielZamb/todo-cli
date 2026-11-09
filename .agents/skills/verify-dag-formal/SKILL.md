@@ -1,6 +1,6 @@
 ---
 name: verify-dag-formal
-description: Check finite Task dependency safety and immutable production conformance. Use after graph, transaction, replay or public Dependency changes. Full conformance is held for L1's exact merged integration SHA; G4/getter fixtures are prepared but unproven.
+description: Check finite Task dependency safety and immutable production conformance. Use after graph, transaction, replay or public Dependency changes. The active immutable product pin is merged integration 0f7a1948; final client/runtime mapping remains pending.
 ---
 
 # Verify Task dependency safety and production conformance
@@ -14,30 +14,30 @@ Followed create-formal-verification-skill. Read mapping.md, coverage.json,
 public-coverage.json, features/README.md and docs/decisions/task-dag/unit-f-report.md.
 Historical f140/e717 receipts retain their original candidates and proof bounds.
 
-## Current hold and source gates
+## Immutable merged source and command
 
-The owner requires the next full F proof at the exact merged integration SHA
-after B's held closure passes and B merges. Do not repin to leaf
-6486b347f611e118a0d60ead4ebe40ac77d86666. The last inspected input pin is
-3cceb41efc08b8cd835d5c883c3d370709865c3f. Its response-order and captured-credential
-issues are known incomplete. awaitMergedIntegration is true in both pins.
+The active product Git object is 0f7a19488f15ec1f8d4c4dad14749de7720f17d0,
+reviewed after both B seats passed the exact delivery and L1 merged it.
+Both pin files and coverage maps must agree. CLI/server builds embed 0f7a1948,
+with contract 58c0026725f2d846fd4f80bd7cabaff73994d6603d04ed501c82cfa1fa6f1fe9.
+The binary cache key includes the product pin, source bytes, compiler, build
+defines and contract. Actual health and --version must agree. A leaf or F HEAD
+binary cannot substitute for that merged identity.
 
 ```sh
 bun .agents/skills/verify-dag-formal/check.mjs
 ```
 
-The current default exits 2 with awaiting-merged-source before any compile.
-production-check.mjs and public-check.mjs also refuse compilation while that
-hold is set. This is not a proof pass. --model-only still runs the unchanged
-finite model and its controls, with no product compilation.
+The earlier default exit 2 was a preparation hold, not a product pass. Its
+receipt remains at merged-hold-YEGKoo. The hold is now cleared after function
+and hash review. Commit verifier inputs before the full proof, then report
+its actual result. Expanded response/client paths require actual execution;
+written assertions alone do not establish conformance. --model-only checks
+only the finite model. --full remains reserved for final feature gates.
 
-When L1 supplies the exact merged SHA, review the covered functions against the
-last inspected Git objects. Update both pins and both coverage mappings only
-after reviewing the actual changed code. Clear the hold after that review.
-Preserve e717 and 3cce evidence and review binaries. Do not switch checkouts.
-Commit the verifier before the final source-bound command, then commit the
-report separately. No final F approval or client acceptance is implied by a
-candidate conformance checkpoint.
+Preserve historical f140/e717/3cce evidence. Never switch checkouts or edit
+another worker's files. Final E/S runtime mapping, fresh Claude discovery and
+independent F review remain pending even when this checkpoint passes.
 
 ## Ordering and client references
 
@@ -53,14 +53,14 @@ closures. The prepared response fixture checks direct objects before encoding,
 encoded/public objects, the root500 1,000-chain in both directions, an unequal-
 energy/unknown fork, equal-energy topo ties, Mermaid identities and readGraph.
 Separate count-only instrumentation checks reachability calls, with no total
-query-time claim. These new response fixtures have not yet compiled or passed.
+query-time claim. The merged-source run must compile and execute these fixtures.
 
 The prepared portable-client test imports the production HttpApiClient factory
 without native Electron imports. It constructs one client signed out and passes
 a credential getter. Real HTTP forwarding records headers across sign-in,
 profiles, sign-out and another profiles request. The last request must carry no
-Authorization header; a 401 by itself is insufficient. The getter fixtures and
-controls remain uncompiled/unproven until the merged source arrives.
+Authorization header; a 401 by itself is insufficient. The same client must then re-sign-in and read Profiles successfully. Header
+presence is observed through a real HTTP forwarding endpoint.
 
 ## Compile, disk and cleanup discipline
 
@@ -94,7 +94,7 @@ loaded source outside them or installed node_modules fails the run. Manifests
 must match the installed tree and production dependency versions must match.
 Bun 1.4.4 is enforced. CLI/HTTP build and contract identities are checked.
 
-After the merged pin is reviewed, the default full path is intended to run:
+The default full path runs:
 
 1. The finite model and all original controls/reachability witnesses.
 2. The actual-source exhaustive/seeded algorithms and replay corpus, source
@@ -103,7 +103,7 @@ After the merged pin is reviewed, the default full path is intended to run:
    and portable-client predicates, real-source controls, exact restoration and
    fresh clean builds/reruns.
 
-The expanded full path is not yet proven. --full remains reserved for final
+Consult the report for the latest actual command result. --full remains reserved for final
 coverage and must not claim approval while final clients, discovery and review
 seats are pending. Diagnostic subsets are never a clean full-command pass.
 
@@ -144,7 +144,7 @@ relabel old f140 results with a new SHA.
 
 Ignored check-*, conformance-* and public-* directories retain source/config
 copies, tool and import hashes, corpus, actual exits, mutations, restoration and
-cleanup receipts. Current client/response draft files are explicitly unproven.
+cleanup receipts. Response and portable-client checks cover their recorded process runs only.
 Keep actual CLI bytes, compact re-encoding bytes and observed HTTP bytes separate.
 Do not relabel B's static size receipts as F execution or infer a time bound.
 

@@ -93,7 +93,7 @@ export default [
   {
     name: "graph-schema-strips-root-set",
     file: "packages/domain/src/graph-contract.ts",
-    from: "  ancestors: Schema.Array(TaskId),",
+    from: '  ancestors: Schema.Array(TaskId).annotate({\n    description:\n      "Strict ancestors of the requested Task in whole-Profile topological order.",\n  }),',
     to: "",
     driver: "graph-response",
     mode: "literals",

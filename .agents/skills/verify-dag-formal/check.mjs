@@ -77,6 +77,11 @@ try {
   const currentPin = JSON.parse(
     readFileSync(join(skill, "public-pin.json"), "utf8"),
   );
+  const productionPin = JSON.parse(
+    readFileSync(join(skill, "production-pin.json"), "utf8"),
+  );
+  assert.equal(currentPin.commit, productionPin.commit, "Product pins differ");
+  assert.equal(currentPin.awaitMergedIntegration, productionPin.awaitMergedIntegration);
   if (
     !process.argv.includes("--model-only") &&
     currentPin.awaitMergedIntegration
@@ -277,7 +282,7 @@ try {
     exitCode,
     scope: modelOnly
       ? "finite transaction model only"
-      : "finite model plus pinned production conformance; final public commands and clients pending",
+      : "finite model plus merged production/public/read conformance; final clients and independent review pending",
     results,
     production,
     publicConformance,
@@ -290,7 +295,7 @@ try {
     sourceMapping: coverage.confirmedCommit,
   });
   console.log(
-    `${modelOnly ? "MODEL CHECKPOINT PASS" : "CONFORMANCE CHECKPOINT PASS"}; final public commands and clients PENDING. Evidence: ${evidence}`,
+    `${modelOnly ? "MODEL CHECKPOINT PASS" : "CONFORMANCE CHECKPOINT PASS"}; final clients and independent review PENDING. Evidence: ${evidence}`,
   );
 } catch (error) {
   if (error instanceof DiskStop) exitCode = 3;

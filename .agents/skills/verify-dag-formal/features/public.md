@@ -1,3 +1,5 @@
+Current active pin: 0f7a19488f15ec1f8d4c4dad14749de7720f17d0. Functions and whole-file hashes were reviewed against immutable Git blobs. The next committed full run must establish actual merged-source conformance. G11 root ancestors/descendants use whole-Profile topo; lightest_next uses own energy, unknown last, then topo. Portable client auth uses a per-request getter and one client across sign-in, sign-out and re-sign-in. Native/main safeStorage/restoration/Keychain/notifications and final E/S mapping remain unproven. Historical sections below retain their candidate scope.
+
 Current status: full conformance is held for L1 exact merged integration SHA.
 The following earlier checkpoint remains candidate-specific. Corrected G4 next
 order is own energy, unknown last, then whole-Profile topo; the old all-three-topo

@@ -1,12 +1,8 @@
 {
-  "confirmedCommit": "3cceb41efc08b8cd835d5c883c3d370709865c3f",
-  "status": "Preparation checkpoint; await exact merged integration SHA after B held closure/merge",
+  "confirmedCommit": "0f7a19488f15ec1f8d4c4dad14749de7720f17d0",
+  "status": "merged-source proof in progress",
   "gateCommit": "ca142014",
-  "scope": "Last-inspected3cceb41e function mapping only; no merged-source or final response/client proof",
-  "knownFinding": {
-    "property": "root-next-energy-order",
-    "status": "3cceb41e topological root next order is superseded by corrected G4"
-  },
+  "scope": "Reviewed immutable merged product functions; full committed conformance execution required.",
   "modelSha256": "54254524caf9a30e95bc1e12b01018eafc28ea88c4a211a46228eb137a802c48",
   "unchangedCore": [
     {
@@ -44,17 +40,26 @@
     },
     {
       "path": "packages/domain/src/dependency-contract.ts",
-      "functions": ["DependRequest", "EdgeReport", "BatchEdgeReport"],
+      "functions": [
+        "DependRequest",
+        "EdgeReport",
+        "BatchEdgeReport"
+      ],
       "sha256": "6df25125f0da176569f97ca2e5974386bb7d09235b37995a046b279efe100026"
     },
     {
       "path": "packages/domain/src/task-filters.ts",
-      "functions": ["TaskFilters", "filterTaskRecords"],
+      "functions": [
+        "TaskFilters",
+        "filterTaskRecords"
+      ],
       "sha256": "237ab5686455b8768af9587af1a25d38e7535e1771ae23b7a0110a1a40e438d5"
     },
     {
       "path": "packages/domain/src/dependency-delete.ts",
-      "functions": ["dependencyFingerprint"],
+      "functions": [
+        "dependencyFingerprint"
+      ],
       "sha256": "a01a2bce5ce6faafa8dd0fa3d0cc6e23ffec48032a84d3fe7382120062738571"
     },
     {
@@ -69,27 +74,41 @@
     },
     {
       "path": "packages/domain/src/auth/auth.ts",
-      "functions": ["requireCredential", "mutate"],
+      "functions": [
+        "requireCredential",
+        "mutate"
+      ],
       "sha256": "619020f5555ac7a8714abf3d61719a6de541a75eccbe57703ffb46654b50c61d"
     },
     {
       "path": "packages/domain/src/import-dependencies.ts",
-      "functions": ["planImportDependencies"],
+      "functions": [
+        "planImportDependencies"
+      ],
       "sha256": "89ad5beaaea403b84d4b78de691e1133e21d4a14253746f133e84d6c8ae631a9"
     },
     {
       "path": "packages/domain/src/import-tasks.ts",
-      "functions": ["executeImport"],
+      "functions": [
+        "executeImport"
+      ],
       "sha256": "400a90406957e3afc6a88c7fdfdf3add2e8d7ac1e2aa0c814e7b01792e886b19"
     },
     {
       "path": "packages/domain/src/import.ts",
-      "functions": ["ImportRow", "ImportReport", "parseImportText"],
+      "functions": [
+        "ImportRow",
+        "ImportReport",
+        "parseImportText"
+      ],
       "sha256": "4101cc74fe6d3692222ac8b6ce9bfad52c519259a9e7f3303ab82673423e5e0b"
     },
     {
       "path": "packages/domain/src/presentation.ts",
-      "functions": ["encodeResponse", "renderError"],
+      "functions": [
+        "encodeResponse",
+        "renderError"
+      ],
       "sha256": "e820e759645b2151e7abbe2fb5f9fd47986e1fa04dcf2a87a93c950610ff0140"
     },
     {
@@ -106,37 +125,56 @@
     },
     {
       "path": "packages/domain/src/store/purge.ts",
-      "functions": ["redactTaskHistory"],
+      "functions": [
+        "redactTaskHistory"
+      ],
       "sha256": "12d8f3861ed8dcc891704108318668a9ef63e0afaefe81bf388497ce32716465"
     },
     {
       "path": "packages/domain/src/store/projection.ts",
-      "functions": ["changes", "applyChanges", "Snapshot"],
+      "functions": [
+        "changes",
+        "applyChanges",
+        "Snapshot"
+      ],
       "sha256": "7c82ea08bacbb1358a809dd7b3acac0092d78ad6e137b9645971fce486604544"
     },
     {
       "path": "packages/domain/src/store/dependencies.ts",
-      "functions": ["incidentRemoval", "applyDependencyVersions"],
+      "functions": [
+        "incidentRemoval",
+        "applyDependencyVersions"
+      ],
       "sha256": "b4e88ed38871bd93483a024b5ca45ba66c441b93f2aeec70ab60c8f97461f411"
     },
     {
       "path": "packages/domain/src/graph-model.ts",
-      "functions": ["indexGraph", "dependencyState"],
+      "functions": [
+        "indexGraph",
+        "dependencyState"
+      ],
       "sha256": "fa7c42485d9576e5e29dad921ad310008cf7cb2cb3a9aea425ee159d4395d6d0"
     },
     {
       "path": "packages/domain/src/graph-order.ts",
-      "functions": ["topologicalOrder"],
+      "functions": [
+        "topologicalOrder"
+      ],
       "sha256": "24c509a82fffad1c43176e1f307b296775702f2d3c182c04448c6edc561c3675"
     },
     {
       "path": "packages/domain/src/graph-energy.ts",
-      "functions": ["graphEnergy"],
+      "functions": [
+        "graphEnergy"
+      ],
       "sha256": "163f46423f38c733c4cf0a250231c0ee64a441177a2636e32c47a88e15656a68"
     },
     {
       "path": "packages/domain/src/dependency-rules.ts",
-      "functions": ["checkDependencyAddition", "checkDependencyStatuses"],
+      "functions": [
+        "checkDependencyAddition",
+        "checkDependencyStatuses"
+      ],
       "sha256": "74369b1acd741009d752f61b4986f190519421170c90d1d2cff33a36183fa26a"
     },
     {
@@ -170,82 +208,125 @@
     },
     {
       "path": "apps/cli/src/schema.ts",
-      "functions": ["registerCommandSchema"],
+      "functions": [
+        "registerCommandSchema"
+      ],
       "sha256": "e625c5d00fabacecf59b3a3f3c954391df16f5b3852131c80e175d83ad55b638"
     },
     {
       "path": "apps/cli/src/input.ts",
-      "functions": ["decodeInput"],
+      "functions": [
+        "decodeInput"
+      ],
       "sha256": "dcc3c99c7b723bbacf43548bbe9e9b3fdd1c9746a2580ae597b2fd04d992e1c6"
     },
     {
       "path": "packages/domain/src/graph-contract.ts",
-      "functions": ["GraphNode", "GraphReport"],
-      "sha256": "e01ebda801a4d7b3acf01695c5fe64ce66ccb5b8597eae876c46d0c44ca030df"
+      "functions": [
+        "GraphNode",
+        "GraphReport"
+      ],
+      "sha256": "6f9bf2f911ed240610d1f758b6fcfb1cc63fe2a3fc76ea7b3ac02a499770c7e5"
     },
     {
       "path": "packages/domain/src/graph-queries.ts",
-      "functions": ["queryGraph", "readGraph"],
-      "sha256": "d372368bdd8f2b6c15b4c8abdc431a153781e405954788ccadcae03c54fbd39e"
+      "functions": [
+        "queryGraph",
+        "readGraph"
+      ],
+      "sha256": "402257e1773144a0570582ade9dca80efd25f265bac9f2de212b5ca626760213"
     },
     {
       "path": "packages/domain/src/graph-mermaid.ts",
-      "functions": ["mermaidNodeIds", "graphMermaid"],
+      "functions": [
+        "mermaidNodeIds",
+        "graphMermaid"
+      ],
       "sha256": "2ed8c484956dd59c2e3f552043ce8657a4d6fe277fe08ab835066047658402cb"
     },
     {
       "path": "apps/electron/src/http-client.ts",
-      "functions": ["taskHttpClient"],
-      "sha256": "b16c5222908a09b06598853aa28416b3fe2a84145261f58f5d5d5c13a5d3ca8f"
+      "functions": [
+        "taskHttpClient"
+      ],
+      "sha256": "c32ca178690da09b9d2c738867c50e5462de84f05874bd6266e7a00b53599ef8"
     },
     {
       "path": "apps/electron/src/main.ts",
-      "functions": ["taskHttpClient caller"],
-      "sha256": "91010a6465419f9e06073126a5c9c89a0246cbfe9a987a315e975b178f191813"
+      "functions": [
+        "taskHttpClient caller"
+      ],
+      "sha256": "d8bd1908ecf5b646e6ac5e25e69327319c9e51bd824f92821eddd485e25cf2d4"
     },
     {
       "path": "apps/electron/src/task-client.ts",
-      "functions": ["taskHttpClient caller"],
+      "functions": [
+        "taskHttpClient caller"
+      ],
       "sha256": "b93392a77c932cf1e1c43bd3eca77518cc73153f62fa7e657c81ee16a44815ff"
     },
     {
       "path": "packages/api/openapi.json",
-      "functions": ["graph response schema"],
-      "sha256": "18b91a39863fcdd7d95b97d872ee67a171258cc17b5c09d1b4bd0c082b18e80f"
+      "functions": [
+        "graph response schema"
+      ],
+      "sha256": "19fcc2bc5758c1a2194cec0828ff9f8ac84bfa500df39df7dac47280f397f182"
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/openapi.json",
-      "functions": ["graph response schema"],
-      "sha256": "3f0a661f2467cc41b6d13b16ead6625d7367086fff6929dd0b1ce031ff799fa5"
+      "functions": [
+        "graph response schema"
+      ],
+      "sha256": "6503a7d601ab35bf1391e8c34b36e92a2e4016991d7b141b30eb0f37685a1073"
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Operations.swift",
-      "functions": ["graph response decoder"],
-      "sha256": "3ced6135461974986c7fdf5917d3d787e3295c959a8a5faa79c466af203b78e5"
+      "functions": [
+        "graph response decoder"
+      ],
+      "sha256": "a8bc93819d7d8457ebcf54a8a79bb29d541f596907c470a91d72b52179dde088"
     },
     {
       "path": "apps/macos/Tests/GeneratedContractTests.swift",
-      "functions": ["root-only graph contract decode"],
-      "sha256": "daa9045ad2257d61796680d9c5013b14d87c9e495eed0afd5ff3785bc7f31b3a"
+      "functions": [
+        "root-only graph contract decode"
+      ],
+      "sha256": "cceb7fad2dcae739079066730b94778a9a012407d25f517ffe64a6ac46dd8efb"
+    },
+    {
+      "path": "apps/electron/scripts/verify-auth-sequence.ts",
+      "sha256": "83310d92eb38da311f03ffc745b9e10ee26865775e4e4dfa0009f2d4e2dfe320",
+      "functions": [
+        "credential getter caller"
+      ]
+    },
+    {
+      "path": "apps/electron/scripts/write-host.ts",
+      "sha256": "4ae357b2245ee5b094e34a243373162fcc624fe73797360e429be12532e6df62",
+      "functions": [
+        "credential getter caller"
+      ]
+    },
+    {
+      "path": "packages/api/src/contract.ts",
+      "sha256": "ec1586a7ced8e452b03016380790365a9faab596f88959969e93975bf2b1de9b",
+      "functions": [
+        "contract identity"
+      ]
+    },
+    {
+      "path": "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift",
+      "sha256": "1f4890f46eadf964e70a8a177d678f723a28047b2a8e56abc6ea02ecf894c400",
+      "functions": [
+        "contract identity"
+      ]
     }
   ],
   "pending": [
-    "explicit corrected B candidate SHA and malformed CLI clean recheck",
-    "G11 root-only graph response and topological root sets",
-    "literal 1000-Task chain, exact node keys and actual before/after serialized bytes",
-    "Mermaid identity/readGraph and final schemas/OpenAPI/Swift conformance at corrected SHA",
-    "final clients, source mapping and both independent review seats",
-    "fresh Claude session discovery"
+    "final E/S feature/runtime mapping",
+    "fresh Claude discovery",
+    "independent final F review seats"
   ],
-  "knownFindings": [
-    {
-      "property": "root-next-energy-order",
-      "status": "3cceb41e topo ordering superseded by G4 own energy/unknown last/topo ties"
-    },
-    {
-      "property": "client-credential-refresh",
-      "status": "3cceb41e captures credential value; getter inside each request required"
-    }
-  ],
+  "knownFindings": [],
   "orderingAmendment": "ancestors/descendants whole-Profile topo; lightest_next own energy ascending, unknown last, whole-Profile topo ties"
 }
