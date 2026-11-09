@@ -1,6 +1,6 @@
 {
-  "commit": "c14371075593a4a163f15797c495ac821510a449",
-  "status": "sec-l1-reviewed-F1a-F1b; independent-seats-pending",
+  "commit": "f85aef6faf7d93be80feef930554206e09d61be3",
+  "status": "reviewed final merged immutable source; product36f9, integration81c, bound f85; final E seats pending",
   "normalization": "normalizeTaskSearch",
   "parsing": "parseTaskSearch",
   "matching": "matchTaskSearch",

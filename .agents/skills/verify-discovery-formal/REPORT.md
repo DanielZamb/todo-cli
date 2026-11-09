@@ -1,161 +1,222 @@
-# Discovery model-ready checkpoint
+# Final integrated formal mapping
 
-The bounded approved-contract model passes both exhaustive safety runs and all
-ten behavioral sensitivity checks. Production conformance remains unproven
-pending reviewed, integrated C/D immutable SHAs.
-No product or domain file is changed. Existing Task search mappings are intact.
+Both formal mappings name immutable merged candidate
+`f85aef6faf7d93be80feef930554206e09d61be3`. Product source is exactly reviewed
+`36f9c56e200048aa2ca16186aaf713bea8d5454e`; root integration
+`81cdef8ec257a8ca7e1cbfb1ab2b3ff3afcbbf14` adds only parent-owned AtomicCAS proof
+closure and one Electron verification literal. L1 updated the bound worktree.
+E did not merge/rebase, edit production/API/runtime policy, change dependencies
+or pins, add domain files, sign, launch native Todo, access Keychain or real Todo
+data, or launch children. No new visuals are produced.
 
-The one command is:
+Discovery source hashes advanced from the separate c488 checkpoint only after
+merged-source semantic review, current root regression receipts and fresh real
+Electron/Swift behavioral failures, byte restoration and clean reruns.
+TaskSearch's ONE semantic/source renewal followed merged matcher sensitivity.
+Final exact-proof-SHA executions are recorded under
+`docs/evidence/discovery-formal/final-locked-proof/commands.json` and its logs.
+Those actual receipts, followed by parent-owned same-SHA seats, determine final
+readiness. Earlier pre-freeze commands below retain their original execution
+HEAD. No producer's builtHead is relabeled as an integration or proof commit.
 
-```sh
-bun .agents/skills/verify-discovery-formal/check.ts
-```
+## Claims and actual checks
 
-TLA+ checks event ordering because a late authorized reply can become unsafe
-after its credential or dialog changes. B separately owns the real domain
-no-leak properties and single SQLite read snapshot. The model assumes each
-reply contains only rows authorized for its captured credential.
+SOURCE-MAPPING.md names actual discovery functions, awaits, epoch/identity
+checks, synchronous publication and UI callbacks. TaskSearch CLIENT-MAPPING.md
+reviews the complete search functions in the changed whole files. Loading maps
+to Requesting; Offline to ResponseError; Invalid issues no request. Directory
+auto-load follows Open. The CLI selector chooses a key; U5 dismisses the origin,
+prefills Lookup and waits for explicit Find. Neither changes modeled publication.
 
-The exact scope, equality abstraction, assumptions, events and maintenance
-obligations are in SKILL.md. SOURCE-MAPPING.md records the contract SHA and
-production mapping gate. No unbounded, liveness, native UI, Task matching or
-mechanical source refinement guarantee is claimed.
+Electron captures the current snapshot/source before Close, rechecks after
+preparation and after exact-id read, and validates the returned Task id/Profile.
+Its extra showGeneration guard is stricter than the model. Actual prepare is
+true and localStorage draft preservation replaces any Save/Discard alert.
+Same-navigation-key Show explicitly refreshes; changed navigation uses the
+normal guarded refresh. Both clear Applying filters and reveal the full-id Task
+without relying on SSE. Main and unsigned host independently guard Unauthorized
+Session side effects by captured credential and epoch; controller guards alone
+cannot establish this. Root's actual delayed-A401/new-B proof and current control
+are bound with their original source and process receipts.
 
-## Tool and graph
+Swift has ONE discovery/app-wide credentialEpoch and a per-attempt Show UUID.
+The actual false alert setters dismiss presentation without clearing the intent;
+queued Save/Discard capture their target. Explicit Cancel revokes the intent.
+Save/Discard awaits and the later exact-id read all recheck the captured intent.
+Origin-report dismissal yields, rechecks the epoch and opens an unsubmitted
+prefilled Lookup. Global handleAuthorization/expireSession require captured
+epochs; SSE Unauthorized and metadata/parse/History/Series/import invalidation
+are traced. RootView gates visible Task navigation on signedIn. Exact-id route
+correctness is a server-contract assumption, not a Swift response-id check.
+The rejected 281ec binding is not accepted. Native alert dispatch is unproven.
 
-TLA+ tools v1.7.4, TLC 2.19, jar SHA-256
-936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88.
-Java uses MemFPSet1, one worker, 2 GiB, fingerprint polynomial 17 and seed 1.
-The command checks the jar hash on every run.
+SEC preserves the search publication guards, snapshot pairing, input invalidation,
+filter rollback, resets and SSE recovery. Project/Tag forwarding narrows requests
+while preserving selected-id joins. Metadata is Profile-keyed in Electron and
+survives view reset; inferred Tag names must be representable without trimming.
+Refusal retains applied context and the shared newline error-2 pair. It hides
+Retry but keeps edit/Clear/SSE recovery. TaskSearch convergence is conditional
+on affordable later successful responses and a fair available recovery source.
+It is not arbitrary network or budget-refusal liveness.
 
-Generation colors are model values. GenerationSymmetry permutes only those
-four colors. All operations on colors are equality, membership and set
-operations, and every invariant is unchanged under a color permutation.
-No credential, dialog, prefix or Profile is permuted. No state constraint,
-depth cutoff or lifetime request bound removes a reachable event order.
-Counts are symmetry-reduced states. Generated successors include duplicates
-and stutters, not distinct edges. A successful queue must be exactly zero.
+| Claim class | Evidence and limit |
+| --- | --- |
+| Bounded model safety | Discovery.tla bytes/tool/bounds unchanged from approved 500cdc38. Both clean graphs exhaust the queue; ten intended invariant controls fail behaviorally. No unbounded or discovery liveness theorem. |
+| Manual source mapping | Actual C/D functions and synchronous publication reviewed on f85; whole-file hashes fail closed on drift. No mechanical TypeScript/Swift refinement. |
+| Server/domain properties | Root verify-discovery generated authorized projection, one read snapshot and compiled no-leak tests. These are separate from client TLC assumptions. Prefix-only discovery remains synchronous inside readSnapshot; SEC text yielding stays outside it. |
+| Real client regressions | Root final CLI/HTTP, renderer/report/stale401, Swift state/unsigned/design and corrected Electron search runs, with original SHA/exits retained. Done planning reveal, drafts, same-Profile refresh and human report recovery are outside the finite model. |
+| Real-code sensitivity | Fresh independent copied Electron7 and Swift4 controls below, each behavioral failure, restoration and clean rerun. Parser/compiler/hash-drift/timeout/resource failures never count. |
+| Generated matcher properties | Real immutable matcher source, bounded corpus/seed, five behavioral mutants and immediate clean property reruns. No unbounded Unicode/matcher-completeness proof. |
 
-## Development attempts
+Discovery.tla SHA-256 remains
+`76ae9ac6c338dd206deea6bb71194b11916b5f3e794949b6db665f4f33246e24`.
+The original approved safety/restored runs each generated 4,001,603 successors,
+found 381,738 distinct states, depth 29, queue 0. Bounds remain two credential
+scopes/dialog kinds/prefixes/source Profiles, at most two outstanding discovery
+plus Show replies, four equality colors, one retained callback and Show read.
+No lifetime request cutoff/fairness assumption is introduced. The final frozen
+command repeats this exact graph and all ten controls with actual receipts.
+Generated successors include duplicates/stutters, not distinct edges.
 
-The initial unsymmetrized run check-qHAOyn was stopped through its recorded
-Java PID 39433 after the graph grew. Java exited 143. It is incomplete proof.
-check-Y3jPf3 exited 255 because TLC symmetry requires model values instead of
-integer colors. That configuration error is not a sensitivity pass. Both
-attempts remain under ignored docs/evidence/discovery-formal.
-check-y61JEm was stopped through recorded PID 41560, Java exit 143, to count
-the pending Show exact-id read toward the two-outstanding-reply limit.
-It is incomplete proof. No invariant was weakened.
+## Fresh merged-source controls
 
-check-dpQt4p was stopped through recorded PID 43909, Java exit 143, before
-splitting the latest-generation mutant from the identity guard.
-check-6Ig24j was stopped through recorded PID 49121, Java exit 143, to use the
-four colors sufficient for every reserved-reference equality pattern.
-Neither attempt is a pass. The ignored attempt-census.json retains all results.
+`electron-rr9Ojq` exits 0 at f85. Its 26-test production controller/fixture suite
+passes clean. Each of seven mutants exits 1 at a named comparison, then all 26
+pass after EACH byte restoration: removed submit publication check, removed
+post-prepare check, removed post-read check, removed extra Show generation check,
+reversed exact-id equality, reversed exact-Profile equality and Close retaining
+state. Live source stays unchanged. Captured source is a regular git-archive
+copy with different inodes; only installed dependencies may be linked.
 
-## Repository check
+`swift-nT6h4U` exits 0 at f85. Baseline and final clean each run seven actual
+production discovery/report/auth tests. Each mutant exits 1 at the expected
+Swift Testing assertion; each affected clean rerun uses another fresh database
+and exits 0. Every source restores byte-for-byte. The only product-source
+substitution is the existing memory SessionVault. The proof-only manifest
+selects existing discovery/report/auth tests; TaskSearch semantic tests are not
+substituted for these checks. The copied U02 fixture keeps its 2100 dates.
 
-The initial pnpm check exited 1. Its existing CLI schema sweep timed out at
-60 seconds while the proof was running. Domain, server and Electron tests passed.
-The unchanged check will be repeated after model checking completes; no timeout
-or product code is changed. The initial receipts are pnpm-check.json and
-pnpm-check.log under docs/evidence/discovery-formal.
+| Swift source mutation | Actual assertion failures | Harm |
+| --- | ---: | --- |
+| canPublishDiscovery returns true | 28 | Old directory/lookup successes/errors publish after reset. |
+| Intent comparison ignores UUID | 3 | A cancelled callback acts after another Show for the same row. |
+| Dismissal clears showIntent | 17 | Queued Save/Discard lose authority before dispatch. |
+| isCurrentCredential ignores epoch | 3 | Old A401 clears B's credential and publishes an obsolete notice. |
 
-## Production gate
+All ten Swift calls retain full argv/stdout/stderr/actual exit and before/after
+hashes plus actual empty diff receipts for all THREE Package.resolved files.
+Every package call has --disable-automatic-resolution and --skip-update and
+runs through the shared swift-slot. There is no --show-bin-path, --skip-build,
+direct swiftc, Xcode, hosted XCTest or native Todo call by E. Readiness is 60 s.
+Every server PID is recorded, stopped by its own finalizer and its scratch HOME/
+database removed. Every call records an order-30 census with zero Bun temporaries.
 
-The user confirmed that C/D immutable source SHAs will arrive only after review
-and integration. This checkpoint must not renew production mappings. The new
-skill is proven as a model-only workflow. The formal skill creator's required
-real-code break, restoration and clean rerun remain pending C/D. A model mutant
-cannot stand in for that evidence. The unit adds no files under packages/domain.
+TaskSearch `matcher-wrLTPA` exits 0 before the single f85 coverage renewal.
+`check-4n4nBS` then exits 0: safety-full generates 16,355,233/finds 1,710,504/queue 0;
+three-request safety generates 10,791,549/finds 1,026,978/queue 0; conditional
+liveness/restored generate 202,987/find 24,186/queue 0. Four invariant controls
+exit 12 and two temporal controls exit 13 at their intended counterexamples.
+The command also checks current source hashes, strict types and real matcher
+properties. Five source mutants each fail the correct behavior assertion,
+restore bytes and rerun the corresponding clean property, then the full corpus
+passes. Seed/corpus/bounds and full actual stage counts remain in the TaskSearch
+reports. Both formal mappings name the same f85 candidate.
 
-## Completion and abstraction review
+## Merged provenance and historical receipts
 
-The model-ready interface is one command with pinned tooling, literal guard
-controls, complete queue receipts and restored checking. Its concepts follow
-requested identity, request generation and applied snapshot. The accepted Show
-handoff retains one source while clearing discovery, then rechecks credential
-provenance after the exact-id await. Mapping an actual client split across an
-await remains a review obligation. Extending coverage to C/D should reuse these
-steps and add source hashes, not create a second publication policy.
+carried-inputs.json binds current root results and fixed backend hashes. The
+input gate compares immutable trees, hashes every text receipt and fixed B9
+binary, and never reads a mutable build manifest. Root full-check-sec36f9 and
+all CLI/HTTP discovery/search, Electron discovery/report/stale401, Swift 110+21
+state, unsigned and 60+116 designs exited 0 at 36f9. The final corrected Electron
+TaskSearch drive exited 0 at 81c with unchanged product inputs and fresh scratch.
+Its initial missing-error-line assertion failure 1 and two wrapper setup failures 1
+remain failures. The actual UI's newline error 2 is required by A2 and verified.
+Root merge correctness seat1/coordinate glance are original root approvals;
+they are not final E seats. AtomicCAS 81c is parent-owned and untouched here.
 
-Completion is partial for the whole E unit until production mapping and
-real-code sensitivity exist. Usability, form and the core abstraction receive
-a code-level yes for this model-only checkpoint, subject to the actual command
-receipts below. No extra child or independent review is claimed. The local
-no-comments audit covers the new runner/model only; independent audit remains
-with the permitted seat-1 reviewer. Existing Task search invariants and hashes
-are unchanged.
+Only current fixed root B9 `{todo,todo-server,seed}` is consumed, source hash
+`b9ec2d8ebf6eed046577134dccdc4a4004a10d76a5409a44af4e2f8b62f19ced`, builtHead
+`36f9c56e200048aa2ca16186aaf713bea8d5454e`. Its CLI SHA is
+`ac059420e71fee7976ab0ecf4c1db73b1d6b644ed524f9819467014a1711d347`, server SHA
+`474608c247b3e91ada6ec62c84cdf43957e6dafa6688524af34bccfa837884a3`, seed SHA
+`cb17ccfa4489e644b4ab85b58f7350f19b6cce9a3e688be485b420dcc61163fa`.
+No producer/package is redundantly compiled. All current Swift sources, API,
+installed dependency copies and build files belong to E, not removed C/D trees
+or retired root Swift caches. Historical path strings in text are not binary
+or source dependencies.
 
-The earlier check-c6YVkm exhausted the clean graph and eight controls, then was
-stopped through recorded PID 58801, exit 143, during broken-show-source.
-Its Show observation accidentally constrained the broken action instead of
-recording the lost source. Parenthesizing the Boolean observation fixes that
-model error without changing the invariants. The isolated preflight then fails
-ShowIsAuthorized with exit 12 after Open, Submit, ResponseOK and Show. Its trace
-is under docs/evidence/discovery-formal/preflight-show-source. The complete
-corrected command is rerun from the beginning below.
+The discovery-only c488 checkpoint is commit b78283e1 and its check-WPcyyW,
+electron-mLJB07/swift-RTazaq/audit receipts. Its original C/D proofs, immutable
+500cdc38 model checkpoint and review verdicts remain in the verified run-store
+text archives. Historical canonical B e76674 and Attachment 7f846 labels use
+DIFFERENT algorithms. Neither is a current B9 hash or a new build. D's original
+notification abort, red 17-assertion alert result and auth setup failure remain
+failures; no notification sink was added. Earlier E harness failures
+{electron-otxDsv,electron-0XFTq5,electron-GKmj7B,swift-C7m9b7,swift-ygUiVT}
+retain their actual exits 1 and restored evidence. They are never sensitivity
+passes. The checkpoint report remains in Git history at b78283e1.
 
-## Completed model proof
+## Resource authorization and final handoff
 
-The command exits 0. Evidence is
+Initial f85 attempt swift-Zvw6WF compiled and passed its seven-test baseline
+with unchanged pins after an above 30 GiB preflight. Space fell below the floor
+during that step. E stopped new builds and set SOFT-DISK-HOLD; subsequent mutant
+and restoration wrappers exited3 without Swift. Source bytes were restored,
+but the whole attempt exits 1 and is not sensitivity. Root cleanup completed;
+E's fresh 30,572,004 KiB remained below 30 GiB, so E correctly retained the stop.
 
-```text
-/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery-e/docs/evidence/discovery-formal/check-4Y5igU
-```
+The coordinator then explicitly authorized an E-final-only order 29 exception:
+25GiB (26,214,400KiB) for remaining f85 Swift controls, final discovery command
+and frozen proof/check steps. Hard 10 GB disk-guard remains unchanged. Default 30 GiB
+is retained for unrelated/future threads. The wrapper requires an exact candidate
+flag AND this bound E worktree path. It prints the scoped exception in each
+receipt. Authorization/preflight are under final-order 29-exception. Only after
+that explicit resume plus fresh local preflight was the owned latch cleared.
+No global rule or production/runtime policy is weakened.
 
-Both clean runs exhaust the full stated bounds together: two credential scopes,
-two dialog kinds, two prefixes, two source Profiles, at most two outstanding
-replies total, four generation colors, one retained callback and one Show read.
-There is no lifetime request cutoff or fairness assumption. The complete
-safety graph has depth 29.
+The current f85 source/build cache is reused; adapter/manifest writes are now
+content-checked, avoiding an unnecessary cached-input rebuild. Prior closed
+E-only c488 caches were retired after lsof exit 1: 12,137 files/1,239,804,911 logical
+bytes, no skips/signals, receipt final-merged-retirement.json. Physical gains
+were smaller under APFS/concurrent writers. All raw text and source evidence
+remain. Order30 censuses after every control record 0 created/retired/remaining.
 
-| Stage | Exit | Generated successors | Distinct states | Final queue |
-| --- | --- | --- | --- | --- |
-| safety | 0 | 4001603 | 381738 | 0 |
-| broken-credential | 12 | 130 | 55 | 33 |
-| broken-dialog | 12 | 112 | 49 | 29 |
-| broken-latest | 12 | 650 | 285 | 196 |
-| broken-error | 12 | 115 | 48 | 28 |
-| broken-close-clear | 12 | 89 | 45 | 29 |
-| broken-signout-clear | 12 | 90 | 45 | 29 |
-| broken-edit-clear | 12 | 169 | 68 | 40 |
-| broken-show-guard | 12 | 517 | 202 | 133 |
-| broken-show-source | 12 | 174 | 73 | 45 |
-| broken-show-credential | 12 | 1706 | 609 | 394 |
-| restored | 0 | 4001603 | 381738 | 0 |
+Final frozen commands use fixed B9 overrides and
+`VITEST_MAX_WORKERS=1 /usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check`.
+Their final immutable proof SHA and actual exits are in final-locked-proof;
+no carried root check is relabeled as an execution at E's proof SHA. The final
+handoff reports source/pin cleanliness and owned-process cleanup, then stops.
+No push/PR/merge or child review is performed. Final same-SHA Solmax seat1 and
+coordinator seat2 are parent-owned.
 
-The negative runs stop at their intended behavioral violation, so their nonzero
-queues are expected counterexample receipts. They are not exhaustive passes.
-The restored run repeats the original model with every guard enabled.
+Completion is subject to those actual frozen receipts and independent seats.
+The one-command interfaces, provenance/snapshot/intent abstractions and behavior
+controls remain simple, usable and composable. No product defect or weakened
+invariant was needed. Local no-comments audit found no added narrative comments
+or suppressions; independent audit belongs to parent seat1. Native UI/alert
+activation, Keychain/persistence, OS clipboard, focus/glass/VoiceOver and native
+notification delivery remain unproven. No mechanical refinement, unbounded
+request/counter theorem or discovery liveness guarantee is claimed.
 
-| Broken guard | Violated property | Behavioral counterexample |
-| --- | --- | --- |
-| credential | CurrentCredentialProvenance | Open, Submit, same-scope CredentialChanged, then the old ResponseOK publishes. |
-| dialog | CurrentDialogProvenance | Open, Submit, Close, then the old ResponseOK publishes. |
-| latest | AppliedIsCurrent | Submit prefix a, edit to b and back to a, then the invalidated ResponseOK publishes. |
-| error | LatestPublication | Submit, Close, then the old ResponseError changes phase to Error. |
-| close-clear | ClosedIsEmpty | Publish rows, then Close leaves rows visible. |
-| signout-clear | SignedOutIsEmpty | Publish rows, then SignOut leaves rows visible. |
-| edit-clear | AppliedIsCurrent | Publish rows, then EditPrefix leaves the earlier result visible. |
-| show-guard | ShowIsAuthorized | Publish, edit the prefix, then an obsolete callback accepts Show. |
-| show-source | ShowIsAuthorized | Publish, then Show closes discovery but loses the captured source. |
-| show-credential | ShowIsAuthorized | Publish, Show, SignOut, then ShowResponseOK opens the old source. |
+## Final documentation-only closure
 
-The runner typecheck exits 0. The tracked model remains byte-identical through
-the controls. Its SHA-256 is
-76ae9ac6c338dd206deea6bb71194b11916b5f3e794949b6db665f4f33246e24.
-The approved contract is hash-checked at immutable commit
-7c9d3b7d3f9fd5d06cf8cc533ee42f1811230efa. This is model sensitivity; real client
-source mutation remains pending C/D. There is no covered production client SHA.
+At frozen proof commit c8584cef6b47a8efc1e6f9961639d7d10384963a, BOTH formal
+commands, the actual locked full check, doc links and product/OCC equivalence
+all exited 0. Exact receipts remain in final-frozen-checks. The full check
+passed 350 domain, 68 CLI, 31 server and 67 Electron tests with one held skip.
+The final documentation follow-up adds PREREQUISITES.md and its skill link to
+make external ignored metadata/B9/Swift dependency paths and optional reuse
+explicit for a cold caller. No executable, model, mapping hash, fixture or
+product input changes. Final-doc-checks records the changed-path allowlist and
+actual locked check/doc-link execution at that final documentation head. Formal
+results carry from c858 solely by byte-identical proof inputs; they are not
+relabeled as new executions. Fresh-session discovery remains parent-owned.
 
-The relative skill link and frontmatter checks pass. The local no-comments
-audit exits 0 with no comments, suppressions, deletions or refactor flags.
-Fresh Claude discovery and independent seat-1 audit remain unproven here.
-No files are added under packages/domain. No visual output is produced.
-
-The final repository check runs after this checkpoint commit, using binaries
-cached by product source hash in this worktree. Its actual command, immutable
-HEAD, exit and log are retained under docs/evidence/discovery-formal as
-pnpm-check-final.json, pnpm-check-final.log and binaries.json. The delivery
-message reports that result. All tracked additions are proof or skill files.
+The descriptive audit then corrected the remaining c488 TaskSearch HOLD label
+in coverage classification and marked the historical mapping statements in the
+past tense. Current regressions name root36f9/81c alongside the earlier C/D
+receipts. Source hashes, candidates, model, executable checks and fixtures are
+unchanged. The b29 documentation-head locked check and doc links also exited0
+in final-doc-checks. Replacement-head actual formal commands and locked check
+are recorded separately in final-locked-proof, without relabeling earlier runs.

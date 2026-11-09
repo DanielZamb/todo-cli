@@ -1,12 +1,228 @@
 {
-  "status": "approved-contract-model-only; production conformance unproven",
-  "contractCommit": "7c9d3b7d3f9fd5d06cf8cc533ee42f1811230efa",
+  "status": "final merged discovery mapping and independent real C/D controls passed; parent final exact-SHA seats pending",
+  "contractCommit": "f85aef6faf7d93be80feef930554206e09d61be3",
   "contract": {
     "path": "docs/decisions/agent-discovery-phase-0.md",
-    "sha256": "5a93634c3717713745470bfd299dc035e2f1563f6c3530cc23d1b234b29b8a42"
+    "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": null,
-  "productionFiles": [],
+  "productionSyncCommit": "f85aef6faf7d93be80feef930554206e09d61be3",
+  "productionFiles": [
+    {
+      "path": "apps/electron/src/discovery-state.ts",
+      "functions": [
+        "DiscoveryStateController.current",
+        "submit",
+        "retry",
+        "close",
+        "credentialChanged",
+        "editPrefix",
+        "offline",
+        "show"
+      ],
+      "sha256": "52b34b9887d0827b04ecb5838340e5f0cb6eb33266fce2bcf2fe4e841156d206",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/electron/src/discovery-dialog.tsx",
+      "functions": [
+        "DiscoveryDialog dismissal, form submission and Show dispatch"
+      ],
+      "sha256": "04242d5042a72860ff1cffd273d283b34a112fe2abffcf78d91c793df5d86dae",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/electron/src/renderer.tsx",
+      "functions": [
+        "openDiscovery",
+        "request discovery branches",
+        "endAuthentication",
+        "DiscoveryDialog show callbacks",
+        "draftForTask",
+        "same-key refresh and changed-navigation effect"
+      ],
+      "sha256": "cfe784fd328701e1ec78f19eeabc03899cd5058c2a1ade9f631946185af9cf83",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/electron/src/main.ts",
+      "functions": [
+        "IPC captured credential/generation and Unauthorized side effects"
+      ],
+      "sha256": "4205be3241282869a730b753618934bb9ad4eb38875ff0f19e92d1e5c14d38b8",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/electron/scripts/write-host.ts",
+      "functions": [
+        "unsigned IPC captured credential/generation and Unauthorized side effects"
+      ],
+      "sha256": "f282f321258d6968061a8588509067b6d58706f1de8d7f491bd36fb51c4b18e7",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/electron/src/task-client.ts",
+      "functions": [
+        "directory",
+        "lookup",
+        "showTask"
+      ],
+      "sha256": "d68195d2d032bc28efae95e9245b8ce3e39d3333fe452bdc67d50325ffb0def2",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/electron/src/protocol.ts",
+      "functions": [
+        "discovery Request/Reply decoders"
+      ],
+      "sha256": "934e10da89bb576db7b691c29d63a9ea78b2069013d9f74dcafb7ca1c0263555",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/electron/src/error-reply.ts",
+      "functions": [
+        "errorReply",
+        "exitDetail"
+      ],
+      "sha256": "9ca2afa2579d3516830038b304e4b77dd1b0892d00d1d6273d4d42f7afab3032",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/electron/src/task-lookup-status.tsx",
+      "functions": [
+        "TaskLookupStatus"
+      ],
+      "sha256": "e08b8ab874d22e5d04919780a38d51c82e4530e0cb16be3e2700b461aa432007",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/electron/src/import-dialog.tsx",
+      "functions": [
+        "structured recovery, generic exit pair and origin dismissal"
+      ],
+      "sha256": "997fd7cfa8c22db6a3b86957fd5cddd543c22100b8be8808e90fac96595bd0fa",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/electron/src/batch-edit.tsx",
+      "functions": [
+        "structured recovery and generic exit pair"
+      ],
+      "sha256": "4e76f1dd92a651689f0b43de5ed7852adf62fba472efee8b335a058aebeabd30",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/electron/src/attachment-batch.tsx",
+      "functions": [
+        "structured recovery and generic exit pair"
+      ],
+      "sha256": "605f9b332b7bc993d133ee809e042c089350e225ffa13759f252a6f9cc096c6d",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/macos/Sources/Discovery.swift",
+      "functions": [
+        "DiscoveryState.invalidate",
+        "credentialChanged",
+        "openDiscovery",
+        "requestDiscovery",
+        "canPublishDiscovery",
+        "closeDiscovery",
+        "editDiscoveryPrefix",
+        "discoveryWentOffline",
+        "showDiscoveryMatch",
+        "canShowDiscovery",
+        "applyDiscoveryShow"
+      ],
+      "sha256": "d4cb2548215a43da7589646195d4907e74731c3b2db8ad8c7f667b350a162b60",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/macos/Sources/TodoModel.swift",
+      "functions": [
+        "replaceCredential",
+        "signOut",
+        "restore",
+        "signIn",
+        "navigate",
+        "saveAndNavigate",
+        "discardAndNavigate",
+        "applyNavigation",
+        "dismissNavigationPrompt",
+        "cancelNavigation",
+        "isCurrentCredential",
+        "handleAuthorization",
+        "expireSession",
+        "followChanges Unauthorized",
+        "metadata/parse/History/Series/import invalidation"
+      ],
+      "sha256": "4bdc53b33e56a66a0a7b8e7dc5c37b65515f9cc9e65661b1a81a365a7798612f",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/macos/Sources/AppViews.swift",
+      "functions": [
+        "RootView authentication visibility",
+        "TaskListView sheet/alert binding",
+        "DraftNavigationActions target capture and explicit Cancel"
+      ],
+      "sha256": "0d2dd9d5eee717df7ace67df5546cd2ba5f79ea42cff29f1340694ca9c13fad6",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/macos/Sources/DiscoveryView.swift",
+      "functions": [
+        "DiscoveryView alert binding, submit, Close and Show dispatch"
+      ],
+      "sha256": "99d4fe04019a550269723afa21a2b47766242603ea8b393c14c33ce863a10de9",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/macos/Sources/ClientErrors.swift",
+      "functions": [
+        "findTaskAfterLookupError",
+        "TaskLookupErrorNotice",
+        "ServerErrorNotice"
+      ],
+      "sha256": "daa783cbaef15590f408665c79c7db986720aaf255ecfdd03be11f6247c5b712",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/macos/Sources/AttachmentModel.swift",
+      "functions": [
+        "changeAttachment captured epoch and publication"
+      ],
+      "sha256": "014232d99ade1c2178fb1ea8c2dbdf8935b8862ebad88af9865291cc2e0909fa",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/macos/Sources/BatchEdit.swift",
+      "functions": [
+        "reloadBatchEditTargets",
+        "applyBatchEdit"
+      ],
+      "sha256": "91693b636baeffda3d17128d573071d62932ee7d93fc7eb8b92db56e75693fef",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/macos/Sources/AttachmentBatch.swift",
+      "functions": [
+        "reloadAttachmentTargets",
+        "applyAttachmentBatch"
+      ],
+      "sha256": "acaa4385ca0b8b4566bdfaf747bf05f98d47c7d1f75a814379596c7c19d28dc8",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    }
+  ],
   "mapping": "SOURCE-MAPPING.md",
-  "pending": "Reviewed integrated C/D immutable source, semantic mapping, production regressions, real-code sensitivity and TaskSearch renewal"
+  "pending": "Parent-owned final same-SHA correctness/coordinator seats; final frozen commands recorded in final-locked-proof; native HOLD limitations remain.",
+  "candidateCommit": "f85aef6faf7d93be80feef930554206e09d61be3",
+  "classification": {
+    "model": "bounded safety only; Discovery.tla bytes unchanged from500cdc38",
+    "domain": "separate verify-discovery generated projection/snapshot properties, not model conclusions",
+    "regressions": "current root36f9/81c and earlier reviewed C75052/D205 regressions carried by immutable product-input equivalence; original SHA/exits retained",
+    "sensitivity": "Fresh f85 Electron7 and Swift4 intended behavioral failures, every byte restoration/clean rerun and final clean; own independent copies only",
+    "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
+    "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
+  },
+  "previousProductionSyncCommit": "c4882258d95bb8d8e80315d2f3d5f88fd5bd9901"
 }
