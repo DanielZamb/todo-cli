@@ -44,8 +44,9 @@ it("charges folded units and banded cells once per distinct field word", () => {
   expect({
     preparedUnits: work.preparedUnits,
     cells: work.damerauCells,
+    visits: work.clauseVisits,
     units: work.units,
-  }).toEqual({ preparedUnits: 16, cells: 13, units: 17.3 });
+  }).toEqual({ preparedUnits: 16, cells: 13, visits: 3, units: 17.6 });
 });
 it("has identical acceptance, refusal and totals cold, warm and uncached", () => {
   const values = ["abcde", "abxde abxde"];
@@ -56,7 +57,7 @@ it("has identical acceptance, refusal and totals cold, warm and uncached", () =>
     while (!step.done) step = steps.next();
     stored.set(value, step.value);
   }
-  for (const limit of [17.2, 17.3]) {
+  for (const limit of [17.5, 17.6]) {
     const outcomes = [];
     for (const mode of ["cold", "warm", "uncached"]) {
       const work = new TaskSearchWork(limit);
@@ -75,6 +76,7 @@ it("has identical acceptance, refusal and totals cold, warm and uncached", () =>
           result,
           preparedUnits: work.preparedUnits,
           cells: work.damerauCells,
+          visits: work.clauseVisits,
           units: work.units,
         });
       } catch (error) {
@@ -84,19 +86,21 @@ it("has identical acceptance, refusal and totals cold, warm and uncached", () =>
           work: error.work,
           preparedUnits: work.preparedUnits,
           cells: work.damerauCells,
+          visits: work.clauseVisits,
           units: work.units,
         });
       }
     }
     expect(outcomes[0]).toEqual(outcomes[1]);
     expect(outcomes[1]).toEqual(outcomes[2]);
-    if (limit === 17.2)
+    if (limit === 17.5)
       expect(outcomes[0]).toEqual({
         code: "search_too_broad",
-        work: 17.3,
+        work: 17.6,
         preparedUnits: 16,
         cells: 13,
-        units: 17.3,
+        visits: 3,
+        units: 17.6,
       });
     else expect("result" in (outcomes[0] ?? {})).toBe(true);
   }
@@ -117,7 +121,7 @@ it("does not charge Tasks rejected by non-text filters", () => {
       { work, prepare: fieldWords },
     ),
   ).toEqual([]);
-  expect(work.units).toBe(5);
+  expect(work.units).toBe(5.1);
 });
 it("is deterministic across seeded refusal inputs and stored preparation", () => {
   let seed = 0x1b0d6e7;
@@ -157,7 +161,12 @@ it("is deterministic across seeded refusal inputs and stored preparation", () =>
           { work, prepare },
         );
         observed.add("pass");
-        return { result, units: work.units, cells: work.damerauCells };
+        return {
+          result,
+          units: work.units,
+          cells: work.damerauCells,
+          visits: work.clauseVisits,
+        };
       } catch (error) {
         if (!(error instanceof SearchTooBroad)) throw error;
         observed.add("search_too_broad");
@@ -165,6 +174,7 @@ it("is deterministic across seeded refusal inputs and stored preparation", () =>
           code: error.code,
           units: error.work,
           cells: work.damerauCells,
+          visits: work.clauseVisits,
         };
       }
     };
@@ -172,4 +182,30 @@ it("is deterministic across seeded refusal inputs and stored preparation", () =>
     expect(run(false)).toEqual(run(false));
   }
   expect([...observed].sort()).toEqual(["pass", "search_too_broad"]);
+});
+
+it("counts visits through every word and phrase sign and phrase kind", () => {
+  for (const [text, accepted, cells, units] of [
+    ["abcde", true, 13, 17.6],
+    ["-abxde", false, 0, 16.3],
+    ["-absent", true, 0, 16.3],
+    ['"abxde abxde"', true, 0, 16.3],
+    ['"abxde abx', true, 0, 16.3],
+    ['-"abxde abxde"', false, 0, 16.3],
+    ['-"abxde abx', false, 0, 16.3],
+  ] as const) {
+    const work = new TaskSearchWork();
+    const result = matchTaskSearch(
+      { title: "abcde", description: "abxde abxde" },
+      parseTaskSearch(text),
+      { work, prepare: fieldWords },
+    );
+    expect(result.accepted).toBe(accepted);
+    expect({
+      prepared: work.preparedUnits,
+      cells: work.damerauCells,
+      visits: work.clauseVisits,
+      units: work.units,
+    }).toEqual({ prepared: 16, cells, visits: 3, units });
+  }
 });

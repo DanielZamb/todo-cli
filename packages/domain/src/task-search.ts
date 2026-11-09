@@ -31,7 +31,7 @@ export type PreparedField = {
 };
 export const taskSearchWorkLimits = {
   budget: 5_000_000,
-  damerauCellWeight: { numerator: 1, denominator: 10 },
+  evaluationWeight: { numerator: 1, denominator: 10 },
 } as const;
 export const searchTooBroadMessage =
   "Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.";
@@ -45,16 +45,24 @@ export class SearchTooBroad extends Error {
 export class TaskSearchWork {
   preparedUnits = 0;
   damerauCells = 0;
+  clauseVisits = 0;
   constructor(readonly limit: number = taskSearchWorkLimits.budget) {}
   get units() {
-    const { numerator, denominator } = taskSearchWorkLimits.damerauCellWeight;
+    const { numerator, denominator } = taskSearchWorkLimits.evaluationWeight;
     return (
-      (this.preparedUnits * denominator + this.damerauCells * numerator) /
+      (this.preparedUnits * denominator +
+        (this.damerauCells + this.clauseVisits) * numerator) /
       denominator
     );
   }
   check() {
-    if (this.units > this.limit) throw new SearchTooBroad(this.units);
+    const { numerator, denominator } = taskSearchWorkLimits.evaluationWeight;
+    if (
+      this.preparedUnits * denominator +
+        (this.damerauCells + this.clauseVisits) * numerator >
+      this.limit * denominator
+    )
+      throw new SearchTooBroad(this.units);
   }
 }
 export type TaskSearchExecution = {
@@ -251,6 +259,7 @@ function* clauseMatches(
     );
     const evaluated = new Map<string, boolean>();
     for (const [index, word] of field.entries()) {
+      work.clauseVisits++;
       let accepted = evaluated.get(word.text);
       if (accepted === undefined) {
         accepted = accepts(word.text);
@@ -263,6 +272,7 @@ function* clauseMatches(
     const phrase = clause.kind === "exclude-phrase" ? clause.phrase : clause;
     const matchedWords = new Set<Word>();
     for (let start = 0; start < field.length; start++) {
+      work.clauseVisits++;
       const candidate = field.slice(start, start + phrase.words.length);
       if (
         candidate.length === phrase.words.length &&
