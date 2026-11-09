@@ -23,5 +23,6 @@ Read `compiled/task-search.json` for exact same-response spans.
 ## Gotchas
 
 Closed phrases cannot cross fields. Exclusions never highlight and allow no
-typos. Text limits count UTF-16 code units. Metadata must not enter stored
+typos. `-foo.bar` excludes the word prefixes foo and bar separately.
+Text limits count UTF-16 code units. Metadata must not enter stored
 Tasks, History or exports without an explicit text query.

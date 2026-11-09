@@ -912,7 +912,7 @@ const searchClientFrame = (id, name, X, swift) => frame(id, name, X, 9600, 3000,
   transition("success", "request", "showing", "response(generation) ok [latest + identity current]\n/ atomically publish rows, spans, appliedIdentity", { from: "bottom", to: "bottom", via: [[x + 2410, y + 1120], [x + 360, y + 1120]], labelAt: [x + 1350, y + 1090] });
   transition("newinput", "request", "debounce", "input change or Esc [enabled] / invalidate; debounce", { from: "top", to: "top", via: [[x + 2420, y + 640], [x + 1390, y + 640]], labelAt: [x + 1900, y + 610] });
   transition("failed", "request", "error", "response(generation) error [latest]\n/ keep text; retain snapshot; report", { fromT: 0.95, toT: 0.95, labelAt: [x + 2550, y + 1260], color: c.warning });
-  transition("retry", "error", "request", "Retry [enabled] / issue requestedIdentity", { from: "left", to: "left", via: [[x + 1840, y + 1520], [x + 1840, y + 850]], labelAt: [x + 1840, y + 1370] });
+  transition("retry", "error", "request", "Retry or SSE reconnect or SSE op\n[Error + current Profile] / issue requestedIdentity", { from: "left", to: "left", via: [[x + 1840, y + 1520], [x + 1840, y + 850]], labelAt: [x + 1840, y + 1370] });
   transition("errorinput", "error", "debounce", "input change or Esc [enabled]\n/ keep snapshot; invalidate; debounce", { from: "bottom", to: "left", toT: 0.8, via: [[x + 2400, y + 1650], [x + 2400, y + 1740], [x + 1000, y + 1740], [x + 1000, y + 896]], labelAt: [x + 1570, y + 1710] });
   transition("repeatinput", "debounce", "debounce", "input change [enabled] / replace timer", { from: "bottom", to: "bottom", fromT: 0.15, toT: 0.85, via: [[x + 1173, y + 1030], [x + 1607, y + 1030]], labelAt: [x + 1390, y + 470] });
   transition("obsolete", "request", "request", "response(generation) ok/error\n[obsolete] / discard", { from: "bottom", to: "bottom", fromT: 0.15, toT: 0.75, via: [[x + 2193, y + 1030], [x + 2565, y + 1030]], labelAt: [x + 2520, y + 1020] });
@@ -929,10 +929,10 @@ const searchClientFrame = (id, name, X, swift) => frame(id, name, X, 9600, 3000,
   marker(`${p}-step3`, x + 1890, y + 2020, 3);
   notes(`${p}-notes`, x + 50, y + 2390, 2670, "Numbered state-machine notes", [
     "Input, Esc and dialog Apply invalidate immediately. Profile/view switch from every phase uses Idle reset. Cmd+F focuses in every phase.",
-    "Error -> Requesting on Retry; Error -> Debouncing on input. Obsolete success/error is a discard self-transition in every phase, never a state.",
+    "Error -> Requesting on Retry or current-Profile SSE reconnect/op. Error -> Debouncing on input. Obsolete replies discard in every phase.",
     "Freshness is orthogonal to request phase: stale iff identities differ. Rows and spans share appliedIdentity. SSE refresh can run while Current.",
-    "Filters entry, dialog Cancel/Apply and filterApplyError rollback are drawn in the separate Filters frame for this client.",
-    "Under weak fairness of debounce and successful replies, stable input eventually reaches Current. Safety and liveness are reported separately.",
+    "Recovery hooks: Electron connection(connected) / changed; Swift followChanges ready / operation. Filters are drawn in their separate frame.",
+    "Weak-fair debounce, successful replies and recovery from Error imply convergence after input stops. Recovery is Retry or SSE reconnect/op; no retry timer.",
   ]);
 });
 searchClientFrame("search-electron", "Electron search", 0, false);
@@ -957,7 +957,7 @@ const searchFilterFrame = (id, name, X, swift) => frame(id, name, X, 12600, 2600
   marker(`${id}-step2`, x + 30, y + 850, 2);
   notes(`${id}-notes`, x + 50, y + 1360, 2480, "Numbered sub-machine notes", [
     "Entry copies dialog fields. Clear all changes dialog draft fields only. Apply composes the toolbar's current text; Cancel leaves applied fields alone.",
-    "The parent search phase owns stale, Retry, Profile/view resets and obsolete-response discard. Filter failure preserves today's dialog rollback behavior.",
+    "The parent search phase owns stale, Retry/SSE recovery, Profile/view resets and obsolete-response discard. Filter failure preserves today's dialog rollback behavior.",
   ]);
 });
 searchFilterFrame("search-electron-filters", "Electron", 0, false);
