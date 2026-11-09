@@ -7,6 +7,7 @@ import {
   renderList,
   renderReview,
 } from "../src/presentation.ts";
+import { shellFlag } from "../src/task-lookup-error.ts";
 
 it("maps actual exit codes independently of error names and rejects mismatched meanings", () => {
   for (const [exit, meaning] of [
@@ -58,4 +59,11 @@ it("requires list tasks without changing empty export or review JSON", () => {
     generated_at: "2030-01-01T00:00:00Z",
     filters: { review: "daily" },
   });
+});
+
+it("quotes recovery flags and preserves dash-leading values as flag values", () => {
+  expect(shellFlag("--prefix", "--")).toBe("--prefix=--");
+  expect(shellFlag("--profile", "owner's tasks")).toBe(
+    "--profile 'owner'\\''s tasks'",
+  );
 });

@@ -15,6 +15,9 @@ export const shellQuote = (value: string) =>
     ? value
     : `'${value.replaceAll("'", "'\\''")}'`;
 
+export const shellFlag = (flag: string, value: string) =>
+  `${flag}${value.startsWith("--") ? "=" : " "}${shellQuote(value)}`;
+
 export const taskLookupError = Effect.fn(function* (
   store: OperationStore,
   request: AccessRequest,
@@ -33,12 +36,12 @@ function authorizedTaskLookupError(
 ): { message: string; details?: typeof TaskLookupDetails.Type } {
   if (!profile) return { message: "Task not found" };
   const validPrefix = Schema.is(TaskIdPrefix)(task_id);
-  const prefix = validPrefix ? shellQuote(task_id) : "'<hex-prefix>'";
+  const prefix = shellFlag("--prefix", validPrefix ? task_id : "<hex-prefix>");
   const routes =
     transport === "http"
       ? ` HTTP: GET /profiles/${encodeURIComponent(profile.id)}/tasks?prefix=${validPrefix ? encodeURIComponent(task_id) : "<hex-prefix>"} or GET /tasks/lookup?prefix=${validPrefix ? encodeURIComponent(task_id) : "<hex-prefix>"}.`
       : "";
-  const recovery = `Run todo list --profile ${shellQuote(profile.id)} --prefix ${prefix} for this Profile, or todo lookup --prefix ${prefix} across Profiles this credential can access.${routes} Mutations need the full Task id and an explicit Profile.`;
+  const recovery = `Run todo list ${shellFlag("--profile", profile.id)} ${prefix} for this Profile, or todo lookup ${prefix} across Profiles this credential can access.${routes} Mutations need the full Task id and an explicit Profile.`;
   return {
     message: `Task not found in Profile ${profile.name} (${profile.id}). ${recovery}`,
     details: {
