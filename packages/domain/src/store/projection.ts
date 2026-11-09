@@ -99,6 +99,7 @@ export function putTask(db: Database, task: Task) {
   const tags = new Set<string>(task.tags);
   const existingTags = storedTags.filter((row) => row.tag_id !== null);
   const sameTags =
+    tags.size === task.tags.length &&
     storedTags.length > 0 &&
     existingTags.length === tags.size &&
     existingTags.every((row) => row.tag_id !== null && tags.has(row.tag_id));
@@ -107,7 +108,7 @@ export function putTask(db: Database, task: Task) {
   ).run(task.id, JSON.stringify(task));
   if (!sameTags) {
     db.query("DELETE FROM task_tags WHERE task_id=?").run(task.id);
-    for (const tag of tags)
+    for (const tag of task.tags)
       db.query("INSERT INTO task_tags VALUES (?,?)").run(task.id, tag);
   }
   db.query(

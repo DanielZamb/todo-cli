@@ -33,9 +33,7 @@ export const proveTagLinks = (path: string) =>
       );
       assert.deepEqual(
         rows(),
-        [...new Set(task.tags)]
-          .sort()
-          .map((tag_id) => ({ task_id: task.id, tag_id })),
+        [...task.tags].sort().map((tag_id) => ({ task_id: task.id, tag_id })),
       );
       assert.deepEqual(
         sql.query("SELECT version FROM task_versions WHERE id=?").get(task.id),
@@ -136,6 +134,36 @@ export const proveTagLinks = (path: string) =>
         ["rejected", "validation"],
       );
       inspect(current);
+      yield* store.auth.setupOwner("scratch Tag proof passphrase");
+      const session = yield* store.auth.signIn("scratch Tag proof passphrase");
+      const beforeDuplicate = yield* store.history();
+      const authenticatedRejection = yield* store.auth.append({
+        credential: session.credential,
+        profile,
+        event: duplicate,
+      });
+      assert.deepEqual(
+        [authenticatedRejection.outcome, authenticatedRejection.reason],
+        ["rejected", "validation"],
+      );
+      inspect(current);
+      const afterDuplicate = yield* store.history();
+      assert.deepEqual(afterDuplicate.slice(0, -1), beforeDuplicate);
+      assert.equal(afterDuplicate.length, beforeDuplicate.length + 1);
+      assert.deepEqual(
+        afterDuplicate.slice(-1).map((entry) => ({
+          kind: entry.event.kind,
+          outcome: entry.outcome,
+          reason: entry.reason,
+        })),
+        [
+          {
+            kind: "TaskAttemptRejected",
+            outcome: "rejected",
+            reason: "validation",
+          },
+        ],
+      );
       const personal = Schema.decodeUnknownSync(ProfileId)("personal");
       yield* store.putProfile({ ...work, id: personal, name: "Personal" });
       const destination = Schema.decodeUnknownSync(Task)({
@@ -215,7 +243,6 @@ export function proveProjectionTagSets() {
     for (const tags of [
       ["tag-a", "tag-b", "tag-c"],
       ["tag-c", "tag-a", "tag-b"],
-      ["tag-c", "tag-a", "tag-a", "tag-b"],
     ]) {
       current = Schema.decodeUnknownSync(Task)({
         ...current,
@@ -232,7 +259,7 @@ export function proveProjectionTagSets() {
       );
     }
     db.exec("DROP TRIGGER refuse_relink");
-    for (const tags of [["tag-d", "tag-d"], [], [], ["tag-a", "tag-a"]]) {
+    for (const tags of [["tag-d"], [], [], ["tag-a"]]) {
       current = Schema.decodeUnknownSync(Task)({
         ...current,
         tags,
@@ -244,16 +271,58 @@ export function proveProjectionTagSets() {
       });
       assert.deepEqual(
         db.query("SELECT tag_id FROM task_tags ORDER BY tag_id").all(),
-        [...new Set(tags)].sort().map((tag_id) => ({ tag_id })),
+        [...tags].sort().map((tag_id) => ({ tag_id })),
+      );
+    }
+    for (const tags of [
+      ["tag-a", "tag-a"],
+      ["tag-d", "tag-d"],
+    ]) {
+      const proposed = Schema.decodeUnknownSync(Task)({
+        ...current,
+        tags,
+        row_version: current.row_version + 1,
+      });
+      assert.throws(
+        () => db.transaction(() => putTask(db, proposed)).immediate(),
+        {
+          message:
+            "UNIQUE constraint failed: task_tags.task_id, task_tags.tag_id",
+        },
+      );
+      assert.deepEqual(db.query("SELECT payload FROM tasks").get(), {
+        payload: JSON.stringify(current),
+      });
+      assert.deepEqual(
+        db.query("SELECT tag_id FROM task_tags ORDER BY tag_id").all(),
+        [{ tag_id: "tag-a" }],
+      );
+      assert.deepEqual(
+        db
+          .query("SELECT version FROM task_versions WHERE id='projection'")
+          .get(),
+        { version: current.row_version },
       );
     }
     const fresh = linkedTask("new-duplicates", ["tag-a", "tag-a"]);
-    putTask(db, fresh);
+    assert.throws(() => db.transaction(() => putTask(db, fresh)).immediate(), {
+      message: "UNIQUE constraint failed: task_tags.task_id, task_tags.tag_id",
+    });
+    assert.equal(
+      db.query("SELECT payload FROM tasks WHERE id='new-duplicates'").get(),
+      null,
+    );
     assert.deepEqual(
       db
         .query("SELECT tag_id FROM task_tags WHERE task_id='new-duplicates'")
         .all(),
-      [{ tag_id: "tag-a" }],
+      [],
+    );
+    assert.equal(
+      db
+        .query("SELECT version FROM task_versions WHERE id='new-duplicates'")
+        .get(),
+      null,
     );
   } finally {
     db.close();

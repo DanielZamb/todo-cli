@@ -9,7 +9,7 @@ import {
 } from "../scripts/tag-link-proof.ts";
 
 it(
-  "keeps equal Tag sets without relinking and collapses duplicate ids while preserving payloads",
+  "keeps equal Tag sets without relinking and rejects duplicate ids without writes",
   proveProjectionTagSets,
 );
 it.effect(

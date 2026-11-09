@@ -2,8 +2,10 @@
 
 `putTask` reads the current Task's links with a LEFT JOIN. No matching Task
 produces no rows; an existing Task with no Tags produces one null row. Compare
-the non-null ids to a Set of the proposed ids. Equal sets skip link DELETE and
-INSERT. Task payload and `task_versions` writes always run. Rebuild starts with
+the non-null ids to a Set of the proposed ids. Equal sets with no duplicate
+proposed ids skip link DELETE and INSERT. All other writes use the original
+array-based INSERT loop, so duplicate ids fail the primary-key constraint and
+the surrounding transaction rolls back. Task payload and `task_versions` writes always run. Rebuild starts with
 no Tasks, so the first replayed state always populates links. A new Tag name
 needs a new id and takes the replacement branch.
 
@@ -13,8 +15,10 @@ are `packages/domain/test/tag-links.test.ts`. Assertions compare complete Task
 payloads, Version rows and sorted links against the issued fixtures after each
 edit, full replay, checkpoint replay, Move, Delete and Revert. Forced SQL failure
 at the Version write covers both equal and changed link branches. Guard checks
-try INSERT, UPDATE and DELETE. Projection-only duplicate cases preserve payload
-arrays and collapse link ids. Public append's duplicate rejection is unchanged.
+try INSERT, UPDATE and DELETE. Projection-only duplicate cases require the
+original constraint error and unchanged payload, Version and links, including
+new Tasks. Authenticated append requires the unchanged validation rejection
+and no committed History entry. Public append's duplicate rejection is unchanged.
 
 For repeatable measurements, compile `packages/domain/scripts/measure-tag-links.ts`
 and pass `<absolute-evidence.json> <absolute-compiled-todo> <source-hash>`.
