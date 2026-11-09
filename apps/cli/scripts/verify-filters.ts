@@ -9,6 +9,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -18,6 +19,7 @@ import { CONTRACT_ID } from "@todo/api";
 import { Task } from "@todo/domain";
 import { TaskResponse, TasksResponse } from "@todo/domain/presentation";
 import { Schema } from "effect";
+import { verifyTaskSearch } from "./verify-task-search.ts";
 
 const root = resolve(import.meta.dirname, "../../..");
 const evidence = process.argv[2];
@@ -36,13 +38,16 @@ const env = {
   TODO_PORT: "0",
   TODO_ATTACHMENT_ROOT: join(scratch, "attachments"),
 };
+const cliBinary = process.env.TODO_CLI_BINARY ?? join(scratch, "todo");
+const serverBinary = process.env.TODO_SERVER_BINARY ?? join(scratch, "server");
+assert.ok(isAbsolute(cliBinary) && isAbsolute(serverBinary));
 const actions: unknown[] = [];
 let server: ChildProcess | undefined;
 let serverLog = "";
 let passed = false;
 const cli = (args: string[], input?: string, expected = 0): unknown => {
   const result = spawnSync(
-    join(scratch, "todo"),
+    cliBinary,
     ["--profile", "work", "--format", "json", ...args],
     { cwd: root, env, input, encoding: "utf8", timeout: 20000 },
   );
@@ -59,23 +64,31 @@ const cli = (args: string[], input?: string, expected = 0): unknown => {
 try {
   execFileSync("sh", ["scripts/disk-guard.sh"], { cwd: root });
   const builds: [string, string][] = [
-    ["apps/cli/src/main.ts", "todo"],
-    ["apps/server/src/main.ts", "server"],
+    ...(process.env.TODO_CLI_BINARY
+      ? []
+      : [["apps/cli/src/main.ts", cliBinary] satisfies [string, string]]),
+    ...(process.env.TODO_SERVER_BINARY
+      ? []
+      : [["apps/server/src/main.ts", serverBinary] satisfies [string, string]]),
   ];
   for (const [source, name] of builds) {
     const output = execFileSync(
       "bun",
-      [
-        "build",
-        "--compile",
-        join(root, source),
-        "--outfile",
-        join(scratch, name),
-      ],
+      ["build", "--compile", join(root, source), "--outfile", name],
       { cwd: scratch, encoding: "utf8" },
     );
     actions.push({ compile: source, output });
   }
+  actions.push({
+    binaries: { cli: cliBinary, server: serverBinary },
+    ...(process.env.TODO_BINARY_PROVENANCE
+      ? {
+          provenance: JSON.parse(
+            readFileSync(process.env.TODO_BINARY_PROVENANCE, "utf8"),
+          ),
+        }
+      : {}),
+  });
   cli(["init", "--password-stdin"], "scratch filter passphrase\n");
   cli(["login", "--password-stdin"], "scratch filter passphrase\n");
   cli([
@@ -101,7 +114,7 @@ try {
   writeFileSync(file, "Plan,Price\nEnterprise,100\n");
   cli(["attach", pricing.id, file, "--label", "Rate review"]);
   cli(["add", "Task without estimate", "--project", "Operations"]);
-  server = spawn(join(scratch, "server"), [], {
+  server = spawn(serverBinary, [], {
     cwd: scratch,
     env,
     stdio: ["ignore", "pipe", "pipe"],
@@ -112,7 +125,7 @@ try {
   server.stderr?.on("data", (chunk) => {
     serverLog += chunk;
   });
-  const until = Date.now() + 20000;
+  const until = Date.now() + 60000;
   while (!/Listening on (http:\/\/127\.0\.0\.1:\d+)/.test(serverLog)) {
     assert.ok(Date.now() < until, `Server readiness: ${serverLog}`);
     await new Promise((done) => setTimeout(done, 40));
@@ -148,11 +161,14 @@ try {
     assert.equal(response.status, expected, text);
     return body;
   };
-  assert.deepEqual(await request("/health"), {
-    service: "todo-server",
-    contract: CONTRACT_ID,
-    build: "dev",
-  });
+  const health = Schema.decodeUnknownSync(
+    Schema.Struct({
+      service: Schema.Literal("todo-server"),
+      contract: Schema.String,
+      build: Schema.NonEmptyString,
+    }),
+  )(await request("/health"));
+  assert.equal(health.contract, CONTRACT_ID);
   assert.deepEqual(
     Schema.decodeUnknownSync(
       Schema.Struct({ code: Schema.String, message: Schema.String }),
@@ -344,6 +360,30 @@ try {
     );
     assert.deepEqual(remote.map((task) => task.title).sort(), titles);
   }
+  for (const { filters, titles } of cases) {
+    const combined = {
+      ...filters,
+      text: '"enterprise"',
+      prefix: enterprise.id.toUpperCase(),
+    };
+    const expected = titles.filter(
+      (title) => title === "Confirm enterprise renewal",
+    );
+    const local = Schema.decodeUnknownSync(TasksResponse)(
+      cli([
+        "list",
+        ...Object.entries(combined).flatMap(([name, value]) => [
+          `--${name}`,
+          value,
+        ]),
+      ]),
+    );
+    assert.deepEqual(local.tasks?.map((task) => task.title).sort(), expected);
+    const remote = Schema.decodeUnknownSync(Schema.Array(Task))(
+      await request(`/profiles/work/tasks?${new URLSearchParams(combined)}`),
+    );
+    assert.deepEqual(remote.map((task) => task.title).sort(), expected);
+  }
   const invalid: [string, string][] = [
     ["energy", "6"],
     ["energy", "0"],
@@ -382,6 +422,7 @@ try {
     final.tasks?.map((task) => task.title),
     ["Confirm enterprise renewal"],
   );
+  await verifyTaskSearch(cli, request, evidence);
   passed = true;
 } finally {
   if (server && server.exitCode === null && server.signalCode === null) {

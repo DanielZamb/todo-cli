@@ -339,10 +339,14 @@ const guides = {
       "--due YYYY-MM-DD|none (default all)",
       "--scheduled YYYY-MM-DD|none (default all)",
       "--attachment <text> (default all)",
+      "--text <query> (maximum 200 UTF-16 characters, blank keeps all)",
+      "--prefix <hex> (1 to 36 hex digits or hyphens, case-insensitive)",
       "--energy 1|2|3|4|5|none (default all)",
       "--estimate <minutes>|none (default all)",
     ],
     examples: [
+      "todo list --text 'rent -draft' --format json",
+      `todo list --text '"pay rent"' --prefix 6AA2`,
       "todo list --project work",
       "todo list --project 'Client Launch' --tag revenue",
       "todo list --inbox --project 'Client Launch' --tag revenue --format json",
@@ -351,7 +355,7 @@ const guides = {
       "todo list --status open --format json",
     ],
     output:
-      "All filters combine. Project names match exactly. Tags ignore case and surrounding spaces. closed includes done and cancelled. Dates match the calendar date in each Task's stored time zone; none matches a missing value. Energy and estimated minutes match exactly. Attachment text ignores case and searches names, labels, paths and URLs. --inbox matches open Tasks with no due or scheduled date. JSON includes active filters and matching Tasks; an empty result omits tasks.",
+      "All filters combine. Project names match exactly. Tags ignore case and surrounding spaces. closed includes done and cancelled. Dates match the calendar date in each Task's stored time zone; none matches a missing value. Energy and estimated minutes match exactly. Attachment text ignores case and searches names, labels, paths and URLs. --inbox matches open Tasks with no due or scheduled date. Text searches title and description, ignoring case and accents. Every word prefix must match, with one typo from 5 characters and two from 9. Adjacent transpositions count as one typo. Closed quotes match consecutive whole words exactly in one field. An unclosed quote allows its last word to prefix-match without typos. A minus at the start of a whitespace-delimited term excludes word prefixes without typos; follow-up searches follow AND up. Search keeps the existing order. JSON includes active filters and response-only search_matches with whole-word, half-open UTF-16 offsets into the original title or description. Supplied blank text returns search_matches: []. Without text the field is omitted. Text or prefix search returns tasks: [] for no match. Other empty results retain the existing omitted tasks field. Exact-id commands still require a full id.",
   }),
   show: reference({
     purpose: "Show one visible Task with its metadata and description.",

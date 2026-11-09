@@ -107,6 +107,18 @@ cancelling one creates the next Occurrence in the same transaction, which is
 why recurrence works from the CLI with the server down
 ([ADR-0006](adr/0006-time-model-and-rfc5545-recurrence.md)).
 
+## Task search
+
+`packages/domain/src/task-search.ts` parses and evaluates title and description
+queries once per Task. `filterTaskRecords` combines search and literal id-prefix
+filtering with the existing filters without changing their order. The matcher
+uses a pinned Unicode default full-fold table and returns original UTF-16 word
+spans together with acceptance. `TaskRead` and `TaskViewSchema` carry optional
+`search_matches` in read responses only. Stored Tasks and events have no search
+metadata. CLI JSON and HTTP list results carry the same matched strings and
+spans; clients highlight those spans without repeating matching. No migration
+or FTS index is needed. See [ADR-0014](adr/0014-task-search.md).
+
 ## Live updates
 
 ![Live updates: a desktop client, the SSE route, op_log, and a CLI writer](diagrams/live.png)

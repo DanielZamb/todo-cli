@@ -9,12 +9,13 @@ import {
   type Series,
   seriesForTask,
   type Tag,
-  type Task,
   TaskPriority,
   TaskStatus,
 } from "./entities.ts";
 import { OpLogEntry } from "./events.ts";
 import { ProfileId } from "./ids.ts";
+import type { TaskRead } from "./task-read.ts";
+import { SearchMatches } from "./task-search.ts";
 import type { TaskTime } from "./time.ts";
 
 export type Format = "md" | "json" | "table";
@@ -25,7 +26,7 @@ const timestamp = (time: TaskTime) =>
   time.kind === "date" ? time.date : iso(time.utc);
 export const iso = (value: string) => value.replace(/\.000Z$/, "Z");
 export function taskView(
-  task: Task,
+  task: TaskRead,
   projects: readonly Project[],
   tags: readonly Tag[],
   series: readonly Series[] = [],
@@ -35,6 +36,9 @@ export function taskView(
     (p) => p.profile_id === task.profile_id && p.id === task.project_id,
   );
   return {
+    ...(task.search_matches === undefined
+      ? {}
+      : { search_matches: task.search_matches }),
     id: task.id,
     user_id: task.profile_id,
     entity_version: task.entity_version,
@@ -87,6 +91,7 @@ export const jsonText = (value: unknown) =>
   `${JSON.stringify(value, null, 2)}\n`;
 
 export const TaskViewSchema = Schema.Struct({
+  search_matches: Schema.optionalKey(SearchMatches),
   attachments: Schema.optionalKey(Schema.Array(AttachmentStatus)),
   external_id: Schema.optionalKey(Schema.String),
   id: Schema.String,
@@ -177,7 +182,11 @@ export function renderTasks(
     return encodeResponse(TasksResponse, {
       generated_at: iso(now),
       ...(Object.keys(filters).length ? { filters } : {}),
-      ...(tasks.length ? { tasks } : {}),
+      ...(tasks.length ||
+      filters.text !== undefined ||
+      filters.prefix !== undefined
+        ? { tasks }
+        : {}),
     });
   return format === "table" ? tableTasks(tasks) : markdownTasks(tasks);
 }

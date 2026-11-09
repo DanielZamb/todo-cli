@@ -1,5 +1,7 @@
 import { Schema } from "effect";
 import { type Project, type Tag, type Task, TaskPriority } from "./entities.ts";
+import type { TaskRead } from "./task-read.ts";
+import { matchTaskSearch, parseTaskSearch } from "./task-search.ts";
 import { CalendarDate, type TaskTime } from "./time.ts";
 
 const dateFilter = Schema.String.check(
@@ -12,6 +14,22 @@ const dateFilter = Schema.String.check(
     "A valid ISO calendar date (YYYY-MM-DD) in the Task's stored time zone, or none for a missing date.",
 });
 export const TaskFilters = Schema.Struct({
+  text: Schema.optionalKey(
+    Schema.String.check(Schema.isMaxLength(200)).annotate({
+      description:
+        "Search title and description with word prefixes, typo tolerance, quoted phrases and exclusions. Blank text returns empty search_matches.",
+    }),
+  ),
+  prefix: Schema.optionalKey(
+    Schema.String.check(
+      Schema.isMinLength(1),
+      Schema.isMaxLength(36),
+      Schema.isPattern(/^[0-9a-f-]+$/iu),
+    ).annotate({
+      description:
+        "Case-insensitive literal Task id prefix. Hex digits and hyphens only.",
+    }),
+  ),
   project: Schema.optionalKey(Schema.String),
   tag: Schema.optionalKey(Schema.String),
   status: Schema.optionalKey(
@@ -51,9 +69,13 @@ export function filterTaskRecords(
   filters: TaskFilters,
   definitions: { projects: readonly Project[]; tags: readonly Tag[] },
 ) {
+  const search =
+    filters.text === undefined ? undefined : parseTaskSearch(filters.text);
+  const prefix = filters.prefix?.toLowerCase();
   const attachmentQuery = filters.attachment?.trim().toLowerCase();
-  return tasks.filter(
+  const selected = tasks.filter(
     (task) =>
+      (prefix === undefined || task.id.toLowerCase().startsWith(prefix)) &&
       (filters.project === undefined ||
         definitions.projects.some(
           (project) =>
@@ -92,4 +114,9 @@ export function filterTaskRecords(
           ].some((value) => value?.toLowerCase().includes(attachmentQuery)),
         )),
   );
+  return selected.flatMap((task): TaskRead[] => {
+    if (search === undefined) return [task];
+    const result = matchTaskSearch(task, search);
+    return result.accepted ? [{ ...task, search_matches: result.matches }] : [];
+  });
 }

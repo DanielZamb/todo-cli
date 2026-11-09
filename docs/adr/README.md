@@ -39,6 +39,8 @@ desktop clients, plus a terminal view when the work is live or for monitoring.
 
 [ADR-0009. Every capability is native to agents and humans](0009-every-capability-is-native-to-agents-and-humans.md)
 
+[ADR-0014. Task search shares one matcher and response spans](0014-task-search.md)
+
 ## What the database remembers
 
 The first live-update design used SQLite triggers to fill a `change_log`, then
@@ -133,6 +135,7 @@ images and redacts paths from History. External files are never deleted.
 | [0009](0009-every-capability-is-native-to-agents-and-humans.md) | Every capability is native to agents and humans | accepted |
 | [0010](0010-profile-deletion.md) | Profile deletion preserves History and reserves IDs | accepted |
 | [0011](0011-attachments-reference-local-files-and-links.md) | Attachments reference local files and links | accepted |
+| [0014](0014-task-search.md) | Task search shares one matcher and response spans | accepted |
 | [0013](0013-attachment-uri-and-atomic-inputs.md) | Attachment URI links and atomic input groups | accepted |
 | [0012](0012-owner-snapshots.md) | Owner Snapshots | accepted |
 

@@ -635,25 +635,51 @@ const list = Command.make(
     due: string("due"),
     scheduled: string("scheduled"),
     attachment: string("attachment"),
+    text: stringFlag("text").pipe(Flag.optional),
+    prefix: stringFlag("prefix").pipe(Flag.optional),
     energy: string("energy"),
     estimate: string("estimate"),
   },
   (input) =>
     Effect.gen(function* () {
       const cfg = yield* root;
-      const filters = yield* Effect.try({
-        try: () =>
-          Schema.decodeUnknownSync(TaskFilters)(
-            Object.fromEntries(
-              Object.entries(input).filter(
-                ([key, value]) =>
-                  key !== "today" &&
-                  key !== "overdue" &&
-                  key !== "inbox" &&
-                  value !== "",
-              ),
-            ),
+      const { text, prefix, ...otherInput } = input;
+      const filterInput = {
+        ...Object.fromEntries(
+          Object.entries(otherInput).filter(
+            ([key, value]) =>
+              key !== "today" &&
+              key !== "overdue" &&
+              key !== "inbox" &&
+              value !== "",
           ),
+        ),
+        ...Option.match(text, {
+          onNone: () => ({}),
+          onSome: (text) => ({ text }),
+        }),
+        ...Option.match(prefix, {
+          onNone: () => ({}),
+          onSome: (prefix) => ({ prefix }),
+        }),
+      };
+      for (const name of ["text", "prefix"] as const) {
+        if (
+          filterInput[name] !== undefined &&
+          !Schema.is(TaskFilters)({ [name]: filterInput[name] })
+        )
+          return yield* Effect.fail(
+            new CommandError(
+              2,
+              "invalid_args",
+              name === "text"
+                ? "--text must be at most 200 UTF-16 characters"
+                : "--prefix must contain 1 to 36 hex digits or hyphens",
+            ),
+          );
+      }
+      const filters = yield* Effect.try({
+        try: () => Schema.decodeUnknownSync(TaskFilters)(filterInput),
         catch: (error) =>
           new CommandError(
             2,
@@ -667,13 +693,12 @@ const list = Command.make(
             store,
             yield* selectProfile(store, cfg),
           );
-          const matching = new Set<string>(
-            filterTaskRecords(data.tasks, filters, data).map((task) => task.id),
-          );
           yield* write(
             renderTasks(
               filterTasks(
-                data.views.filter((task) => matching.has(task.id)),
+                filterTaskRecords(data.tasks, filters, data).map((task) =>
+                  taskView(task, data.projects, data.tags, data.series),
+                ),
                 {
                   today: input.today,
                   overdue: input.overdue,
@@ -684,8 +709,15 @@ const list = Command.make(
               cfg.format,
               nowInstant(),
               Object.fromEntries(
-                Object.entries(input).flatMap(([key, value]) =>
-                  value ? [[key, String(value)]] : [],
+                Object.entries({
+                  ...filterInput,
+                  today: input.today,
+                  overdue: input.overdue,
+                  inbox: input.inbox,
+                }).flatMap(([key, value]) =>
+                  typeof value === "string" || value === true
+                    ? [[key, String(value)]]
+                    : [],
                 ),
               ),
             ),

@@ -1,7 +1,7 @@
 # Tasks
 
 Task List accepts optional Project, Tag, Status, Priority, Due and Scheduled
-dates, Attachment metadata text, Energy and estimated-minute query parameters.
+dates, Task text, literal id prefix, Attachment metadata text, Energy and estimated-minute query parameters.
 They use the shared `TaskFilters` schema and matching function. Run the compiled
 [filter proof](../../verify-filters/SKILL.md) for the complete literal matrix,
 including invalid query values returning HTTP 400. Task reads stay read only.
@@ -23,3 +23,8 @@ The HTTP contract test `isolates Project and Tag definitions from rejected work 
 ## Gotchas
 
 Task IDs, timestamps, initial status and defaults come from the domain. Project and Tag IDs must already exist in the Profile. Deleted Tasks are hidden. There are no profile/project/tag management routes in S01.
+
+Task List adds optional response-only `search_matches` when text is supplied.
+The [Task search proof](../../verify-task-search/SKILL.md) compares same-response
+strings and exact UTF-16 spans through HTTP and the compiled CLI. Stored Tasks
+and events keep their schemas.

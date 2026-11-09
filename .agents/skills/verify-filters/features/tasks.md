@@ -3,7 +3,7 @@
 ## Sub-features
 
 Project and Tag, Priority, open or closed Status, Due and Scheduled calendar
-dates, Attachment names/labels/paths/URLs, Energy and estimated minutes combine
+dates, Task text, id prefix, Attachment names/labels/paths/URLs, Energy and estimated minutes combine
 with AND. Closed means done or cancelled. `none` selects missing metadata.
 Instants use their stored time zone for calendar-date matching.
 
@@ -25,8 +25,9 @@ scheduled, dated, closed, unassigned and unrelated Tasks.
 
 Inbox continues to mean open Tasks without Due or Scheduled dates. Filtering
 never widens a planning view or changes a Task. Attachment search reads metadata
-only; it never opens referenced files or follows URLs. Empty CLI results retain
-the existing contract that omits `tasks`.
+only; it never opens referenced files or follows URLs. Text or prefix queries return `tasks: []` for no match. Other empty CLI
+results retain the existing omitted `tasks` field. Text responses include
+`search_matches`, including an empty array for supplied blank text.
 
 ## Version guardrails
 
