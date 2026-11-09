@@ -311,8 +311,9 @@ it("keeps HTTP error tags, adds matching pairs at decoding boundaries and hides 
     title: "Transfer auth target",
     row_version: 1,
   });
+  expect(run(["rm", sourceId, "--expected-version", "1"]).status).toBe(0);
   expect(
-    run(["rm", sourceId, "--expected-version", "1", "--force"]).status,
+    run(["rm", sourceId, "--expected-version", "2", "--force"]).status,
   ).toBe(0);
   const transfer = run([
     "copy",
