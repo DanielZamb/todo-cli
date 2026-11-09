@@ -1,6 +1,7 @@
 import { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
 import { Effect, Schema } from "effect";
+import { FinishTaskRequest, StartSeriesRequest } from "../src/auth/model.ts";
 import { ClientReads } from "../src/client-reads.ts";
 import { Edge, emptyDependencies } from "../src/dependencies.ts";
 import { Task } from "../src/entities.ts";
@@ -582,6 +583,180 @@ export const dagCases = {
       assert.equal(result.event.details?.truncated, true);
       assert.equal(result.event.details?.witness, null);
       assert.equal(result.from_version, 2);
+    }),
+  authenticatedInitial: (store: OperationStore) =>
+    Effect.gen(function* () {
+      yield* seed(store, ["A"]);
+      yield* store.auth.setupOwner("dag authenticated passphrase");
+      const session = yield* store.auth.signIn("dag authenticated passphrase");
+      const other = Schema.decodeUnknownSync(ProfileId)("other");
+      yield* store.putProfile({
+        id: other,
+        name: "Other",
+        created_at: at,
+        updated_at: at,
+      });
+      assert.equal(
+        (yield* store.auth.append({
+          ...session,
+          profile: other,
+          event: create(task("foreign", { profile_id: other })),
+        })).outcome,
+        "committed",
+      );
+      const start = (
+        name: string,
+        blockers: readonly string[],
+        taskId = name,
+      ) =>
+        Schema.decodeUnknownSync(StartSeriesRequest)({
+          ...session,
+          profile,
+          task_id: taskId,
+          occurrence_id: `occ-${name}`,
+          depends_on: blockers,
+          external_id: `external-${name}`,
+          project: {
+            id: "project",
+            profile_id: profile,
+            name: "Project",
+            created_at: at,
+            updated_at: at,
+          },
+          tags: [{ id: "tag", profile_id: profile, name: "Tag" }],
+          attachments: [
+            {
+              id: `attachment-${name}`,
+              kind: "link",
+              url: "urn:dag:reference",
+              added_at: at,
+            },
+          ],
+          series: {
+            id: `series-${name}`,
+            profile_id: profile,
+            entity_version: 1,
+            row_version: 1,
+            recurrence: {
+              dtstart: { kind: "date", date: "2026-11-09" },
+              rrule: "FREQ=DAILY;COUNT=2",
+              exdate: [],
+            },
+            task: task("defaults", {
+              project_id: Schema.decodeUnknownSync(Task.fields.project_id)(
+                "project",
+              ),
+              tags: [Schema.decodeUnknownSync(Task.fields.tags.value)("tag")],
+            }),
+            created_at: at,
+            updated_at: at,
+            deleted_at: null,
+          },
+        });
+      const before = (yield* store.history()).length;
+      const valid = yield* store.auth.startSeries(start("first", ["A"]));
+      assert.equal(valid.outcome, "committed");
+      assert.equal(valid.event.kind, "TaskCreated");
+      assert.equal(valid.event.entity_version, 2);
+      assert.equal((yield* store.history()).length, before + 1);
+      assert.deepEqual(yield* store.dependencies(), [edge("first", "A")]);
+      const first = yield* current(store, "first");
+      assert.equal(first.row_version, 1);
+      assert.equal(first.external_id, "external-first");
+      assert.equal(first.project_id, "project");
+      assert.deepEqual(first.tags, ["tag"]);
+      assert.deepEqual(first.attachments, [
+        {
+          id: "attachment-first",
+          kind: "link",
+          url: "urn:dag:reference",
+          added_at: at,
+        },
+      ]);
+      for (const [name, blockers, taskId, reason] of [
+        ["missing", ["absent"], "missing", "dependency_profile_mismatch"],
+        ["cross", ["foreign"], "cross", "dependency_profile_mismatch"],
+        ["self", ["self"], "self", "dependency_cycle"],
+        ["reuse", ["first"], "A", "conflict"],
+      ] as const) {
+        const tasks = yield* store.tasks();
+        const series = yield* store.series();
+        const history = yield* store.history();
+        const refused = yield* store.auth.startSeries(
+          start(name, blockers, taskId),
+        );
+        assert.equal(refused.outcome, "rejected");
+        assert.equal(refused.reason, reason);
+        assert.equal(refused.event.kind, "TaskAttemptRejected");
+        if (refused.event.kind !== "TaskAttemptRejected")
+          throw new Error("Expected rejected attempt");
+        assert.equal(refused.event.attempted_kind, "TaskCreated");
+        assert.deepEqual(yield* store.tasks(), tasks);
+        assert.deepEqual(yield* store.series(), series);
+        assert.deepEqual(
+          (yield* store.history())
+            .slice(history.length)
+            .map((entry) => [entry.outcome, entry.event.kind]),
+          [["rejected", "TaskAttemptRejected"]],
+        );
+      }
+      const linked = yield* store.auth.append({
+        ...session,
+        profile,
+        event: create(task("linked"), ["A"]),
+      });
+      assert.equal(linked.event.entity_version, 2);
+      const edgeEdit = yield* store.auth.append({
+        ...session,
+        profile,
+        event: delta("first", "linked", 1),
+      });
+      assert.equal(edgeEdit.outcome, "committed");
+      assert.equal(
+        (yield* store.auth.revert({ ...session, profile, seq: edgeEdit.seq }))
+          .outcome,
+        "committed",
+      );
+      assert.deepEqual(yield* store.dependencies(), [
+        edge("first", "A"),
+        edge("linked", "A"),
+      ]);
+      const blocked = yield* store.auth.finishTask(
+        Schema.decodeUnknownSync(FinishTaskRequest)({
+          ...session,
+          profile,
+          task_id: "first",
+          from_version: 3,
+          action: "complete",
+          next_task_id: "not-created",
+          next_occurrence_id: "occ-not-created",
+        }),
+      );
+      assert.equal(blocked.outcome, "rejected");
+      assert.equal(blocked.reason, "blocked");
+      assert.equal(
+        (yield* store.tasks()).some((task) => task.id === "not-created"),
+        false,
+      );
+      const cancelled = yield* store.auth.finishTask(
+        Schema.decodeUnknownSync(FinishTaskRequest)({
+          ...session,
+          profile,
+          task_id: "first",
+          from_version: 3,
+          action: "cancel",
+          next_task_id: "second",
+          next_occurrence_id: "occ-second",
+        }),
+      );
+      assert.equal(cancelled.outcome, "committed");
+      assert.equal((yield* current(store, "second")).row_version, 1);
+      assert.deepEqual(yield* store.dependencies(), [
+        edge("first", "A"),
+        edge("linked", "A"),
+      ]);
+      yield* store.takeSnapshot();
+      yield* replay(store);
     }),
   seriesInitial: (store: OperationStore) =>
     Effect.gen(function* () {

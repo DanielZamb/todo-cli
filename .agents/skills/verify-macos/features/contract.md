@@ -76,3 +76,22 @@ the optional HTTP test's skip. generated-tests-result.json and cleanup.json
 retain real exits and owned child termination. Both client handlers already
 refresh for ordinary committed operations after decoding. This proof adds no
 Dependency controls or renderer and does not launch Todo or touch Keychain.
+
+## Typed lifecycle versions
+
+Roundtrip equality alone does not prove that a generated oneOf selects the
+correct typed branch. testLifecycleVersionsSelectTypedCasesAndRejectContradictions
+asserts each v1/v2 branch and literal typed edge/Version fields, then rejects
+unknown, missing and malformed versions and contradictory dependency shapes.
+Legacy nullable fields and unrelated additional fields survive encoding.
+
+The pinned Swift generator represents numeric enums as unchecked Double fields.
+The existing preserve-null generation step now reads component schema constants
+and emits numeric-version checks in generated Decodable initializers. A v1
+payload therefore cannot consume a v2 value. Optional false-schema properties
+become explicit x-todo-forbidden-properties metadata during normalization;
+generated checks reject those keys without banning unrelated additional fields.
+The checks run in the generated CommittedOperation and History decoders used by
+production. No handwritten client wrapper or branch reordering is involved.
+Operation-local non-component schemas retain their prior generation behavior;
+all lifecycle cases live in the component schemas covered by these checks.

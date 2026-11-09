@@ -13,6 +13,14 @@ def normalize(value):
     if not isinstance(value, dict):
         return value
     result = dict(value)
+    properties = result.get('properties')
+    if isinstance(properties, dict):
+        forbidden = [key for key, schema in properties.items() if schema is False or schema == {'not': {}}]
+        if forbidden:
+            if set(forbidden).intersection(result.get('required', [])):
+                raise ValueError('A required property cannot use the false schema')
+            result['properties'] = {key: schema for key, schema in properties.items() if key not in forbidden}
+            result['x-todo-forbidden-properties'] = sorted(forbidden)
     branches = value.get('anyOf')
     if isinstance(branches, list) and {'type': 'null'} in branches:
         remaining = [branch for branch in branches if branch != {'type': 'null'}]
@@ -103,7 +111,7 @@ def normalize_tagged_unions(document):
                     schema = resolve(member)
                     version = schema.get('properties', {}).get('entity_version', {})
                     choices = version.get('enum', [version.get('const')])
-                    if 'entity_version' not in schema.get('required', []) or version.get('nullable') or len(choices) != 1 or not isinstance(choices[0], int):
+                    if 'entity_version' not in schema.get('required', []) or version.get('nullable') or len(choices) != 1 or isinstance(choices[0], bool) or not isinstance(choices[0], int):
                         disjoint = False
                         break
                     versions.append(choices[0])

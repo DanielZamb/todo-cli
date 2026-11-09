@@ -34,7 +34,7 @@ account (`apps/cli/test/macos-password.test.ts`), never with a real password.
 
 Run `bun --version`, `command -v sqlite3`, and
 `pnpm --filter @todo/domain typecheck` in the checkout. The driver's first
-public `openStore` call requires schema version 6, WAL, a 5000ms busy timeout,
+public `openStore` call requires schema version 7, WAL, a 5000ms busy timeout,
 and literal `0600` modes on the database, WAL and SHM files. It refuses a
 preexisting database or a path outside its own temporary directory.
 When anything fails, inspect `commands.log` in the selected evidence directory.

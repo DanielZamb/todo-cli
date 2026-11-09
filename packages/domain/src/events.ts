@@ -14,6 +14,7 @@ const eventFields = {
 };
 
 const TaskCreatedV1 = Schema.Struct({
+  dependencies: Schema.optionalKey(Schema.Never),
   ...eventFields,
   kind: Schema.Literal("TaskCreated"),
   copied_from: Schema.optionalKey(
@@ -79,6 +80,7 @@ export const TaskReopened = Schema.Struct({
 export type TaskReopened = typeof TaskReopened.Type;
 
 const TaskDeletedV1 = Schema.Struct({
+  dependencies: Schema.optionalKey(Schema.Never),
   ...eventFields,
   kind: Schema.Literal("TaskDeleted"),
   before: Task,
@@ -116,6 +118,7 @@ export const TaskPurged = Schema.Struct({
 export type TaskPurged = typeof TaskPurged.Type;
 
 const TaskRevertedV1 = Schema.Struct({
+  dependencies: Schema.optionalKey(Schema.Never),
   ...eventFields,
   kind: Schema.Literal("TaskReverted"),
   original_seq: Sequence,
@@ -140,6 +143,7 @@ export const TaskReverted = Schema.Union([
 export type TaskReverted = typeof TaskReverted.Type;
 
 const TaskMovedOutV1 = Schema.Struct({
+  dependencies: Schema.optionalKey(Schema.Never),
   ...eventFields,
   kind: Schema.Literal("TaskMovedOut"),
   move_id: Schema.NonEmptyString,

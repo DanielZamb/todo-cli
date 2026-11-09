@@ -706,17 +706,10 @@ export class Authentication<Read> {
       );
       if (request.series.profile_id !== request.profile)
         throw new AuthError("profile_scope", credential.id);
+      const { credential: _credential, ...facts } = request;
       return this.ports.startSeries({
+        ...facts,
         actor: Schema.decodeUnknownSync(ActorId)(credential.id),
-        profile: request.profile,
-        series: request.series,
-        ...(request.external_id === undefined
-          ? {}
-          : { external_id: request.external_id }),
-        ...(request.project === undefined ? {} : { project: request.project }),
-        ...(request.tags === undefined ? {} : { tags: request.tags }),
-        task_id: request.task_id,
-        occurrence_id: request.occurrence_id,
         occurred_at: instant(time),
       });
     });

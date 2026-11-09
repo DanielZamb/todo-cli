@@ -80,3 +80,16 @@ Task content inside rejection witnesses as well as compact edge endpoint IDs.
 Those paths are exercised by the compiled DAG cases, outside AtomicCAS's bounds.
 
 Reviewed product commit: 96c0f3ea19dcab207d1d06a66d333a80d78c2f36.
+
+## Seat-1 closure mapping
+
+The closure adds optional Never dependencies fields to TaskCreated/Deleted/
+MovedOut/Reverted v1. This makes v1-with-dependency payloads invalid at the same
+Event schema used by the authoritative store and client decoders. Valid legacy
+v1 events omit the field, so the 216 AtomicCAS fixtures and their compare-and-swap,
+record/apply/commit and crash transitions remain unchanged. No store transaction
+or projection function changed in this delta. Authenticated startSeries now
+forwards all parsed Series facts except the credential and supplies actor/time
+itself. Authentication handoff remains outside AtomicCAS; authenticatedInitial
+in the compiled DAG drive covers it. Renew the event source pin only after
+reviewing these changes and rerunning behavioral sensitivity and the clean check.
