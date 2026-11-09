@@ -443,12 +443,10 @@ try {
       await shot(`${prefix}-description`);
       await expect(page.locator(".search-excerpt")).toContainText(/^…/);
       expect(
-        await page
-          .locator(".search-excerpt")
-          .evaluate((element) => ({
-            scrollLeft: element.scrollLeft,
-            overflow: getComputedStyle(element).textOverflow,
-          })),
+        await page.locator(".search-excerpt").evaluate((element) => ({
+          scrollLeft: element.scrollLeft,
+          overflow: getComputedStyle(element).textOverflow,
+        })),
       ).toEqual({ scrollLeft: 0, overflow: "ellipsis" });
       expect(
         await page

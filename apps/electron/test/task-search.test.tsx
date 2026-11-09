@@ -4,8 +4,8 @@ import { Schema } from "effect";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Reply } from "../src/protocol.ts";
 import {
-  descriptionMatch,
   DescriptionMatch,
+  descriptionMatch,
   SearchHighlight,
 } from "../src/task-search-presentation.tsx";
 import { searchGroups } from "../src/task-search-results.ts";

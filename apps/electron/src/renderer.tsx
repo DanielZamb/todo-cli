@@ -628,7 +628,11 @@ function App() {
   useEffect(() => () => clearTimeout(debounce.current), []);
   useLayoutEffect(() => {
     if (!quick || !signedIn) return;
-    const field = searchInput.current?.closest(".task-search-field");
+    const field = document.querySelector(
+      compact && editor?.base.id
+        ? ".editor .task-search-field"
+        : ".task-pane .task-search-field",
+    );
     if (!field) return;
     const update = () =>
       document.documentElement.style.setProperty(
