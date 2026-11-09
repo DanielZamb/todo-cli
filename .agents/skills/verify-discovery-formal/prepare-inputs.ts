@@ -6,9 +6,10 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   writeFileSync,
 } from "node:fs";
-import { join, relative } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 import { Schema } from "effect";
 import {
   repositoryInput,
@@ -171,10 +172,40 @@ try {
     join(evidence, "enrichment-history"),
     "enrichment-history",
   ]);
+  const producerDirectory = dirname(realpathSync(producer.cli));
+  const suffix = /^[a-f0-9]{12}-([a-f0-9]{12})$/.exec(
+    basename(producerDirectory),
+  )?.[1];
+  assert.ok(
+    suffix,
+    "Backend cache has no canonical producer commit; run the documented build step",
+  );
+  const builtHead = execFileSync(
+    "git",
+    ["rev-parse", "--verify", `${suffix}^{commit}`],
+    { cwd: root, encoding: "utf8" },
+  ).trim();
+  for (const value of [producer.server, producer.seed])
+    assert.equal(
+      dirname(realpathSync(value)),
+      producerDirectory,
+      "Backend artifacts must share one actual producer",
+    );
+  for (const file of sourceFiles)
+    assert.equal(
+      hash(
+        execFileSync("git", ["show", `${builtHead}:${file.path}`], {
+          cwd: root,
+          maxBuffer: 32 * 1024 * 1024,
+        }),
+      ),
+      file.sha256,
+      `Producer source differs: ${file.path}`,
+    );
   const inputs = {
     candidateCommit: candidate,
     backend: {
-      builtHead: producer.head,
+      builtHead,
       sourceHash: producer.sourceHash,
       sourceFiles,
       binaries: {

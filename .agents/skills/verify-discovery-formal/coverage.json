@@ -1,11 +1,11 @@
 {
-  "status": "Current merged-source mapping reviewed with fresh Electron and Swift behavioral controls/restoration; full command pending",
+  "status": "Reviewed main4c composition and synchronized real-SSE fixture; bounded model and real-code results remain separately recorded",
   "contractCommit": "f85aef6faf7d93be80feef930554206e09d61be3",
   "contract": {
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "dc43db3f16e3e1591793bf13b18127acd2be939d",
+  "productionSyncCommit": "26367043daf92787fc128ac23544afcb5709a791",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -214,13 +214,12 @@
     }
   ],
   "mapping": "SOURCE-MAPPING.md",
-  "pending": "Final full discovery command, same-head locked workspace check and the two conflict-delta seats; separate offscreen Import geometry finding reported to coordinator",
-  "candidateCommit": "dc43db3f16e3e1591793bf13b18127acd2be939d",
+  "candidateCommit": "26367043daf92787fc128ac23544afcb5709a791",
   "classification": {
     "model": "bounded safety only; Discovery.tla bytes unchanged from500cdc38",
     "domain": "separate verify-discovery generated projection/snapshot properties, not model conclusions",
     "regressions": "Fresh current prepare-JP0mLs runs domain/scope-removal and compiled discovery/credential/boundary/enrichment-history drives; no historical receipt is reopened",
-    "sensitivity": "Fresh current Electron7 controls at electron-LzUdLa and Swift4 controls at swift-pb8ruR; every intended failure, byte restoration, clean rerun and final clean passed",
+    "sensitivity": "All original Electron/Swift controls/restoration passed. Added deterministic ready/retry transport regression,20 consecutive8-test fresh runs and full113-state suite passed; final committed command receipts determine completion.",
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
@@ -229,5 +228,12 @@
     "main": "4c904d96277853c60692c685c6d4ea3b3e655bc4",
     "source": "dc43db3f16e3e1591793bf13b18127acd2be939d",
     "scope": "Full/query catalog debt composed with Show and credential epochs; current controller/Swift controls and compiled state drives passed before hash renewal"
-  }
+  },
+  "fixtureIntegration": {
+    "commit": "26367043daf92787fc128ac23544afcb5709a791",
+    "productDiffFromMerge": "git diff dc43db3f..26367043 -- apps/**/src packages = empty; only Swift fixture changes among app source trees",
+    "newNamedRegression": "readyFullRefreshSupersedesRetryAndKeepsRevealDraftAndCatalog",
+    "proof": "Frozen fixture matches26367043;20consecutive8-test runs0 and full113-state suite0; final immutable command results recorded separately"
+  },
+  "limits": "Native/Keychain/persistence and unbounded or mechanical refinement unproved; full Import geometry fails identically on main and is an owner follow-up."
 }

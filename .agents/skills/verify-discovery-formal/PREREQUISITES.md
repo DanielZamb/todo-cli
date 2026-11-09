@@ -64,3 +64,8 @@ Swift wrapper. The default soft floor is 30 GiB and the hard disk guard remains.
 An owned SOFT-DISK-HOLD latch prevents work until explicit release. Before and
 after receipts retain each command, actual exit and all pin comparisons. Do not
 apply an old worktree-specific floor exception to a new candidate.
+
+Cached aliases preserve the original producer identity. Preparation resolves each
+canonical source-hash/commit cache directory and verifies that producer's full
+input inventory against the reviewed candidate before recording builtHead.
+Changing only a metadata head never claims a new binary build.

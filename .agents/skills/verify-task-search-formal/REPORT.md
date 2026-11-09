@@ -1,31 +1,36 @@
-# Main4c verification maintenance
+# Main4c merged verification
 
-Product merge dc43db3f composes main4c with the reviewed Performance units.
+Product source is `26367043`, which adds only a discovery fixture to merged `dc43db3f`.
 This is verification maintenance shipped with the Performance PR. Required
-formal inputs are repo-relative. Historical input paths are provenance only,
-never runtime dependencies. Fresh domain, compiled discovery, required-path
-controls, TaskSearch formal/matcher, cache, AtomicCAS, API/SSE, both client
-full/query drives,112 Swift state tests and the unsigned build passed. All
-dependency pin comparisons passed.
+formal paths are repo-relative, historical receipts are provenance only, and
+preparation builds or locates current source-hash binaries. Canonical artifacts
+retain their actual producer `dc43db3f`; the complete producer and candidate input
+inventories must agree. No old C/D receipt is reopened or relabeled.
 
-The full design suite fails identically on clean main4c:12 Compact Import
-geometry assertions across6 screens. It is pre-existing and tracked as an owner
-Task. All347 candidate PNGs and baseline logs remain. Search60 and discovery116
-offscreen subsets pass. The Performance PR does not claim full design-suite
-success. No UI or geometry assertion was changed.
+The original final-clean retry failure and real HTTP/SSE probe are preserved.
+A ready full refresh legitimately supersedes the held manual retry. The original
+.applied assertion now follows observed ready completion; a named regression
+requires .superseded, newer revealed rows, cleared error and preserved draft,
+then one data read proving cleared catalog debt. Twenty consecutive fresh
+eight-test runs passed, 160 tests total. The full 113 state suite also passed.
+No product generation guard, UI, geometry assertion, delay or retry changed.
 
-Discovery check-4NWI2S passed its model/controls but its final clean fixture
-expected a manual retry to publish while a ready full refresh could supersede
-it. The real HTTP/SSE probe ready-probe-confirmed reproduces that accepted
-interleaving, with actual assertion exit1 and proof exit0, then restores its
-independent source. The fixture now awaits observed ready completion and keeps
-.applied. A named regression separately requires .superseded, the revealed row,
-cleared error and preserved draft, then a one-read query proving cleared catalog
-debt. A fresh8-test warm run passed. The20 consecutive runs, final immutable
-formal commands, full state suite and locked workspace check remain pending.
-No product guard, dependency pin or performance measurement changed.
+Current TaskSearch formal checks, matcher controls, cache one-command, AtomicCAS,
+compiled discovery/search/API/SSE, both clients' full/query/count drives, generated
+contracts and unsigned build passed. Required-path controls reject absolute,
+outside-repo and escaping-symlink inputs. All dependency pins stayed unchanged.
+The final committed verifier command and locked-check exits are recorded in the
+local integration ledger. Earlier interrupted, temporary-census and concurrent
+verifier-edit typecheck failures remain evidence and are not counted as passes.
 
-## Historical records
+The full design suite fails identically on clean main `4c904d96`: 12 Compact Import
+geometry assertions across 6 screens. It is pre-existing and tracked as an owner
+Task. All 347 candidate PNGs and raw baseline receipts remain. Search, 60 images, and
+discovery, 116 images, offscreen subsets pass; full design-suite success is not claimed.
+No new paired performance window or latency claim is made. Native activation,
+Keychain, signed persistence and mechanical/unbounded refinement stay unproved.
+
+## Earlier checkpoints and original receipts
 
 # Combined main integration under verification
 

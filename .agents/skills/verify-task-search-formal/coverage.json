@@ -1,5 +1,5 @@
 {
-  "sourceCommit": "dc43db3f16e3e1591793bf13b18127acd2be939d",
+  "sourceCommit": "26367043daf92787fc128ac23544afcb5709a791",
   "status": "Current main4c composition: bounded safety/liveness, intended controls/restoration, fresh matcher properties and compiled full/query client drives passed",
   "files": [
     {
@@ -214,5 +214,11 @@
     "base": "7c1326bd5ecd1d84cdd9a6426b18e8c380e5d336",
     "main": "4c904d96277853c60692c685c6d4ea3b3e655bc4",
     "status": "Covered bodies reviewed; current matcher controls and both compiled client drives passed before hash renewal"
+  },
+  "fixtureIntegration": {
+    "commit": "26367043daf92787fc128ac23544afcb5709a791",
+    "productDiffFromMerge": "git diff dc43db3f..26367043 -- apps/**/src packages = empty; only Swift fixture changes among app source trees",
+    "newNamedRegression": "readyFullRefreshSupersedesRetryAndKeepsRevealDraftAndCatalog",
+    "proof": "Frozen fixture matches26367043;20consecutive8-test runs0 and full113-state suite0; final immutable command results recorded separately"
   }
 }

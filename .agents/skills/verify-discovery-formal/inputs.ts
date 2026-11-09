@@ -65,6 +65,16 @@ export function discoveryInputs(root: string, candidate: string) {
       source.sha256,
       `Live source drift: ${source.path}`,
     );
+    const built = execFileSync(
+      "git",
+      ["show", `${inputs.backend.builtHead}:${source.path}`],
+      { cwd: root, maxBuffer: 32 * 1024 * 1024 },
+    );
+    assert.equal(
+      hash(built),
+      source.sha256,
+      `Producer source drift: ${source.path}`,
+    );
     producerHash.update(source.path).update(captured);
   }
   assert.equal(
