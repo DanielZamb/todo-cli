@@ -1,0 +1,36 @@
+{
+  "commit": "0f7a19488f15ec1f8d4c4dad14749de7720f17d0",
+  "scope": "Immutable merged integration source, reviewed after both B seats and pnpm check0. Final client/runtime acceptance pending.",
+  "scopes": [
+    "packages/domain",
+    "packages/api",
+    "apps/cli/src",
+    "apps/cli/package.json",
+    "apps/server/src",
+    "apps/server/package.json",
+    ".agents/skills/verify-occ-atomicity",
+    "apps/electron/package.json",
+    "apps/electron/src/http-client.ts",
+    "apps/electron/src/main.ts",
+    "apps/electron/src/task-client.ts",
+    "apps/electron/scripts/verify-graph-contract.ts",
+    "apps/macos/API/Sources/TodoAPI/openapi.json",
+    "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift",
+    "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Operations.swift",
+    "apps/macos/Tests/GeneratedContractTests.swift",
+    "apps/electron/scripts/verify-auth-sequence.ts",
+    "apps/electron/scripts/write-host.ts"
+  ],
+  "manifests": [
+    "package.json",
+    "pnpm-lock.yaml",
+    "packages/domain/package.json",
+    "packages/api/package.json",
+    "apps/cli/package.json",
+    "apps/server/package.json",
+    "apps/electron/package.json"
+  ],
+  "pendingCorrections": [],
+  "contract": "58c0026725f2d846fd4f80bd7cabaff73994d6603d04ed501c82cfa1fa6f1fe9",
+  "awaitMergedIntegration": false
+}

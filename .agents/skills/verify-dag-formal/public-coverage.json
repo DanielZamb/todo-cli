@@ -1,0 +1,332 @@
+{
+  "confirmedCommit": "0f7a19488f15ec1f8d4c4dad14749de7720f17d0",
+  "status": "reviewed merged mapping; actual execution receipts in unit-f-report.md",
+  "gateCommit": "ca142014",
+  "scope": "Reviewed immutable merged product functions; full committed conformance execution required.",
+  "modelSha256": "54254524caf9a30e95bc1e12b01018eafc28ea88c4a211a46228eb137a802c48",
+  "unchangedCore": [
+    {
+      "path": "packages/domain/src/graph-model.ts",
+      "sha256": "fa7c42485d9576e5e29dad921ad310008cf7cb2cb3a9aea425ee159d4395d6d0",
+      "previousCommit": "f140c7b09bcb1db48ce4ccaee797ecfe60019ce4"
+    },
+    {
+      "path": "packages/domain/src/graph-order.ts",
+      "sha256": "24c509a82fffad1c43176e1f307b296775702f2d3c182c04448c6edc561c3675",
+      "previousCommit": "f140c7b09bcb1db48ce4ccaee797ecfe60019ce4"
+    },
+    {
+      "path": "packages/domain/src/graph-energy.ts",
+      "sha256": "163f46423f38c733c4cf0a250231c0ee64a441177a2636e32c47a88e15656a68",
+      "previousCommit": "f140c7b09bcb1db48ce4ccaee797ecfe60019ce4"
+    },
+    {
+      "path": "packages/domain/src/dependency-rules.ts",
+      "sha256": "74369b1acd741009d752f61b4986f190519421170c90d1d2cff33a36183fa26a",
+      "previousCommit": "f140c7b09bcb1db48ce4ccaee797ecfe60019ce4"
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/domain/src/dependency-commands.ts",
+      "functions": [
+        "DependencyCommands.change",
+        "dependencyWarnings",
+        "edgeFailure",
+        "executeBatch",
+        "batchDepend"
+      ],
+      "sha256": "1aa95169d08fd729d3fe098e94fb158d6bb5886ffdfe75c3d81978cfb27f04b1"
+    },
+    {
+      "path": "packages/domain/src/dependency-contract.ts",
+      "functions": [
+        "DependRequest",
+        "EdgeReport",
+        "BatchEdgeReport"
+      ],
+      "sha256": "6df25125f0da176569f97ca2e5974386bb7d09235b37995a046b279efe100026"
+    },
+    {
+      "path": "packages/domain/src/task-filters.ts",
+      "functions": [
+        "TaskFilters",
+        "filterTaskRecords"
+      ],
+      "sha256": "237ab5686455b8768af9587af1a25d38e7535e1771ae23b7a0110a1a40e438d5"
+    },
+    {
+      "path": "packages/domain/src/dependency-delete.ts",
+      "functions": [
+        "dependencyFingerprint"
+      ],
+      "sha256": "a01a2bce5ce6faafa8dd0fa3d0cc6e23ffec48032a84d3fe7382120062738571"
+    },
+    {
+      "path": "packages/domain/src/commands.ts",
+      "functions": [
+        "TaskCommands.result",
+        "TaskCommands.change",
+        "cliResult",
+        "mutateTask"
+      ],
+      "sha256": "30e46419e8053676ebbb7486b58b1b2a34c8b5f3933a00948a6227a17137e06a"
+    },
+    {
+      "path": "packages/domain/src/auth/auth.ts",
+      "functions": [
+        "requireCredential",
+        "mutate"
+      ],
+      "sha256": "619020f5555ac7a8714abf3d61719a6de541a75eccbe57703ffb46654b50c61d"
+    },
+    {
+      "path": "packages/domain/src/import-dependencies.ts",
+      "functions": [
+        "planImportDependencies"
+      ],
+      "sha256": "89ad5beaaea403b84d4b78de691e1133e21d4a14253746f133e84d6c8ae631a9"
+    },
+    {
+      "path": "packages/domain/src/import-tasks.ts",
+      "functions": [
+        "executeImport"
+      ],
+      "sha256": "400a90406957e3afc6a88c7fdfdf3add2e8d7ac1e2aa0c814e7b01792e886b19"
+    },
+    {
+      "path": "packages/domain/src/import.ts",
+      "functions": [
+        "ImportRow",
+        "ImportReport",
+        "parseImportText"
+      ],
+      "sha256": "4101cc74fe6d3692222ac8b6ce9bfad52c519259a9e7f3303ab82673423e5e0b"
+    },
+    {
+      "path": "packages/domain/src/presentation.ts",
+      "functions": [
+        "encodeResponse",
+        "renderError"
+      ],
+      "sha256": "e820e759645b2151e7abbe2fb5f9fd47986e1fa04dcf2a87a93c950610ff0140"
+    },
+    {
+      "path": "packages/domain/src/store/store.ts",
+      "functions": [
+        "transaction",
+        "recordRejection",
+        "appendSync",
+        "rebuild",
+        "takeSnapshot",
+        "graph"
+      ],
+      "sha256": "d9c9e4c5c09e1616c1b46ff0e8077a8d58ef3f7d2b7ea67db82dcccce2fef443"
+    },
+    {
+      "path": "packages/domain/src/store/purge.ts",
+      "functions": [
+        "redactTaskHistory"
+      ],
+      "sha256": "12d8f3861ed8dcc891704108318668a9ef63e0afaefe81bf388497ce32716465"
+    },
+    {
+      "path": "packages/domain/src/store/projection.ts",
+      "functions": [
+        "changes",
+        "applyChanges",
+        "Snapshot"
+      ],
+      "sha256": "7c82ea08bacbb1358a809dd7b3acac0092d78ad6e137b9645971fce486604544"
+    },
+    {
+      "path": "packages/domain/src/store/dependencies.ts",
+      "functions": [
+        "incidentRemoval",
+        "applyDependencyVersions"
+      ],
+      "sha256": "b4e88ed38871bd93483a024b5ca45ba66c441b93f2aeec70ab60c8f97461f411"
+    },
+    {
+      "path": "packages/domain/src/graph-model.ts",
+      "functions": [
+        "indexGraph",
+        "dependencyState"
+      ],
+      "sha256": "fa7c42485d9576e5e29dad921ad310008cf7cb2cb3a9aea425ee159d4395d6d0"
+    },
+    {
+      "path": "packages/domain/src/graph-order.ts",
+      "functions": [
+        "topologicalOrder"
+      ],
+      "sha256": "24c509a82fffad1c43176e1f307b296775702f2d3c182c04448c6edc561c3675"
+    },
+    {
+      "path": "packages/domain/src/graph-energy.ts",
+      "functions": [
+        "graphEnergy"
+      ],
+      "sha256": "163f46423f38c733c4cf0a250231c0ee64a441177a2636e32c47a88e15656a68"
+    },
+    {
+      "path": "packages/domain/src/dependency-rules.ts",
+      "functions": [
+        "checkDependencyAddition",
+        "checkDependencyStatuses"
+      ],
+      "sha256": "74369b1acd741009d752f61b4986f190519421170c90d1d2cff33a36183fa26a"
+    },
+    {
+      "path": "packages/api/src/index.ts",
+      "functions": [
+        "Tasks",
+        "DependRequest",
+        "BatchEdgeRequest",
+        "TaskFilters"
+      ],
+      "sha256": "dfede7dd397f98f0bf862eaf6ddad322235cac22f772379deb43878f991e0536"
+    },
+    {
+      "path": "apps/server/src/server.ts",
+      "functions": [
+        "rejectUnknownQuery",
+        "TasksApi handlers: depend, undepend, batchDepend, importTasks"
+      ],
+      "sha256": "d3ad8a514e84100b99e8c21533eefda80fecb37b237aee94ac065530583c4ee5"
+    },
+    {
+      "path": "apps/cli/src/main.ts",
+      "functions": [
+        "dependencyCommand",
+        "batchDepend command",
+        "deletion Prompt.Confirm",
+        "false filter guard",
+        "malformed Version boundary finding"
+      ],
+      "sha256": "0fb7b0ed7ebd9d9d0f6cee3107a08639c73d5c4c119c9ff684e1a74e6b116462"
+    },
+    {
+      "path": "apps/cli/src/schema.ts",
+      "functions": [
+        "registerCommandSchema"
+      ],
+      "sha256": "e625c5d00fabacecf59b3a3f3c954391df16f5b3852131c80e175d83ad55b638"
+    },
+    {
+      "path": "apps/cli/src/input.ts",
+      "functions": [
+        "decodeInput"
+      ],
+      "sha256": "dcc3c99c7b723bbacf43548bbe9e9b3fdd1c9746a2580ae597b2fd04d992e1c6"
+    },
+    {
+      "path": "packages/domain/src/graph-contract.ts",
+      "functions": [
+        "GraphNode",
+        "GraphReport"
+      ],
+      "sha256": "6f9bf2f911ed240610d1f758b6fcfb1cc63fe2a3fc76ea7b3ac02a499770c7e5"
+    },
+    {
+      "path": "packages/domain/src/graph-queries.ts",
+      "functions": [
+        "queryGraph",
+        "readGraph"
+      ],
+      "sha256": "402257e1773144a0570582ade9dca80efd25f265bac9f2de212b5ca626760213"
+    },
+    {
+      "path": "packages/domain/src/graph-mermaid.ts",
+      "functions": [
+        "mermaidNodeIds",
+        "graphMermaid"
+      ],
+      "sha256": "2ed8c484956dd59c2e3f552043ce8657a4d6fe277fe08ab835066047658402cb"
+    },
+    {
+      "path": "apps/electron/src/http-client.ts",
+      "functions": [
+        "taskHttpClient"
+      ],
+      "sha256": "c32ca178690da09b9d2c738867c50e5462de84f05874bd6266e7a00b53599ef8"
+    },
+    {
+      "path": "apps/electron/src/main.ts",
+      "functions": [
+        "taskHttpClient caller"
+      ],
+      "sha256": "d8bd1908ecf5b646e6ac5e25e69327319c9e51bd824f92821eddd485e25cf2d4"
+    },
+    {
+      "path": "apps/electron/src/task-client.ts",
+      "functions": [
+        "taskHttpClient caller"
+      ],
+      "sha256": "b93392a77c932cf1e1c43bd3eca77518cc73153f62fa7e657c81ee16a44815ff"
+    },
+    {
+      "path": "packages/api/openapi.json",
+      "functions": [
+        "graph response schema"
+      ],
+      "sha256": "19fcc2bc5758c1a2194cec0828ff9f8ac84bfa500df39df7dac47280f397f182"
+    },
+    {
+      "path": "apps/macos/API/Sources/TodoAPI/openapi.json",
+      "functions": [
+        "graph response schema"
+      ],
+      "sha256": "6503a7d601ab35bf1391e8c34b36e92a2e4016991d7b141b30eb0f37685a1073"
+    },
+    {
+      "path": "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Operations.swift",
+      "functions": [
+        "graph response decoder"
+      ],
+      "sha256": "a8bc93819d7d8457ebcf54a8a79bb29d541f596907c470a91d72b52179dde088"
+    },
+    {
+      "path": "apps/macos/Tests/GeneratedContractTests.swift",
+      "functions": [
+        "root-only graph contract decode"
+      ],
+      "sha256": "cceb7fad2dcae739079066730b94778a9a012407d25f517ffe64a6ac46dd8efb"
+    },
+    {
+      "path": "apps/electron/scripts/verify-auth-sequence.ts",
+      "sha256": "83310d92eb38da311f03ffc745b9e10ee26865775e4e4dfa0009f2d4e2dfe320",
+      "functions": [
+        "credential getter caller"
+      ]
+    },
+    {
+      "path": "apps/electron/scripts/write-host.ts",
+      "sha256": "4ae357b2245ee5b094e34a243373162fcc624fe73797360e429be12532e6df62",
+      "functions": [
+        "credential getter caller"
+      ]
+    },
+    {
+      "path": "packages/api/src/contract.ts",
+      "sha256": "ec1586a7ced8e452b03016380790365a9faab596f88959969e93975bf2b1de9b",
+      "functions": [
+        "contract identity"
+      ]
+    },
+    {
+      "path": "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift",
+      "sha256": "1f4890f46eadf964e70a8a177d678f723a28047b2a8e56abc6ea02ecf894c400",
+      "functions": [
+        "contract identity"
+      ]
+    }
+  ],
+  "pending": [
+    "final E/S feature/runtime mapping",
+    "fresh Claude discovery",
+    "independent final F review seats"
+  ],
+  "knownFindings": [],
+  "orderingAmendment": "ancestors/descendants whole-Profile topo; lightest_next own energy ascending, unknown last, whole-Profile topo ties"
+}
