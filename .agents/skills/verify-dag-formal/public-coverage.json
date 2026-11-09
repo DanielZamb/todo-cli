@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "8ee1c08fb92201691dc3b0bcd5fe3cd03560eb3a",
+  "confirmedCommit": "42ae3fa90ddd9d7cfa19f384099aabbb1c2fb4da",
   "status": "reviewed merged mapping; actual execution receipts in unit-f-report.md",
   "gateCommit": "ca142014",
   "scope": "Reviewed immutable merged product functions; full committed conformance execution required.",
@@ -291,7 +291,7 @@
       "functions": [
         "root-only graph contract decode"
       ],
-      "sha256": "fa1ab32d6a2677ef04a97248e9643881745705e1a62451755a04e5ea0cb08ea5"
+      "sha256": "6ca7eac64405ae2e333c217210afb5ea4c440dad819368bab625acbe9c826857"
     },
     {
       "path": "apps/electron/scripts/verify-auth-sequence.ts",
@@ -350,6 +350,7 @@
       "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift"
     ],
     "scope": "Core16 unchanged. Public changes are approved SEC/search base plus reviewed-by-L1 integration of typed yielding search, graph slot5, search-dialog draft and getter preservation. Fresh independent rebase review pending.",
-    "previousSensitivity": "Historical89executions on0f7; not relabelled as current-source sensitivity"
+    "previousSensitivity": "Historical89executions on0f7; not relabelled as current-source sensitivity",
+    "handwrittenSwiftAdaptation": "Search refusal typed branch3 after DAG union regeneration; nil branches1 and2. No generated source edit."
   }
 }

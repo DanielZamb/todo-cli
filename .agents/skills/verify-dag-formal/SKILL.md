@@ -20,7 +20,7 @@ Historical f140/e717 receipts retain their original candidates and proof bounds.
 
 ## Current main-rebase qualification
 
-The active product is 8ee1c08fb92201691dc3b0bcd5fe3cd03560eb3a, rebased onto
+The active product is 42ae3fa90ddd9d7cfa19f384099aabbb1c2fb4da, rebased onto
 main 9de893454cb6e3f5729407e9313c73e56bfd0481. Both pin files and coverage maps
 must agree. Its contract is
 bf54af931b6531866cbe23740582a5241999f5defcf98ad1d7f2da58774e1f3d.
