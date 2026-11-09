@@ -1,6 +1,6 @@
 {
-  "sourceCommit": "064b266753446b6bc36bc88d05da5acf0fb328fb",
-  "status": "worker-reviewed-budget-yielding-and-client-error-mapping; independent-seats-pending",
+  "sourceCommit": "5d42f32b0b3b5b84ca82df0a07af2d4fe0ae9887",
+  "status": "worker-reviewed-F1-request-narrowing; independent-seats-pending",
   "files": [
     {
       "path": "apps/electron/src/renderer.tsx",
@@ -13,7 +13,7 @@
         "clearFilters",
         "changed/connection notice handlers"
       ],
-      "sha256": "614644df958d31a89a300a6243fc5ee4be557806db43f5ed080653141a5c03ee"
+      "sha256": "aefd84e517da6c7ea6d6ae99525896c8af86f5799756010c1aac28222119f66e"
     },
     {
       "path": "apps/electron/src/task-search-results.ts",
@@ -21,9 +21,10 @@
         "SearchIdentity",
         "AppliedSearch",
         "identityKey",
-        "searchGroups"
+        "searchGroups",
+        "taskSearchQuery"
       ],
-      "sha256": "32fcb14d4790e2a67af432419c26d8e25bae63d6950993afe906813892f89ae6"
+      "sha256": "bbb664ff484bfb8782f8b2422bf31fccb71b4a67eecea68c989eba8e354dcf05"
     },
     {
       "path": "apps/electron/src/task-client.ts",
@@ -54,7 +55,7 @@
         "followChanges",
         "applyTaskFilters"
       ],
-      "sha256": "2dd3b94b7d41599192dade7626a5e274cd80e501d5aba1a7c4c28dbd072529d4"
+      "sha256": "a9859dd9f62e9c18d1a612c7cba27b196f3abc773d44d132c8f0af15918e585c"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -159,7 +160,8 @@
     "swift": "code76035210 + visual8fd49f25; integratedc19fd669; approved presentation alignment0d5b2198",
     "electron": "codedf13e2a8 + visuale8178e24; integratedbc288b30",
     "security": "SEC-W1 local source review, literal client/core proofs, immutable real matcher properties and all five behavioral mutations passed at0a2eef1c in matcher-zwScvg. Covered source bytes unchanged at this product commit. Seat1 held for SEC-L1 to launch; seat2 coordinator.",
-    "v1": "Reviewed display-only diff against CLIENT-MAPPING.md: shared applied-context helpers, unchanged refusal sentence, secondary context, no state transition/publication guard/generation/identity changes. Immutable matcher properties and all five behavioral mutations passed at064b2667 in matcher-1eyrdt before these four hashes were renewed. Seat1/visual review pending."
+    "v1": "Reviewed display-only diff against CLIENT-MAPPING.md: shared applied-context helpers, unchanged refusal sentence, secondary context, no state transition/publication guard/generation/identity changes. Immutable matcher properties and all five behavioral mutations passed at064b2667 in matcher-1eyrdt before these four hashes were renewed. Seat1/visual review pending.",
+    "f1": "Reviewed F1 against CLIENT-MAPPING.md: catalog-name request narrowing only; explicit dialog names win, unresolved ids add no name, same-response id joins remain. No state transition, publication guard, generation, identity, snapshot or SSE recovery change. Immutable real matcher properties and all five behavioral mutations passed at5d42f32b in matcher-uo9W7V before renewing only the three changed source hashes. Compiled Electron/Swift recovery, ordinary JSON, real raw-append case-fold Tags and synthetic same-name Projects passed."
   },
   "productionMatcher": "Immutable real source with generated properties, behavioral mutations and byte restoration; final-tip command uses its explicit full SHA.",
   "recovery": "Transient errors offer Retry; search_too_broad hides Retry and retains text/snapshot. Current-Profile SSE op/reconnect remains available. Liveness is conditional on a later affordable successful response and a fair available recovery source.",
