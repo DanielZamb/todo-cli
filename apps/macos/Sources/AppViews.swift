@@ -372,6 +372,7 @@ struct TaskListView: View {
                 }
             }.padding(.horizontal, 16).padding(.vertical, 8).compactBounds("header")
             Divider()
+            searchField.padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 4)
             if model.editor != nil, let result = model.transferResult {
                 TaskTransferResultView(model: model, result: result)
                 Divider()
@@ -381,7 +382,6 @@ struct TaskListView: View {
             } else if model.editor != nil {
                 EditorView(model: model, compact: true)
             } else {
-                searchField.padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 4)
                 taskContent
             }
         }
@@ -405,7 +405,7 @@ struct TaskListView: View {
                 Button { model.setSearchText("") } label: { Image(systemName: "xmark.circle.fill") }
                     .buttonStyle(.plain).foregroundStyle(.secondary).accessibilityLabel("Clear search")
             }
-        }.padding(10).background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
+        }.padding(10).background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8)).compactBounds("search")
     }
 
     private var compactNavigation: some View {
@@ -533,11 +533,12 @@ struct TaskListView: View {
                     Button("Retry") { Task { await model.retrySearch() } }.accessibilityIdentifier("retry-search")
                 }.padding(12).accessibilityIdentifier("search-error")
             }
-            if compactMode && model.connection == .offline {
+            if model.appliedSearchSnapshot == nil, let message = model.taskLoadError {
+                compactState("Could not load tasks.", action: "Retry") { Task { await model.retrySearch() } }
+                    .help(message).accessibilityIdentifier("task-load-error").compactBounds("task-load-error")
+            } else if compactMode && model.connection == .offline && model.appliedSearchSnapshot == nil {
                 compactState("Your tasks are read only while offline.", action: "Reconnect") { model.connect() }
                     .accessibilityIdentifier("connection-status")
-            } else if compactMode, model.appliedSearchSnapshot == nil, let message = model.taskLoadError {
-                compactState("Could not load tasks.", action: "Retry") { model.connect() }.help(message)
             } else {
             if let filterError = model.taskLoadError, model.appliedSearchSnapshot != nil {
                 HStack {
@@ -633,7 +634,7 @@ struct TaskListView: View {
                 }
             }
             }
-            if model.connection != .live && !(compactMode && model.connection == .offline) {
+            if model.connection != .live && !(compactMode && model.connection == .offline && model.appliedSearchSnapshot == nil) {
                 HStack {
                     Label(
                         model.connection == .connecting ? "Reconnecting" : "Offline · Read only",

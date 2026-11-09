@@ -10,6 +10,7 @@ import OpenAPIURLSession
 private actor SearchTransport: ClientTransport {
     private let live = URLSessionTransport()
     private var failNext = false
+    private var failNextRead = false
     private var holdNext = false
     private var held: [Int: CheckedContinuation<Void, Never>] = [:]
     private var streamContinuation: AsyncThrowingStream<HTTPBody.ByteChunk, any Error>.Continuation?
@@ -18,6 +19,7 @@ private actor SearchTransport: ClientTransport {
     private(set) var filteredRequests: [String] = []
 
     func fail() { failNext = true }
+    func failRead() { failNextRead = true }
     func hold(failing: Bool) { holdNext = true; shouldFailHeld = failing }
     func release(_ index: Int? = nil) {
         guard let key = index ?? held.keys.min() else { return }
@@ -25,6 +27,10 @@ private actor SearchTransport: ClientTransport {
     }
     func disconnectStream() { streamContinuation?.finish(throwing: URLError(.networkConnectionLost)) }
     func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
+        if operationID == "tasks.list", failNextRead {
+            failNextRead = false
+            throw URLError(.notConnectedToInternet)
+        }
         if operationID == "tasks.list", request.path?.contains("text=") == true {
             filteredRequests.append(request.path ?? "")
             let failing = failNext
@@ -32,9 +38,9 @@ private actor SearchTransport: ClientTransport {
             if holdNext {
                 holdNext = false
                 let failure = shouldFailHeld
+                let response = try await live.send(request, body: body, baseURL: baseURL, operationID: operationID)
                 heldCount += 1
                 let index = heldCount
-                let response = try await live.send(request, body: body, baseURL: baseURL, operationID: operationID)
                 await withCheckedContinuation { held[index] = $0 }
                 if failure { throw URLError(.notConnectedToInternet) }
                 return response
@@ -68,6 +74,75 @@ struct TaskSearchStateTests {
         throw SearchProofError.timeout(line)
     }
     enum SearchProofError: Error { case timeout(Int) }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_W06_SERVER"] != nil))
+    func viewResetPreservesDraftAndReschedulesProjectAndTag() async throws {
+        let server = try #require(ProcessInfo.processInfo.environment["TODO_W06_SERVER"].flatMap(URL.init(string:)))
+        let credential = try await todoClient(server: server, credential: "").signIn_period_signIn(body: .json(.init(passphrase: "scratch verification passphrase"))).ok.body.json.credential
+        let direct = todoClient(server: server, credential: credential)
+        let payload = try JSONDecoder().decode(Operations.tasks_period_create.Input.Body.jsonPayload.self, from: Data(#"{"title":"Reset navigation proof"}"#.utf8))
+        let task = try await TaskSnapshot.decode(direct.tasks_period_create(path: .init(profile: "personal"), body: .json(payload)).ok.body.json)
+        let transport = SearchTransport()
+        let model = TodoModel(configuration: .init(server: server, initialProfile: "personal", vaultService: "unused-reset-\(UUID())"), clientFactory: { url, _ in
+            Client(serverURL: url, transport: transport, middlewares: [BearerMiddleware(credential: credential)])
+        })
+        model.selectedView = "all"
+        model.signedIn = true
+        model.connection = .live
+        await model.retrySearch()
+        model.beginEditing(task)
+        model.editor?.title = "Keep this unsaved draft"
+        model.conflict = TaskConflict(latest: task)
+        model.setSearchText("a")
+        try await wait { model.searchPhase == .showing }
+        await transport.hold(failing: false)
+        model.selectView("inbox")
+        #expect(model.editor?.title == "Keep this unsaved draft")
+        #expect(model.conflict?.latest?.id == task.id)
+        try await wait { await transport.heldCount == 1 }
+        model.selectedProject = "pending-project"
+        model.selectedTag = "pending-tag"
+        await transport.release()
+        try await wait { model.searchPhase == .showing }
+        #expect(model.appliedSearchSnapshot?.appliedIdentity.project == "pending-project")
+        #expect(model.appliedSearchSnapshot?.appliedIdentity.tag == "pending-tag")
+        #expect(model.appliedSearchSnapshot?.rows.isEmpty == true)
+        #expect(!model.loading)
+        #expect(!model.searchStale)
+        #expect(model.editor?.title == "Keep this unsaved draft")
+        #expect(model.conflict?.latest?.id == task.id)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_W06_SERVER"] != nil))
+    func initialFailureRetainsExplicitErrorAndCanRetry() async throws {
+        let server = try #require(ProcessInfo.processInfo.environment["TODO_W06_SERVER"].flatMap(URL.init(string:)))
+        let credential = try await todoClient(server: server, credential: "").signIn_period_signIn(body: .json(.init(passphrase: "scratch verification passphrase"))).ok.body.json.credential
+        let transport = SearchTransport()
+        let model = TodoModel(configuration: .init(server: server, initialProfile: "personal", vaultService: "unused-initial-error-\(UUID())"), clientFactory: { url, _ in
+            Client(serverURL: url, transport: transport, middlewares: [BearerMiddleware(credential: credential)])
+        })
+        model.signedIn = true
+        model.connection = .live
+        await transport.failRead()
+        let failed = await model.retrySearch()
+        #expect(failed == .failed)
+        #expect(model.searchPhase == .error)
+        #expect(model.taskLoadError != nil)
+        #expect(model.appliedSearchSnapshot == nil)
+        #expect(!model.loading)
+        let applied = await model.retrySearch()
+        #expect(applied == .applied)
+        #expect(model.searchPhase == .showing)
+        #expect(model.taskLoadError == nil)
+        #expect(model.appliedSearchSnapshot != nil)
+        await transport.failRead()
+        await model.refreshAfterWrite("Task updated")
+        #expect(model.message == "Task updated. The live view is reconnecting.")
+        try await wait { model.connection == .live && model.searchPhase == .showing }
+        #expect(model.taskLoadError == nil)
+        model.signedIn = false
+        model.connect()
+    }
 
     @Test func prefixConstraintsAndUTF16Presentation() throws {
         #expect(TaskListFilters(prefix: "6AA2-").isValid)
@@ -240,7 +315,7 @@ struct TaskSearchStateTests {
         #expect(model.searchText == "cancion")
         #expect(model.appliedSearchSnapshot == nil)
         await transport.release()
-        await oldViewRequest.value
+        #expect(await oldViewRequest.value == .superseded)
         try await wait { model.searchPhase == .showing }
         #expect(model.taskLoadError == nil)
         #expect(model.searchError == nil)
@@ -257,7 +332,7 @@ struct TaskSearchStateTests {
         #expect(model.appliedSearchSnapshot?.appliedIdentity.profile == "personal")
         #expect(model.appliedSearchSnapshot?.rows.isEmpty == true)
         await transport.release()
-        await oldProfileRequest.value
+        #expect(await oldProfileRequest.value == .superseded)
         #expect(model.appliedSearchSnapshot?.appliedIdentity.profile == "personal")
         #expect(model.appliedSearchSnapshot?.rows.isEmpty == true)
         #expect(model.searchError == nil)

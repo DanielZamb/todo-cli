@@ -34,6 +34,10 @@ fields and no rollback, late success, ABA, clear, Profile/view races, reload,
 manual Retry, a real SSE disconnect/reconnect and current-Profile operation
 recovery without Retry. It checks Copy with a named scratch NSPasteboard and
 requires the same Task Version after the write and feedback timeout.
+It also holds a view-reset request, changes Project and Tag before the reply,
+and requires a replacement response to finish loading. An unsaved editor draft
+and conflict survive view/Project/Tag navigation. Initial blank-text read failure
+returns an explicit failed outcome, keeps the error visible, and succeeds on Retry.
 Project and Tag filters remain identity fields and filter the same-response
 rows by their ids. Planning responses supply only membership and order.
 
@@ -54,15 +58,20 @@ Run Compact first in both appearances, then full-window:
 TODO_SNAPSHOT_SEARCH_ONLY=1 /Users/zambamon/Work/todo-cli/scripts/swift-slot.sh apps/macos/scripts/verify-design.py "$PWD/docs/evidence/task-search-swift/design-new"
 ```
 
-Require 40 PNGs and exit 0. Inspect every `search-compact-*-light.png`, then
+Require 52 PNGs and exit 0. Inspect every `search-compact-*-light.png`, then
 `search-compact-*-dark.png`, followed by the full-window captures. States are
 ready with title highlights and a description-only excerpt, typing, requesting,
 empty with one Clear search action, Error with Retry and retained highlights,
-valid and invalid prefix Filters, detail id, Copied and Copy failure. The full-window fixture uses
+valid and invalid prefix Filters, detail id, Quick add, Copied and Copy failure,
+initial load failure with Retry, and offline search with retained highlights.
+Geometry assertions require the shared Compact search field within the viewport
+in every state, including detail and Quick add. Offline retains a visible Task
+row; initial failure renders the error and recovery action in both layouts.
+The full-window fixture uses
 the production search-field content because unordered NSHostingView cannot
 capture native `.searchable` toolbar chrome. Compact retains `compact-search`.
 New identifiers include `filter-prefix`, `retry-search`, `search-error`,
-`search-excerpt-<id>`, `task-full-id`, `copy-task-id` and `copy-task-id-feedback`.
+`search-excerpt-<id>`, `task-load-error`, `task-full-id`, `copy-task-id` and `copy-task-id-feedback`.
 The existing design identifier checker must still pass.
 
 Use the parent skill's unsigned build helper through the shared Swift slot.

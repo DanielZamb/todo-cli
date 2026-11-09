@@ -11,6 +11,7 @@ struct TaskSearchIdentity: Equatable {
 }
 
 enum TaskSearchPhase { case idle, showing, debouncing, requesting, error }
+enum TaskSearchRefreshOutcome: Equatable { case applied, superseded, failed }
 
 struct TaskSearchSnapshot {
     let appliedIdentity: TaskSearchIdentity
