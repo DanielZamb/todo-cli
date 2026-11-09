@@ -38,6 +38,13 @@ struct TaskSnapshot: Codable, Identifiable, Equatable, Sendable {
     }
 }
 
+struct TaskSearchMatch: Codable, Equatable, Sendable {
+    enum Field: String, Codable, Sendable { case title, description }
+    let field: Field
+    let start: Int
+    let end: Int
+}
+
 struct TaskTime: Codable, Equatable, Sendable {
     let kind: String
     var date: String?

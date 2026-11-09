@@ -18,13 +18,6 @@ struct TaskSearchSnapshot {
     let groups: [PlanningResult.Group]
 }
 
-struct TaskSearchMatch: Codable, Equatable, Sendable {
-    enum Field: String, Codable, Sendable { case title, description }
-    let field: Field
-    let start: Int
-    let end: Int
-}
-
 enum TaskSearchPresentation {
     static func highlighted(_ text: String, spans: [TaskSearchMatch], field: TaskSearchMatch.Field) -> AttributedString {
         var result = AttributedString(text)

@@ -56,13 +56,13 @@ struct TaskFilterView: View {
                     Text("Any").tag("")
                     ForEach(["P1", "P2", "P3", "P4"], id: \.self) { Text($0).tag($0) }
                 }.accessibilityIdentifier("filter-priority")
+                TextField("Id starts with", text: $draft.prefix, prompt: Text("Hex digits and hyphens"))
+                    .accessibilityIdentifier("filter-prefix")
+                if !draft.prefixIsValid { Text("Use 1 to 36 hex digits or hyphens.").font(.caption).foregroundStyle(TodoColors.color("destructive")) }
                 dateFilter("Due date", value: $draft.due)
                 dateFilter("Scheduled date", value: $draft.scheduled)
                 TextField("Attachment contains", text: $draft.attachment, prompt: Text("Name, label, path or URL"))
                     .accessibilityIdentifier("filter-attachment")
-                TextField("Id starts with", text: $draft.prefix, prompt: Text("Hex digits and hyphens"))
-                    .accessibilityIdentifier("filter-prefix")
-                if !draft.prefixIsValid { Text("Use 1 to 36 hex digits or hyphens.").font(.caption).foregroundStyle(TodoColors.color("destructive")) }
                 Picker("Energy", selection: $draft.energy) {
                     Text("Any").tag("")
                     ForEach(1...5, id: \.self) { Text(String($0)).tag(String($0)) }
