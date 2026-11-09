@@ -96,6 +96,45 @@ afterAll(async () => {
     );
   rmSync(scratch, { recursive: true, force: true });
 });
+it("keeps typed search-budget refusals as CLI usage errors after graph reads", () => {
+  const home = mkdtempSync(join(tmpdir(), "todo-search-dag-contract-"));
+  try {
+    expect(
+      run(["init", "--password-stdin"], "scratch-budget-passphrase\n", home)
+        .code,
+    ).toBe(0);
+    expect(
+      run(["login", "--password-stdin"], "scratch-budget-passphrase\n", home)
+        .code,
+    ).toBe(0);
+    const file = join(home, "tasks.json");
+    writeFileSync(
+      file,
+      JSON.stringify(
+        Array.from({ length: 3 }, (_, index) => ({
+          external_id: `budget-${index}`,
+          title: `Budget probe ${index}`,
+          description: "\ufdfa".repeat(100000),
+        })),
+      ),
+    );
+    expect(run(["import", file, "--format", "json"], "", home).code).toBe(0);
+    const result = run(
+      ["list", "--text", "\ufdfa".repeat(200), "--format", "json"],
+      "",
+      home,
+    );
+    expect(result.code).toBe(2);
+    expect(JSON.parse(result.out)).toMatchObject({
+      code: "search_too_broad",
+      message:
+        "Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.",
+    });
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+}, 30000);
+
 it("publishes the Task and shared error schemas", () => {
   const task = run(["schema", "add"]);
   expect(task.code, task.err).toBe(0);

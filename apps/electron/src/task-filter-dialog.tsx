@@ -13,7 +13,11 @@ import { Field, FieldGroup, FieldLabel } from "./components/ui/field.tsx";
 import { Input } from "./components/ui/input.tsx";
 import { NativeSelect } from "./components/ui/native-select.tsx";
 import { DatePicker } from "./date-picker.tsx";
-import { applyTaskFilterDraft, taskFilterDraft, type TaskFilterDraft } from "./task-filter-draft.ts";
+import {
+  applyTaskFilterDraft,
+  type TaskFilterDraft,
+  taskFilterDraft,
+} from "./task-filter-draft.ts";
 
 type DateFilterDraft =
   | { kind: "any" }
@@ -75,7 +79,10 @@ export function TaskFilterDialog({
     !Schema.is(TaskFilters.fields.prefix)(draft.fields.prefix);
   const change = (field: keyof TaskFilterDraft["fields"], value: string) => {
     setError("");
-    setDraft((current) => ({ ...current, fields: { ...current.fields, [field]: value } }));
+    setDraft((current) => ({
+      ...current,
+      fields: { ...current.fields, [field]: value },
+    }));
   };
   const select = (
     field: "status" | "priority" | "energy",
@@ -189,10 +196,20 @@ export function TaskFilterDialog({
                 return;
               }
               const value = applyTaskFilterDraft(
-                { ...draft, fields: { ...draft.fields, ...(planning ? { status: "" } : {}) } },
                 {
-                  ...(dates.due.kind === "any" ? {} : { due: dateValue(dates.due) }),
-                  ...(dates.scheduled.kind === "any" ? {} : { scheduled: dateValue(dates.scheduled) }),
+                  ...draft,
+                  fields: {
+                    ...draft.fields,
+                    ...(planning ? { status: "" } : {}),
+                  },
+                },
+                {
+                  ...(dates.due.kind === "any"
+                    ? {}
+                    : { due: dateValue(dates.due) }),
+                  ...(dates.scheduled.kind === "any"
+                    ? {}
+                    : { scheduled: dateValue(dates.scheduled) }),
                 },
               );
               onApply(value);
@@ -264,7 +281,11 @@ export function TaskFilterDialog({
                 inputMode="numeric"
                 pattern="[1-9][0-9]*"
                 placeholder="Any"
-                value={draft.fields.estimate === "none" ? "" : (draft.fields.estimate ?? "")}
+                value={
+                  draft.fields.estimate === "none"
+                    ? ""
+                    : (draft.fields.estimate ?? "")
+                }
                 onChange={(event) => change("estimate", event.target.value)}
               />
               <label className="filter-checkbox">

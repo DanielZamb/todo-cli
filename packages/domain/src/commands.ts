@@ -164,9 +164,14 @@ export const readTasks = Effect.fn(function* (
         a.created_at.localeCompare(b.created_at) ||
         a.id.localeCompare(b.id),
     );
-  const context = graph.edges.length || filters.ready || filters.blocked || filters.order ? graph : undefined;
+  const context =
+    graph.edges.length || filters.ready || filters.blocked || filters.order
+      ? graph
+      : undefined;
   const tasks = yield* filters.text === undefined
-    ? Effect.sync(() => filterTaskRecords(ordered, filters, data, undefined, context))
+    ? Effect.sync(() =>
+        filterTaskRecords(ordered, filters, data, undefined, context),
+      )
     : filterTaskRecordsEffect(ordered, filters, data, undefined, context);
   return {
     ...data,
@@ -311,9 +316,14 @@ export class TaskCommands {
       const view = yield* this.store.auth.read(request);
       const graph = yield* this.store.graph(request.profile);
       const tasks = graph.tasks.filter((task) => task.deleted_at === null);
-      const context = graph.edges.length || filters.ready || filters.blocked || filters.order ? graph : undefined;
+      const context =
+        graph.edges.length || filters.ready || filters.blocked || filters.order
+          ? graph
+          : undefined;
       return yield* filters.text === undefined
-        ? Effect.sync(() => filterTaskRecords(tasks, filters, view, undefined, context))
+        ? Effect.sync(() =>
+            filterTaskRecords(tasks, filters, view, undefined, context),
+          )
         : filterTaskRecordsEffect(tasks, filters, view, undefined, context);
     });
   }

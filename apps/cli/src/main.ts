@@ -44,9 +44,9 @@ import {
   parseQuickAdd,
   QuickAddDraft,
   QuickAddInput,
-  SearchTooBroad,
   RevertTask,
   readGraph,
+  SearchTooBroad,
   SnapshotError,
   TaskFilters,
   TaskId,
@@ -2285,13 +2285,15 @@ const program = Effect.gen(function* () {
     Effect.sync(() => {
       const cause = error instanceof StoreError ? error.cause : error;
       const mapped =
-        cause instanceof SnapshotError
-          ? new CommandError(
-              cause.code === "not_found" ? 3 : 2,
-              cause.code,
-              cause.message,
-            )
-          : authFailure(error);
+        cause instanceof SearchTooBroad
+          ? new CommandError(2, cause.code, cause.message)
+          : cause instanceof SnapshotError
+            ? new CommandError(
+                cause.code === "not_found" ? 3 : 2,
+                cause.code,
+                cause.message,
+              )
+            : authFailure(error);
       const failure =
         mapped instanceof CommandError
           ? mapped
