@@ -77,6 +77,7 @@ final class TodoModel {
     private var importGeneration = 0
     private var parseGeneration = 0
     private var historyGeneration = 0
+    var lookupErrors: [ClientErrorPosition: ServerFailure] = [:]
     let discovery = DiscoveryState()
     var signedIn = false { didSet { if !signedIn { discovery.credentialChanged() } } }
     var canRestore = false
@@ -116,6 +117,7 @@ final class TodoModel {
     private var credential = ""
     func replaceCredential(_ value: String) {
         discovery.credentialChanged()
+        lookupErrors = [:]
         credential = value
     }
     private var streamTask: Task<Void, Never>?
@@ -182,7 +184,7 @@ final class TodoModel {
         } catch {
             guard profile == requestedProfile, importGeneration == requestedGeneration else { return }
             handleAuthorization(error)
-            importError = describe(error)
+            importError = describe(error, at: .importTasks)
         }
     }
 
@@ -420,7 +422,7 @@ final class TodoModel {
                 let applied = appliedSearchSnapshot?.appliedIdentity.text ?? ""
                 searchError = applied.isEmpty ? "Couldn't search. Showing tasks without search." : "Couldn't search. Showing results for \"\(applied)\"."
             } else {
-                taskLoadError = describe(error)
+                taskLoadError = describe(error, at: .taskLoad)
             }
             loading = false
             searchPhase = .error
@@ -603,7 +605,7 @@ final class TodoModel {
             await refreshAfterWrite("Task added")
             announce("Task added to \(profileName)")
             return true
-        } catch { quickAddError = describe(error); handleAuthorization(error); return false }
+        } catch { quickAddError = describe(error, at: .quickAdd); handleAuthorization(error); return false }
     }
 
     @discardableResult
@@ -630,7 +632,7 @@ final class TodoModel {
             await refreshAfterWrite("Task saved")
             announce("Task saved")
             return saved
-        } catch { editorError = describe(error); handleAuthorization(error); return nil }
+        } catch { editorError = describe(error, at: .editor); handleAuthorization(error); return nil }
     }
 
     func refreshConflictDefinitions() async {
@@ -642,7 +644,7 @@ final class TodoModel {
             guard profile == requestedProfile, conflict != nil else { return }
             projects = try decode([DiscoveryEntry].self, projectValues).sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
             tags = try decode([DiscoveryEntry].self, tagValues).sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-        } catch { editorError = describe(error); handleAuthorization(error) }
+        } catch { editorError = describe(error, at: .editor); handleAuthorization(error) }
     }
 
     var hasUnsavedEditor: Bool {
@@ -789,7 +791,7 @@ final class TodoModel {
             if editor?.id == task.id { editor = nil }
             await refreshAfterWrite("Task updated")
             announce("Task updated")
-        } catch { message = describe(error); editorError = message; handleAuthorization(error) }
+        } catch { message = describe(error); editorError = describe(error, at: .editor); handleAuthorization(error) }
     }
 
     func deleteTask(_ task: TaskSnapshot) async {
@@ -815,7 +817,7 @@ final class TodoModel {
             }
             await refreshAfterWrite("Task deleted")
         } catch {
-            if editor?.id == task.id { editorError = describe(error) }
+            if editor?.id == task.id { editorError = describe(error, at: .editor) }
             else { message = describe(error) }
             handleAuthorization(error)
         }
@@ -897,7 +899,7 @@ final class TodoModel {
             }
             announce("Task updated")
         } catch {
-            editorError = describe(error)
+            editorError = describe(error, at: .editor)
             if intent.transfer != nil { writeIntent = intent }
             handleAuthorization(error)
         }
@@ -965,7 +967,7 @@ final class TodoModel {
             showingSeries = presenting
         } catch {
             guard !Task.isCancelled, seriesGeneration == request, profile == requestedProfile, editor?.id == draft.id else { return }
-            editorError = describe(error)
+            editorError = describe(error, at: .editor)
             handleAuthorization(error)
         }
     }
@@ -993,7 +995,7 @@ final class TodoModel {
             }
             await refreshAfterWrite("Series created")
             announce("Series created")
-        } catch { editorError = describe(error); handleAuthorization(error) }
+        } catch { editorError = describe(error, at: .editor); handleAuthorization(error) }
     }
 
     private func discoverProfiles() async throws {
@@ -1065,7 +1067,7 @@ final class TodoModel {
             parsedInput = text
         } catch {
             guard run == parseGeneration, !Task.isCancelled else { return }
-            parseError = describe(error)
+            parseError = describe(error, at: .parse)
         }
     }
 
@@ -1112,7 +1114,7 @@ final class TodoModel {
             history = try decode([HistoryEntry].self, value)
         } catch {
             guard historyGeneration == request, generation == run, profile == requestedProfile, editor?.id == task.id else { return }
-            historyError = describe(error)
+            historyError = describe(error, at: .history)
         }
     }
 
@@ -1127,7 +1129,7 @@ final class TodoModel {
             let wire = try await client.snapshots_period_list().ok.body.json
             ownerSnapshots = try decode(SnapshotCatalog.self, wire).snapshots
             snapshotsLoaded = true
-        } catch { snapshotError = describe(error) }
+        } catch { snapshotError = describe(error, at: .snapshot) }
     }
 
     func createSnapshot() async {
@@ -1137,7 +1139,7 @@ final class TodoModel {
         do {
             _ = try await client.snapshots_period_create(body: .json(.init(reason: "manual"))).ok
             await loadSnapshots()
-        } catch { snapshotError = describe(error) }
+        } catch { snapshotError = describe(error, at: .snapshot) }
     }
 
     func previewSnapshotRestore(_ snapshot: OwnerSnapshot) async {
@@ -1148,7 +1150,7 @@ final class TodoModel {
             let wire = try await client.snapshots_period_restore(path: .init(snapshot: snapshot.id), body: .json(.init(dry_run: true))).ok.body.json
             snapshotRestore = try decode(SnapshotRestorePreview.self, wire)
             snapshotRestoreTarget = snapshot
-        } catch { snapshotError = describe(error) }
+        } catch { snapshotError = describe(error, at: .snapshot) }
     }
 
     func confirmSnapshotRestore() async {
@@ -1159,7 +1161,7 @@ final class TodoModel {
             _ = try await client.snapshots_period_restore(path: .init(snapshot: target.id), body: .json(.init(dry_run: false))).ok
             snapshotRestore = nil; snapshotRestoreTarget = nil
             await loadSnapshots()
-        } catch { snapshotError = describe(error) }
+        } catch { snapshotError = describe(error, at: .snapshot) }
     }
 
     private func expireSession() {
@@ -1204,8 +1206,10 @@ final class TodoModel {
     private func failure(_ error: Error) -> RequestFailure? {
         (error as? RequestFailure) ?? (error as? ClientError)?.underlyingError as? RequestFailure
     }
-    func describe(_ error: Error) -> String {
-        if let failure = failure(error) { return failure.humanMessage }
+    func describe(_ error: Error, at position: ClientErrorPosition = .message) -> String {
+        let server = failure(error)?.body ?? (error as? ServerFailure)
+        lookupErrors[position] = server?.isTaskLookup == true ? server : nil
+        if let server { return server.humanMessage }
         if error is DecodingError { return "The server response could not be read. Your draft is preserved." }
         if let draft = error as? DraftError { return draft.localizedDescription }
         if let vault = error as? VaultError { return vault.localizedDescription }

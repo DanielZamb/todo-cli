@@ -369,7 +369,7 @@ Native toolbar keyboard interaction and glass remain under HOLD.
 ## Authorized discovery during HOLD
 
 Read [Authorized discovery](features/discovery.md). Its production TodoModel tests
-use compiled scratch HTTP, and its 64 offscreen captures cover directory and
+use compiled scratch HTTP, and its 88 offscreen captures cover directory and
 lookup states in Compact and full windows, light and dark. Show preserves draft
 decisions, reads the exact Task under the current credential epoch, and reveals
 completed Tasks through All tasks with a full-id prefix. No native app, hosted

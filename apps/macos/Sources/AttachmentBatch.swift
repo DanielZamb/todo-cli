@@ -4,7 +4,7 @@ import TodoAPI
 
 struct AttachmentBatchReport: Decodable, Sendable {
   struct Row: Decodable, Sendable {
-    struct Failure: Decodable, Sendable { let code: String; let message: String }
+    typealias Failure = ServerFailure
     let task_id: String?
     let outcome: String
     let current_version: Int?
@@ -44,7 +44,7 @@ extension TodoModel {
       attachmentBatch?.report = nil
     } catch {
       guard attachmentBatch?.id == draft.id else { return }
-      attachmentBatch?.error = describe(error)
+      attachmentBatch?.error = describe(error, at: .attachmentBatch)
       handleAuthorization(error)
     }
     if attachmentBatch?.id == draft.id { attachmentBatch?.loading = false }
@@ -77,7 +77,7 @@ extension TodoModel {
       }
     } catch {
       guard attachmentBatch?.id == draft.id else { return }
-      attachmentBatch?.error = describe(error)
+      attachmentBatch?.error = describe(error, at: .attachmentBatch)
       handleAuthorization(error)
     }
   }
@@ -114,8 +114,8 @@ struct AttachmentBatchView: View {
                 VStack(alignment: .leading, spacing: 4) {
                   Text(task.title).font(.callout).lineLimit(2)
                   if let row {
-                    Text(row.error?.message ?? (row.outcome == "attached" ? draft.report?.dry_run == true ? "Ready to attach" : "Attached" : "Already attached"))
-                      .font(.caption).foregroundStyle(row.error == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(TodoColors.color("destructive")))
+                    if let failure = row.error { ServerErrorNotice(model: model, failure: failure) }
+                    else { Text(row.outcome == "attached" ? draft.report?.dry_run == true ? "Ready to attach" : "Attached" : "Already attached").font(.caption).foregroundStyle(.secondary) }
                   }
                 }
               }.toggleStyle(.checkbox).frame(minHeight: 56).disabled(model.busy)
@@ -124,7 +124,7 @@ struct AttachmentBatchView: View {
           }.frame(maxWidth: .infinity, alignment: .leading)
         }.frame(height: 224).batchBounds("batch-viewport")
         Divider()
-        if let error = draft.error { Text(error).font(.caption).foregroundStyle(TodoColors.color("destructive")) }
+        if let error = draft.error { ClientErrorNotice(model: model, text: error, position: .attachmentBatch) }
         HStack(spacing: 8) {
           Button("Reload") { Task { await model.reloadAttachmentTargets() } }.disabled(model.busy || draft.loading).accessibilityLabel("Reload Tasks")
           Spacer(minLength: 0)

@@ -838,7 +838,7 @@ func liveExternalIdMoveRejectionPreservesBothProfiles() async throws {
     model.beginEditing(source)
     model.editor?.title = "Keep the unsaved source draft"
     await model.write(.move("personal"))
-    #expect(model.editorError == "\"Personal\" already has a Task with external id \"c11:move-clash\". Choose another Profile.")
+    #expect(model.editorError == "\"Personal\" already has a Task with external id \"c11:move-clash\". Choose another Profile.\nerror 2 - validation or usage")
     #expect(model.writeIntent?.transfer?.kind == .move)
     #expect(model.conflict == nil)
     #expect(model.editor?.title == "Keep the unsaved source draft")

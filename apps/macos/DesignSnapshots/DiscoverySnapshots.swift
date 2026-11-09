@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import Testing
+import TodoAPI
 @testable import TodoState
 
 @MainActor private final class DiscoveryFrames { var frames: [String: CGRect] = [:] }
@@ -22,7 +23,10 @@ import Testing
             ("lookup-loading", .lookup, .requesting), ("lookup-ready", .lookup, .showing),
             ("lookup-empty", .lookup, .empty), ("lookup-error", .lookup, .error),
             ("lookup-offline", .lookup, .offline), ("lookup-copied", .lookup, .showing),
-            ("lookup-copy-failed", .lookup, .showing), ("lookup-dense", .lookup, .showing)
+            ("lookup-copy-failed", .lookup, .showing), ("lookup-dense", .lookup, .showing),
+            ("show-gone", .lookup, .error), ("editor-not-found", .lookup, .error),
+            ("history-not-found", .lookup, .error), ("batch-not-found", .lookup, .error),
+            ("import-not-found", .lookup, .error), ("attachment-not-found", .lookup, .error)
         ]
         for compact in [true, false] {
             for scheme in [ColorScheme.light, .dark] {
@@ -31,7 +35,7 @@ import Testing
                 for (name, dialog, phase) in states {
                     let model = TodoModel(configuration: .init(server: URL(string: "http://127.0.0.1:1")!, initialProfile: "work", vaultService: "unused-discovery-snapshot"))
                     model.signedIn = true
-                    model.connection = .live
+                    model.connection = phase == .offline ? .offline : .live
                     model.discovery.dialog = dialog
                     model.discovery.phase = phase
                     model.discovery.prefix = phase == .invalid ? "invalid!" : "aaaa"
@@ -44,6 +48,8 @@ import Testing
                         model.discovery.copiedID = match.id
                         model.taskIDCopyFeedback = name == "lookup-copied" ? "Copied" : "Couldn't copy. Try again."
                     }
+                    let contextual = name == "show-gone" || name.hasSuffix("not-found")
+                    let failure = ServerFailure(message: "Run todo list --prefix aa. HTTP: GET /tasks/lookup?prefix=aa.", code: "not_found", exitCode: 3, exitMeaning: "not found or auth missing", details: .init(profile: .init(id: "work", name: "Work"), taskID: match.task_id))
                     let frames = DiscoveryFrames()
                     let width: CGFloat = compact ? 393 : 1024
                     let height: CGFloat = compact ? 426 : 720
@@ -56,7 +62,16 @@ import Testing
                             }.frame(width: width, height: height)
                             Color.black.opacity(0.08)
                         }
-                        DiscoveryView(model: model, compact: compact).background(.background, in: RoundedRectangle(cornerRadius: compact ? 0 : 12))
+                        if contextual {
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text(name == "show-gone" ? "All tasks" : name.replacingOccurrences(of: "-not-found", with: "").capitalized).font(.headline)
+                                ServerErrorNotice(model: model, failure: failure)
+                                Spacer()
+                            }.padding(16).frame(width: compact ? 393 : 560, height: compact ? 426 : 600)
+                                .background(.background, in: RoundedRectangle(cornerRadius: compact ? 0 : 12))
+                        } else {
+                            DiscoveryView(model: model, compact: compact).background(.background, in: RoundedRectangle(cornerRadius: compact ? 0 : 12))
+                        }
                     }.frame(width: width, height: height)
                         .onPreferenceChange(CompactLayoutKey.self) { value in MainActor.assumeIsolated { frames.frames = value } }
                         .environment(\.colorScheme, scheme).environment(\.controlActiveState, .key)
@@ -72,7 +87,7 @@ import Testing
                     try await Task.sleep(for: .milliseconds(120))
                     host.layoutSubtreeIfNeeded()
                     let file = "discovery-\(compact ? "compact" : "full")-\(name)-\(scheme == .light ? "light" : "dark").png"
-                    for key in dialog == .lookup ? ["discovery-close", "discovery-find", "discovery-prefix"] : ["discovery-close"] {
+                    for key in contextual ? [] : dialog == .lookup ? ["discovery-close", "discovery-find", "discovery-prefix"] : ["discovery-close"] {
                         let frame = try #require(frames.frames[key])
                         #expect(frame.minX >= 0 && frame.maxX <= width && frame.minY >= 0 && frame.maxY <= height, "\(file) \(key) \(frame)")
                     }
@@ -85,7 +100,7 @@ import Testing
                 }
             }
         }
-        #expect(files.count == 64)
+        #expect(files.count == 88)
         try JSONSerialization.data(withJSONObject: ["files": files], options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("manifest.json"))
         try JSONSerialization.data(withJSONObject: geometry, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("discovery-layout.json"))
     }

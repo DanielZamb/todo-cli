@@ -558,11 +558,15 @@ struct TaskListView: View {
                 }.padding(12)
             }
             if let message = model.message {
-                HStack {
-                    Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(TodoColors.color("destructive"))
-                    Spacer()
-                    Button("Retry") { model.connect() }
-                }.padding()
+                if model.lookupError(at: .message, text: message) != nil {
+                    ClientErrorNotice(model: model, text: message, position: .message).padding()
+                } else {
+                    HStack {
+                        Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(TodoColors.color("destructive"))
+                        Spacer()
+                        Button("Retry") { model.connect() }
+                    }.padding()
+                }
             }
             if model.loading && model.appliedSearchSnapshot == nil {
                 ProgressView("Loading tasks…").frame(maxWidth: .infinity, maxHeight: .infinity)

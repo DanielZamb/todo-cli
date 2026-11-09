@@ -18,7 +18,7 @@ struct DiscoveryView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(state.dialog == .directory ? "Profiles and Projects" : "Find Task by id").font(.headline)
-            Text("Search Profiles available to this credential").font(.caption).foregroundStyle(.secondary)
+            Text(state.dialog == .directory ? "Profiles and Projects available to this credential" : "Search Profiles available to this credential").font(.caption).foregroundStyle(.secondary)
             if state.dialog == .lookup {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Id starts with").font(.caption)
@@ -66,12 +66,9 @@ struct DiscoveryView: View {
             Text("Offline. Reconnect to search Profiles.").foregroundStyle(.secondary)
             if model.connection == .live { retry }
         case .error:
-            VStack(alignment: .leading, spacing: 6) {
-                let parts = (state.error ?? "Couldn't read discovery.").components(separatedBy: "\nerror ")
-                Text(parts[0]).textSelection(.enabled)
-                if parts.count > 1 { Text("error " + parts[1]).font(.caption).foregroundStyle(.secondary) }
-            }.accessibilityIdentifier("discovery-error")
-            retry
+            ClientErrorNotice(model: model, text: state.error ?? "Couldn't read discovery.", position: .discovery)
+                .accessibilityIdentifier("discovery-error")
+            if model.lookupError(at: .discovery, text: state.error) == nil { retry }
         case .empty:
             Text(state.dialog == .directory ? "No Profiles available." : "No Tasks found.").foregroundStyle(.secondary)
         case .showing:
@@ -80,16 +77,24 @@ struct DiscoveryView: View {
                     ForEach(state.appliedSnapshot?.matches ?? []) { match in
                         VStack(alignment: .leading, spacing: 6) {
                             Text(match.title).font(.headline).fixedSize(horizontal: false, vertical: true)
-                            Text("Profile: \(match.profile.name)")
-                            fullID(match.profile.id)
-                            Text(match.project ?? "No Project").foregroundStyle(.secondary)
-                            fullID(match.task_id)
-                            Button(state.copiedID == match.id ? model.taskIDCopyFeedback ?? "Copy task id" : "Copy task id", systemImage: "doc.on.doc") {
-                                model.copyTaskID(match.task_id)
-                                state.copiedID = match.id
-                            }.accessibilityIdentifier("discovery-copy-\(match.task_id)")
+                            Text("\(match.profile.name) · \(match.project ?? "No Project")").foregroundStyle(.secondary)
+                            if match.profile.id != match.profile.name { labeledID(match.profile.id) }
+                            HStack(spacing: 8) {
+                                fullID(match.task_id)
+                                Button {
+                                    model.copyTaskID(match.task_id)
+                                    state.copiedID = match.id
+                                } label: { Image(systemName: "doc.on.doc") }
+                                    .buttonStyle(.plain).frame(minWidth: 28, minHeight: 28)
+                                    .accessibilityLabel("Copy task id").help("Copy task id")
+                                    .accessibilityIdentifier("discovery-copy-\(match.task_id)")
+                            }
+                            if state.copiedID == match.id, let feedback = model.taskIDCopyFeedback {
+                                Text(feedback).font(.caption2).foregroundStyle(.secondary)
+                                    .accessibilityIdentifier("discovery-copy-feedback-\(match.task_id)")
+                            }
                             Button("Show in \(match.profile.name)") { Task { await model.showDiscoveryMatch(match) } }
-                                .accessibilityIdentifier("discovery-show-\(match.task_id)")
+                                .buttonStyle(.bordered).accessibilityIdentifier("discovery-show-\(match.task_id)")
                         }
                     }
                 }.accessibilityIdentifier("discovery-results")
@@ -98,7 +103,7 @@ struct DiscoveryView: View {
     }
     private var directoryList: some View {
         List {
-            ForEach(state.appliedSnapshot?.profiles ?? []) { profile in
+            ForEach(Array((state.appliedSnapshot?.profiles ?? []).enumerated()), id: \.element.id) { index, profile in
                 Section {
                     if profile.projects.isEmpty {
                         Text("No Projects").foregroundStyle(.secondary).listRowSeparator(.hidden)
@@ -111,12 +116,13 @@ struct DiscoveryView: View {
                             }.padding(.leading, 12).listRowSeparator(.hidden)
                         }
                     }
+                    if index < (state.appliedSnapshot?.profiles.count ?? 0) - 1 { Divider().listRowSeparator(.hidden) }
                 } header: {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(profile.name).font(.body.weight(.semibold)).foregroundStyle(.primary).textSelection(.enabled)
                         if profile.id != profile.name { labeledID(profile.id) }
                     }
-                }
+                }.listSectionSeparator(.hidden)
             }
         }.listStyle(.inset).accessibilityIdentifier("discovery-directory-list")
     }

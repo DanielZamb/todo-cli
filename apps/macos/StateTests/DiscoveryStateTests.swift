@@ -41,8 +41,8 @@ private actor DiscoveryTransport: ClientTransport {
     }
 
     @Test func errorDetailUsesActualServerPairAndPreservesContext() {
-        let error = RequestFailure(status: 404, message: "Task missing in Profile Work (work). Try GET /tasks/lookup?prefix=aa.", exitCode: 3, exitMeaning: "not found or auth missing")
-        #expect(error.humanMessage == "Task missing in Profile Work (work). Try GET /tasks/lookup?prefix=aa.\nerror 3 - not found or auth missing")
+        let error = RequestFailure(status: 404, message: "Task missing in Profile Work (work). Try GET /tasks/lookup?prefix=aa.", exitCode: 3, exitMeaning: "not found or auth missing", details: .init(profile: .init(id: "work", name: "Work"), taskID: "aa"))
+        #expect(error.humanMessage == "Task not found in Work.\nerror 3 - not found or auth missing")
         #expect(RequestFailure(status: 422, message: "Bad prefix", exitCode: 2, exitMeaning: "validation or usage").exitDetail == "error 2 - validation or usage")
     }
 
@@ -92,6 +92,8 @@ private actor DiscoveryTransport: ClientTransport {
         #expect(model.editor?.title == "Keep unsaved D draft")
         #expect(await model.showDiscoveryMatch(match) == false)
         let target = try #require(model.pendingNavigation)
+        #expect(await model.discardAndNavigate(cancelledTarget) == false)
+        #expect(model.editor?.title == "Keep unsaved D draft")
         #expect(await model.discardAndNavigate(target))
         try await wait { model.searchPhase == .showing && !model.loading }
         #expect(model.profile == "personal")
@@ -208,6 +210,40 @@ private actor DiscoveryTransport: ClientTransport {
         await transport.release()
         #expect(await saving.value == false)
         #expect(model.editor?.id != done.id)
+        model.editor = nil
+        let gone = try await TaskSnapshot.decode(direct.tasks_period_create(path: .init(profile: "personal"), body: .json(create)).ok.body.json)
+        await model.openDiscovery(.lookup)
+        model.editDiscoveryPrefix(gone.id)
+        await model.requestDiscovery()
+        let goneMatch = try #require(model.discovery.appliedSnapshot?.matches.first)
+        _ = try await direct.tasks_period_delete(path: .init(profile: "personal", task: gone.id), query: .init(from_version: "1")).ok
+        #expect(await model.showDiscoveryMatch(goneMatch) == false)
+        #expect(model.message == "Task not found in Personal.\nerror 3 - not found or auth missing")
+        let recovery = try #require(model.lookupError(at: .message, text: model.message))
+        let requestsBeforeRecovery = await transport.requests.count
+        await model.findTaskAfterLookupError(recovery)
+        #expect(model.discovery.prefix == gone.id)
+        #expect(model.discovery.phase == .editing)
+        #expect(model.discovery.appliedSnapshot == nil)
+        #expect(await transport.requests.count == requestsBeforeRecovery)
+        #expect(model.profile == "work")
+        model.closeDiscovery()
+        let unavailable = try await TaskSnapshot.decode(direct.tasks_period_create(path: .init(profile: "work"), body: .json(create)).ok.body.json)
+        _ = try await direct.tasks_period_delete(path: .init(profile: "work", task: unavailable.id), query: .init(from_version: "1")).ok
+        model.beginEditing(unavailable)
+        model.editor?.title = "Keep missing Task draft"
+        #expect(await model.save() == nil)
+        #expect(model.editorError == "Task not found in Work.\nerror 3 - not found or auth missing")
+        let editorFailure = try #require(model.lookupError(at: .editor, text: model.editorError))
+        let beforeEditorRecovery = await transport.requests.count
+        await model.findTaskAfterLookupError(editorFailure)
+        #expect(model.discovery.prefix == unavailable.id)
+        #expect(await transport.requests.count == beforeEditorRecovery)
+        #expect(model.editor?.title == "Keep missing Task draft")
+        model.closeDiscovery()
+        await model.loadHistory()
+        #expect(model.historyError == "Task not found in Work.\nerror 3 - not found or auth missing")
+        #expect(model.lookupError(at: .history, text: model.historyError)?.details?.task_id == unavailable.id)
         model.closeDiscovery()
         model.signedIn = false
         model.connect()

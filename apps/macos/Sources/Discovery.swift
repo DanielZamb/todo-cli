@@ -37,7 +37,8 @@ struct DiscoverySnapshot {
     var matches: [TaskLookupMatch] = []
 }
 
-struct DiscoveryShowIntent {
+struct DiscoveryShowIntent: Equatable {
+    let id = UUID()
     let identity: DiscoveryIdentity
     let match: TaskLookupMatch
 }
@@ -132,7 +133,7 @@ extension TodoModel {
             discovery.phase = snapshot.profiles.isEmpty && snapshot.matches.isEmpty ? .empty : .showing
         } catch {
             guard canPublishDiscovery(identity) else { return }
-            discovery.error = describe(error)
+            discovery.error = describe(error, at: .discovery)
             discovery.phase = .error
             handleAuthorization(error)
         }
@@ -152,8 +153,7 @@ extension TodoModel {
     func canShowDiscovery(_ intent: DiscoveryShowIntent) -> Bool {
         guard signedIn, connection == .live, !Task.isCancelled,
               discovery.credentialEpoch == intent.identity.credentialEpoch,
-              discovery.showIntent?.identity == intent.identity,
-              discovery.showIntent?.match == intent.match else { return false }
+              discovery.showIntent == intent else { return false }
         return true
     }
 

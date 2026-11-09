@@ -21,7 +21,7 @@ enum BatchEditField: String, CaseIterable, Identifiable {
 }
 struct BatchEditReport: Decodable, Sendable {
   struct Row: Decodable, Sendable {
-    struct Failure: Decodable, Sendable { let code: String; let message: String }
+    typealias Failure = ServerFailure
     let task_id: String
     let from_version: Int
     let current_version: Int?
@@ -88,7 +88,7 @@ extension TodoModel {
       batchEdit?.selected.formIntersection(Set(values.map(\.id)))
     } catch {
       guard batchEdit?.id == draft.id else { return }
-      batchEdit?.error = describe(error)
+      batchEdit?.error = describe(error, at: .batchEdit)
       handleAuthorization(error)
     }
     if batchEdit?.id == draft.id { batchEdit?.loading = false }
@@ -108,7 +108,7 @@ extension TodoModel {
       if !dryRun { await refreshAfterWrite("Tasks updated") }
     } catch {
       guard batchEdit?.id == draft.id else { return }
-      batchEdit?.error = describe(error)
+      batchEdit?.error = describe(error, at: .batchEdit)
       handleAuthorization(error)
     }
   }
@@ -154,15 +154,19 @@ struct BatchEditView: View {
               })) {
                 VStack(alignment: .leading, spacing: 4) {
                   Text(task.title).font(.callout).lineLimit(1).help(task.title)
-                  Text(row.map { row in row.error.map { error in error.code == "occ_conflict" ? "Conflict · Version \(row.current_version ?? 0). Reload Tasks." : error.message } ?? (draft.report?.dry_run == true ? "Ready · Version \(task.row_version)" : "Updated · Version \(row.current_version ?? 0)") } ?? "\(task.priority) · Version \(task.row_version)")
-                    .font(.caption).foregroundStyle(row?.error == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(TodoColors.color("destructive")))
+                  if let failure = row?.error, failure.isTaskLookup {
+                    ServerErrorNotice(model: model, failure: failure)
+                  } else {
+                    Text(row.map { row in row.error.map { error in error.code == "occ_conflict" ? "Conflict · Version \(row.current_version ?? 0). Reload Tasks." : error.humanMessage } ?? (draft.report?.dry_run == true ? "Ready · Version \(task.row_version)" : "Updated · Version \(row.current_version ?? 0)") } ?? "\(task.priority) · Version \(task.row_version)")
+                      .font(.caption).foregroundStyle(row?.error == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(TodoColors.color("destructive")))
+                  }
                 }.frame(maxWidth: .infinity, alignment: .leading)
               }.toggleStyle(.checkbox).frame(minHeight: 56).disabled(model.busy || draft.loading).accessibilityLabel("Select \(task.title)")
             }
           }.frame(maxWidth: .infinity, alignment: .leading)
         }.frame(height: compact ? 112 : 224).accessibilityLabel("Tasks to edit")
         Divider()
-        if let error = draft.error { Text(error).font(.caption).foregroundStyle(TodoColors.color("destructive")) }
+        if let error = draft.error { ClientErrorNotice(model: model, text: error, position: .batchEdit) }
         HStack(spacing: 8) {
           if hasConflicts(draft) { reloadButton(draft).buttonStyle(.borderedProminent) }
           else { reloadButton(draft).buttonStyle(.bordered) }

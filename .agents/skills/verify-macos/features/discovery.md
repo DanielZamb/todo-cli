@@ -31,7 +31,7 @@ the credential epoch and rejects navigation. The assertions use literal outcomes
 ## Offscreen sheets
 
 Run TODO_SNAPSHOT_DISCOVERY_ONLY=1 with apps/macos/scripts/verify-design.py and a
-fresh absolute evidence path. Require exit 0, 64 PNGs, manifest.json,
+fresh absolute evidence path. Require exit 0, 88 PNGs, manifest.json,
 discovery-layout.json and accessibility.json. Inspect Compact 393 by 426 first,
 light and dark, then full. Both dialogs cover ready, empty, loading, error,
 offline and dense scrolling content. Lookup adds Editing, Invalid, Copied and
@@ -50,3 +50,15 @@ VoiceOver, glass, actual clipboard denial or Keychain. The integrated discovery
 formal skill is model-ready only until its owner maps and proves the final
 production functions and await/publication boundaries. Do not renew Task search
 source hashes without semantic review and proof.
+
+Contextual Task misses use structured Profile and Task details to show
+"Task not found in <Profile name>." and the actual server exit pair, plus one
+Find Task by id action. Opening recovery prefills a valid id prefix and sends no
+request until Find. The 24 additional U5 captures render the shared production
+error notice for Show, editor, History, batch edit, import and Attachments in both
+layouts and appearances. They prove the notice content, not native placement.
+Agent message/recovery commands and HTTP routes never enter this notice. The
+production HTTP drive also removes a found Task before Show, rejects Save and
+History for a missing Task, preserves its draft and proves recovery opens without
+a request. A cancelled Show callback stays rejected even after another Show on
+the same applied row, because each intent has a distinct id.

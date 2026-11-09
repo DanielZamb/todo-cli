@@ -33,7 +33,7 @@ extension TodoModel {
         editorError = "Task changed. Your draft is preserved. Retry the Attachment action."
       }
     } catch {
-      editorError = describe(error)
+      editorError = describe(error, at: .editor)
       handleAuthorization(error)
     }
   }
@@ -59,7 +59,7 @@ extension TodoModel {
       let response = try await client.tasks_period_attachMany(path: .init(profile: draft.base.profile_id), body: .json(payload)).ok.body.json
       let report = try JSONDecoder().decode(AttachmentBatchResponse.self, from: JSONEncoder().encode(response))
       if let row = report.items.first, row.outcome == "rejected", row.error?.code != "occ_conflict" {
-        throw AttachmentBatchFailure(message: row.error?.message ?? "Attachments were rejected.")
+        throw row.error ?? ServerFailure(message: "Attachments were rejected.")
       }
       let latest = try TaskSnapshot.decode(try await client.tasks_period_show(path: .init(profile: draft.base.profile_id, task: draft.id)).ok.body.json)
       if report.items.first?.error?.code == "occ_conflict" { return .conflict(latest) }
@@ -160,13 +160,9 @@ extension TaskDraft {
 
 private struct AttachmentBatchResponse: Decodable {
   struct Row: Decodable {
-    struct Failure: Decodable { let code: String; let message: String }
+    typealias Failure = ServerFailure
     let outcome: String
     let error: Failure?
   }
   let items: [Row]
-}
-private struct AttachmentBatchFailure: LocalizedError {
-  let message: String
-  var errorDescription: String? { message }
 }

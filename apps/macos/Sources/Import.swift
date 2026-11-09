@@ -54,12 +54,7 @@ enum ImportFileError: LocalizedError {
 }
 struct ImportSummary: Codable, Sendable {
     struct Row: Codable, Identifiable, Sendable {
-        struct Failure: Codable, Sendable {
-            struct Details: Codable, Sendable { let current_version: Int? }
-            let code: String
-            let message: String
-            let details: Details?
-        }
+        typealias Failure = ServerFailure
         var id: String { external_id }
         let external_id: String
         let outcome: String
@@ -152,7 +147,7 @@ struct ImportView: View {
                                         Text(row.external_id.isEmpty ? "Missing external id" : row.external_id)
                                             .font(.caption).foregroundStyle(.secondary).textSelection(.enabled).lineLimit(1).help(row.external_id)
                                         if let error = row.error {
-                                            Text(error.message).font(.caption).foregroundStyle(TodoColors.color("destructive").opacity(0.85)).lineLimit(compact ? 1 : nil).help(error.message)
+                                            ServerErrorNotice(model: model, failure: error)
                                         } else {
                                             Text(row.changesText).font(.caption).foregroundStyle(.secondary).lineLimit(compact ? 1 : nil).help(row.changesText)
                                         }
