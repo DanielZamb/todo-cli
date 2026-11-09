@@ -164,3 +164,7 @@ restored byte for byte. This evidence targets the fixed candidate hashes, not
 historical measured cc5777 code. The final committed-input one-command result is
 listed in the worker's ignored final delivery receipt. No AtomicOCC model bounds,
 invariants, package dependency or SQLite configuration changed.
+
+The exact fixed code commit65033c86ec00889f84642fb76289094a23762ebb passed the
+actual-worktree one-command at docs/evidence/fv01/fv01-check-ciYXwL, exit 0.
+The later mapping-only head has identical covered source hashes.

@@ -77,3 +77,12 @@ Own server writes may be observed and cleared again harmlessly. Content keys
 preserve output correctness; these erasure rules are memory hygiene, not database
 coherence. No new timing window is authorized. Frozen measurements remain
 cc5777/source 2eb2, separate from the later fixed review SHA.
+
+The confirmed immutable fixed code is 65033c86ec00889f84642fb76289094a23762ebb, aggregate source fingerprint
+8fe6361c476a5c81182491dacd3588021b206e08b6fc5d8acc8e0c6c7e1f69c7. Its cache
+one-command receipt verify-2pGXUu passed with all controls and compiled assertions.
+Official matcher/formal, CLI/goldens, search, operation-log, Profile, Snapshot,
+HTTP, SSE, scheduler and AtomicCAS recipes all exited 0 under fix-65033c86.
+The final mapping-only delivery commit preserves these source bytes. Its exact
+locked full-check exit and review SHA are in the ignored final delivery receipt.
+Frozen timings remain measured cc5777/source 2eb2, not this fixed product.

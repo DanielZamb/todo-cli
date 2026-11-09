@@ -1,6 +1,6 @@
 {
-  "productCommit": "cc5777acbebbebbffd8679022f8165bb7b6c38a5",
-  "scope": "Review-fix candidate from cc5777: whole-cache Purge/restore epoch fencing, incremental committed hygiene, exact same-source matching and charged bounds; finite evidence, no RSS/unbounded theorem",
+  "productCommit": "65033c86ec00889f84642fb76289094a23762ebb",
+  "scope": "Confirmed fixed source65033: whole-cache Purge/restore epoch fencing, incremental committed hygiene and indexed restore headers; same-source matching, literal charged bounds and bounded formal evidence",
   "seed": "0x5ea2c001",
   "files": [
     {
@@ -32,8 +32,8 @@
       "sha256": "4f0276e1953a56db0a31844c51faec02835eea134b04a06ed2ba6e9231d6d600"
     }
   ],
-  "review": "Reviewed exact ClearAll/read-epoch/token guard, local Purge/restore callbacks, indexed canonical restore headers and narrow committed tail. Generated-8mUNAd behavior-result controls/restoration/strict0 and admission-code-upMphO eleven controls/restoration/strict0 passed; hygiene-NqPs1w three hook/query controls restored0, admission-s2Ahb9 seven model mutants TLC12/restored0. Compiled external moved-Purge/Profile delete and defect envelope passed using8fe636 source candidate. Protected SEC matcher/runner/evaluator unchanged. productCommit names the parent; actual covered bytes are the candidate hashes and later immutable proof head is recorded in receipts.",
-  "reviewedCandidate": true,
+  "review": "Exact immutable65033 one-command verify-2pGXUu passed generated/meter/store controls, seven model mutants, eleven real Effect mutants, three hygiene/query mutants and restoration/strict checks; compiled lifecycle, moved-Purge/Profile delete1000ms and CLI defect envelope passed. Official search/CLI goldens/op-log/Profile/Snapshot/HTTP/SSE/scheduler and AtomicCAS clean/sensitivity passed. Protected SEC matcher/runner/evaluator unchanged. Final metadata head has identical covered source bytes; no retiming.",
+  "reviewedCandidate": false,
   "hygieneFiles": [
     {
       "path": "apps/server/src/task-search-cache-hygiene.ts",

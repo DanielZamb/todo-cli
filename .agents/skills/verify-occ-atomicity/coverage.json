@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "cc5777acbebbebbffd8679022f8165bb7b6c38a5",
+  "confirmedCommit": "65033c86ec00889f84642fb76289094a23762ebb",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
@@ -70,6 +70,6 @@
       ]
     }
   ],
-  "reviewedCandidate": true,
-  "review": "Review-fix candidate from parentcc5777: constructor restore callback clears cache; read-only narrow cache metadata query; TaskPurged clears epoch/maps instead of cache History scanning. Validate, record, applyEvent, Version, commit, rejection, replay and crash boundaries remain unchanged. Exact store diff reviewed; sensitivity/restoration and one-command checks recorded in ignored fixed-review receipts. Other covered hashes byte-identical. No model change."
+  "reviewedCandidate": false,
+  "review": "Confirmed immutable65033 covered source. Pure cache clear replaced historical cache eviction; restore callback and read-only metadata tail do not change Validate/Record/Apply/WriteVersion/Commit/rejection/replay/crash boundaries. Actual-worktree AtomicCAS one-command0 at fv01-check-ciYXwL; two isolated source sensitivity breaks fail1/restored0 at sensitivity-CW3gRs. Other covered hashes unchanged. No model change."
 }

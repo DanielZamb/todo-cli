@@ -66,3 +66,12 @@ elsewhere, source attribution incomplete. The helper hit cost is separate from
 HTTP latency. The new epoch guard itself is not remeasured. Charged storage is
 not RSS; the finite admission model is not an unbounded refinement theorem. First
 preparation of expanding text remains expensive and V3 remains nonretained.
+
+The confirmed immutable fixed code is 65033c86ec00889f84642fb76289094a23762ebb, aggregate source fingerprint
+8fe6361c476a5c81182491dacd3588021b206e08b6fc5d8acc8e0c6c7e1f69c7. Its cache
+one-command receipt verify-2pGXUu passed with all controls and compiled assertions.
+Official matcher/formal, CLI/goldens, search, operation-log, Profile, Snapshot,
+HTTP, SSE, scheduler and AtomicCAS recipes all exited 0 under fix-65033c86.
+The final mapping-only delivery commit preserves these source bytes. Its exact
+locked full-check exit and review SHA are in the ignored final delivery receipt.
+Frozen timings remain measured cc5777/source 2eb2, not this fixed product.
