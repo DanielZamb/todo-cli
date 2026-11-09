@@ -48,8 +48,9 @@ It checks literal titles, versions, sequence numbers, reasons, and settings.
 The compiled Tag proof also checks exact payload JSON and sorted `task_tags`
 after unchanged, reordered, added, removed, empty and new-name Tags, full and
 replay-checkpoint rebuild, Revert, Move and Delete. A trigger rejects unnecessary
-link Deletes for equal sets. Projection-only cases collapse duplicate ids while
-preserving their payload order; public append still rejects duplicate ids.
+link Deletes for equal sets with distinct payload ids. Projection-only duplicate
+cases require the exact UNIQUE constraint error and unchanged payload, links and
+Version; a failed new Task stays absent. Public append still rejects duplicate ids.
 SQL failures after either link branch must roll back payload, links, Version
 and History together. Direct INSERT, UPDATE and DELETE on links remain guarded.
 It also attempts a direct SQL Delete and requires rejection. The compiled
