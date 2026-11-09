@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "0f7a19488f15ec1f8d4c4dad14749de7720f17d0",
+  "confirmedCommit": "8ee1c08fb92201691dc3b0bcd5fe3cd03560eb3a",
   "source": "immutable git objects; current worktree product files are not candidates",
   "scope": "Reviewed immutable merged product functions; full committed conformance execution required.",
   "modelBaselineCommit": "a91dcf8917e242bce6c0f3521a1b2727114d0ef7",
@@ -161,5 +161,12 @@
         "Authentication.append"
       ]
     }
-  ]
+  ],
+  "rebaseReview": {
+    "main": "9de893454cb6e3f5729407e9313c73e56bfd0481",
+    "previousProduct": "0f7a19488f15ec1f8d4c4dad14749de7720f17d0",
+    "changedFiles": [],
+    "scope": "Core16 unchanged. Public changes are approved SEC/search base plus reviewed-by-L1 integration of typed yielding search, graph slot5, search-dialog draft and getter preservation. Fresh independent rebase review pending.",
+    "previousSensitivity": "Historical89executions on0f7; not relabelled as current-source sensitivity"
+  }
 }

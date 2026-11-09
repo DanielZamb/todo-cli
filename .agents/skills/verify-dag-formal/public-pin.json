@@ -1,6 +1,6 @@
 {
-  "commit": "0f7a19488f15ec1f8d4c4dad14749de7720f17d0",
-  "scope": "Immutable merged integration source, reviewed after both B seats and pnpm check0. Final client/runtime acceptance pending.",
+  "commit": "8ee1c08fb92201691dc3b0bcd5fe3cd03560eb3a",
+  "scope": "Main9de89345 rebase qualification candidate. Core source hashes unchanged; selected generated/replay/public stages run separately from historical full sensitivity.",
   "scopes": [
     "packages/domain",
     "packages/api",
@@ -31,6 +31,6 @@
     "apps/electron/package.json"
   ],
   "pendingCorrections": [],
-  "contract": "58c0026725f2d846fd4f80bd7cabaff73994d6603d04ed501c82cfa1fa6f1fe9",
+  "contract": "bf54af931b6531866cbe23740582a5241999f5defcf98ad1d7f2da58774e1f3d",
   "awaitMergedIntegration": false
 }

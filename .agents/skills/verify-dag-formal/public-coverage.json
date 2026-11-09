@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "0f7a19488f15ec1f8d4c4dad14749de7720f17d0",
+  "confirmedCommit": "8ee1c08fb92201691dc3b0bcd5fe3cd03560eb3a",
   "status": "reviewed merged mapping; actual execution receipts in unit-f-report.md",
   "gateCommit": "ca142014",
   "scope": "Reviewed immutable merged product functions; full committed conformance execution required.",
@@ -53,7 +53,7 @@
         "TaskFilters",
         "filterTaskRecords"
       ],
-      "sha256": "237ab5686455b8768af9587af1a25d38e7535e1771ae23b7a0110a1a40e438d5"
+      "sha256": "5224bac2d9f82305e807d99ab959b495bc1be7347e0ee2964a7024a6fccc2f36"
     },
     {
       "path": "packages/domain/src/dependency-delete.ts",
@@ -70,7 +70,7 @@
         "cliResult",
         "mutateTask"
       ],
-      "sha256": "30e46419e8053676ebbb7486b58b1b2a34c8b5f3933a00948a6227a17137e06a"
+      "sha256": "1d912b557332d25806da32e22848eeb17974a8ed08e11cb2ae91f80bfa788dad"
     },
     {
       "path": "packages/domain/src/auth/auth.ts",
@@ -109,7 +109,7 @@
         "encodeResponse",
         "renderError"
       ],
-      "sha256": "e820e759645b2151e7abbe2fb5f9fd47986e1fa04dcf2a87a93c950610ff0140"
+      "sha256": "2199d100f3a5f3882cca4e230715b30831a24532505cecdbe3bbf0416631b42e"
     },
     {
       "path": "packages/domain/src/store/store.ts",
@@ -185,7 +185,7 @@
         "BatchEdgeRequest",
         "TaskFilters"
       ],
-      "sha256": "dfede7dd397f98f0bf862eaf6ddad322235cac22f772379deb43878f991e0536"
+      "sha256": "1810c0a4e8999648e8e692980fbe10df3d79a8f6c7622740b3562d5d8402d926"
     },
     {
       "path": "apps/server/src/server.ts",
@@ -193,7 +193,7 @@
         "rejectUnknownQuery",
         "TasksApi handlers: depend, undepend, batchDepend, importTasks"
       ],
-      "sha256": "d3ad8a514e84100b99e8c21533eefda80fecb37b237aee94ac065530583c4ee5"
+      "sha256": "79c4fcfc314fba21cd605b9700e0aee6f9971ce9e30aa0e8bc0886d8f7602ec0"
     },
     {
       "path": "apps/cli/src/main.ts",
@@ -204,7 +204,7 @@
         "false filter guard",
         "malformed Version boundary finding"
       ],
-      "sha256": "0fb7b0ed7ebd9d9d0f6cee3107a08639c73d5c4c119c9ff684e1a74e6b116462"
+      "sha256": "8e5a4c8df5a969959517fdc557faef4857a63687ad03657735bf3d7316ac1bc6"
     },
     {
       "path": "apps/cli/src/schema.ts",
@@ -256,42 +256,42 @@
       "functions": [
         "taskHttpClient caller"
       ],
-      "sha256": "d8bd1908ecf5b646e6ac5e25e69327319c9e51bd824f92821eddd485e25cf2d4"
+      "sha256": "771fe4555d82d3cb02d9244b099a089c1565194a42f9ff530dec2c0a0193aca0"
     },
     {
       "path": "apps/electron/src/task-client.ts",
       "functions": [
         "taskHttpClient caller"
       ],
-      "sha256": "b93392a77c932cf1e1c43bd3eca77518cc73153f62fa7e657c81ee16a44815ff"
+      "sha256": "5fa3aa1fce54c97716363a573551d4c1e38b0159bfc85a01c696b8f8cd6df2bc"
     },
     {
       "path": "packages/api/openapi.json",
       "functions": [
         "graph response schema"
       ],
-      "sha256": "19fcc2bc5758c1a2194cec0828ff9f8ac84bfa500df39df7dac47280f397f182"
+      "sha256": "8ecc9f0a45230cfb0edb17c6e60af1365142ad11f81ecb393a6d409501473313"
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/openapi.json",
       "functions": [
         "graph response schema"
       ],
-      "sha256": "6503a7d601ab35bf1391e8c34b36e92a2e4016991d7b141b30eb0f37685a1073"
+      "sha256": "31ccdc4b78637a2229aa6c2060f07f34c34e1c29eae0bb2e0be41a47d418dc1d"
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Operations.swift",
       "functions": [
         "graph response decoder"
       ],
-      "sha256": "a8bc93819d7d8457ebcf54a8a79bb29d541f596907c470a91d72b52179dde088"
+      "sha256": "fc574d8d22b6323c48ec99edbf776203e1ed98c8c7c983a1e9b7247b4557d7a8"
     },
     {
       "path": "apps/macos/Tests/GeneratedContractTests.swift",
       "functions": [
         "root-only graph contract decode"
       ],
-      "sha256": "cceb7fad2dcae739079066730b94778a9a012407d25f517ffe64a6ac46dd8efb"
+      "sha256": "fa1ab32d6a2677ef04a97248e9643881745705e1a62451755a04e5ea0cb08ea5"
     },
     {
       "path": "apps/electron/scripts/verify-auth-sequence.ts",
@@ -302,21 +302,21 @@
     },
     {
       "path": "apps/electron/scripts/write-host.ts",
-      "sha256": "4ae357b2245ee5b094e34a243373162fcc624fe73797360e429be12532e6df62",
+      "sha256": "7818670c2e95b57b69de21c1dfb6b13047069b9351225ed05f3ee8478c060cce",
       "functions": [
         "credential getter caller"
       ]
     },
     {
       "path": "packages/api/src/contract.ts",
-      "sha256": "ec1586a7ced8e452b03016380790365a9faab596f88959969e93975bf2b1de9b",
+      "sha256": "cc1c1fe696544af2f417f0c2945d9124cad2d6e73a76bbf2ee89408e30595e36",
       "functions": [
         "contract identity"
       ]
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift",
-      "sha256": "1f4890f46eadf964e70a8a177d678f723a28047b2a8e56abc6ea02ecf894c400",
+      "sha256": "9e3f12cbeea05a6eaf29a420954e54bbfa72b73c98ca81c46e53b5801fb2bdd6",
       "functions": [
         "contract identity"
       ]
@@ -328,5 +328,28 @@
     "independent final F review seats"
   ],
   "knownFindings": [],
-  "orderingAmendment": "ancestors/descendants whole-Profile topo; lightest_next own energy ascending, unknown last, whole-Profile topo ties"
+  "orderingAmendment": "ancestors/descendants whole-Profile topo; lightest_next own energy ascending, unknown last, whole-Profile topo ties",
+  "rebaseReview": {
+    "main": "9de893454cb6e3f5729407e9313c73e56bfd0481",
+    "previousProduct": "0f7a19488f15ec1f8d4c4dad14749de7720f17d0",
+    "changedFiles": [
+      "packages/domain/src/task-filters.ts",
+      "packages/domain/src/commands.ts",
+      "packages/domain/src/presentation.ts",
+      "packages/api/src/index.ts",
+      "apps/server/src/server.ts",
+      "apps/cli/src/main.ts",
+      "apps/electron/src/main.ts",
+      "apps/electron/src/task-client.ts",
+      "packages/api/openapi.json",
+      "apps/macos/API/Sources/TodoAPI/openapi.json",
+      "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Operations.swift",
+      "apps/macos/Tests/GeneratedContractTests.swift",
+      "apps/electron/scripts/write-host.ts",
+      "packages/api/src/contract.ts",
+      "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift"
+    ],
+    "scope": "Core16 unchanged. Public changes are approved SEC/search base plus reviewed-by-L1 integration of typed yielding search, graph slot5, search-dialog draft and getter preservation. Fresh independent rebase review pending.",
+    "previousSensitivity": "Historical89executions on0f7; not relabelled as current-source sensitivity"
+  }
 }

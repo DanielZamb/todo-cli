@@ -164,3 +164,9 @@ AtomicCAS builds without editing B's skill. disk-safety-self-check.mjs tests an
 injected prior-stop sentinel and exact scratch restoration; it is not a physical
 disk observation. Expanded full-path and nested-preload behavior still need the
 merged-source run. Do not clear a source/hash/compiler gate to make a run pass.
+
+## Main rebase qualification
+
+Immutable product 8ee1c08fb92201691dc3b0bcd5fe3cd03560eb3a incorporates main9de89345. All16 core coverage files are byte-identical to the prior reviewed0f7 product. The existing finite model and its assumptions are unchanged. Selected algorithm/replay and public baseline stages qualify this rebase; their results must be reported separately from historical full sensitivity.
+
+The public integration preserves SEC search work budgets, generator yields and interruption cleanup. TaskSearchExecution remains argument4 and TaskGraph is argument5. TaskCommands.list/readTasks preserve typed search failures; the CLI maps typed SearchTooBroad to usage2. The search dialog retains main's validation/focus while preserving true-only readiness through the draft boundary. Generated OpenAPI and Swift files are regenerated, not hand-merged. Fresh independent conflict-resolution reviews precede client merges.
