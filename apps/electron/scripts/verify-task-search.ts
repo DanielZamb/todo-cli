@@ -1496,10 +1496,8 @@ try {
       .click();
     await field.fill("");
     await showing("");
-    await page.getByLabel("Filter by Project").selectOption("");
-    await showing("");
-    await page.getByLabel("Filter by Tag").selectOption("");
-    await showing("");
+    await selectScope("Filter by Project", "", "");
+    await selectScope("Filter by Tag", "", "");
     await field.fill("probe");
     await expect(pane).toHaveAttribute("data-search-phase", "Error");
     await expect(page.getByLabel("Search failed")).toHaveAttribute(
