@@ -981,11 +981,11 @@ frame("search-copy", "Task search: copy full id", 4000, 8000, 1840, (X, Y) => {
 });
 
 frame("perf-tags", "PERF: putTask Tag links", 0, 16000, 2800, (x, y) => {
-  heading("pt", x + 50, y + 32, "putTask: unchanged task_tags", "Proposed fast path inside the existing OperationStore.transaction. Task payload and Version writes remain mandatory.");
+  heading("pt", x + 50, y + 32, "putTask: unchanged task_tags", "Set comparison inside the existing OperationStore.transaction. Task payload and Version writes remain mandatory.");
   card("pt-begin", x + 50, y + 200, 650, { title: "OperationStore.appendSync", body: "transaction / BEGIN IMMEDIATE\nvalidate; record committed op_log\napplyEvent -> applyChanges -> putTask", h: 150 });
-  card("pt-compare", x + 1800, y + 200, 850, { title: "putTask / compare Tag ids", body: "SELECT tag_id FROM task_tags WHERE task_id=?\ncompare stored ids with task.tags as sets\nINSERT / UPDATE tasks payload", h: 150 });
+  card("pt-compare", x + 1800, y + 200, 850, { title: "putTask / compare Tag ids", body: "tasks LEFT JOIN task_tags WHERE tasks.id=?\nexisting Task + equal sets -> sameTags\nINSERT / UPDATE tasks payload", h: 150 });
   card("pt-keep", x + 1800, y + 700, 850, { title: "Equal sets / keep task_tags", body: "skip task_tags DELETE and INSERT\npreserve task.tags order in payload", fill: c.accent, h: 130 });
-  card("pt-relink", x + 50, y + 700, 850, { title: "Different sets / existing relink path", body: "DELETE FROM task_tags WHERE task_id=?\nINSERT INTO task_tags for every task.tags id\nempty/new/rebuild projections use actual rows", h: 150 });
+  card("pt-relink", x + 50, y + 700, 850, { title: "Different sets or new Task / relink", body: "DELETE FROM task_tags WHERE task_id=?\nINSERT INTO task_tags for each distinct Tag id\nnew/rebuild projections use actual rows", h: 150 });
   card("pt-commit", x + 950, y + 1180, 850, { title: "putTask / task_versions -> COMMIT", body: "upsert row_version; publish History + projection\nSQL error rolls the whole transaction back", h: 140 });
   arrow("pt-enter", "pt-begin", "pt-compare", { label: "validated Event", from: "right", to: "left", labelFont: SANS });
   arrow("pt-equal", "pt-compare", "pt-keep", { label: "equal sets", from: "bottom", to: "top", labelFont: SANS });
@@ -995,7 +995,7 @@ frame("perf-tags", "PERF: putTask Tag links", 0, 16000, 2800, (x, y) => {
   marker("pt-m1", x + 1760, y + 180, 1);
   marker("pt-m2", x + 910, y + 1160, 2);
   notes("pt-notes", x + 50, y + 1450, 2650, "Numbered notes", [
-    "Compare task_tags, including after rebuild. Payload Tag order stays unchanged. Domain guard triggers remain active.",
+    "Compare actual task_tags, including after rebuild. Duplicate ids collapse for links; payload Tag order stays unchanged. Domain guards remain active.",
     "Measure WAL frames per real Task edit. verify-op-log compares exact task_tags; verify-occ-atomicity rechecks crash stages.",
   ]);
 });

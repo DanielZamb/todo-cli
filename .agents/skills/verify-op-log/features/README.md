@@ -7,6 +7,7 @@
 | [Rebuild and snapshots](rebuild.md) | Full replay and snapshot replay reproduce task rows and tag relations. |
 | [Purge redaction](purge.md) | Erased content stays absent through replay, rejected attempts and raw-byte compaction checks. |
 | [Revert](revert.md) | An inverse event restores facts at a newer version and keeps prior history. |
+| [Tag link writes](tag-links.md) | Equal Tag sets skip relinking; payload order, rebuild, guards and rollback remain exact. |
 
 The compiled driver covers every row. The `@effect/vitest` suite adds failure
 and isolation cases. Both use scratch databases only.
