@@ -38,6 +38,7 @@ import {
   resolveOccurrence,
   StartSeries,
 } from "../recurrence.ts";
+import { TaskSearchCache } from "../task-search-cache.ts";
 import { Instant } from "../time.ts";
 import { Diagnostics } from "./diagnostics.ts";
 import { StoreError } from "./error.ts";
@@ -127,6 +128,7 @@ const prepareDatabasePath = (path: string, create: boolean) => {
 };
 
 export class OperationStore {
+  readonly searchWords = new TaskSearchCache();
   private writing = false;
   private attachmentCleanupRequested = false;
   private readonly db: Database;
@@ -292,7 +294,23 @@ export class OperationStore {
     return result;
   }
 
-  readonly close = () => attempt(() => this.db.close());
+  readonly close = () =>
+    attempt(() => {
+      this.searchWords.clear();
+      this.db.close();
+    });
+
+  private evictSearchTask(id: TaskId, profile: ProfileId) {
+    for (const entry of this.historySync(0)) {
+      if (!Schema.is(Event)(entry.event)) continue;
+      for (const { before, after } of changes(entry.event).tasks)
+        for (const task of [before, after])
+          if (task?.id === id && task.profile_id === profile) {
+            this.searchWords.evict(profile, task.title);
+            this.searchWords.evict(profile, task.description ?? "");
+          }
+    }
+  }
 
   private cleanupAttachmentsSync() {
     for (const row of this.db
@@ -479,6 +497,7 @@ export class OperationStore {
         "UPDATE credentials SET revoked_at=? WHERE profile=? AND revoked_at IS NULL",
       )
       .run(input.occurred_at, profile.id);
+    this.searchWords.evictProfile(profile.id);
     return { outcome: "deleted", report };
   }
 
@@ -1013,6 +1032,7 @@ export class OperationStore {
         });
         applyEvent(this.db, event);
         if (event.kind === "TaskPurged") {
+          this.evictSearchTask(event.task_id, input.profile);
           this.queueAttachmentCleanup(event.task_id);
           redactTaskHistory(this.db, this.historySync(0), event.task_id);
           return this.historySync(entry.seq - 1)[0] ?? entry;

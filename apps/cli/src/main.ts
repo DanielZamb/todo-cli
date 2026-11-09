@@ -697,7 +697,12 @@ const list = Command.make(
           yield* write(
             renderTasks(
               filterTasks(
-                filterTaskRecords(data.tasks, filters, data).map((task) =>
+                filterTaskRecords(
+                  data.tasks,
+                  filters,
+                  data,
+                  store.searchWords.words,
+                ).map((task) =>
                   taskView(task, data.projects, data.tags, data.series),
                 ),
                 {

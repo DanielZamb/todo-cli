@@ -119,6 +119,16 @@ metadata. CLI JSON and HTTP list results carry the same matched strings and
 spans; clients highlight those spans without repeating matching. No migration
 or FTS index is needed. See [ADR-0014](adr/0014-task-search.md).
 
+Each OperationStore owns a bounded TaskSearchCache. Search memoizes fieldWords
+by Profile and exact title or description text read from SQLite for that request.
+Query results and empty-clause work are not cached. The uncached matcher remains
+available. The LRU retains at most 4,096 entries and 16 MiB of charged storage,
+including exact keys; entries over 4 MiB compute without retention. These are
+deterministic accounting bounds, not RSS limits. Local Purge evicts matching
+prior text in its Profile, Profile deletion evicts that Profile, and close clears
+the memo. External Purge entries age out through LRU. Correct matching after
+external edits or Snapshot restore follows from the exact current text key.
+
 Each client retains one applied response snapshot while requesting a newer
 identity. Search text survives Profile and view switches. Failed reads offer
 Retry and recover on current-Profile SSE reconnection or operations, without

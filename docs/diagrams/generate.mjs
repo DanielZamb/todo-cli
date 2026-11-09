@@ -1002,11 +1002,11 @@ frame("perf-tags", "PERF: putTask Tag links", 0, 16000, 2800, (x, y) => {
 
 frame("perf-cache", "PERF: folded-word cache", 3000, 16000, 3000, (x, y) => {
   heading("pc", x + 50, y + 32, "fieldWords: content-addressed memo per Profile", "Coordinator C1: every lookup uses the exact text read from SQLite in this request. No Version key or coherence protocol.");
-  card("pc-read", x + 50, y + 220, 820, { title: "OperationStore / auth.read", body: "current Task title + description + profile_id\nTaskCommands.list -> filterTaskRecords\nempty search clauses skip preparation", h: 150 });
-  card("pc-lookup", x + 2000, y + 220, 850, { title: "TaskSearchCache / proposed lookup", body: "key = profile_id + exact field text\nexact string equality or SHA-256\nvalue = fieldWords(text), with UTF-16 offsets", h: 150 });
-  card("pc-serve", x + 2000, y + 850, 850, { title: "filterTaskRecords / matchTaskSearch", body: "evaluate clauses with prepared Word arrays\nreturn strings + original UTF-16 spans\ncached and uncached outputs must be identical", fill: c.accent, h: 150 });
-  card("pc-purge", x + 50, y + 850, 1000, { title: "Local TaskPurged / deleteProfileSync", body: "Purge evicts entries for prior text in its Profile\nProfile delete evicts every entry for that Profile\nexternal Purge entries age out through LRU", fill: c.warningFill, h: 150 });
-  card("pc-evict", x + 1100, y + 1400, 1150, { title: "TaskSearchCache / proposed LRU bound", body: "4,096 entries; 16 MiB charged including key text\noversize >4 MiB entry computes without retention\nevict before insertion; store.close clears entries", h: 150 });
+  card("pc-read", x + 50, y + 220, 820, { title: "OperationStore / auth.read", body: "current Task title + description + profile_id\nTaskCommands.list / CLI list -> filterTaskRecords\nempty search clauses skip preparation", h: 150 });
+  card("pc-lookup", x + 2000, y + 220, 850, { title: "TaskSearchCache.words(profile, text)", body: "key = profile_id + exact field text\nlength-prefixed Profile + exact string key\nvalue = fieldWords(text), with UTF-16 offsets", h: 150 });
+  card("pc-serve", x + 2000, y + 850, 850, { title: "filterTaskRecords / matchTaskSearch(prepareWords)", body: "evaluate clauses with prepared Word arrays\nreturn strings + original UTF-16 spans\ncached and uncached outputs must be identical", fill: c.accent, h: 150 });
+  card("pc-purge", x + 50, y + 850, 1000, { title: "Local TaskPurged / deleteProfileSync", body: "evictSearchTask evicts all prior text in its Profile\nProfile delete evicts every entry for that Profile\nexternal Purge entries age out through LRU", fill: c.warningFill, h: 150 });
+  card("pc-evict", x + 1100, y + 1400, 1150, { title: "TaskSearchCache.words / drop / clear", body: "4,096 entries; 16 MiB charged including key text\noversize >4 MiB entry computes without retention\nevict before insertion; store.close clears entries", h: 150 });
   arrow("pc-start", "pc-read", "pc-lookup", { label: "profile_id + field text", from: "right", to: "left", labelFont: SANS });
   arrow("pc-use", "pc-lookup", "pc-serve", { label: "hit / reuse fieldWords(text)", from: "bottom", to: "top", labelFont: SANS });
   arrow("pc-hygiene", "pc-purge", "pc-evict", { label: "synchronous local hygiene eviction", from: "bottom", to: "left", labelFont: SANS });

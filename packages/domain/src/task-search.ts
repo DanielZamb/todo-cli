@@ -20,7 +20,7 @@ export type SearchClause =
   | { readonly kind: "exclude-word"; readonly word: string }
   | Phrase
   | { readonly kind: "exclude-phrase"; readonly phrase: Phrase };
-type Word = {
+export type Word = {
   readonly text: string;
   readonly start: number;
   readonly end: number;
@@ -80,7 +80,7 @@ export function parseTaskSearch(value: string): readonly SearchClause[] {
   return clauses;
 }
 
-function fieldWords(value: string): readonly Word[] {
+export function fieldWords(value: string): readonly Word[] {
   let normalized = "";
   const origins: { start: number; end: number }[] = [];
   for (const part of graphemes.segment(value)) {
@@ -206,11 +206,12 @@ function clauseMatches(
 export function matchTaskSearch(
   task: { readonly title: string; readonly description: string | null },
   clauses: readonly SearchClause[],
+  prepareWords: typeof fieldWords = fieldWords,
 ): { readonly accepted: boolean; readonly matches: readonly SearchMatch[] } {
   if (clauses.length === 0) return { accepted: true, matches: [] };
   const fields = [
-    { field: "title", words: fieldWords(task.title) },
-    { field: "description", words: fieldWords(task.description ?? "") },
+    { field: "title", words: prepareWords(task.title) },
+    { field: "description", words: prepareWords(task.description ?? "") },
   ] satisfies { field: SearchMatch["field"]; words: readonly Word[] }[];
   const matches: SearchMatch[] = [];
   for (const clause of clauses) {

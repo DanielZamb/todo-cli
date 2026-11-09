@@ -279,6 +279,7 @@ export class TaskCommands {
           ),
           filters,
           view,
+          this.store.searchWords.words,
         ),
       ),
     );

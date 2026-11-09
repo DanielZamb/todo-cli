@@ -2,7 +2,11 @@ import { Schema } from "effect";
 import { type Project, type Tag, type Task, TaskPriority } from "./entities.ts";
 import { inputLimits } from "./limits.ts";
 import type { TaskRead } from "./task-read.ts";
-import { matchTaskSearch, parseTaskSearch } from "./task-search.ts";
+import {
+  type fieldWords,
+  matchTaskSearch,
+  parseTaskSearch,
+} from "./task-search.ts";
 import { CalendarDate, type TaskTime } from "./time.ts";
 
 const dateFilter = Schema.String.check(
@@ -69,6 +73,10 @@ export function filterTaskRecords(
   tasks: readonly Task[],
   filters: TaskFilters,
   definitions: { projects: readonly Project[]; tags: readonly Tag[] },
+  prepareWords?: (
+    profile: Task["profile_id"],
+    text: string,
+  ) => ReturnType<typeof fieldWords>,
 ) {
   const search =
     filters.text === undefined ? undefined : parseTaskSearch(filters.text);
@@ -117,7 +125,13 @@ export function filterTaskRecords(
   );
   return selected.flatMap((task): TaskRead[] => {
     if (search === undefined) return [task];
-    const result = matchTaskSearch(task, search);
+    const result = matchTaskSearch(
+      task,
+      search,
+      prepareWords === undefined
+        ? undefined
+        : (text) => prepareWords(task.profile_id, text),
+    );
     return result.accepted ? [{ ...task, search_matches: result.matches }] : [];
   });
 }
