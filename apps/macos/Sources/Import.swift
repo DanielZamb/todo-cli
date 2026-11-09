@@ -54,12 +54,7 @@ enum ImportFileError: LocalizedError {
 }
 struct ImportSummary: Codable, Sendable {
     struct Row: Codable, Identifiable, Sendable {
-        struct Failure: Codable, Sendable {
-            struct Details: Codable, Sendable { let current_version: Int? }
-            let code: String
-            let message: String
-            let details: Details?
-        }
+        typealias Failure = ServerFailure
         var id: String { external_id }
         let external_id: String
         let outcome: String
@@ -103,6 +98,10 @@ struct ImportView: View {
     @Bindable var model: TodoModel
     var compact = false
     @State private var choosingFile = false
+    private var onlyLookupRejections: Bool {
+        let errors = model.importReport?.items.compactMap(\.error) ?? []
+        return !errors.isEmpty && errors.allSatisfy(\.isTaskLookup)
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: compact ? 8 : 16) {
             Text(model.importReport.map { $0.dry_run ? "Preview import" : "Import results" } ?? "Import Tasks")
@@ -124,7 +123,7 @@ struct ImportView: View {
                         ForEach(Array(report.totals.nonzero.enumerated()), id: \.offset) { index, outcome in
                             if index > 0 { Text(" · ").foregroundStyle(.secondary) }
                             Text("\(outcome.count) \(outcome.name)")
-                                .foregroundStyle(outcome.name == "rejected" ? TodoColors.color("destructive") : .secondary)
+                                .foregroundStyle(outcome.name == "rejected" && !onlyLookupRejections ? TodoColors.color("destructive") : .secondary)
                         }
                         if report.totals.nonzero.isEmpty { Text("No changes").foregroundStyle(.secondary) }
                     }.font(.caption).lineLimit(1).importFrame(.summary)
@@ -152,21 +151,22 @@ struct ImportView: View {
                                         Text(row.external_id.isEmpty ? "Missing external id" : row.external_id)
                                             .font(.caption).foregroundStyle(.secondary).textSelection(.enabled).lineLimit(1).help(row.external_id)
                                         if let error = row.error {
-                                            Text(error.message).font(.caption).foregroundStyle(TodoColors.color("destructive").opacity(0.85)).lineLimit(compact ? 1 : nil).help(error.message)
+                                            ServerErrorNotice(model: model, failure: error)
                                         } else {
                                             Text(row.changesText).font(.caption).foregroundStyle(.secondary).lineLimit(compact ? 1 : nil).help(row.changesText)
                                         }
                                     }.frame(maxWidth: .infinity, alignment: .leading)
-                                    Text(row.outcomeText).font(.callout).foregroundStyle(row.outcome == "rejected" ? TodoColors.color("destructive") : .primary).fixedSize()
+                                    Text(row.outcomeText).font(.callout).foregroundStyle(row.outcome == "rejected" && row.error?.isTaskLookup != true ? TodoColors.color("destructive") : .primary).fixedSize()
                                 }.padding(.top, compact ? 0 : 12).padding(.bottom, compact ? 8 : 12)
-                                    .frame(height: compact ? 56 : nil, alignment: .top).importFrame(.row(index))
+                                    .frame(minHeight: compact ? 56 : nil, alignment: .top).importFrame(.row(index))
+                                    .reportErrorBounds("row-" + (row.task_id ?? row.external_id))
                                     .overlay(alignment: .bottom) { if compact { Divider() } }
                                 if !compact { Divider() }
                             }
                         }.padding(.trailing, 8)
                     }.scrollIndicators(.visible)
                         .frame(minHeight: compact ? 224 : 240, maxHeight: compact ? 224 : .infinity).clipped()
-                        .importFrame(.viewport).accessibilityIdentifier("import-preview-table")
+                        .importFrame(.viewport).reportErrorBounds("viewport").accessibilityIdentifier("import-preview-table")
                 }
             } else {
                 VStack(alignment: .leading, spacing: 12) {
@@ -180,7 +180,7 @@ struct ImportView: View {
                 Spacer(minLength: 0)
             }
             if compact && model.importReport != nil { Spacer(minLength: 0) }
-            if let error = model.importError { Text(error).foregroundStyle(TodoColors.color("destructive")).font(.callout).accessibilityIdentifier("import-error") }
+            if let error = model.importError { ClientErrorNotice(model: model, text: error, position: .importTasks).font(.callout).accessibilityIdentifier("import-error") }
             if !model.canWrite && !model.busy { Text("Offline. Reconnect to preview or apply.").font(.callout).foregroundStyle(.secondary) }
             VStack(alignment: .leading, spacing: compact ? 8 : 12) {
                 if let report = model.importReport {

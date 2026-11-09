@@ -18,21 +18,37 @@ extension Components {
             public var _tag: Components.Schemas.UnauthorizedEncoded._tagPayload
             /// - Remark: Generated from `#/components/schemas/UnauthorizedEncoded/message`.
             public var message: Swift.String
+            /// - Remark: Generated from `#/components/schemas/UnauthorizedEncoded/exit_code`.
+            public var exit_code: Swift.Double
+            /// - Remark: Generated from `#/components/schemas/UnauthorizedEncoded/exit_meaning`.
+            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+            }
+            /// - Remark: Generated from `#/components/schemas/UnauthorizedEncoded/exit_meaning`.
+            public var exit_meaning: Components.Schemas.UnauthorizedEncoded.exit_meaningPayload
             /// Creates a new `UnauthorizedEncoded`.
             ///
             /// - Parameters:
             ///   - _tag:
             ///   - message:
+            ///   - exit_code:
+            ///   - exit_meaning:
             public init(
                 _tag: Components.Schemas.UnauthorizedEncoded._tagPayload,
-                message: Swift.String
+                message: Swift.String,
+                exit_code: Swift.Double,
+                exit_meaning: Components.Schemas.UnauthorizedEncoded.exit_meaningPayload
             ) {
                 self._tag = _tag
                 self.message = message
+                self.exit_code = exit_code
+                self.exit_meaning = exit_meaning
             }
             public enum CodingKeys: String, CodingKey {
                 case _tag
                 case message
+                case exit_code
+                case exit_meaning
             }
             public init(from decoder: any Swift.Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -45,9 +61,19 @@ extension Components {
                     Swift.String.self,
                     forKey: .message
                 )
+                self.exit_code = try container.decode(
+                    Swift.Double.self,
+                    forKey: .exit_code
+                )
+                self.exit_meaning = try container.decode(
+                    Components.Schemas.UnauthorizedEncoded.exit_meaningPayload.self,
+                    forKey: .exit_meaning
+                )
                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                     "_tag",
-                    "message"
+                    "message",
+                    "exit_code",
+                    "exit_meaning"
                 ])
             }
 
@@ -55,6 +81,8 @@ extension Components {
                 var container = encoder.container(keyedBy: CodingKeys.self)
                 try container.encode(self._tag, forKey: ._tag)
                 try container.encode(self.message, forKey: .message)
+                try container.encode(self.exit_code, forKey: .exit_code)
+                try container.encode(self.exit_meaning, forKey: .exit_meaning)
             }
         }
         /// - Remark: Generated from `#/components/schemas/InternalErrorEncoded`.
@@ -69,21 +97,37 @@ extension Components {
             public var _tag: Components.Schemas.InternalErrorEncoded._tagPayload
             /// - Remark: Generated from `#/components/schemas/InternalErrorEncoded/message`.
             public var message: Swift.String
+            /// - Remark: Generated from `#/components/schemas/InternalErrorEncoded/exit_code`.
+            public var exit_code: Swift.Double
+            /// - Remark: Generated from `#/components/schemas/InternalErrorEncoded/exit_meaning`.
+            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case runtime_space_failure = "runtime failure"
+            }
+            /// - Remark: Generated from `#/components/schemas/InternalErrorEncoded/exit_meaning`.
+            public var exit_meaning: Components.Schemas.InternalErrorEncoded.exit_meaningPayload
             /// Creates a new `InternalErrorEncoded`.
             ///
             /// - Parameters:
             ///   - _tag:
             ///   - message:
+            ///   - exit_code:
+            ///   - exit_meaning:
             public init(
                 _tag: Components.Schemas.InternalErrorEncoded._tagPayload,
-                message: Swift.String
+                message: Swift.String,
+                exit_code: Swift.Double,
+                exit_meaning: Components.Schemas.InternalErrorEncoded.exit_meaningPayload
             ) {
                 self._tag = _tag
                 self.message = message
+                self.exit_code = exit_code
+                self.exit_meaning = exit_meaning
             }
             public enum CodingKeys: String, CodingKey {
                 case _tag
                 case message
+                case exit_code
+                case exit_meaning
             }
             public init(from decoder: any Swift.Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -96,9 +140,19 @@ extension Components {
                     Swift.String.self,
                     forKey: .message
                 )
+                self.exit_code = try container.decode(
+                    Swift.Double.self,
+                    forKey: .exit_code
+                )
+                self.exit_meaning = try container.decode(
+                    Components.Schemas.InternalErrorEncoded.exit_meaningPayload.self,
+                    forKey: .exit_meaning
+                )
                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                     "_tag",
-                    "message"
+                    "message",
+                    "exit_code",
+                    "exit_meaning"
                 ])
             }
 
@@ -106,6 +160,8 @@ extension Components {
                 var container = encoder.container(keyedBy: CodingKeys.self)
                 try container.encode(self._tag, forKey: ._tag)
                 try container.encode(self.message, forKey: .message)
+                try container.encode(self.exit_code, forKey: .exit_code)
+                try container.encode(self.exit_meaning, forKey: .exit_meaning)
             }
         }
         /// - Remark: Generated from `#/components/schemas/InvalidTaskEncoded`.
@@ -118,6 +174,14 @@ extension Components {
             }
             /// - Remark: Generated from `#/components/schemas/InvalidTaskEncoded/_tag`.
             public var _tag: Components.Schemas.InvalidTaskEncoded._tagPayload
+            /// - Remark: Generated from `#/components/schemas/InvalidTaskEncoded/exit_code`.
+            public var exit_code: Swift.Double
+            /// - Remark: Generated from `#/components/schemas/InvalidTaskEncoded/exit_meaning`.
+            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case validation_space_or_space_usage = "validation or usage"
+            }
+            /// - Remark: Generated from `#/components/schemas/InvalidTaskEncoded/exit_meaning`.
+            public var exit_meaning: Components.Schemas.InvalidTaskEncoded.exit_meaningPayload
             /// - Remark: Generated from `#/components/schemas/InvalidTaskEncoded/message`.
             public var message: Swift.String
             /// - Remark: Generated from `#/components/schemas/InvalidTaskEncoded/details`.
@@ -173,19 +237,27 @@ extension Components {
             ///
             /// - Parameters:
             ///   - _tag:
+            ///   - exit_code:
+            ///   - exit_meaning:
             ///   - message:
             ///   - details:
             public init(
                 _tag: Components.Schemas.InvalidTaskEncoded._tagPayload,
+                exit_code: Swift.Double,
+                exit_meaning: Components.Schemas.InvalidTaskEncoded.exit_meaningPayload,
                 message: Swift.String,
                 details: Components.Schemas.InvalidTaskEncoded.detailsPayload? = nil
             ) {
                 self._tag = _tag
+                self.exit_code = exit_code
+                self.exit_meaning = exit_meaning
                 self.message = message
                 self.details = details
             }
             public enum CodingKeys: String, CodingKey {
                 case _tag
+                case exit_code
+                case exit_meaning
                 case message
                 case details
             }
@@ -195,6 +267,14 @@ extension Components {
                 self._tag = try container.decode(
                     Components.Schemas.InvalidTaskEncoded._tagPayload.self,
                     forKey: ._tag
+                )
+                self.exit_code = try container.decode(
+                    Swift.Double.self,
+                    forKey: .exit_code
+                )
+                self.exit_meaning = try container.decode(
+                    Components.Schemas.InvalidTaskEncoded.exit_meaningPayload.self,
+                    forKey: .exit_meaning
                 )
                 self.message = try container.decode(
                     Swift.String.self,
@@ -206,6 +286,8 @@ extension Components {
                 )
                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                     "_tag",
+                    "exit_code",
+                    "exit_meaning",
                     "message",
                     "details"
                 ])
@@ -214,6 +296,8 @@ extension Components {
             public func encode(to encoder: any Swift.Encoder) throws {
                 var container = encoder.container(keyedBy: CodingKeys.self)
                 try container.encode(self._tag, forKey: ._tag)
+                try container.encode(self.exit_code, forKey: .exit_code)
+                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                 try container.encode(self.message, forKey: .message)
                 if self.details == nil && _explicitNullKeys.contains(CodingKeys.details.stringValue) {
                     try container.encodeNil(forKey: .details)
@@ -1025,21 +1109,37 @@ extension Components {
             }
             /// - Remark: Generated from `#/components/schemas/ConflictEncoded/latest`.
             public var latest: Components.Schemas.ConflictEncoded.latestPayload?
+            /// - Remark: Generated from `#/components/schemas/ConflictEncoded/exit_code`.
+            public var exit_code: Swift.Double
+            /// - Remark: Generated from `#/components/schemas/ConflictEncoded/exit_meaning`.
+            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case Conflict = "Conflict"
+            }
+            /// - Remark: Generated from `#/components/schemas/ConflictEncoded/exit_meaning`.
+            public var exit_meaning: Components.Schemas.ConflictEncoded.exit_meaningPayload
             /// Creates a new `ConflictEncoded`.
             ///
             /// - Parameters:
             ///   - _tag:
             ///   - latest:
+            ///   - exit_code:
+            ///   - exit_meaning:
             public init(
                 _tag: Components.Schemas.ConflictEncoded._tagPayload,
-                latest: Components.Schemas.ConflictEncoded.latestPayload? = nil
+                latest: Components.Schemas.ConflictEncoded.latestPayload? = nil,
+                exit_code: Swift.Double,
+                exit_meaning: Components.Schemas.ConflictEncoded.exit_meaningPayload
             ) {
                 self._tag = _tag
                 self.latest = latest
+                self.exit_code = exit_code
+                self.exit_meaning = exit_meaning
             }
             public enum CodingKeys: String, CodingKey {
                 case _tag
                 case latest
+                case exit_code
+                case exit_meaning
             }
             public init(from decoder: any Swift.Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -1052,9 +1152,19 @@ extension Components {
                     Components.Schemas.ConflictEncoded.latestPayload.self,
                     forKey: .latest
                 )
+                self.exit_code = try container.decode(
+                    Swift.Double.self,
+                    forKey: .exit_code
+                )
+                self.exit_meaning = try container.decode(
+                    Components.Schemas.ConflictEncoded.exit_meaningPayload.self,
+                    forKey: .exit_meaning
+                )
                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                     "_tag",
-                    "latest"
+                    "latest",
+                    "exit_code",
+                    "exit_meaning"
                 ])
             }
 
@@ -1066,6 +1176,8 @@ extension Components {
                 } else {
                     try container.encodeIfPresent(self.latest, forKey: .latest)
                 }
+                try container.encode(self.exit_code, forKey: .exit_code)
+                try container.encode(self.exit_meaning, forKey: .exit_meaning)
             }
         }
         /// - Remark: Generated from `#/components/schemas/Attachment`.
@@ -1123,21 +1235,149 @@ extension Components {
             public var _tag: Components.Schemas.NotFoundEncoded._tagPayload
             /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/message`.
             public var message: Swift.String
+            /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/details`.
+            public struct detailsPayload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/details/profile`.
+                public struct profilePayload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/details/profile/id`.
+                    public var id: Swift.String
+                    /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/details/profile/name`.
+                    public var name: Swift.String
+                    /// Creates a new `profilePayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - id:
+                    ///   - name:
+                    public init(
+                        id: Swift.String,
+                        name: Swift.String
+                    ) {
+                        self.id = id
+                        self.name = name
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case id
+                        case name
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.id = try container.decode(
+                            Swift.String.self,
+                            forKey: .id
+                        )
+                        self.name = try container.decode(
+                            Swift.String.self,
+                            forKey: .name
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "id",
+                            "name"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.id, forKey: .id)
+                        try container.encode(self.name, forKey: .name)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/details/profile`.
+                public var profile: Components.Schemas.NotFoundEncoded.detailsPayload.profilePayload
+                /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/details/task_id`.
+                public var task_id: Swift.String
+                /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/details/recovery`.
+                public var recovery: Swift.String
+                /// Creates a new `detailsPayload`.
+                ///
+                /// - Parameters:
+                ///   - profile:
+                ///   - task_id:
+                ///   - recovery:
+                public init(
+                    profile: Components.Schemas.NotFoundEncoded.detailsPayload.profilePayload,
+                    task_id: Swift.String,
+                    recovery: Swift.String
+                ) {
+                    self.profile = profile
+                    self.task_id = task_id
+                    self.recovery = recovery
+                }
+                public enum CodingKeys: String, CodingKey {
+                    case profile
+                    case task_id
+                    case recovery
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                    self.profile = try container.decode(
+                        Components.Schemas.NotFoundEncoded.detailsPayload.profilePayload.self,
+                        forKey: .profile
+                    )
+                    self.task_id = try container.decode(
+                        Swift.String.self,
+                        forKey: .task_id
+                    )
+                    self.recovery = try container.decode(
+                        Swift.String.self,
+                        forKey: .recovery
+                    )
+                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                        "profile",
+                        "task_id",
+                        "recovery"
+                    ])
+                }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.profile, forKey: .profile)
+                        try container.encode(self.task_id, forKey: .task_id)
+                        try container.encode(self.recovery, forKey: .recovery)
+                    }
+                }
+            /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/details`.
+            public var details: Components.Schemas.NotFoundEncoded.detailsPayload?
+            /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/exit_code`.
+            public var exit_code: Swift.Double
+            /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/exit_meaning`.
+            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+            }
+            /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/exit_meaning`.
+            public var exit_meaning: Components.Schemas.NotFoundEncoded.exit_meaningPayload
             /// Creates a new `NotFoundEncoded`.
             ///
             /// - Parameters:
             ///   - _tag:
             ///   - message:
+            ///   - details:
+            ///   - exit_code:
+            ///   - exit_meaning:
             public init(
                 _tag: Components.Schemas.NotFoundEncoded._tagPayload,
-                message: Swift.String
+                message: Swift.String,
+                details: Components.Schemas.NotFoundEncoded.detailsPayload? = nil,
+                exit_code: Swift.Double,
+                exit_meaning: Components.Schemas.NotFoundEncoded.exit_meaningPayload
             ) {
                 self._tag = _tag
                 self.message = message
+                self.details = details
+                self.exit_code = exit_code
+                self.exit_meaning = exit_meaning
             }
             public enum CodingKeys: String, CodingKey {
                 case _tag
                 case message
+                case details
+                case exit_code
+                case exit_meaning
             }
             public init(from decoder: any Swift.Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -1150,9 +1390,24 @@ extension Components {
                     Swift.String.self,
                     forKey: .message
                 )
+                self.details = try container.decodeIfPresent(
+                    Components.Schemas.NotFoundEncoded.detailsPayload.self,
+                    forKey: .details
+                )
+                self.exit_code = try container.decode(
+                    Swift.Double.self,
+                    forKey: .exit_code
+                )
+                self.exit_meaning = try container.decode(
+                    Components.Schemas.NotFoundEncoded.exit_meaningPayload.self,
+                    forKey: .exit_meaning
+                )
                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                     "_tag",
-                    "message"
+                    "message",
+                    "details",
+                    "exit_code",
+                    "exit_meaning"
                 ])
             }
 
@@ -1160,6 +1415,13 @@ extension Components {
                 var container = encoder.container(keyedBy: CodingKeys.self)
                 try container.encode(self._tag, forKey: ._tag)
                 try container.encode(self.message, forKey: .message)
+                if self.details == nil && _explicitNullKeys.contains(CodingKeys.details.stringValue) {
+                    try container.encodeNil(forKey: .details)
+                } else {
+                    try container.encodeIfPresent(self.details, forKey: .details)
+                }
+                try container.encode(self.exit_code, forKey: .exit_code)
+                try container.encode(self.exit_meaning, forKey: .exit_meaning)
             }
         }
         /// - Remark: Generated from `#/components/schemas/ForbiddenEncoded`.
@@ -1174,21 +1436,37 @@ extension Components {
             public var _tag: Components.Schemas.ForbiddenEncoded._tagPayload
             /// - Remark: Generated from `#/components/schemas/ForbiddenEncoded/message`.
             public var message: Swift.String
+            /// - Remark: Generated from `#/components/schemas/ForbiddenEncoded/exit_code`.
+            public var exit_code: Swift.Double
+            /// - Remark: Generated from `#/components/schemas/ForbiddenEncoded/exit_meaning`.
+            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+            }
+            /// - Remark: Generated from `#/components/schemas/ForbiddenEncoded/exit_meaning`.
+            public var exit_meaning: Components.Schemas.ForbiddenEncoded.exit_meaningPayload
             /// Creates a new `ForbiddenEncoded`.
             ///
             /// - Parameters:
             ///   - _tag:
             ///   - message:
+            ///   - exit_code:
+            ///   - exit_meaning:
             public init(
                 _tag: Components.Schemas.ForbiddenEncoded._tagPayload,
-                message: Swift.String
+                message: Swift.String,
+                exit_code: Swift.Double,
+                exit_meaning: Components.Schemas.ForbiddenEncoded.exit_meaningPayload
             ) {
                 self._tag = _tag
                 self.message = message
+                self.exit_code = exit_code
+                self.exit_meaning = exit_meaning
             }
             public enum CodingKeys: String, CodingKey {
                 case _tag
                 case message
+                case exit_code
+                case exit_meaning
             }
             public init(from decoder: any Swift.Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -1201,9 +1479,19 @@ extension Components {
                     Swift.String.self,
                     forKey: .message
                 )
+                self.exit_code = try container.decode(
+                    Swift.Double.self,
+                    forKey: .exit_code
+                )
+                self.exit_meaning = try container.decode(
+                    Components.Schemas.ForbiddenEncoded.exit_meaningPayload.self,
+                    forKey: .exit_meaning
+                )
                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                     "_tag",
-                    "message"
+                    "message",
+                    "exit_code",
+                    "exit_meaning"
                 ])
             }
 
@@ -1211,6 +1499,87 @@ extension Components {
                 var container = encoder.container(keyedBy: CodingKeys.self)
                 try container.encode(self._tag, forKey: ._tag)
                 try container.encode(self.message, forKey: .message)
+                try container.encode(self.exit_code, forKey: .exit_code)
+                try container.encode(self.exit_meaning, forKey: .exit_meaning)
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/BadRequestEncoded`.
+        public struct BadRequestEncoded: Codable, Hashable, Sendable {
+            private var _explicitNullKeys: Set<String> = []
+
+            /// - Remark: Generated from `#/components/schemas/BadRequestEncoded/_tag`.
+            @frozen public enum _tagPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case BadRequest = "BadRequest"
+            }
+            /// - Remark: Generated from `#/components/schemas/BadRequestEncoded/_tag`.
+            public var _tag: Components.Schemas.BadRequestEncoded._tagPayload
+            /// - Remark: Generated from `#/components/schemas/BadRequestEncoded/message`.
+            public var message: Swift.String
+            /// - Remark: Generated from `#/components/schemas/BadRequestEncoded/exit_code`.
+            public var exit_code: Swift.Double
+            /// - Remark: Generated from `#/components/schemas/BadRequestEncoded/exit_meaning`.
+            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case validation_space_or_space_usage = "validation or usage"
+            }
+            /// - Remark: Generated from `#/components/schemas/BadRequestEncoded/exit_meaning`.
+            public var exit_meaning: Components.Schemas.BadRequestEncoded.exit_meaningPayload
+            /// Creates a new `BadRequestEncoded`.
+            ///
+            /// - Parameters:
+            ///   - _tag:
+            ///   - message:
+            ///   - exit_code:
+            ///   - exit_meaning:
+            public init(
+                _tag: Components.Schemas.BadRequestEncoded._tagPayload,
+                message: Swift.String,
+                exit_code: Swift.Double,
+                exit_meaning: Components.Schemas.BadRequestEncoded.exit_meaningPayload
+            ) {
+                self._tag = _tag
+                self.message = message
+                self.exit_code = exit_code
+                self.exit_meaning = exit_meaning
+            }
+            public enum CodingKeys: String, CodingKey {
+                case _tag
+                case message
+                case exit_code
+                case exit_meaning
+            }
+            public init(from decoder: any Swift.Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                self._tag = try container.decode(
+                    Components.Schemas.BadRequestEncoded._tagPayload.self,
+                    forKey: ._tag
+                )
+                self.message = try container.decode(
+                    Swift.String.self,
+                    forKey: .message
+                )
+                self.exit_code = try container.decode(
+                    Swift.Double.self,
+                    forKey: .exit_code
+                )
+                self.exit_meaning = try container.decode(
+                    Components.Schemas.BadRequestEncoded.exit_meaningPayload.self,
+                    forKey: .exit_meaning
+                )
+                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                    "_tag",
+                    "message",
+                    "exit_code",
+                    "exit_meaning"
+                ])
+            }
+
+            public func encode(to encoder: any Swift.Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(self._tag, forKey: ._tag)
+                try container.encode(self.message, forKey: .message)
+                try container.encode(self.exit_code, forKey: .exit_code)
+                try container.encode(self.exit_meaning, forKey: .exit_meaning)
             }
         }
         /// - Remark: Generated from `#/components/schemas/TooManySignInsEncoded`.
@@ -1227,25 +1596,41 @@ extension Components {
             public var message: Swift.String
             /// - Remark: Generated from `#/components/schemas/TooManySignInsEncoded/locked_until`.
             public var locked_until: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/TooManySignInsEncoded/exit_code`.
+            public var exit_code: Swift.Double
+            /// - Remark: Generated from `#/components/schemas/TooManySignInsEncoded/exit_meaning`.
+            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+            }
+            /// - Remark: Generated from `#/components/schemas/TooManySignInsEncoded/exit_meaning`.
+            public var exit_meaning: Components.Schemas.TooManySignInsEncoded.exit_meaningPayload
             /// Creates a new `TooManySignInsEncoded`.
             ///
             /// - Parameters:
             ///   - _tag:
             ///   - message:
             ///   - locked_until:
+            ///   - exit_code:
+            ///   - exit_meaning:
             public init(
                 _tag: Components.Schemas.TooManySignInsEncoded._tagPayload,
                 message: Swift.String,
-                locked_until: Swift.String? = nil
+                locked_until: Swift.String? = nil,
+                exit_code: Swift.Double,
+                exit_meaning: Components.Schemas.TooManySignInsEncoded.exit_meaningPayload
             ) {
                 self._tag = _tag
                 self.message = message
                 self.locked_until = locked_until
+                self.exit_code = exit_code
+                self.exit_meaning = exit_meaning
             }
             public enum CodingKeys: String, CodingKey {
                 case _tag
                 case message
                 case locked_until
+                case exit_code
+                case exit_meaning
             }
             public init(from decoder: any Swift.Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -1262,10 +1647,20 @@ extension Components {
                     Swift.String.self,
                     forKey: .locked_until
                 )
+                self.exit_code = try container.decode(
+                    Swift.Double.self,
+                    forKey: .exit_code
+                )
+                self.exit_meaning = try container.decode(
+                    Components.Schemas.TooManySignInsEncoded.exit_meaningPayload.self,
+                    forKey: .exit_meaning
+                )
                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                     "_tag",
                     "message",
-                    "locked_until"
+                    "locked_until",
+                    "exit_code",
+                    "exit_meaning"
                 ])
             }
 
@@ -1278,6 +1673,8 @@ extension Components {
                 } else {
                     try container.encodeIfPresent(self.locked_until, forKey: .locked_until)
                 }
+                try container.encode(self.exit_code, forKey: .exit_code)
+                try container.encode(self.exit_meaning, forKey: .exit_meaning)
             }
         }
         /// - Remark: Generated from `#/components/schemas/CommittedOperation`.

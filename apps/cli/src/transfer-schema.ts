@@ -1,5 +1,6 @@
+import { TaskLookupDetails } from "@todo/domain";
 import {
-  ErrorResponse,
+  ErrorDetails,
   ExternalIdConflictDetails,
 } from "@todo/domain/presentation";
 import { Schema } from "effect";
@@ -14,16 +15,27 @@ const TransferResult = Schema.Struct({
   managed_image_bytes: Schema.optionalKey(Schema.Int),
   current_version: Schema.optionalKey(Schema.Int),
   message: Schema.optionalKey(Schema.String),
-  details: Schema.optionalKey(ExternalIdConflictDetails),
+  details: Schema.optionalKey(
+    Schema.Union([ExternalIdConflictDetails, TaskLookupDetails]),
+  ),
 });
 export type TransferResult = typeof TransferResult.Type;
 export const TransferResponse = Schema.Struct({
   generated_at: Schema.String,
   dry_run: Schema.Boolean,
   results: Schema.Array(TransferResult),
+  exit_code: Schema.optionalKey(Schema.Literals([1, 2, 3, 4])),
+  exit_meaning: Schema.optionalKey(
+    Schema.Literals([
+      "runtime failure",
+      "validation or usage",
+      "not found or auth missing",
+      "Conflict",
+    ]),
+  ),
   code: Schema.optionalKey(Schema.String),
   message: Schema.optionalKey(Schema.String),
-  details: ErrorResponse.fields.details,
+  details: ErrorDetails,
 });
 registerCommandSchema("move", TransferResponse);
 registerCommandSchema("copy", TransferResponse);

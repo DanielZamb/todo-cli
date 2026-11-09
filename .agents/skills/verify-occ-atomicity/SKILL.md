@@ -203,3 +203,9 @@ The source gate failed against `ed4e2423`, which is not an ancestor of `main`. T
 - The external reason passed to rejection recording is now capped at 64 units. The driver's reasons are short codes.
 
 No transition, invariant or fixture changed. The check exited 0 with 37,036 distinct states. `prove-sensitivity.ts` exited 0: both store breaks failed the enumeration, and the restored source passed. One earlier candidate run exited 1 when `kill-validated` exceeded its 15-second readiness timer at host load 41. A rerun on the same source exited 0.
+
+## Agent discovery mapping review
+
+The reviewed product is `36f9c56e200048aa2ca16186aaf713bea8d5454e`, after the final SEC base merge. Only `attachments.ts` differs from the covered SEC source at `f709549c`. It imports `TaskLookupDetails` and adds the exit pair and authorized Task context to `AttachManyRow.error`. The stored `Attachment`, `validAttachmentLocation`, Task events, transaction, validation, projection, Version, rejection recording, and replay functions are unchanged. These report fields do not change the modeled Task content or a transaction boundary.
+
+The one command passed on the merged source. Both real store mutations then failed their intended enumeration assertions, and the byte-restored source passed the same command. The model, invariants, fixtures, bounds, and exclusions are unchanged. [REPORT.md](REPORT.md) records the renewal receipts.

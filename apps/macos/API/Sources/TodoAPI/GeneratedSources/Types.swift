@@ -86,6 +86,9 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /profiles/{profile}/events`.
     /// - Remark: Generated from `#/paths//profiles/{profile}/events/get(changes.stream)`.
     func changes_period_stream(_ input: Operations.changes_period_stream.Input) async throws -> Operations.changes_period_stream.Output
+    /// - Remark: HTTP `GET /tasks/lookup`.
+    /// - Remark: Generated from `#/paths//tasks/lookup/get(reads.lookup)`.
+    func reads_period_lookup(_ input: Operations.reads_period_lookup.Input) async throws -> Operations.reads_period_lookup.Output
     /// - Remark: HTTP `DELETE /profiles/{profile}`.
     /// - Remark: Generated from `#/paths//profiles/{profile}/delete(reads.deleteProfile)`.
     func reads_period_deleteProfile(_ input: Operations.reads_period_deleteProfile.Input) async throws -> Operations.reads_period_deleteProfile.Output
@@ -446,6 +449,17 @@ extension APIProtocol {
             headers: headers
         ))
     }
+    /// - Remark: HTTP `GET /tasks/lookup`.
+    /// - Remark: Generated from `#/paths//tasks/lookup/get(reads.lookup)`.
+    public func reads_period_lookup(
+        query: Operations.reads_period_lookup.Input.Query,
+        headers: Operations.reads_period_lookup.Input.Headers = .init()
+    ) async throws -> Operations.reads_period_lookup.Output {
+        try await reads_period_lookup(Operations.reads_period_lookup.Input(
+            query: query,
+            headers: headers
+        ))
+    }
     /// - Remark: HTTP `DELETE /profiles/{profile}`.
     /// - Remark: Generated from `#/paths//profiles/{profile}/delete(reads.deleteProfile)`.
     public func reads_period_deleteProfile(
@@ -461,8 +475,14 @@ extension APIProtocol {
     }
     /// - Remark: HTTP `GET /profiles`.
     /// - Remark: Generated from `#/paths//profiles/get(reads.profiles)`.
-    public func reads_period_profiles(headers: Operations.reads_period_profiles.Input.Headers = .init()) async throws -> Operations.reads_period_profiles.Output {
-        try await reads_period_profiles(Operations.reads_period_profiles.Input(headers: headers))
+    public func reads_period_profiles(
+        query: Operations.reads_period_profiles.Input.Query = .init(),
+        headers: Operations.reads_period_profiles.Input.Headers = .init()
+    ) async throws -> Operations.reads_period_profiles.Output {
+        try await reads_period_profiles(Operations.reads_period_profiles.Input(
+            query: query,
+            headers: headers
+        ))
     }
     /// - Remark: HTTP `GET /profiles/{profile}/projects`.
     /// - Remark: Generated from `#/paths//profiles/{profile}/projects/get(reads.projects)`.

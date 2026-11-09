@@ -27,3 +27,7 @@ Offline state disables both preview and Apply. This host never uses Keychain.
 Cancel missing Tasks is available before preview. The host driver edits one
 absent Task after preview, then applies cancellations. That Task must stay open
 at Version 4 with its concurrent title, and the report must show a Conflict.
+
+[Discovery report recovery](discovery.md#same-profile-show-and-report-row-recovery)
+records the real task_deleted rejection for a stale Task before Preview, then
+uses an explicitly typed not-found UI fixture to verify structured recovery.

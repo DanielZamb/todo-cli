@@ -129,3 +129,11 @@ checkout and runs domain tests plus the compiled filter drive. It reuses
 Fresh Claude discovery remains a separate coordinator check; a resolved link
 alone does not prove discovery. Use `/maintain-verification-skill` when syntax
 or the response contract changes.
+
+## Authorized discovery
+
+[verify-discovery](../verify-discovery/SKILL.md) owns the compiled Profile directory
+and cross-Profile id-prefix lookup matrix, credential no-leak properties, WAL
+snapshot tests and auth-failure rollback proof. Run its single command after
+changing these reads or their CLI/HTTP contracts. Existing Profile-scoped SSE
+and Task search behavior retain their current recipes.

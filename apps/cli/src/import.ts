@@ -46,7 +46,7 @@ export function renderImport(
   const rows = report.items
     .map(
       (row) =>
-        `${row.external_id}\t${row.outcome}\t${row.changed_fields.join(", ")}${row.error ? `\t${row.error.message}` : ""}`,
+        `${row.external_id}\t${row.outcome}\t${row.changed_fields.join(", ")}${row.error ? `\t${row.error.message}\nerror ${row.error.exit_code} - ${row.error.exit_meaning}` : ""}`,
     )
     .join("\n");
   return `${format === "md" ? `# Import${report.dry_run ? " preview" : ""}\n\n` : ""}Created ${report.totals.created}, updated ${report.totals.updated}, unchanged ${report.totals.unchanged}, rejected ${report.totals.rejected}\n\nEXTERNAL ID\tOUTCOME\tCHANGED FIELDS\n${rows}\n`;

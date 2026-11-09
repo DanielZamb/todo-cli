@@ -4,7 +4,7 @@ import TodoAPI
 
 struct AttachmentBatchReport: Decodable, Sendable {
   struct Row: Decodable, Sendable {
-    struct Failure: Decodable, Sendable { let code: String; let message: String }
+    typealias Failure = ServerFailure
     let task_id: String?
     let outcome: String
     let current_version: Int?
@@ -33,23 +33,25 @@ extension TodoModel {
     await reloadAttachmentTargets()
   }
   func reloadAttachmentTargets() async {
+    let credentialEpoch = discovery.credentialEpoch
     guard let draft = attachmentBatch, canWrite else { return }
     attachmentBatch?.loading = true
     attachmentBatch?.error = nil
     do {
       let values = try await client.tasks_period_list(path: .init(profile: draft.profile)).ok.body.json.map(TaskSnapshot.decode)
-      guard attachmentBatch?.id == draft.id, profile == draft.profile else { return }
+      guard isCurrentCredential(credentialEpoch), attachmentBatch?.id == draft.id, profile == draft.profile else { return }
       attachmentBatch?.targets = values
       attachmentBatch?.selected.formIntersection(Set(values.map(\.id)))
       attachmentBatch?.report = nil
     } catch {
-      guard attachmentBatch?.id == draft.id else { return }
-      attachmentBatch?.error = describe(error)
-      handleAuthorization(error)
+      guard isCurrentCredential(credentialEpoch), attachmentBatch?.id == draft.id else { return }
+      attachmentBatch?.error = describe(error, at: .attachmentBatch)
+      handleAuthorization(error, credentialEpoch: credentialEpoch)
     }
     if attachmentBatch?.id == draft.id { attachmentBatch?.loading = false }
   }
   func applyAttachmentBatch(dryRun: Bool) async {
+    let credentialEpoch = discovery.credentialEpoch
     guard canWrite, let draft = attachmentBatch, !draft.loading, !draft.selected.isEmpty else { return }
     busy = true
     attachmentBatch?.error = nil
@@ -66,7 +68,7 @@ extension TodoModel {
       let payload = try JSONDecoder().decode(Operations.tasks_period_attachMany.Input.Body.jsonPayload.self, from: JSONSerialization.data(withJSONObject: ["items": items, "dry_run": dryRun]))
       let value = try await client.tasks_period_attachMany(path: .init(profile: draft.profile), body: .json(payload)).ok.body.json
       let report = try JSONDecoder().decode(AttachmentBatchReport.self, from: JSONEncoder().encode(value))
-      guard attachmentBatch?.id == draft.id, profile == draft.profile else { return }
+      guard isCurrentCredential(credentialEpoch), attachmentBatch?.id == draft.id, profile == draft.profile else { return }
       attachmentBatch?.report = report
       if !dryRun {
         if let editor, draft.selected.contains(editor.id) {
@@ -76,9 +78,9 @@ extension TodoModel {
         await refreshAfterWrite("Attachments updated")
       }
     } catch {
-      guard attachmentBatch?.id == draft.id else { return }
-      attachmentBatch?.error = describe(error)
-      handleAuthorization(error)
+      guard isCurrentCredential(credentialEpoch), attachmentBatch?.id == draft.id else { return }
+      attachmentBatch?.error = describe(error, at: .attachmentBatch)
+      handleAuthorization(error, credentialEpoch: credentialEpoch)
     }
   }
 }
@@ -114,17 +116,17 @@ struct AttachmentBatchView: View {
                 VStack(alignment: .leading, spacing: 4) {
                   Text(task.title).font(.callout).lineLimit(2)
                   if let row {
-                    Text(row.error?.message ?? (row.outcome == "attached" ? draft.report?.dry_run == true ? "Ready to attach" : "Attached" : "Already attached"))
-                      .font(.caption).foregroundStyle(row.error == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(TodoColors.color("destructive")))
+                    if let failure = row.error { ServerErrorNotice(model: model, failure: failure, currentVersion: row.current_version) }
+                    else { Text(row.outcome == "attached" ? draft.report?.dry_run == true ? "Ready to attach" : "Attached" : "Already attached").font(.caption).foregroundStyle(.secondary) }
                   }
                 }
               }.toggleStyle(.checkbox).frame(minHeight: 56).disabled(model.busy)
-              .accessibilityLabel("Select \(task.title)").batchBounds("batch-row-\(task.id)")
+              .accessibilityLabel("Select \(task.title)").reportErrorBounds("row-" + task.id).batchBounds("batch-row-\(task.id)")
             }
           }.frame(maxWidth: .infinity, alignment: .leading)
-        }.frame(height: 224).batchBounds("batch-viewport")
+        }.frame(height: 224).reportErrorBounds("viewport").batchBounds("batch-viewport")
         Divider()
-        if let error = draft.error { Text(error).font(.caption).foregroundStyle(TodoColors.color("destructive")) }
+        if let error = draft.error { ClientErrorNotice(model: model, text: error, position: .attachmentBatch) }
         HStack(spacing: 8) {
           Button("Reload") { Task { await model.reloadAttachmentTargets() } }.disabled(model.busy || draft.loading).accessibilityLabel("Reload Tasks")
           Spacer(minLength: 0)

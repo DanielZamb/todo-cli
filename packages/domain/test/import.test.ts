@@ -399,6 +399,8 @@ it.effect(
           [
             "rejected",
             {
+              exit_code: 4,
+              exit_meaning: "Conflict",
               code: "occ_conflict",
               message:
                 "Task changed since preview. Preview again and apply the current Version.",

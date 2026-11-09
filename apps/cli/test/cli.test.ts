@@ -205,8 +205,8 @@ it("combines Project and Tag filters within Inbox and reports every active filte
     "Launch without Tags",
     "Unplanned launch revenue",
   ]);
-  expect(list("--project", "Unknown Project").tasks).toBeUndefined();
-  expect(list("--tag", "unknown").tasks).toBeUndefined();
+  expect(list("--project", "Unknown Project").tasks).toEqual([]);
+  expect(list("--tag", "unknown").tasks).toEqual([]);
   for (const format of ["md", "table"]) {
     const text = ok(home, ["list", ...flags, "--format", format]);
     expect(text).toContain("Unplanned launch revenue");
@@ -939,7 +939,7 @@ it.effect(
         expect(result).toEqual({
           code: 3,
           out: "",
-          err: "ERROR\tauth_required\trun todo login\n",
+          err: "error 3 - not found or auth missing\nERROR\tauth_required\trun todo login\n",
         });
         expect(readFileSync(file, "utf8")).toBe(body);
       }
@@ -1645,7 +1645,14 @@ it("C10 emits one JSON error and reports stale Versions and missing Tasks per ba
       target_id: null,
       outcome: "not-found",
       occurrence_as_plain_task: false,
-      message: "Task not found in the selected Profile and filters",
+      message:
+        "Task not found in Profile default (default). Run todo list --profile default --prefix '<hex-prefix>' for this Profile, or todo lookup --prefix '<hex-prefix>' --credential-profile default across Profiles this credential can access. Mutations need the full Task id and an explicit Profile.",
+      details: {
+        profile: { id: "default", name: "default" },
+        task_id: "missing-task",
+        recovery:
+          "Run todo list --profile default --prefix '<hex-prefix>' for this Profile, or todo lookup --prefix '<hex-prefix>' --credential-profile default across Profiles this credential can access. Mutations need the full Task id and an explicit Profile.",
+      },
     },
   ]);
 });

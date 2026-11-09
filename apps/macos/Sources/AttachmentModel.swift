@@ -14,6 +14,7 @@ extension TodoModel {
   private func changeAttachment(_ operation: (Client, TaskDraft) async throws -> AttachmentResult)
     async
   {
+    let credentialEpoch = discovery.credentialEpoch
     guard canWrite, let draft = editor, conflict == nil else { return }
     busy = true
     editorError = nil
@@ -22,7 +23,7 @@ extension TodoModel {
       var attachmentDraft = draft
       attachmentDraft.base = attachmentTask ?? draft.base
       let result = try await operation(client, attachmentDraft)
-      guard profile == draft.base.profile_id, editor?.id == draft.id else { return }
+      guard isCurrentCredential(credentialEpoch), profile == draft.base.profile_id, editor?.id == draft.id else { return }
       switch result {
       case .accepted(let task):
         editor = editor?.acceptingAttachmentChange(task)
@@ -33,8 +34,9 @@ extension TodoModel {
         editorError = "Task changed. Your draft is preserved. Retry the Attachment action."
       }
     } catch {
-      editorError = describe(error)
-      handleAuthorization(error)
+      guard isCurrentCredential(credentialEpoch) else { return }
+      editorError = describe(error, at: .editor)
+      handleAuthorization(error, credentialEpoch: credentialEpoch)
     }
   }
 
@@ -59,7 +61,7 @@ extension TodoModel {
       let response = try await client.tasks_period_attachMany(path: .init(profile: draft.base.profile_id), body: .json(payload)).ok.body.json
       let report = try JSONDecoder().decode(AttachmentBatchResponse.self, from: JSONEncoder().encode(response))
       if let row = report.items.first, row.outcome == "rejected", row.error?.code != "occ_conflict" {
-        throw AttachmentBatchFailure(message: row.error?.message ?? "Attachments were rejected.")
+        throw row.error ?? ServerFailure(message: "Attachments were rejected.")
       }
       let latest = try TaskSnapshot.decode(try await client.tasks_period_show(path: .init(profile: draft.base.profile_id, task: draft.id)).ok.body.json)
       if report.items.first?.error?.code == "occ_conflict" { return .conflict(latest) }
@@ -160,13 +162,9 @@ extension TaskDraft {
 
 private struct AttachmentBatchResponse: Decodable {
   struct Row: Decodable {
-    struct Failure: Decodable { let code: String; let message: String }
+    typealias Failure = ServerFailure
     let outcome: String
     let error: Failure?
   }
   let items: [Row]
-}
-private struct AttachmentBatchFailure: LocalizedError {
-  let message: String
-  var errorDescription: String? { message }
 }

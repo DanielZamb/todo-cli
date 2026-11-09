@@ -106,8 +106,18 @@ it("publishes the Task and shared error schemas", () => {
   const error = run(["schema", "error"]);
   expect(error.code, error.err).toBe(0);
   expect(JSON.parse(error.out)).toMatchObject({
-    type: "object",
-    required: ["generated_at", "code", "message"],
+    anyOf: expect.arrayContaining([
+      expect.objectContaining({
+        type: "object",
+        required: [
+          "generated_at",
+          "code",
+          "message",
+          "exit_code",
+          "exit_meaning",
+        ],
+      }),
+    ]),
   });
 });
 
@@ -276,6 +286,7 @@ it("validates every command's single JSON object against its published JSON Sche
       )(JSON.parse(result.out));
       schema = SchemaRepresentation.fromJsonSchemaDocument(
         JsonSchema.fromSchemaDraft2020_12(json),
+        { patterns: "apply" },
       );
       expect(Schema.is(schema)(null)).toBe(false);
       schemas.set(name, schema);
@@ -303,6 +314,11 @@ it("validates every command's single JSON object against its published JSON Sche
   });
   success("init", ["init", "--profile", "empty-profile-contract"]);
   success("profile list", ["profile", "list"]);
+  success("profile list", ["profile", "list", "--projects"]);
+  expect(success("lookup", ["lookup", "--prefix", "ab"])).toMatchObject({
+    prefix: "ab",
+    matches: [],
+  });
   success("profile delete", [
     "profile",
     "delete",

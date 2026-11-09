@@ -31,7 +31,7 @@ struct EditorView: View {
                         }
                         AttachmentsSection(model: model)
                         DisclosureGroup("History", isExpanded: $model.showingHistory) {
-                            if let error = model.historyError { Text(error).foregroundStyle(TodoColors.color("destructive")) }
+                            if let error = model.historyError { ClientErrorNotice(model: model, text: error, position: .history) }
                             ScrollView {
                                 VStack(alignment: .leading, spacing: 8) {
                                     ForEach(model.history.reversed()) { entry in
@@ -69,7 +69,7 @@ struct EditorView: View {
                             }.frame(maxHeight: 260)
                         }.onChange(of: model.showingHistory) { _, expanded in if expanded { Task { await model.loadHistory() } } }
                         if let error = model.editorError {
-                            Text(error).foregroundStyle(TodoColors.color("destructive")).accessibilityIdentifier("editor-error")
+                            ClientErrorNotice(model: model, text: error, position: .editor).accessibilityIdentifier("editor-error")
                         }
                     }.frame(maxWidth: .infinity).padding(20)
                 }
@@ -486,7 +486,7 @@ struct TaskTransferFeedbackView: View {
         VStack(alignment: .leading, spacing: 16) {
             if let error = model.editorError {
                 Text(kind == .copy ? "Copy rejected" : "Move rejected").font(.headline)
-                Text(error).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).transferFeedbackFrame(.message)
+                ClientErrorNotice(model: model, text: error, position: .editor).transferFeedbackFrame(.message)
                 HStack {
                     Spacer()
                     Button(role: .cancel) { model.cancelTransferConflict() } label: { Text("Cancel").frame(minHeight: 28) }

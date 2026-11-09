@@ -19,19 +19,25 @@ source_files += sorted((root / 'design/macos/Assets.xcassets').glob('search-high
 }, indent=2) + '\n')
 commands = []
 
-def run(command, log, env=None):
+def run(command, log, env=None, capture_stdout=False):
     with (evidence / log).open('w') as output:
-        result = subprocess.run(command, cwd=root, env=env, stdout=output, stderr=subprocess.STDOUT)
-    commands.append({'argv': command, 'exit': result.returncode, 'log': log})
+        result = subprocess.run(command, cwd=root, env=env, stdout=subprocess.PIPE if capture_stdout else output, stderr=output if capture_stdout else subprocess.STDOUT, text=True)
+        if capture_stdout:
+            output.write(result.stdout)
+    entry = {'argv': command, 'exit': result.returncode, 'log': log}
+    if capture_stdout:
+        entry['stdout'] = result.stdout
+    commands.append(entry)
     (evidence / 'commands.json').write_text(json.dumps(commands, indent=2) + '\n')
     if result.returncode:
         raise SystemExit(result.returncode)
+    return result.stdout
 
 run(['sh', 'scripts/disk-guard.sh'], 'disk-guard.log')
 run(['python3', 'apps/macos/scripts/check-design-identifiers.py', str(evidence / 'accessibility.json')], 'accessibility.log')
 run(['swift', 'build', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--disable-automatic-resolution', '--build-tests', '--jobs', '2'], 'build.log')
-run(['swift', 'test', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--skip-build', '--filter', 'PresentationTests|CompactFormattingTests|WindowLayoutTests|TaskFilterTests'], 'presentation.log')
-binary = subprocess.check_output(['swift', 'build', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--show-bin-path'], cwd=root, text=True).strip()
+run(['swift', 'test', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--skip-build', '--disable-automatic-resolution', '--filter', 'PresentationTests|CompactFormattingTests|WindowLayoutTests|TaskFilterTests'], 'presentation.log')
+binary = run(['swift', 'build', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--disable-automatic-resolution', '--show-bin-path'], 'show-bin-path.log', capture_stdout=True).strip()
 run([
     'xcrun', 'swiftc', '-typecheck', '-parse-as-library', '-swift-version', '6',
     '-target', f'{platform.machine()}-apple-macosx26.0', '-I', str(Path(binary) / 'Modules'),
@@ -43,9 +49,9 @@ resources.mkdir(parents=True, exist_ok=True)
 run(['xcrun', 'actool', str(root / 'design/macos/Assets.xcassets'), '--compile', str(resources), '--platform', 'macosx', '--minimum-deployment-target', '26.0'], 'assets.log')
 assert (resources / 'Assets.car').is_file(), 'actool did not compile the production color assets'
 environment = dict(os.environ, TODO_SNAPSHOT_DIR=str(evidence))
-run(['swift', 'test', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--skip-build', '--filter', 'Snapshots'], 'render.log', environment)
+run(['swift', 'test', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--skip-build', '--disable-automatic-resolution', '--filter', 'Snapshots'], 'render.log', environment)
 manifest = json.loads((evidence / 'manifest.json').read_text())
-assert len(manifest['files']) == (60 if os.environ.get('TODO_SNAPSHOT_SEARCH_ONLY') == '1' else 2 if os.environ.get('TODO_SNAPSHOT_QUICK_ONLY') == '1' else 18 if os.environ.get('TODO_SNAPSHOT_PRIORITY_ONLY') == '1' else 28 if os.environ.get('TODO_SNAPSHOT_BATCH_EDIT_ONLY') == '1' else 346)
+assert len(manifest['files']) == (116 if os.environ.get('TODO_SNAPSHOT_DISCOVERY_ONLY') == '1' else 60 if os.environ.get('TODO_SNAPSHOT_SEARCH_ONLY') == '1' else 2 if os.environ.get('TODO_SNAPSHOT_QUICK_ONLY') == '1' else 18 if os.environ.get('TODO_SNAPSHOT_PRIORITY_ONLY') == '1' else 28 if os.environ.get('TODO_SNAPSHOT_BATCH_EDIT_ONLY') == '1' else 346)
 assert all((evidence / name).is_file() for name in manifest['files'])
 (evidence / 'result.json').write_text(json.dumps({'status': 'PASS', 'pngs': len(manifest['files']), 'appLaunched': False, 'signed': False, 'keychainAccess': False, 'nativeGlassVerified': False}, indent=2) + '\n')
 print(f"PASS: {len(manifest['files'])} offscreen PNGs in {evidence}")

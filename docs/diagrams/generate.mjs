@@ -980,6 +980,159 @@ frame("search-copy", "Task search: copy full id", 4000, 8000, 1840, (X, Y) => {
   ]);
 });
 
+const discoveryFrames = [
+  {
+    id: "agent-errors", name: "Exit-code meanings", x: 0, y: 16000,
+    subtitle: "Proposed additive contract. Existing error names, details and process exits remain unchanged.",
+    nodes: [
+      ["failure", "CommandError / HTTP error", "CommandError.exit / actual process exit\nCLI program catch / follow stderr\nHTTP tagged errors keep _tag"],
+      ["mapping", "exit-status.ts / proposed", "0 success / 1 runtime failure\n2 validation or usage\n3 not found or auth missing / 4 Conflict"],
+      ["output", "renderError / HTTP boundary", "exit_code + exit_meaning\ntodo schema error / manual examples\nmd, json, table; one JSON object"],
+      ["client", "TaskLookupStatus / lookupErrorNotice", "details -> human Profile context / retain draft\nsecondary error <code> - <meaning>\nneutral status / Find Task by id"],
+    ],
+    edges: [
+      ["failure", "mapping", "failure / map actual exit", "right", "left"],
+      ["mapping", "output", "mapping / add matching pair", "right", "left"],
+      ["output", "client", "HTTP error / preserve pair", "bottom", "top"],
+      ["client", "failure", "Retry [operation available] / issue again", "left", "bottom"],
+    ],
+    notes: [
+      "1. Mapping keys on the exit code. A new DAG error name inherits the existing meaning. No success envelope gains fields.",
+      "2. Existing latest/current_version details and HTTP tags stay intact. JSON usage errors remain exit 2; follow errors use stderr.",
+    ],
+  },
+  {
+    id: "agent-lookup-errors", name: "Selected Profile in Task errors", x: 2800, y: 16000,
+    subtitle: "Proposed recovery contract. Exact-id reads and mutations never search other Profiles.",
+    nodes: [
+      ["request", "selectProfile / HTTP :profile", "CLI resolveProfile with real operation action\nHTTP authorizes the selected route operation\nselected Profile stays unchanged"],
+      ["auth", "Authentication.resolveProfile / operation auth", "authorized set / return only {id,name}\none rejected-auth row / real Profile and action\nno preliminary null-Profile discovery rejection"],
+      ["missing", "Task not found", "commands.cliResult / show / History\nnot_found exit 3 / HTTP NotFound 404\nno cross-Profile probe"],
+      ["recover", "task-lookup-error.ts / proposed", "details.profile {id,name} / task_id\nlist --profile <id> --prefix <p> [--credential-profile <used>]\nlookup --prefix <p> --credential-profile <used> / HTTP both routes"],
+      ["human", "TaskLookupStatus / lookupErrorNotice", "Task not found in <Profile name>.\nsecondary error 3 - not found or auth missing\nneutral status / no agent commands"],
+      ["prefill", "openDiscovery / findTaskAfterLookupError", "Find Task by id / retain draft\nprefill discovery-prefix / no request yet\nexplicit Find continues in agent-prefix"],
+    ],
+    edges: [
+      ["request", "auth", "request / authorize first", "right", "left"],
+      ["auth", "missing", "authorized + absent / existing outcome", "right", "left"],
+      ["missing", "recover", "safe context / enrich message + details", "bottom", "top"],
+      ["recover", "request", "explicit user recovery / retain draft", "left", "bottom"],
+      ["recover", "human", "apps / project structured details", "bottom", "top"],
+      ["human", "prefill", "Find Task by id / prefill only", "bottom", "top"],
+    ],
+    notes: [
+      "1. Enrich only an authorized missing Task, never a missing Attachment on an existing Task. Absent and unauthorized Profile outcomes are identical.",
+      "2. Both hints query nothing. Mutations need full ids and an explicit Profile. Human detail uses error 3 - not found or auth missing.",
+      "3. Apps also use the shared human status for report rows. CLI and HTTP retain full recovery; apps never concatenate message and recovery.",
+    ],
+  },
+  {
+    id: "agent-directory", name: "Profile-to-Project directory", x: 0, y: 20000,
+    subtitle: "Proposed read-only directory. Current Profile, main Task filters, search text and editor drafts stay intact.",
+    nodes: [
+      ["entry", "Profile navigation / Open", "todo profile list --projects [--credential-profile <key>]\nGET /profiles?include_projects=true\ndiscovery-directory / Closed -> Loading"],
+      ["auth", "Authentication.profiles", "credential -> authorized active Profiles\nAuthentication.read per authorized id\nONE SQLite read transaction / one database state"],
+      ["query", "discovery.ts / proposed query", "ProfileSummary + projects [{id,name}]\ninclude Projects with no visible Tasks\nempty Profile projects: []"],
+      ["show", "Showing / Empty", "guard credential + dialog generation\nread-only names and full selectable ids\nCompact stacked rows / no navigation"],
+      ["error", "Error / Offline", "discard failed aggregate response\nretain no foreign context / show Retry\ndiscovery-directory-retry"],
+      ["closed", "Closed / SignOut", "clear rows / invalidate generation\nlate success and error publish nothing\nrestore focus to navigation trigger"],
+    ],
+    edges: [
+      ["entry", "auth", "Open / load authorized directory", "right", "left"],
+      ["auth", "query", "authorized / read Projects", "right", "left"],
+      ["query", "show", "current success / publish whole response", "bottom", "top"],
+      ["query", "error", "failure / no partial result", "bottom", "top"],
+      ["error", "entry", "Retry / issue new generation", "left", "bottom"],
+      ["show", "closed", "Close or credential change / clear", "right", "left"],
+    ],
+    notes: [
+      "1. Authentication.profiles is the sole scope rule. ONE read transaction returns one database state; credential failure returns no partial result.",
+      "2. Close, sign-out and credential replacement invalidate in-flight replies. Bounded TLA+ and delayed-reply regressions cover this gate.",
+    ],
+  },
+  {
+    id: "agent-prefix", name: "Read-only id-prefix discovery", x: 2800, y: 20000,
+    subtitle: "Proposed explicit lookup. Normal list, exact-id reads and every mutation retain their selected Profile.",
+    nodes: [
+      ["edit", "Editing / Invalid", "todo lookup --prefix <value> [--credential-profile <key>]\nFind Task by id / discovery-prefix\n1..36 hex or hyphen / no trim"],
+      ["auth", "Requesting / authorized Profiles", "Find / Return submits explicitly\nGET /tasks/lookup?prefix=<value>\nAuthentication.profiles + auth.read in ONE read transaction"],
+      ["query", "filterTaskRecords / discovery.ts", "reuse TaskFilters.prefix validation\nliteral case-insensitive startsWith\nexclude Deleted Tasks and Profiles"],
+      ["show", "Showing / Empty", "every match / Profile {id,name}\nfull task_id / title / Project or null\nCopy task id + Show in <Profile name> / [] succeeds"],
+      ["error", "Error / Retry", "retain typed prefix / exact submitted query\nError pair and recovery remain visible\nno partial or hidden-result count"],
+      ["closed", "Closed / authorization reset", "clear rows / invalidate replies\nclear applied snapshot / invalidate generation\nlate reply -> discard visible-state stutter"],
+    ],
+    edges: [
+      ["edit", "auth", "Find [valid] / capture query + generation", "right", "left"],
+      ["auth", "query", "authorized / evaluate only allowed Tasks", "right", "left"],
+      ["query", "show", "current success / publish all matches", "bottom", "top"],
+      ["query", "error", "current failure / no rows", "bottom", "top"],
+      ["error", "edit", "Edit or Retry / retain query", "left", "bottom"],
+      ["show", "closed", "Close or credential change / clear", "right", "left"],
+      ["show", "opened", "Show [current authorized applied snapshot] / explicit navigation", "bottom", "top"],
+      ["show", "edit", "Edit prefix / clear applied snapshot", "right", "right"],
+    ],
+    notes: [
+      "1. Invalid input does not query Tasks. CLI names --prefix and exits 2. No match exits 0 and returns matches: [] or HTTP [].",
+      "2. requestedIdentity, generation and applied snapshot guard publication AND Show. CLI rows print show --profile <id> with --credential-profile <used> when different.",
+    ],
+  },
+  {
+    id: "agent-list", name: "List JSON always contains tasks", x: 0, y: 24000,
+    subtitle: "Proposed list fix. HTTP retains its array; existing export and review goldens must be preserved.",
+    nodes: [
+      ["entry", "todo list / selected Profile", "selectProfile -> readTasks\nTaskFilters / existing planning filters\nnormal Profile scope"],
+      ["filter", "filterTaskRecords / filterTasks", "same membership and order\nzero Tasks is successful\ntext and prefix compose as before"],
+      ["json", "renderTasks / list schema", "{generated_at, filters?, tasks: []}\ntasks required for every list result\nexit 0 / todo schema list"],
+      ["http", "GET /profiles/:profile/tasks", "TaskRead[] remains an array\nempty response [] / HTTP 200\nElectron and SwiftUI empty states retained"],
+    ],
+    edges: [
+      ["entry", "filter", "authorized list / apply filters", "right", "left"],
+      ["filter", "json", "CLI JSON / include tasks unconditionally", "right", "left"],
+      ["filter", "http", "HTTP / preserve array contract", "bottom", "top"],
+      ["http", "entry", "Clear filters or search / explicit reload", "left", "bottom"],
+    ],
+    notes: [
+      "1. Reproduce the missing unfiltered tasks key through the compiled CLI on scratch data before changing the renderer.",
+      "2. TasksResponse is shared with export and review. Keep unrelated output byte-identical; use a list-specific schema if needed.",
+    ],
+  },
+];
+
+const prefixFlow = discoveryFrames.find((flow) => flow.id === "agent-prefix");
+const prefixByKey = new Map(prefixFlow.nodes.map((node) => [node[0], node]));
+prefixByKey.set("opened", ["opened", "Show / explicit user navigation", "discovery-show-<task-id> / protect editor draft\nclose dialog / select Profile / open exact Task\nif hidden: All tasks + full-id prefix / visible error on failure"]);
+prefixFlow.nodes = ["edit", "auth", "query", "error", "show", "opened", "closed"].map((key) => prefixByKey.get(key));
+prefixFlow.notes.push("3. Close, SignOut and CredentialChanged invalidate every open state. Show is explicit navigation; CLI credentialProfileName chooses the named key without fallback.");
+
+for (const flow of discoveryFrames) {
+  frame(flow.id, flow.name, flow.x, flow.y, 2660, (X, Y) => {
+    heading(flow.id, X + 40, Y + 32, flow.name + ": proposed states", flow.subtitle);
+    flow.nodes.forEach(([key, title, body], i) => {
+      card(flow.id + "-" + key, X + 80, Y + 200 + i * 300, 1540, { title, body, h: 150, bodySize: 17 });
+    });
+    flow.edges.forEach(([from, to, label], i) => {
+      const fromIndex = flow.nodes.findIndex(([key]) => key === from);
+      const toIndex = flow.nodes.findIndex(([key]) => key === to);
+      const adjacent = toIndex === fromIndex + 1;
+      const fromY = Y + 275 + fromIndex * 300;
+      const toY = Y + 275 + toIndex * 300;
+      const lane = X + (toIndex < fromIndex ? 2540 : 1950 + i * 70);
+      arrow(flow.id + "-transition-" + i, flow.id + "-" + from, flow.id + "-" + to, {
+        label: label.replace(" / ", "\n/ "), labelFont: SANS, labelSize: 17,
+        from: adjacent ? "bottom" : "right", to: adjacent ? "top" : "right",
+        ...(adjacent ? {} : {
+          via: [[lane, fromY], [lane, toY]],
+          labelAt: [X + 2120, toIndex < fromIndex ? toY + 175 : fromY + 175],
+          bindLabel: true,
+        }),
+      });
+    });
+    marker(flow.id + "-step1", X + 60, Y + 180, 1);
+    marker(flow.id + "-step2", X + 60, Y + 180 + (flow.nodes.length - 1) * 300, 2);
+    notes(flow.id + "-notes", X + 40, Y + 400 + flow.nodes.length * 300, 2580, "Numbered workflow notes", flow.notes);
+  });
+}
+
 const scene = {
   type: "excalidraw",
   version: 2,

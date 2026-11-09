@@ -7,8 +7,10 @@ import type { Reply, Request } from "./protocol.ts";
 export function TaskIdCopy({
   task,
   request,
+  testId,
 }: {
   task: typeof TaskId.Type;
+  testId?: string;
   request: (request: Request) => Promise<Reply>;
 }) {
   const [feedback, setFeedback] = useState<{
@@ -24,9 +26,10 @@ export function TaskIdCopy({
   return (
     <div className="task-id-copy">
       <fieldset className="task-id-value" aria-label="Task id">
-        <code>{task}</code>
+        <code className="type-code">{task}</code>
       </fieldset>
       <Button
+        data-testid={testId}
         type="button"
         variant="ghost"
         size="icon"

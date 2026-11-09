@@ -29,6 +29,7 @@ import {
 } from "./components/ui/dropdown-menu.tsx";
 import { Input } from "./components/ui/input.tsx";
 import type { Reply, Request } from "./protocol.ts";
+import type { FindTask } from "./task-lookup-status.tsx";
 import "./attachments.css";
 
 type Send = (request: Request) => Promise<Reply>;
@@ -59,6 +60,7 @@ function AttachmentRow({
   profile,
   taskId,
   accepted,
+  onFindTask,
   send,
   disabled,
   remove,
@@ -68,6 +70,7 @@ function AttachmentRow({
   profile: ProfileId;
   taskId: Task["id"];
   accepted: (task: Task) => void;
+  onFindTask?: FindTask | undefined;
   send: Send;
   disabled: boolean;
   remove: () => void;
@@ -279,6 +282,7 @@ function AttachmentRow({
           request={send}
           sourceTaskId={taskId}
           onAccepted={accepted}
+          onFindTask={onFindTask}
           canWrite={!disabled}
           onClose={() => setSharing(false)}
         />
@@ -291,11 +295,13 @@ export function AttachmentsSection({
   readOnly,
   request,
   onAccepted,
+  onFindTask,
 }: {
   task: Task;
   readOnly: boolean;
   request: Send;
   onAccepted: (task: Task) => void;
+  onFindTask?: FindTask | undefined;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -521,6 +527,7 @@ export function AttachmentsSection({
                 onAccepted(value);
               }}
               send={request}
+              onFindTask={onFindTask}
               disabled={disabled}
               remove={() =>
                 void action(() =>
