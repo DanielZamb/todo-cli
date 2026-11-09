@@ -4,7 +4,7 @@ set -eu
 root=$(git rev-parse --show-toplevel)
 cd "$root/docs/diagrams"
 bun generate.mjs
-for frame in runtime write model live; do
+for frame in runtime write model live search-cli search-http search-electron search-swift search-copy; do
   excalidraw render todo.excalidraw --frame-id "$frame" \
     --out "$frame.png" --scale 2 --max-width 3800 --max-height 4000
 done

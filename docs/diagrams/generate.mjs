@@ -847,6 +847,93 @@ frame("live", "Live updates", 5880, 0, 1840, (X, Y) => {
   ]);
 });
 
+frame("search-cli", "Task search: CLI", 0, 8000, 1840, (X, Y) => {
+  heading("sc", X + 40, Y + 32, "Task search through todo list", "Phase 0 design. Existing names are literal; task-search.ts and search_matches are proposed additions.");
+  card("sc-list", X + 40, Y + 140, 510, { title: "list / Command.make", body: "--text <query> / --prefix <hex>\nexisting list flags stay AND filters" });
+  card("sc-decode", X + 650, Y + 140, 510, { title: "Schema.decodeUnknownSync(TaskFilters)", body: "inputLimits.searchText = 200\nprefix: /^[0-9a-f-]{1,36}$/i" });
+  card("sc-invalid", X + 1260, Y + 140, 510, { title: "CommandError / exit 2", body: "invalid_args names --text or --prefix\nJSON: generated_at, code, message", fill: c.warningFill });
+  card("sc-read", X + 650, Y + 365, 510, { title: "withStore / selectProfile / readTasks", body: "Profile-visible Tasks only\nno database migration or writes" });
+  card("sc-filter", X + 650, Y + 570, 510, { title: "filterTaskRecords / task-search.ts", body: "title + description / all query terms\ntext AND prefix AND existing filters\nkeep input order; original UTF-16 spans" });
+  card("sc-render", X + 650, Y + 800, 510, { title: "filterTasks / renderTasks / write", body: "today / overdue / inbox still apply\nJSON adds per-Task search_matches\nexit 0 also for tasks: []" });
+  arrow("sc-a", "sc-list", "sc-decode", { from: "right", to: "left" });
+  arrow("sc-b", "sc-decode", "sc-invalid", { from: "right", to: "left", color: c.warning });
+  arrow("sc-c", "sc-decode", "sc-read");
+  arrow("sc-d", "sc-read", "sc-filter");
+  arrow("sc-e", "sc-filter", "sc-render");
+  marker("sc-step1", X + 630, Y + 120, 1);
+  marker("sc-step2", X + 630, Y + 550, 2);
+  marker("sc-step3", X + 20, Y + 120, 3);
+  notes("sc-notes", X + 40, Y + 1040, 1720, "Numbered workflow notes", [
+    "Validation happens before opening the store. Whitespace-only text has no predicate; prefix never resolves a mutation id.",
+    "One domain matcher returns acceptance and spans. CLI JSON decorates views without changing persisted Task payloads.",
+    "show, edit, done, cancel, reopen, rm, history, attach, detach, move and copy still require exact full ids.",
+  ]);
+});
+
+frame("search-http", "Task search: HTTP", 2000, 8000, 1840, (X, Y) => {
+  heading("sh", X + 40, Y + 32, "Task search through HttpApi", "One Task list route and additive response metadata; clients do not implement matching.");
+  card("sh-routes", X + 40, Y + 150, 760, { title: "HttpApi tasks.list", body: "GET /profiles/:profile/tasks?text=...&prefix=...\nSwift generated operation: tasks_period_list\nTaskFilters remains the shared query schema" });
+  card("sh-boundary", X + 990, Y + 150, 760, { title: "TaskFilters decode / authenticate", body: "invalid text or prefix -> HTTP 400\nexisting credential and Profile checks stay\nunknown query parameters still rejected" });
+  card("sh-list", X + 990, Y + 420, 760, { title: "TaskCommands.list / filterTaskRecords", body: "authorized Profile / visible Tasks\ntask-search.ts: one matcher, stable order\nsearch_matches is response-only metadata" });
+  card("sh-reply", X + 990, Y + 690, 760, { title: "HttpApi success / HTTP 200", body: "existing array envelope remains unchanged\nper-Task search_matches when text is supplied\n[] for no matches; CLI keeps { tasks: [] }" });
+  arrow("sh-a", "sh-routes", "sh-boundary", { from: "right", to: "left" });
+  arrow("sh-b", "sh-boundary", "sh-list");
+  arrow("sh-c", "sh-list", "sh-reply");
+  marker("sh-step1", X + 20, Y + 130, 1);
+  marker("sh-step2", X + 970, Y + 400, 2);
+  marker("sh-step3", X + 970, Y + 670, 3);
+  notes("sh-notes", X + 40, Y + 960, 1720, "Numbered workflow notes", [
+    "The dotted tasks_period_list operation is the generated-client name for the same URL, not a new endpoint.",
+    "search_matches contains title/description and start/end offsets in the original UTF-16 string. It is never persisted.",
+    "Regenerate OpenAPI and the Swift contract. Do not hand-edit generated Swift or copy matching logic into either client.",
+  ]);
+});
+
+const searchClientFrame = (id, name, X, swift) => frame(id, name, X, 9600, 1840, (x, y) => {
+  const p = id;
+  heading(p, x + 40, y + 32, `${name}: request states`, "Proposed search transitions extend the existing refresh guard. Compact view is the first proof target.");
+  card(`${p}-idle`, x + 40, y + 150, 520, { title: "Idle / showing / empty", body: swift ? "TaskListView / TodoModel\n.searchable / compact-search\nrequestedTaskFilters == taskFilters" : "renderer.tsx / shadcn Input\nadvancedFiltersRef / appliedFiltersRef\nrefreshGeneration / activeQuery" });
+  card(`${p}-debounce`, x + 660, y + 150, 520, { title: "Debouncing / 250 ms", body: "edit / Esc clear -> invalidate now\nhide old-query rows, retain applied data\nCmd+F focuses the visible search field" });
+  card(`${p}-request`, x + 660, y + 410, 520, { title: swift ? "Requesting / refresh(generation:)" : "Requesting / refresh()", body: "capture Profile + view + filters + text\nnew generation for each request\nSSE refresh uses the latest input" });
+  card(`${p}-guard`, x + 660, y + 680, 520, { title: "Response freshness guard", body: swift ? "generation / refreshGeneration\nprofile / selectedView / filters equality\n!Task.isCancelled" : "refreshGeneration.current == captured\nactiveQuery.current == captured\nrequested filters still match input" });
+  card(`${p}-discard`, x + 1280, y + 680, 500, { title: "Obsolete response / discard", body: "no rows, errors or filters published\nnewer debounce/request continues", fill: c.secondary });
+  card(`${p}-success`, x + 40, y + 950, 520, { title: "Showing matches / empty", body: "publish current rows + search_matches\nkeep view order / display highlights\nzero matches offers Clear search" });
+  card(`${p}-error`, x + 660, y + 950, 520, { title: "Error / previous filters active", body: "restore last applied filters + text\nkeep previous data and show error\nno rows falsely attributed to new text", fill: c.warningFill });
+  card(`${p}-dialog`, x + 1280, y + 150, 500, { title: swift ? "TaskFilterView / draft" : "TaskFilterDialog / draft", body: "Id starts with / filter-prefix\nCancel -> keep applied values\ninvalid prefix -> inline error\nApply -> compose current search" });
+  arrow(`${p}-a`, `${p}-idle`, `${p}-debounce`, { from: "right", to: "left" });
+  arrow(`${p}-b`, `${p}-debounce`, `${p}-request`);
+  arrow(`${p}-c`, `${p}-request`, `${p}-guard`);
+  arrow(`${p}-d`, `${p}-guard`, `${p}-discard`, { from: "right", to: "left" });
+  arrow(`${p}-e`, `${p}-guard`, `${p}-success`, { fromT: 0.2, toT: 0.7 });
+  arrow(`${p}-f`, `${p}-guard`, `${p}-error`, { color: c.warning });
+  arrow(`${p}-g`, `${p}-dialog`, `${p}-request`, { from: "left", to: "right", via: [[x + 1230, y + 330], [x + 1230, y + 475]] });
+  marker(`${p}-step1`, x + 640, y + 130, 1);
+  marker(`${p}-step2`, x + 640, y + 930, 2);
+  marker(`${p}-step3`, x + 20, y + 930, 3);
+  notes(`${p}-notes`, x + 40, y + 1220, 1720, "Numbered workflow notes", [
+    "Any input change, view switch or Profile switch invalidates in-flight work before the debounce. Search and dialog filters combine.",
+    "Pending rows are hidden, not relabeled. On failure the field returns to the applied query before its retained rows reappear.",
+    "Client proof includes delayed replies, clear, Cmd+F, Esc, mixed filters, title and description highlights, and light/dark Compact captures.",
+  ]);
+});
+searchClientFrame("search-electron", "Electron search", 0, false);
+searchClientFrame("search-swift", "SwiftUI search", 2000, true);
+
+frame("search-copy", "Task search: copy full id", 4000, 8000, 1840, (X, Y) => {
+  heading("si", X + 40, Y + 32, "Copy the exact Task id", "Both Task details expose the full id in small monospace. Copy is independent of search matching.");
+  card("si-detail", X + 40, Y + 150, 500, { title: "Task detail / full task.id", body: "Electron editor / SwiftUI editor\nread-only, selectable monospace\nCopy task id button" });
+  card("si-copy", X + 660, Y + 150, 500, { title: "Copy action", body: "Electron: validated clipboard IPC\nSwiftUI: NSPasteboard.general\nwrite the exact complete UUID" });
+  card("si-result", X + 1280, Y + 150, 500, { title: "Copied / copy failed", body: "announce success after write\naccessible error if copy fails\nno Task mutation or Version change" });
+  arrow("si-a", "si-detail", "si-copy", { from: "right", to: "left" });
+  arrow("si-b", "si-copy", "si-result", { from: "right", to: "left" });
+  marker("si-step1", X + 20, Y + 130, 1);
+  marker("si-step2", X + 640, Y + 130, 2);
+  notes("si-notes", X + 40, Y + 430, 1720, "Numbered workflow notes", [
+    "The copied value is the full Task id from the detail being shown, including while search or another filter is active.",
+    "Unsigned Electron host verifies the production IPC path. Swift offscreen proof renders the action; headless tests prove the copied value.",
+  ]);
+});
+
 const scene = {
   type: "excalidraw",
   version: 2,
