@@ -363,6 +363,8 @@ final class TodoModel {
             let decoded = try values.map(TaskSnapshot.decode)
             var query = identity.filters.query
             query.text = identity.text.isEmpty ? nil : identity.text
+            if query.project == nil { query.project = projects.first { $0.id == identity.project }?.name }
+            if query.tag == nil { query.tag = tags.first { $0.id == identity.tag }?.name }
             let filteredResponse: [TaskSnapshot]
             if identity.filters.isEmpty && identity.text.isEmpty && identity.project == nil && identity.tag == nil {
                 filteredResponse = decoded

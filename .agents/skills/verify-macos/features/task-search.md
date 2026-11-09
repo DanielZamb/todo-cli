@@ -69,6 +69,31 @@ there is no search retry timer. Without Retry or SSE activity, Error can persist
 
 ## Offscreen proof
 
+The headless state drive also runs
+`filterRecoveryPreservesOrdinaryRowsWithRawAppendCaseFoldTagsAndSyntheticSameNameProjects`.
+`verify-write-state.py` compiles the shared recovery fixture
+`.agents/skills/verify-task-search/seed-recovery.ts` into its scratch directory
+and passes it to the tests as `SEC_SEARCH_RECOVERY_SEED`. Set that variable to an
+absolute compiled path only to reuse an existing build:
+
+```sh
+/Users/zambamon/Work/todo-cli/scripts/swift-slot.sh python3 apps/macos/scripts/verify-write-state.py "$PWD/apps/macos/evidence/search-recovery-new"
+```
+
+Three 100,000-U+FDFA descriptions make `probe` fail. Project Small or Tag keep
+must narrow the request before metering and publish only Scope probe 0 with
+title span `[6, 11)`. Ordinary rows and spans remain byte-identical after the id
+join. The real keep/KEEP Tags come from compiled raw append, representing old
+data or raw events: public commands lowercase names. The server returns both
+case-fold matches; the client keeps the selected Tag id.
+
+The same-name Project transport is **synthetic**, over real scratch HTTP. It
+relabels Other as Small in discovery and removes the forwarded Project predicate
+to supply a name superset; the requested query still contains Small. The id join
+keeps only the selected Project's Task and span. Real Projects retain
+`UNIQUE(profile_id, name)`, so their server name filter is 1:1 inside a Profile
+and the id join is defense in depth. No view or accessibility identifier changes.
+
 Run Compact first in both appearances, then full-window:
 
 ```sh

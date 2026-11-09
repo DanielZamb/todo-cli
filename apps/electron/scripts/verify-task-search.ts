@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { _electron, type ElectronApplication, expect } from "@playwright/test";
 import { CONTRACT_ID } from "@todo/api";
-import { Task, TaskRead } from "@todo/domain";
+import { ProjectSummary, Task, TaskRead } from "@todo/domain";
 import { Schema } from "effect";
 import { setAppearance } from "./appearance.ts";
 import { selectProfile } from "./profile-menu.ts";
@@ -50,6 +50,7 @@ server.stderr.on("data", (data) => {
 let desktop: ElectronApplication | undefined;
 let upstream = "";
 let failText: string | null = null;
+let syntheticProjectSuperset = false;
 type ResponseGate = {
   text: string;
   profile: string;
@@ -67,11 +68,21 @@ const proxy = Bun.serve({
   idleTimeout: 0,
   async fetch(request) {
     const url = new URL(request.url);
-    const response = await fetch(`${upstream}${url.pathname}${url.search}`, {
-      method: request.method,
-      headers: request.headers,
-      ...(request.method === "GET" ? {} : { body: await request.text() }),
-    });
+    const forwarded = new URL(url);
+    if (
+      syntheticProjectSuperset &&
+      url.pathname === "/profiles/work/tasks" &&
+      url.searchParams.has("project")
+    )
+      forwarded.searchParams.delete("project");
+    const response = await fetch(
+      `${upstream}${forwarded.pathname}${forwarded.search}`,
+      {
+        method: request.method,
+        headers: request.headers,
+        ...(request.method === "GET" ? {} : { body: await request.text() }),
+      },
+    );
     if (url.pathname.endsWith("/events") && response.body) {
       eventConnections++;
       const reader = response.body.getReader();
@@ -104,7 +115,21 @@ const proxy = Bun.serve({
     }
     const text = url.searchParams.get("text");
     const filtered = url.pathname.endsWith("/tasks") && text !== null;
-    const body = await response.text();
+    let body = await response.text();
+    if (
+      syntheticProjectSuperset &&
+      url.pathname === "/profiles/work/projects" &&
+      response.status === 200
+    ) {
+      const rows = Schema.decodeUnknownSync(Schema.Array(ProjectSummary))(
+        JSON.parse(body),
+      );
+      body = JSON.stringify(
+        rows.map((row) =>
+          row.name === "Other" ? { ...row, name: "Small" } : row,
+        ),
+      );
+    }
     const gate =
       filtered &&
       hold?.text === text &&
@@ -1100,6 +1125,229 @@ try {
     retainedTitles,
     recoveryBySseAfterShrink: true,
   });
+  await field.fill("");
+  await showing("");
+  for (const task of broadTasks) {
+    const latest = Schema.decodeUnknownSync(Task)(
+      await api(`/profiles/work/tasks/${task.id}`),
+    );
+    cli("rm", latest.id, "--expected-version", String(latest.row_version));
+  }
+  const scopeTasks = [];
+  for (let index = 0; index < 3; index++)
+    scopeTasks.push(
+      Schema.decodeUnknownSync(Task)(
+        await api("/profiles/work/tasks", "POST", {
+          title: `Scope probe ${index}`,
+          description: "ordinary",
+          project_name: index === 0 ? "Small" : "Other",
+          tag_names: [index === 0 ? "keep" : "other"],
+        }),
+      ),
+    );
+  const scope = scopeTasks[0];
+  if (!scope) throw new Error("Missing scoped Task");
+  await field.fill("probe");
+  await showing("probe");
+  const ordinary = filteredReplies.findLast(
+    (reply) => reply.text === "probe",
+  )?.tasks;
+  if (!ordinary) throw new Error("Missing ordinary response");
+  for (const [selector, label, id] of [
+    ["Filter by Project", "Small", scope.project_id],
+    ["Filter by Tag", "keep", scope.tags[0]],
+  ] as const) {
+    if (!id) throw new Error("Missing definition id");
+    await page.getByLabel("Filter by Project").selectOption("");
+    await showing("probe");
+    await page.getByLabel("Filter by Tag").selectOption("");
+    await showing("probe");
+    await page.getByLabel(selector).selectOption(id);
+    await showing("probe");
+    expect(await titles()).toEqual(["Scope probe 0"]);
+    expect(await page.locator(".task-title mark").allTextContents()).toEqual([
+      "probe",
+    ]);
+    const after = filteredReplies.findLast(
+      (reply) => reply.text === "probe",
+    )?.tasks;
+    expect(JSON.stringify(after?.filter((row) => row.id === scope.id))).toBe(
+      JSON.stringify(ordinary.filter((row) => row.id === scope.id)),
+    );
+    checks.push({ ordinaryScope: label, byteIdenticalRowsAndSpans: true });
+  }
+  await field.fill("");
+  await showing("");
+  await page.getByLabel("Filter by Tag").selectOption("");
+  await showing("");
+  for (const task of scopeTasks)
+    await api(`/profiles/work/tasks/${task.id}`, "PATCH", {
+      from_version: 1,
+      changes: { description: "\ufdfa".repeat(100000) },
+    });
+  await field.fill("probe");
+  await expect(pane).toHaveAttribute("data-search-phase", "Error");
+  for (const [selector, id] of [
+    ["Filter by Project", scope.project_id],
+    ["Filter by Tag", scope.tags[0]],
+  ] as const) {
+    if (!id) throw new Error("Missing definition id");
+    await field.fill("");
+    await showing("");
+    await page.getByLabel("Filter by Project").selectOption("");
+    await showing("");
+    await page.getByLabel("Filter by Tag").selectOption("");
+    await showing("");
+    await page.getByLabel(selector).selectOption(id);
+    await showing("");
+    await field.fill("probe");
+    await showing("probe");
+    expect(await titles()).toEqual(["Scope probe 0"]);
+    await expect(page.getByLabel("Search failed")).toHaveCount(0);
+    expect(
+      filteredReplies
+        .findLast((reply) => reply.text === "probe")
+        ?.tasks.map((row) => ({
+          id: row.id,
+          search_matches: row.search_matches,
+        })),
+    ).toEqual([
+      { id: scope.id, search_matches: [{ field: "title", start: 6, end: 11 }] },
+    ]);
+  }
+  expect(
+    cli("list", "--text", "probe", "--project", "Small").tasks.map(
+      (row: TaskRead) => ({
+        title: row.title,
+        search_matches: row.search_matches,
+      }),
+    ),
+  ).toEqual([
+    {
+      title: "Scope probe 0",
+      search_matches: [{ field: "title", start: 6, end: 11 }],
+    },
+  ]);
+  expect(
+    cli("list", "--text", "probe", "--tag", "keep").tasks.map(
+      (row: TaskRead) => ({
+        title: row.title,
+        search_matches: row.search_matches,
+      }),
+    ),
+  ).toEqual([
+    {
+      title: "Scope probe 0",
+      search_matches: [{ field: "title", start: 6, end: 11 }],
+    },
+  ]);
+  checks.push({ projectAndTagRecoverMeteredWork: true });
+  await field.fill("");
+  await showing("");
+  await page.getByLabel("Filter by Project").selectOption("");
+  await showing("");
+  await page.getByLabel("Filter by Tag").selectOption("");
+  await showing("");
+  for (const task of scopeTasks)
+    await api(`/profiles/work/tasks/${task.id}`, "PATCH", {
+      from_version: 2,
+      changes: { description: "ordinary" },
+    });
+  const recoverySeed =
+    process.env.SEC_SEARCH_RECOVERY_SEED ??
+    join(scratch, "search-recovery-seed");
+  if (process.env.SEC_SEARCH_RECOVERY_SEED === undefined) {
+    const compiled = spawnSync(
+      "bun",
+      [
+        "build",
+        "--compile",
+        resolve(
+          import.meta.dirname,
+          "../../../.agents/skills/verify-task-search/seed-recovery.ts",
+        ),
+        "--outfile",
+        recoverySeed,
+      ],
+      { cwd: scratch, encoding: "utf8" },
+    );
+    receipts.push({
+      compiledRecoverySeed: recoverySeed,
+      exit: compiled.status,
+      stderr: compiled.stderr,
+    });
+    expect(compiled.status).toBe(0);
+  }
+  const seeded = spawnSync(recoverySeed, ["work"], { env, encoding: "utf8" });
+  receipts.push({
+    compiledRawAppendSeed: "keep/KEEP from raw append or old data",
+    exit: seeded.status,
+    stderr: seeded.stderr,
+  });
+  expect(seeded.status).toBe(0);
+  const collision = Schema.decodeUnknownSync(
+    Schema.Array(Schema.Struct({ task: Task })),
+  )(JSON.parse(seeded.stdout));
+  await field.fill("collision");
+  await showing("collision");
+  await expect.poll(async () => (await titles()).length).toBe(2);
+  const allCollision = filteredReplies.findLast(
+    (reply) => reply.text === "collision",
+  )?.tasks;
+  if (!allCollision) throw new Error("Missing collision response");
+  for (const item of collision) {
+    const tagId = item.task.tags[0];
+    if (!tagId) throw new Error("Missing case-fold Tag id");
+    await page.getByLabel("Filter by Tag").selectOption(tagId);
+    await showing("collision");
+    expect(await titles()).toEqual([item.task.title]);
+    expect(await page.locator(".task-title mark").allTextContents()).toEqual([
+      "Collision",
+    ]);
+    const superset = filteredReplies.findLast(
+      (reply) => reply.text === "collision",
+    )?.tasks;
+    expect(superset?.length).toBe(2);
+    expect(
+      JSON.stringify(superset?.filter((row) => row.tags.includes(tagId))),
+    ).toBe(
+      JSON.stringify(allCollision.filter((row) => row.tags.includes(tagId))),
+    );
+  }
+  checks.push({ rawAppendCaseFoldTagSupersetKeepsSelectedId: true });
+  await page.getByLabel("Filter by Tag").selectOption("");
+  await showing("collision");
+  syntheticProjectSuperset = true;
+  await field.fill("");
+  await showing("");
+  await field.fill("collision");
+  await showing("collision");
+  for (const item of collision) {
+    if (!item.task.project_id) throw new Error("Missing Project id");
+    await page
+      .getByLabel("Filter by Project")
+      .selectOption(item.task.project_id);
+    await showing("collision");
+    expect(await titles()).toEqual([item.task.title]);
+    expect(await page.locator(".task-title mark").allTextContents()).toEqual([
+      "Collision",
+    ]);
+    const superset = filteredReplies.findLast(
+      (reply) => reply.text === "collision",
+    )?.tasks;
+    expect(superset?.length).toBe(2);
+    expect(
+      JSON.stringify(
+        superset?.filter((row) => row.project_id === item.task.project_id),
+      ),
+    ).toBe(
+      JSON.stringify(
+        allCollision.filter((row) => row.project_id === item.task.project_id),
+      ),
+    );
+  }
+  checks.push({ syntheticSameNameProjectSupersetKeepsSelectedId: true });
+  syntheticProjectSuperset = false;
   expect(pageErrors).toEqual([]);
   await page.screenshot({
     path: join(evidence, "tasks.png"),

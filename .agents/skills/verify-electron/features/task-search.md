@@ -91,6 +91,27 @@ fixture; real stream-close and operation recovery remain separate checks.
 
 ## Coverage and evidence
 
+The drive compiles the shared recovery fixture
+`.agents/skills/verify-task-search/seed-recovery.ts` into its scratch directory
+before using it. Set `SEC_SEARCH_RECOVERY_SEED` to an absolute compiled path
+only to reuse an existing build.
+
+The drive seeds three Tasks with 100,000 U+FDFA descriptions. `probe` is refused;
+selecting Project Small or Tag keep sends its catalog name and returns only
+Scope probe 0 with the title span `[6, 11)`. Compiled CLI `--project Small` and
+`--tag keep` assert the same literal result. Ordinary rows and spans are compared
+byte-for-byte after the selected-id join. Explicit dialog names win over catalog
+names; an unresolved id adds no server name filter.
+
+The raw-append fixture supplies real keep/KEEP Tags over scratch HTTP. Public
+commands lowercase Tag names; this collision represents raw append or old data.
+The server's case-folded response contains both Tasks, but the selected-id join
+keeps one. The same-name Project transport is **synthetic**: it relabels Other as
+Small in discovery and forwards the read to real scratch HTTP without a Project
+predicate to supply a name superset. `UNIQUE(profile_id, name)` remains binding;
+real Project name filtering is 1:1 with its id inside a Profile. The Project join
+is defense in depth. No production schema or stored Project name is changed.
+
 `apps/electron/scripts/verify-task-search.ts` drives Compact 393 × 426 FIRST,
 then full, in light/dark. It captures ready, typing, Requesting, description,
 empty, error, Filters prefix, detail Copied, detail failure and Quick add search. `task-search.json`
