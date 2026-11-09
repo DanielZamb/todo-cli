@@ -11,6 +11,7 @@ import {
   DeleteProfile,
   DetachTask,
   DiagnosticsSnapshot,
+  DirectoryQuery,
   EditSeries,
   EditTask,
   ExpectedVersion,
@@ -19,6 +20,8 @@ import {
   ImportRequest,
   inputLimits,
   LabelAttachment,
+  LookupMatch,
+  LookupQuery,
   MoveTask,
   OpLogEntry,
   PlanningView,
@@ -299,6 +302,11 @@ const Tasks = HttpApiGroup.make("tasks")
 
 const Reads = HttpApiGroup.make("reads")
   .add(
+    HttpApiEndpoint.get("lookup", "/tasks/lookup", {
+      query: LookupQuery,
+      success: Schema.Array(LookupMatch),
+      error: taskErrors,
+    }),
     HttpApiEndpoint.delete("deleteProfile", "/profiles/:profile", {
       params: profile,
       payload: DeleteProfile,
@@ -306,6 +314,7 @@ const Reads = HttpApiGroup.make("reads")
       error: [...taskErrors, ProfileDeleteError],
     }),
     HttpApiEndpoint.get("profiles", "/profiles", {
+      query: DirectoryQuery,
       success: Schema.Array(ProfileSummary),
       error: taskErrors,
     }),

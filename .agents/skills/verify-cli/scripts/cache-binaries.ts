@@ -52,12 +52,14 @@ for (const [key, file] of [
   ["server", "apps/server/src/main.ts"],
   ["seed", "apps/server/scripts/seed-verification.ts"],
 ] as const) {
-  if (!existsSync(binaries[key]))
+  if (!existsSync(binaries[key])) {
+    execFileSync("sh", [join(root, "scripts/disk-guard.sh")], { cwd: root, stdio: "inherit" });
     execFileSync(
       "bun",
       [join(root, "scripts/compile.ts"), join(root, file), binaries[key]],
       { cwd: root, stdio: "inherit" },
     );
+  }
 }
 writeFileSync(
   join(root, ".scratch/bin/build.json"),

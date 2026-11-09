@@ -17,6 +17,7 @@ import {
 import {
   batchEditTasks,
   ClientReads,
+  Discovery,
   ExpectedVersion,
   ProfileId,
   parseQuickAdd,
@@ -229,6 +230,7 @@ export const serverLayer = (options: {
       const diagnostics = store.diagnostics;
       const attachments = new AttachmentCommands(store);
       const reads = new ClientReads(store);
+      const discovery = new Discovery(store);
       const ValidationHistoryLive = HttpApiMiddleware.layerSchemaErrorTransform(
         ValidationHistory,
         (error, { endpoint }) =>
@@ -597,9 +599,20 @@ export const serverLayer = (options: {
                 );
               return result.report;
             }),
-          profiles: () =>
+          lookup: ({ query }) =>
             Effect.gen(function* () {
-              return yield* translate(reads.profiles(yield* BearerCredential));
+              return yield* translate(
+                discovery.lookup(yield* BearerCredential, query),
+              );
+            }),
+          profiles: ({ query }) =>
+            Effect.gen(function* () {
+              const credential = yield* BearerCredential;
+              return yield* translate(
+                query.include_projects === "true"
+                  ? discovery.directory(credential)
+                  : reads.profiles(credential),
+              );
             }),
           projects: ({ params }) =>
             Effect.gen(function* () {

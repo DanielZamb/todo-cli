@@ -28,10 +28,13 @@ import {
   BatchEditRequest,
   batchEditTasks,
   ClientReads,
+  Discovery,
   filterTaskRecords,
   inputLimits,
+  LookupQuery,
+  LookupResponse,
   ProfileDeletionReport,
-  ProfileSummary,
+  ProfileListResponse,
   parseQuickAdd,
   QuickAddDraft,
   QuickAddInput,
@@ -87,6 +90,7 @@ import {
   withAttachmentStatus,
 } from "./attachments.ts";
 import { diagnosticsOutput, diagnosticsRead } from "./diagnostics.ts";
+import { directoryOutput, lookupOutput } from "./discovery.ts";
 import { manualPage, withGuide } from "./help.ts";
 import { makeImportCommand, readImportFile, renderImport } from "./import.ts";
 import { verifyMacPassword } from "./macos-password.ts";
@@ -1505,33 +1509,66 @@ const top = Command.make(
       yield* runTop(read, !cfg.noColor && !process.env.NO_COLOR);
     }),
 ).pipe(withGuide("top"));
-const ProfileListResponse = Schema.Struct({
-  generated_at: Schema.String,
-  profiles: Schema.Array(ProfileSummary),
-});
+registerCommandSchema("lookup", LookupResponse);
+const lookup = Command.make(
+  "lookup",
+  { prefix: stringFlag("prefix") },
+  (input) =>
+    Effect.gen(function* () {
+      const cfg = yield* root;
+      if (!Schema.is(LookupQuery)(input))
+        return yield* Effect.fail(
+          new CommandError(
+            2,
+            "invalid_args",
+            "--prefix must contain 1 to 36 hex digits or hyphens",
+          ),
+        );
+      yield* withStore(cfg, (store) =>
+        Effect.gen(function* () {
+          const credential = yield* io(() => loadCredential(cfg.profile));
+          const matches = yield* new Discovery(store).lookup(credential, input);
+          yield* write(
+            cfg.format === "json"
+              ? encodeResponse(LookupResponse, {
+                  generated_at: nowInstant(),
+                  prefix: input.prefix,
+                  matches,
+                })
+              : lookupOutput(matches, cfg.format),
+          );
+        }),
+      );
+    }),
+).pipe(withGuide("lookup"));
 registerCommandSchema("profile", TextResponse);
 registerCommandSchema("profile list", ProfileListResponse);
 registerCommandSchema("profile delete", ProfileDeletionReport);
 const profiles = Command.make("profile").pipe(
   Command.withSubcommands([
-    Command.make("list", {}, () =>
+    Command.make("list", { projects: bool("projects") }, (input) =>
       Effect.gen(function* () {
         const cfg = yield* root;
         yield* withStore(cfg, (store) =>
           Effect.gen(function* () {
             const credential = yield* io(() => loadCredential(cfg.profile));
-            const profiles = yield* new ClientReads(store).profiles(credential);
+            const profiles = yield* input.projects
+              ? new Discovery(store).directory(credential)
+              : new ClientReads(store).profiles(credential);
             yield* write(
               cfg.format === "json"
                 ? encodeResponse(ProfileListResponse, {
                     generated_at: nowInstant(),
                     profiles,
                   })
-                : profiles
-                    .map(
-                      (p) => `- ${p.name} (${p.visible_task_count ?? 0} Tasks)`,
-                    )
-                    .join("\n") + "\n",
+                : input.projects
+                  ? directoryOutput(profiles)
+                  : profiles
+                      .map(
+                        (p) =>
+                          `- ${p.name} (${p.visible_task_count ?? 0} Tasks)`,
+                      )
+                      .join("\n") + "\n",
             );
           }),
         );
@@ -1673,6 +1710,7 @@ const app = root.pipe(
     whoami,
     importCommand,
     profiles,
+    lookup,
     add,
     parseCommand,
     list,

@@ -96,6 +96,11 @@ type Ports<Read> = {
   }) => OpLogEntry;
 };
 
+type ReadBoundary = {
+  readonly transaction: <A>(run: () => A) => A;
+  readonly recordRejection: boolean;
+};
+
 export class Authentication<Read> {
   constructor(
     private readonly db: Database,
@@ -256,15 +261,20 @@ export class Authentication<Read> {
     action: AuthAction,
     profile: unknown,
     run: (time: number) => A,
+    boundary?: ReadBoundary,
   ) {
     return Effect.gen({ self: this }, function* () {
       const time = yield* Clock.currentTimeMillis;
       return yield* Effect.try({
         try: () => {
           try {
-            return this.transaction(() => run(time));
+            return (boundary?.transaction ?? this.transaction)(() => run(time));
           } catch (error) {
-            if (!(error instanceof AuthError)) throw error;
+            if (
+              !(error instanceof AuthError) ||
+              boundary?.recordRejection === false
+            )
+              throw error;
             const target =
               Schema.is(ProfileId)(profile) &&
               this.db.query("SELECT 1 FROM profiles WHERE id=?").get(profile)
@@ -639,23 +649,71 @@ export class Authentication<Read> {
       return yield* this.profileDeletion(input, false);
     });
 
-  readonly profiles = (input: { readonly credential: string }) =>
-    this.perform("read", null, (time) => {
-      const credential = this.requireCredential(input, time, "profiles");
-      return this.ports
-        .profiles()
-        .filter(
-          (profile) =>
-            credential.profile === null || profile.id === credential.profile,
-        );
-    });
+  readonly readSnapshot = <A>(
+    operation: (
+      reads: Pick<Authentication<Read>, "profiles" | "read">,
+    ) => Effect.Effect<A, AuthError | StoreError>,
+  ) =>
+    Effect.contextWith<never, A, AuthError | StoreError, never>((context) =>
+      this.perform(
+        "read",
+        null,
+        () => {
+          const boundary: ReadBoundary = {
+            transaction: (run) => run(),
+            recordRejection: false,
+          };
+          const result = Effect.runSyncExitWith(context)(
+            operation({
+              profiles: (input) => this.profilesWithin(input, boundary),
+              read: (input) => this.readWithin(input, boundary),
+            }),
+          );
+          if (Exit.isFailure(result)) throw Cause.squash(result.cause);
+          return result.value;
+        },
+        {
+          transaction: (run) => this.db.transaction(run).deferred(),
+          recordRejection: true,
+        },
+      ),
+    );
 
-  readonly read = (input: AccessRequest) =>
-    this.perform("read", input.profile, (time) => {
-      const request = parse(AccessRequest, input);
-      this.requireCredential(request, time, "read", request.profile);
-      return this.ports.read(request.profile);
-    });
+  readonly profiles = (input: { readonly credential: string }) =>
+    this.profilesWithin(input);
+
+  private profilesWithin = (
+    input: { readonly credential: string },
+    boundary?: ReadBoundary,
+  ) =>
+    this.perform(
+      "read",
+      null,
+      (time) => {
+        const credential = this.requireCredential(input, time, "profiles");
+        return this.ports
+          .profiles()
+          .filter(
+            (profile) =>
+              credential.profile === null || profile.id === credential.profile,
+          );
+      },
+      boundary,
+    );
+
+  readonly read = (input: AccessRequest) => this.readWithin(input);
+
+  private readWithin = (input: AccessRequest, boundary?: ReadBoundary) =>
+    this.perform(
+      "read",
+      input.profile,
+      (time) => {
+        const request = parse(AccessRequest, input);
+        this.requireCredential(request, time, "read", request.profile);
+        return this.ports.read(request.profile);
+      },
+      boundary,
+    );
 
   readonly append = (input: AccessRequest & { readonly event: unknown }) =>
     this.perform("append", input.profile, (time) => {

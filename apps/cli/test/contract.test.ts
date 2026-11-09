@@ -302,6 +302,11 @@ it("validates every command's single JSON object against its published JSON Sche
   });
   success("init", ["init", "--profile", "empty-profile-contract"]);
   success("profile list", ["profile", "list"]);
+  success("profile list", ["profile", "list", "--projects"]);
+  expect(success("lookup", ["lookup", "--prefix", "ab"])).toMatchObject({
+    prefix: "ab",
+    matches: [],
+  });
   success("profile delete", [
     "profile",
     "delete",

@@ -148,3 +148,11 @@ The compiled HTTP recipes compare health with CONTRACT_ID and reject unknown que
 ## Batch edit
 
 Read [Edit several Tasks](features/batch-edit.md) for the shared batch-edit contract and the compiled scratch proof. Both client flows retain selections and loaded Versions through preview, apply and Conflict reload.
+
+## Authorized discovery
+
+[verify-discovery](../verify-discovery/SKILL.md) owns the compiled Profile directory
+and cross-Profile id-prefix lookup matrix, credential no-leak properties, WAL
+snapshot tests and auth-failure rollback proof. Run its single command after
+changing these reads or their CLI/HTTP contracts. Existing Profile-scoped SSE
+and Task search behavior retain their current recipes.

@@ -127,8 +127,15 @@ a search retry timer. See [ADR-0015](adr/0015-search-text-retention-and-recovery
 ## Agent discovery contract
 
 The approved [agent discovery contract](decisions/agent-discovery-phase-0.md)
-adds a Profile-to-Project directory and explicit read-only Task prefix lookup
-over `Authentication.profiles`. Implementation follows the approved Phase 0 gate.
+adds a Profile-to-Project directory and explicit read-only Task prefix lookup.
+`Discovery.directory` and `Discovery.lookup` call the existing authentication
+queries inside `Authentication.readSnapshot`, one synchronous deferred SQLite
+transaction. The Profile visibility predicate remains in Authentication. Each
+Profile read rechecks the credential; any failure discards the aggregate before
+rejected-auth History is recorded in its separate transaction. A concurrent WAL
+writer cannot mix database states in a response. Deletions or revocations
+committed after that snapshot are observed on the next request. No discovery
+cache, migration, event, or persistent write is added.
 [ADR-0019](adr/0019-authorized-read-only-discovery.md) records the boundary.
 Normal Task lookup and mutations remain Profile-scoped. The workflow
 frames are `agent-errors`, `agent-lookup-errors`, `agent-directory`, `agent-prefix`,

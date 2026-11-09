@@ -106,3 +106,11 @@ its own checkout, so it can run from another working directory. Its compiled
 driver accepts only a fresh temporary scratch directory and an absolute
 evidence directory outside scratch. Use `/maintain-verification-skill` when
 these APIs or the feature map change.
+
+## Authorized discovery
+
+[verify-discovery](../verify-discovery/SKILL.md) owns the compiled Profile directory
+and cross-Profile id-prefix lookup matrix, credential no-leak properties, WAL
+snapshot tests and auth-failure rollback proof. Run its single command after
+changing these reads or their CLI/HTTP contracts. Existing Profile-scoped SSE
+and Task search behavior retain their current recipes.
