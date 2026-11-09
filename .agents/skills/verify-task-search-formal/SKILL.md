@@ -1,6 +1,6 @@
 ---
 name: verify-task-search-formal
-description: Check the approved Task search response-order design with TLA+. Use after search debounce, request generation, snapshot publication, filter rollback, Profile or view reset changes. Real matcher properties and final client refinement remain pending until their implementation lands.
+description: Check the approved Task search response-order design with TLA+ and generated properties against an immutable real matcher candidate. Use after matcher, debounce, generation, snapshot, rollback, Profile or view reset changes. Final client refinement remains pending.
 ---
 
 # Verify Task search response ordering
@@ -11,14 +11,18 @@ Run this command from the checkout root:
 bun .agents/skills/verify-task-search-formal/check.ts
 ```
 
-The command exits 0 only after the design model, deliberate broken variants,
-restored model, runner typecheck, and reviewed baseline source hashes pass.
-The final line explicitly marks matcher checks and final client mapping PENDING.
+The command exits 0 only after the design model, real candidate matcher,
+deliberate broken variants, restored checks, typechecks, and reviewed baseline
+source hashes pass. The final line marks integration recheck and final client
+mapping PENDING.
 This command does not certify the implemented feature.
 
 Prerequisites are Java 11 or newer, Bun, curl, and dependencies from the existing
 pnpm lockfile. Follow the active run's disk guard before `pnpm install`.
-The command does not install Bun, add dependencies, build apps, start a server,
+The Git object named in `matcher-candidate.json` must exist locally. The command
+captures it with `git archive` into its own ignored evidence directory. It never
+merges the candidate or edits its worktree. The command does not install Bun,
+add dependencies, build apps, start a server,
 open SQLite, access Keychain, or use an installed Todo binary.
 
 Created with the `create-formal-verification-skill` workflow. TLA+ fits this
@@ -154,7 +158,7 @@ Advancing hashes alone does not establish a client refinement proof.
 | Identity capture and rollback | Swift `requestedTaskFilters`, `taskFilters`, `applyTaskFilters` | Existing rollback inspected. Separate typed text and search snapshot are approved design. |
 | Reset and SSE | Electron `activateProfile`, planning navigation, `changed` notice; Swift `activateProfile`, `selectView`, `disconnect`, `followChanges` | Baseline inspected. Swift view changes clear planning and filters but retain its Task array. The model abstracts the approved cleared selection results, not each array assignment. |
 | Search debounce, spans, complete-identity guards | Both clients | PENDING. These transitions describe the approved C1 design only. |
-| Matcher generated-input checks | Proposed `packages/domain/src/task-search.ts` | PENDING. The implementation is absent at the inspected base. No stand-in matcher is used. |
+| Matcher generated-input checks | Candidate `be876581ea9d4c024fab3b0bc2c8358051c6d2b4`, `normalizeTaskSearch`, `parseTaskSearch`, `matchTaskSearch`, and `filterTaskRecords` | Proven on captured real source. The candidate awaits review. Integration recheck is PENDING. See [matcher report](MATCHER-REPORT.md). |
 
 The hash check fails after any change to either covered client file. Once clients
 land, replace the baseline mapping with reviewed actual functions, preserve the
@@ -171,12 +175,28 @@ source hash failure, timeout, or nonempty queue cannot satisfy sensitivity.
 The unchanged model runs again afterward. The checked-in model is never edited
 by sensitivity checks, and product files remain byte-identical.
 
-After the real matcher lands, add generated-input checks that import its actual
-exports. Inspect its API first. Cover normalization idempotence, monotonic AND,
+`check-matcher.ts` captures the immutable candidate, copies
+`matcher-properties.ts` beside its real `packages/domain/src`, and imports those
+actual source modules. It checks normalization idempotence, monotonic AND,
 closed-phrase subset, literal case-insensitive id `startsWith`, and ordered,
-in-range original UTF-16 spans on grapheme boundaries. Record exact corpus,
-seed, and bounds. Break each covered production path in a scratch copy, observe
-an assertion failure, restore bytes, and rerun clean. The domain worker owns
+in-range original UTF-16 spans on grapheme boundaries. Every property has a
+scratch production-code break, observed assertion failure, byte restoration,
+and a clean rerun. Corpus, seed, bounds, hashes, and witnesses are preserved.
+The driver typechecks in the captured source tree, where its relative imports
+resolve. The runner has a separate strict TypeScript check.
+
+After L1 integrates the reviewed implementation, repeat matcher checks against
+the exact integration SHA:
+
+```sh
+bun .agents/skills/verify-task-search-formal/check-matcher.ts <full-integration-sha>
+```
+
+The argument must be a full immutable commit SHA. The command records it as an
+explicit commit check. The caller establishes that it is the approved integration
+tip. The main command accepts the same optional SHA after the baseline client
+mapping is renewed. No branch name is resolved implicitly. Mutation anchors
+that change fail closed and require a new source review. The domain worker owns
 `verify-task-search`, the matcher, and all product edits.
 
 The run forbids extra children. The `no-comments` workflow therefore receives

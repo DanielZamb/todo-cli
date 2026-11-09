@@ -7,5 +7,5 @@
       "../../../node_modules/@types"
     ]
   },
-  "include": ["./*.ts"]
+  "include": ["./check.ts", "./check-matcher.ts"]
 }

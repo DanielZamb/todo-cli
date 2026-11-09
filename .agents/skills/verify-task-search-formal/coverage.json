@@ -28,6 +28,6 @@
       "status": "baseline guards inspected; complete search identity and snapshot are approved design only"
     }
   ],
-  "productionMatcher": "PENDING: task-search.ts absent at baseline",
+  "productionMatcher": "Generated-input properties and production-code sensitivity pass on candidate be876581ea9d4c024fab3b0bc2c8358051c6d2b4; integration recheck PENDING",
   "finalClientRefinement": "PENDING: clients still use pre-search guards"
 }

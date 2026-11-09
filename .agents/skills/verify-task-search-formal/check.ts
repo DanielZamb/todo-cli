@@ -145,6 +145,14 @@ try {
   assert.equal(sha256(jar), pin.sha256, "TLC tool hash mismatch");
   copyFileSync(join(skill, "tool.json"), join(evidence, "tool.json"));
   const source = readFileSync(join(skill, "TaskSearch.tla"), "utf8");
+  const head = await execute("git-head", "git", ["rev-parse", "HEAD"]);
+  assert.equal(head.exit, 0);
+  record("provenance", {
+    head: head.out.trim(),
+    modelHash: sha256(join(skill, "TaskSearch.tla")),
+    runnerHash: sha256(join(skill, "check.ts")),
+    runtime: process.versions,
+  });
   const full: Bounds = {
     profiles: 2,
     views: 2,
@@ -306,16 +314,25 @@ try {
     createHash("sha256").update(source).digest("hex"),
     "Model changed during proof",
   );
+  const matcher = await execute("matcher-check", "bun", [
+    join(skill, "check-matcher.ts"),
+    ...(process.argv[2] === undefined ? [] : [process.argv[2]]),
+  ]);
+  assert.equal(matcher.exit, 0, "Real candidate matcher checks failed");
+  const matcherOutcome: unknown = JSON.parse(matcher.out);
   record("result", {
     passed: true,
-    scope: "approved-C1-design-model",
+    scope: "approved-C1-design-and-candidate-matcher",
+    sourceCommit: head.out.trim(),
     stages,
-    productionMatcher: "PENDING",
+    productionMatcher:
+      "candidate-generated-inputs-passed; integration recheck PENDING",
+    matcherOutcome,
     finalClientRefinement: "PENDING",
     evidence,
   });
   console.log(
-    "PASS: C1 design safety and liveness; matcher and final client mapping PENDING",
+    "PASS: C1 design safety/liveness and real candidate matcher; integration recheck and final client mapping PENDING",
   );
 } catch (error) {
   record("result", { passed: false, stages, error: String(error), evidence });

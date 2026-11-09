@@ -1,8 +1,13 @@
 # C1 design model proof
 
-The approved response-order model is proven within the bounds below. The real
-matcher checks and final client mapping are PENDING. This is the formal unit's
-first delivery before Phase 2, not a complete Task search feature proof.
+The approved response-order model is proven within the bounds below. Generated
+checks against the real unit 1 candidate also pass, with production-code
+sensitivity. Integration recheck and final client mapping are PENDING. This is
+not a complete Task search feature proof.
+
+The model's first delivery before Phase 2 is local commit
+`1cdb35340b7df59882f979880e622dec8308a444`. Candidate matcher results are recorded
+separately in [MATCHER-REPORT.md](MATCHER-REPORT.md).
 
 The inspected base is `605b84aa85e4be4e9386365b97cf64ddef2639c6` on worker branch
 `t3/task-search-tests`. All additions belong to `verify-task-search-formal` and
@@ -103,11 +108,9 @@ reset, not a claim that those baseline assignments already implement C1.
 
 The following work requires the implementation commits arranged by L1:
 
-- Generated-input checks importing the real matcher, with exact corpus, seed,
-  and bounds, for normalization idempotence, monotonic positive AND, closed
-  phrase subset, id-prefix reference equality, and original grapheme-safe UTF-16
-  spans. Each needs a scratch production-code break, assertion failure, byte
-  restoration, and clean rerun. No fake matcher or invented export is present.
+- Repeat the completed matcher checks at the approved integration tip. The
+  current checks capture candidate `be876581ea9d4c024fab3b0bc2c8358051c6d2b4`,
+  which awaits review. No fake matcher or invented export is present.
 - Final mapping of both clients' request, refresh, debounce, error, rollback,
   and reset functions. Delayed-response tests must drive production state
   through the existing compiled scratch verification recipes.
