@@ -58,9 +58,9 @@ request until Find. The 24 additional U5 captures render the shared production
 error notice for Show, editor, History, batch edit, import and Attachments in both
 layouts and appearances. They prove the notice content, not native placement.
 Agent message/recovery commands and HTTP routes never enter this notice. The
-production HTTP drive also removes a found Task before Show, rejects Save and
-History for a missing Task, preserves its draft and proves recovery opens without
-a request. A cancelled Show callback stays rejected even after another Show on
+production HTTP drive also removes a found Task before Show, rejects Save for a missing Task, preserves its draft and proves recovery opens
+without a request. Deleted Task History stays readable; its contextual error
+notice is a typed UI fixture. A cancelled Show callback stays rejected even after another Show on
 the same applied row, because each intent has a distinct id.
 
 The same-Profile All tasks proof suppresses SSE entirely. It starts with zero
