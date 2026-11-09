@@ -119,6 +119,11 @@ metadata. CLI JSON and HTTP list results carry the same matched strings and
 spans; clients highlight those spans without repeating matching. No migration
 or FTS index is needed. See [ADR-0014](adr/0014-task-search.md).
 
+Each client retains one applied response snapshot while requesting a newer
+identity. Search text survives Profile and view switches. Failed reads offer
+Retry and recover on current-Profile SSE reconnection or operations, without
+a search retry timer. See [ADR-0015](adr/0015-search-text-retention-and-recovery.md).
+
 ## Live updates
 
 ![Live updates: a desktop client, the SSE route, op_log, and a CLI writer](diagrams/live.png)

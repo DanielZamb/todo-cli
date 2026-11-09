@@ -901,7 +901,7 @@ const searchClientFrame = (id, name, X, swift) => frame(id, name, X, 9600, 3000,
     { t: "issuedGeneration; appliedGeneration; stale = requestedIdentity != appliedIdentity; phase = Idle | Showing | Debouncing | Requesting | Error" },
     { t: swift ? "TodoModel: generation, refreshGeneration, requestedTaskFilters, taskFilters; TaskListView: .searchable / compact-search" : "renderer.tsx: refreshGeneration, activeQuery, advancedFiltersRef, appliedFiltersRef; TaskFilterDialog; shadcn Input" },
   ], h: 150 });
-  node("idle", 50, 350, "Idle", "Profile/view reset clears old selection\ninitial snapshot absent; current reset behavior");
+  node("idle", 50, 350, "Idle", "Profile/view reset clears old selection\nkeep toolbar text; snapshot absent");
   node("showing", 50, 780, "Showing / empty", "rows + spans = appliedSnapshot\nsearch empty: Clear search is primary\ndescription excerpt: one centered line");
   node("debounce", 1080, 780, "Debouncing", "250 ms timer; generation invalidated now\nretain applied rows + highlights\nfield progress / stale emphasis");
   node("request", 2100, 780, "Requesting", "refresh() / refresh(generation:)\ncapture identity + new issuedGeneration\nretain appliedSnapshot");
@@ -918,7 +918,7 @@ const searchClientFrame = (id, name, X, swift) => frame(id, name, X, 9600, 3000,
   transition("obsolete", "request", "request", "response(generation) ok/error\n[obsolete] / discard", { from: "bottom", to: "bottom", fromT: 0.15, toT: 0.75, via: [[x + 2193, y + 1030], [x + 2565, y + 1030]], labelAt: [x + 2520, y + 1020] });
   transition("sse", "showing", "request", "SSE op [current Profile] / refresh latest requestedIdentity", { from: "top", to: "top", via: [[x + 360, y + 590], [x + 2400, y + 590]], labelAt: [x + 820, y + 560] });
   transition("focus", "showing", "showing", "Cmd+F [search visible] / focus field", { from: "top", to: "top", fromT: 0.15, toT: 0.85, via: [[x + 143, y + 690], [x + 577, y + 690]], labelAt: [x + 350, y + 990] });
-  transition("reset", "error", "idle", "Profile switch or view switch [changed]\n/ existing reset; invalidate generations", { from: "top", to: "left", via: [[x + 2220, y + 1400], [x + 2220, y + 1350], [x + 20, y + 1350], [x + 20, y + 420]], labelAt: [x + 1060, y + 1320] });
+  transition("reset", "error", "idle", "Profile switch or view switch [changed]\n/ keep text; clear selection; invalidate", { from: "top", to: "left", via: [[x + 2220, y + 1400], [x + 2220, y + 1350], [x + 20, y + 1350], [x + 20, y + 420]], labelAt: [x + 1060, y + 1320] });
   zone(`${p}-freshness`, x + 50, y + 1930, 2670, 400, "Orthogonal freshness state / retained rows stay visible");
   node("current", 180, 2040, "Current", "requestedIdentity == appliedIdentity\nnormal rows and their matching highlights", c.accent);
   node("stale", 1910, 2040, "Stale", "requestedIdentity != appliedIdentity\nreduced emphasis; field progress if pending\nerror keeps typed text and Retry", c.secondary);

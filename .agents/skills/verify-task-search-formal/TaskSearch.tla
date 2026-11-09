@@ -132,10 +132,10 @@ DialogApply ==
   /\ \E n \in Slots : Launch(n, [requestedIdentity EXCEPT !.filters = dialogDraft])
   /\ dialogDraft' = Closed
 
-Reset(p, v, t) ==
+Reset(p, v) ==
   /\ ~stable
   /\ p # requestedIdentity.profile \/ v # requestedIdentity.view
-  /\ requestedIdentity' = [profile |-> p, view |-> v, text |-> t, filters |-> EmptyFilter]
+  /\ requestedIdentity' = [profile |-> p, view |-> v, text |-> requestedIdentity.text, filters |-> EmptyFilter]
   /\ appliedSnapshot' = EmptySnapshot
   /\ phase' = "Idle"
   /\ stale' = TRUE
@@ -145,11 +145,9 @@ Reset(p, v, t) ==
   /\ UNCHANGED <<pending, stable, publicationOK>>
 
 ProfileSwitch ==
-  \E p \in Profiles, t \in {EmptyText, requestedIdentity.text} :
-     Reset(p, requestedIdentity.view, t)
+  \E p \in Profiles : Reset(p, requestedIdentity.view)
 ViewSwitch ==
-  \E v \in Views, t \in {EmptyText, requestedIdentity.text} :
-     Reset(requestedIdentity.profile, v, t)
+  \E v \in Views : Reset(requestedIdentity.profile, v)
 
 SelectTask ==
   /\ appliedSnapshot.appliedIdentity # NoIdentity
@@ -192,6 +190,7 @@ OneSnapshot ==
   /\ appliedSnapshot.search_matches.identity = appliedSnapshot.appliedIdentity
   /\ appliedSnapshot.rows.generation = appliedSnapshot.search_matches.generation
 LatestPublication == publicationOK
+ShowingIsCurrent == phase = "Showing" => appliedSnapshot.appliedIdentity = requestedIdentity
 ExactStale == stale = (requestedIdentity # appliedSnapshot.appliedIdentity)
 Convergence == stable ~> (appliedSnapshot.appliedIdentity = requestedIdentity /\ ~stale)
 =============================================================================

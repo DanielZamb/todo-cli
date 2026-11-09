@@ -1,6 +1,6 @@
 # C1 design model proof
 
-The approved response-order model, including SSE recovery, is proven within the bounds below at model code commit f42fc7f5. Generated
+The approved response-order model, including SSE recovery, semantic ShowingIsCurrent and text-retaining reset, passes the R1 amendment run within the bounds below. The original SSE model was reviewed at code commit f42fc7f5. Generated
 checks against the real unit 1 candidate also pass, with production-code
 sensitivity. The reviewed Unit 1 integration recheck at `8272b610` passed.
 The final integration recheck and production client mapping are PENDING.
@@ -25,7 +25,7 @@ bun .agents/skills/verify-task-search-formal/check.ts
 The completed model run is under this ignored absolute evidence directory:
 
 ```text
-/Users/zambamon/.t3/worktrees/todo-cli/t3-9a98d7a3/docs/evidence/task-search-formal/check-XKctmq
+/Users/zambamon/.t3/worktrees/todo-cli/t3-cf66f082/docs/evidence/task-search-formal/check-CslMY5
 ```
 
 Each stage records its command, PID, actual exit, model, config, stdout, stderr,
@@ -43,14 +43,14 @@ deductive proof at arbitrary sizes or a verification of TypeScript or Swift.
 
 | Stage | Profiles, views, texts, filters | Concurrent requests | Distinct states | Generated successors | Queue | TLC exit |
 | --- | --- | --- | --- | --- | --- | --- |
-| Safety, full identities | 2, 2, 3, 2 | 2 | 1,710,504 | 17,495,569 | 0 | 0 |
+| Safety, full identities | 2, 2, 3, 2 | 2 | 1,710,504 | 16,355,233 | 0 | 0 |
 | Safety, three requests | 1, 1, 3, 2 | 3 | 1,026,978 | 10,791,549 | 0 | 0 |
 | Liveness | 1, 1, 2, 2 | 2 | 24,186 | 202,987 | 0 | 0 |
 | Restored clean model | 1, 1, 2, 2 | 2 | 24,186 | 202,987 | 0 | 0 |
 
 Generated successors include duplicate transitions and visible stutters. The
 table does not claim a count of distinct edges. Both safety graphs exhaust their
-queues and check `TypeOK`, `OneSnapshot`, `LatestPublication`, and `ExactStale`.
+queues and check `TypeOK`, `OneSnapshot`, `LatestPublication`, `ShowingIsCurrent`, and `ExactStale`.
 The liveness graph separately checks `Convergence` and exhausts its queue.
 
 The initial requested bound was 24 identities with up to three requests. The
@@ -74,11 +74,12 @@ and ordinary SSE refreshes. Recovery SSE events remain enabled in Error. All lat
 | --- | --- | --- | --- |
 | `BrokenSnapshot` | `OneSnapshot` | 12 | Initial request succeeds. New rows retain the old empty snapshot's spans. |
 | `BrokenLatest` | `LatestPublication` | 12 | Issue for text 1, input text 2, then publish text 1's obsolete success during Debouncing. |
+| `BrokenLatest`, ghost invariant disabled | `ShowingIsCurrent` | 12 | Issue text 1, input text 2, then an obsolete success enters Showing with text 1. |
 | `BrokenStale` | `ExactStale` | 12 | Publish text 1, input text 2, and incorrectly retain `stale = FALSE`. |
 | `BrokenProgress` | `Convergence` | 13 | Input text 2, Settle in Debouncing, then stutter forever because debounce never launches. |
 | `FairSpecWithoutRetry` | `Convergence` | 13 | Input text 2, issue, fail, Settle in Error, then stutter forever without Retry, SSE reconnection or SSE op. |
 
-The three invariant failures stop early with queues of 13, 50, and 59 states.
+The four invariant failures stop early with queues of 13, 50, 50, and 59 states.
 Those are expected counterexamples, not clean exhaustive passes. Both temporal
 controls exhaust their 24,186-state graphs and produce a stuttering lasso.
 No sensitivity receipt relies on parsing, compilation, hashes, or timeouts.
@@ -96,9 +97,12 @@ equality. Existing dialog rollback and Profile and view reset paths were read.
 The new complete identity, immediate input invalidation, atomic rows and spans,
 and search debounce remain approved design transitions at this base.
 
-The model permits clearing or keeping the new toolbar text during reset.
-It does not silently choose behavior for a field that does not exist yet.
-The final client review must constrain that choice to the approved actual code.
+Coordinator R3 narrows Reset to retain toolbar search text. Coordinator R1 adds
+`ShowingIsCurrent`, which reads phase and applied/requested identities without
+the publication ghost. The separate `broken-latest-showing` sensitivity run
+disables the ghost invariant and must violate this semantic invariant. The amendment check-CslMY5 exits 0; both BrokenLatest checks exit 12, and the
+no-recovery fairness control exits 13. The counts above include these amendments.
+Final production client mapping and the final-tip recheck remain pending.
 Swift's baseline view reset retains the Task array while clearing planning and
 filters. The model's empty selection snapshot represents the approved visible
 reset, not a claim that those baseline assignments already implement C1.

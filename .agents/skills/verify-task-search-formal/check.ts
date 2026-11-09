@@ -96,7 +96,7 @@ const controls = [
   "BrokenStale",
   "BrokenProgress",
 ];
-function config(bounds: Bounds, live: boolean, broken = "") {
+function config(bounds: Bounds, live: boolean, broken = "", semanticOnly = false) {
   return [
     "CONSTANTS",
     `  Profiles = ${set(bounds.profiles)}`,
@@ -114,7 +114,9 @@ function config(bounds: Bounds, live: boolean, broken = "") {
       (name) => `  ${name} = ${name === broken ? "TRUE" : "FALSE"}`,
     ),
     `SPECIFICATION ${live ? "FairSpec" : "Spec"}`,
-    "INVARIANTS TypeOK OneSnapshot LatestPublication ExactStale",
+    semanticOnly
+      ? "INVARIANTS TypeOK OneSnapshot ShowingIsCurrent ExactStale"
+      : "INVARIANTS TypeOK OneSnapshot LatestPublication ShowingIsCurrent ExactStale",
     ...(live ? ["PROPERTY Convergence"] : []),
     "CHECK_DEADLOCK FALSE",
     "",
@@ -180,11 +182,12 @@ try {
     live: boolean,
     broken: string,
     failure: string,
+    semanticOnly = false,
   ) {
     const directory = join(evidence, label);
     mkdirSync(directory);
     writeFileSync(join(directory, "TaskSearch.tla"), source);
-    const cfg = config(bounds, live, broken);
+    const cfg = config(bounds, live, broken, semanticOnly);
     writeFileSync(
       join(directory, "TaskSearch.cfg"),
       broken === "NoRetryFairness"
@@ -270,6 +273,14 @@ try {
     false,
     "BrokenLatest",
     "Invariant LatestPublication is violated",
+  );
+  await tlc(
+    "broken-latest-showing",
+    small,
+    false,
+    "BrokenLatest",
+    "Invariant ShowingIsCurrent is violated",
+    true,
   );
   await tlc(
     "broken-stale",

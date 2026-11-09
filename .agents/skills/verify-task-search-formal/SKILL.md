@@ -55,6 +55,7 @@ The normal command checks these properties separately:
 | --- | --- |
 | `OneSnapshot` | Rows use one response while highlights use another response's strings or offsets. Both identity and response generation must agree. |
 | `LatestPublication` | An obsolete success replaces current rows, or an obsolete error rolls filters back or replaces the current phase. |
+| `ShowingIsCurrent` | Showing presents a response for an identity other than the current request. This invariant reads only phase and snapshot identity. |
 | `ExactStale` | The UI presents old rows as current, or keeps current rows dimmed. `stale` must equal the complete identity inequality. |
 | `Convergence` | Stable input remains stale forever despite fair debounce, recovery, and successful replies. |
 
@@ -62,7 +63,9 @@ The normal command checks these properties separately:
 guard. It does not make that guard true. Both response branches compute the
 observation independently of their publish decision, so removing the decision
 guard fails the invariant. Reset is a separate transition and never reports
-a response publication.
+a response publication. `ShowingIsCurrent` independently requires the applied
+identity to equal the requested identity whenever phase is Showing. A separate
+`BrokenLatest` run omits `LatestPublication` and must violate `ShowingIsCurrent`.
 
 ## Understand the model bounds
 
@@ -121,11 +124,9 @@ notice for the current Profile and issues a refresh of the requested identity. `
 outside the data-order model.
 
 Profile and view reset invalidate requests, clear the applied selection snapshot
-and dialog filters, close the draft, and reset selection. The model permits
-either retention or clearing of the new toolbar text at reset. That choice has
-no baseline implementation yet and this model makes no product decision about
-it. The final client mapping must replace that overapproximation with the actual
-approved behavior. `SelectTask` models only the presence of a selection.
+and dialog filters, close the filter draft, and reset selection. Reset retains
+toolbar search text, as required by coordinator decision R3. Editor drafts are
+outside this data-order model. `SelectTask` models only the presence of a selection.
 
 `Settle` marks the point after which identity-changing input, dialog Apply,
 Profile and view switches, and ordinary SSE refreshes stop. Recovery SSE events in Error remain enabled. All future replies succeed.

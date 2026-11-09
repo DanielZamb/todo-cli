@@ -45,7 +45,8 @@ with the current generation and identity may publish. Obsolete successes and
 errors publish nothing. Pending search keeps the applied rows and highlights
 visible with reduced emphasis and field progress. Search errors retain typed
 text, applied results and a Retry action. Dialog errors retain their existing
-rollback, and Profile/view changes retain their reset behavior.
+rollback. [ADR-0015](0015-search-text-retention-and-recovery.md) specifies text
+retention across Profile/view resets and recovery through live updates.
 
 Both clients expose toolbar search, Cmd+F focus, Esc clear, a roughly 250 ms
 debounce, an Id starts with dialog field, and the full id with Copy in detail.
