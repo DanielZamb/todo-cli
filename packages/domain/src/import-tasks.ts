@@ -302,7 +302,9 @@ const executeImport = Effect.fn(function* (
               result.outcome === "rejected" ? result.reason : "not_found";
             const context =
               reason === "not_found" && item.task_id != null
-                ? yield* taskLookupError(store, request, item.task_id, "http")
+                ? yield* taskLookupError(store, request, item.task_id, "http", {
+                    action: "authenticate",
+                  })
                 : undefined;
             return yield* store.auth
               .mutate(request, (actor) =>

@@ -391,6 +391,7 @@ export class AttachmentCommands {
                         request,
                         item.task_id,
                         "http",
+                        { action: "authenticate" },
                       )
                     : undefined;
                 return yield* this.store.auth

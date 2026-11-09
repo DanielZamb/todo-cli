@@ -247,7 +247,7 @@ export const serverLayer = (options: {
       const commands = new TaskCommands(store);
       const missingTask = (
         params: { profile: ProfileId; task: TaskId },
-        action: AuthAction = "read",
+        action: AuthAction,
       ) =>
         Effect.gen(function* () {
           const credential = yield* BearerCredential;
@@ -264,10 +264,7 @@ export const serverLayer = (options: {
           );
         });
       const taskResultFor =
-        (
-          params: { profile: ProfileId; task?: TaskId },
-          action: AuthAction = "mutate",
-        ) =>
+        (params: { profile: ProfileId; task?: TaskId }, action: AuthAction) =>
         (result: TaskCommandResult) =>
           Effect.gen(function* () {
             if (
@@ -421,7 +418,7 @@ export const serverLayer = (options: {
                   },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResultFor(params)));
+              ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
             }),
           detach: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -434,7 +431,7 @@ export const serverLayer = (options: {
                   },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResultFor(params)));
+              ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
             }),
           labelAttachment: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -447,7 +444,7 @@ export const serverLayer = (options: {
                   },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResultFor(params)));
+              ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
             }),
           uploadAttachment: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -460,7 +457,7 @@ export const serverLayer = (options: {
                   },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResultFor(params)));
+              ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
             }),
           attachmentImage: ({ params }) =>
             Effect.gen(function* () {
@@ -484,7 +481,7 @@ export const serverLayer = (options: {
               );
               return yield* Effect.fail(
                 task === null
-                  ? yield* missingTask(params)
+                  ? yield* missingTask(params, "read")
                   : new NotFound({ message: "Managed image not found" }),
               );
             }),
@@ -537,7 +534,9 @@ export const serverLayer = (options: {
                   task_id: params.task,
                 }),
               );
-              return task ?? (yield* Effect.fail(yield* missingTask(params)));
+              return (
+                task ?? (yield* Effect.fail(yield* missingTask(params, "read")))
+              );
             }),
           create: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -547,7 +546,7 @@ export const serverLayer = (options: {
                   { credential, profile: params.profile },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResultFor(params)));
+              ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
             }),
           edit: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -557,7 +556,7 @@ export const serverLayer = (options: {
                   { credential, profile: params.profile, task_id: params.task },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResultFor(params)));
+              ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
             }),
           transition: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -567,7 +566,7 @@ export const serverLayer = (options: {
                   { credential, profile: params.profile, task_id: params.task },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResultFor(params)));
+              ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
             }),
           move: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -611,7 +610,7 @@ export const serverLayer = (options: {
                   { credential, profile: params.profile },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResultFor(params)));
+              ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
             }),
           editSeries: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -622,7 +621,7 @@ export const serverLayer = (options: {
                   { credential, profile: params.profile, task_id: params.task },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResultFor(params)));
+              ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
             }),
           skipOccurrence: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -633,7 +632,7 @@ export const serverLayer = (options: {
                   { credential, profile: params.profile, task_id: params.task },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResultFor(params)));
+              ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
             }),
           delete: ({ params, query }) =>
             Effect.gen(function* () {
@@ -643,7 +642,7 @@ export const serverLayer = (options: {
                   { credential, profile: params.profile, task_id: params.task },
                   query,
                 ),
-              ).pipe(Effect.flatMap(taskResultFor(params)));
+              ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
             }),
         }),
       ).pipe(
