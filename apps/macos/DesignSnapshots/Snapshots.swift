@@ -338,7 +338,7 @@ struct Snapshots {
                         if state == "budget-error" {
                             searchModel.searchText = "probe"
                             searchModel.searchPhase = .error
-                            searchModel.searchError = .tooBroad("Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.")
+                            searchModel.searchError = .tooBroad("Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.", context: TaskSearchPresentation.appliedContext(searchModel.appliedSearchSnapshot?.appliedIdentity.text))
                         }
                         if state == "initial-error" {
                             searchModel.searchText = ""

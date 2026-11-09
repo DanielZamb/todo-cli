@@ -119,6 +119,7 @@ import { TaskIdCopy } from "./task-id-copy.tsx";
 import {
   DescriptionMatch,
   descriptionMatch,
+  SearchErrorMessage,
   SearchHighlight,
 } from "./task-search-presentation.tsx";
 import {
@@ -2016,13 +2017,11 @@ function App() {
           >
             <CircleAlert />
             <AlertDescription>
-              <span>
-                {loadFailure?.kind === "search_too_broad"
-                  ? loadFailure.message
-                  : appliedSearch?.appliedIdentity.text
-                    ? `Couldn't search. Showing results for "${appliedSearch.appliedIdentity.text}".`
-                    : "Couldn't search. Showing tasks without search."}
-              </span>
+              <SearchErrorMessage
+                kind={loadFailure?.kind ?? "transient"}
+                message={loadError}
+                appliedText={appliedSearch?.appliedIdentity.text}
+              />
               {connection === "connected" &&
                 loadFailure?.kind !== "search_too_broad" && (
                   <Button

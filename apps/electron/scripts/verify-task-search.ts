@@ -1021,12 +1021,49 @@ try {
           .length,
     )
     .toBe(3);
-  const retainedTitles = await titles();
+  const unsearchedTitles = await titles();
   await field.fill("probe");
   await expect(pane).toHaveAttribute("data-search-phase", "Error");
   await expect(field).toBeFocused();
   const recovery =
     "Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.";
+  const expectRefusal = async (context: string) => {
+    await expect(page.getByLabel("Search failed").locator("span")).toHaveText(
+      recovery,
+    );
+    await expect(
+      page.getByLabel("Search failed").locator(".search-error-context"),
+    ).toHaveText(context);
+    await expect(
+      page
+        .getByLabel("Search failed")
+        .getByRole("button", { name: "Retry", exact: true }),
+    ).toHaveCount(0);
+  };
+  await expectRefusal("Showing tasks without search.");
+  expect(await titles()).toEqual(unsearchedTitles);
+  let shrinking = broadTasks[0];
+  if (!shrinking) throw new Error("Missing budget recovery Task");
+  const resizeDescription = async (description: string) => {
+    if (!shrinking) throw new Error("Missing budget recovery Task");
+    shrinking = Schema.decodeUnknownSync(Task)(
+      await api(`/profiles/work/tasks/${shrinking.id}`, "PATCH", {
+        from_version: shrinking.row_version,
+        changes: { description },
+      }),
+    );
+  };
+  await resizeDescription("Small description");
+  await showing("probe");
+  await field.fill("rent");
+  await showing("rent");
+  const retainedTitles = await titles();
+  expect(retainedTitles.length).toBeGreaterThan(0);
+  await resizeDescription("\ufdfa".repeat(100000));
+  await expect(pane).toHaveAttribute("data-search-phase", "Error");
+  await field.fill("probe");
+  await expect(pane).toHaveAttribute("data-search-phase", "Error");
+  await expect(field).toBeFocused();
   for (const compact of [false, true]) {
     if (compact)
       await page
@@ -1034,12 +1071,7 @@ try {
         .click();
     for (const theme of ["light", "dark"] as const) {
       await setAppearance(page, theme);
-      await expect(page.getByLabel("Search failed")).toHaveText(recovery);
-      await expect(
-        page
-          .getByLabel("Search failed")
-          .getByRole("button", { name: "Retry", exact: true }),
-      ).toHaveCount(0);
+      await expectRefusal('Showing results for "rent".');
       await expect(field).toHaveValue("probe");
       expect(
         await page
@@ -1051,12 +1083,7 @@ try {
       await shot(`${compact ? "compact" : "full"}-${theme}-budget-error`);
     }
   }
-  const shrinking = broadTasks[0];
-  if (!shrinking) throw new Error("Missing budget recovery Task");
-  await api(`/profiles/work/tasks/${shrinking.id}`, "PATCH", {
-    from_version: shrinking.row_version,
-    changes: { description: "Small description" },
-  });
+  await resizeDescription("Small description");
   await showing("probe");
   expect((await titles()).toSorted()).toEqual([
     "Budget probe 0",
@@ -1068,6 +1095,8 @@ try {
     deterministicRefusal: true,
     retryAbsent: true,
     typedText: "probe",
+    contextWithoutSearch: "Showing tasks without search.",
+    contextWithSearch: 'Showing results for "rent".',
     retainedTitles,
     recoveryBySseAfterShrink: true,
   });

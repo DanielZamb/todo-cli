@@ -409,13 +409,12 @@ final class TodoModel {
             if let refusal = failure(error), refusal.code == "search_too_broad" {
                 requestedTaskFilters = taskFilters
                 taskLoadError = nil
-                searchError = .tooBroad(refusal.message)
+                searchError = .tooBroad(refusal.message, context: TaskSearchPresentation.appliedContext(appliedSearchSnapshot?.appliedIdentity.text))
             } else if taskFilters != identity.filters {
                 requestedTaskFilters = taskFilters
                 taskLoadError = "Could not apply filters. Your previous filters are still active."
             } else if !identity.text.isEmpty || appliedSearchSnapshot?.appliedIdentity.text.isEmpty == false {
-                let applied = appliedSearchSnapshot?.appliedIdentity.text ?? ""
-                searchError = .transient(applied.isEmpty ? "Couldn't search. Showing tasks without search." : "Couldn't search. Showing results for \"\(applied)\".")
+                searchError = .transient("Couldn't search. \(TaskSearchPresentation.appliedContext(appliedSearchSnapshot?.appliedIdentity.text))")
             } else {
                 taskLoadError = describe(error)
             }

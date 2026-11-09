@@ -1588,6 +1588,11 @@ nav {
   align-items: center;
   gap: 8px;
 }
+.search-error-context {
+  flex-basis: 100%;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
 .task-id-copy {
   display: flex;
   flex-wrap: wrap;
