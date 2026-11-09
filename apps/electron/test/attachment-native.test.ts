@@ -50,6 +50,24 @@ it("rejects a non-string without touching the clipboard", async () => {
   expect(writeText.mock.calls).toEqual([]);
 });
 
+it("rejects Unicode format characters without touching the clipboard", async () => {
+  for (const task of [
+    "6aa2647d-\u202e1234",
+    "6aa2647d-\u20661234",
+    "6aa2647d-\u200b1234",
+  ]) {
+    writeText.mockClear();
+    expect(await nativeAttachmentRequest({ _tag: "copyTaskId", task })).toEqual(
+      {
+        _tag: "error",
+        message:
+          "Task id must be at most 128 UTF-16 units and contain no control characters or format characters.",
+      },
+    );
+    expect(writeText.mock.calls).toEqual([]);
+  }
+});
+
 it("uses UTF-16 units at the boundary and rejects each control range", async () => {
   writeText.mockClear();
   expect(

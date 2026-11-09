@@ -18,6 +18,7 @@ export async function nativeAttachmentRequest(input: unknown): Promise<Reply> {
       case "copyTaskId":
         if (
           request.task.length > 128 ||
+          /\p{Cf}/u.test(request.task) ||
           [...request.task].some((character) => {
             const unit = character.charCodeAt(0);
             return (
@@ -31,7 +32,7 @@ export async function nativeAttachmentRequest(input: unknown): Promise<Reply> {
           return {
             _tag: "error",
             message:
-              "Task id must be at most 128 UTF-16 units and contain no control characters.",
+              "Task id must be at most 128 UTF-16 units and contain no control characters or format characters.",
           };
         await clipboard.writeText(request.task);
         return { _tag: "ok" };

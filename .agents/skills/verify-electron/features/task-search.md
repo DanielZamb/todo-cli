@@ -11,6 +11,8 @@ step remain covered by the same drive.
 `attachment-native.test.ts` mocks the clipboard at the Electron main boundary.
 It checks the exact valid id write and rejects newline, oversized and non-string
 payloads without clipboard calls, plus UTF-16 and forbidden-control boundaries.
+The main boundary requires no control characters and no format characters;
+literal RLO (U+202E), LRI (U+2066) and ZWSP (U+200B) payloads must be rejected.
 The production Copy step in the unsigned Task-search drive must still pass.
 
 Run the production renderer, task-client, IPC decoder and sandboxed preload in
