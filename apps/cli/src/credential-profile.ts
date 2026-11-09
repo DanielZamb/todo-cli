@@ -10,21 +10,29 @@ export type CredentialSelection = {
 };
 
 export const credentialSelectionDescription =
-  "Global --credential-profile <name> selects the stored credential file for authenticated commands and overrides --profile for credential selection. Without it, --profile (default default) selects the credential as before. The target Profile remains --profile. Discovery uses the chosen credential's authorization. No other credential file is tried. Login stores and logout reads/removes the chosen credential file. Schema and help remain auth-free.";
+  "Global --credential-profile <name> selects the stored credential file for authenticated commands and overrides --profile for credential selection. Without it, --profile (default default) selects the credential as before. An explicitly empty --profile or --credential-profile is a usage error before prompts, authentication or Profile creation. The target Profile remains --profile. Discovery uses the chosen credential's authorization. No other credential file is tried. Login stores and logout reads/removes the chosen credential file. Schema and help remain auth-free.";
 
-export const credentialProfileName = (selection: CredentialSelection) => {
-  const name = Option.getOrElse(
-    selection.credentialProfile,
-    () => selection.profile,
-  );
-  if (!name)
-    throw new CommandError(
-      2,
-      "invalid_args",
-      "--credential-profile must name a credential Profile",
-    );
-  return name;
-};
+export const credentialProfileName = (selection: CredentialSelection) =>
+  Option.getOrElse(selection.credentialProfile, () => selection.profile);
+
+export function validateProfileSelectors(
+  args: readonly string[],
+  valueFlags: ReadonlySet<string>,
+) {
+  for (let index = 0; index < args.length; index++) {
+    const arg = args[index];
+    if (arg === undefined) continue;
+    for (const flag of ["--profile", "--credential-profile"]) {
+      if ((arg === flag && args[index + 1] === "") || arg === flag + "=")
+        throw new CommandError(
+          2,
+          "invalid_args",
+          `${flag} must name a Profile`,
+        );
+    }
+    if (valueFlags.has(arg)) index++;
+  }
+}
 
 export const credentialFile = (name: string) =>
   join(homedir(), ".todo-cli", `session_${encodeURIComponent(name)}.json`);

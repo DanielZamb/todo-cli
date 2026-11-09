@@ -50,6 +50,11 @@ Lookup checks original uppercase prefix, all four row keys, null Project,
 closed statuses, Deleted Task exclusion, empty success, exact next commands in
 Markdown/table, schema/manual discovery and invalid or unknown query rejection.
 
+The compiled review-boundaries driver also proves authorized selection, early
+empty global flag validation and exact unchanged printed shell execution. Eight
+real HTTP/CLI rejected-auth comparisons assert every stored field on independent
+seed clones; see [the boundary recipe](features/authorization-boundaries.md).
+
 The compiled credential-selection recipe signs in under source and dest, logs
 dest out and executes the printed Show command using source. It checks global
 precedence, reads and mutations, scoped refusal, missing-file isolation, explicit
@@ -68,7 +73,8 @@ in the isolated copy and live worktree.
 ## Evidence
 
 Keep domain.log, properties/{baseline,scope-removal,restored,clean-worktree}.log,
-properties/result.json, build.log and compiled/{actions.json,authorized.sse,
+properties/result.json, build.log, boundaries/{result.json,comparisons.json,
+actions.json,driver-provenance.json,cleanup.json} and compiled/{actions.json,authorized.sse,
 server.log,binary-provenance.json,cleanup.json,result.json}. Actions pair input
 with actual process exits or HTTP statuses. Bearer credentials are omitted.
 Outputs remain ignored by Git; reusable scripts and expected values are tracked.
@@ -92,3 +98,6 @@ only the isolated no-leak control. Resolve those script paths from this skill. `
 is called by drive.ts with the owned scratch HOME and compiled binary; it never
 opens the real HOME or reads an installed credential.
 Use `/maintain-verification-skill` when the command or route contract changes.
+
+`bun scripts/run-review-boundaries.ts <fresh-absolute-evidence-directory>` runs
+only the compiled boundary driver using the current source-hash cache manifest.

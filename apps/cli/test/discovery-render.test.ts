@@ -41,3 +41,29 @@ it("carries the credential file used by discovery when it differs from the resul
       "todo show ab000000-0000-4000-8000-000000000001 --profile=--dest --credential-profile='--source key'",
     );
 });
+
+it("puts every flag before the delimiter for a dash-leading full Task id", () => {
+  const row = Schema.decodeUnknownSync(LookupMatch)({
+    profile: { id: "work", name: "Work" },
+    task_id: "-ab",
+    title: "Dash",
+    project: null,
+  });
+  for (const format of ["md", "table"] as const)
+    expect(lookupOutput([row], format, "work")).toContain(
+      "todo show --profile work -- -ab",
+    );
+});
+
+it("quotes a colon and apostrophe and renders any dash-leading flag value inline", () => {
+  const row = Schema.decodeUnknownSync(LookupMatch)({
+    profile: { id: "Team: It's Work", name: "Work" },
+    task_id: "ab",
+    title: "Plain",
+    project: null,
+  });
+  for (const format of ["md", "table"] as const)
+    expect(lookupOutput([row], format, "-key")).toContain(
+      "todo show ab --profile 'Team: It'\\''s Work' --credential-profile=-key",
+    );
+});

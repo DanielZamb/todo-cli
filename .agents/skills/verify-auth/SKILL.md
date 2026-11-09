@@ -114,3 +114,16 @@ and cross-Profile id-prefix lookup matrix, credential no-leak properties, WAL
 snapshot tests and auth-failure rollback proof. Run its single command after
 changing these reads or their CLI/HTTP contracts. Existing Profile-scoped SSE
 and Task search behavior retain their current recipes.
+
+## Authorized Profile resolution
+
+`pnpm --filter @todo/domain test profile-resolution.test.ts` drives the shared
+`Authentication.resolveProfile({credential, profile: nameOrId, action})` query.
+It returns only id/name; absent or unauthorized targets share ProfileResolutionError.
+Credential rejections retain the supplied real AuthAction. Four literal cases
+cover scoped metadata, direct-id versus name History, deleted-id/active-name
+collisions and owner/scoped expiry/revocation. Each comparison uses an isolated
+serialized seed clone, preserving per-minute rejection policy.
+[verify-discovery](../verify-discovery/SKILL.md) additionally compiles and drives
+real CLI/HTTP action-attribution parity. No public read/profiles call is nested
+inside resolution, and no caller learns foreign metadata.
