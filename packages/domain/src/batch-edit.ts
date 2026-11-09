@@ -107,7 +107,9 @@ const execute = Effect.fn(function* (
           : null;
     const context =
       code === "not_found"
-        ? yield* taskLookupError(store, request, item.task_id, "http")
+        ? yield* taskLookupError(store, request, item.task_id, "http", {
+            action: "authenticate",
+          })
         : undefined;
     items.push({
       ...item,

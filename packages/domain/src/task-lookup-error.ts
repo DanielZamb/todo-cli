@@ -21,18 +21,18 @@ export const shellFlag = (flag: string, value: string) =>
 
 export type TaskLookupErrorOptions = {
   readonly credentialProfile?: string;
-  readonly action?: AuthAction;
+  readonly action: AuthAction;
 };
 
 export const taskLookupError = Effect.fn(function* (
   store: OperationStore,
   request: AccessRequest,
   task_id: string,
-  transport: "cli" | "http" = "cli",
-  options: TaskLookupErrorOptions = {},
+  transport: "cli" | "http",
+  options: TaskLookupErrorOptions,
 ) {
   const profile = yield* store.auth
-    .resolveProfile({ ...request, action: options.action ?? "read" })
+    .resolveProfile({ ...request, action: options.action })
     .pipe(
       Effect.catchTag("ProfileResolutionError", () =>
         Effect.succeed(undefined),

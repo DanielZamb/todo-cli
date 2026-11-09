@@ -4,17 +4,20 @@ import { join } from "node:path";
 import { expect, it } from "@effect/vitest";
 import {
   AuthError,
+  batchEditTasks,
   Instant,
   ProfileId,
   ProfileResolutionError,
+  TaskId,
   taskLookupError,
+  Version,
 } from "@todo/domain";
 import {
   type OperationStore,
   openStore,
   type StoreError,
 } from "@todo/domain/store";
-import { Effect, Schema } from "effect";
+import { Clock, Effect, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { time, work } from "./store-fixtures.ts";
 
@@ -80,6 +83,80 @@ it.effect(
             row.event.kind === "AuthAttemptRejected" ? row.event.detail : null,
           ]),
         ).toEqual([["work", "AuthAttemptRejected", "mutate", "revoked"]]);
+      }),
+    ),
+);
+
+it.effect(
+  "missing Task batch recovery retains authenticate when the credential expires after its Task check",
+  () =>
+    using((store) =>
+      Effect.gen(function* () {
+        const owner = yield* setup(store);
+        const token = yield* store.auth.issueToken({
+          credential: owner.credential,
+          token: {
+            name: "row-expiry",
+            profile: id("work"),
+            scope: "read-write",
+            expires_at: Schema.decodeUnknownSync(Instant)(
+              new Date(start + 1).toISOString(),
+            ),
+          },
+        });
+        let now = start;
+        let count = 0;
+        const original = store.diagnostics.credentialUsed.bind(
+          store.diagnostics,
+        );
+        Object.defineProperty(store.diagnostics, "credentialUsed", {
+          configurable: true,
+          value: (...args: Parameters<typeof original>) => {
+            original(...args);
+            if (++count === 2) now = start + 1;
+          },
+        });
+        const clock = yield* Clock.Clock;
+        const before = (yield* store.history()).length;
+        try {
+          expect(
+            yield* Effect.flip(
+              batchEditTasks(
+                store,
+                { credential: token.credential, profile: id("work") },
+                {
+                  items: [
+                    {
+                      task_id: Schema.decodeUnknownSync(TaskId)("ab"),
+                      from_version: Schema.decodeUnknownSync(Version)(1),
+                    },
+                  ],
+                  changes: { title: "Ignored" },
+                },
+              ).pipe(
+                Effect.provideService(Clock.Clock, {
+                  ...clock,
+                  currentTimeMillis: Effect.sync(() => now),
+                  currentTimeMillisUnsafe: () => now,
+                }),
+              ),
+            ),
+          ).toMatchObject({ detail: "expired" });
+        } finally {
+          Object.defineProperty(store.diagnostics, "credentialUsed", {
+            value: original,
+          });
+        }
+        const rows = (yield* store.history())
+          .slice(before)
+          .filter((row) => row.event.kind === "AuthAttemptRejected");
+        expect(
+          rows.map((row) => [
+            row.profile,
+            row.event.kind === "AuthAttemptRejected" ? row.event.action : null,
+            row.event.kind === "AuthAttemptRejected" ? row.event.detail : null,
+          ]),
+        ).toEqual([["work", "authenticate", "expired"]]);
       }),
     ),
 );

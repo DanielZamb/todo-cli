@@ -1604,6 +1604,7 @@ it.effect(
         const request = { credential: session.credential, profile };
         const explicit = yield* taskLookupError(store, request, "45A3", "cli", {
           credentialProfile: "source key",
+          action: "read",
         });
         expect(explicit.details).toEqual({
           profile: { id: "work", name: "Work" },
@@ -1611,12 +1612,19 @@ it.effect(
           recovery:
             "Run todo list --profile work --prefix 45A3 --credential-profile 'source key' for this Profile, or todo lookup --prefix 45A3 --credential-profile 'source key' across Profiles this credential can access. Mutations need the full Task id and an explicit Profile.",
         });
-        const legacy = yield* taskLookupError(store, request, "45A3");
-        expect(legacy.details?.recovery).toBe(
+        const selectedCredential = yield* taskLookupError(
+          store,
+          request,
+          "45A3",
+          "cli",
+          { action: "read" },
+        );
+        expect(selectedCredential.details?.recovery).toBe(
           "Run todo list --profile work --prefix 45A3 for this Profile, or todo lookup --prefix 45A3 --credential-profile work across Profiles this credential can access. Mutations need the full Task id and an explicit Profile.",
         );
         const http = yield* taskLookupError(store, request, "45A3", "http", {
           credentialProfile: "source key",
+          action: "read",
         });
         expect(http.details?.recovery).toBe(
           "Run todo list --profile work --prefix 45A3 for this Profile, or todo lookup --prefix 45A3 across Profiles this credential can access. HTTP: GET /profiles/work/tasks?prefix=45A3 or GET /tasks/lookup?prefix=45A3. Mutations need the full Task id and an explicit Profile.",
