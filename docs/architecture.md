@@ -158,7 +158,7 @@ docs/diagrams/render.sh
 
 The script rewrites the scene and exports each frame (`runtime`, `write`,
 `model`, `live`, `search-cli`, `search-http`, `search-electron`, `search-swift`,
-`search-copy`) to a PNG with `excalidraw render --frame-id`. The search design
+`search-copy`, `search-electron-filters`, `search-swift-filters`) to a PNG with `excalidraw render --frame-id`. The search design
 gate is [Task search Phase 0](decisions/task-search-phase-0.md). It needs a local
 Chrome, Chromium, Edge, or Firefox. It does not need an Excalidraw account.
 Colors follow `design/electron/TOKENS.md`.

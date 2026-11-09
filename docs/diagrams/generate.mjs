@@ -265,11 +265,11 @@ const arrow = (id, from, to, o = {}) => {
       size,
       font,
       color: o.labelColor ?? color,
-      containerId: o.labelAt ? null : id,
+      containerId: o.labelAt && !o.bindLabel ? null : id,
     });
     t.textAlign = "center";
     t.verticalAlign = "middle";
-    if (!o.labelAt) bind(el, { type: "text", id: t.id });
+    if (!o.labelAt || o.bindLabel) bind(el, { type: "text", id: t.id });
   }
   return el;
 };
@@ -891,10 +891,10 @@ frame("search-http", "Task search: HTTP", 2000, 8000, 1840, (X, Y) => {
   ]);
 });
 
-const searchClientFrame = (id, name, X, swift) => frame(id, name, X, 9600, 2800, (x, y) => {
+const searchClientFrame = (id, name, X, swift) => frame(id, name, X, 9600, 3000, (x, y) => {
   const p = id;
   const node = (key, dx, dy, title, body, fill) => card(`${p}-${key}`, x + dx, y + dy, 620, { title, body, fill, h: 145 });
-  const transition = (key, from, to, label, o = {}) => arrow(`${p}-${key}`, `${p}-${from}`, `${p}-${to}`, { label, labelSize: 15, labelFont: SANS, ...o });
+  const transition = (key, from, to, label, o = {}) => arrow(`${p}-${key}`, `${p}-${from}`, `${p}-${to}`, { label, labelSize: 15, labelFont: SANS, bindLabel: true, ...o });
   heading(p, x + 50, y + 32, `${name}: search state machine`, "Approved C1/C5. Stale rows stay visible; generation guards publish one response snapshot. Compact first.");
   card(`${p}-variables`, x + 50, y + 115, 2670, { title: "State variables and code mapping", body: [
     { t: "requestedIdentity = { Profile, view, dialog filters, typed text }; appliedSnapshot = { appliedIdentity, rows, search_matches }" },
@@ -906,23 +906,19 @@ const searchClientFrame = (id, name, X, swift) => frame(id, name, X, 9600, 2800,
   node("debounce", 1080, 780, "Debouncing", "250 ms timer; generation invalidated now\nretain applied rows + highlights\nfield progress / stale emphasis");
   node("request", 2100, 780, "Requesting", "refresh() / refresh(generation:)\ncapture identity + new issuedGeneration\nretain appliedSnapshot");
   node("error", 2100, 1450, "Error", "keep typed text + appliedSnapshot\nCouldn't search. Showing results for\n\"<applied text>\". / Retry", c.warningFill);
-  node("dialog", 50, 1450, swift ? "TaskFilterView / editing draft" : "TaskFilterDialog / editing draft", "Id starts with / filter-prefix\ninvalid prefix stays in draft\nfilter failure keeps filterApplyError");
   transition("initial", "idle", "request", "refresh [selection ready] / issue current request", { from: "right", to: "top", via: [[x + 2380, y + 420]], labelAt: [x + 1580, y + 390] });
   transition("input", "showing", "debounce", "input change or Esc [enabled]\n/ update requestedIdentity; invalidate; schedule", { from: "right", to: "left", labelAt: [x + 875, y + 810] });
   transition("fired", "debounce", "request", "debounce fired [current timer]\n/ refresh; issue latest identity", { from: "right", to: "left", labelAt: [x + 1900, y + 810] });
   transition("success", "request", "showing", "response(generation) ok [latest + identity current]\n/ atomically publish rows, spans, appliedIdentity", { from: "bottom", to: "bottom", via: [[x + 2410, y + 1120], [x + 360, y + 1120]], labelAt: [x + 1350, y + 1090] });
   transition("newinput", "request", "debounce", "input change or Esc [enabled] / invalidate; debounce", { from: "top", to: "top", via: [[x + 2420, y + 640], [x + 1390, y + 640]], labelAt: [x + 1900, y + 610] });
-  transition("failed", "request", "error", "response(generation) error [latest]\n/ keep text; retain snapshot; report", { fromT: 0.8, toT: 0.8, labelAt: [x + 2550, y + 1260], color: c.warning });
-  transition("retry", "error", "request", "Retry [enabled] / issue requestedIdentity", { from: "left", to: "left", via: [[x + 1990, y + 1520], [x + 1990, y + 850]], labelAt: [x + 1840, y + 1370] });
-  transition("errorinput", "error", "debounce", "input change or Esc [enabled]\n/ keep snapshot; invalidate; debounce", { from: "bottom", to: "bottom", via: [[x + 2400, y + 1740], [x + 1400, y + 1740]], labelAt: [x + 1570, y + 1710] });
-  transition("repeatinput", "debounce", "debounce", "input change [enabled] / replace timer", { from: "top", to: "top", fromT: 0.2, toT: 0.8, via: [[x + 1200, y + 500], [x + 1580, y + 500]], labelAt: [x + 1390, y + 470] });
-  transition("obsolete", "request", "request", "response(generation) ok/error\n[obsolete] / discard", { from: "right", to: "right", fromT: 0.25, toT: 0.75, via: [[x + 2770, y + 815], [x + 2770, y + 890]], labelAt: [x + 2520, y + 1020] });
+  transition("failed", "request", "error", "response(generation) error [latest]\n/ keep text; retain snapshot; report", { fromT: 0.95, toT: 0.95, labelAt: [x + 2550, y + 1260], color: c.warning });
+  transition("retry", "error", "request", "Retry [enabled] / issue requestedIdentity", { from: "left", to: "left", via: [[x + 1840, y + 1520], [x + 1840, y + 850]], labelAt: [x + 1840, y + 1370] });
+  transition("errorinput", "error", "debounce", "input change or Esc [enabled]\n/ keep snapshot; invalidate; debounce", { from: "bottom", to: "left", toT: 0.8, via: [[x + 2400, y + 1650], [x + 2400, y + 1740], [x + 1000, y + 1740], [x + 1000, y + 896]], labelAt: [x + 1570, y + 1710] });
+  transition("repeatinput", "debounce", "debounce", "input change [enabled] / replace timer", { from: "bottom", to: "bottom", fromT: 0.15, toT: 0.85, via: [[x + 1173, y + 1030], [x + 1607, y + 1030]], labelAt: [x + 1390, y + 470] });
+  transition("obsolete", "request", "request", "response(generation) ok/error\n[obsolete] / discard", { from: "bottom", to: "bottom", fromT: 0.15, toT: 0.75, via: [[x + 2193, y + 1030], [x + 2565, y + 1030]], labelAt: [x + 2520, y + 1020] });
   transition("sse", "showing", "request", "SSE op [current Profile] / refresh latest requestedIdentity", { from: "top", to: "top", via: [[x + 360, y + 590], [x + 2400, y + 590]], labelAt: [x + 820, y + 560] });
-  transition("focus", "showing", "showing", "Cmd+F [search visible] / focus field", { from: "left", to: "left", fromT: 0.2, toT: 0.8, via: [[x + 15, y + 810], [x + 15, y + 895]], labelAt: [x + 350, y + 990] });
-  transition("open", "showing", "dialog", "Filters [enabled] / copy dialog draft", { labelAt: [x + 360, y + 1280] });
-  transition("cancel", "dialog", "showing", "dialog Cancel [open] / close; keep values", { from: "right", to: "right", via: [[x + 780, y + 1520], [x + 780, y + 850]], labelAt: [x + 1020, y + 1480] });
-  transition("apply", "dialog", "request", "dialog Apply [valid] / compose current text; issue request", { from: "bottom", to: "bottom", via: [[x + 360, y + 1830], [x + 2770, y + 1830], [x + 2770, y + 1220], [x + 2600, y + 1220]], labelAt: [x + 1020, y + 1800] });
-  transition("reset", "error", "idle", "Profile switch or view switch [changed]\n/ existing reset; invalidate generations", { from: "top", to: "left", via: [[x + 2220, y + 1350], [x + 20, y + 1350], [x + 20, y + 420]], labelAt: [x + 1060, y + 1320] });
+  transition("focus", "showing", "showing", "Cmd+F [search visible] / focus field", { from: "top", to: "top", fromT: 0.15, toT: 0.85, via: [[x + 143, y + 690], [x + 577, y + 690]], labelAt: [x + 350, y + 990] });
+  transition("reset", "error", "idle", "Profile switch or view switch [changed]\n/ existing reset; invalidate generations", { from: "top", to: "left", via: [[x + 2220, y + 1400], [x + 2220, y + 1350], [x + 20, y + 1350], [x + 20, y + 420]], labelAt: [x + 1060, y + 1320] });
   zone(`${p}-freshness`, x + 50, y + 1930, 2670, 400, "Orthogonal freshness state / retained rows stay visible");
   node("current", 180, 2040, "Current", "requestedIdentity == appliedIdentity\nnormal rows and their matching highlights", c.accent);
   node("stale", 1910, 2040, "Stale", "requestedIdentity != appliedIdentity\nreduced emphasis; field progress if pending\nerror keeps typed text and Retry", c.secondary);
@@ -935,11 +931,37 @@ const searchClientFrame = (id, name, X, swift) => frame(id, name, X, 9600, 2800,
     "Input, Esc and dialog Apply invalidate immediately. Profile/view switch from every phase uses Idle reset. Cmd+F focuses in every phase.",
     "Error -> Requesting on Retry; Error -> Debouncing on input. Obsolete success/error is a discard self-transition in every phase, never a state.",
     "Freshness is orthogonal to request phase: stale iff identities differ. Rows and spans share appliedIdentity. SSE refresh can run while Current.",
+    "Filters entry, dialog Cancel/Apply and filterApplyError rollback are drawn in the separate Filters frame for this client.",
     "Under weak fairness of debounce and successful replies, stable input eventually reaches Current. Safety and liveness are reported separately.",
   ]);
 });
 searchClientFrame("search-electron", "Electron search", 0, false);
-searchClientFrame("search-swift", "SwiftUI search", 3000, true);
+searchClientFrame("search-swift", "SwiftUI search", 3200, true);
+
+const searchFilterFrame = (id, name, X, swift) => frame(id, name, X, 12600, 2600, (x, y) => {
+  const node = (key, dx, dy, title, body, fill) => card(`${id}-${key}`, x + dx, y + dy, 620, { title, body, fill, h: 145 });
+  const transition = (key, from, to, label, o = {}) => arrow(`${id}-${key}`, `${id}-${from}`, `${id}-${to}`, { label, labelFont: SANS, labelSize: 16, ...o });
+  heading(id, x + 50, y + 32, `${name}: Filters state machine`, "Entry and exit connect to the client's search phase. Toolbar text survives dialog editing and filter rollback.");
+  node("parent", 50, 270, "Parent search phase", swift ? "TaskListView / showingTaskFilters\nreturn to retained appliedSnapshot\nrequested text stays typed" : "renderer.tsx / filtersOpen\nreturn to retained appliedSnapshot\nrequested text stays typed");
+  node("draft", 1550, 270, swift ? "TaskFilterView / editing draft" : "TaskFilterDialog / editing draft", "Id starts with / filter-prefix\ndraft fields separate from applied filters\nCancel discards draft");
+  node("request", 1550, 870, "Requesting / parent search phase", "compose dialog fields + current text\nnew generation; retain applied snapshot\nrequest state's freshness guard applies");
+  node("rollback", 50, 870, "Filter application failed", "filterApplyError / restore dialog fields\nkeep typed search text\nretain applied snapshot", c.warningFill);
+  transition("entry", "parent", "draft", "Filters [enabled] / snapshot dialog fields", { from: "right", to: "left" });
+  transition("cancel", "draft", "parent", "dialog Cancel [open] / close; retain applied values", { from: "top", to: "top", via: [[x + 1860, y + 170], [x + 360, y + 170]] });
+  transition("invalid", "draft", "draft", "dialog Apply [invalid prefix]\n/ show inline validation; retain draft", { from: "right", to: "right", fromT: 0.2, toT: 0.8, via: [[x + 2390, y + 299], [x + 2390, y + 386]] });
+  transition("apply", "draft", "request", "dialog Apply [valid]\n/ close; request latest identity", { from: "bottom", to: "top" });
+  transition("error", "request", "rollback", "response(generation) error [latest filter apply]\n/ restore dialog filters; keep text", { from: "left", to: "right", color: c.warning });
+  transition("return", "rollback", "parent", "rollback [complete] / show filterApplyError", { from: "top", to: "bottom" });
+  transition("success", "request", "parent", "response(generation) ok [latest + identity current]\n/ publish snapshot; return to Showing or empty", { from: "right", to: "left", fromT: 0.3, toT: 0.3, via: [[x + 2420, y + 914], [x + 2420, y + 1270], [x + 20, y + 1270], [x + 20, y + 314]] });
+  marker(`${id}-step1`, x + 1530, y + 250, 1);
+  marker(`${id}-step2`, x + 30, y + 850, 2);
+  notes(`${id}-notes`, x + 50, y + 1360, 2480, "Numbered sub-machine notes", [
+    "Entry copies dialog fields. Clear all changes dialog draft fields only. Apply composes the toolbar's current text; Cancel leaves applied fields alone.",
+    "The parent search phase owns stale, Retry, Profile/view resets and obsolete-response discard. Filter failure preserves today's dialog rollback behavior.",
+  ]);
+});
+searchFilterFrame("search-electron-filters", "Electron", 0, false);
+searchFilterFrame("search-swift-filters", "SwiftUI", 3000, true);
 
 frame("search-copy", "Task search: copy full id", 4000, 8000, 1840, (X, Y) => {
   heading("si", X + 40, Y + 32, "Copy full Task id: state machine", "Electron reuses attachment-native.ts clipboard IPC. SwiftUI uses NSPasteboard.general. No Task mutation.");
