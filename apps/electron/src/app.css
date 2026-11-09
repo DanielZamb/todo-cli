@@ -1634,7 +1634,10 @@ nav {
   margin: 0;
   min-width: 0;
 }
-.compact .search-error [data-slot="alert-description"] > span {
+.compact
+  .search-error:not([data-code="search_too_broad"])
+  [data-slot="alert-description"]
+  > span {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;

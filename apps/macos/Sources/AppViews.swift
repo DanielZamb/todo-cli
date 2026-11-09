@@ -529,9 +529,9 @@ struct TaskListView: View {
             taskFilters
             if let error = model.searchError {
                 HStack(alignment: .top) {
-                    Text(error).font(.caption).fixedSize(horizontal: false, vertical: true)
+                    Text(error.message).font(.caption).fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 4)
-                    if model.connection == .live {
+                    if model.connection == .live && error.canRetry {
                         Button("Retry") { Task { await model.retrySearch() } }
                             .accessibilityIdentifier("retry-search").compactBounds("search-retry")
                     }

@@ -1,5 +1,13 @@
 # Task search and id prefix
 
+The Task-search drive also creates three maximum-size U+FDFA descriptions and
+requires a real `search_too_broad` response. It retains typed text, focus and the
+applied rows, shows the complete server recovery text in the neutral `Search
+failed` status, and requires no Retry button. Four `*-budget-error.png` captures
+cover Compact/full and light/dark. Shrinking one description through HTTP must
+make SSE publish the results without Retry. Transient-error Retry and the Copy
+step remain covered by the same drive.
+
 Run the production renderer, task-client, IPC decoder and sandboxed preload in
 an unsigned host against fresh compiled scratch CLI/server data:
 
