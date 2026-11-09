@@ -16,15 +16,22 @@ import {
   ValidationHistory,
 } from "@todo/api";
 import {
+  batchDepend,
   batchEditTasks,
   ClientReads,
+  DependencyCommands,
+  type DependencyError,
+  type EdgeCommandResult,
+  type EdgeReport,
   ExpectedVersion,
+  Instant,
   ProfileId,
   parseQuickAdd,
+  readGraph,
   SnapshotError,
-  type Task,
   TaskId,
   type TaskMutationKind,
+  type TaskWrite,
 } from "@todo/domain";
 import { AttachmentCommands } from "@todo/domain/attachments";
 import {
@@ -61,13 +68,19 @@ import { changesLayer } from "./sse.ts";
 
 const taskResult = (
   result: TaskCommandResult,
-): Effect.Effect<Task, NotFound | Conflict | InvalidTask> => {
+): Effect.Effect<
+  TaskWrite,
+  NotFound | Conflict | InvalidTask | DependencyError
+> => {
   switch (result.outcome) {
-    case "committed":
-      return Effect.succeed(result.task);
+    case "committed": {
+      const { outcome: _outcome, task, ...report } = result;
+      return Effect.succeed({ ...task, ...report });
+    }
     case "not-found":
       return Effect.fail(new NotFound({ message: "Task not found" }));
     case "rejected":
+      if (result.dependency_error) return Effect.fail(result.dependency_error);
       return result.reason === "conflict"
         ? Effect.fail(new Conflict({ latest: result.latest }))
         : Effect.fail(
@@ -78,6 +91,22 @@ const taskResult = (
           );
   }
 };
+
+const dependencyResult = (
+  result: EdgeCommandResult,
+): Effect.Effect<EdgeReport, Conflict | InvalidTask | DependencyError> =>
+  result.outcome === "success"
+    ? Effect.succeed(result.report)
+    : result.dependency_error
+      ? Effect.fail(result.dependency_error)
+      : result.reason === "conflict"
+        ? Effect.fail(new Conflict({ latest: result.latest }))
+        : Effect.fail(
+            new InvalidTask({
+              message:
+                "Dependency change rejected. Check the Task ids and current Version, then retry.",
+            }),
+          );
 
 const knownRoutes = Object.keys(OpenApi.fromApi(TodoApi).paths ?? {}).map(
   (path) => ({
@@ -127,6 +156,23 @@ export const rejectUnknownQuery = <E, R>(
     const unknown = [...new Set(url.searchParams.keys())].filter(
       (name) => !route?.parameters.has(name),
     );
+    const invalidDependencyFilter = ["ready", "blocked"].find(
+      (name) =>
+        url.searchParams.has(name) &&
+        (url.searchParams.getAll(name).length !== 1 ||
+          url.searchParams.get(name) !== "true"),
+    );
+    if (invalidDependencyFilter)
+      return Effect.succeed(
+        HttpServerResponse.jsonUnsafe(
+          {
+            generated_at: new Date().toISOString(),
+            code: "invalid_args",
+            message: `${invalidDependencyFilter} accepts true only. Use --blocked or --status for another set of Tasks.`,
+          },
+          { status: 400 },
+        ),
+      );
     return unknown.length
       ? Effect.succeed(
           HttpServerResponse.jsonUnsafe(
@@ -227,6 +273,7 @@ export const serverLayer = (options: {
       );
       yield* scheduler(store).pipe(Effect.forkScoped);
       const commands = new TaskCommands(store);
+      const dependencies = new DependencyCommands(store);
       const diagnostics = store.diagnostics;
       const attachments = new AttachmentCommands(store);
       const reads = new ClientReads(store);
@@ -235,6 +282,8 @@ export const serverLayer = (options: {
         (error, { endpoint }) =>
           Effect.gen(function* () {
             const kinds = new Map<string, TaskMutationKind>([
+              ["depend", "DependencyAdded"],
+              ["undepend", "DependencyRemoved"],
               ["create", "TaskCreated"],
               ["createSeries", "TaskCreated"],
               ["edit", "TaskEdited"],
@@ -445,6 +494,57 @@ export const serverLayer = (options: {
                   { credential, profile: params.profile },
                   payload,
                 ),
+              );
+            }),
+          depend: ({ params, payload }) =>
+            Effect.gen(function* () {
+              const credential = yield* BearerCredential;
+              return yield* translate(
+                dependencies.change(
+                  { credential, profile: params.profile, task_id: params.task },
+                  payload,
+                  "depend",
+                ),
+              ).pipe(Effect.flatMap(dependencyResult));
+            }),
+          undepend: ({ params, payload }) =>
+            Effect.gen(function* () {
+              const credential = yield* BearerCredential;
+              return yield* translate(
+                dependencies.change(
+                  { credential, profile: params.profile, task_id: params.task },
+                  payload,
+                  "undepend",
+                ),
+              ).pipe(Effect.flatMap(dependencyResult));
+            }),
+          batchDepend: ({ params, payload }) =>
+            Effect.gen(function* () {
+              const credential = yield* BearerCredential;
+              return yield* translate(
+                batchDepend(
+                  store,
+                  { credential, profile: params.profile },
+                  payload,
+                ),
+              );
+            }),
+          graph: ({ params }) =>
+            Effect.gen(function* () {
+              const credential = yield* BearerCredential;
+              const graph = yield* translate(
+                readGraph(
+                  store,
+                  { credential, profile: params.profile, task_id: params.task },
+                  Schema.decodeUnknownSync(Instant)(new Date().toISOString()),
+                ),
+              );
+              return (
+                graph ??
+                (yield* new NotFound({
+                  message:
+                    "Task not found. Read the Profile Task list and select again.",
+                }))
               );
             }),
           list: ({ params, query }) =>

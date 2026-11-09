@@ -28,6 +28,12 @@ final class GeneratedContractTests: XCTestCase {
         XCTAssertEqual(query.prefix, "6AA2")
     }
 
+    func testDependencyCommandsAndImportWitnessSurviveGeneratedCoding() throws {
+        try roundTrip(Operations.tasks_period_create.Input.Body.jsonPayload.self, #"{"title":"Dependent","depends_on":["blocker"]}"#)
+        try roundTrip(Operations.tasks_period_depend.Input.Body.jsonPayload.self, #"{"blocker_id":"blocker","from_version":7}"#)
+        try roundTrip(Operations.tasks_period_importTasks.Output.Ok.Body.jsonPayload.self, #"{"generated_at":"2026-11-09T06:00:00Z","dry_run":false,"items":[{"external_id":"dependent","outcome":"rejected","task_id":"task","from_version":7,"changed_fields":[],"error":{"code":"dependency_cycle","message":"Remove a Dependency in this loop, then try again.","details":{"current_version":7,"dependency_error":{"generated_at":"2026-11-09T06:00:00Z","code":"dependency_cycle","message":"Remove a Dependency in this loop, then try again.","details":{"dependent_id":"task","blocker_id":"blocker","path":["task","blocker","task"]}}}}}],"totals":{"created":0,"updated":0,"unchanged":0,"rejected":1}}"#)
+    }
+
     func testExistingAndDependencyOperationsDecodeAtTheLiveClientBoundary() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
         let fixture = root.appendingPathComponent("API/Fixtures/dag-operations.json")
@@ -201,7 +207,7 @@ final class GeneratedContractTests: XCTestCase {
         try roundTrip(Operations.tasks_period_move.Input.Body.jsonPayload.self, json)
         try roundTrip(Operations.tasks_period_copy.Input.Body.jsonPayload.self, json)
         let task = #"{"id":"copied-1","profile_id":"personal","entity_version":1,"row_version":1,"title":"Copied","description":null,"project_id":null,"priority":"P3","scheduled_at":null,"due_at":null,"energy":null,"estimate_min":null,"source":"manual","tags":[],"status":"done","occurrence":null,"created_at":"2020-01-01T00:00:00Z","updated_at":"2026-10-29T00:00:00Z","completed_at":"2020-01-02T00:00:00Z","deleted_at":null}"#
-        try roundTrip(Operations.tasks_period_copy.Output.Ok.Body.jsonPayload.self, task)
+        try roundTrip(Components.Schemas.TaskWrite.self, task)
     }
     func testGeneratedStreamSendsResumeHeader() async throws {
         let client = Client(serverURL: URL(string: "http://127.0.0.1:4310")!, transport: ResumeTransport())
@@ -241,8 +247,8 @@ final class GeneratedContractTests: XCTestCase {
 
     func testResponseAndNestedNullableOccurrenceSurviveGeneratedCoding() throws {
         let json = #"{"id":"task-1","profile_id":"work","entity_version":1,"row_version":7,"title":"Nested fields","description":null,"project_id":null,"priority":"P3","scheduled_at":null,"due_at":{"kind":"date","date":"2026-10-28"},"energy":null,"estimate_min":null,"source":"manual","tags":[],"status":"open","occurrence":{"id":"occ-1","series_id":"series-1","date":"2026-10-27","time":null},"created_at":"2026-10-27T00:00:00Z","updated_at":"2026-10-27T00:00:00Z","completed_at":null,"deleted_at":null}"#
-        try roundTrip(Operations.tasks_period_create.Output.Ok.Body.jsonPayload.self, json)
-        try roundTrip(Operations.tasks_period_edit.Output.Ok.Body.jsonPayload.self, json)
+        try roundTrip(Components.Schemas.TaskWrite.self, json)
+        try roundTrip(Components.Schemas.TaskWrite.self, json)
         try roundTrip(Operations.tasks_period_show.Output.Ok.Body.jsonPayload.self, json)
     }
 
@@ -284,6 +290,38 @@ final class GeneratedContractTests: XCTestCase {
         for key in ["description", "project_id", "due_at", "scheduled_at", "energy", "estimate_min"] { XCTAssertTrue(clearedFields[key] is NSNull, key) }
         XCTAssertEqual(clearedFields["row_version"] as? Int, 3)
         XCTAssertEqual(clearedFields["title"] as? String, "Omitted fields preserved")
+        func graphTask(_ title: String, _ priority: String, _ energy: Int?, _ blockers: [String] = []) async throws -> Components.Schemas.TaskWrite {
+            var fields: [String: Any] = ["title": title, "priority": priority, "depends_on": blockers]
+            if let energy { fields["energy"] = energy }
+            let data = try JSONSerialization.data(withJSONObject: fields)
+            let input = try JSONDecoder().decode(Operations.tasks_period_create.Input.Body.jsonPayload.self, from: data)
+            return try await client.tasks_period_create(path: .init(profile: "work"), body: .json(input)).ok.body.json
+        }
+        let a = try await graphTask("Swift graph A", "P1", 4)
+        let b = try await graphTask("Swift graph B", "P2", 1)
+        let unknown = try await graphTask("Swift graph unknown", "P3", nil)
+        let root = try await graphTask("Swift graph root", "P4", 2, [a.id, b.id, unknown.id])
+        let c = try await graphTask("Swift graph C", "P1", 4, [root.id])
+        let d = try await graphTask("Swift graph D", "P2", 1, [root.id])
+        let graph = try await client.tasks_period_graph(path: .init(profile: "work", task: root.id)).ok.body.json
+        let typed = try XCTUnwrap(graph.value1)
+        XCTAssertEqual(typed.orientation, .mixed)
+        XCTAssertEqual(typed.topological_order, [a.id, b.id, unknown.id, root.id, c.id, d.id])
+        XCTAssertEqual(typed.ancestors, [a.id, b.id, unknown.id])
+        XCTAssertEqual(typed.descendants, [c.id, d.id])
+        XCTAssertEqual(typed.lightest_next, [b.id, a.id, unknown.id])
+        for node in typed.nodes {
+            XCTAssertEqual(Set(try fields(node).keys), Set(["mermaid_id", "task", "in_degree", "out_degree", "ready", "blocked", "depth", "remaining_energy"]))
+        }
+        let graphFields = try fields(graph)
+        XCTAssertEqual(graphFields["ancestors"] as? [String], [a.id, b.id, unknown.id])
+        XCTAssertEqual(graphFields["descendants"] as? [String], [c.id, d.id])
+        XCTAssertEqual(graphFields["lightest_next"] as? [String], [b.id, a.id, unknown.id])
+        let singleGraph = try await client.tasks_period_graph(path: .init(profile: "work", task: cleared.id)).ok.body.json
+        let single = try XCTUnwrap(singleGraph.value2)
+        XCTAssertEqual(single.ancestors, [])
+        XCTAssertEqual(single.descendants, [])
+        XCTAssertEqual(single.lightest_next, [cleared.id])
     }
 
     func testEveryHistoryEventKindSurvivesGeneratedCoding() throws {

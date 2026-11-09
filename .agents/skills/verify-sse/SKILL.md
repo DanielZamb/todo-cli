@@ -8,6 +8,12 @@ description: Verify ordered, resumable Todo SSE over real HTTP, including concur
 Created with `create-verification-skill`.
 Read the [feature map](features/README.md) before selecting coverage.
 
+After DAG contract generation, also run the shared history-unions scratch drive
+with TODO_DAG_CONTRACT_TESTS=1 through swift-slot.sh. It exercises old and DAG
+event kinds through the production Electron decoder and GeneratedContractTests,
+including live HTTP. A skipped live test does not establish compatibility.
+TODO_SERVER_BINARY reuses the final provenanced compiled server in this skill.
+
 ## Launch
 
 Resolve the checkout with `git rev-parse --show-toplevel`. From its root, run:

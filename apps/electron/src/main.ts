@@ -8,10 +8,8 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { TodoApi } from "@todo/api";
 import { Effect, Fiber, Schema, Stream } from "effect";
-import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
-import { HttpApiClient } from "effect/http-api";
+import { FetchHttpClient, type HttpClient } from "effect/http";
 import {
   app,
   BrowserWindow,
@@ -28,6 +26,7 @@ import {
   nativeAttachmentRequest,
 } from "./attachment-native.ts";
 import { createDiagnosticsWindow } from "./diagnostics-window.ts";
+import { taskHttpClient } from "./http-client.ts";
 import { type Notice, Reply, Request } from "./protocol.ts";
 import { serverCompatibility } from "./server-compatibility.ts";
 import {
@@ -82,16 +81,7 @@ const setWindowMode = (compact: boolean) => {
   if (item) item.checked = layout.compact;
   send({ _tag: "windowMode", compact: layout.compact });
 };
-const client = () =>
-  HttpApiClient.make(TodoApi, {
-    baseUrl: server.origin,
-    transformClient: (http) =>
-      HttpClient.mapRequest(http, (request) =>
-        credential
-          ? HttpClientRequest.bearerToken(request, credential)
-          : request,
-      ),
-  });
+const client = () => taskHttpClient(server.origin, () => credential);
 const run = <A, E>(effect: Effect.Effect<A, E, HttpClient.HttpClient>) =>
   Effect.runPromise(effect.pipe(Effect.provide(FetchHttpClient.layer)));
 const stopStream = () => {

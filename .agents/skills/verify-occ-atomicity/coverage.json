@@ -1,9 +1,9 @@
 {
-  "confirmedCommit": "50ef7c3dccd50d427bb8dfa2bfff8915c49b907e",
+  "confirmedCommit": "3cceb41efc08b8cd835d5c883c3d370709865c3f",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "2c660357bf2409637264af627b88dc7efc8e192d36d1dddf3e3e1bf915e40e81",
+      "sha256": "d9c9e4c5c09e1616c1b46ff0e8077a8d58ef3f7d2b7ea67db82dcccce2fef443",
       "functions": [
         "OperationStore.constructor",
         "OperationStore.transaction",
@@ -19,7 +19,7 @@
     },
     {
       "path": "packages/domain/src/store/projection.ts",
-      "sha256": "bc79d5b8a50a07f4d5f9ca225de6bd5a0f961300ad36934253bb1272d6817573",
+      "sha256": "7c82ea08bacbb1358a809dd7b3acac0092d78ad6e137b9645971fce486604544",
       "functions": [
         "changes",
         "applyEvent",
@@ -97,7 +97,7 @@
     },
     {
       "path": "packages/domain/src/dependencies.ts",
-      "sha256": "eabcf671077bae70f5509b14c0622b69b00bfca816e0e82ee2f21fcfee9f3e95",
+      "sha256": "ca418428c4d3a7dffff822b8c2e0ae4b84e0b86ca911630d619a75f76a87c8d3",
       "functions": [
         "Edge",
         "VersionChange",

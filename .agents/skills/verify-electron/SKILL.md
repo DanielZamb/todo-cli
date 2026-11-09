@@ -270,3 +270,27 @@ feedback, and Error recovery through actual SSE reconnect/operations.
 `TODO_VERIFY_TASK_SEARCH=1` selects that drive. The host now reconnects its SSE
 stream for this proof; production cursor persistence and native HOLD remain
 separate limits.
+
+Unit B's shared-contract alignment extracts taskFilterDraft/applyTaskFilterDraft
+in src/task-filter-draft.ts. Run `pnpm --filter @todo/electron test task-filter-draft.test.ts`.
+It drives the same draft initialization/Apply/Clear boundary used by the existing
+dialog, with prefix/text, true-or-absent readiness, false rejection and exact
+other filter values. This is contract proof only, with no new controls or native
+client parity claim. L1 reapplies this correction to the final search dialog and
+reruns the actual filter feature after its own rebase.
+
+G11 protocol proof uses scripts/verify-graph-contract.ts against the compiled
+scratch server through taskHttpClient, the production Electron HttpApiClient
+factory also used by main.ts. It asserts topo ancestors/descendants and
+lightest_next by own energy, unknown last, then topo position. The literal
+branch distinguishes all orders and checks eight decoded node fields and encoding. The shared
+verify-history-unions.sh drive invokes it with TODO_DAG_CONTRACT_TESTS=1.
+No Electron/native UI, safeStorage or Keychain starts for this decoder proof.
+
+The transport factory reads a credential getter inside every request mapping.
+Run scripts/verify-auth-sequence.ts as a compiled proof against scratch binaries;
+one client is created signed out, signs in, reads Profiles with a bearer, signs
+out, clears the credential, then reads without a bearer. The proxy records only
+header presence and statuses. The unsigned host write drive now reuses this
+production factory and verify-host-auth.ts signs out/in through the actual
+renderer. Native safeStorage/session.enc restoration remains held.

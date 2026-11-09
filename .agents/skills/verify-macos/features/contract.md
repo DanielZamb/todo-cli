@@ -95,3 +95,10 @@ The checks run in the generated CommittedOperation and History decoders used by
 production. No handwritten client wrapper or branch reordering is involved.
 Operation-local non-component schemas retain their prior generation behavior;
 all lifecycle cases live in the component schemas covered by these checks.
+
+G11 extends the existing live GeneratedContractTests case with a branching
+graph created through generated API methods. Typed graph decoding and encoding
+must retain topo ancestors/descendants and lightest_next by own energy, unknown
+last, then topo position. Every node must have exactly eight fields. The branch
+has Ready energies 4,1,unknown in topo order and requires next 1,4,unknown. Run the history-unions scratch drive through swift-slot
+with TODO_DAG_CONTRACT_TESTS=1 so this live case cannot be skipped.

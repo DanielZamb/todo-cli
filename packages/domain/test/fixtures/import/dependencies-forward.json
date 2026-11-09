@@ -1,0 +1,24 @@
+[
+  {
+    "external_id": "goal",
+    "title": "Goal",
+    "priority": "P4",
+    "energy": 4,
+    "depends_on": ["left", "right"]
+  },
+  {
+    "external_id": "right",
+    "title": "Right",
+    "priority": "P3",
+    "energy": 3,
+    "depends_on": ["source"]
+  },
+  { "external_id": "source", "title": "Source", "priority": "P1", "energy": 1 },
+  {
+    "external_id": "left",
+    "title": "Left",
+    "priority": "P2",
+    "energy": 2,
+    "depends_on": ["source"]
+  }
+]

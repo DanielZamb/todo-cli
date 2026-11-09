@@ -1,16 +1,15 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { TodoApi } from "@todo/api";
 import { Effect, Fiber, Schema, Stream } from "effect";
-import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
-import { HttpApiClient } from "effect/http-api";
+import { FetchHttpClient, type HttpClient } from "effect/http";
 import { app, BrowserWindow, ipcMain, Menu, shell } from "electron";
 import {
   isNativeAttachmentRequest,
   nativeAttachmentRequest,
 } from "../src/attachment-native.ts";
 import { createDiagnosticsWindow } from "../src/diagnostics-window.ts";
+import { taskHttpClient } from "../src/http-client.ts";
 import { Reply, Request } from "../src/protocol.ts";
 import { serverCompatibility } from "../src/server-compatibility.ts";
 import {
@@ -33,18 +32,10 @@ const compatibility = serverCompatibility(url.origin);
 app.setPath("userData", process.env.TODO_ELECTRON_DATA);
 async function boot() {
   await app.whenReady();
-  let credential = "";
+  let credential: string | undefined;
   const run = <A, E>(effect: Effect.Effect<A, E, HttpClient.HttpClient>) =>
     Effect.runPromise(effect.pipe(Effect.provide(FetchHttpClient.layer)));
-  const client = await run(
-    HttpApiClient.make(TodoApi, {
-      baseUrl: url.origin,
-      transformClient: (http) =>
-        HttpClient.mapRequest(http, (request) =>
-          HttpClientRequest.bearerToken(request, credential),
-        ),
-    }),
-  );
+  const client = await run(taskHttpClient(url.origin, () => credential));
   if (!(await run(compatibility.check())))
     credential = (
       await run(
@@ -266,7 +257,7 @@ async function boot() {
           return { _tag: "ok" };
         case "signOut":
           await run(client.credentials.signOut());
-          credential = "";
+          credential = undefined;
           authentication("signedOut");
           return { _tag: "signedOut" };
         case "signIn": {
@@ -296,7 +287,7 @@ async function boot() {
                   error._tag === "Unauthorized"
                 ) {
                   stopStream();
-                  credential = "";
+                  credential = undefined;
                   authentication("signedOut");
                   return Effect.succeed<Reply>({ _tag: "signedOut" });
                 }

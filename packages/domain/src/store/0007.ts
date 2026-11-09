@@ -1,4 +1,4 @@
-export const dependencyMigrationSql = `
+export const dependencySchemaSql = `
 CREATE UNIQUE INDEX IF NOT EXISTS tasks_profile_id_id ON tasks(profile_id, id);
 CREATE TABLE IF NOT EXISTS task_dependencies (
   profile_id TEXT NOT NULL,
@@ -20,5 +20,6 @@ BEGIN SELECT RAISE(ABORT, 'domain writes only'); END;
 CREATE TRIGGER IF NOT EXISTS task_dependencies_domain_delete
 BEFORE DELETE ON task_dependencies WHEN domain_write_allowed() != 1
 BEGIN SELECT RAISE(ABORT, 'domain writes only'); END;
-PRAGMA user_version = 7;
 `;
+
+export const dependencyMigrationSql = `${dependencySchemaSql}\nPRAGMA user_version = 7;`;

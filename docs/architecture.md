@@ -207,3 +207,58 @@ The proposed Task dependency workflows are also frames in the scene, with
 picker, list drag, Delete dialog, and graph view. The coordinator approved [Task DAG Phase 0](decisions/task-dag-phase-0.md)
 with corrections G1 through G10. ADRs 0016 through 0018 are accepted; their
 runtime implementation and verification follow in units A, F, B, E and S.
+
+## Task Dependencies
+
+Tasks and direct Dependency edges are independent facts. Migration 0007 creates
+task_dependencies with composite same-Profile endpoint foreign keys, a primary
+key by Profile/dependent/blocker and a reverse covering index. Projection schema
+recreation creates DDL without changing user_version. Only migrate advances it.
+Compact edge events and grouped lifecycle v2 deltas replay through the operation
+store; existing v1 events and checkpoints without edges remain readable.
+
+The authoritative dependency-rules and store/dependency-validation modules own
+endpoint, cycle, degree and lifecycle guards inside BEGIN IMMEDIATE. Public
+commands authenticate and validate visible endpoints before no-op detection.
+A no-op writes no History or Version even when its valid expected Version is
+stale. A real change CASes only the dependent. Captured full DependencyError
+responses survive rollback; History retains the bounded copy.
+
+OperationStore.graph(Profile) reads Tasks and edges in one SQLite read
+transaction. graph-model builds temporary adjacency; graph-order uses a Kahn
+min-heap over the whole Profile before filters; graph-energy uses temporary
+ancestor bitsets and weight masks for distinct pruned sums. graph-queries owns
+components, Ready/Blocked, strict ancestry, depth and shape/orientation.
+graph-mermaid formats typed identities and escaped labels without a renderer.
+TaskRead/TaskView carry optional response metadata, and TaskWrite names additive
+write reports. None changes stored Task content. Optional graph metadata stays
+omitted on default reads of Profiles with no edges, preserving legacy payloads;
+explicit graph filters and ordering still compute the complete result.
+
+The CLI and HttpApi share Dependency commands, initial creation, public Revert,
+and Delete fingerprint checks. Batch edge edits commit per item; previews use
+an authenticated in-memory fork without source History or Snapshot changes.
+TTY md Delete prompts show both directions, default No, and submit the reviewed
+fingerprint. JSON and non-TTY requests use explicit confirmation. Client feature
+UI and renderer integration remain later units under ADR-0009.
+
+import-dependencies plans external-id references over the proposed Profile graph,
+including later file rows. Import applies in dependency order and reports in
+file order. Each Task resolves successful mappings again under its writer lock;
+failure rolls back that Task's payload, edges and History. Import errors preserve
+current_version and an optional complete nested dependency_error.
+Export reads one consistent graph snapshot and emits depends_on only when
+nonempty. Obsidian keeps one managed note with stable Task blocks, same-note
+wiki links and pure Mermaid formatting. GraphNode.mermaid_id maps diagram nodes
+to full Task identity without relying on labels or diagram parsing.
+
+Under approved G11, GraphNode carries only mermaid_id, task, in_degree,
+out_degree, ready, blocked, depth and remaining_energy. GraphReport carries
+strict ancestors, strict descendants and lightest_next for its requested Task
+only. Ancestors and descendants use whole-Profile topological order. lightest_next
+contains Ready members of the remaining set, including a Ready root, sorted by
+own energy ascending, unknown energy last, then whole-Profile topological
+position. Query another Task for its sets.
+Reachability and Ready-set membership are computed outside node assembly, so
+the serialized report has O(n+m) content plus the requested root's sets.
+Shared ranking energy and unknown-energy tie behavior are unchanged.

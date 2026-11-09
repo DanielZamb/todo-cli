@@ -8,6 +8,15 @@ description: Verify combined Task filters through the compiled Todo CLI and auth
 Created with `create-verification-skill`.
 Read [the feature map](features/README.md) before choosing coverage.
 
+Ready and Blocked are true-only switches. False must return CLI exit 2 or HTTP
+400 with --blocked or --status recovery. Whole-Profile topo/lightest ranking
+precedes filtering. Run [verify-dag public proof](../verify-dag/features/public.md)
+for those cases, including cancelled Tasks behind open blockers.
+The Electron draft boundary regression is
+`pnpm --filter @todo/electron test task-filter-draft.test.ts`; it preserves
+prefix/text and all existing values, true-or-absent readiness and omission
+clearing. It adds no filter controls.
+
 ## Launch
 
 From the checkout root, run:
@@ -76,3 +85,11 @@ checkout and runs the TypeScript driver through pnpm. No server stays running.
 ## Version guardrails
 
 The compiled CLI and HTTP drive asserts exact Open and Closed Task titles and rejects an unknown HTTP filter name. See [the feature recipe](features/tasks.md) for commands and expected evidence.
+
+Ready and Blocked are true-only filters, and topo/lightest order runs over the
+whole Profile before membership filtering. The compiled public verify-dag drive
+checks both transports. Electron's existing form boundary has a focused pure
+roundtrip test: `pnpm --filter @todo/electron test task-filter-draft.test.ts`.
+It preserves true/absent readiness, prefix/text and other exact string values;
+false fails initialization and Apply, and Clear returns an empty draft.
+No graph controls are added by this contract alignment.

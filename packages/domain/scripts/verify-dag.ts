@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, isAbsolute, join } from "node:path";
 import { Effect } from "effect";
+import { parseImportText } from "../src/import.ts";
 import { openStore } from "../src/store/store.ts";
 import {
   append,
@@ -18,6 +19,10 @@ import {
   runDagCase,
   task,
 } from "./dag-proof.ts";
+import { proveDependencyCommands } from "./dependency-command-proof.ts";
+import { proveExportDependencies } from "./export-dependency-proof.ts";
+import { proveGraphAlgorithms } from "./graph-proof.ts";
+import { proveImportDependencies } from "./import-dependency-proof.ts";
 
 const [mode, directory, evidence] = process.argv.slice(2);
 if (
@@ -63,6 +68,10 @@ if (mode === "A" || mode === "B") {
     );
   mkdirSync(evidence, { recursive: true });
   const receipts: unknown[] = [];
+  proveGraphAlgorithms();
+  proveExportDependencies();
+  receipts.push({ name: "dependency-export", outcome: "passed" });
+  receipts.push({ name: "graph-algorithms", outcome: "passed" });
   for (const [name, run] of Object.entries(dagCases)) {
     const caseDirectory = join(directory, name);
     mkdirSync(caseDirectory);
@@ -92,11 +101,37 @@ if (mode === "A" || mode === "B") {
     mkdirSync(caseDirectory);
     await Effect.runPromise(
       runDagCase(join(caseDirectory, "scratch.db"), (store) =>
-        provePurgeEndpoint(store, target),
+        provePurgeEndpoint(store, target, join(caseDirectory, "scratch.db")),
       ),
     );
     receipts.push({ name: `purge-${target}`, outcome: "passed" });
   }
+  mkdirSync(join(directory, "public-commands"));
+  await Effect.runPromise(
+    runDagCase(
+      join(directory, "public-commands/scratch.db"),
+      proveDependencyCommands,
+    ),
+  );
+  receipts.push({
+    name: "authenticated-dependency-commands",
+    outcome: "passed",
+  });
+  mkdirSync(join(directory, "dependency-import"));
+  await Effect.runPromise(
+    runDagCase(join(directory, "dependency-import/scratch.db"), (store) =>
+      proveImportDependencies(
+        store,
+        parseImportText(
+          readFileSync(
+            "packages/domain/test/fixtures/import/dependencies-forward.json",
+            "utf8",
+          ),
+        ),
+      ),
+    ),
+  );
+  receipts.push({ name: "dependency-import", outcome: "passed" });
   mkdirSync(join(directory, "migration"));
   await Effect.runPromise(
     proveMigrationAndGuards(join(directory, "migration/scratch.db")),

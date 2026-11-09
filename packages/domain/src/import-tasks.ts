@@ -3,6 +3,7 @@ import { AttachmentCommands } from "./attachment-commands.ts";
 import { validateAttachmentInputs } from "./attachment-input.ts";
 import type { AccessRequest } from "./auth/model.ts";
 import { type TaskCommandResult, TaskCommands } from "./commands.ts";
+import { DependencyCommands } from "./dependency-commands.ts";
 import type { Task } from "./entities.ts";
 import {
   ImportItem,
@@ -10,6 +11,7 @@ import {
   type ImportRequest,
   type ImportRow,
 } from "./import.ts";
+import { planImportDependencies } from "./import-dependencies.ts";
 import { StoreError } from "./store/error.ts";
 import type { OperationStore } from "./store/store.ts";
 import { CreateTask, TaskPatch } from "./task-commands.ts";
@@ -38,7 +40,15 @@ const executeImport = Effect.fn(function* (
   input: ImportRequest,
 ) {
   const commands = new TaskCommands(store);
-  const initial = (yield* store.auth.read(request)).tasks;
+  yield* store.auth.read(request);
+  const graph = yield* store.graph(request.profile);
+  const initial = graph.tasks;
+  const dependencyPlan = planImportDependencies(
+    graph,
+    input.items,
+    request.profile,
+    Schema.decodeUnknownSync(Instant)(new Date().toISOString()),
+  );
   const seen = new Set<string>();
   const identities = input.items.flatMap((raw) => {
     const decoded = Schema.decodeUnknownOption(identity)(raw);
@@ -48,7 +58,14 @@ const executeImport = Effect.fn(function* (
     identities.filter((id, index) => identities.indexOf(id) !== index),
   );
   const rows: ImportRow[] = [];
-  for (const raw of input.items) {
+  const rowOrder = new Map<ImportRow, number>();
+  const recordRow = (row: ImportRow, index: number) => {
+    rows.push(row);
+    rowOrder.set(row, index);
+  };
+  for (const index of dependencyPlan.order) {
+    const raw = input.items[index];
+    if (raw === undefined) continue;
     const decoded = Schema.decodeUnknownExit(ImportItem, {
       onExcessProperty: "error",
     })(raw);
@@ -80,19 +97,23 @@ const executeImport = Effect.fn(function* (
           ? { from_version: version.value.from_version }
           : {}),
       });
-      rows.push({
-        ...base,
-        outcome: "rejected",
-        error: {
-          code: "invalid_args",
-          message: duplicates.has(external_id)
-            ? "Each external id must occur once in the file."
-            : "Task does not match import-item. Check todo schema import-item.",
+      recordRow(
+        {
+          ...base,
+          outcome: "rejected",
+          error: {
+            code: "invalid_args",
+            message: duplicates.has(external_id)
+              ? "Each external id must occur once in the file."
+              : "Task does not match import-item. Check todo schema import-item.",
+          },
         },
-      });
+        index,
+      );
       continue;
     }
     const item = decoded.value;
+    const plannedTaskId = dependencyPlan.ids.get(index);
     const expectedVersion =
       item.from_version === undefined ? base.from_version : item.from_version;
     const adopting =
@@ -140,6 +161,39 @@ const executeImport = Effect.fn(function* (
                 outcome: "rejected",
                 reason: "conflict",
                 latest: current ?? linked,
+              }),
+            );
+          const plannedFailure = dependencyPlan.failures.get(index);
+          if (plannedFailure)
+            return yield* Effect.fail(
+              new ImportFailure({
+                outcome: "rejected",
+                reason: plannedFailure.reason,
+                message: plannedFailure.message,
+                latest: current,
+                ...(plannedFailure.dependency_error
+                  ? { dependency_error: plannedFailure.dependency_error }
+                  : {}),
+              }),
+            );
+          const resolvedDependencies = item.depends_on?.flatMap((external) => {
+            const blocker = tasks.find(
+              (task) =>
+                task.external_id === external && task.deleted_at === null,
+            );
+            return blocker ? [blocker.id] : [];
+          });
+          if (
+            item.depends_on !== undefined &&
+            resolvedDependencies?.length !== item.depends_on.length
+          )
+            return yield* Effect.fail(
+              new ImportFailure({
+                outcome: "rejected",
+                reason: "invalid_args",
+                message:
+                  "A Dependency external id was not created or adopted successfully in this Profile. Fix its row, preview again and retry.",
+                latest: current,
               }),
             );
           if (item.attachments !== undefined)
@@ -208,7 +262,11 @@ const executeImport = Effect.fn(function* (
                   ...(item.attachments === undefined
                     ? {}
                     : { attachments: item.attachments }),
+                  ...(resolvedDependencies !== undefined
+                    ? { depends_on: resolvedDependencies }
+                    : {}),
                 }),
+                plannedTaskId !== undefined ? { task_id: plannedTaskId } : {},
               ),
             );
           } else if (changed_fields.length) {
@@ -246,6 +304,60 @@ const executeImport = Effect.fn(function* (
           }
           if (current === null && item.attachments?.length)
             changed_fields.push("attachments");
+          const desiredDependencies = resolvedDependencies;
+          if (current !== null && desiredDependencies !== undefined) {
+            if (
+              item.status !== undefined &&
+              item.status !== task.status &&
+              (task.status === "done" ||
+                task.status === "cancelled" ||
+                (task.status === "snoozed" && item.status === "open"))
+            ) {
+              task = yield* accepted(
+                yield* commands.transition(
+                  { ...request, task_id: task.id },
+                  { from_version: task.row_version, action: "reopen" },
+                ),
+              );
+              changed_fields.push("status");
+            }
+            const currentBlockers = (yield* store.graph(request.profile)).edges
+              .filter((edge) => edge.dependent_id === task.id)
+              .map((edge) => edge.blocker_id);
+            const removed = currentBlockers.filter(
+              (id) => !desiredDependencies.includes(id),
+            );
+            const added = desiredDependencies.filter(
+              (id) => !currentBlockers.includes(id),
+            );
+            if (removed.length || added.length)
+              changed_fields.push("depends_on");
+            const edgeCommands = new DependencyCommands(store);
+            for (const [action, blockers] of [
+              ["undepend", removed],
+              ["depend", added],
+            ] as const)
+              for (const blocker_id of blockers) {
+                const result = yield* edgeCommands.change(
+                  { ...request, task_id: task.id },
+                  { blocker_id, from_version: task.row_version },
+                  action,
+                );
+                if (result.outcome === "rejected")
+                  return yield* Effect.fail(
+                    new ImportFailure({
+                      ...result,
+                      message:
+                        result.dependency_error?.message ??
+                        "Dependency change rejected. Fix this item and import again.",
+                    }),
+                  );
+                task =
+                  (yield* commands.get({ ...request, task_id: task.id })) ??
+                  task;
+              }
+          } else if (current === null && desiredDependencies?.length)
+            changed_fields.push("depends_on");
           if (item.status !== undefined && item.status !== task.status) {
             changed_fields.push("status");
             if (
@@ -296,6 +408,8 @@ const executeImport = Effect.fn(function* (
           const latest = result.outcome === "rejected" ? result.latest : null;
           const reason =
             result.outcome === "rejected" ? result.reason : "not_found";
+          const dependency_error =
+            result.outcome === "rejected" ? result.dependency_error : undefined;
           return store.auth
             .mutate(request, (actor) =>
               store.reject({
@@ -304,6 +418,7 @@ const executeImport = Effect.fn(function* (
                   ? {}
                   : { from_version: expectedVersion }),
                 reason,
+                ...(dependency_error ? { dependency_error } : {}),
                 event: {
                   kind: before ? "TaskEdited" : "TaskCreated",
                   occurred_at: new Date().toISOString(),
@@ -319,9 +434,15 @@ const executeImport = Effect.fn(function* (
                     ...base,
                     outcome: "rejected",
                     error: {
-                      code: reason === "conflict" ? "occ_conflict" : reason,
+                      code:
+                        dependency_error?.code ??
+                        (reason === "conflict" ? "occ_conflict" : reason),
                       message:
-                        reason === "conflict"
+                        dependency_error?.message ??
+                        (result.outcome === "rejected"
+                          ? result.message
+                          : undefined) ??
+                        (reason === "conflict"
                           ? adopting && latest?.external_id == null
                             ? "Task changed and has no external id yet. Read its current Version and import again with task_id and from_version."
                             : "Task changed since preview. Preview again and apply the current Version."
@@ -333,15 +454,21 @@ const executeImport = Effect.fn(function* (
                                 ? "This Task is deleted. Restore it before importing changes."
                                 : reason === "external_id_conflict"
                                   ? "This external id already belongs to a Task. Restore the deleted Task or use another external id."
-                                  : "Task fields are invalid. Check import-item and import again.",
-                      details: { current_version: latest?.row_version ?? null },
+                                  : "Task fields are invalid. Check import-item and import again."),
+                      details: {
+                        ...(dependency_error ? { dependency_error } : {}),
+                        current_version:
+                          reason === "conflict"
+                            ? (latest?.row_version ?? null)
+                            : (before?.row_version ?? null),
+                      },
                     },
                   }) satisfies ImportRow,
               ),
             );
         }),
       );
-    rows.push(result);
+    recordRow(result, index);
   }
   if (input.close_missing && !rows.some((row) => row.outcome === "rejected")) {
     const candidates =
@@ -421,6 +548,9 @@ const executeImport = Effect.fn(function* (
     }
   }
 
+  rows.sort(
+    (a, b) => (rowOrder.get(a) ?? Infinity) - (rowOrder.get(b) ?? Infinity),
+  );
   const totals = { created: 0, updated: 0, unchanged: 0, rejected: 0 };
   for (const row of rows) totals[row.outcome]++;
   return {

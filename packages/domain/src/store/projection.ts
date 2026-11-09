@@ -9,7 +9,7 @@ import { Project, Series, Tag, Task } from "../entities.ts";
 import type { Event, TaskHistoryRedacted } from "../events.ts";
 import type { ProfileId } from "../ids.ts";
 import { SeriesId, TaskId, Version } from "../ids.ts";
-import { dependencyMigrationSql } from "./0007.ts";
+import { dependencySchemaSql } from "./0007.ts";
 import { applyDependencyVersions, putEdge, readEdges } from "./dependencies.ts";
 
 const taskFields = [
@@ -84,7 +84,7 @@ export function createProjection(db: Database) {
         BEGIN SELECT RAISE(ABORT, 'domain writes only'); END;`);
     }
   }
-  db.exec(dependencyMigrationSql);
+  db.exec(dependencySchemaSql);
 }
 
 export const readTasks = (db: Database): Task[] =>

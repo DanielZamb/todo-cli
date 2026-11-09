@@ -5,6 +5,11 @@ description: Verify the compiled Todo CLI in a scratch HOME. Use after changing 
 
 # Verify the CLI
 
+New DAG usage boundaries also require verify-dag/scripts/verify-closure.sh.
+Its matrix asserts actual exit 2, one invalid_args JSON object, flag-specific
+recovery and unchanged projection for malformed/zero/negative inputs, before
+no-op detection. Missing files retain runtime classification.
+
 Generated with `create-verification-skill`.
 Read [the feature map](features/README.md) before selecting coverage.
 
@@ -131,3 +136,9 @@ The install verifier requires --version to report build and contract without cha
 ## Batch edit
 
 Read [Edit several Tasks](features/batch-edit.md) for the shared batch-edit contract and the compiled scratch proof. Both client flows retain selections and loaded Versions through preview, apply and Conflict reload.
+
+Dependency commands and graph responses also run through the compiled public
+[verify-dag](../verify-dag/SKILL.md) drive. The command registry publishes depend,
+undepend, graph, batch-depend and revert. contract.test.ts discovers their help,
+validates real responses against published schemas, and covers add --depends-on,
+list --ready/--blocked and ordering through the dedicated public drive.

@@ -1,11 +1,14 @@
 import {
+  DeleteReport,
   SnapshotList,
   SnapshotManifest,
   SnapshotPruneReport,
   SnapshotRestoreReport,
+  TaskId,
 } from "@todo/domain";
 import {
   ErrorResponse,
+  ExportResponse,
   HistoryResponse,
   TaskResponse,
   TasksResponse,
@@ -34,6 +37,7 @@ export function registerCommandSchema(
 
 export type StatusResponse = typeof StatusResponse.Type;
 export const StatusResponse = Schema.Struct({
+  dry_run: Schema.optionalKey(Schema.Boolean),
   generated_at: Schema.String,
   status: Schema.String,
 });
@@ -51,6 +55,7 @@ export const PassphraseResetResponse = Schema.Struct({
 });
 export type PathResponse = typeof PathResponse.Type;
 export const PathResponse = Schema.Struct({
+  outside_projection: Schema.optionalKey(Schema.Array(TaskId)),
   generated_at: Schema.String,
   path: Schema.String,
 });
@@ -103,7 +108,7 @@ export function commandSchema(name: string) {
 
 for (const name of ["add", "show", "edit", "done", "cancel", "reopen"])
   registerCommandSchema(name, TaskResponse);
-for (const name of ["list", "review daily", "review weekly", "export"])
+for (const name of ["list", "review daily", "review weekly"])
   registerCommandSchema(name, TasksResponse);
 registerCommandSchema("history", HistoryResponse);
 registerCommandSchema("error", ErrorResponse);
@@ -130,7 +135,7 @@ registerCommandSchema("snapshot restore", SnapshotRestoreResponse);
 registerCommandSchema("snapshot prune", SnapshotPruneResponse);
 registerCommandSchema("help", TextResponse);
 
-for (const name of ["init", "logout", "rm", "config set"])
+for (const name of ["init", "logout", "config set"])
   registerCommandSchema(name, StatusResponse);
 registerCommandSchema("reset-passphrase", PassphraseResetResponse);
 for (const name of ["login", "whoami"])
@@ -144,3 +149,16 @@ registerCommandSchema(
   "schema",
   Schema.Union([SchemaResponse, SchemaListResponse]),
 );
+
+registerCommandSchema(
+  "rm",
+  Schema.Union([
+    StatusResponse,
+    Schema.Struct({
+      ...DeleteReport.fields,
+      status: Schema.Literal("deleted"),
+    }),
+  ]),
+);
+
+registerCommandSchema("export", ExportResponse);

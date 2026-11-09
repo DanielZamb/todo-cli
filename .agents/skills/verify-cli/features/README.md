@@ -9,6 +9,7 @@
 | Export and Obsidian files | [files.md](files.md) |
 | Help, manual and configuration | [discovery.md](discovery.md) |
 | Agent JSON contract and command schemas | [agent-contract.md](agent-contract.md) |
+| Dependency commands, TTY Delete, graph and dependency export | [verify-dag public drive](../../verify-dag/features/public.md) |
 
 All recipes run through the compiled binary using the helper in the parent skill.
 

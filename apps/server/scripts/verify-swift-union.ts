@@ -478,6 +478,32 @@ try {
     ),
   );
   if (process.env.TODO_DAG_CONTRACT_TESTS === "1") {
+    const electron = spawnSync(
+      "bun",
+      [
+        "apps/electron/scripts/verify-graph-contract.ts",
+        join(evidence, "electron-graph.json"),
+      ],
+      {
+        cwd: resolve("."),
+        env: {
+          ...process.env,
+          TODO_GRAPH_SERVER: base,
+          TODO_GRAPH_CREDENTIAL: credential,
+        },
+        encoding: "utf8",
+        timeout: 60000,
+      },
+    );
+    writeFileSync(
+      join(evidence, "electron-graph.log"),
+      (electron.stdout ?? "") + (electron.stderr ?? ""),
+    );
+    assert.equal(
+      electron.status,
+      0,
+      "Production Electron graph decoding must pass",
+    );
     const generated = spawnSync(
       "swift",
       [

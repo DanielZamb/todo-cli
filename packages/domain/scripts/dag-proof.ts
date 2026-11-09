@@ -845,112 +845,147 @@ export const dagCases = {
       ]);
     }),
 };
-export function provePurgeEndpoint(store: OperationStore, target: "A" | "B") {
+export function provePurgeEndpoint(
+  store: OperationStore,
+  target: "A" | "B",
+  path: string,
+) {
   return Effect.gen(function* () {
     yield* seed(store, ["A", "B", "C"]);
     yield* append(store, delta("B", "A", 1));
     yield* append(store, delta("C", "B", 1));
-    assert.equal((yield* editStatus(store, "B", "done")).reason, "blocked");
-    yield* store.takeSnapshot();
-    const ownerSnapshot = yield* store.snapshots.create("dag-before-delete");
-    yield* remove(store, target);
-    yield* store.takeSnapshot();
-    const before = yield* current(store, target);
-    assert.equal(
-      (yield* append(store, {
-        kind: "TaskPurged",
-        entity_version: 1,
-        occurred_at: at,
-        task_id: before.id,
-        before,
-      })).outcome,
-      "committed",
-    );
-    assert.deepEqual(
-      yield* versions(store),
-      target === "A"
-        ? [
-            ["B", 3],
-            ["C", 2],
-          ]
-        : [
-            ["A", 1],
-            ["C", 3],
-          ],
-    );
-    assert.deepEqual(
-      yield* store.dependencies(),
-      target === "A" ? [edge("C", "B")] : [],
-    );
-    const history = yield* store.history();
-    const erased = history.filter(
-      (entry) => entry.event.kind === "TaskHistoryRedacted",
-    );
-    assert.ok(erased.length >= 3);
-    assert.equal(JSON.stringify(history).includes(`Task ${target}`), false);
-    assert.ok(
-      erased.some(
-        (entry) =>
-          entry.event.kind === "TaskHistoryRedacted" &&
-          entry.event.replay.dependencies?.added.some(
-            (edge) =>
-              edge.dependent_id === target || edge.blocker_id === target,
-          ),
-      ),
-    );
-    yield* replay(store);
-    const original = erased[0];
-    assert.ok(original);
-    assert.equal(
-      (yield* store.revert({
-        actor,
-        profile,
-        seq: original.seq,
-        occurred_at: at,
-      })).reason,
-      "task_purged",
-    );
-    const copies = yield* store.snapshots.list();
-    for (const copy of copies.snapshots) {
-      const db = new Database(
-        `${store.snapshots.directory}/${copy.id}.sqlite`,
-        { readonly: true },
+    const audit = new Database(path);
+    try {
+      audit.exec(`CREATE TABLE dependency_delete_audit (dependent_id TEXT, blocker_id TEXT);
+      CREATE TRIGGER dependency_delete_audit AFTER DELETE ON task_dependencies
+      BEGIN INSERT INTO dependency_delete_audit VALUES (OLD.dependent_id, OLD.blocker_id); END;`);
+      const deletions = () =>
+        audit
+          .query(
+            "SELECT * FROM dependency_delete_audit ORDER BY dependent_id,blocker_id",
+          )
+          .all();
+      assert.deepEqual(deletions(), []);
+      assert.equal((yield* editStatus(store, "B", "done")).reason, "blocked");
+      yield* store.takeSnapshot();
+      const ownerSnapshot = yield* store.snapshots.create("dag-before-delete");
+      yield* remove(store, target);
+      const deletedEdges =
+        target === "A"
+          ? [{ dependent_id: "B", blocker_id: "A" }]
+          : [
+              { dependent_id: "B", blocker_id: "A" },
+              { dependent_id: "C", blocker_id: "B" },
+            ];
+      assert.deepEqual(deletions(), deletedEdges);
+      yield* store.takeSnapshot();
+      const before = yield* current(store, target);
+      assert.equal(
+        (yield* append(store, {
+          kind: "TaskPurged",
+          entity_version: 1,
+          occurred_at: at,
+          task_id: before.id,
+          before,
+        })).outcome,
+        "committed",
       );
-      try {
-        assert.equal(
-          db.query("SELECT 1 FROM tasks WHERE id=?").get(target),
-          null,
+      assert.deepEqual(
+        deletions(),
+        deletedEdges,
+        "Purge must delete zero live Dependency rows after Delete",
+      );
+      audit.exec(
+        "DROP TRIGGER dependency_delete_audit; DROP TABLE dependency_delete_audit",
+      );
+      assert.deepEqual(
+        yield* versions(store),
+        target === "A"
+          ? [
+              ["B", 3],
+              ["C", 2],
+            ]
+          : [
+              ["A", 1],
+              ["C", 3],
+            ],
+      );
+      assert.deepEqual(
+        yield* store.dependencies(),
+        target === "A" ? [edge("C", "B")] : [],
+      );
+      const history = yield* store.history();
+      const erased = history.filter(
+        (entry) => entry.event.kind === "TaskHistoryRedacted",
+      );
+      assert.ok(erased.length >= 3);
+      assert.equal(JSON.stringify(history).includes(`Task ${target}`), false);
+      assert.ok(
+        erased.some(
+          (entry) =>
+            entry.event.kind === "TaskHistoryRedacted" &&
+            entry.event.replay.dependencies?.added.some(
+              (edge) =>
+                edge.dependent_id === target || edge.blocker_id === target,
+            ),
+        ),
+      );
+      yield* replay(store);
+      const original = erased[0];
+      assert.ok(original);
+      assert.equal(
+        (yield* store.revert({
+          actor,
+          profile,
+          seq: original.seq,
+          occurred_at: at,
+        })).reason,
+        "task_purged",
+      );
+      const copies = yield* store.snapshots.list();
+      for (const copy of copies.snapshots) {
+        const db = new Database(
+          `${store.snapshots.directory}/${copy.id}.sqlite`,
+          { readonly: true },
         );
-        assert.deepEqual(
-          db
-            .query(
-              "SELECT * FROM task_dependencies WHERE dependent_id=? OR blocker_id=?",
-            )
-            .all(target, target),
-          [],
-        );
-      } finally {
-        db.close();
+        try {
+          assert.equal(
+            db.query("SELECT 1 FROM tasks WHERE id=?").get(target),
+            null,
+          );
+          assert.deepEqual(
+            db
+              .query(
+                "SELECT * FROM task_dependencies WHERE dependent_id=? OR blocker_id=?",
+              )
+              .all(target, target),
+            [],
+          );
+        } finally {
+          db.close();
+        }
       }
+      yield* store.snapshots.restore(ownerSnapshot.id);
+      assert.deepEqual(
+        yield* versions(store),
+        target === "A"
+          ? [
+              ["B", 2],
+              ["C", 2],
+            ]
+          : [
+              ["A", 1],
+              ["C", 2],
+            ],
+      );
+      assert.deepEqual(
+        yield* store.dependencies(),
+        target === "A" ? [edge("C", "B")] : [],
+      );
+      yield* replay(store);
+    } finally {
+      audit.close();
     }
-    yield* store.snapshots.restore(ownerSnapshot.id);
-    assert.deepEqual(
-      yield* versions(store),
-      target === "A"
-        ? [
-            ["B", 2],
-            ["C", 2],
-          ]
-        : [
-            ["A", 1],
-            ["C", 2],
-          ],
-    );
-    assert.deepEqual(
-      yield* store.dependencies(),
-      target === "A" ? [edge("C", "B")] : [],
-    );
-    yield* replay(store);
   });
 }
 export function proveMigrationAndGuards(path: string) {

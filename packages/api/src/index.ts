@@ -3,17 +3,24 @@ import {
   AttachManyRequest,
   AttachmentId,
   AttachTask,
+  BatchEdgeReport,
+  BatchEdgeRequest,
   BatchEditReport,
   BatchEditRequest,
   CreateSeries,
   CreateTask,
   CredentialInfo,
   DeleteProfile,
+  DeleteTask,
+  DependencyError,
+  DependRequest,
   DetachTask,
   DiagnosticsSnapshot,
+  EdgeReport,
   EditSeries,
   EditTask,
   ExpectedVersion,
+  GraphReport,
   ImageMime,
   ImportReport,
   ImportRequest,
@@ -42,8 +49,10 @@ import {
   TaskFilters,
   TaskId,
   TaskRead,
+  TaskWrite,
   TokenOptions,
   TransitionTask,
+  UndependRequest,
   UploadAttachment,
 } from "@todo/domain";
 import { ExternalIdConflictDetails } from "@todo/domain/presentation";
@@ -137,7 +146,18 @@ export class ValidationHistory extends HttpApiMiddleware.Service<
 
 const profile = { profile: ProfileId };
 const target = { ...profile, task: TaskId };
+export const DependencyRejected = DependencyError.annotate({
+  httpApiStatus: 422,
+  identifier: "DependencyError",
+});
+export const FilterUsageError = Schema.Struct({
+  generated_at: Schema.String,
+  code: Schema.Literal("invalid_args"),
+  message: Schema.String,
+}).annotate({ httpApiStatus: 400, identifier: "FilterUsageError" });
 const taskErrors = [
+  FilterUsageError,
+  DependencyRejected,
   HttpApiError.BadRequestNoContent,
   Forbidden,
   ProfileNotFound,
@@ -148,6 +168,41 @@ const taskErrors = [
 ];
 const Tasks = HttpApiGroup.make("tasks")
   .add(
+    HttpApiEndpoint.post(
+      "depend",
+      "/profiles/:profile/tasks/:task/dependencies",
+      {
+        params: target,
+        payload: DependRequest,
+        success: EdgeReport,
+        error: taskErrors,
+      },
+    ),
+    HttpApiEndpoint.post(
+      "undepend",
+      "/profiles/:profile/tasks/:task/dependencies/remove",
+      {
+        params: target,
+        payload: UndependRequest,
+        success: EdgeReport,
+        error: taskErrors,
+      },
+    ),
+    HttpApiEndpoint.post(
+      "batchDepend",
+      "/profiles/:profile/dependencies/batch",
+      {
+        params: profile,
+        payload: BatchEdgeRequest,
+        success: BatchEdgeReport,
+        error: taskErrors,
+      },
+    ),
+    HttpApiEndpoint.get("graph", "/profiles/:profile/tasks/:task/graph", {
+      params: target,
+      success: GraphReport,
+      error: taskErrors,
+    }),
     HttpApiEndpoint.post("attachMany", "/profiles/:profile/attachments/batch", {
       params: profile,
       payload: AttachManyRequest,
@@ -160,7 +215,7 @@ const Tasks = HttpApiGroup.make("tasks")
       {
         params: target,
         payload: AttachTask,
-        success: Task,
+        success: TaskWrite,
         error: taskErrors,
       },
     ),
@@ -170,7 +225,7 @@ const Tasks = HttpApiGroup.make("tasks")
       {
         params: target,
         payload: DetachTask,
-        success: Task,
+        success: TaskWrite,
         error: taskErrors,
       },
     ),
@@ -180,7 +235,7 @@ const Tasks = HttpApiGroup.make("tasks")
       {
         params: target,
         payload: LabelAttachment,
-        success: Task,
+        success: TaskWrite,
         error: taskErrors,
       },
     ),
@@ -190,7 +245,7 @@ const Tasks = HttpApiGroup.make("tasks")
       {
         params: target,
         payload: UploadAttachment,
-        success: Task,
+        success: TaskWrite,
         error: taskErrors,
       },
     ),
@@ -223,19 +278,19 @@ const Tasks = HttpApiGroup.make("tasks")
     }),
     HttpApiEndpoint.get("show", "/profiles/:profile/tasks/:task", {
       params: target,
-      success: Task,
+      success: TaskRead,
       error: taskErrors,
     }),
     HttpApiEndpoint.post("create", "/profiles/:profile/tasks", {
       params: profile,
       payload: CreateTask,
-      success: Task,
+      success: TaskWrite,
       error: taskErrors,
     }),
     HttpApiEndpoint.patch("edit", "/profiles/:profile/tasks/:task", {
       params: target,
       payload: EditTask,
-      success: Task,
+      success: TaskWrite,
       error: taskErrors,
     }),
     HttpApiEndpoint.post(
@@ -244,32 +299,32 @@ const Tasks = HttpApiGroup.make("tasks")
       {
         params: target,
         payload: TransitionTask,
-        success: Task,
+        success: TaskWrite,
         error: taskErrors,
       },
     ),
     HttpApiEndpoint.post("move", "/profiles/:profile/tasks/:task/move", {
       params: target,
       payload: MoveTask,
-      success: Task,
+      success: TaskWrite,
       error: taskErrors,
     }),
     HttpApiEndpoint.post("copy", "/profiles/:profile/tasks/:task/copy", {
       params: target,
       payload: MoveTask,
-      success: Task,
+      success: TaskWrite,
       error: taskErrors,
     }),
     HttpApiEndpoint.post("revert", "/profiles/:profile/tasks/:task/revert", {
       params: target,
       payload: RevertTask,
-      success: Task,
+      success: TaskWrite,
       error: taskErrors,
     }),
     HttpApiEndpoint.post("createSeries", "/profiles/:profile/series", {
       params: profile,
       payload: CreateSeries,
-      success: Task,
+      success: TaskWrite,
       error: taskErrors,
     }),
     HttpApiEndpoint.patch(
@@ -278,7 +333,7 @@ const Tasks = HttpApiGroup.make("tasks")
       {
         params: target,
         payload: EditSeries,
-        success: Task,
+        success: TaskWrite,
         error: taskErrors,
       },
     ),
@@ -288,14 +343,14 @@ const Tasks = HttpApiGroup.make("tasks")
       {
         params: target,
         payload: ExpectedVersion,
-        success: Task,
+        success: TaskWrite,
         error: taskErrors,
       },
     ),
     HttpApiEndpoint.delete("delete", "/profiles/:profile/tasks/:task", {
       params: target,
-      query: ExpectedVersion,
-      success: Task,
+      query: DeleteTask,
+      success: TaskWrite,
       error: taskErrors,
     }),
   )

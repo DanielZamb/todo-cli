@@ -9,8 +9,12 @@ scratch=$(mktemp -d "${TMPDIR:-/tmp}/todo-s01-verify-XXXXXX")
 trap 'rm -rf "$scratch"' EXIT HUP INT TERM
 cd "$root"
 {
-  printf 'bun build --compile apps/server/src/main.ts --outfile %s/server\n' "$scratch"
-  (cd "$scratch" && bun build --compile "$root/apps/server/src/main.ts" --outfile "$scratch/server")
+  if [ -n "${TODO_SERVER_BINARY:-}" ]; then
+    ln -s "$TODO_SERVER_BINARY" "$scratch/server"
+  else
+    sh "$root/scripts/disk-guard.sh"
+    (cd "$scratch" && bun build --compile "$root/apps/server/src/main.ts" --outfile "$scratch/server")
+  fi
   printf 'bun build --compile apps/server/scripts/seed-verification.ts --outfile %s/seed\n' "$scratch"
   (cd "$scratch" && bun build --compile "$root/apps/server/scripts/seed-verification.ts" --outfile "$scratch/seed")
   printf '%s/seed %s client-reads\n' "$scratch" "$scratch"

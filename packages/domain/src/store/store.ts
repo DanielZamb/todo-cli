@@ -76,7 +76,10 @@ declare module "bun:sqlite" {
 }
 
 class Rejection extends Error {
-  constructor(readonly reason: string) {
+  constructor(
+    readonly reason: string,
+    readonly witness?: DependencyError,
+  ) {
     super(reason);
   }
 }
@@ -609,7 +612,7 @@ export class OperationStore {
     reason: string,
     fromVersion: Version | null = null,
     witness?: DependencyError,
-  ): OpLogEntry {
+  ): AppendResult {
     const payload: unknown = JSON.parse(json(input.event));
     const envelope = Schema.decodeUnknownSync(
       Schema.Struct({ kind: TaskMutationKind, occurred_at: Instant }),
@@ -687,7 +690,10 @@ export class OperationStore {
       });
       for (const id of this.snapshots.purgedIdsSync())
         redactTaskHistory(this.db, this.historySync(0), id);
-      return this.historySync(entry.seq - 1)[0] ?? entry;
+      return {
+        ...(this.historySync(entry.seq - 1)[0] ?? entry),
+        ...(witness ? { dependency_error: witness } : {}),
+      };
     });
   }
 
@@ -1178,7 +1184,7 @@ export class OperationStore {
             true,
           );
           if (departure.outcome === "rejected")
-            throw new Rejection(departure.reason);
+            throw new Rejection(departure.reason, departure.dependency_error);
           const arrival = this.appendSync(
             {
               actor: input.actor,
@@ -1194,7 +1200,7 @@ export class OperationStore {
             true,
           );
           if (arrival.outcome === "rejected")
-            throw new Rejection(arrival.reason);
+            throw new Rejection(arrival.reason, arrival.dependency_error);
           return arrival;
         });
       } catch (error) {
@@ -1202,6 +1208,8 @@ export class OperationStore {
         return this.recordRejection(
           { actor: input.actor, profile: before.profile_id, event },
           error.reason,
+          null,
+          error.witness,
         );
       }
     });

@@ -95,3 +95,64 @@ in the compiled DAG drive covers it. Renew the event source pin only after
 reviewing these changes and rerunning behavioral sensitivity and the clean check.
 
 Closure reviewed product source: 50ef7c3dccd50d427bb8dfa2bfff8915c49b907e.
+
+## Unit B N1/N2 mapping review
+
+Reviewed the N1 diff from integration base 9f2ec0fb798dfbb7fa7cd1ccd666cbabbb1a7d89.
+Only createProjection changes among covered production functions. It creates
+exactly the same dependency tables, indexes and guards through dependencySchemaSql,
+without executing a schema-version pragma. Migration 0007 still creates that
+schema and advances to 7 inside the existing constructor migration transaction.
+Legacy migration order and pre-migration Snapshot placement stay in migrate.
+Task writes, before-value and Version checks, History publication, projection
+application and seven crash boundaries are unchanged. Rebuild no longer changes
+user_version as a side effect of recreating projections. The compiled migration
+driver asserts preservation of version 1, the full legacy 0003 through 0007
+schema and literal migrated Tasks. N2 changes verification only, observing actual
+SQLite DELETE effects with a scratch audit trigger around Delete then Purge.
+AtomicCAS retains its one-Task/no-edge bounds. Renew the projection pin only
+with this review and fresh real-code sensitivity plus the clean one command.
+
+## Unit B command error forwarding
+
+Reviewed store.ts against algorithm checkpoint f140c7b09bcb1db48ce4ccaee797ecfe60019ce4.
+Rejection optionally carries a captured DependencyError through the Move outer
+transaction. recordRejection now returns that same full witness in AppendResult,
+while its History copy retains the existing bounded RejectionDetails and Purge
+redaction. The SQL transaction, before-value/Version checks, record/apply/commit,
+replay, and all seven instrumentation boundaries stay in the same positions.
+No graph guard is moved out of authoritative validation. The no-edge AtomicCAS
+fixtures produce no witness and retain their literal results. Command handoff,
+public edge Revert, fingerprints and graph batch operations remain outside this
+single-Task model and are exercised by compiled verify-dag public commands.
+Renew the store source pin only with this review, real-code sensitivity and the
+clean full check. Do not infer a grouped graph proof from AtomicCAS.
+
+## Unit B import and public schema review
+
+Compared dependencies.ts with public checkpoint dc35c131. DependencyError now
+has a shared schema identity and literal nonempty evidence constraints: cycle
+paths have at least two ids, blocked/done-dependent lists have at least one
+Task, counts are nonnegative and counted advice follows the approved exact text.
+has_dependencies may carry an empty incident set after a confirmed preview
+changes. These affect captured error decoding, not Task CAS or SQL boundaries.
+No covered transaction, projection, Event, Task or Version implementation changed.
+The one-Task/no-edge AtomicCAS fixtures produce no DependencyError and preserve
+all 216 literal outcomes. Import resolves successful external-id mappings under
+the existing writer transaction and rolls back each failed Task; its multi-Task
+planning is outside this finite model and has separate compiled public proof.
+Advance this schema pin only with fresh real-code sensitivity and clean check.
+
+## Unit B combined review closure
+
+Reviewed corrected source 3cceb41efc08b8cd835d5c883c3d370709865c3f against
+e7170510a376b51eaf3525bb9933cb0dd588b233. Every covered production file is
+byte-identical, including transaction, validate, appendSync, recordRejection,
+projection/replay and Event/Version schemas. G11 changes graph-contract and
+graph-queries only; CLI pure-input conversion remains outside these functions.
+No source pin or finite model changes. Advancing confirmedCommit records this
+identity review, not a stronger claim. Fresh real-code sensitivity removes the
+Task before check and edit projection in turn, requires exit 1 for each, restores
+bytes and requires exit 0. Final source runs the one command again. AtomicCAS
+remains bounded single-Task/no-edge safety; graph response and CLI boundaries
+have separate compiled public proofs, and final F remains coordinator-owned.

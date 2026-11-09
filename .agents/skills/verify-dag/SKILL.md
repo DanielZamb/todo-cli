@@ -6,8 +6,8 @@ description: Verify Task Dependency storage, authoritative graph rules and repla
 # Verify Dependencies
 
 Created with create-verification-skill. Read the [feature map](features/README.md).
-Unit A's entry point is the OperationStore library. CLI and HTTP graph commands
-belong to Unit B and are not claimed by this drive.
+The library drive checks OperationStore and shared algorithms. The separate
+public drive checks compiled CLI commands and authenticated HTTP routes.
 
 ## Launch
 
@@ -60,4 +60,52 @@ scripts/verify.sh is executable and takes an absolute evidence path.
 The .claude/skills/verify-dag link is relative to this checkout. Check it with
 `realpath .claude/skills/verify-dag`. Runtime Claude discovery requires a fresh
 Claude session and is not established by the symlink alone.
-Use /maintain-verification-skill when B adds public graph commands.
+Use /maintain-verification-skill when graph behavior changes.
+
+The compiled drive also invokes graph-proof.ts, which imports the production
+query/order/energy/format exports. See queries.md for its literal fixtures.
+The public drive below separately exercises the production command boundaries.
+
+## Public commands and routes
+
+Run `scripts/verify-public.sh <fresh-absolute-evidence-directory>` for compiled
+CLI/HTTP commands on a fresh scratch database. It reuses source-hash CLI/server
+binaries from .scratch/bin, compiles the driver once per source hash, and checks
+actual exits/statuses. Optional TODO_CLI_BINARY and TODO_SERVER_BINARY select
+already-provenanced binaries. actions.json retains commands and HTTP bodies
+without credentials; cleanup.json records the owned server PID and real exit.
+The current corpus covers edge no-ops/Conflicts, cycles, redundant warnings,
+9/13/14, Ready/Blocked, atomic creation, public edge Revert, blocked completion,
+Delete previews/refusals/fingerprint changes, batch previews, Series inheritance,
+and move/copy. Real PTYs check No, EOF, default No, Yes and a competing-edge
+confirmation race. State comparisons include History, replay checkpoints and
+owner Snapshot file bytes. Import uses dependencies-forward.json to check later
+file references, Version-1 initial edges, report order, atomic refusal and failed
+adoption. CLI/HTTP encoding must retain the complete nested DependencyError.
+Export checks nonempty-only depends_on and absent response metadata; Obsidian
+checks one managed note, preserved surrounding text, stable block links and
+Mermaid. The public graph corpus also checks a 105-Task cycle with its full
+shortest witness, terminal-pruned energy, terminal-node ordering and changed-to-
+empty preview fingerprints. graph-public.json and import-export.json retain
+literal observations. Client feature UI and both-client proof remain separate.
+
+## Combined review closure
+
+Run scripts/verify-closure.sh with a fresh absolute evidence directory. It reuses
+the selected compiled CLI and compiles two cached production-importing drivers.
+graph-response-proof.ts seeds the literal chain-1000.json fixture into a fresh
+scratch database, retaining all reviewed ids, Task fields and root. It saves the
+actual CLI stdout and its UTF-8 byte count separately from compact re-encoding.
+It requires 1,000 nodes, 999 edges, exact requested root sets, and exactly the
+eight G11 fields on both direct query results and encoded public nodes.
+The original e717 compiled baseline is retained in Unit B closure evidence and
+fails this property with 49,255,186 actual CLI stdout bytes. This is response size
+for that fixture, not a latency or HTTP-size measurement.
+
+dag-cli-input-proof.ts audits malformed and out-of-range applicable inputs for
+depend, undepend, graph, batch-depend, rm dependency flags, add --depends-on and
+Revert. Every usage refusal must exit 2 with one invalid_args object and named
+recovery, including zero Versions on existing-edge and absent-edge no-ops.
+Tasks, edges and Versions remain equal. Valid missing references retain domain
+not-found/profile errors, actual file I/O retains runtime_error, and valid stale
+no-ops still succeed. result.json contains the repeatable matrix and all exits.
