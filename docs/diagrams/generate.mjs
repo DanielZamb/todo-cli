@@ -324,7 +324,7 @@ const frame = (id, name, x, y, w, draw) => {
     Math.max(
       ...elements
         .filter((e) => e.frameId === id)
-        .map((e) => e.y + e.height),
+        .map((e) => e.y + (id.startsWith("dag-") && e.points ? Math.max(...e.points.map((p) => p[1])) : e.height)),
     ) -
     y +
     48;
@@ -1163,7 +1163,7 @@ for (const [suffix, name, offset] of [["electron", "Electron", 0], ["swift", "Sw
   ["offline", 0, 2, "GraphView / offline", "retain readable last graph\nall writes disabled; no retry action\nselected Task list still available"],
   ["gone", 1, 2, "Task deleted / selection recovery", "fall back to surviving region root\notherwise show deleted notice + Task list\nnever resurrect vanished Task content"],
 ], [
-  ["load", "ready", "response [latest identity]\n/ render region; bind accessible nodes"],
+  ["load", "ready", "response [latest identity]\n/ render region; bind accessible nodes", { from: "right", to: "left", labelAt: [945, 332.5] }],
   ["ready", "expand", "Expand [more neighbors]\n/ extend expanded-id set"],
   ["expand", "ready", "render [success]\n/ preserve transform and selection"],
   ["ready", "overview", "Overview [enabled]\n/ save region; fit group"],
@@ -1176,10 +1176,10 @@ for (const [suffix, name, offset] of [["electron", "Electron", 0], ["swift", "Sw
   ["refresh", "refresh", "response [obsolete]\n/ discard without host-state changes"],
   ["refresh", "error", "response [latest + failed]\n/ retain snapshot and host state"],
   ["ready", "offline", "disconnect [current Profile]\n/ retain snapshot; disable writes"],
-  ["load", "error", "read or render [failed]\n/ retain data; expose recovery"],
-  ["error", "load", "Retry [connected]\n/ issue current identity"],
+  ["load", "error", "read or render [failed]\n/ retain data; expose recovery", { from: "bottom", to: "top", fromT: 0.2, toT: 0.2, via: [[226, 500], [800, 500], [800, 900], [226, 900]], labelAt: [513, 500] }],
+  ["error", "load", "Retry [connected]\n/ issue current identity", { from: "top", to: "bottom", fromT: 0.8, toT: 0.8, via: [[634, 1370], [1040, 1370], [1040, 600], [634, 600]], labelAt: [837, 1370] }],
   ["error", "offline", "disconnect [current Profile]\n/ retain error and snapshot"],
-  ["offline", "load", "SSE ready [reconnected]\n/ reload current root", { from: "left", to: "left", via: [[35, 1372], [35, 332]], labelAt: [235, 1110] }],
+  ["offline", "load", "SSE ready [reconnected]\n/ reload current root", { from: "left", to: "top", toT: 0.8, via: [[30, 2832], [30, 1170], [920, 1170], [920, 125], [634, 125]], labelAt: [475, 1170] }],
 ], [
   "Disconnect from every online state enters Offline. Profile/root switches invalidate requests. Obsolete success/error self-loops discard without changing host state.",
   "Refresh returns to the saved region or overview mode. Expand/overview changes no server data. SSE errors retain viewport, selected id and focused id.",

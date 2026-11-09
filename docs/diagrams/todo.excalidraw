@@ -45576,12 +45576,7 @@
       "version": 1,
       "versionNonce": 8972227,
       "isDeleted": false,
-      "boundElements": [
-        {
-          "type": "text",
-          "id": "dag-electron-graph-transition-0-label"
-        }
-      ],
+      "boundElements": null,
       "updated": 1,
       "link": null,
       "locked": false,
@@ -45636,8 +45631,8 @@
       "updated": 1,
       "link": null,
       "locked": false,
-      "x": 768.5,
-      "y": 61310.5,
+      "x": 773.5,
+      "y": 61311,
       "width": 343,
       "height": 43,
       "text": "response [latest identity]\n/ render region; bind accessible nodes",
@@ -45646,7 +45641,7 @@
       "fontFamily": 9,
       "textAlign": "center",
       "verticalAlign": "middle",
-      "containerId": "dag-electron-graph-transition-0",
+      "containerId": null,
       "autoResize": true,
       "lineHeight": 1.25
     },
@@ -46852,18 +46847,13 @@
       "version": 1,
       "versionNonce": 9178121,
       "isDeleted": false,
-      "boundElements": [
-        {
-          "type": "text",
-          "id": "dag-electron-graph-transition-13-label"
-        }
-      ],
+      "boundElements": null,
       "updated": 1,
       "link": null,
       "locked": false,
-      "x": 430,
+      "x": 226,
       "y": 61415,
-      "width": 0,
+      "width": 574,
       "height": 1085,
       "points": [
         [
@@ -46872,11 +46862,19 @@
         ],
         [
           0,
-          648
+          85
+        ],
+        [
+          574,
+          85
+        ],
+        [
+          574,
+          485
         ],
         [
           0,
-          648
+          485
         ],
         [
           0,
@@ -46920,8 +46918,8 @@
       "updated": 1,
       "link": null,
       "locked": false,
-      "x": 294.5,
-      "y": 62017.5,
+      "x": 377.5,
+      "y": 61478.5,
       "width": 271,
       "height": 43,
       "text": "read or render [failed]\n/ retain data; expose recovery",
@@ -46930,7 +46928,7 @@
       "fontFamily": 9,
       "textAlign": "center",
       "verticalAlign": "middle",
-      "containerId": "dag-electron-graph-transition-13",
+      "containerId": null,
       "autoResize": true,
       "lineHeight": 1.25
     },
@@ -46952,18 +46950,13 @@
       "version": 1,
       "versionNonce": 9193959,
       "isDeleted": false,
-      "boundElements": [
-        {
-          "type": "text",
-          "id": "dag-electron-graph-transition-14-label"
-        }
-      ],
+      "boundElements": null,
       "updated": 1,
       "link": null,
       "locked": false,
-      "x": 430,
+      "x": 634,
       "y": 62500,
-      "width": 0,
+      "width": 406,
       "height": 1085,
       "points": [
         [
@@ -46972,11 +46965,19 @@
         ],
         [
           0,
-          -349
+          -130
+        ],
+        [
+          406,
+          -130
+        ],
+        [
+          406,
+          -900
         ],
         [
           0,
-          -349
+          -900
         ],
         [
           0,
@@ -47020,8 +47021,8 @@
       "updated": 1,
       "link": null,
       "locked": false,
-      "x": 321.5,
-      "y": 62105.5,
+      "x": 728.5,
+      "y": 62348.5,
       "width": 217,
       "height": 43,
       "text": "Retry [connected]\n/ issue current identity",
@@ -47030,7 +47031,7 @@
       "fontFamily": 9,
       "textAlign": "center",
       "verticalAlign": "middle",
-      "containerId": "dag-electron-graph-transition-14",
+      "containerId": null,
       "autoResize": true,
       "lineHeight": 1.25
     },
@@ -47158,24 +47159,36 @@
       "locked": false,
       "x": 90,
       "y": 63832.5,
-      "width": 55,
-      "height": 2500.5,
+      "width": 890,
+      "height": 2707.5,
       "points": [
         [
           0,
           0
         ],
         [
-          -55,
-          -1460.5
+          -60,
+          -0.5
         ],
         [
-          -55,
-          -2500.5
+          -60,
+          -1662.5
         ],
         [
-          0,
-          -2500
+          830,
+          -1662.5
+        ],
+        [
+          830,
+          -2707.5
+        ],
+        [
+          544,
+          -2707.5
+        ],
+        [
+          544,
+          -2582.5
         ]
       ],
       "lastCommittedPoint": null,
@@ -47215,8 +47228,8 @@
       "updated": 1,
       "link": null,
       "locked": false,
-      "x": 131,
-      "y": 62088.5,
+      "x": 371,
+      "y": 62148.5,
       "width": 208,
       "height": 43,
       "text": "SSE ready [reconnected]\n/ reload current root",
@@ -47769,7 +47782,7 @@
       "x": 0,
       "y": 61000,
       "width": 3000,
-      "height": 5381,
+      "height": 4280,
       "name": "Electron graph loading, navigation and SSE"
     },
     {
@@ -48862,12 +48875,7 @@
       "version": 1,
       "versionNonce": 9574071,
       "isDeleted": false,
-      "boundElements": [
-        {
-          "type": "text",
-          "id": "dag-swift-graph-transition-0-label"
-        }
-      ],
+      "boundElements": null,
       "updated": 1,
       "link": null,
       "locked": false,
@@ -48922,8 +48930,8 @@
       "updated": 1,
       "link": null,
       "locked": false,
-      "x": 768.5,
-      "y": 66310.5,
+      "x": 773.5,
+      "y": 66311,
       "width": 343,
       "height": 43,
       "text": "response [latest identity]\n/ render region; bind accessible nodes",
@@ -48932,7 +48940,7 @@
       "fontFamily": 9,
       "textAlign": "center",
       "verticalAlign": "middle",
-      "containerId": "dag-swift-graph-transition-0",
+      "containerId": null,
       "autoResize": true,
       "lineHeight": 1.25
     },
@@ -50138,18 +50146,13 @@
       "version": 1,
       "versionNonce": 9779965,
       "isDeleted": false,
-      "boundElements": [
-        {
-          "type": "text",
-          "id": "dag-swift-graph-transition-13-label"
-        }
-      ],
+      "boundElements": null,
       "updated": 1,
       "link": null,
       "locked": false,
-      "x": 430,
+      "x": 226,
       "y": 66415,
-      "width": 0,
+      "width": 574,
       "height": 1085,
       "points": [
         [
@@ -50158,11 +50161,19 @@
         ],
         [
           0,
-          648
+          85
+        ],
+        [
+          574,
+          85
+        ],
+        [
+          574,
+          485
         ],
         [
           0,
-          648
+          485
         ],
         [
           0,
@@ -50206,8 +50217,8 @@
       "updated": 1,
       "link": null,
       "locked": false,
-      "x": 294.5,
-      "y": 67017.5,
+      "x": 377.5,
+      "y": 66478.5,
       "width": 271,
       "height": 43,
       "text": "read or render [failed]\n/ retain data; expose recovery",
@@ -50216,7 +50227,7 @@
       "fontFamily": 9,
       "textAlign": "center",
       "verticalAlign": "middle",
-      "containerId": "dag-swift-graph-transition-13",
+      "containerId": null,
       "autoResize": true,
       "lineHeight": 1.25
     },
@@ -50238,18 +50249,13 @@
       "version": 1,
       "versionNonce": 9795803,
       "isDeleted": false,
-      "boundElements": [
-        {
-          "type": "text",
-          "id": "dag-swift-graph-transition-14-label"
-        }
-      ],
+      "boundElements": null,
       "updated": 1,
       "link": null,
       "locked": false,
-      "x": 430,
+      "x": 634,
       "y": 67500,
-      "width": 0,
+      "width": 406,
       "height": 1085,
       "points": [
         [
@@ -50258,11 +50264,19 @@
         ],
         [
           0,
-          -349
+          -130
+        ],
+        [
+          406,
+          -130
+        ],
+        [
+          406,
+          -900
         ],
         [
           0,
-          -349
+          -900
         ],
         [
           0,
@@ -50306,8 +50320,8 @@
       "updated": 1,
       "link": null,
       "locked": false,
-      "x": 321.5,
-      "y": 67105.5,
+      "x": 728.5,
+      "y": 67348.5,
       "width": 217,
       "height": 43,
       "text": "Retry [connected]\n/ issue current identity",
@@ -50316,7 +50330,7 @@
       "fontFamily": 9,
       "textAlign": "center",
       "verticalAlign": "middle",
-      "containerId": "dag-swift-graph-transition-14",
+      "containerId": null,
       "autoResize": true,
       "lineHeight": 1.25
     },
@@ -50444,24 +50458,36 @@
       "locked": false,
       "x": 90,
       "y": 68832.5,
-      "width": 55,
-      "height": 2500.5,
+      "width": 890,
+      "height": 2707.5,
       "points": [
         [
           0,
           0
         ],
         [
-          -55,
-          -1460.5
+          -60,
+          -0.5
         ],
         [
-          -55,
-          -2500.5
+          -60,
+          -1662.5
         ],
         [
-          0,
-          -2500
+          830,
+          -1662.5
+        ],
+        [
+          830,
+          -2707.5
+        ],
+        [
+          544,
+          -2707.5
+        ],
+        [
+          544,
+          -2582.5
         ]
       ],
       "lastCommittedPoint": null,
@@ -50501,8 +50527,8 @@
       "updated": 1,
       "link": null,
       "locked": false,
-      "x": 131,
-      "y": 67088.5,
+      "x": 371,
+      "y": 67148.5,
       "width": 208,
       "height": 43,
       "text": "SSE ready [reconnected]\n/ reload current root",
@@ -51055,7 +51081,7 @@
       "x": 0,
       "y": 66000,
       "width": 3000,
-      "height": 5381,
+      "height": 4280,
       "name": "SwiftUI graph loading, navigation and SSE"
     }
   ],

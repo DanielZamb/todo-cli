@@ -385,9 +385,9 @@ recheck. Model mappings refresh after the final clients land.
 
 | Unit | Owned work and proposed domain additions | Gate and proof |
 | --- | --- | --- |
-| A | Storage/replay. `store/0007.ts`, `store/dependencies.ts`, `dependencies.ts` for schemas, and a narrowly scoped graph invariant file if authoritative append needs it. Extend events, projection, Snapshot, Purge, Revert and guarded validation. New verify-dag from create-verification-skill. | After Phase 0 APPROVE. L1 behavior, compiled library replay, verify-op-log and verify-occ-atomicity. |
+| A | Storage/replay. `store/0007.ts`, `store/dependencies.ts`, `dependencies.ts` for schemas, and a narrowly scoped graph invariant file if authoritative append needs it. Extend events, projection, Snapshot, Purge, Revert and guarded validation. Regenerate OpenAPI and Swift for event-schema changes, with existing/new-kind SSE decode compatibility in both clients. New verify-dag from create-verification-skill. | After Phase 0 APPROVE. L1 behavior, compiled library replay, verify-op-log and verify-occ-atomicity. |
 | F | Formal model/checker, coverage and generated-input driver. No product edits. Coordinate function interfaces with A/B. | Parallel with A. Finish production conformance after B, final mapping at integration tip. |
-| B | Shared graph commands/queries/algorithms plus CLI and HTTP. Proposed `dependency-commands.ts`, `dependency-rules.ts`, `graph-queries.ts`, `graph-order.ts`, `graph-energy.ts`, `graph-mermaid.ts`; reuse and consolidate existing logic before adding each. Filters, lifecycle enforcement, batch, import/export/Obsidian, OpenAPI and regenerated Swift contract. | After A passes both seats and merges. L1 and L2 compiled CLI/server/filter/DAG drives. |
+| B | Shared graph commands/queries/algorithms plus CLI and HTTP. Proposed `dependency-commands.ts`, `dependency-rules.ts`, `graph-queries.ts`, `graph-order.ts`, `graph-energy.ts`, `graph-mermaid.ts`; reuse and consolidate existing logic before adding each. Filters, lifecycle enforcement, batch, import/export/Obsidian, OpenAPI and regenerated Swift contract. | After A passes both seats and merges. Regenerate contracts again for new routes. L1 and L2 compiled CLI/server/filter/DAG drives. |
 | E | Electron picker/drag/delete/graph/badges/sort/batch/Create follow-up and shared offline graph adapter. New renderer package only if a concrete two-client build requires it. | After A/B merge AND coordinator confirms final search-client base. L1 plus compiled unsigned host, Compact first, light/dark every new state. |
 | S | SwiftUI parity using generated HTTP types; WKWebView local resources, production TodoModel state tests, offscreen renders and identifiers. | Same gate, parallel with E. L1, unsigned build, state reload proof and light/dark full/Compact captures. |
 
@@ -417,6 +417,12 @@ the explicit unit SHA with git show and git diff; no checkout change is needed.
 The no-comments skill requests an extra research child, which this run forbids.
 As recorded in the search Phase 0 gate, inspect comments locally before commits
 and include that audit in the permitted seat-1 review. No extra child launches.
+After the coordinator authorizes rebasing onto the final search base, regenerate
+packages/api/openapi.json and the Swift API with the generators. Never hand-merge
+generated files. A must prove existing committed SSE operations still decode in
+Swift GeneratedContractTests and Electron protocol decode, and new DAG kinds
+are ignored or refresh safely without a decoder failure dropping the stream.
+
 Before final report, run post-implementation-review and server-core-structure
 across the whole branch, fix accepted findings and rerun affected proofs.
 
@@ -460,5 +466,8 @@ nonterminal Ready/Blocked, true-only filters, tree orientation, inclusive
 lightest_next, per-item batch atomicity, source-blocks-target list drag, same-note
 Obsidian block links, mandatory client/TTY fingerprints, exact counted warning
 text, and accessible-list recovery without a runtime second renderer.
-Unit B owns the final CONTEXT.md and architecture update. The graph frames need
-a further legibility pass before Phase 2, as requested by the coordinator.
+Unit B owns the final CONTEXT.md and architecture update. The graph frames have
+a further legibility pass after the coordinator review. Retry, SSE reconnect
+and failed-read labels each sit on a separate horizontal transition segment.
+The design check rejects overlapping transition labels or state-card collisions
+and verifies those three recovery labels against the actual arrow geometry.

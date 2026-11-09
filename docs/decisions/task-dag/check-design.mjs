@@ -22,6 +22,23 @@ const frames = scene.elements.filter((e) => e.type === "frame" && e.id.startsWit
 expect(frames.length, 11, "DAG frame count");
 let arrows = 0;
 for (const frame of frames) {
+  if (frame.id.endsWith("-graph")) {
+    const labels = scene.elements.filter(e => e.frameId === frame.id && e.type === "text" && e.id.includes("-transition-"));
+    const boxes = scene.elements.filter(e => e.frameId === frame.id && e.type === "rectangle");
+    const intersects = (a,b) => a.x < b.x+b.width && b.x < a.x+a.width && a.y < b.y+b.height && b.y < a.y+a.height;
+    for (let i=0; i<labels.length; i++) {
+      expect(labels.slice(i+1).filter(b=>intersects(labels[i],b)).map(b=>b.id), [], "graph transition labels do not overlap");
+      expect(boxes.filter(b=>intersects(labels[i],b)).map(b=>b.id), [], "graph transition labels avoid state cards");
+    }
+    for (const prefix of ["SSE ready [reconnected]", "Retry [connected]", "read or render [failed]"]) {
+      const label = labels.find(l=>l.text.startsWith(prefix));
+      if(!label) throw new Error("Missing graph recovery label " + prefix);
+      const a=all.get(label.id.slice(0,-6));
+      const cx=label.x+label.width/2, cy=label.y+label.height/2;
+      const points=a.points.map(([px,py])=>[a.x+px,a.y+py]);
+      expect(points.some((p,i)=>i>0 && p[1]===points[i-1][1] && Math.abs(cy-p[1])<1 && cx>=Math.min(p[0],points[i-1][0]) && cx<=Math.max(p[0],points[i-1][0])), true, "recovery label sits on its horizontal transition");
+    }
+  }
   for (const e of scene.elements.filter((e) => e.frameId === frame.id)) {
     const xs = e.points ? e.points.map(p=>e.x+p[0]) : [e.x,e.x+e.width];
     const ys = e.points ? e.points.map(p=>e.y+p[1]) : [e.y,e.y+e.height];
