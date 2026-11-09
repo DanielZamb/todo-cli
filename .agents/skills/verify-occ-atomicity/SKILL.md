@@ -194,14 +194,17 @@ Batch groups and import adoption compose existing commands within the existing i
 
 ## PERF-tags mapping review
 
-Product commit `07550ecd35890094625711a5269b8d7c6eb476dc` changes only
+Product commit `d83d61863b95d2482ca9281a34d5db4494abffbb` changes only
 `putTask` in the modeled production path. Its SELECT reads actual link rows
-inside the existing immediate transaction. Equal Tag sets skip only link
-DELETE and INSERT. The Task payload statement still precedes the separate
+inside the existing immediate transaction. Equal Tag sets with distinct payload
+ids skip only link DELETE and INSERT. Other inputs use the original array INSERT
+loop, so duplicate ids fail the link primary key and roll back the transaction.
+This D1 correction supersedes the duplicate-collapse behavior in `07550ecd`.
+The Task payload statement still precedes the separate
 Version statement, so `Apply`, `WriteVersion`, `Commit` and every crash boundary
 remain in the same order. The abstract no-Tag fixture still describes both
 writes; the concrete Tag proof in `verify-op-log` covers link branches, payload
-order, duplicate collapse, rebuild, rollback, Move, Delete and Revert.
+order, duplicate constraint failures, rebuild, rollback, Move, Delete and Revert.
 
 The inherited mapping had drifted before this unit. Inspection of the delta
 from `ed4e2423` through parent `8c7c7b10` found bounded rejection inputs and
@@ -219,3 +222,10 @@ hashes and `confirmedCommit` were then renewed. Local evidence is
 `docs/evidence/fv01/sensitivity-Km03fK/` and
 `docs/evidence/perf-tags/sensitivity-reviewed.log`. The one-command clean
 recheck and the full worker report record the final evidence location.
+
+For the D1 correction, the pre-renewal checker completed the model and production
+stages before failing only the changed projection hash. The mapping review above
+keeps every atomicity boundary unchanged. Fresh sensitivity again rejected both
+real-code defects with exit 1 and passed the restored command with exit 0.
+Evidence is `docs/evidence/perf-tags/d1/sensitivity.log` and
+`docs/evidence/fv01/sensitivity-d7gc1J/`. The source hashes now identify `d83d6186`.

@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "07550ecd35890094625711a5269b8d7c6eb476dc",
+  "confirmedCommit": "d83d61863b95d2482ca9281a34d5db4494abffbb",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
@@ -19,7 +19,7 @@
     },
     {
       "path": "packages/domain/src/store/projection.ts",
-      "sha256": "03774ec9db2fce1b5ad66a7632394f97763b122fc41d6b80c7c3a872040b2663",
+      "sha256": "944adc71cfe493c8631119daeba165e16c688426de7e3694112cb3f8b84d465a",
       "functions": [
         "changes",
         "applyEvent",
