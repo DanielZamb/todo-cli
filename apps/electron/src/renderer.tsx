@@ -630,13 +630,12 @@ function App() {
     const focus = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f") {
         event.preventDefault();
-        if (compact) setEditor(null);
         requestAnimationFrame(() => searchInput.current?.focus());
       }
     };
     window.addEventListener("keydown", focus);
     return () => window.removeEventListener("keydown", focus);
-  }, [compact]);
+  }, []);
   useEffect(() => {
     void request({ _tag: "windowMode" }).then((reply) => {
       if (reply._tag === "windowMode") setCompact(reply.compact);
@@ -1237,16 +1236,20 @@ function App() {
     if (signedIn) void refresh();
   }, [signedIn, refresh]);
   const groups = catalog
-    ? searchGroups(catalog).map((group) => ({
-        ...group,
-        tasks: group.tasks.filter(
-          (task) =>
-            (appliedSearch?.appliedIdentity.project == null ||
-              task.project_id === appliedSearch.appliedIdentity.project) &&
-            (appliedSearch?.appliedIdentity.tag == null ||
-              task.tags.some((id) => id === appliedSearch.appliedIdentity.tag)),
-        ),
-      }))
+    ? searchGroups(catalog)
+        .map((group) => ({
+          ...group,
+          tasks: group.tasks.filter(
+            (task) =>
+              (appliedSearch?.appliedIdentity.project == null ||
+                task.project_id === appliedSearch.appliedIdentity.project) &&
+              (appliedSearch?.appliedIdentity.tag == null ||
+                task.tags.some(
+                  (id) => id === appliedSearch.appliedIdentity.tag,
+                )),
+          ),
+        }))
+        .filter((group) => !searchText.trim() || group.tasks.length > 0)
     : [];
   const overlaps = editor && latest ? conflicts(editor, latest) : [];
   const rowDateOptions = { now: new Date(presentationNow) };
@@ -1354,6 +1357,34 @@ function App() {
         </form>
       </main>
     );
+  const taskSearchField = (
+    <Field className="task-search-field">
+      <div className="task-search-input">
+        <Search aria-hidden="true" />
+        <Input
+          id="compact-search"
+          ref={searchInput}
+          aria-label="Search tasks"
+          placeholder="Search tasks"
+          value={searchText}
+          aria-busy={
+            searchPhase === "Debouncing" || searchPhase === "Requesting"
+          }
+          onChange={(event) => changeSearch(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              event.stopPropagation();
+              changeSearch("");
+            }
+          }}
+        />
+        {(searchPhase === "Debouncing" || searchPhase === "Requesting") && (
+          <LoaderCircle className="search-progress" aria-label="Searching" />
+        )}
+      </div>
+    </Field>
+  );
   return (
     <div
       className={cn(
@@ -1810,34 +1841,7 @@ function App() {
             )}
           </div>
         </header>
-        <Field className="task-search-field">
-          <div className="task-search-input">
-            <Search aria-hidden="true" />
-            <Input
-              id="compact-search"
-              ref={searchInput}
-              aria-label="Search tasks"
-              placeholder="Search tasks"
-              value={searchText}
-              aria-busy={
-                searchPhase === "Debouncing" || searchPhase === "Requesting"
-              }
-              onChange={(event) => changeSearch(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") {
-                  event.preventDefault();
-                  changeSearch("");
-                }
-              }}
-            />
-            {(searchPhase === "Debouncing" || searchPhase === "Requesting") && (
-              <LoaderCircle
-                className="search-progress"
-                aria-label="Searching"
-              />
-            )}
-          </div>
-        </Field>
+        {!quick && !(compact && editor) && taskSearchField}
         <FieldSet className="task-filters" aria-label="Task filters">
           <FieldGroup className="task-filter-fields">
             <Field>
@@ -1976,17 +1980,20 @@ function App() {
             <CircleAlert />
             <AlertDescription>
               <span>
-                Couldn't search. Showing results for "
-                {appliedSearch?.appliedIdentity.text ?? ""}".
+                {appliedSearch?.appliedIdentity.text
+                  ? `Couldn't search. Showing results for "${appliedSearch.appliedIdentity.text}".`
+                  : "Couldn't search. Showing tasks without search."}
               </span>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  void refresh();
-                }}
-              >
-                Retry
-              </Button>
+              {connection === "connected" && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    void refresh();
+                  }}
+                >
+                  Retry
+                </Button>
+              )}
             </AlertDescription>
           </Alert>
         )}
@@ -2421,11 +2428,7 @@ function App() {
               </DropdownMenu>
             </div>
           </div>
-          <TaskIdCopy
-            key={editor.base.id}
-            task={editor.base.id}
-            request={request}
-          />
+          {compact && !quick && taskSearchField}
           <form
             id="task-editor-form"
             onSubmit={(e) => {
@@ -2443,6 +2446,11 @@ function App() {
                   disabled={readOnly}
                 />
               </Field>
+              <TaskIdCopy
+                key={editor.base.id}
+                task={editor.base.id}
+                request={request}
+              />
               <Field>
                 <FieldLabel htmlFor="description">
                   Description <span className="quiet">Markdown</span>
@@ -2787,7 +2795,10 @@ function App() {
         />
       )}
       <Dialog open={quick} onOpenChange={setQuick}>
-        <DialogContent className="quick-dialog">
+        <DialogContent
+          className="quick-dialog"
+          initialFocus={() => document.getElementById("quick-title")}
+        >
           <div className="quick-heading">
             <DialogTitle>New task</DialogTitle>
             <DialogDescription className="profile-chip">
@@ -2797,6 +2808,7 @@ function App() {
               )}
             </DialogDescription>
           </div>
+          {quick && taskSearchField}
           <form
             className="quick-add-form"
             onSubmit={(event) => {

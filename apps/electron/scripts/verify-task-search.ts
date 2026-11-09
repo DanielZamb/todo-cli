@@ -263,6 +263,15 @@ try {
     timeout: 60000,
   });
   const page = await desktop.firstWindow();
+  checks.push({
+    verificationWindows: await desktop.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows().map((window) => ({
+        id: window.id,
+        visible: window.isVisible(),
+        focused: window.isFocused(),
+      })),
+    ),
+  });
   page.setDefaultTimeout(30000);
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(String(error)));
@@ -283,6 +292,9 @@ try {
   const query = async (text: string, expected: string[]) => {
     await field.fill(text);
     await showing(text);
+    await expect(
+      page.locator(".list-heading").filter({ hasText: /\b0 tasks\b/ }),
+    ).toHaveCount(0);
     expect((await titles()).toSorted()).toEqual(expected.toSorted());
     expect(await titles()).toEqual(
       filteredReplies
@@ -296,6 +308,7 @@ try {
     });
   };
   const shot = async (name: string) => {
+    await expect(page.locator("#compact-search")).toBeVisible();
     await page.screenshot({
       path: join(evidence, `${name}.png`),
       animations: "disabled",
@@ -378,6 +391,15 @@ try {
   };
   await showing("");
   await expect.poll(() => eventConnections).toBe(1);
+  failText = "reno";
+  await field.fill("reno");
+  await expect(pane).toHaveAttribute("data-search-phase", "Error");
+  await expect(page.getByLabel("Search failed")).toContainText(
+    "Couldn't search. Showing tasks without search.",
+  );
+  failText = null;
+  await field.fill("");
+  await showing("");
   await page.getByRole("button", { name: "Compact mode", exact: true }).click();
   await expect
     .poll(() =>
@@ -419,6 +441,12 @@ try {
           .allTextContents(),
       ).toEqual(["Canción"]);
       await shot(`${prefix}-description`);
+      expect(
+        await page
+          .locator(".search-results mark")
+          .first()
+          .evaluate((mark) => getComputedStyle(mark).backgroundColor),
+      ).toBe(theme === "light" ? "rgb(221, 239, 216)" : "rgb(52, 88, 63)");
       const excerptBounds = await page
         .locator(".search-excerpt")
         .evaluate((element) => ({
@@ -455,6 +483,34 @@ try {
         'Couldn\'t search. Showing results for "reno".',
       );
       await shot(`${prefix}-error`);
+      await desktop.evaluate(({ BrowserWindow }) => {
+        BrowserWindow.getAllWindows()[0]?.webContents.send("todo:notice", {
+          _tag: "connection",
+          profile: "work",
+          state: "offline",
+        });
+      });
+      await expect(
+        page
+          .getByLabel("Search failed")
+          .getByRole("button", { name: "Retry", exact: true }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole("button", { name: "Reconnect", exact: true }),
+      ).toHaveCount(1);
+      await shot(`${prefix}-offline-search`);
+      const beforeConnectedNotice = receipts.length;
+      await desktop.evaluate(({ BrowserWindow }) => {
+        BrowserWindow.getAllWindows()[0]?.webContents.send("todo:notice", {
+          _tag: "connection",
+          profile: "work",
+          state: "connected",
+        });
+      });
+      await expect
+        .poll(() => receipts.length)
+        .toBeGreaterThan(beforeConnectedNotice);
+      await expect(pane).toHaveAttribute("data-search-phase", "Error");
       const failedCount = receipts.length;
       await page.waitForTimeout(450);
       expect(receipts.length).toBe(failedCount);
@@ -514,19 +570,40 @@ try {
       await expect(page.getByLabel("Task id", { exact: true })).toHaveText(
         passport.id,
       );
+      const titleBounds = await page
+        .getByLabel("Title", { exact: true })
+        .boundingBox();
+      const idBounds = await page
+        .getByLabel("Task id", { exact: true })
+        .boundingBox();
+      expect(
+        titleBounds &&
+          idBounds &&
+          idBounds.y >= titleBounds.y + titleBounds.height,
+      ).toBe(true);
+      await expect(field).toBeVisible();
+      await page
+        .getByLabel("Title", { exact: true })
+        .fill("Keep this editor draft");
+      await page.keyboard.press("Meta+f");
+      await expect(field).toBeFocused();
+      await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
+        "Keep this editor draft",
+      );
+      await page.getByLabel("Title", { exact: true }).fill(passport.title);
       await page
         .getByRole("button", { name: "Copy task id", exact: true })
         .click();
       await expect(
-        page.getByRole("button", { name: "Copy task id", exact: true }),
+        page.getByLabel("Task id copy feedback", { exact: true }),
       ).toHaveText("Copied");
       expect(
         await desktop.evaluate(async ({ clipboard }) => clipboard.readText()),
       ).toBe(passport.id);
       await shot(`${prefix}-detail-copied`);
       await expect(
-        page.getByRole("button", { name: "Copy task id", exact: true }),
-      ).toHaveText("Copy");
+        page.getByLabel("Task id copy feedback", { exact: true }),
+      ).toHaveText("");
       await desktop.evaluate(() => {
         process.emit("todo:verify-copy-failure");
       });
@@ -548,11 +625,14 @@ try {
       expect(cli("show", passport.id).task.row_version).toBe(1);
       await page.keyboard.press("Meta+f");
       await expect(field).toBeFocused();
-      if (!compact)
-        await expect(page.getByLabel("Title", { exact: true })).toBeVisible();
+      await expect(page.getByLabel("Title", { exact: true })).toBeVisible();
       await field.press("Escape");
       await showing("");
-      if (!compact) {
+      if (compact) {
+        await page
+          .getByRole("button", { name: "Back to tasks", exact: true })
+          .click();
+      } else {
         await page
           .getByRole("button", { name: "Task actions", exact: true })
           .click();
@@ -560,6 +640,41 @@ try {
           .getByRole("menuitem", { name: "Close editor", exact: true })
           .click();
       }
+      await page
+        .getByRole("button", { name: "Quick add", exact: true })
+        .click();
+      const quick = page.getByRole("dialog", { name: "New task", exact: true });
+      await expect(
+        quick.getByLabel("Task title", { exact: true }),
+      ).toBeFocused();
+      await quick
+        .getByLabel("Task title", { exact: true })
+        .fill("Keep this Quick add draft");
+      await expect(
+        quick.getByRole("textbox", { name: "Search tasks", exact: true }),
+      ).toBeVisible();
+      await page.keyboard.press("Meta+f");
+      await expect(field).toBeFocused();
+      await expect(quick.getByLabel("Task title", { exact: true })).toHaveValue(
+        "Keep this Quick add draft",
+      );
+      await field.fill("reno");
+      await showing("reno");
+      await expect(quick.getByLabel("Task title", { exact: true })).toHaveValue(
+        "Keep this Quick add draft",
+      );
+      await shot(`${prefix}-quick-add-search`);
+      await field.press("Escape");
+      await showing("");
+      await expect(quick).toBeVisible();
+      await quick.getByRole("button", { name: "Close", exact: true }).click();
+      checks.push({
+        toolbarAvailable: prefix,
+        detailDraftPreserved: true,
+        quickAddDraftPreserved: true,
+        cmdF: true,
+        esc: true,
+      });
     }
     if (compact) {
       await query("pasaprote", ["Renovar el pasaporte"]);

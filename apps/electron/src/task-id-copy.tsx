@@ -1,4 +1,5 @@
 import type { TaskId } from "@todo/domain";
+import { Check, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "./components/ui/button.tsx";
 import type { Reply, Request } from "./protocol.ts";
@@ -27,8 +28,10 @@ export function TaskIdCopy({
       </fieldset>
       <Button
         type="button"
-        variant="outline"
+        variant="ghost"
+        size="icon"
         aria-label="Copy task id"
+        title="Copy task id"
         onClick={async () => {
           const reply = await request({ _tag: "copyTaskId", task });
           setFeedback({
@@ -37,14 +40,15 @@ export function TaskIdCopy({
           });
         }}
       >
-        {current === "copied" ? "Copied" : "Copy"}
+        {current === "copied" ? <Check /> : <Copy />}
       </Button>
       <span
         role={current === "failed" ? "alert" : "status"}
-        className={current === "failed" ? "copy-error" : "sr-only"}
+        aria-label="Task id copy feedback"
+        className={current === "failed" ? "copy-error" : "copy-feedback"}
       >
         {current === "copied"
-          ? "Task id copied"
+          ? "Copied"
           : current === "failed"
             ? "Couldn't copy task id. Try again."
             : ""}

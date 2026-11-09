@@ -1488,6 +1488,10 @@ nav {
   margin-bottom: 8px;
   flex-shrink: 0;
 }
+.compact .editor > .task-search-field {
+  width: auto;
+  margin: 0 16px 8px;
+}
 .task-search-input {
   position: relative;
   display: flex;
@@ -1528,7 +1532,7 @@ nav {
 }
 .search-results mark {
   color: inherit;
-  background: var(--selection);
+  background: var(--search-highlight);
   font-weight: 600;
 }
 .task-row.has-search-excerpt {
@@ -1580,6 +1584,11 @@ nav {
   user-select: text;
   overflow-wrap: anywhere;
   min-width: 0;
+  color: var(--muted-foreground);
+}
+.copy-feedback {
+  color: var(--muted-foreground);
+  font-size: 12px;
 }
 .copy-error {
   color: var(--destructive);
@@ -1596,10 +1605,6 @@ nav {
 }
 .compact .task-filter-fields [data-slot="field-label"] {
   display: none;
-}
-.compact .task-id-copy {
-  padding-inline: 16px;
-  flex-shrink: 0;
 }
 .task-filter-dialog form {
   overflow: clip;

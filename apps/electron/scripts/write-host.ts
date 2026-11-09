@@ -76,6 +76,7 @@ async function boot() {
     width: 1280,
     height: 927,
     title: "Todo",
+    show: process.env.TODO_ELECTRON_VERIFY_BACKGROUND !== "1",
     webPreferences: {
       preload: join(import.meta.dirname, "../preload.cjs"),
       contextIsolation: true,

@@ -5,7 +5,7 @@ an unsigned host against fresh compiled scratch CLI/server data:
 
 ```sh
 bun .agents/skills/verify-cli/scripts/cache-binaries.ts
-bun -e 'const p = await Bun.file(".scratch/bin/build.json").json(); const child = Bun.spawn(["sh", ".agents/skills/verify-electron/scripts/verify.sh", `${process.cwd()}/docs/evidence/task-search/electron-new`], {env: {...process.env, TODO_ELECTRON_VERIFY_HOST:"1", TODO_VERIFY_TASK_SEARCH:"1", TODO_CLI_BINARY:p.cli, TODO_SERVER_BINARY:p.server, TODO_SEED_BINARY:p.seed}, stdout:"inherit", stderr:"inherit"}); process.exit(await child.exited);'
+bun -e 'const p = await Bun.file(".scratch/bin/build.json").json(); const child = Bun.spawn(["sh", ".agents/skills/verify-electron/scripts/verify.sh", `${process.cwd()}/docs/evidence/task-search/electron-new`], {env: {...process.env, TODO_ELECTRON_VERIFY_HOST:"1", TODO_ELECTRON_VERIFY_BACKGROUND:"1", TODO_VERIFY_TASK_SEARCH:"1", TODO_CLI_BINARY:p.cli, TODO_SERVER_BINARY:p.server, TODO_SEED_BINARY:p.seed}, stdout:"inherit", stderr:"inherit"}); process.exit(await child.exited);'
 ```
 
 Choose a fresh absolute evidence directory. The shell helper owns the disk guard
@@ -13,6 +13,12 @@ and shared `/tmp/todo-search-electron.lock`; never wrap it in another lock.
 The binary cache records its source hash and commit in `.scratch/bin/build.json`.
 Each drive provisions its own HOME, SQLite and Attachment root. Read the real
 process exit and `result.json`. The server readiness allowance is 60 seconds.
+
+Background verification leaves the host BrowserWindow unshown, isolating its
+renderer from desktop keystrokes. The drive still checks document focus, actual
+BrowserWindow content size, production IPC and rendered captures. It records
+visible/focused flags for every owned window. This proves no native activation
+or signed-app focus behavior. Use this option when other work uses the desktop.
 
 The always-visible installed shadcn Input has label `Search tasks` and id
 `compact-search`. Cmd+F focuses it, including from Compact detail. Esc clears it.
@@ -51,11 +57,19 @@ uses the native clipboard IPC handler. Copied returns to Copy after two seconds.
 Failure announces `Couldn't copy task id. Try again.` until retry, dismissal or
 another Task detail. Copy never changes Task Version.
 
+The id sits below the title in secondary monospace, with an icon-only Copy
+button and visible feedback. Active text omits empty groups. Highlights use the
+shared search-highlight light/dark token, checked against literal sRGB colors.
+An empty applied query reports "Couldn't search. Showing tasks without search."
+While disconnected, search keeps its message and offers only footer Reconnect.
+The offline recovery-action capture uses a current-Profile connection notice
+fixture; real stream-close and operation recovery remain separate checks.
+
 ## Coverage and evidence
 
 `apps/electron/scripts/verify-task-search.ts` drives Compact 393 × 426 FIRST,
 then full, in light/dark. It captures ready, typing, Requesting, description,
-empty, error, Filters prefix, detail Copied and detail failure. `task-search.json`
+empty, error, Filters prefix, detail Copied, detail failure and Quick add search. `task-search.json`
 records literal titles, identities and DOM bounds. `actions.json` records real
 HTTP payloads/statuses and compiled CLI exits. `binary-provenance.json` identifies
 the compiled inputs. The trace and server log survive cleanup.
@@ -84,4 +98,10 @@ not establish VoiceOver behavior or signed production app startup.
 
 Empty search hides the header Quick add in both layouts, leaving Clear search
 as the single primary action. Cmd+F preserves the open full-window detail; in
-Compact it returns to the Task view to focus the search field.
+Compact it focuses the shared field above detail without closing the editor.
+Quick add includes the same active field inside its modal focus scope, with one
+`compact-search` control mounted at a time. New task initially focuses Task title.
+Cmd+F and Esc preserve both editor and Quick add drafts. The drive requires the
+search control visible before each capture and checks focus and literal drafts
+in detail and Quick add in both layouts and appearances. Zero-size search
+controls cannot pass by being filtered out of the bounds receipt.
