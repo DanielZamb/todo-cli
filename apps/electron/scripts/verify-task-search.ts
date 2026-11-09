@@ -1051,7 +1051,7 @@ try {
   await expect(pane).toHaveAttribute("data-search-phase", "Error");
   await expect(field).toBeFocused();
   const recovery =
-    "Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.";
+    "Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.\nerror 2 - validation or usage";
   const expectRefusal = async (context: string) => {
     await expect(page.getByLabel("Search failed").locator("span")).toHaveText(
       recovery,

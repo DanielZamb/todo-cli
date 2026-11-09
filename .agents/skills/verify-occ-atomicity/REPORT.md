@@ -113,3 +113,15 @@ A close next target is preserving the caller's expected Version through import
 adoption, especially when a Task gains an external id while another client
 edits it. The current skill protects the shared storage transaction; it does
 not prove that callers pass the Version the owner approved.
+
+## Agent discovery renewal after the SEC merge
+
+The reviewed product is `36f9c56e200048aa2ca16186aaf713bea8d5454e`. Its SEC parent is `9de893454cb6e3f5729407e9313c73e56bfd0481`. The earlier gate failure is preserved at `docs/evidence/fv01/fv01-check-XaBaHF`. All behavior stages passed, and the source gate named only `packages/domain/src/attachments.ts`.
+
+The covered store, projection, event, entity, and id files retain the SEC-reviewed bytes. The Attachment change adds report-error exit and Task lookup context fields plus the `TaskLookupDetails` import. It changes neither stored `Attachment` validation nor the modeled transaction. The report schema is outside the atomicity claim. No model, invariant, fixture, or bound changed.
+
+The renewed one-command run exited 0 at `docs/evidence/fv01/fv01-check-E2Uefa`. TLC exhausted 37,036 distinct states. The production enumeration, replay, crash, competing-writer, rollback, strict-type, and source checks passed.
+
+`bun .agents/skills/verify-occ-atomicity/prove-sensitivity.ts` exited 0 at `docs/evidence/fv01/sensitivity-AGWD3B`. Removing the Task before-value check made a wrong before-value commit and exited 1 at the intended assertion. Omitting the TaskEdited projection made the durable Task disagree with History and exited 1 at the intended assertion. Both failures occurred before the source gate. Every mutation restored the original bytes. The restored full command exited 0.
+
+The normal command remains `bun .agents/skills/verify-occ-atomicity/check.ts`. This renewal establishes the existing bounded atomicity claim. Authorization, cross-Profile discovery, client response ordering, multiple Tasks in one transaction, and native behavior remain outside that claim. No production or domain file was added by the renewal.

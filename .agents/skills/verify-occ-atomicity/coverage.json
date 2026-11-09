@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "f709549c30d7f76543b103f6d31b7c78d2840664",
+  "confirmedCommit": "36f9c56e200048aa2ca16186aaf713bea8d5454e",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
@@ -46,17 +46,28 @@
     {
       "path": "packages/domain/src/entities.ts",
       "sha256": "ee505f78a6434528dbfe5f072463ec77cd6823bab1781f3f656d01c77f2d52f9",
-      "functions": ["Task", "Profile"]
+      "functions": [
+        "Task",
+        "Profile"
+      ]
     },
     {
       "path": "packages/domain/src/ids.ts",
       "sha256": "c1081994f401f4898f950348587ff4633fd36eb822628ca00d3d215e73defd0f",
-      "functions": ["ActorId", "ProfileId", "TaskId", "Version"]
+      "functions": [
+        "ActorId",
+        "ProfileId",
+        "TaskId",
+        "Version"
+      ]
     },
     {
       "path": "packages/domain/src/attachments.ts",
-      "sha256": "d6ba1579e84f5db261ecae9c12b9000757c42514ae99192b97c6da5a31668e26",
-      "functions": ["Attachment", "validAttachmentLocation"]
+      "sha256": "7094e663ad7a34dc38de76529a471c6f1b1d9c52c2f29883666b408603e1962e",
+      "functions": [
+        "Attachment",
+        "validAttachmentLocation"
+      ]
     }
   ]
 }
