@@ -26,6 +26,74 @@ export async function proveGraphPublic(input: {
   const { run, http, evidence } = input;
   const add = (title: string) =>
     Schema.decodeUnknownSync(TaskResponse)(run(["add", title])).task;
+  const completionBlocker = add("Completion Revert blocker");
+  const completionDependent = Schema.decodeUnknownSync(TaskResponse)(
+    run([
+      "add",
+      "Completion Revert dependent",
+      "--depends-on",
+      completionBlocker.id,
+    ]),
+  ).task;
+  assert.equal(
+    run(
+      ["done", completionDependent.id, "--expected-version", "1", "--force"],
+      2,
+    ).code,
+    "blocked",
+  );
+  run(["done", completionBlocker.id, "--expected-version", "1"]);
+  run(["done", completionDependent.id, "--expected-version", "1"]);
+  const completionHistory = Schema.decodeUnknownSync(
+    Schema.Struct({
+      entries: Schema.Array(
+        Schema.Struct({
+          seq: Schema.Int,
+          event: Schema.Struct({ kind: Schema.String }),
+        }),
+      ),
+    }),
+  )(run(["history", completionBlocker.id]));
+  const completionSeq = completionHistory.entries.find(
+    (entry) => entry.event.kind === "TaskCompleted",
+  )?.seq;
+  assert.ok(completionSeq);
+  const refusedInverse = run(
+    ["revert", String(completionSeq), "--expected-version", "2"],
+    2,
+  );
+  assert.equal(refusedInverse.code, "blocks_done_task");
+  assert.match(
+    String(refusedInverse.message),
+    new RegExp(`--depends-on ${completionDependent.id}`),
+  );
+  const httpInverse = Schema.decodeUnknownSync(
+    Schema.Struct({ code: Schema.String, details: Schema.Json }),
+  )(
+    await http(
+      "POST",
+      `/profiles/default/tasks/${completionBlocker.id}/revert`,
+      { seq: completionSeq, from_version: 2 },
+      422,
+    ),
+  );
+  assert.equal(httpInverse.code, "blocks_done_task");
+  assert.deepEqual(httpInverse.details, refusedInverse.details);
+  const freshBlocker = add("Unresolved blocker for done Task");
+  assert.equal(
+    run(
+      [
+        "depend",
+        completionDependent.id,
+        "--on",
+        freshBlocker.id,
+        "--expected-version",
+        "2",
+      ],
+      2,
+    ).code,
+    "blocked",
+  );
   const target = add("Empty preview target");
   const dependent = add("Empty preview dependent");
   run(["depend", dependent.id, "--on", target.id, "--expected-version", "1"]);
@@ -313,6 +381,13 @@ export async function proveGraphPublic(input: {
     assert.deepEqual(
       filtered?.map((task) => task.id),
       [id("rank-terminal")],
+    );
+    const open = Schema.decodeUnknownSync(TasksResponse)(
+      run(["list", "--text", "Rank", "--status", "open", "--order", order]),
+    ).tasks;
+    assert.deepEqual(
+      open?.map((task) => task.id),
+      [id("rank-source"), id("rank-goal")],
     );
   }
   const shape = Schema.decodeUnknownSync(GraphReport)(
