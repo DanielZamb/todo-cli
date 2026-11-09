@@ -78,3 +78,5 @@ the full captured DependencyError through authenticated ports; only the bounded
 copy enters History. Neither changes the one-Task v1 fixtures. Purge now finds
 Task content inside rejection witnesses as well as compact edge endpoint IDs.
 Those paths are exercised by the compiled DAG cases, outside AtomicCAS's bounds.
+
+Reviewed product commit: 96c0f3ea19dcab207d1d06a66d333a80d78c2f36.
