@@ -1530,7 +1530,7 @@ export const revertTask = (
         Effect.gen(function* () {
           if (
             !event ||
-            !eventChanges(event).tasks.some(
+            !eventChanges(event, request.profile).tasks.some(
               (change) =>
                 (change.after ?? change.before)?.id === request.task_id,
             )

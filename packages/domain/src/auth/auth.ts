@@ -2,7 +2,7 @@ import type { Database } from "bun:sqlite";
 import { createHash, randomBytes } from "node:crypto";
 import { Cause, Clock, Effect, Exit, Schema } from "effect";
 import type { Profile } from "../entities.ts";
-import { type AuthAction, Event, type OpLogEntry } from "../events.ts";
+import { type AppendResult, type AuthAction, Event } from "../events.ts";
 import { ActorId, ProfileId, Sequence } from "../ids.ts";
 import type {
   DeleteProfile,
@@ -80,20 +80,20 @@ type Ports<Read> = {
   }) => ProfileDeletionResult;
   readonly read: (profile: ProfileId) => Read;
   readonly profiles: () => readonly Profile[];
-  readonly startSeries: (input: StartSeries) => OpLogEntry;
-  readonly finishTask: (input: FinishTask) => OpLogEntry;
+  readonly startSeries: (input: StartSeries) => AppendResult;
+  readonly finishTask: (input: FinishTask) => AppendResult;
   readonly append: (input: {
     actor: ActorId;
     profile: ProfileId;
     event: unknown;
-  }) => OpLogEntry;
+  }) => AppendResult;
   readonly credentialUsed?: (id: string, time: number) => void;
   readonly revert: (input: {
     actor: ActorId;
     profile: ProfileId;
     seq: Sequence;
     occurred_at: Instant;
-  }) => OpLogEntry;
+  }) => AppendResult;
 };
 
 export class Authentication<Read> {
@@ -667,7 +667,7 @@ export class Authentication<Read> {
         request.profile,
       );
       if (Schema.is(Event)(input.event)) {
-        const targets = changes(input.event);
+        const targets = changes(input.event, request.profile);
         const definitions = metadata(input.event);
         const profiles = [
           ...targets.tasks.flatMap(({ before, after }) => [
@@ -706,17 +706,10 @@ export class Authentication<Read> {
       );
       if (request.series.profile_id !== request.profile)
         throw new AuthError("profile_scope", credential.id);
+      const { credential: _credential, ...facts } = request;
       return this.ports.startSeries({
+        ...facts,
         actor: Schema.decodeUnknownSync(ActorId)(credential.id),
-        profile: request.profile,
-        series: request.series,
-        ...(request.external_id === undefined
-          ? {}
-          : { external_id: request.external_id }),
-        ...(request.project === undefined ? {} : { project: request.project }),
-        ...(request.tags === undefined ? {} : { tags: request.tags }),
-        task_id: request.task_id,
-        occurrence_id: request.occurrence_id,
         occurred_at: instant(time),
       });
     });

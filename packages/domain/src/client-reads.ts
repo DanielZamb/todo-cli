@@ -3,7 +3,7 @@ import type { AccessRequest } from "./auth/model.ts";
 import { filterTasks } from "./commands.ts";
 import { Profile, Project, Tag, Task } from "./entities.ts";
 import type { OpLogEntry } from "./events.ts";
-import type { TaskId } from "./ids.ts";
+import { TaskId } from "./ids.ts";
 import { taskView } from "./presentation.ts";
 import { changes } from "./store/projection.ts";
 import type { OperationStore } from "./store/store.ts";
@@ -60,6 +60,10 @@ export const isInboxTask = (
 
 const openTasks = (tasks: readonly Task[]) =>
   tasks.filter((task) => task.status === "open" && task.deleted_at === null);
+const dependencyReference = Schema.Struct({
+  dependent_id: TaskId,
+  blocker_id: TaskId,
+});
 const concernsTask = (entry: OpLogEntry, id: TaskId) => {
   const event = entry.event;
   switch (event.kind) {
@@ -72,17 +76,36 @@ const concernsTask = (entry: OpLogEntry, id: TaskId) => {
     case "TaskHistoryRedacted":
       return (
         event.task_ids.includes(id) ||
+        [
+          ...(event.replay.dependencies?.added ?? []),
+          ...(event.replay.dependencies?.removed ?? []),
+        ].some((edge) => edge.dependent_id === id || edge.blocker_id === id) ||
         event.replay.tasks.some(
           ({ before, after }) => before?.id === id || after?.id === id,
         )
       );
     case "ReminderFired":
-    case "TaskAttemptRejected":
       return event.task_id === id;
-    default:
-      return changes(event).tasks.some(
-        ({ before, after }) => before?.id === id || after?.id === id,
+    case "TaskAttemptRejected":
+      return (
+        event.task_id === id ||
+        event.violations.some(
+          ({ received }) =>
+            Schema.is(dependencyReference)(received) &&
+            (received.dependent_id === id || received.blocker_id === id),
+        )
       );
+    default: {
+      const resolved = changes(event, entry.profile);
+      return (
+        [...resolved.dependencies.added, ...resolved.dependencies.removed].some(
+          (edge) => edge.dependent_id === id || edge.blocker_id === id,
+        ) ||
+        resolved.tasks.some(
+          ({ before, after }) => before?.id === id || after?.id === id,
+        )
+      );
+    }
   }
 };
 

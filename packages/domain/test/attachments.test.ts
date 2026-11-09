@@ -284,7 +284,7 @@ it.effect(
         fixture.close();
         for (const _round of [1, 2]) {
           const store = yield* openStore({ path });
-          expect((yield* store.settings()).user_version).toBe(6);
+          expect((yield* store.settings()).user_version).toBe(7);
           yield* store.close();
           const check = new Database(path);
           try {

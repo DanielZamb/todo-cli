@@ -7,6 +7,7 @@ import { authMigrationSql } from "./0003.ts";
 import { profileMigrationSql } from "./0004.ts";
 import { migrateExternalId } from "./0005.ts";
 import { attachmentMigrationSql } from "./0006.ts";
+import { dependencyMigrationSql } from "./0007.ts";
 import { applyEvent, createProjection } from "./projection.ts";
 
 const LegacyProfile = Schema.Struct({
@@ -44,7 +45,7 @@ const legacyTime = (value: string | null) =>
       ? { kind: "date", date: value }
       : { kind: "instant", utc: utc(value), time_zone: "UTC" };
 
-export const currentSchemaVersion = 6;
+export const currentSchemaVersion = 7;
 const externalIdMigrationBaseVersions = [4];
 const attachmentMigrationBaseVersions = [5];
 
@@ -53,8 +54,13 @@ export function migrate(db: Database): void {
     .query<{ user_version: number }, []>("PRAGMA user_version")
     .get()?.user_version;
   if (version === currentSchemaVersion) return;
+  if (version === 6) {
+    db.exec(dependencyMigrationSql);
+    return;
+  }
   if (attachmentMigrationBaseVersions.includes(version ?? -1)) {
     db.exec(attachmentMigrationSql);
+    migrate(db);
     return;
   }
   if (externalIdMigrationBaseVersions.includes(version ?? -1)) {
@@ -193,7 +199,7 @@ export function migrate(db: Database): void {
     db.query(
       "INSERT INTO op_log(actor,profile,entity_version,event,from_version,to_version,outcome,reason) VALUES ('migration:0002',?,1,?,NULL,?,'committed',NULL)",
     ).run(task.profile_id, JSON.stringify(event), task.row_version);
-    applyEvent(db, event);
+    applyEvent(db, event, task.profile_id);
   }
   db.exec("PRAGMA user_version=2");
   migrate(db);

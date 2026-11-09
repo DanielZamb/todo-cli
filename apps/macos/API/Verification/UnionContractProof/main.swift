@@ -36,8 +36,8 @@ for entry in globals {
     guard let event = entry["event"] as? NSDictionary, let kind = event["kind"] as? String else { throw UnionProofFailure(message: "Missing SSE event kind") }
     globalKinds.insert(kind)
 }
-try require(globalKinds == ["AuthChanged", "DatabaseRestored"], "Missing global operation kinds")
+try require(globalKinds == ["AuthChanged", "DatabaseRestored", "DependencyAdded", "DependencyRemoved"], "Missing global operation kinds")
 let fixture = try roundTripHistory(arguments[3])
-try require(fixture.count == 18, "Expected every effect-port event kind")
-let result: [String: Any] = ["status": "PASS", "real_history_entries": history.count, "logical_task_kinds": logicalKinds.sorted(), "global_operation_kinds": globalKinds.sorted(), "database_restored_source": "scratch operation store", "fixture_kinds": 18, "native_app_launched": false, "keychain_accessed": false]
+try require(fixture.count == 20, "Expected every effect-port event kind")
+let result: [String: Any] = ["status": "PASS", "real_history_entries": history.count, "logical_task_kinds": logicalKinds.sorted(), "global_operation_kinds": globalKinds.sorted(), "database_restored_source": "scratch operation store", "fixture_kinds": 20, "native_app_launched": false, "keychain_accessed": false]
 print(String(decoding: try JSONSerialization.data(withJSONObject: result, options: [.sortedKeys]), as: UTF8.self))

@@ -33,7 +33,7 @@ Run `bun --version` and `command -v sqlite3` from the checkout. Then run
 `pnpm --filter @todo/domain typecheck`. When a drive fails, inspect its
 `commands.log` and confirm the database path is under `todo-c02-verify-*`.
 The driver's first store check requires WAL, a 5000ms busy timeout, and schema
-version 6. A path outside the temporary scratch directory is rejected.
+version 7. A path outside the temporary scratch directory is rejected.
 
 ## Drive
 
@@ -89,3 +89,11 @@ any working directory and resolves its own checkout. The compiled driver is
 directory and an absolute evidence directory outside it. The fixtures under
 `packages/domain/test/fixtures/` must remain reachable from the checkout root.
 Use `/maintain-verification-skill` when store behavior changes.
+
+## Dependencies
+
+Migration 0007 raises the schema to 7. Run the compiled DAG drive in
+[verify-dag](../verify-dag/SKILL.md) after the base drive. It extends replay proof
+with exact sorted edges, grouped lifecycle Versions and Purge of either endpoint.
+The base driver also runs the edges and groupedDelete cases and retains
+dag-replay.json after exact full/checkpoint replay comparisons.

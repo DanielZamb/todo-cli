@@ -117,7 +117,7 @@ const program = Effect.acquireUseRelease(
       assert.deepEqual(yield* store.settings(), {
         journal_mode: "wal",
         busy_timeout: 5000,
-        user_version: 6,
+        user_version: 7,
       });
       assert.deepEqual(modes(), [0o600, 0o600, 0o600]);
       mark("openStore scratch.db doctor", {

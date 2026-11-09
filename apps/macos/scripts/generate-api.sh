@@ -9,4 +9,4 @@ python3 "$root/apps/macos/scripts/normalize-openapi.py" "$root/packages/api/open
 swift build --package-path "$api" -c release --product swift-openapi-generator
 "$api/.build/release/swift-openapi-generator" generate "$api/Sources/TodoAPI/openapi.json" --config "$api/Sources/TodoAPI/openapi-generator-config.yaml" --output-directory "$api/Sources/TodoAPI/GeneratedSources"
 
-python3 "$root/apps/macos/scripts/preserve-null.py" "$api/Sources/TodoAPI/GeneratedSources"
+python3 "$root/apps/macos/scripts/preserve-null.py" "$api/Sources/TodoAPI/GeneratedSources" "$api/Sources/TodoAPI/openapi.json"

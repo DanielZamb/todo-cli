@@ -7,6 +7,8 @@ import type {
 } from "@todo/domain";
 
 const labels = {
+  DependencyAdded: "Dependency added",
+  DependencyRemoved: "Dependency removed",
   AttachmentAdded: "Attachment added",
   AttachmentRemoved: "Attachment removed",
   TaskCreated: "Created",

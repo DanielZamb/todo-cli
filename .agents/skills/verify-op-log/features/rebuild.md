@@ -30,3 +30,7 @@ unaffected resolved facts and version counters. See [Purge](purge.md).
 F10's ProfileDeleted operation reconstructs Profile tombstones and scoped Token
 revocations during both full and Snapshot replay. profiles.test.ts checks the
 visible Profile list, Task History and foreign rows after both replay paths.
+
+The compiled driver now also runs Dependency edge and grouped Delete cases.
+It compares exact sorted edges and Tasks after full and checkpoint replay and
+retains dag-replay.json. The broader lifecycle and Purge cases are in verify-dag.

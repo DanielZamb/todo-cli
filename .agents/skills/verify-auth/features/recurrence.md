@@ -45,3 +45,12 @@ Use the authenticated recurrence methods rather than submitting a resolved
 completion event from a client. A Session or Token must still be valid when
 execution starts. All trigger failures, Clock changes and replay probes belong
 to scratch verification and are cleaned up; evidence stays outside scratch.
+
+The compiled verify-dag drive's authenticatedInitial case supplies depends_on
+through Authentication.startSeries, then reads the typed first edge, TaskCreated
+v2, Version 1, metadata, external id and Attachments. Missing and foreign blockers,
+a self-link and reuse of an existing endpoint each leave Tasks and Series
+unchanged and append exactly one rejected attempt. A fresh endpoint cannot already
+have outgoing edges, so a transitive initial cycle requires identity reuse; that
+attempt is refused by the real identity guard. The case also drives authenticated
+v2 append, edge Revert and finish, and proves the successor has no edges.

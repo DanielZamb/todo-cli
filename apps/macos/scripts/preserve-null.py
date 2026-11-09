@@ -1,7 +1,30 @@
 #!/usr/bin/env python3
+import json
 import re
 from pathlib import Path
 import sys
+
+contract = json.loads(Path(sys.argv[2]).read_text())
+
+
+def schema_at(pointer):
+    value = contract
+    for segment in pointer.removeprefix('#/').split('/'):
+        while '$ref' in value:
+            value = schema_at(value['$ref'])
+        if value.get('type') == 'array':
+            value = value['items']
+        if segment in value.get('properties', {}):
+            value = value['properties'][segment]
+        elif segment.endswith('Payload') and segment.removesuffix('Payload') in value.get('properties', {}):
+            value = value['properties'][segment.removesuffix('Payload')]['items']
+        elif re.fullmatch(r'case[1-9][0-9]*', segment):
+            value = value['oneOf'][int(segment[4:]) - 1]
+        elif re.fullmatch(r'value[1-9][0-9]*', segment):
+            value = value['anyOf'][int(segment[5:]) - 1]
+        else:
+            value = value[segment.replace('~1', '/').replace('~0', '~')]
+    return value
 
 
 def mask(source):
@@ -52,6 +75,23 @@ for path in Path(sys.argv[1]).glob('Types*.swift'):
         indent = re.search(r'\n( *)public var ', body).group(1)
         decoder_indent = indent + '    '
         injection = '\n' + decoder_indent + 'self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\\.stringValue))'
+        version_property = next((prop for prop in re.finditer(r'public var entity_version: ([^\n]+)', bodycode) if depths[prop.start()] == 1), None)
+        if version_property:
+            origin = re.findall(r'Generated from `([^`]+)`', body[:version_property.start()])[-1]
+            if origin.startswith('#/components/schemas/'):
+                schema = schema_at(origin)
+                choices = schema.get('enum', [schema.get('const')])
+                if len(choices) != 1 or isinstance(choices[0], bool) or not isinstance(choices[0], (int, float)):
+                    raise ValueError(f'Expected a numeric version constant at {origin}')
+                expected = choices[0]
+                injection += '\n' + decoder_indent + f'guard try container.decode({version_property.group(1).strip()}.self, forKey: .entity_version) == {expected} else {{ throw Swift.DecodingError.dataCorruptedError(forKey: .entity_version, in: container, debugDescription: "Expected entity_version {expected}") }}'
+                parent = schema_at(origin.rsplit('/', 1)[0])
+                forbidden = parent.get('x-todo-forbidden-properties', [])
+                if forbidden:
+                    known = json.dumps(sorted(parent['properties']))
+                    injection += '\n' + decoder_indent + f'let extraKeys = try decoder.decodeAdditionalProperties(knownKeys: {known}).value.keys'
+                    for key in forbidden:
+                        injection += '\n' + decoder_indent + f'guard !extraKeys.contains({json.dumps(key)}) else {{ throw Swift.DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Forbidden property {key}")) }}'
         edits.append((start + containers[0].end(), start + containers[0].end(), injection))
         edits.append((start + 1, start + 1, '\n' + indent + 'private var _explicitNullKeys: Set<String> = []\n'))
         if custom:

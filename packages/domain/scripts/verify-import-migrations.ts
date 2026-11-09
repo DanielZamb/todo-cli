@@ -100,7 +100,7 @@ if (process.argv[2] === "--open") {
             openStore({ path }),
             (store) =>
               Effect.gen(function* () {
-                assert.equal((yield* store.settings()).user_version, 6);
+                assert.equal((yield* store.settings()).user_version, 7);
                 const snapshots = (yield* store.snapshots.list()).snapshots;
                 assert.deepEqual(
                   snapshots.map((s) => [s.reason, s.schema_version]),

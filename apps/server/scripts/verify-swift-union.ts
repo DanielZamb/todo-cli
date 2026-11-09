@@ -9,7 +9,8 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { OpLogEntry } from "@todo/domain";
+import { ChangeEvent } from "@todo/api";
+import { ActorId, Instant, OpLogEntry, ProfileId } from "@todo/domain";
 import { openStore } from "@todo/domain/store";
 import { Effect, Schema } from "effect";
 
@@ -171,6 +172,49 @@ try {
   );
   const id: string = task.id;
   const path = `/profiles/work/tasks/${id}`;
+  const blocker = curl(
+    "POST",
+    "/profiles/work/tasks",
+    { title: "DAG stream blocker" },
+    credential,
+  );
+  await Effect.runPromise(
+    Effect.acquireUseRelease(
+      openStore({ path: database }),
+      (store) =>
+        Effect.gen(function* () {
+          for (const [kind, from_version] of [
+            ["DependencyAdded", 1],
+            ["DependencyRemoved", 2],
+          ] as const) {
+            const result = yield* store.append({
+              actor: Schema.decodeUnknownSync(ActorId)("dag-stream-proof"),
+              profile: Schema.decodeUnknownSync(ProfileId)("work"),
+              event: {
+                kind,
+                entity_version: 1,
+                occurred_at: Schema.decodeUnknownSync(Instant)(
+                  new Date().toISOString(),
+                ),
+                dependent_id: id,
+                blocker_id: blocker.id,
+                from_version,
+                to_version: from_version + 1,
+              },
+            });
+            assert.equal(result.outcome, "committed");
+          }
+        }),
+      (store) => Effect.orDie(store.close()),
+    ),
+  );
+  await wait(
+    () =>
+      sse.includes('"kind":"DependencyAdded"') &&
+      sse.includes('"kind":"DependencyRemoved"'),
+    "DAG events through existing SSE",
+  );
+  task = curl("GET", path, undefined, credential);
   await wait(() => sse.includes('"kind":"ReminderFired"'), "ReminderFired SSE");
   task = curl(
     "PATCH",
@@ -328,6 +372,8 @@ try {
     "AuthAttemptRejected",
     "AuthChanged",
     "DatabaseRestored",
+    "DependencyAdded",
+    "DependencyRemoved",
     "ProfileDeleted",
     "ProfileDeletionRejected",
     "ReminderFired",
@@ -358,11 +404,35 @@ try {
     return [JSON.parse(value)];
   });
   assert.ok(operations.some((entry) => entry.event.kind === "AuthChanged"));
+  for (const entry of operations)
+    Schema.decodeUnknownSync(ChangeEvent)({
+      event: "operation",
+      id: String(entry.seq),
+      data: JSON.stringify(entry),
+    });
+  for (const kind of ["AuthChanged", "DependencyAdded", "DependencyRemoved"])
+    assert.ok(operations.some((entry) => entry.event.kind === kind));
+  writeFileSync(
+    join(evidence, "dag-operations.json"),
+    JSON.stringify(
+      operations.filter((entry) =>
+        ["AuthChanged", "DependencyAdded", "DependencyRemoved"].includes(
+          entry.event.kind,
+        ),
+      ),
+      null,
+      2,
+    ),
+  );
   writeFileSync(
     join(evidence, "global-operations.json"),
     JSON.stringify(
       [
-        ...operations.filter((entry) => entry.event.kind === "AuthChanged"),
+        ...operations.filter((entry) =>
+          ["AuthChanged", "DependencyAdded", "DependencyRemoved"].includes(
+            entry.event.kind,
+          ),
+        ),
         ...history.filter((entry) => entry.event.kind === "DatabaseRestored"),
       ],
       null,
@@ -407,9 +477,69 @@ try {
       2,
     ),
   );
+  if (process.env.TODO_DAG_CONTRACT_TESTS === "1") {
+    const generated = spawnSync(
+      "swift",
+      [
+        "test",
+        "--package-path",
+        "apps/macos",
+        "--filter",
+        "GeneratedContractTests",
+      ],
+      {
+        cwd: resolve("."),
+        env: {
+          ...process.env,
+          TODO_W06_SERVER: base,
+          TODO_W06_PASSPHRASE: "scratch union passphrase",
+          TODO_UNION_FIXTURE: join(evidence, "all-event-kinds.json"),
+        },
+        encoding: "utf8",
+        timeout: 60000,
+        maxBuffer: 8 * 1024 * 1024,
+      },
+    );
+    writeFileSync(
+      join(evidence, "generated-tests.log"),
+      (generated.stdout ?? "") + (generated.stderr ?? ""),
+    );
+    writeFileSync(
+      join(evidence, "generated-tests-result.json"),
+      JSON.stringify({
+        exit_code: generated.status,
+        signal: generated.signal,
+        error: generated.error?.message,
+      }),
+    );
+    assert.equal(
+      generated.status,
+      0,
+      "GeneratedContractTests with scratch HTTP must pass",
+    );
+  }
 } finally {
   await stop(stream);
   await stop(server);
+  writeFileSync(
+    join(evidence, "cleanup.json"),
+    JSON.stringify(
+      {
+        server: {
+          pid: server?.pid,
+          exit_code: server?.exitCode,
+          signal: server?.signalCode,
+        },
+        stream: {
+          pid: stream?.pid,
+          exit_code: stream?.exitCode,
+          signal: stream?.signalCode,
+        },
+      },
+      null,
+      2,
+    ),
+  );
   writeFileSync(join(evidence, "server.log"), log);
   writeFileSync(join(evidence, "events.sse"), sse);
   writeFileSync(

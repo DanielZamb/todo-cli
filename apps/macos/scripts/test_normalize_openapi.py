@@ -29,6 +29,41 @@ class TaggedUnionTests(unittest.TestCase):
             self.assertEqual(schemas[name], source['components']['schemas'][name])
 
 
+    def test_same_kind_versions_group_under_the_kind_discriminator(self):
+        def variant(version):
+            return {'type': 'object', 'properties': {'kind': {'const': 'TaskDeleted'}, 'entity_version': {'enum': [version]}}, 'required': ['kind', 'entity_version']}
+        other = {'type': 'object', 'properties': {'kind': {'const': 'DependencyAdded'}}, 'required': ['kind']}
+        source = {'components': {'schemas': {'Events': {'anyOf': [variant(1), variant(2), other]}}}}
+        normalized = module.normalize_tagged_unions(source)
+        events = normalized['components']['schemas']['Events']
+        self.assertEqual(sorted(events['discriminator']['mapping']), ['DependencyAdded', 'TaskDeleted'])
+        reference = events['discriminator']['mapping']['TaskDeleted'].split('/')[-1]
+        self.assertEqual(normalized['components']['schemas'][reference], {'oneOf': [variant(1), variant(2)]})
+        self.assertEqual(module.normalize_tagged_unions(normalized), normalized)
+        overlap = {'anyOf': [variant(1), variant(1), other]}
+        self.assertEqual(module.normalize_tagged_unions(overlap), overlap)
+
+    def test_optional_nullable_overlapping_and_boolean_versions_stay_unmodified(self):
+        def variant(version):
+            return {'type': 'object', 'properties': {'kind': {'const': 'TaskDeleted'}, 'entity_version': {'enum': [version]}}, 'required': ['kind', 'entity_version']}
+        optional = variant(1)
+        optional['required'].remove('entity_version')
+        nullable = variant(1)
+        nullable['properties']['entity_version']['nullable'] = True
+        for first, second in [(optional, variant(2)), (nullable, variant(2)), (variant(1), variant(1)), (variant(False), variant(2))]:
+            source = {'anyOf': [first, second]}
+            self.assertEqual(module.normalize_tagged_unions(source), source)
+
+    def test_false_optional_property_is_preserved_as_an_explicit_forbidden_key(self):
+        source = {'type': 'object', 'properties': {'entity_version': {'type': 'number', 'enum': [1]}, 'dependencies': {'not': {}}}, 'required': ['entity_version'], 'additionalProperties': True}
+        normalized = module.normalize(source)
+        self.assertEqual(normalized, {'type': 'object', 'properties': {'entity_version': {'type': 'number', 'enum': [1]}}, 'required': ['entity_version'], 'additionalProperties': True, 'x-todo-forbidden-properties': ['dependencies']})
+        self.assertEqual(module.normalize(normalized), normalized)
+        required = copy.deepcopy(source)
+        required['required'].append('dependencies')
+        with self.assertRaises(ValueError):
+            module.normalize(required)
+
     def test_unrelated_document_stays_identical(self):
         source = {'openapi': '3.0.3', 'paths': {}}
         self.assertEqual(module.normalize_tagged_unions(source), source)

@@ -1,0 +1,315 @@
+[
+  {
+    "seq": 40,
+    "actor": "dag-proof",
+    "profile": "work",
+    "from_version": null,
+    "to_version": null,
+    "outcome": "committed",
+    "reason": null,
+    "event": {
+      "entity_version": 1,
+      "occurred_at": "2026-11-09T00:00:00Z",
+      "kind": "AuthChanged",
+      "action": "issueToken",
+      "credential_id": "scratch-token"
+    }
+  },
+  {
+    "seq": 41,
+    "actor": "dag-proof",
+    "profile": "work",
+    "from_version": 1,
+    "to_version": 2,
+    "outcome": "committed",
+    "reason": null,
+    "event": {
+      "entity_version": 1,
+      "occurred_at": "2026-11-09T00:00:00Z",
+      "kind": "DependencyAdded",
+      "dependent_id": "B",
+      "blocker_id": "A",
+      "from_version": 1,
+      "to_version": 2
+    }
+  },
+  {
+    "seq": 15,
+    "actor": "dag-proof",
+    "profile": "dag",
+    "from_version": null,
+    "event": {
+      "entity_version": 2,
+      "occurred_at": "2026-11-09T06:00:00Z",
+      "kind": "TaskCreated",
+      "task": {
+        "title": "Task T",
+        "description": null,
+        "project_id": null,
+        "priority": "P2",
+        "scheduled_at": null,
+        "due_at": null,
+        "energy": null,
+        "estimate_min": null,
+        "source": "dag-proof",
+        "tags": [],
+        "id": "T",
+        "profile_id": "dag",
+        "entity_version": 1,
+        "row_version": 1,
+        "status": "open",
+        "occurrence": null,
+        "created_at": "2026-11-09T06:00:00Z",
+        "updated_at": "2026-11-09T06:00:00Z",
+        "completed_at": null,
+        "deleted_at": null
+      },
+      "series": null,
+      "project": null,
+      "tags": [],
+      "dependencies": {
+        "added": [
+          {
+            "profile_id": "dag",
+            "dependent_id": "T",
+            "blocker_id": "B00"
+          }
+        ],
+        "removed": [],
+        "versions": []
+      }
+    },
+    "to_version": 1,
+    "outcome": "committed",
+    "reason": null
+  },
+  {
+    "seq": 6,
+    "actor": "dag-proof",
+    "profile": "dag",
+    "from_version": 2,
+    "event": {
+      "entity_version": 2,
+      "occurred_at": "2026-11-09T06:00:00Z",
+      "kind": "TaskDeleted",
+      "before": {
+        "title": "Task B",
+        "description": null,
+        "project_id": null,
+        "priority": "P2",
+        "scheduled_at": null,
+        "due_at": null,
+        "energy": null,
+        "estimate_min": null,
+        "source": "dag-proof",
+        "tags": [],
+        "id": "B",
+        "profile_id": "dag",
+        "entity_version": 1,
+        "row_version": 2,
+        "status": "open",
+        "occurrence": null,
+        "created_at": "2026-11-09T06:00:00Z",
+        "updated_at": "2026-11-09T06:00:00Z",
+        "completed_at": null,
+        "deleted_at": null
+      },
+      "after": {
+        "title": "Task B",
+        "description": null,
+        "project_id": null,
+        "priority": "P2",
+        "scheduled_at": null,
+        "due_at": null,
+        "energy": null,
+        "estimate_min": null,
+        "source": "dag-proof",
+        "tags": [],
+        "id": "B",
+        "profile_id": "dag",
+        "entity_version": 1,
+        "row_version": 3,
+        "status": "open",
+        "occurrence": null,
+        "created_at": "2026-11-09T06:00:00Z",
+        "updated_at": "2026-11-09T06:00:00Z",
+        "completed_at": null,
+        "deleted_at": "2026-11-09T06:00:00Z"
+      },
+      "dependencies": {
+        "added": [],
+        "removed": [
+          {
+            "profile_id": "dag",
+            "dependent_id": "B",
+            "blocker_id": "A"
+          },
+          {
+            "profile_id": "dag",
+            "dependent_id": "C",
+            "blocker_id": "B"
+          }
+        ],
+        "versions": [
+          {
+            "id": "C",
+            "from_version": 2,
+            "to_version": 3,
+            "updated_at": "2026-11-09T06:00:00Z"
+          }
+        ]
+      }
+    },
+    "to_version": 3,
+    "outcome": "committed",
+    "reason": null
+  },
+  {
+    "seq": 6,
+    "actor": "dag-proof",
+    "profile": "dag",
+    "from_version": 2,
+    "event": {
+      "entity_version": 2,
+      "occurred_at": "2026-11-09T06:00:00Z",
+      "kind": "TaskMovedOut",
+      "move_id": "bcf013e7-6daf-4188-82d2-dad0589f392b",
+      "original_seq": null,
+      "task": {
+        "title": "Task B",
+        "description": null,
+        "project_id": null,
+        "priority": "P2",
+        "scheduled_at": null,
+        "due_at": null,
+        "energy": null,
+        "estimate_min": null,
+        "source": "dag-proof",
+        "tags": [],
+        "id": "B",
+        "profile_id": "dag",
+        "entity_version": 1,
+        "row_version": 2,
+        "status": "open",
+        "occurrence": null,
+        "created_at": "2026-11-09T06:00:00Z",
+        "updated_at": "2026-11-09T06:00:00Z",
+        "completed_at": null,
+        "deleted_at": null
+      },
+      "dependencies": {
+        "added": [],
+        "removed": [
+          {
+            "profile_id": "dag",
+            "dependent_id": "B",
+            "blocker_id": "A"
+          },
+          {
+            "profile_id": "dag",
+            "dependent_id": "C",
+            "blocker_id": "B"
+          }
+        ],
+        "versions": [
+          {
+            "id": "C",
+            "from_version": 2,
+            "to_version": 3,
+            "updated_at": "2026-11-09T06:00:00Z"
+          }
+        ]
+      }
+    },
+    "to_version": null,
+    "outcome": "committed",
+    "reason": null
+  },
+  {
+    "seq": 7,
+    "actor": "dag-proof",
+    "profile": "dag",
+    "from_version": 3,
+    "event": {
+      "entity_version": 2,
+      "occurred_at": "2026-11-09T06:00:00Z",
+      "kind": "TaskReverted",
+      "original_seq": 6,
+      "tasks": [
+        {
+          "before": {
+            "title": "Task B",
+            "description": null,
+            "project_id": null,
+            "priority": "P2",
+            "scheduled_at": null,
+            "due_at": null,
+            "energy": null,
+            "estimate_min": null,
+            "source": "dag-proof",
+            "tags": [],
+            "id": "B",
+            "profile_id": "dag",
+            "entity_version": 1,
+            "row_version": 3,
+            "status": "open",
+            "occurrence": null,
+            "created_at": "2026-11-09T06:00:00Z",
+            "updated_at": "2026-11-09T06:00:00Z",
+            "completed_at": null,
+            "deleted_at": "2026-11-09T06:00:00Z"
+          },
+          "after": {
+            "title": "Task B",
+            "description": null,
+            "project_id": null,
+            "priority": "P2",
+            "scheduled_at": null,
+            "due_at": null,
+            "energy": null,
+            "estimate_min": null,
+            "source": "dag-proof",
+            "tags": [],
+            "id": "B",
+            "profile_id": "dag",
+            "entity_version": 1,
+            "row_version": 4,
+            "status": "open",
+            "occurrence": null,
+            "created_at": "2026-11-09T06:00:00Z",
+            "updated_at": "2026-11-09T06:00:00Z",
+            "completed_at": null,
+            "deleted_at": null
+          }
+        }
+      ],
+      "series": [],
+      "dependencies": {
+        "added": [
+          {
+            "profile_id": "dag",
+            "dependent_id": "B",
+            "blocker_id": "A"
+          },
+          {
+            "profile_id": "dag",
+            "dependent_id": "C",
+            "blocker_id": "B"
+          }
+        ],
+        "removed": [],
+        "versions": [
+          {
+            "id": "C",
+            "from_version": 3,
+            "to_version": 4,
+            "updated_at": "2026-11-09T06:00:00Z"
+          }
+        ]
+      }
+    },
+    "to_version": 4,
+    "outcome": "committed",
+    "reason": null
+  }
+]
