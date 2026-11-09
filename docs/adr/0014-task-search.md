@@ -58,3 +58,9 @@ We rejected SQLite FTS, stored search metadata, ranking, optimal string alignmen
 locale lowercase approximations, and client matchers. They would change the
 agreed behavior or split its implementation. Revisit indexing above roughly
 10,000 Tasks in a Profile.
+
+## Amendment (2026-11-09): known limits
+
+A security review (KIMI-2) found that a compatibility character which expands to several words joins its last word to the next letter. Two U+FDFA characters with nothing between them, `ﷺﷺ`, normalize to `صلى الله عليه وسلمصلى الله عليه وسلم`. The query `صلى` then matches only the first character, with span `[0, 1)`, and the query `وسلمصلى` matches both, with span `[0, 2)`. With a space between them, `ﷺ ﷺ`, the query `صلى` returns spans `[0, 1)` and `[2, 3)`.
+
+This is accepted behavior. The original text has no word boundary between the two characters: `Intl.Segmenter` treats `ﷺﷺ` as one word, as it treats `ﬁx`. No per-grapheme rule splits `ﷺﷺ` without also splitting `ﬁx`, which must stay one word so that `fix` matches it. Search matches the normalized text as `Intl.Segmenter` segments it. The missing second span follows from that single joined word and is not a separate span defect. Spans stay in range and on whole graphemes.
