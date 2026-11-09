@@ -1,9 +1,9 @@
 {
-  "commit": "be876581ea9d4c024fab3b0bc2c8358051c6d2b4",
-  "status": "unit-1-candidate-awaiting-review",
+  "commit": "8272b610f6e0d4723c52a7906a2583d12721d6af",
+  "status": "reviewed-unit-1-integration; final-client-refinement-pending",
   "normalization": "normalizeTaskSearch",
   "parsing": "parseTaskSearch",
   "matching": "matchTaskSearch",
   "prefix": "filterTaskRecords",
-  "integrationRecheck": "PENDING"
+  "integrationRecheck": "PASS: matcher-HtP4C8, check-matcher.ts explicit integration SHA, exit 0"
 }

@@ -65,11 +65,7 @@ colors. Thus the finite graph supports indefinitely repeated requests without
 allowing a stale response to acquire a newer generation's token.
 
 `Settle` freezes identity-changing inputs, Apply, Profile and view switches,
-and SSE refreshes. All later responses succeed. Weak fairness covers initial
-launch, debounce, every pending successful response, and Retry. Retry fairness
-is a user recovery assumption. The model does not implement automatic retry.
-The additional counterexample below proves that stable input and response
-fairness alone cannot recover an unretried Error.
+and ordinary SSE refreshes. Recovery SSE events remain enabled in Error. All later responses succeed. Weak fairness covers initial launch, debounce, every pending successful response, and the disjunction of manual Retry, current-Profile SSE reconnection, or SSE op while in Error. This recovery assumption was accepted by the coordinator on 2026-11-09. Clients recover automatically on those SSE notices, with no timer-based retry. The counterexample below proves that stable input and response fairness cannot recover Error if none of those recovery events occurs.
 
 ## Sensitivity receipts
 
@@ -79,7 +75,7 @@ fairness alone cannot recover an unretried Error.
 | `BrokenLatest` | `LatestPublication` | 12 | Issue for text 1, input text 2, then publish text 1's obsolete success during Debouncing. |
 | `BrokenStale` | `ExactStale` | 12 | Publish text 1, input text 2, and incorrectly retain `stale = FALSE`. |
 | `BrokenProgress` | `Convergence` | 13 | Input text 2, Settle in Debouncing, then stutter forever because debounce never launches. |
-| `FairSpecWithoutRetry` | `Convergence` | 13 | Input text 2, issue, fail, Settle in Error, then stutter forever without Retry. |
+| `FairSpecWithoutRetry` | `Convergence` | 13 | Input text 2, issue, fail, Settle in Error, then stutter forever without Retry, SSE reconnection or SSE op. |
 
 The three invariant failures stop early with queues of 13, 50, and 59 states.
 Those are expected counterexamples, not clean exhaustive passes. Both temporal
@@ -121,6 +117,10 @@ The following work requires the implementation commits arranged by L1:
 
 No native app, signing, Keychain, installed binary, real Todo database, owner
 Task, branch switch, merge, rebase, push, or PR is used in this unit.
+
+## Coordinator recovery amendment
+
+The coordinator accepted conditional liveness on 2026-11-09, retained manual Retry, and required automatic Error -> Requesting recovery on a current-Profile SSE reconnection or op. `Recovery` is the disjunction of those actions, guarded by Error. Fairness applies to that disjunction. `FairSpecWithoutRetry` is retained as the requested legacy spec name, but removes all recovery fairness. Its no-recovery trace remains a limit. The model adds no retry timer. Revised safety and both liveness specs are rerun after this amendment; the final L1 receipt records their actual exits and counts.
 
 ## Other checks and diagnostic attempts
 

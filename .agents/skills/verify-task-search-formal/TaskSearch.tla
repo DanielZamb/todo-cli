@@ -75,9 +75,12 @@ Retry ==
   /\ UNCHANGED dialogDraft
 
 SSEOp ==
-  /\ ~stable
+  /\ ~stable \/ phase = "Error"
   /\ \E n \in Slots : Launch(n, requestedIdentity)
   /\ UNCHANGED dialogDraft
+
+SSEReconnect == SSEOp
+Recovery == phase = "Error" /\ (Retry \/ SSEReconnect \/ SSEOp)
 
 ResponseOK(n) ==
   /\ pending[n] # NoIdentity
@@ -162,14 +165,14 @@ Settle ==
 
 Next ==
   \/ \E t \in Texts : Input(t)
-  \/ Esc \/ CmdF \/ InitialRequest \/ DebounceFired \/ Retry \/ SSEOp
+  \/ Esc \/ CmdF \/ InitialRequest \/ DebounceFired \/ Retry \/ SSEOp \/ SSEReconnect
   \/ \E n \in Slots : ResponseOK(n) \/ ResponseError(n)
   \/ DialogOpen \/ \E f \in Filters : DialogEdit(f)
   \/ DialogCancel \/ DialogApply \/ ProfileSwitch \/ ViewSwitch \/ SelectTask \/ Settle
 
 Spec == Init /\ [][Next]_vars
 FairSpec == Spec /\ WF_vars(InitialRequest) /\ WF_vars(DebounceFired)
-                /\ WF_vars(Retry) /\ \A n \in Slots : WF_vars(ResponseOK(n))
+                /\ WF_vars(Recovery) /\ \A n \in Slots : WF_vars(ResponseOK(n))
 FairSpecWithoutRetry == Spec /\ WF_vars(InitialRequest) /\ WF_vars(DebounceFired)
                             /\ \A n \in Slots : WF_vars(ResponseOK(n))
 

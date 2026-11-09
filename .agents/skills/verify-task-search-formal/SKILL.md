@@ -111,15 +111,14 @@ wall-clock responsiveness.
 `ResponseOK` publishes only for the latest issued token with the current captured
 identity. `ResponseError` uses the same guard. A current error retains typed text
 and snapshot, restores only dialog filters to the applied filters, and enters
-Error. Retry issues the requested identity. An obsolete response removes its
+Error. Retry, a current-Profile SSE reconnection, or a current-Profile SSE op issues the requested identity. There is no timer-based automatic retry. An obsolete response removes its
 private pending entry and leaves every visible variable unchanged. This is a
 discard self-transition in the visible UI state, in every phase.
 
 Dialog Open copies requested filters. Edit changes only its draft. Apply captures
 that draft with the current toolbar text and issues immediately. Cancel leaves
 the requested identity and snapshot unchanged. `SSEOp` abstracts an operation
-notice for the current Profile and issues a refresh of the requested identity.
-Other Profiles' notices and Cmd+F are visible-state stutters. Focus itself is
+notice for the current Profile and issues a refresh of the requested identity. `SSEReconnect` uses the same transition. In Error both remain enabled after input settles. Other Profiles' notices and Cmd+F are visible-state stutters. Focus itself is
 outside the data-order model.
 
 Profile and view reset invalidate requests, clear the applied selection snapshot
@@ -130,12 +129,10 @@ it. The final client mapping must replace that overapproximation with the actual
 approved behavior. `SelectTask` models only the presence of a selection.
 
 `Settle` marks the point after which identity-changing input, dialog Apply,
-Profile and view switches, and SSE refreshes stop. All future replies succeed.
+Profile and view switches, and ordinary SSE refreshes stop. Recovery SSE events in Error remain enabled. All future replies succeed.
 Every finite prefix may reach Settle, including one with obsolete requests or
 Error. Weak fairness applies to initial request launch, debounce, each pending
-successful reply, and Retry. Retry fairness is an explicit recovery assumption
-about the user, not automatic client retry. Without it, an unretried Error is
-a counterexample to convergence. The command checks that counterexample too.
+successful reply, and the disjunction `Recovery = Retry or SSEReconnect or SSEOp` while in Error. Recovery fairness requires one of those events eventually, not each one separately. The approved design recovers on current-Profile SSE reconnection or an op and still offers manual Retry. There is no timer-based retry. `FairSpecWithoutRetry` retains its legacy name and omits fairness of the whole recovery disjunction. Its no-recovery Error stutter remains a documented failing case, checked by the command.
 
 The temporal property is `stable ~> (appliedIdentity = requestedIdentity /\ ~stale)`.
 It does not require the environment to stop typing, and does not claim arbitrary
@@ -156,9 +153,11 @@ Advancing hashes alone does not establish a client refinement proof.
 | Identity capture and rollback | Electron `advancedFiltersRef`, `appliedFiltersRef`, `filterApplyError`, `clearFilters` | Existing dialog policy inspected. Complete requested search identity and atomic search snapshot are approved design. |
 | Latest issued request | `apps/macos/Sources/TodoModel.swift`, `refresh(generation:)` | Success checks `generation`, `refreshGeneration`, Profile, selected view, requested filters, and cancellation. Error omits the filter equality check. |
 | Identity capture and rollback | Swift `requestedTaskFilters`, `taskFilters`, `applyTaskFilters` | Existing rollback inspected. Separate typed text and search snapshot are approved design. |
-| Reset and SSE | Electron `activateProfile`, planning navigation, `changed` notice; Swift `activateProfile`, `selectView`, `disconnect`, `followChanges` | Baseline inspected. Swift view changes clear planning and filters but retain its Task array. The model abstracts the approved cleared selection results, not each array assignment. |
+| Reset and SSE recovery | Electron `activateProfile`, planning navigation, `changed` notice; Swift `activateProfile`, `selectView`, `disconnect`, `followChanges` | Baseline inspected. Swift view changes clear planning and filters but retain its Task array. The model abstracts the approved cleared selection results, not each array assignment. |
 | Search debounce, spans, complete-identity guards | Both clients | PENDING. These transitions describe the approved C1 design only. |
-| Matcher generated-input checks | Candidate `be876581ea9d4c024fab3b0bc2c8358051c6d2b4`, `normalizeTaskSearch`, `parseTaskSearch`, `matchTaskSearch`, and `filterTaskRecords` | Proven on captured real source. The candidate awaits review. Integration recheck is PENDING. See [matcher report](MATCHER-REPORT.md). |
+| Matcher generated-input checks | Candidate `be876581ea9d4c024fab3b0bc2c8358051c6d2b4`, `normalizeTaskSearch`, `parseTaskSearch`, `matchTaskSearch`, and `filterTaskRecords` | Proven on captured real source. Unit 1 is reviewed and integrated at 8272b610f6e0d4723c52a7906a2583d12721d6af; L1 repeated properties with exit 0. See [matcher report](MATCHER-REPORT.md). |
+
+The 2026-11-09 coordinator decision adds Error -> Requesting on a current-Profile SSE reconnection or op. Electron connection notices already carry connected state; its renderer must request current search on recovery. Swift followChanges already refreshes on ready and operation. These hooks are inspected baseline facts, not proof that revised client search state is implemented.
 
 The hash check fails after any change to either covered client file. Once clients
 land, replace the baseline mapping with reviewed actual functions, preserve the

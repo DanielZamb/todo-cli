@@ -326,13 +326,13 @@ try {
     sourceCommit: head.out.trim(),
     stages,
     productionMatcher:
-      "candidate-generated-inputs-passed; integration recheck PENDING",
+      "generated-inputs-passed on recorded immutable commit; final client refinement PENDING",
     matcherOutcome,
     finalClientRefinement: "PENDING",
     evidence,
   });
   console.log(
-    "PASS: C1 design safety/liveness and real candidate matcher; integration recheck and final client mapping PENDING",
+    "PASS: C1 design safety/liveness and real matcher properties; final client mapping PENDING",
   );
 } catch (error) {
   record("result", { passed: false, stages, error: String(error), evidence });
