@@ -1,5 +1,5 @@
 import type { TaskRead } from "@todo/domain";
-import { Fragment, useLayoutEffect, useRef } from "react";
+import { Fragment } from "react";
 
 export function SearchHighlight({
   text,
@@ -38,30 +38,40 @@ export function descriptionMatch(task: TaskRead) {
   return first;
 }
 
+const excerptWords = new Intl.Segmenter("und", { granularity: "word" });
+export function descriptionExcerpt(task: TaskRead) {
+  const first = descriptionMatch(task);
+  if (!first || !task.description) return null;
+  let start = first.start;
+  for (const part of excerptWords.segment(task.description)) {
+    if (part.index > first.start) break;
+    if (part.isWordLike && part.index >= Math.max(0, first.start - 28)) {
+      start = part.index;
+      break;
+    }
+  }
+  return {
+    start,
+    text: task.description.slice(start),
+    matches: (task.search_matches ?? [])
+      .filter((span) => span.field === "description")
+      .map((span) => ({
+        ...span,
+        start: span.start - start,
+        end: span.end - start,
+      })),
+  };
+}
+
 export function DescriptionMatch({ task }: { task: TaskRead }) {
-  const element = useRef<HTMLSpanElement>(null);
-  useLayoutEffect(() => {
-    if (!task.description) return;
-    const excerpt = element.current;
-    if (!excerpt) return;
-    const center = () => {
-      const first = excerpt.querySelector("mark");
-      if (!first) return;
-      const span = first.getBoundingClientRect();
-      const viewport = excerpt.getBoundingClientRect();
-      excerpt.scrollLeft +=
-        span.left + span.width / 2 - viewport.left - viewport.width / 2;
-    };
-    center();
-    const observer = new ResizeObserver(center);
-    observer.observe(excerpt);
-    return () => observer.disconnect();
-  }, [task]);
+  const excerpt = descriptionExcerpt(task);
+  if (!excerpt) return null;
   return (
-    <span ref={element} className="search-excerpt">
+    <span className="search-excerpt">
+      {excerpt.start > 0 && "…"}
       <SearchHighlight
-        text={task.description ?? ""}
-        matches={task.search_matches}
+        text={excerpt.text}
+        matches={excerpt.matches}
         field="description"
       />
     </span>

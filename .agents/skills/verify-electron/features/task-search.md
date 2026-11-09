@@ -35,8 +35,10 @@ and spans. `appliedSearch` holds the catalog and applied identity together.
 `data-search-stale` on `.task-pane` expose production state to the drive.
 Freshness is exactly identity inequality. `.search-results[data-stale=true]`
 reduces row emphasis. It retains the applied highlights and description excerpt.
-Description-only matches have one line in `.search-excerpt`, centered by the
-first supplied span. There is no client query matcher or normalization.
+Description-only matches have one line in `.search-excerpt`, with context around
+the first supplied span. Cropping starts at a word boundary and prefixes a
+leading ellipsis; CSS adds the trailing ellipsis. Original spans are shifted
+only for this presentation slice. There is no client query matcher or normalization.
 
 A failed search retains text and applied results, announces the applied text
 and offers Retry. No search retry timer exists. Current-Profile operation and
@@ -99,9 +101,15 @@ not establish VoiceOver behavior or signed production app startup.
 Empty search hides the header Quick add in both layouts, leaving Clear search
 as the single primary action. Cmd+F preserves the open full-window detail; in
 Compact it focuses the shared field above detail without closing the editor.
-Quick add includes the same active field inside its modal focus scope, with one
-`compact-search` control mounted at a time. New task initially focuses Task title.
+Quick add keeps the same active field in the shell header above the scrim,
+separate from the New task card, with one `compact-search` control mounted at a
+time. The standard dialog is nonmodal so the header remains focusable; outside
+press and close behavior remain, and header search focus does not dismiss it.
+New task initially focuses Task title.
 Cmd+F and Esc preserve both editor and Quick add drafts. The drive requires the
 search control visible before each capture and checks focus and literal drafts
 in detail and Quick add in both layouts and appearances. Zero-size search
 controls cannot pass by being filtered out of the bounds receipt.
+The drive requires search outside the New task card, above its bounds, and
+reachable by hit testing through the scrim. Search failure uses neutral inline
+status styling, with retained rows and the existing recovery actions.

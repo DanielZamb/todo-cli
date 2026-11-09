@@ -626,6 +626,27 @@ function App() {
     }, 250);
   };
   useEffect(() => () => clearTimeout(debounce.current), []);
+  useLayoutEffect(() => {
+    if (!quick || !signedIn) return;
+    const field = searchInput.current?.closest(".task-search-field");
+    if (!field) return;
+    const update = () =>
+      document.documentElement.style.setProperty(
+        "--quick-search-bottom",
+        `${field.getBoundingClientRect().bottom}px`,
+      );
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(field);
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+      document.documentElement.style.removeProperty("--quick-search-bottom");
+    };
+  }, [quick, signedIn, compact, editor?.base.id]);
   useEffect(() => {
     const focus = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f") {
@@ -1391,6 +1412,7 @@ function App() {
         "shell",
         compact && "compact",
         compact && editor && "editing",
+        quick && "quick-search",
       )}
     >
       {filtersOpen && (
@@ -1841,7 +1863,7 @@ function App() {
             )}
           </div>
         </header>
-        {!quick && !(compact && editor) && taskSearchField}
+        {!(compact && editor) && taskSearchField}
         <FieldSet className="task-filters" aria-label="Task filters">
           <FieldGroup className="task-filter-fields">
             <Field>
@@ -1973,7 +1995,7 @@ function App() {
         )}
         {searchPhase === "Error" && loadError && (
           <Alert
-            variant="destructive"
+            role="status"
             className="search-error"
             aria-label="Search failed"
           >
@@ -2428,7 +2450,7 @@ function App() {
               </DropdownMenu>
             </div>
           </div>
-          {compact && !quick && taskSearchField}
+          {compact && taskSearchField}
           <form
             id="task-editor-form"
             onSubmit={(e) => {
@@ -2794,7 +2816,26 @@ function App() {
           }}
         />
       )}
-      <Dialog open={quick} onOpenChange={setQuick}>
+      <Dialog
+        open={quick}
+        modal={false}
+        onOpenChange={(open, details) => {
+          const field = searchInput.current?.closest(".task-search-field");
+          const target = details.event.target;
+          if (
+            !open &&
+            ((details.reason === "focus-out" &&
+              document.activeElement === searchInput.current) ||
+              (details.reason === "outside-press" &&
+                target instanceof Node &&
+                field?.contains(target)))
+          ) {
+            details.cancel();
+            return;
+          }
+          setQuick(open);
+        }}
+      >
         <DialogContent
           className="quick-dialog"
           initialFocus={() => document.getElementById("quick-title")}
@@ -2808,7 +2849,6 @@ function App() {
               )}
             </DialogDescription>
           </div>
-          {quick && taskSearchField}
           <form
             className="quick-add-form"
             onSubmit={(event) => {

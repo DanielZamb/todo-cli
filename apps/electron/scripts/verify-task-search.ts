@@ -441,6 +441,15 @@ try {
           .allTextContents(),
       ).toEqual(["Canción"]);
       await shot(`${prefix}-description`);
+      await expect(page.locator(".search-excerpt")).toContainText(/^…/);
+      expect(
+        await page
+          .locator(".search-excerpt")
+          .evaluate((element) => ({
+            scrollLeft: element.scrollLeft,
+            overflow: getComputedStyle(element).textOverflow,
+          })),
+      ).toEqual({ scrollLeft: 0, overflow: "ellipsis" });
       expect(
         await page
           .locator(".search-results mark")
@@ -483,6 +492,15 @@ try {
         'Couldn\'t search. Showing results for "reno".',
       );
       await shot(`${prefix}-error`);
+      await expect(page.getByLabel("Search failed")).toHaveAttribute(
+        "role",
+        "status",
+      );
+      expect(
+        await page
+          .getByLabel("Search failed")
+          .evaluate((element) => getComputedStyle(element).borderTopWidth),
+      ).toBe("0px");
       await desktop.evaluate(({ BrowserWindow }) => {
         BrowserWindow.getAllWindows()[0]?.webContents.send("todo:notice", {
           _tag: "connection",
@@ -648,9 +666,26 @@ try {
       await quick
         .getByLabel("Task title", { exact: true })
         .fill("Keep this Quick add draft");
-      await expect(
-        quick.getByRole("textbox", { name: "Search tasks", exact: true }),
-      ).toBeVisible();
+      await expect(quick.locator("#compact-search")).toHaveCount(0);
+      await expect(field).toBeVisible();
+      const searchBounds = await field.boundingBox();
+      const quickBounds = await quick.boundingBox();
+      expect(
+        searchBounds &&
+          quickBounds &&
+          searchBounds.y + searchBounds.height <= quickBounds.y,
+      ).toBe(true);
+      expect(
+        await field.evaluate((input) => {
+          const rect = input.getBoundingClientRect();
+          return (
+            document.elementFromPoint(
+              rect.x + rect.width / 2,
+              rect.y + rect.height / 2,
+            ) === input
+          );
+        }),
+      ).toBe(true);
       await page.keyboard.press("Meta+f");
       await expect(field).toBeFocused();
       await expect(quick.getByLabel("Task title", { exact: true })).toHaveValue(

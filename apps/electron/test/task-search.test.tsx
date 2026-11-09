@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { Reply } from "../src/protocol.ts";
 import {
   descriptionMatch,
+  DescriptionMatch,
   SearchHighlight,
 } from "../src/task-search-presentation.tsx";
 import { searchGroups } from "../src/task-search-results.ts";
@@ -31,6 +32,23 @@ const task = Schema.decodeUnknownSync(TaskRead)({
   completed_at: null,
   deleted_at: null,
   search_matches: [{ field: "title", start: 0, end: 7 }],
+});
+
+it("starts a trimmed description at a whole word and marks the original match", () => {
+  expect(
+    renderToStaticMarkup(
+      <DescriptionMatch
+        task={{
+          ...task,
+          description:
+            "This is a deliberately long introductory phrase. Find the blue Canción receipt in the cabinet.",
+          search_matches: [{ field: "description", start: 63, end: 70 }],
+        }}
+      />,
+    ),
+  ).toBe(
+    '<span class="search-excerpt">…phrase. Find the blue <mark>Canción</mark> receipt in the cabinet.</span>',
+  );
 });
 const catalog = () =>
   Schema.decodeUnknownSync(Reply)({
