@@ -64,7 +64,9 @@ export function finishCompile(capture) {
     .split("\n")
     .some(
       (line) =>
-        line.includes(root) && /\bbun\s+build\b|\s--compile(?:\s|$)/.test(line),
+        Number(line.trim().split(/\s+/, 1)[0]) !== process.pid &&
+        line.includes(root) &&
+        /\bbun\s+build\b|\s--compile(?:\s|$)/.test(line),
     );
   const artifacts = [];
   for (const { directory, names } of snapshots)

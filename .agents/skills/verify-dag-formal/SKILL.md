@@ -104,7 +104,11 @@ loaded source outside them or installed node_modules fails the run. Manifests
 must match the installed tree and production dependency versions must match.
 Bun 1.4.4 is enforced. CLI/HTTP build and contract identities are checked.
 
-The default full path runs:
+The default full path runs with a 600-second library stage ceiling and a
+3,600-second public stage ceiling. Each behavioral child retains its existing
+180-second limit; TLC retains 120 seconds per config. A timeout never counts
+as a completed control or proof. These are execution ceilings, not state
+constraints. The full path runs:
 
 1. The finite model and all original controls/reachability witnesses.
 2. The actual-source exhaustive/seeded algorithms and replay corpus, source

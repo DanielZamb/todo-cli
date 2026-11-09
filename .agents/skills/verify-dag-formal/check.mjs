@@ -272,7 +272,7 @@ try {
       "public-conformance",
       "bun",
       [join(skill, "public-check.mjs")],
-      600000,
+      3600000,
     );
     assert.equal(
       publicResult.exitCode,

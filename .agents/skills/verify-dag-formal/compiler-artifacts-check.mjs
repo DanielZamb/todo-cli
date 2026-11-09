@@ -1,13 +1,17 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import {
   copyFileSync,
   existsSync,
   mkdirSync,
   readFileSync,
+  readdirSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { guardedCompiler } from "./compile-artifacts.mjs";
 import { digest } from "./candidate-inputs.mjs";
 const evidence = process.argv[2];
@@ -39,6 +43,45 @@ assert.equal(existsSync(retired), false);
 assert.equal(digest(readFileSync(preexisting)), before);
 assert.equal(readFileSync(foreign, "utf8"), "ambiguous bytes retained");
 assert.equal(existsSync(linked), true);
+const runtime = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "guarded-runtime.mjs",
+);
+for (const compile of [true, false]) {
+  const cliOutput = join(directory, compile ? "cli-driver" : "bundle.js");
+  const cli = spawnSync(
+    process.execPath,
+    [
+      runtime,
+      "build",
+      ...(compile ? ["--compile"] : []),
+      source,
+      "--outfile",
+      cliOutput,
+    ],
+    {
+      env: {
+        ...process.env,
+        DAG_F_REAL_BUN: process.execPath,
+        DAG_F_GUARD_EVIDENCE: evidence,
+        DAG_F_WRAP_BUILDS: "1",
+      },
+      encoding: "utf8",
+    },
+  );
+  assert.equal(cli.status, 0, cli.stderr);
+  assert.ok(existsSync(cliOutput));
+}
+for (const receipt of readdirSync(evidence).filter((name) =>
+  name.startsWith("compile-temporaries-nested-cli-compiler"),
+)) {
+  const record = JSON.parse(readFileSync(join(evidence, receipt), "utf8"));
+  assert.ok(
+    record.artifacts.every(
+      (item) => item.action === "unlinked-own-new-compiler-temporary",
+    ),
+  );
+}
 writeFileSync(
   join(evidence, "compiler-artifacts-check.json"),
   JSON.stringify(

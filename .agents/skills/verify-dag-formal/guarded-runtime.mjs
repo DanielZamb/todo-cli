@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 const args = process.argv.slice(2);
 const compiler =
+  args[0] === "build" ||
   args.some((arg) => arg.includes("typescript/bin/tsc")) ||
   args.includes("--compile");
 const outputIndex = args.indexOf("--outfile");
@@ -34,7 +35,7 @@ if (compiler) {
   }
 }
 const forwarded =
-  process.env.DAG_F_WRAP_BUILDS === "1"
+  process.env.DAG_F_WRAP_BUILDS === "1" && args[0] !== "build"
     ? [
         "--preload",
         join(
