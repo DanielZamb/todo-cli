@@ -201,3 +201,10 @@ The script rewrites the scene and exports each frame (`runtime`, `write`,
 gate is [Task search Phase 0](decisions/task-search-phase-0.md). It needs a local
 Chrome, Chromium, Edge, or Firefox. It does not need an Excalidraw account.
 Colors follow `design/electron/TOKENS.md`.
+
+The proposed Task dependency workflows are also frames in the scene, with
+`dag-` prefixes for CLI edge edits, Delete, status refusals, and each client's
+picker, list drag, Delete dialog, and graph view. They remain a design proposal
+until the coordinator approves [Task DAG Phase 0](decisions/task-dag-phase-0.md).
+ADRs 0016 through 0018 are drafts; no graph runtime is implemented by those
+workflow diagrams.

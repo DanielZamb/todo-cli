@@ -1,0 +1,3234 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Task DAG Phase 0 contract",
+  "$defs": {
+    "UnauthorizedEncoded": {
+      "type": "object",
+      "properties": {
+        "_tag": {
+          "type": "string",
+          "enum": [
+            "Unauthorized"
+          ]
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "_tag",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "InternalErrorEncoded": {
+      "type": "object",
+      "properties": {
+        "_tag": {
+          "type": "string",
+          "enum": [
+            "InternalError"
+          ]
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "_tag",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "InvalidTaskEncoded": {
+      "type": "object",
+      "properties": {
+        "_tag": {
+          "type": "string",
+          "enum": [
+            "InvalidTask"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "object",
+          "properties": {
+            "external_id": {
+              "type": "string"
+            },
+            "profile_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "external_id",
+            "profile_id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "_tag",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "ConflictEncoded": {
+      "type": "object",
+      "properties": {
+        "_tag": {
+          "type": "string",
+          "enum": [
+            "Conflict"
+          ]
+        },
+        "latest": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Task"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "_tag",
+        "latest"
+      ],
+      "additionalProperties": false
+    },
+    "Attachment": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1
+            },
+            "added_at": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "file"
+              ]
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "id",
+            "added_at",
+            "kind",
+            "path"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1
+            },
+            "added_at": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "image"
+              ]
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "byte_size": {
+              "type": "integer",
+              "maximum": 9007199254740991,
+              "exclusiveMinimum": 0
+            }
+          },
+          "required": [
+            "id",
+            "added_at",
+            "kind",
+            "path"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1
+            },
+            "added_at": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "link"
+              ]
+            },
+            "url": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "id",
+            "added_at",
+            "kind",
+            "url"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "NotFoundEncoded": {
+      "type": "object",
+      "properties": {
+        "_tag": {
+          "type": "string",
+          "enum": [
+            "NotFound"
+          ]
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "_tag",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "ForbiddenEncoded": {
+      "type": "object",
+      "properties": {
+        "_tag": {
+          "type": "string",
+          "enum": [
+            "Forbidden"
+          ]
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "_tag",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "TooManySignInsEncoded": {
+      "type": "object",
+      "properties": {
+        "_tag": {
+          "type": "string",
+          "enum": [
+            "TooManySignIns"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "locked_until": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "_tag",
+        "message",
+        "locked_until"
+      ],
+      "additionalProperties": false
+    },
+    "Task": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "project_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "P1",
+            "P2",
+            "P3",
+            "P4"
+          ]
+        },
+        "scheduled_at": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "instant"
+                      ]
+                    },
+                    "utc": {
+                      "type": "string"
+                    },
+                    "time_zone": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "utc",
+                    "time_zone"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "date"
+                      ]
+                    },
+                    "date": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "date"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "due_at": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "instant"
+                      ]
+                    },
+                    "utc": {
+                      "type": "string"
+                    },
+                    "time_zone": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "utc",
+                    "time_zone"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "date"
+                      ]
+                    },
+                    "date": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "date"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "energy": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "estimate_min": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "maximum": 9007199254740991,
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Attachment"
+          }
+        },
+        "external_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "profile_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "entity_version": {
+          "type": "number",
+          "enum": [
+            1
+          ]
+        },
+        "row_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "done",
+            "cancelled",
+            "snoozed"
+          ]
+        },
+        "occurrence": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "series_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "date": {
+                  "type": "string"
+                },
+                "time": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "instant"
+                          ]
+                        },
+                        "utc": {
+                          "type": "string"
+                        },
+                        "time_zone": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "utc",
+                        "time_zone"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "date"
+                          ]
+                        },
+                        "date": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "date"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "series_id",
+                "date"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "legacy_series_detached": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "string"
+        },
+        "completed_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "deleted_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "title",
+        "description",
+        "project_id",
+        "priority",
+        "scheduled_at",
+        "due_at",
+        "energy",
+        "estimate_min",
+        "source",
+        "tags",
+        "id",
+        "profile_id",
+        "entity_version",
+        "row_version",
+        "status",
+        "occurrence",
+        "created_at",
+        "updated_at",
+        "completed_at",
+        "deleted_at"
+      ],
+      "additionalProperties": false
+    },
+    "Edge": {
+      "type": "object",
+      "properties": {
+        "profile_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dependent_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blocker_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "profile_id",
+        "dependent_id",
+        "blocker_id"
+      ],
+      "additionalProperties": false
+    },
+    "VersionChange": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "from_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "to_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "updated_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "from_version",
+        "to_version",
+        "updated_at"
+      ],
+      "additionalProperties": false
+    },
+    "DependencyChanges": {
+      "type": "object",
+      "properties": {
+        "added": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Edge"
+          }
+        },
+        "removed": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Edge"
+          }
+        },
+        "versions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/VersionChange"
+          }
+        }
+      },
+      "required": [
+        "added",
+        "removed",
+        "versions"
+      ],
+      "additionalProperties": false
+    },
+    "DependRequest": {
+      "type": "object",
+      "properties": {
+        "blocker_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "from_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "blocker_id",
+        "from_version"
+      ],
+      "additionalProperties": false
+    },
+    "UndependRequest": {
+      "type": "object",
+      "properties": {
+        "blocker_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "from_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "blocker_id",
+        "from_version"
+      ],
+      "additionalProperties": false
+    },
+    "DeleteQuery": {
+      "type": "object",
+      "properties": {
+        "from_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "with_dependencies": {
+          "type": "boolean",
+          "default": false
+        },
+        "dry_run": {
+          "type": "boolean",
+          "default": false
+        },
+        "dependency_fingerprint": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "from_version"
+      ],
+      "additionalProperties": false
+    },
+    "CreateExtension": {
+      "type": "object",
+      "properties": {
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "maxItems": 13,
+          "uniqueItems": true
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "ListExtension": {
+      "type": "object",
+      "properties": {
+        "ready": {
+          "type": "boolean"
+        },
+        "blocked": {
+          "type": "boolean"
+        },
+        "order": {
+          "enum": [
+            "topo",
+            "lightest"
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "Warning": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "code": {
+              "const": "many_dependencies"
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1
+            },
+            "dependent_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "code",
+            "message",
+            "dependent_id",
+            "count"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "code": {
+              "const": "redundant_dependency"
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1
+            },
+            "dependent_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "blocker_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "path": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 3
+            }
+          },
+          "required": [
+            "code",
+            "message",
+            "dependent_id",
+            "blocker_id",
+            "path"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "EdgeReport": {
+      "type": "object",
+      "properties": {
+        "generated_at": {
+          "type": "string"
+        },
+        "outcome": {
+          "enum": [
+            "added",
+            "removed",
+            "unchanged"
+          ]
+        },
+        "dependent_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blocker_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "from_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "to_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "seq": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Warning"
+          }
+        },
+        "dry_run": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "generated_at",
+        "outcome",
+        "dependent_id",
+        "blocker_id",
+        "from_version",
+        "to_version",
+        "seq",
+        "warnings"
+      ],
+      "additionalProperties": false
+    },
+    "DependencyError": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "generated_at": {
+              "type": "string"
+            },
+            "code": {
+              "const": "dependency_cycle"
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1
+            },
+            "details": {
+              "type": "object",
+              "properties": {
+                "dependent_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "blocker_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "path": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "minItems": 2
+                }
+              },
+              "required": [
+                "dependent_id",
+                "blocker_id",
+                "path"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "generated_at",
+            "code",
+            "message",
+            "details"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "generated_at": {
+              "type": "string"
+            },
+            "code": {
+              "const": "too_many_dependencies"
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1
+            },
+            "details": {
+              "type": "object",
+              "properties": {
+                "dependent_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "limit": {
+                  "const": 13
+                }
+              },
+              "required": [
+                "dependent_id",
+                "count",
+                "limit"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "generated_at",
+            "code",
+            "message",
+            "details"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "generated_at": {
+              "type": "string"
+            },
+            "code": {
+              "const": "blocked"
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1
+            },
+            "details": {
+              "type": "object",
+              "properties": {
+                "task_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "blockers": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/Task"
+                  },
+                  "minItems": 1
+                }
+              },
+              "required": [
+                "task_id",
+                "blockers"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "generated_at",
+            "code",
+            "message",
+            "details"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "generated_at": {
+              "type": "string"
+            },
+            "code": {
+              "const": "blocks_done_task"
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1
+            },
+            "details": {
+              "type": "object",
+              "properties": {
+                "task_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "done_dependents": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/Task"
+                  },
+                  "minItems": 1
+                },
+                "follow_up_depends_on": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "task_id",
+                "done_dependents",
+                "follow_up_depends_on"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "generated_at",
+            "code",
+            "message",
+            "details"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "generated_at": {
+              "type": "string"
+            },
+            "code": {
+              "const": "has_dependencies"
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1
+            },
+            "details": {
+              "type": "object",
+              "properties": {
+                "task_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "dependencies": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/Edge"
+                  },
+                  "minItems": 1
+                },
+                "flag": {
+                  "const": "--with-dependencies"
+                }
+              },
+              "required": [
+                "task_id",
+                "dependencies",
+                "flag"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "generated_at",
+            "code",
+            "message",
+            "details"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "generated_at": {
+              "type": "string"
+            },
+            "code": {
+              "const": "dependency_profile_mismatch"
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1
+            },
+            "details": {
+              "type": "object",
+              "properties": {
+                "dependent_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "blocker_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "profile_id": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "dependent_id",
+                "blocker_id",
+                "profile_id"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "generated_at",
+            "code",
+            "message",
+            "details"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Energy": {
+      "type": "object",
+      "properties": {
+        "energy": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "unweighted": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "energy",
+        "unweighted"
+      ],
+      "additionalProperties": false
+    },
+    "GraphNode": {
+      "type": "object",
+      "properties": {
+        "task": {
+          "$ref": "#/$defs/Task"
+        },
+        "in_degree": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "out_degree": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "ready": {
+          "type": "boolean"
+        },
+        "blocked": {
+          "type": "boolean"
+        },
+        "ancestors": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "descendants": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "depth": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "remaining_energy": {
+          "$ref": "#/$defs/Energy"
+        },
+        "lightest_next": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "task",
+        "in_degree",
+        "out_degree",
+        "ready",
+        "blocked",
+        "ancestors",
+        "descendants",
+        "depth",
+        "remaining_energy",
+        "lightest_next"
+      ],
+      "additionalProperties": false
+    },
+    "GraphReport": {
+      "type": "object",
+      "properties": {
+        "generated_at": {
+          "type": "string"
+        },
+        "profile_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "task_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/GraphNode"
+          },
+          "minItems": 1
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Edge"
+          }
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "sinks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "topological_order": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "shape": {
+          "enum": [
+            "single",
+            "chain",
+            "tree",
+            "dag"
+          ]
+        },
+        "mermaid": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "generated_at",
+        "profile_id",
+        "task_id",
+        "nodes",
+        "edges",
+        "sources",
+        "sinks",
+        "topological_order",
+        "shape",
+        "mermaid"
+      ],
+      "additionalProperties": false
+    },
+    "DeleteReport": {
+      "type": "object",
+      "properties": {
+        "generated_at": {
+          "type": "string"
+        },
+        "task": {
+          "$ref": "#/$defs/Task"
+        },
+        "removed_dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Edge"
+          }
+        },
+        "affected_versions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/VersionChange"
+          }
+        },
+        "dependency_fingerprint": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "dry_run": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "generated_at",
+        "task",
+        "removed_dependencies",
+        "affected_versions",
+        "dependency_fingerprint",
+        "dry_run"
+      ],
+      "additionalProperties": false
+    },
+    "BatchEdgeItem": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "enum": [
+            "depend",
+            "undepend"
+          ]
+        },
+        "dependent_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "blocker_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "from_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "action",
+        "dependent_id",
+        "blocker_id",
+        "from_version"
+      ],
+      "additionalProperties": false
+    },
+    "BatchEdgeRequest": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/BatchEdgeItem"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        },
+        "dry_run": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": false
+    },
+    "BatchEdgeResult": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "index": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "result": {
+              "$ref": "#/$defs/EdgeReport"
+            }
+          },
+          "required": [
+            "index",
+            "result"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "index": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "error": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/DependencyError"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "generated_at": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "enum": [
+                        "conflict",
+                        "not_found",
+                        "invalid_args",
+                        "auth_required",
+                        "forbidden",
+                        "runtime"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "details": {}
+                  },
+                  "required": [
+                    "generated_at",
+                    "code",
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "exit_code": {
+              "enum": [
+                1,
+                2,
+                3,
+                4
+              ]
+            }
+          },
+          "required": [
+            "index",
+            "error",
+            "exit_code"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "BatchEdgeReport": {
+      "type": "object",
+      "properties": {
+        "generated_at": {
+          "type": "string"
+        },
+        "dry_run": {
+          "type": "boolean"
+        },
+        "results": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/BatchEdgeResult"
+          }
+        }
+      },
+      "required": [
+        "generated_at",
+        "dry_run",
+        "results"
+      ],
+      "additionalProperties": false
+    },
+    "DependencyAdded": {
+      "type": "object",
+      "properties": {
+        "entity_version": {
+          "const": 1
+        },
+        "occurred_at": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "DependencyAdded"
+        },
+        "dependent_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blocker_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "from_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "to_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "entity_version",
+        "occurred_at",
+        "kind",
+        "dependent_id",
+        "blocker_id",
+        "from_version",
+        "to_version"
+      ],
+      "additionalProperties": false
+    },
+    "DependencyRemoved": {
+      "type": "object",
+      "properties": {
+        "entity_version": {
+          "const": 1
+        },
+        "occurred_at": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "DependencyRemoved"
+        },
+        "dependent_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blocker_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "from_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "to_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "entity_version",
+        "occurred_at",
+        "kind",
+        "dependent_id",
+        "blocker_id",
+        "from_version",
+        "to_version"
+      ],
+      "additionalProperties": false
+    },
+    "TaskDeletedV2": {
+      "type": "object",
+      "properties": {
+        "entity_version": {
+          "const": 2
+        },
+        "occurred_at": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "TaskDeleted"
+        },
+        "before": {
+          "$ref": "#/$defs/Task"
+        },
+        "after": {
+          "$ref": "#/$defs/Task"
+        },
+        "dependencies": {
+          "$ref": "#/$defs/DependencyChanges"
+        }
+      },
+      "required": [
+        "entity_version",
+        "occurred_at",
+        "kind",
+        "before",
+        "after",
+        "dependencies"
+      ],
+      "additionalProperties": false
+    },
+    "TaskRevertedExtension": {
+      "type": "object",
+      "properties": {
+        "dependencies": {
+          "$ref": "#/$defs/DependencyChanges"
+        }
+      },
+      "required": [
+        "dependencies"
+      ],
+      "additionalProperties": false
+    },
+    "CheckpointExtension": {
+      "type": "object",
+      "properties": {
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Edge"
+          }
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "RedactedReplayExtension": {
+      "type": "object",
+      "properties": {
+        "dependencies": {
+          "$ref": "#/$defs/DependencyChanges"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "ImportExtension": {
+      "type": "object",
+      "properties": {
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "maxItems": 13,
+          "uniqueItems": true
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "TaskReadExtension": {
+      "type": "object",
+      "properties": {
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "blocks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "ready": {
+          "type": "boolean"
+        },
+        "blocked": {
+          "type": "boolean"
+        },
+        "remaining_energy": {
+          "$ref": "#/$defs/Energy"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "CreateResponseExtension": {
+      "type": "object",
+      "properties": {
+        "dependency_warnings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Warning"
+          }
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "MoveResponseExtension": {
+      "type": "object",
+      "properties": {
+        "removed_dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Edge"
+          }
+        },
+        "affected_versions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/VersionChange"
+          }
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "ExportExtension": {
+      "type": "object",
+      "properties": {
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "TaskCreatedV2": {
+      "type": "object",
+      "properties": {
+        "entity_version": {
+          "const": 2
+        },
+        "occurred_at": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "TaskCreated"
+          ]
+        },
+        "copied_from": {
+          "type": "object",
+          "properties": {
+            "profile_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "profile_name": {
+              "type": "string"
+            },
+            "source_task_id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "profile_id",
+            "profile_name",
+            "source_task_id"
+          ],
+          "additionalProperties": false
+        },
+        "task": {
+          "$ref": "#/$defs/Task"
+        },
+        "series": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "profile_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "entity_version": {
+                  "type": "number",
+                  "enum": [
+                    1
+                  ]
+                },
+                "row_version": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "recurrence": {
+                  "type": "object",
+                  "properties": {
+                    "dtstart": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "instant"
+                              ]
+                            },
+                            "utc": {
+                              "type": "string"
+                            },
+                            "time_zone": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "utc",
+                            "time_zone"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "date"
+                              ]
+                            },
+                            "date": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "date"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "rrule": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "exdate": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "instant"
+                                ]
+                              },
+                              "utc": {
+                                "type": "string"
+                              },
+                              "time_zone": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "utc",
+                              "time_zone"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "date"
+                                ]
+                              },
+                              "date": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "date"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "dtstart",
+                    "rrule",
+                    "exdate"
+                  ],
+                  "additionalProperties": false
+                },
+                "task": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "description": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "project_id": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "priority": {
+                      "type": "string",
+                      "enum": [
+                        "P1",
+                        "P2",
+                        "P3",
+                        "P4"
+                      ]
+                    },
+                    "scheduled_at": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "instant"
+                                  ]
+                                },
+                                "utc": {
+                                  "type": "string"
+                                },
+                                "time_zone": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "utc",
+                                "time_zone"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "date"
+                                  ]
+                                },
+                                "date": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "date"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "due_at": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "instant"
+                                  ]
+                                },
+                                "utc": {
+                                  "type": "string"
+                                },
+                                "time_zone": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "utc",
+                                "time_zone"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "date"
+                                  ]
+                                },
+                                "date": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "date"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "energy": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 5
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "estimate_min": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "maximum": 9007199254740991,
+                          "exclusiveMinimum": 0
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "source": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    }
+                  },
+                  "required": [
+                    "title",
+                    "description",
+                    "project_id",
+                    "priority",
+                    "scheduled_at",
+                    "due_at",
+                    "energy",
+                    "estimate_min",
+                    "source",
+                    "tags"
+                  ],
+                  "additionalProperties": false
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "updated_at": {
+                  "type": "string"
+                },
+                "deleted_at": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "profile_id",
+                "entity_version",
+                "row_version",
+                "recurrence",
+                "task",
+                "created_at",
+                "updated_at",
+                "deleted_at"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "project": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "profile_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "created_at": {
+                  "type": "string"
+                },
+                "updated_at": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "profile_id",
+                "name",
+                "created_at",
+                "updated_at"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "profile_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "id",
+              "profile_id",
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "dependencies": {
+          "$ref": "#/$defs/DependencyChanges"
+        }
+      },
+      "required": [
+        "entity_version",
+        "occurred_at",
+        "kind",
+        "task",
+        "series",
+        "project",
+        "tags",
+        "dependencies"
+      ],
+      "additionalProperties": false
+    },
+    "TaskMovedOutV2": {
+      "type": "object",
+      "properties": {
+        "entity_version": {
+          "const": 2
+        },
+        "occurred_at": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "TaskMovedOut"
+          ]
+        },
+        "move_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "original_seq": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "task": {
+          "$ref": "#/$defs/Task"
+        },
+        "dependencies": {
+          "$ref": "#/$defs/DependencyChanges"
+        }
+      },
+      "required": [
+        "entity_version",
+        "occurred_at",
+        "kind",
+        "move_id",
+        "original_seq",
+        "task",
+        "dependencies"
+      ],
+      "additionalProperties": false
+    },
+    "TaskRevertedV2": {
+      "type": "object",
+      "properties": {
+        "entity_version": {
+          "const": 2
+        },
+        "occurred_at": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "TaskReverted"
+          ]
+        },
+        "original_seq": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "tasks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "before": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/Task"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "after": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/Task"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "before",
+              "after"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "series": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "before": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "profile_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "entity_version": {
+                        "type": "number",
+                        "enum": [
+                          1
+                        ]
+                      },
+                      "row_version": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      },
+                      "recurrence": {
+                        "type": "object",
+                        "properties": {
+                          "dtstart": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "instant"
+                                    ]
+                                  },
+                                  "utc": {
+                                    "type": "string"
+                                  },
+                                  "time_zone": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "utc",
+                                  "time_zone"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "date"
+                                    ]
+                                  },
+                                  "date": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "date"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
+                          },
+                          "rrule": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "exdate": {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "instant"
+                                      ]
+                                    },
+                                    "utc": {
+                                      "type": "string"
+                                    },
+                                    "time_zone": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "utc",
+                                    "time_zone"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "date"
+                                      ]
+                                    },
+                                    "date": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "date"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "dtstart",
+                          "rrule",
+                          "exdate"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "task": {
+                        "type": "object",
+                        "properties": {
+                          "title": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "description": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "project_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "priority": {
+                            "type": "string",
+                            "enum": [
+                              "P1",
+                              "P2",
+                              "P3",
+                              "P4"
+                            ]
+                          },
+                          "scheduled_at": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "instant"
+                                        ]
+                                      },
+                                      "utc": {
+                                        "type": "string"
+                                      },
+                                      "time_zone": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "utc",
+                                      "time_zone"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "date"
+                                        ]
+                                      },
+                                      "date": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "date"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "due_at": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "instant"
+                                        ]
+                                      },
+                                      "utc": {
+                                        "type": "string"
+                                      },
+                                      "time_zone": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "utc",
+                                      "time_zone"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "date"
+                                        ]
+                                      },
+                                      "date": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "date"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "energy": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 5
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "estimate_min": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "maximum": 9007199254740991,
+                                "exclusiveMinimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "source": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          }
+                        },
+                        "required": [
+                          "title",
+                          "description",
+                          "project_id",
+                          "priority",
+                          "scheduled_at",
+                          "due_at",
+                          "energy",
+                          "estimate_min",
+                          "source",
+                          "tags"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "created_at": {
+                        "type": "string"
+                      },
+                      "updated_at": {
+                        "type": "string"
+                      },
+                      "deleted_at": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "profile_id",
+                      "entity_version",
+                      "row_version",
+                      "recurrence",
+                      "task",
+                      "created_at",
+                      "updated_at",
+                      "deleted_at"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "after": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "profile_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "entity_version": {
+                        "type": "number",
+                        "enum": [
+                          1
+                        ]
+                      },
+                      "row_version": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      },
+                      "recurrence": {
+                        "type": "object",
+                        "properties": {
+                          "dtstart": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "instant"
+                                    ]
+                                  },
+                                  "utc": {
+                                    "type": "string"
+                                  },
+                                  "time_zone": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "utc",
+                                  "time_zone"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "date"
+                                    ]
+                                  },
+                                  "date": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "date"
+                                ],
+                                "additionalProperties": false
+                              }
+                            ]
+                          },
+                          "rrule": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "exdate": {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "instant"
+                                      ]
+                                    },
+                                    "utc": {
+                                      "type": "string"
+                                    },
+                                    "time_zone": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "utc",
+                                    "time_zone"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "date"
+                                      ]
+                                    },
+                                    "date": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "date"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "dtstart",
+                          "rrule",
+                          "exdate"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "task": {
+                        "type": "object",
+                        "properties": {
+                          "title": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "description": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "project_id": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "priority": {
+                            "type": "string",
+                            "enum": [
+                              "P1",
+                              "P2",
+                              "P3",
+                              "P4"
+                            ]
+                          },
+                          "scheduled_at": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "instant"
+                                        ]
+                                      },
+                                      "utc": {
+                                        "type": "string"
+                                      },
+                                      "time_zone": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "utc",
+                                      "time_zone"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "date"
+                                        ]
+                                      },
+                                      "date": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "date"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "due_at": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "instant"
+                                        ]
+                                      },
+                                      "utc": {
+                                        "type": "string"
+                                      },
+                                      "time_zone": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "utc",
+                                      "time_zone"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "date"
+                                        ]
+                                      },
+                                      "date": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "date"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "energy": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 5
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "estimate_min": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "maximum": 9007199254740991,
+                                "exclusiveMinimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "source": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "tags": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          }
+                        },
+                        "required": [
+                          "title",
+                          "description",
+                          "project_id",
+                          "priority",
+                          "scheduled_at",
+                          "due_at",
+                          "energy",
+                          "estimate_min",
+                          "source",
+                          "tags"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "created_at": {
+                        "type": "string"
+                      },
+                      "updated_at": {
+                        "type": "string"
+                      },
+                      "deleted_at": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "profile_id",
+                      "entity_version",
+                      "row_version",
+                      "recurrence",
+                      "task",
+                      "created_at",
+                      "updated_at",
+                      "deleted_at"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "before",
+              "after"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "dependencies": {
+          "$ref": "#/$defs/DependencyChanges"
+        }
+      },
+      "required": [
+        "entity_version",
+        "occurred_at",
+        "kind",
+        "original_seq",
+        "tasks",
+        "series",
+        "dependencies"
+      ],
+      "additionalProperties": false
+    },
+    "RejectionDetails": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "witness": {
+              "$ref": "#/$defs/DependencyError"
+            },
+            "truncated": {
+              "const": false
+            },
+            "total": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "witness",
+            "truncated",
+            "total"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "witness": {
+              "type": "null"
+            },
+            "truncated": {
+              "const": true
+            },
+            "total": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "witness",
+            "truncated",
+            "total"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

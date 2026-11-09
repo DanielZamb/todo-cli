@@ -980,6 +980,213 @@ frame("search-copy", "Task search: copy full id", 4000, 8000, 1840, (X, Y) => {
   ]);
 });
 
+let dagFrameY = 11000;
+const dagMachine = (id, title, _plannedY, states, transitions, details) => frame(id, title, 0, dagFrameY += 5000, 3000, (x, top) => {
+  heading(id, x + 60, top + 28, title, "Phase 0 proposal. Existing entry points and proposed Dependency symbols are named explicitly.");
+  const positions = new Map();
+  const laneCounts = new Map();
+  const pitch = states.length > 6 ? 1250 : 950;
+  for (const [key, column, row, name, body, warning] of states) {
+    const px = x + 90 + column * 1030;
+    const py = top + 250 + row * pitch;
+    positions.set(key, { px, py, column, row });
+    card(`${id}-${key}`, px, py, 680, { title: name, body, h: 165, fill: warning ? c.warningFill : c.card, bodySize: 15 });
+  }
+  for (let i = 0; i < transitions.length; i++) {
+    const [from, to, label, route = {}] = transitions[i];
+    const a = positions.get(from);
+    const b = positions.get(to);
+    const gap = Math.min(a.row, b.row);
+    const laneIndex = laneCounts.get(gap) ?? 0;
+    if (a.row !== b.row || (from !== to && (Math.abs(a.column - b.column) > 1 || a.column > b.column))) laneCounts.set(gap, laneIndex + 1);
+    let geometry;
+    if (from === to) {
+      geometry = { from: "top", to: "top", fromT: 0.2, toT: 0.8, via: [[a.px + 136, a.py - 95], [a.px + 544, a.py - 95]], labelAt: [a.px + 340, a.py - 130] };
+    } else if (a.row === b.row && b.column - a.column === 1) {
+      geometry = { from: "right", to: "left", labelAt: [a.px + 850, a.py + 82] };
+    } else if (a.row === b.row) {
+      const lane = a.py + 270 + laneIndex * 88;
+      geometry = { from: "bottom", to: "bottom", via: [[a.px + 340, lane], [b.px + 340, lane]], labelAt: [(a.px + b.px) / 2 + 340, lane + 30] };
+    } else {
+      const lane = top + 250 + gap * pitch + 285 + laneIndex * 88;
+      geometry = { from: a.row < b.row ? "bottom" : "top", to: a.row < b.row ? "top" : "bottom", via: [[a.px + 340, lane], [b.px + 340, lane]], labelAt: [(a.px + b.px) / 2 + 340, lane - 24] };
+    }
+    arrow(`${id}-transition-${i}`, `${id}-${from}`, `${id}-${to}`, { ...geometry, label, labelFont: SANS, labelSize: 17, bindLabel: !route.labelAt, ...route, ...(route.via ? {via: route.via.map(([px, py]) => [x + px, top + py])} : {}), ...(route.labelAt ? {labelAt: [x + route.labelAt[0], top + route.labelAt[1]]} : {}) });
+  }
+  const rows = Math.max(...states.map((s) => s[2])) + 1;
+  marker(`${id}-entry-marker`, x + 55, top + 232, 1);
+  notes(`${id}-notes`, x + 60, top + 320 + rows * pitch, 2860, "Numbered workflow notes", details);
+});
+
+dagMachine("dag-cli-edges", "CLI depend and undepend outcomes", 16000, [
+  ["input", 0, 0, "depend / undepend", "main.ts command boundary\n--expected-version / full Task ids\nTaskCommands + proposed dependency-commands.ts"],
+  ["lock", 1, 0, "OperationStore.transaction", "BEGIN IMMEDIATE before graph reads\nread endpoints and edge existence\nactive Profile + visible endpoints"],
+  ["noop", 2, 0, "EdgeReport / unchanged", "existing add or absent remove\ncurrent Version returned / exit 0\nno op_log row; no Version comparison"],
+  ["guard", 1, 1, "addDependency / removeDependency", "real change: compare dependent Version\nBFS all statuses; in-degree <= 13\ndone Task only gets resolved blockers"],
+  ["reject", 0, 1, "recordRejection after rollback", "dependency_cycle / blocked / too_many_dependencies\nConflict exit 4 / other rule refusal exit 2\ncapture witness while locked", true],
+  ["commit", 2, 1, "appendSync / applyEvent / commit", "DependencyAdded or DependencyRemoved\ndependent Version advances once\nEdgeReport / exit 0; additive warnings"],
+], [
+  ["input", "lock", "command [valid]\n/ authenticate; acquire writer lock"],
+  ["lock", "noop", "existence [no-op]\n/ return current Versions"],
+  ["lock", "guard", "existence [real change]\n/ compare current Version"],
+  ["guard", "reject", "validation [refused]\n/ rollback; retain evidence"],
+  ["guard", "commit", "validation [accepted]\n/ record and apply together"],
+  ["reject", "input", "retry [recovered]\n/ issue fresh intent and Version", { from: "left", to: "left", via: [[35, 852], [35, 332]], labelAt: [280, 615] }],
+], [
+  "The entry names depend/undepend and Dependency helpers are proposed. OperationStore.transaction, appendSync and applyEvent already exist.",
+  "No-op beats a stale valid Version, after authorization and endpoint checks. Real changes validate under the lock. Rejected evidence survives rollback.",
+  "Only the dependent advances. The ninth add warns, the fourteenth refuses. A redundant edge is stored and returns its implying path.",
+]);
+
+dagMachine("dag-cli-delete", "CLI rm with Dependencies", 19000, [
+  ["input", 0, 0, "mutateTask / rm", "--force still means Purge\n--with-dependencies authorizes edge removal\n--dry-run writes nothing"],
+  ["preview", 1, 0, "locked Delete preview", "read both incident edge directions\nexpected Version + affected Versions\nreturn exact removed_dependencies"],
+  ["dry", 2, 0, "DeleteReport / dry_run", "same report; projected Versions\nno Snapshot; no op_log; exit 0"],
+  ["prompt", 0, 1, "[y/N] on stdin + stdout TTY", "md mode only / default No\nlist Depends on and Blocks\nNo or EOF cancels / exit 0"],
+  ["refuse", 1, 1, "has_dependencies / exit 2", "JSON or other nonprompt mode\nname --with-dependencies\nno projection writes", true],
+  ["apply", 2, 1, "TaskCommands.delete / recheck", "reacquire BEGIN IMMEDIATE\nverify current Version + preview edge set\none TaskDeleted v2 removes every edge"],
+], [
+  ["input", "preview", "rm [authorized]\n/ read a consistent preview"],
+  ["preview", "dry", "--dry-run [true]\n/ report; exit 0"],
+  ["preview", "prompt", "edges [TTY + md, no flag]\n/ release lock; ask"],
+  ["preview", "refuse", "edges [agent + no flag]\n/ explain recovery"],
+  ["preview", "apply", "rm [no dry-run + flag or no edges]\n/ validate and commit"],
+  ["prompt", "apply", "Yes [same preview]\n/ revalidate; commit"],
+  ["prompt", "input", "No or EOF [default]\n/ cancel without writes", { from: "left", to: "left", via: [[35, 852], [35, 332]], labelAt: [230, 615] }],
+  ["apply", "refuse", "recheck [edge set changed]\n/ require renewed confirmation"],
+], [
+  "Dry-run terminates without a write. Apply starts only when dry-run is false and edges were authorized, or there are no edges.",
+  "No lock is held during a human prompt. The final transaction rejects a changed confirmed edge set. A stale Task Version remains Conflict exit 4.",
+  "TaskDeleted contains every edge and surviving dependent Version. A Task without Dependencies deletes as today. Purge later only redacts History.",
+]);
+
+dagMachine("dag-lifecycle", "Completion, reopen and Create follow-up", 22000, [
+  ["input", 0, 0, "transition / edit / revert", "TaskCommands.transition + finishTaskSync\nOperationStore.revert + validate\nall status writes share dependency-rules.ts"],
+  ["guard", 1, 0, "BEGIN IMMEDIATE / status guards", "done requires resolved direct blockers\nreopen checks direct done dependents\ngrouped Revert validates final graph"],
+  ["commit", 2, 0, "appendSync / accepted", "TaskCompleted / TaskReopened / TaskReverted\nrecurring successor inherits no edges\nno descendant weight writes"],
+  ["blocked", 0, 1, "blocked / exit 2, HTTP 422", "unresolved direct blockers listed\nFinish or cancel Dependencies first\nno force completion", true],
+  ["reopen", 1, 1, "blocks_done_task / exit 2, HTTP 422", "done dependents listed\ntodo add <title> --depends-on <done-id>\nCLI recovery hint + both-client action", true],
+  ["follow", 2, 1, "Create follow-up / Quick add", "prefill depends_on = chosen done dependent\nsource Task remains unchanged\nconfirm create through tasks.create"],
+], [
+  ["input", "guard", "intent [authorized]\n/ acquire lock; validate Version"],
+  ["guard", "commit", "status guards [pass]\n/ commit resolved event"],
+  ["guard", "blocked", "complete [unresolved blockers]\n/ rollback; record refusal"],
+  ["guard", "reopen", "reopen or Revert [done dependent]\n/ rollback; record refusal"],
+  ["reopen", "follow", "Create follow-up [connected]\n/ open prefilled draft"],
+  ["follow", "commit", "Add [valid draft]\n/ create Task and initial edge"],
+  ["blocked", "input", "retry [blockers resolved]\n/ reload current Version", { from: "left", to: "left", via: [[35, 852], [35, 332]], labelAt: [260, 615] }],
+], [
+  "Cancelled blockers resolve completion too. Reopening either a done or a cancelled blocker is refused beneath a done dependent.",
+  "Create follow-up is explicit new work. It never reopens the source or removes its edges. Offline state disables writes and retains the draft.",
+  "Adding an unresolved blocker to a done Task uses the same blocked refusal. Replaying committed events applies facts without running these guards again.",
+]);
+
+for (const [suffix, name, entry] of [["electron", "Electron", "renderer.tsx / activeQuery / deleteTask"], ["swift", "SwiftUI", "TodoModel / generation / deleteTask(_:)"]]) {
+  const shift = suffix === "electron" ? 0 : 12000;
+  dagMachine(`dag-${suffix}-picker`, `${name} Depends on and Blocks picker`, 25000 + shift, [
+    ["closed", 0, 0, "Task detail / list menu", `${entry}\nAdd dependency / Depends on / Blocks\nproposed dependency-picker identifier`],
+    ["load", 1, 0, "DependencyPicker / loading", "Profile-wide task search, not current view\nretain requested Profile + mode + root id\nexisting links loaded checked"],
+    ["ready", 2, 0, "DependencyPicker / ready", "linked rows stay checked under search\nDepends on: root depends on candidate\nBlocks: candidate depends on root"],
+    ["error", 0, 1, "Picker error / retained draft", "recovery hint and witness visible\nConflict requires Reload current Versions\nno blind resend", true],
+    ["write", 1, 1, "tasks.depend / tasks.undepend", "toggle uses dependent current Version\nserialize per dependent; disable pending row\npreview/apply batch keeps per-item results"],
+    ["offline", 2, 1, "Offline / read only", "retain checked state and search text\ndisable all mutation controls\nshow Offline text"],
+  ], [
+    ["closed", "load", "open [connected]\n/ snapshot identity; request links"],
+    ["load", "ready", "response [latest identity]\n/ publish rows and checks"],
+    ["ready", "ready", "search [text changed]\n/ debounce with shared search guards"],
+    ["ready", "write", "toggle [enabled]\n/ capture dependent Version"],
+    ["write", "ready", "response [changed or unchanged]\n/ refresh checks; quiet no-op"],
+    ["write", "error", "response [refusal or Conflict]\n/ retain intent; show recovery"],
+    ["error", "load", "Retry or Reload [connected]\n/ fetch current graph and Versions"],
+    ["ready", "offline", "disconnect [current Profile]\n/ retain snapshot; disable writes"],
+    ["offline", "load", "SSE ready [reconnected]\n/ reload current identity"],
+    ["load", "closed", "Cancel or Esc [open]\n/ invalidate; restore invoking focus"],
+  ], [
+    "This is a separate sub-machine, entered from Task detail, graph context menu, list Add dependency or keyboard. Both directions use one component.",
+    "Search uses server text and original response spans. Obsolete responses never publish. Current-Profile SSE ops reload graph data and Versions.",
+    "Cancel and Profile/root switch apply in every open phase. Close invalidates requests. Already linked and Already removed do not show an error.",
+  ]);
+  dagMachine(`dag-${suffix}-drag`, `${name} list drag with keyboard alternative`, 28000 + shift, [
+    ["idle", 0, 0, "Task list / idle", `${entry}\nAdd dependency menu + keyboard opens picker\nproposed dependency-drop-target identifier`],
+    ["drag", 1, 0, "Dragging Task source", "source id / Profile captured\nsource will depend on drop target\nvisible relation text"],
+    ["target", 2, 0, "Drop target / allowed", "show source depends on target\nsource Version retained\nrefuse self or foreign Profile"],
+    ["linked", 0, 1, "Already depends on", "existing edge / quiet state\nrelease without request or Version bump\nkeyboard can open checked picker"],
+    ["write", 1, 1, "tasks.depend / pending", "same command as picker\nserver checks current graph under lock\nno optimistic committed edge"],
+    ["error", 2, 1, "Drop refused / recover", "loop path, blockers or Conflict\nretain list selection\nReload or choose another target", true],
+  ], [
+    ["idle", "drag", "drag start [enabled]\n/ capture source"],
+    ["drag", "target", "drag over [valid target]\n/ show direction"],
+    ["drag", "linked", "drag over [edge exists]\n/ show Already depends on"],
+    ["target", "write", "drop [allowed]\n/ send expected source Version"],
+    ["write", "idle", "response [accepted or unchanged]\n/ refresh graph; announce quietly"],
+    ["write", "error", "response [refused]\n/ display recovery"],
+    ["error", "target", "choose target [reloaded]\n/ use current Version"],
+    ["linked", "idle", "drop or Esc [already linked]\n/ no write", { from: "left", to: "left", via: [[35, 852], [35, 332]], labelAt: [270, 615] }],
+    ["drag", "idle", "Esc or drag end [cancelled]\n/ clear drag state"],
+  ], [
+    "List drag is v1. Diagram edge dragging is deferred. The Add dependency menu and keyboard action reach the picker without a drag gesture.",
+    "Self, foreign Profile, offline and absent targets never submit. Cycle and Version rules remain authoritative in the domain, not drag state.",
+    "SSE refresh can invalidate a target. Keep source/target identity stable and recheck on drop. A refused drop never mutates the displayed graph optimistically.",
+  ]);
+  dagMachine(`dag-${suffix}-delete`, `${name} every-Delete confirmation`, 31000 + shift, [
+    ["idle", 0, 0, "Task detail or list / Delete", `${entry}\nevery Delete first opens a dialog\nproposed task-delete-dialog identifier`],
+    ["preview", 1, 0, "Delete dialog / loading preview", "tasks.delete dry_run=true\nread Task Version and incident edges\ndefault Cancel; Escape restores focus"],
+    ["confirm", 2, 0, "Delete dialog / confirmation", "Depends on and Blocks listed\nDelete Task and remove Dependencies\nempty graph says Delete Task"],
+    ["error", 0, 1, "Delete dialog / changed or error", "Conflict or changed preview set\nshow recovery and current edges\nrequire fresh explicit confirmation", true],
+    ["write", 1, 1, "tasks.delete / applying", "with_dependencies=true when needed\ncurrent expected Version + confirmed set\ndisable repeated action"],
+    ["offline", 2, 1, "Offline / retained dialog", "read only; keep preview visible\nno Delete or Retry while offline\nCancel still works"],
+  ], [
+    ["idle", "preview", "Delete [dialog closed]\n/ open confirmation"],
+    ["preview", "confirm", "response [latest + current root]\n/ show exact edge set"],
+    ["confirm", "write", "Confirm [connected]\n/ submit reviewed removal"],
+    ["write", "error", "response [Conflict or changed edges]\n/ keep dialog; show recovery"],
+    ["error", "preview", "Reload [connected]\n/ fetch current preview"],
+    ["write", "idle", "response [committed]\n/ close; reload; announce Delete"],
+    ["confirm", "offline", "disconnect [dialog open]\n/ disable destructive action"],
+    ["offline", "preview", "SSE ready [connected]\n/ invalidate old confirmation"],
+    ["confirm", "preview", "SSE operation [edges may change]\n/ invalidate confirmation; reload"],
+    ["preview", "idle", "Cancel or Esc [open]\n/ close; restore invoking focus"],
+  ], [
+    "Electron gains confirmation for every Delete. SwiftUI retains its existing confirmation and adds graph-specific impact, preview and changed-state recovery.",
+    "Cancel/close applies in every phase before commit. A response can publish only for the current Profile, Task and generation. Offline never authorizes a write.",
+    "One TaskDeleted event hides the Task and removes both edge directions. Apply rechecks the preview under BEGIN IMMEDIATE before recording anything.",
+  ]);
+}
+
+for (const [suffix, name, offset] of [["electron", "Electron", 0], ["swift", "SwiftUI", 5000]]) dagMachine(`dag-${suffix}-graph`, `${name} graph loading, navigation and SSE`, 50000 + offset, [
+  ["load", 0, 0, "GraphView / loading", "tasks.graph / selected Task id\nlatest Profile + root + request generation\nlocal resources only"],
+  ["ready", 1, 0, "GraphView / region ready", "selected + direct blockers + dependents\napp-owned x/y/scale/selection/focus\nclick opens Task; context/key opens picker"],
+  ["expand", 2, 0, "GraphView / expanding", "expand one level by click or key\nretain existing viewport and focus\nshow nodes outside region"],
+  ["error", 0, 1, "GraphView / error", "retain last good data; Retry if connected\nPele failure uses our own renderer\nTask list/search remains available", true],
+  ["overview", 1, 1, "GraphView / whole-group overview", "explicit toggle; list primary above ~50\nkeep saved region and selected Task\nall stored edges including redundant ones"],
+  ["refresh", 2, 1, "GraphView / SSE refresh", "current Profile operations invalidate graph\nretain expanded ids + transform + selection\nlatest response only; never mount.update"],
+  ["offline", 0, 2, "GraphView / offline", "retain readable last graph\nall writes disabled; no retry action\nselected Task list still available"],
+  ["gone", 1, 2, "Task deleted / selection recovery", "fall back to surviving region root\notherwise show deleted notice + Task list\nnever resurrect vanished Task content"],
+], [
+  ["load", "ready", "response [latest identity]\n/ render region; bind accessible nodes"],
+  ["ready", "expand", "Expand [more neighbors]\n/ extend expanded-id set"],
+  ["expand", "ready", "render [success]\n/ preserve transform and selection"],
+  ["ready", "overview", "Overview [enabled]\n/ save region; fit group"],
+  ["overview", "ready", "Region [enabled]\n/ restore saved region viewport"],
+  ["ready", "refresh", "SSE op [current Profile]\n/ fetch same root identity"],
+  ["overview", "refresh", "SSE op [current Profile]\n/ preserve overview mode"],
+  ["refresh", "ready", "response [latest + region + root survives]\n/ replace data; retain host state"],
+  ["refresh", "gone", "response [selected Task gone]\n/ repair selection explicitly"],
+  ["refresh", "overview", "response [latest + overview]\n/ preserve overview transform"],
+  ["refresh", "refresh", "response [obsolete]\n/ discard without host-state changes"],
+  ["refresh", "error", "response [latest + failed]\n/ retain snapshot and host state"],
+  ["ready", "offline", "disconnect [current Profile]\n/ retain snapshot; disable writes"],
+  ["load", "error", "read or render [failed]\n/ retain data; expose recovery"],
+  ["error", "load", "Retry [connected]\n/ issue current identity"],
+  ["error", "offline", "disconnect [current Profile]\n/ retain error and snapshot"],
+  ["offline", "load", "SSE ready [reconnected]\n/ reload current root", { from: "left", to: "left", via: [[35, 1372], [35, 332]], labelAt: [235, 1110] }],
+], [
+  "Disconnect from every online state enters Offline. Profile/root switches invalidate requests. Obsolete success/error self-loops discard without changing host state.",
+  "Refresh returns to the saved region or overview mode. Expand/overview changes no server data. SSE errors retain viewport, selected id and focused id.",
+  "Anchor pointerdown bypasses zoom capture, issue 130. A disappearing Reset/zoom control returns focus to SVG, issue 131. Native relation lists keep every action available.",
+  "Pele is pinned 1.13.0. Electron renderer and SwiftUI NSViewRepresentable/WKWebView use the same offline adapter and design tokens. Drag-to-connect is later.",
+]);
+
 const scene = {
   type: "excalidraw",
   version: 2,

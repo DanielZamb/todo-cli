@@ -142,6 +142,12 @@ images and redacts paths from History. External files are never deleted.
 | [0013](0013-attachment-uri-and-atomic-inputs.md) | Attachment URI links and atomic input groups | accepted |
 | [0012](0012-owner-snapshots.md) | Owner Snapshots | accepted |
 
+DAG design drafts await the coordinator's Phase 0 approval.
+
+- [0016. Task dependencies form a DAG](0016-task-dependencies-form-a-dag.md), proposed.
+- [0017. Pele renders Task graphs](0017-pele-renders-task-graphs.md), proposed.
+- [0018. Dependencies are replayable History](0018-dependencies-are-replayable-history.md), proposed.
+
 Track notes under [docs/decisions/](../decisions/) record how a port unit
 implemented one of these choices. They are not a second decision log.
 
