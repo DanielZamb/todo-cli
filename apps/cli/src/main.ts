@@ -30,11 +30,14 @@ import {
   BatchEditRequest,
   batchEditTasks,
   ClientReads,
+  Discovery,
   exitStatus,
   filterTaskRecords,
   inputLimits,
+  LookupQuery,
+  LookupResponse,
   ProfileDeletionReport,
-  ProfileSummary,
+  ProfileListResponse,
   parseQuickAdd,
   QuickAddDraft,
   QuickAddInput,
@@ -90,10 +93,18 @@ import {
   labelAttachment,
   withAttachmentStatus,
 } from "./attachments.ts";
+import {
+  credentialProfileName,
+  loadCredential,
+  credentialFile as sessionFile,
+  validateProfileSelectors,
+} from "./credential-profile.ts";
 import { diagnosticsOutput, diagnosticsRead } from "./diagnostics.ts";
+import { directoryOutput, lookupOutput } from "./discovery.ts";
 import { manualPage, withGuide } from "./help.ts";
 import { makeImportCommand, readImportFile, renderImport } from "./import.ts";
 import { verifyMacPassword } from "./macos-password.ts";
+import { resolveProfile } from "./profile-selection.ts";
 import {
   ConfigResponse,
   commandNames,
@@ -157,8 +168,6 @@ const io = <A>(run: () => A) =>
         : new CommandError(1, "runtime_error", String(error)),
   });
 const localDir = join(homedir(), ".todo-cli");
-const sessionFile = (profile: string) =>
-  join(localDir, `session_${encodeURIComponent(profile)}.json`);
 const Config = Schema.Struct({ db_path: Schema.optionalKey(Schema.String) });
 const loadConfig = () =>
   existsSync(join(localDir, "config.json"))
@@ -166,18 +175,6 @@ const loadConfig = () =>
         JSON.parse(readFileSync(join(localDir, "config.json"), "utf8")),
       )
     : {};
-const loadCredential = (profile: string) => {
-  try {
-    const token = Schema.decodeUnknownSync(
-      Schema.Struct({
-        token: Schema.NonEmptyString.check(Schema.isPattern(/^\S+$/)),
-      }),
-    )(JSON.parse(readFileSync(sessionFile(profile), "utf8"))).token;
-    return token;
-  } catch {
-    throw new CommandError(3, "auth_required", "run todo login");
-  }
-};
 const canonicalPath = (path: string): string => {
   if (lstatSync(path, { throwIfNoEntry: false })) return realpathSync(path);
   return join(canonicalPath(dirname(path)), basename(path));
@@ -224,6 +221,7 @@ const root = Command.make("todo").pipe(
       Flag.withDefault("md"),
     ),
     profile: string("profile", "default"),
+    credentialProfile: stringFlag("credential-profile").pipe(Flag.optional),
     noColor: bool("no-color"),
     helpHuman: bool("help-human-flag"),
   }),
@@ -280,7 +278,7 @@ const withStore = <A, E, R>(
   });
 const access = (cfg: Settings) =>
   io(() => ({
-    credential: loadCredential(cfg.profile),
+    credential: loadCredential(cfg),
     profile: profileId(cfg.profile),
   }));
 const selectProfile = Effect.fn(function* (
@@ -288,20 +286,12 @@ const selectProfile = Effect.fn(function* (
   cfg: Settings,
   action: AuthAction = "read",
 ) {
-  const credential = yield* io(() => loadCredential(cfg.profile));
-  const profile = yield* store.auth
-    .resolveProfile({ credential, profile: cfg.profile, action })
-    .pipe(
-      Effect.catchTag("ProfileResolutionError", () =>
-        Effect.fail(
-          new CommandError(
-            3,
-            "not_found",
-            "Profile not found; run todo init --profile <name>",
-          ),
-        ),
-      ),
-    );
+  const credential = yield* io(() => loadCredential(cfg));
+  const profile = yield* resolveProfile(store, {
+    credential,
+    profile: cfg.profile,
+    action,
+  });
   return { credential, profile: profile.id };
 });
 const cliLookupError = (
@@ -434,11 +424,11 @@ const login = Command.make(
           yield* ensureProfile(store, cfg.profile);
           yield* io(() => {
             writeFileSync(
-              sessionFile(cfg.profile),
+              sessionFile(credentialProfileName(cfg)),
               JSON.stringify({ token: result.credential }),
               { mode: 0o600 },
             );
-            chmodSync(sessionFile(cfg.profile), 0o600);
+            chmodSync(sessionFile(credentialProfileName(cfg)), 0o600);
           });
           yield* response(
             cfg.format,
@@ -539,12 +529,14 @@ const resetPassphrase = Command.make(
 const logout = Command.make("logout", {}, () =>
   Effect.gen(function* () {
     const cfg = yield* root;
-    if (existsSync(sessionFile(cfg.profile)))
+    if (Option.isSome(cfg.credentialProfile))
+      yield* io(() => loadCredential(cfg));
+    if (existsSync(sessionFile(credentialProfileName(cfg))))
       yield* withStore(cfg, (store) =>
         Effect.gen(function* () {
           const request = yield* access(cfg);
           yield* store.auth.signOut({ credential: request.credential });
-          yield* io(() => rmSync(sessionFile(cfg.profile)));
+          yield* io(() => rmSync(sessionFile(credentialProfileName(cfg))));
         }),
       );
     yield* status(cfg.format, "logged_out", "logged out\n");
@@ -758,7 +750,7 @@ const list = Command.make(
         Effect.gen(function* () {
           const data = yield* readTasks(
             store,
-            yield* selectProfile(store, cfg),
+            yield* selectProfile(store, cfg, "read"),
           );
           yield* write(
             renderList(
@@ -856,23 +848,15 @@ const transfer = (kind: "move" | "copy") =>
         yield* withStore(cfg, (store) =>
           Effect.gen(function* () {
             const request = yield* selectProfile(store, cfg, "authenticate");
-            const destination = yield* store.auth
-              .resolveProfile({
+            const destination = yield* resolveProfile(
+              store,
+              {
                 credential: request.credential,
                 profile: input.to,
                 action: "authenticate",
-              })
-              .pipe(
-                Effect.catchTag("ProfileResolutionError", () =>
-                  Effect.fail(
-                    new CommandError(
-                      3,
-                      "not_found",
-                      "target Profile not found; run todo init --profile <name>",
-                    ),
-                  ),
-                ),
-              );
+              },
+              "target Profile not found; run todo init --profile <name>",
+            );
             if (kind === "move" && destination.id === request.profile)
               return yield* Effect.fail(
                 new CommandError(
@@ -1047,7 +1031,7 @@ const show = Command.make(
         Effect.gen(function* () {
           const data = yield* readTasks(
             store,
-            yield* selectProfile(store, cfg),
+            yield* selectProfile(store, cfg, "read"),
           );
           const task = data.views.find((t) => t.id === id);
           if (!task)
@@ -1083,25 +1067,25 @@ const batchEditCommand = Command.make(
   (input) =>
     Effect.gen(function* () {
       const cfg = yield* root;
-      const body = yield* Effect.try({
-        try: () =>
-          Schema.decodeUnknownSync(BatchEditRequest, {
-            onExcessProperty: "error",
-          })(
-            JSON.parse(
-              readFileSync(input.file === "-" ? 0 : input.file, "utf8"),
-            ),
-          ),
-        catch: (error) =>
-          new CommandError(
-            2,
-            "invalid_args",
-            `Cannot read batch edit. Supply Task ids, from_version and one shared changes field. Check todo schema batch-edit-input. ${String(error)}`,
-          ),
-      });
       yield* withStore(cfg, (store) =>
         Effect.gen(function* () {
           const request = yield* selectProfile(store, cfg, "authenticate");
+          const body = yield* Effect.try({
+            try: () =>
+              Schema.decodeUnknownSync(BatchEditRequest, {
+                onExcessProperty: "error",
+              })(
+                JSON.parse(
+                  readFileSync(input.file === "-" ? 0 : input.file, "utf8"),
+                ),
+              ),
+            catch: (error) =>
+              new CommandError(
+                2,
+                "invalid_args",
+                `Cannot read batch edit. Supply Task ids, from_version and one shared changes field. Check todo schema batch-edit-input. ${String(error)}`,
+              ),
+          });
           const result = yield* batchEditTasks(store, request, {
             ...body,
             dry_run: input.dryRun || body.dry_run || false,
@@ -1157,25 +1141,26 @@ const attachManyCommand = Command.make(
   (input) =>
     Effect.gen(function* () {
       const cfg = yield* root;
-      const requestBody = yield* Effect.try({
-        try: () =>
-          Schema.decodeUnknownSync(AttachManyRequest, {
-            onExcessProperty: "error",
-          })(
-            JSON.parse(
-              readFileSync(input.file === "-" ? 0 : input.file, "utf8"),
-            ),
-          ),
-        catch: (error) =>
-          new CommandError(
-            2,
-            "invalid_args",
-            `Cannot read Attachment batch: ${String(error)}`,
-          ),
-      });
       yield* withStore(cfg, (store) =>
         Effect.gen(function* () {
           const request = yield* selectProfile(store, cfg, "authenticate");
+          const requestBody = yield* Effect.try({
+            try: () =>
+              Schema.decodeUnknownSync(AttachManyRequest, {
+                onExcessProperty: "error",
+              })(
+                JSON.parse(
+                  readFileSync(input.file === "-" ? 0 : input.file, "utf8"),
+                ),
+              ),
+            catch: (error) =>
+              new CommandError(
+                2,
+                "invalid_args",
+                `Cannot read Attachment batch: ${String(error)}`,
+              ),
+          });
+
           const result = yield* new AttachmentCommands(store).attachMany(
             request,
             {
@@ -1315,7 +1300,7 @@ const history = Command.make(
       const cfg = yield* root;
       yield* withStore(cfg, (store) =>
         Effect.gen(function* () {
-          const request = yield* selectProfile(store, cfg);
+          const request = yield* selectProfile(store, cfg, "read");
           const task_id = yield* io(() => Schema.decodeUnknownSync(TaskId)(id));
           const entries = yield* new ClientReads(store).history({
             ...request,
@@ -1367,7 +1352,7 @@ const reviewCommand = (period: "daily" | "weekly") =>
         Effect.gen(function* () {
           const data = yield* readTasks(
             store,
-            yield* selectProfile(store, cfg),
+            yield* selectProfile(store, cfg, "read"),
           );
           yield* write(
             renderReview(data.views, period, cfg.format, nowInstant()),
@@ -1396,7 +1381,7 @@ const exportCommand = Command.make(
         Effect.gen(function* () {
           const data = yield* readTasks(
             store,
-            yield* selectProfile(store, cfg),
+            yield* selectProfile(store, cfg, "read"),
           );
           const tasks = yield* Effect.try({
             try: () => exportScope(data.views, input.scope, nowInstant()),
@@ -1428,14 +1413,14 @@ const sync = Command.make("sync").pipe(
       (input) =>
         Effect.gen(function* () {
           const cfg = yield* root;
-          const { target, canonicalTarget } = yield* io(() =>
-            projectionTarget(input.vault, input.file),
-          );
           yield* withStore(cfg, (store) =>
             Effect.gen(function* () {
               const data = yield* readTasks(
                 store,
-                yield* selectProfile(store, cfg),
+                yield* selectProfile(store, cfg, "read"),
+              );
+              const { target, canonicalTarget } = yield* io(() =>
+                projectionTarget(input.vault, input.file),
               );
               yield* io(() => {
                 mkdirSync(dirname(canonicalTarget), { recursive: true });
@@ -1532,10 +1517,10 @@ const config = Command.make("config").pipe(
 const importCommand = makeImportCommand((input) =>
   Effect.gen(function* () {
     const cfg = yield* root;
-    const items = yield* readImportFile(input.file);
     yield* withStore(cfg, (store) =>
       Effect.gen(function* () {
         const request = yield* selectProfile(store, cfg, "authenticate");
+        const items = yield* readImportFile(input.file);
         const result = yield* importTasks(store, request, {
           items,
           file_name: input.file === "-" ? "stdin" : basename(input.file),
@@ -1616,7 +1601,7 @@ const diagnostics = Command.make(
   (input) =>
     Effect.gen(function* () {
       const cfg = yield* root;
-      const credential = yield* io(() => loadCredential(cfg.profile));
+      const credential = yield* io(() => loadCredential(cfg));
       const snapshot = diagnosticsRead(input.server, credential).pipe(
         Effect.flatMap((snapshot) =>
           write(diagnosticsOutput(snapshot, cfg.format, input.follow)),
@@ -1640,7 +1625,7 @@ const top = Command.make(
   (input) =>
     Effect.gen(function* () {
       const cfg = yield* root;
-      const credential = yield* io(() => loadCredential(cfg.profile));
+      const credential = yield* io(() => loadCredential(cfg));
       const read = diagnosticsRead(input.server, credential);
       if (
         !process.stdout.isTTY ||
@@ -1653,33 +1638,66 @@ const top = Command.make(
       yield* runTop(read, !cfg.noColor && !process.env.NO_COLOR);
     }),
 ).pipe(withGuide("top"));
-const ProfileListResponse = Schema.Struct({
-  generated_at: Schema.String,
-  profiles: Schema.Array(ProfileSummary),
-});
+registerCommandSchema("lookup", LookupResponse);
+const lookup = Command.make(
+  "lookup",
+  { prefix: stringFlag("prefix") },
+  (input) =>
+    Effect.gen(function* () {
+      const cfg = yield* root;
+      if (!Schema.is(LookupQuery)(input))
+        return yield* Effect.fail(
+          new CommandError(
+            2,
+            "invalid_args",
+            "--prefix must contain 1 to 36 hex digits or hyphens",
+          ),
+        );
+      yield* withStore(cfg, (store) =>
+        Effect.gen(function* () {
+          const credential = yield* io(() => loadCredential(cfg));
+          const matches = yield* new Discovery(store).lookup(credential, input);
+          yield* write(
+            cfg.format === "json"
+              ? encodeResponse(LookupResponse, {
+                  generated_at: nowInstant(),
+                  prefix: input.prefix,
+                  matches,
+                })
+              : lookupOutput(matches, cfg.format, credentialProfileName(cfg)),
+          );
+        }),
+      );
+    }),
+).pipe(withGuide("lookup"));
 registerCommandSchema("profile", TextResponse);
 registerCommandSchema("profile list", ProfileListResponse);
 registerCommandSchema("profile delete", ProfileDeletionReport);
 const profiles = Command.make("profile").pipe(
   Command.withSubcommands([
-    Command.make("list", {}, () =>
+    Command.make("list", { projects: bool("projects") }, (input) =>
       Effect.gen(function* () {
         const cfg = yield* root;
         yield* withStore(cfg, (store) =>
           Effect.gen(function* () {
-            const credential = yield* io(() => loadCredential(cfg.profile));
-            const profiles = yield* new ClientReads(store).profiles(credential);
+            const credential = yield* io(() => loadCredential(cfg));
+            const profiles = yield* input.projects
+              ? new Discovery(store).directory(credential)
+              : new ClientReads(store).profiles(credential);
             yield* write(
               cfg.format === "json"
                 ? encodeResponse(ProfileListResponse, {
                     generated_at: nowInstant(),
                     profiles,
                   })
-                : profiles
-                    .map(
-                      (p) => `- ${p.name} (${p.visible_task_count ?? 0} Tasks)`,
-                    )
-                    .join("\n") + "\n",
+                : input.projects
+                  ? directoryOutput(profiles)
+                  : profiles
+                      .map(
+                        (p) =>
+                          `- ${p.name} (${p.visible_task_count ?? 0} Tasks)`,
+                      )
+                      .join("\n") + "\n",
             );
           }),
         );
@@ -1697,14 +1715,15 @@ const profiles = Command.make("profile").pipe(
           const cfg = yield* root;
           yield* withStore(cfg, (store) =>
             Effect.gen(function* () {
-              const credential = yield* io(() => loadCredential(cfg.profile));
-              const profiles = yield* store.auth.profiles({ credential });
-              const target = profiles.find(
-                (p) => p.name === input.name || p.id === input.name,
-              );
+              const credential = yield* io(() => loadCredential(cfg));
+              const target = yield* resolveProfile(store, {
+                credential,
+                profile: input.name,
+                action: "deleteProfile",
+              });
               const result = yield* store.auth.deleteProfile({
                 credential,
-                profile: target?.id ?? profileId(input.name),
+                profile: target.id,
                 options: { with_tasks: input.withTasks, dry_run: input.dryRun },
               });
               if (result.outcome === "refused") {
@@ -1794,7 +1813,7 @@ function snapshotUse<S extends Schema.ConstraintEncoder<unknown>>(
     yield* withStore(cfg, (store) =>
       Effect.gen(function* () {
         yield* store.auth.requireOwner({
-          credential: yield* io(() => loadCredential(cfg.profile)),
+          credential: yield* io(() => loadCredential(cfg)),
         });
         const result = yield* use(store, iso(nowInstant()));
         yield* response(
@@ -1820,6 +1839,7 @@ const app = root.pipe(
     whoami,
     importCommand,
     profiles,
+    lookup,
     add,
     parseCommand,
     list,
@@ -1909,6 +1929,7 @@ const follow = args.some(
 );
 const jsonOutput = format === "json" || (follow && !process.stdout.isTTY);
 const program = Effect.gen(function* () {
+  yield* io(() => validateProfileSelectors(flagArgs, stringFlags));
   if (args.length === 1 && (args[0] === "--version" || args[0] === "-v")) {
     process.stdout.write(
       `todo 0.1.0 build=${BUILD_ID} contract=${CONTRACT_ID}\n`,

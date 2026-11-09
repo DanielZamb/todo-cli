@@ -33119,6 +33119,705 @@ public enum Operations {
             }
         }
     }
+    /// - Remark: HTTP `GET /tasks/lookup`.
+    /// - Remark: Generated from `#/paths//tasks/lookup/get(reads.lookup)`.
+    public enum reads_period_lookup {
+        public static let id: Swift.String = "reads.lookup"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/tasks/lookup/GET/query`.
+            public struct Query: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/tasks/lookup/GET/query/prefix`.
+                public var prefix: Swift.String
+                /// Creates a new `Query`.
+                ///
+                /// - Parameters:
+                ///   - prefix:
+                public init(prefix: Swift.String) {
+                    self.prefix = prefix
+                }
+            }
+            public var query: Operations.reads_period_lookup.Input.Query
+            /// - Remark: Generated from `#/paths/tasks/lookup/GET/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.reads_period_lookup.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.reads_period_lookup.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.reads_period_lookup.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - query:
+            ///   - headers:
+            public init(
+                query: Operations.reads_period_lookup.Input.Query,
+                headers: Operations.reads_period_lookup.Input.Headers = .init()
+            ) {
+                self.query = query
+                self.headers = headers
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/200/content/jsonPayload`.
+                    public struct jsonPayloadPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                        /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/200/content/jsonPayload/profile`.
+                        public struct profilePayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/200/content/jsonPayload/profile/id`.
+                            public var id: Swift.String
+                            /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/200/content/jsonPayload/profile/name`.
+                            public var name: Swift.String
+                            /// Creates a new `profilePayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - id:
+                            ///   - name:
+                            public init(
+                                id: Swift.String,
+                                name: Swift.String
+                            ) {
+                                self.id = id
+                                self.name = name
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case id
+                                case name
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.id = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .id
+                                )
+                                self.name = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .name
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "id",
+                                    "name"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.id, forKey: .id)
+                                try container.encode(self.name, forKey: .name)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/200/content/jsonPayload/profile`.
+                        public var profile: Operations.reads_period_lookup.Output.Ok.Body.jsonPayloadPayload.profilePayload
+                        /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/200/content/jsonPayload/task_id`.
+                        public var task_id: Swift.String
+                        /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/200/content/jsonPayload/title`.
+                        public var title: Swift.String
+                        /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/200/content/jsonPayload/project`.
+                        public var project: Swift.String?
+                        /// Creates a new `jsonPayloadPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - profile:
+                        ///   - task_id:
+                        ///   - title:
+                        ///   - project:
+                        public init(
+                            profile: Operations.reads_period_lookup.Output.Ok.Body.jsonPayloadPayload.profilePayload,
+                            task_id: Swift.String,
+                            title: Swift.String,
+                            project: Swift.String? = nil
+                        ) {
+                            self.profile = profile
+                            self.task_id = task_id
+                            self.title = title
+                            self.project = project
+                        }
+                        public enum CodingKeys: String, CodingKey {
+                            case profile
+                            case task_id
+                            case title
+                            case project
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.profile = try container.decode(
+                                Operations.reads_period_lookup.Output.Ok.Body.jsonPayloadPayload.profilePayload.self,
+                                forKey: .profile
+                            )
+                            self.task_id = try container.decode(
+                                Swift.String.self,
+                                forKey: .task_id
+                            )
+                            self.title = try container.decode(
+                                Swift.String.self,
+                                forKey: .title
+                            )
+                            self.project = try container.decodeIfPresent(
+                                Swift.String.self,
+                                forKey: .project
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "profile",
+                                "task_id",
+                                "title",
+                                "project"
+                            ])
+                        }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.profile, forKey: .profile)
+                                try container.encode(self.task_id, forKey: .task_id)
+                                try container.encode(self.title, forKey: .title)
+                                if self.project == nil && _explicitNullKeys.contains(CodingKeys.project.stringValue) {
+                                    try container.encodeNil(forKey: .project)
+                                } else {
+                                    try container.encodeIfPresent(self.project, forKey: .project)
+                                }
+                            }
+                        }
+                    /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/200/content/json`.
+                    public typealias jsonPayload = [Operations.reads_period_lookup.Output.Ok.Body.jsonPayloadPayload]
+                    /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/200/content/application\/json`.
+                    case json(Operations.reads_period_lookup.Output.Ok.Body.jsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Operations.reads_period_lookup.Output.Ok.Body.jsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_lookup.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_lookup.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Success
+            ///
+            /// - Remark: Generated from `#/paths//tasks/lookup/get(reads.lookup)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.reads_period_lookup.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.reads_period_lookup.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct BadRequest: Sendable, Hashable {
+                /// Creates a new `BadRequest`.
+                public init() {}
+            }
+            /// BadRequest
+            ///
+            /// - Remark: Generated from `#/paths//tasks/lookup/get(reads.lookup)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.reads_period_lookup.Output.BadRequest)
+            /// BadRequest
+            ///
+            /// - Remark: Generated from `#/paths//tasks/lookup/get(reads.lookup)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            public static var badRequest: Self {
+                .badRequest(.init())
+            }
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            public var badRequest: Operations.reads_period_lookup.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/401/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/401/content/application\/json`.
+                    case json(Components.Schemas.UnauthorizedEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.UnauthorizedEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_lookup.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_lookup.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// Unauthorized
+            ///
+            /// - Remark: Generated from `#/paths//tasks/lookup/get(reads.lookup)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.reads_period_lookup.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            public var unauthorized: Operations.reads_period_lookup.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/403/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/403/content/application\/json`.
+                    case json(Components.Schemas.ForbiddenEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.ForbiddenEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_lookup.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_lookup.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// Forbidden
+            ///
+            /// - Remark: Generated from `#/paths//tasks/lookup/get(reads.lookup)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.reads_period_lookup.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            public var forbidden: Operations.reads_period_lookup.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct NotFound: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/404/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/404/content/json`.
+                    public struct jsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/404/content/json/value1`.
+                        public struct Value1Payload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/404/content/json/value1/generated_at`.
+                            public var generated_at: Swift.String
+                            /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/404/content/json/value1/code`.
+                            @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_found = "not_found"
+                            }
+                            /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/404/content/json/value1/code`.
+                            public var code: Operations.reads_period_lookup.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload
+                            /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/404/content/json/value1/message`.
+                            public var message: Swift.String
+                            /// Creates a new `Value1Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - generated_at:
+                            ///   - code:
+                            ///   - message:
+                            public init(
+                                generated_at: Swift.String,
+                                code: Operations.reads_period_lookup.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
+                                message: Swift.String
+                            ) {
+                                self.generated_at = generated_at
+                                self.code = code
+                                self.message = message
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case generated_at
+                                case code
+                                case message
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.generated_at = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .generated_at
+                                )
+                                self.code = try container.decode(
+                                    Operations.reads_period_lookup.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "generated_at",
+                                    "code",
+                                    "message"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.generated_at, forKey: .generated_at)
+                                try container.encode(self.code, forKey: .code)
+                                try container.encode(self.message, forKey: .message)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/404/content/json/value1`.
+                        public var value1: Operations.reads_period_lookup.Output.NotFound.Body.jsonPayload.Value1Payload?
+                        /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/404/content/json/value2`.
+                        public var value2: Components.Schemas.NotFoundEncoded?
+                        /// Creates a new `jsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - value1:
+                        ///   - value2:
+                        public init(
+                            value1: Operations.reads_period_lookup.Output.NotFound.Body.jsonPayload.Value1Payload? = nil,
+                            value2: Components.Schemas.NotFoundEncoded? = nil
+                        ) {
+                            self.value1 = value1
+                            self.value2 = value2
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self.value1 = try .init(from: decoder)
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self.value2 = try .init(from: decoder)
+                            } catch {
+                                errors.append(error)
+                            }
+                            try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                [
+                                    self.value1,
+                                    self.value2
+                                ],
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
+                            )
+                        }
+                        public func encode(to encoder: any Swift.Encoder) throws {
+                            try self.value1?.encode(to: encoder)
+                            try self.value2?.encode(to: encoder)
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/404/content/application\/json`.
+                    case json(Operations.reads_period_lookup.Output.NotFound.Body.jsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Operations.reads_period_lookup.Output.NotFound.Body.jsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_lookup.Output.NotFound.Body
+                /// Creates a new `NotFound`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_lookup.Output.NotFound.Body) {
+                    self.body = body
+                }
+            }
+            /// NotFound
+            ///
+            /// - Remark: Generated from `#/paths//tasks/lookup/get(reads.lookup)/responses/404`.
+            ///
+            /// HTTP response code: `404 notFound`.
+            case notFound(Operations.reads_period_lookup.Output.NotFound)
+            /// The associated value of the enum case if `self` is `.notFound`.
+            ///
+            /// - Throws: An error if `self` is not `.notFound`.
+            /// - SeeAlso: `.notFound`.
+            public var notFound: Operations.reads_period_lookup.Output.NotFound {
+                get throws {
+                    switch self {
+                    case let .notFound(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "notFound",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct Conflict: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/409/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/409/content/application\/json`.
+                    case json(Components.Schemas.ConflictEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.ConflictEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_lookup.Output.Conflict.Body
+                /// Creates a new `Conflict`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_lookup.Output.Conflict.Body) {
+                    self.body = body
+                }
+            }
+            /// Conflict
+            ///
+            /// - Remark: Generated from `#/paths//tasks/lookup/get(reads.lookup)/responses/409`.
+            ///
+            /// HTTP response code: `409 conflict`.
+            case conflict(Operations.reads_period_lookup.Output.Conflict)
+            /// The associated value of the enum case if `self` is `.conflict`.
+            ///
+            /// - Throws: An error if `self` is not `.conflict`.
+            /// - SeeAlso: `.conflict`.
+            public var conflict: Operations.reads_period_lookup.Output.Conflict {
+                get throws {
+                    switch self {
+                    case let .conflict(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "conflict",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/422/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/422/content/application\/json`.
+                    case json(Components.Schemas.InvalidTaskEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.InvalidTaskEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_lookup.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_lookup.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// InvalidTask
+            ///
+            /// - Remark: Generated from `#/paths//tasks/lookup/get(reads.lookup)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.reads_period_lookup.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            public var unprocessableContent: Operations.reads_period_lookup.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct InternalServerError: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/500/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/tasks/lookup/GET/responses/500/content/application\/json`.
+                    case json(Components.Schemas.InternalErrorEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.InternalErrorEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_lookup.Output.InternalServerError.Body
+                /// Creates a new `InternalServerError`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_lookup.Output.InternalServerError.Body) {
+                    self.body = body
+                }
+            }
+            /// InternalError
+            ///
+            /// - Remark: Generated from `#/paths//tasks/lookup/get(reads.lookup)/responses/500`.
+            ///
+            /// HTTP response code: `500 internalServerError`.
+            case internalServerError(Operations.reads_period_lookup.Output.InternalServerError)
+            /// The associated value of the enum case if `self` is `.internalServerError`.
+            ///
+            /// - Throws: An error if `self` is not `.internalServerError`.
+            /// - SeeAlso: `.internalServerError`.
+            public var internalServerError: Operations.reads_period_lookup.Output.InternalServerError {
+                get throws {
+                    switch self {
+                    case let .internalServerError(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "internalServerError",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
     /// - Remark: HTTP `DELETE /profiles/{profile}`.
     /// - Remark: Generated from `#/paths//profiles/{profile}/delete(reads.deleteProfile)`.
     public enum reads_period_deleteProfile {
@@ -34070,6 +34769,24 @@ public enum Operations {
     public enum reads_period_profiles {
         public static let id: Swift.String = "reads.profiles"
         public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/profiles/GET/query`.
+            public struct Query: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/GET/query/include_projects`.
+                @frozen public enum include_projectsPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case _true = "true"
+                    case _false = "false"
+                }
+                /// - Remark: Generated from `#/paths/profiles/GET/query/include_projects`.
+                public var include_projects: Operations.reads_period_profiles.Input.Query.include_projectsPayload?
+                /// Creates a new `Query`.
+                ///
+                /// - Parameters:
+                ///   - include_projects:
+                public init(include_projects: Operations.reads_period_profiles.Input.Query.include_projectsPayload? = nil) {
+                    self.include_projects = include_projects
+                }
+            }
+            public var query: Operations.reads_period_profiles.Input.Query
             /// - Remark: Generated from `#/paths/profiles/GET/header`.
             public struct Headers: Sendable, Hashable {
                 public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.reads_period_profiles.AcceptableContentType>]
@@ -34085,8 +34802,13 @@ public enum Operations {
             /// Creates a new `Input`.
             ///
             /// - Parameters:
+            ///   - query:
             ///   - headers:
-            public init(headers: Operations.reads_period_profiles.Input.Headers = .init()) {
+            public init(
+                query: Operations.reads_period_profiles.Input.Query = .init(),
+                headers: Operations.reads_period_profiles.Input.Headers = .init()
+            ) {
+                self.query = query
                 self.headers = headers
             }
         }
@@ -34112,6 +34834,61 @@ public enum Operations {
                         public var inbox_task_count: Swift.Int
                         /// - Remark: Generated from `#/paths/profiles/GET/responses/200/content/jsonPayload/visible_task_count`.
                         public var visible_task_count: Swift.Int?
+                        /// - Remark: Generated from `#/paths/profiles/GET/responses/200/content/jsonPayload/projectsPayload`.
+                        public struct projectsPayloadPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/profiles/GET/responses/200/content/jsonPayload/projectsPayload/id`.
+                            public var id: Swift.String
+                            /// - Remark: Generated from `#/paths/profiles/GET/responses/200/content/jsonPayload/projectsPayload/name`.
+                            public var name: Swift.String
+                            /// Creates a new `projectsPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - id:
+                            ///   - name:
+                            public init(
+                                id: Swift.String,
+                                name: Swift.String
+                            ) {
+                                self.id = id
+                                self.name = name
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case id
+                                case name
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.id = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .id
+                                )
+                                self.name = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .name
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "id",
+                                    "name"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.id, forKey: .id)
+                                try container.encode(self.name, forKey: .name)
+                            }
+                        }
+                        /// Present with --projects or include_projects=true. Includes defined Projects even without visible Tasks; an empty Profile has [].
+                        ///
+                        /// - Remark: Generated from `#/paths/profiles/GET/responses/200/content/jsonPayload/projects`.
+                        public typealias projectsPayload = [Operations.reads_period_profiles.Output.Ok.Body.jsonPayloadPayload.projectsPayloadPayload]
+                        /// Present with --projects or include_projects=true. Includes defined Projects even without visible Tasks; an empty Profile has [].
+                        ///
+                        /// - Remark: Generated from `#/paths/profiles/GET/responses/200/content/jsonPayload/projects`.
+                        public var projects: Operations.reads_period_profiles.Output.Ok.Body.jsonPayloadPayload.projectsPayload?
                         /// Creates a new `jsonPayloadPayload`.
                         ///
                         /// - Parameters:
@@ -34122,6 +34899,7 @@ public enum Operations {
                         ///   - open_task_count:
                         ///   - inbox_task_count:
                         ///   - visible_task_count:
+                        ///   - projects: Present with --projects or include_projects=true. Includes defined Projects even without visible Tasks; an empty Profile has [].
                         public init(
                             id: Swift.String,
                             name: Swift.String,
@@ -34129,7 +34907,8 @@ public enum Operations {
                             updated_at: Swift.String,
                             open_task_count: Swift.Int,
                             inbox_task_count: Swift.Int,
-                            visible_task_count: Swift.Int? = nil
+                            visible_task_count: Swift.Int? = nil,
+                            projects: Operations.reads_period_profiles.Output.Ok.Body.jsonPayloadPayload.projectsPayload? = nil
                         ) {
                             self.id = id
                             self.name = name
@@ -34138,6 +34917,7 @@ public enum Operations {
                             self.open_task_count = open_task_count
                             self.inbox_task_count = inbox_task_count
                             self.visible_task_count = visible_task_count
+                            self.projects = projects
                         }
                         public enum CodingKeys: String, CodingKey {
                             case id
@@ -34147,6 +34927,7 @@ public enum Operations {
                             case open_task_count
                             case inbox_task_count
                             case visible_task_count
+                            case projects
                         }
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -34179,6 +34960,10 @@ public enum Operations {
                                 Swift.Int.self,
                                 forKey: .visible_task_count
                             )
+                            self.projects = try container.decodeIfPresent(
+                                Operations.reads_period_profiles.Output.Ok.Body.jsonPayloadPayload.projectsPayload.self,
+                                forKey: .projects
+                            )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
                                 "id",
                                 "name",
@@ -34186,7 +34971,8 @@ public enum Operations {
                                 "updated_at",
                                 "open_task_count",
                                 "inbox_task_count",
-                                "visible_task_count"
+                                "visible_task_count",
+                                "projects"
                             ])
                         }
 
@@ -34202,6 +34988,11 @@ public enum Operations {
                                 try container.encodeNil(forKey: .visible_task_count)
                             } else {
                                 try container.encodeIfPresent(self.visible_task_count, forKey: .visible_task_count)
+                            }
+                            if self.projects == nil && _explicitNullKeys.contains(CodingKeys.projects.stringValue) {
+                                try container.encodeNil(forKey: .projects)
+                            } else {
+                                try container.encodeIfPresent(self.projects, forKey: .projects)
                             }
                         }
                     }

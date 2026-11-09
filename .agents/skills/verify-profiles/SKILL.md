@@ -99,3 +99,10 @@ Its move/copy matrix requires byte-identical table errors for both destinations,
 including dry-run, and the unchanged owner absent-target response. Destination
 resolution calls auth.resolveProfile with authenticate; the source and destination
 write-access checks still run afterward. Revoked move/copy History matches HTTP.
+## Authorized discovery
+
+[verify-discovery](../verify-discovery/SKILL.md) owns the compiled Profile directory
+and cross-Profile id-prefix lookup matrix, credential no-leak properties, WAL
+snapshot tests and auth-failure rollback proof. Run its single command after
+changing these reads or their CLI/HTTP contracts. Existing Profile-scoped SSE
+and Task search behavior retain their current recipes.

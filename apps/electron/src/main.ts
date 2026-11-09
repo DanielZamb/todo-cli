@@ -250,7 +250,10 @@ const handle = (
         return { _tag: "windowMode", compact: layout.compact };
       case "restore":
         return credential
-          ? { _tag: "signedIn", profiles: yield* http.reads.profiles() }
+          ? {
+              _tag: "signedIn",
+              profiles: yield* http.reads.profiles({ query: {} }),
+            }
           : { _tag: "signedOut" };
       case "signIn": {
         if (
@@ -280,7 +283,10 @@ const handle = (
           return outdated;
         }
         send({ _tag: "signedIn" });
-        return { _tag: "signedIn", profiles: yield* http.reads.profiles() };
+        return {
+          _tag: "signedIn",
+          profiles: yield* http.reads.profiles({ query: {} }),
+        };
       }
       case "signOut": {
         yield* http.credentials.signOut();

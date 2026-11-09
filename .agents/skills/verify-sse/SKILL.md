@@ -121,3 +121,11 @@ resolves its own checkout and runs the full recipe. Executable
 binary. Executable `scripts/drive.py <scratch> <evidence>` starts the compiled
 server and drives curl and the CLI. Invoke the shell helper for cleanup.
 Use `/maintain-verification-skill` when stream behavior changes.
+
+## Authorized discovery
+
+[verify-discovery](../verify-discovery/SKILL.md) owns the compiled Profile directory
+and cross-Profile id-prefix lookup matrix, credential no-leak properties, WAL
+snapshot tests and auth-failure rollback proof. Run its single command after
+changing these reads or their CLI/HTTP contracts. Existing Profile-scoped SSE
+and Task search behavior retain their current recipes.

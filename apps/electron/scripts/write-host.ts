@@ -257,7 +257,7 @@ async function boot() {
           if (!credential) return { _tag: "signedOut" };
           return {
             _tag: "signedIn",
-            profiles: await run(client.reads.profiles()),
+            profiles: await run(client.reads.profiles({ query: {} })),
           };
         case "watch":
           watch(request.profile);
@@ -282,7 +282,7 @@ async function boot() {
           authentication("signedIn");
           return {
             _tag: "signedIn",
-            profiles: await run(client.reads.profiles()),
+            profiles: await run(client.reads.profiles({ query: {} })),
           };
         }
         default:

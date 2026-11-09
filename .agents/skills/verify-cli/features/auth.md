@@ -30,3 +30,9 @@ The compiled behavior case checks JSON schemas, refusal with a visible Task
 count, preview without writes, retained Task History, last Profile protection,
 and same-name recreation with a new ID. JSON responses use encodeResponse and
 the shared error envelope.
+
+Global `--credential-profile <name>` selects the stored credential for reads and
+mutations, plus login storage and logout removal, while --profile still chooses
+the target. Without the option, existing selection stays unchanged. The compiled
+[discovery credential recipe](../../verify-discovery/features/credential-selection.md)
+proves precedence, no fallback, missing-file errors and printed Show execution.

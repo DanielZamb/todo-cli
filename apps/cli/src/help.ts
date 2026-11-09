@@ -1,4 +1,5 @@
 import { Command } from "effect/cli";
+import { credentialSelectionDescription } from "./credential-profile.ts";
 
 const exitCodes =
   "0 success\n1 runtime failure\n2 validation or usage\n3 not found or auth missing\n4 Conflict";
@@ -16,7 +17,8 @@ String flag values beginning with a single dash work in split or equals form, in
 const globals = [
   "--format md|json|table (default md)",
   "--db <path> (default TODO_DB, config db.path, then ~/.todo-cli/todo.db)",
-  "--profile <name> (default default)",
+  "--profile <name> (default default; target Profile and default credential file)",
+  `--credential-profile <name> (default --profile; ${credentialSelectionDescription})`,
   "--no-color (default false)",
   "--help-human-flag (default false)",
 ];
@@ -606,14 +608,28 @@ const guides = {
     examples: ["todo profile list", "todo profile delete personal --dry-run"],
     output: "Choose list or delete. JSON help returns generated_at and text.",
   }),
+  lookup: reference({
+    purpose:
+      "Explicitly find Tasks by id prefix across Profiles available to this credential.",
+    synopsis: "todo lookup --prefix <hex-prefix>",
+    flags: [
+      "--prefix <value> (required, 1 through 36 hex digits or hyphens; no trimming)",
+    ],
+    examples: ["todo lookup --prefix 45A3 --format json"],
+    auth: "A Session or unscoped Token sees all active Profiles. A scoped Token sees only its Profile. Global --profile selects the stored credential unless --credential-profile is supplied.",
+    output:
+      "JSON returns generated_at, the original prefix and matches (always an array). Each match has profile {id,name}, task_id, title and project (name or null). Markdown and table include a quoted todo show command with --credential-profile when the credential file differs from the result Profile. Deleted Tasks and Profiles are excluded. Empty results succeed. No selected Profile changes; mutations still require a full id and an explicit Profile.",
+  }),
   "profile list": reference({
     purpose: "List active Profiles and their Task counts.",
-    synopsis: "todo profile list",
-    flags: [],
+    synopsis: "todo profile list [--projects]",
+    flags: [
+      "--projects (include defined Projects with stable ids, including empty Profiles)",
+    ],
     examples: ["todo profile list --format json"],
     auth: "Requires a Session or Access Token. Scoped Tokens see their Profile only.",
     output:
-      "json returns generated_at and profiles, including visible_task_count. Deleted Profiles stay hidden.",
+      "json returns generated_at and profiles, including visible_task_count. --projects adds projects to every Profile, including [] for empty Profiles and Projects with no Tasks. Global --profile selects the stored credential unless --credential-profile is supplied; it does not change credential scope. Deleted Profiles stay hidden.",
   }),
   "profile delete": reference({
     purpose:

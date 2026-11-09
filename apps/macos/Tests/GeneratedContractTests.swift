@@ -170,6 +170,13 @@ final class GeneratedContractTests: XCTestCase {
         XCTAssertTrue(expected.contains { $0["outcome"] as? String == "rejected" })
     }
 
+    func testAuthorizedDiscoveryPreservesEmptyProjectsAndNullProject() throws {
+        try roundTrip(Operations.reads_period_profiles.Output.Ok.Body.jsonPayloadPayload.self,
+                      #"{"id":"work","name":"Work","created_at":"2026-10-27T00:00:00Z","updated_at":"2026-10-27T00:00:00Z","open_task_count":0,"inbox_task_count":0,"visible_task_count":0,"projects":[]}"#)
+        try roundTrip(Operations.reads_period_lookup.Output.Ok.Body.jsonPayloadPayload.self,
+                      #"{"profile":{"id":"work","name":"Work"},"task_id":"ab000000-0000-4000-8000-000000000001","title":"Read the report","project":null}"#)
+    }
+
     func testProfileDeletionRequestAndReportSurviveGeneratedCoding() throws {
         try roundTrip(Operations.reads_period_deleteProfile.Input.Body.jsonPayload.self,
                       #"{"with_tasks":true,"dry_run":false}"#)

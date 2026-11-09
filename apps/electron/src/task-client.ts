@@ -147,7 +147,10 @@ export const taskRequest = (
           }),
         };
       case "profiles":
-        return { _tag: "signedIn", profiles: yield* http.reads.profiles() };
+        return {
+          _tag: "signedIn",
+          profiles: yield* http.reads.profiles({ query: {} }),
+        };
       case "deleteProfile":
         return {
           _tag: "profileDeleted",
@@ -162,7 +165,7 @@ export const taskRequest = (
           yield* Effect.all(
             [
               http.tasks.list({ params, query: {} }),
-              http.reads.profiles(),
+              http.reads.profiles({ query: {} }),
               http.reads.projects({ params }),
               http.reads.tags({ params }),
               Effect.all(
