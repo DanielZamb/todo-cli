@@ -1008,7 +1008,7 @@ const discoveryFrames = [
       ["request", "selectProfile / HTTP :profile", "readTasks / Authentication.read\nexisting exact Task id or mutation\nselected Profile stays unchanged"],
       ["auth", "Authentication.requireCredential", "read or write scope succeeds\nselected Profile id is authorized\notherwise keep existing auth error"],
       ["missing", "Task not found", "commands.cliResult / show / History\nnot_found exit 3 / HTTP NotFound 404\nno cross-Profile probe"],
-      ["recover", "task-lookup-error.ts / proposed", "details.profile {id,name} / task_id\nlist --profile <id> --prefix <p> AND lookup --prefix <p>\nHTTP scoped list AND /tasks/lookup?prefix=<p>"],
+      ["recover", "task-lookup-error.ts / proposed", "details.profile {id,name} / task_id\nlist --profile <id> --prefix <p> [--credential-profile <used>]\nlookup --prefix <p> --credential-profile <used> / HTTP both routes"],
     ],
     edges: [
       ["request", "auth", "request / authorize first", "right", "left"],
@@ -1025,7 +1025,7 @@ const discoveryFrames = [
     id: "agent-directory", name: "Profile-to-Project directory", x: 0, y: 20000,
     subtitle: "Proposed read-only directory. Current Profile, main Task filters, search text and editor drafts stay intact.",
     nodes: [
-      ["entry", "Profile navigation / Open", "todo profile list --projects\nGET /profiles?include_projects=true\ndiscovery-directory / Closed -> Loading"],
+      ["entry", "Profile navigation / Open", "todo profile list --projects [--credential-profile <key>]\nGET /profiles?include_projects=true\ndiscovery-directory / Closed -> Loading"],
       ["auth", "Authentication.profiles", "credential -> authorized active Profiles\nAuthentication.read per authorized id\nONE SQLite read transaction / one database state"],
       ["query", "discovery.ts / proposed query", "ProfileSummary + projects [{id,name}]\ninclude Projects with no visible Tasks\nempty Profile projects: []"],
       ["show", "Showing / Empty", "guard credential + dialog generation\nread-only names and full selectable ids\nCompact stacked rows / no navigation"],
@@ -1049,7 +1049,7 @@ const discoveryFrames = [
     id: "agent-prefix", name: "Read-only id-prefix discovery", x: 2800, y: 20000,
     subtitle: "Proposed explicit lookup. Normal list, exact-id reads and every mutation retain their selected Profile.",
     nodes: [
-      ["edit", "Editing / Invalid", "todo lookup --prefix <value>\nFind Task by id / discovery-prefix\n1..36 hex or hyphen / no trim"],
+      ["edit", "Editing / Invalid", "todo lookup --prefix <value> [--credential-profile <key>]\nFind Task by id / discovery-prefix\n1..36 hex or hyphen / no trim"],
       ["auth", "Requesting / authorized Profiles", "Find / Return submits explicitly\nGET /tasks/lookup?prefix=<value>\nAuthentication.profiles + auth.read in ONE read transaction"],
       ["query", "filterTaskRecords / discovery.ts", "reuse TaskFilters.prefix validation\nliteral case-insensitive startsWith\nexclude Deleted Tasks and Profiles"],
       ["show", "Showing / Empty", "every match / Profile {id,name}\nfull task_id / title / Project or null\nCopy task id + Show in <Profile name> / [] succeeds"],
@@ -1068,7 +1068,7 @@ const discoveryFrames = [
     ],
     notes: [
       "1. Invalid input does not query Tasks. CLI names --prefix and exits 2. No match exits 0 and returns matches: [] or HTTP [].",
-      "2. requestedIdentity, generation and applied snapshot guard publication AND Show. CLI rows print todo show <full-id> --profile <id>.",
+      "2. requestedIdentity, generation and applied snapshot guard publication AND Show. CLI rows print show --profile <id> with --credential-profile <used> when different.",
     ],
   },
   {
@@ -1097,7 +1097,7 @@ const prefixFlow = discoveryFrames.find((flow) => flow.id === "agent-prefix");
 const prefixByKey = new Map(prefixFlow.nodes.map((node) => [node[0], node]));
 prefixByKey.set("opened", ["opened", "Show / explicit user navigation", "discovery-show-<task-id> / protect editor draft\nclose dialog / select Profile / open exact Task\nif hidden: All tasks + full-id prefix / visible error on failure"]);
 prefixFlow.nodes = ["edit", "auth", "query", "error", "show", "opened", "closed"].map((key) => prefixByKey.get(key));
-prefixFlow.notes.push("3. Close, SignOut and CredentialChanged invalidate every open state. Show is explicit, authorized navigation, never a mutation or automatic switch.");
+prefixFlow.notes.push("3. Close, SignOut and CredentialChanged invalidate every open state. Show is explicit navigation; CLI credentialProfileName chooses the named key without fallback.");
 
 for (const flow of discoveryFrames) {
   frame(flow.id, flow.name, flow.x, flow.y, 2660, (X, Y) => {
