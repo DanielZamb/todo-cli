@@ -29,7 +29,7 @@ public struct BearerMiddleware: ClientMiddleware {
             var data: Data?
             if let responseBody { data = try await Data(collecting: responseBody, upTo: 65_536) }
             let detail = data.flatMap { try? JSONDecoder().decode(FailureMessage.self, from: $0) }
-            throw RequestFailure(status: status, message: detail?.message ?? "The server rejected this request (HTTP \(status)).", code: detail?.code)
+            throw RequestFailure(status: status, message: detail?.message ?? "The server rejected this request (HTTP \(status)).", code: detail?.code, exitCode: detail?.exit_code, exitMeaning: detail?.exit_meaning)
         }
         return (response, responseBody)
     }
@@ -49,11 +49,21 @@ public func todoClient(server: URL, credential: String) -> Client {
     return Client(serverURL: server, transport: URLSessionTransport(configuration: .init(session: URLSession(configuration: configuration))), middlewares: [BearerMiddleware(credential: credential)])
 }
 
-private struct FailureMessage: Decodable { let message: String; let code: String? }
+private struct FailureMessage: Decodable { let message: String; let code: String?; let exit_code: Int?; let exit_meaning: String? }
 
 public struct RequestFailure: Error, Sendable {
     public let status: Int
     public let message: String
     public let code: String?
-    public init(status: Int, message: String, code: String? = nil) { self.status = status; self.message = message; self.code = code }
+    public let exitCode: Int?
+    public let exitMeaning: String?
+    public var exitDetail: String? {
+        guard let exitCode, let exitMeaning else { return nil }
+        return "error \(exitCode) - \(exitMeaning)"
+    }
+    public var humanMessage: String { [message, exitDetail].compactMap { $0 }.joined(separator: "\n") }
+    public init(status: Int, message: String, code: String? = nil, exitCode: Int? = nil, exitMeaning: String? = nil) {
+        self.status = status; self.message = message; self.code = code
+        self.exitCode = exitCode; self.exitMeaning = exitMeaning
+    }
 }

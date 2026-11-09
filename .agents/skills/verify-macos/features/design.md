@@ -88,3 +88,6 @@ TODO_SNAPSHOT_PRIORITY_ONLY=1 run keeps these and the two existing quick-add
 captures. Compact Task viewport geometry must contain whole rows. The ready
 and empty fixtures enable their one primary Add task action without restoring
 a Session or touching Keychain.
+
+The focused TODO_SNAPSHOT_DISCOVERY_ONLY=1 run adds 64 production-sheet captures.
+See [Authorized discovery](discovery.md) for the state matrix and geometry checks.

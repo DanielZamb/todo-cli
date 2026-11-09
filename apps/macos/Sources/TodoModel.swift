@@ -77,11 +77,12 @@ final class TodoModel {
     private var importGeneration = 0
     private var parseGeneration = 0
     private var historyGeneration = 0
-    var signedIn = false
+    let discovery = DiscoveryState()
+    var signedIn = false { didSet { if !signedIn { discovery.credentialChanged() } } }
     var canRestore = false
     var busy = false
     var loading = false
-    var connection = Connection.connecting
+    var connection = Connection.connecting { didSet { if connection == .offline { discoveryWentOffline() } } }
     var outdatedServerBuild: String?
     var message: String?
     var taskLoadError: String?
@@ -94,6 +95,7 @@ final class TodoModel {
         case copy(TaskSnapshot, to: String)
         case profile(String)
         case openTransfer(TaskTransferResult)
+        case showDiscovery(DiscoveryShowIntent)
     }
     var pendingNavigation: EditorNavigation?
     var deletionNotice: String?
@@ -112,6 +114,10 @@ final class TodoModel {
     var restoreGeneration = "initial"
     var restoreReloadCount = 0
     private var credential = ""
+    func replaceCredential(_ value: String) {
+        discovery.credentialChanged()
+        credential = value
+    }
     private var streamTask: Task<Void, Never>?
     private var restored = false
     private var generation = 0
@@ -189,7 +195,7 @@ final class TodoModel {
         do {
             guard try await checkServerContract() else { return }
             if let value = try vault.load() {
-                credential = value
+                replaceCredential(value)
                 try await discoverProfiles()
                 signedIn = true
                 connect()
@@ -215,7 +221,7 @@ final class TodoModel {
             let session = try response.ok.body.json
             guard try await checkServerContract() else { return false }
             try vault.save(session.credential)
-            credential = session.credential
+            replaceCredential(session.credential)
             message = nil
             try await discoverProfiles()
             signedIn = true
@@ -231,13 +237,14 @@ final class TodoModel {
 
     func signOut() async {
         guard !busy else { return }
+        discovery.credentialChanged()
         busy = true
         defer { busy = false }
         do {
             _ = try await client.credentials_period_signOut()
             try vault.delete()
             disconnect()
-            credential = ""
+            replaceCredential("")
             signedIn = false
             diagnostics = nil
             tasks = []
@@ -307,7 +314,7 @@ final class TodoModel {
         activateProfile(value)
     }
 
-    private func activateProfile(_ value: String) {
+    func activateProfile(_ value: String) {
         profileDeletion = nil
         profileDeletionError = nil
         disconnect()
@@ -645,6 +652,7 @@ final class TodoModel {
     @discardableResult
     func navigate(_ target: EditorNavigation) async -> Bool {
         guard !busy else { return false }
+        if case .showDiscovery(let intent) = target, !canShowDiscovery(intent) { return false }
         switch target {
         case .edit(let task) where editor?.id == task.id: return true
         case .profile(let destination) where destination == profile: return true
@@ -660,6 +668,7 @@ final class TodoModel {
     @discardableResult
     func discardAndNavigate(_ target: EditorNavigation) async -> Bool {
         guard !busy else { return false }
+        if case .showDiscovery(let intent) = target, !canShowDiscovery(intent) { return false }
         if case .move = target, !canWrite { return false }
         if case .copy = target, !canWrite { return false }
         pendingNavigation = nil
@@ -670,6 +679,7 @@ final class TodoModel {
     @discardableResult
     func saveAndNavigate(_ target: EditorNavigation) async -> Bool {
         guard canWrite, conflict == nil, let draft = editor else { return false }
+        if case .showDiscovery(let intent) = target, !canShowDiscovery(intent) { return false }
         pendingNavigation = nil
         let saved: TaskSnapshot
         if let recurrence = recurrenceDraft {
@@ -692,6 +702,8 @@ final class TodoModel {
     private func applyNavigation(_ target: EditorNavigation) async -> Bool {
         pendingNavigation = nil
         switch target {
+        case .showDiscovery(let intent):
+            return await applyDiscoveryShow(intent)
         case .edit(let task):
             if editor?.id != task.id { beginEditing(task) }
         case .move(let task, let destination):
@@ -722,6 +734,11 @@ final class TodoModel {
             changeProfile(destination)
         }
         return true
+    }
+
+    func cancelNavigation() {
+        pendingNavigation = nil
+        discovery.showIntent = nil
     }
 
     func beginEditing(_ task: TaskSnapshot, focusTitle: Bool = false) {
@@ -1150,7 +1167,7 @@ final class TodoModel {
         try? vault.delete()
         signedIn = false
         diagnostics = nil
-        credential = ""
+        replaceCredential("")
         tasks = []
         appliedSearchSnapshot = nil
         searchError = nil
@@ -1188,7 +1205,7 @@ final class TodoModel {
         (error as? RequestFailure) ?? (error as? ClientError)?.underlyingError as? RequestFailure
     }
     func describe(_ error: Error) -> String {
-        if let failure = failure(error) { return failure.status == 401 ? "Sign in again with your owner passphrase." : failure.message }
+        if let failure = failure(error) { return failure.humanMessage }
         if error is DecodingError { return "The server response could not be read. Your draft is preserved." }
         if let draft = error as? DraftError { return draft.localizedDescription }
         if let vault = error as? VaultError { return vault.localizedDescription }

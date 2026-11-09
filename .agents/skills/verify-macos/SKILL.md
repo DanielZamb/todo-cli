@@ -365,3 +365,13 @@ production TodoModel response-order and SSE recovery proof, scratch pasteboard,
 40 focused offscreen captures and new identifiers. Search retains toolbar text
 across Profile and view switches. Every Swift command uses the shared slot.
 Native toolbar keyboard interaction and glass remain under HOLD.
+
+## Authorized discovery during HOLD
+
+Read [Authorized discovery](features/discovery.md). Its production TodoModel tests
+use compiled scratch HTTP, and its 64 offscreen captures cover directory and
+lookup states in Compact and full windows, light and dark. Show preserves draft
+decisions, reads the exact Task under the current credential epoch, and reveals
+completed Tasks through All tasks with a full-id prefix. No native app, hosted
+XCTest, signing or Keychain is involved. Coordinator visual approval remains
+required before integration.

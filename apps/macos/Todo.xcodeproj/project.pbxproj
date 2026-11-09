@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D19D00000000000000000003 /* DiscoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D19D00000000000000000004 /* DiscoveryView.swift */; };
+		D19D00000000000000000001 /* Discovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = D19D00000000000000000002 /* Discovery.swift */; };
 		F804BA7C670BE45DADFF01A1 /* TaskSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = F804BA7C670BE45DADFF01A2 /* TaskSearch.swift */; };
 		F802BA7C670BE45DADFF01A1 /* BatchEdit.swift in Sources */ = {isa = PBXBuildFile; fileRef = F802BA7C670BE45DADFF01A2 /* BatchEdit.swift */; };
 		F801BA7C670BE45DADFF01A1 /* AttachmentBatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = F801BA7C670BE45DADFF01A2 /* AttachmentBatch.swift */; };
@@ -64,6 +66,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		D19D00000000000000000004 /* DiscoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryView.swift; sourceTree = "<group>"; };
+		D19D00000000000000000002 /* Discovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Discovery.swift; sourceTree = "<group>"; };
 		F804BA7C670BE45DADFF01A2 /* TaskSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskSearch.swift; sourceTree = "<group>"; };
 		F802BA7C670BE45DADFF01A2 /* BatchEdit.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BatchEdit.swift; sourceTree = "<group>"; };
 		F801BA7C670BE45DADFF01A2 /* AttachmentBatch.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AttachmentBatch.swift; sourceTree = "<group>"; };
@@ -175,6 +179,8 @@
 				2F536933478469E464FC74A47EC935BC /* TodoModel.swift */,
 				76A269BE6C338142348CFC7C /* TaskFilters.swift */,
 				F804BA7C670BE45DADFF01A2 /* TaskSearch.swift */,
+				D19D00000000000000000004 /* DiscoveryView.swift */,
+				D19D00000000000000000002 /* Discovery.swift */,
 			);
 			name = Sources;
 			path = Sources;
@@ -420,6 +426,8 @@
 				3629AAAF8D5A9556E31438371387D646 /* TodoModel.swift in Sources */,
 				C4756861BAB530B98C78D475 /* TaskFilters.swift in Sources */,
 				F804BA7C670BE45DADFF01A1 /* TaskSearch.swift in Sources */,
+				D19D00000000000000000003 /* DiscoveryView.swift in Sources */,
+				D19D00000000000000000001 /* Discovery.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
