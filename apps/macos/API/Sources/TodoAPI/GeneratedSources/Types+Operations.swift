@@ -12917,6 +12917,10 @@ public enum Operations {
             public var path: Operations.tasks_period_list.Input.Path
             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/query`.
             public struct Query: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/query/text`.
+                public var text: Swift.String?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/query/prefix`.
+                public var prefix: Swift.String?
                 /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/query/project`.
                 public var project: Swift.String?
                 /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/query/tag`.
@@ -12962,6 +12966,8 @@ public enum Operations {
                 /// Creates a new `Query`.
                 ///
                 /// - Parameters:
+                ///   - text:
+                ///   - prefix:
                 ///   - project:
                 ///   - tag:
                 ///   - status:
@@ -12972,6 +12978,8 @@ public enum Operations {
                 ///   - energy:
                 ///   - estimate:
                 public init(
+                    text: Swift.String? = nil,
+                    prefix: Swift.String? = nil,
                     project: Swift.String? = nil,
                     tag: Swift.String? = nil,
                     status: Operations.tasks_period_list.Input.Query.statusPayload? = nil,
@@ -12982,6 +12990,8 @@ public enum Operations {
                     energy: Operations.tasks_period_list.Input.Query.energyPayload? = nil,
                     estimate: Swift.String? = nil
                 ) {
+                    self.text = text
+                    self.prefix = prefix
                     self.project = project
                     self.tag = tag
                     self.status = status
@@ -13520,6 +13530,76 @@ public enum Operations {
                         public var completed_at: Swift.String?
                         /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/200/content/jsonPayload/deleted_at`.
                         public var deleted_at: Swift.String?
+                        /// Whole matched word in the same response's original title or description. start is inclusive and end exclusive, in UTF-16 code units on grapheme boundaries. Ordered, deduplicated and overlap-merged; exclusions and id prefixes have no spans.
+                        ///
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/200/content/jsonPayload/search_matchesPayload`.
+                        public struct search_matchesPayloadPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/200/content/jsonPayload/search_matchesPayload/field`.
+                            @frozen public enum fieldPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case title = "title"
+                                case description = "description"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/200/content/jsonPayload/search_matchesPayload/field`.
+                            public var field: Operations.tasks_period_list.Output.Ok.Body.jsonPayloadPayload.search_matchesPayloadPayload.fieldPayload
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/200/content/jsonPayload/search_matchesPayload/start`.
+                            public var start: Swift.Int
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/200/content/jsonPayload/search_matchesPayload/end`.
+                            public var end: Swift.Int
+                            /// Creates a new `search_matchesPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - field:
+                            ///   - start:
+                            ///   - end:
+                            public init(
+                                field: Operations.tasks_period_list.Output.Ok.Body.jsonPayloadPayload.search_matchesPayloadPayload.fieldPayload,
+                                start: Swift.Int,
+                                end: Swift.Int
+                            ) {
+                                self.field = field
+                                self.start = start
+                                self.end = end
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case field
+                                case start
+                                case end
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.field = try container.decode(
+                                    Operations.tasks_period_list.Output.Ok.Body.jsonPayloadPayload.search_matchesPayloadPayload.fieldPayload.self,
+                                    forKey: .field
+                                )
+                                self.start = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .start
+                                )
+                                self.end = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .end
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "field",
+                                    "start",
+                                    "end"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.field, forKey: .field)
+                                try container.encode(self.start, forKey: .start)
+                                try container.encode(self.end, forKey: .end)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/200/content/jsonPayload/search_matches`.
+                        public typealias search_matchesPayload = [Operations.tasks_period_list.Output.Ok.Body.jsonPayloadPayload.search_matchesPayloadPayload]
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/200/content/jsonPayload/search_matches`.
+                        public var search_matches: Operations.tasks_period_list.Output.Ok.Body.jsonPayloadPayload.search_matchesPayload?
                         /// Creates a new `jsonPayloadPayload`.
                         ///
                         /// - Parameters:
@@ -13546,6 +13626,7 @@ public enum Operations {
                         ///   - updated_at:
                         ///   - completed_at:
                         ///   - deleted_at:
+                        ///   - search_matches:
                         public init(
                             title: Swift.String,
                             description: Swift.String? = nil,
@@ -13569,7 +13650,8 @@ public enum Operations {
                             created_at: Swift.String,
                             updated_at: Swift.String,
                             completed_at: Swift.String? = nil,
-                            deleted_at: Swift.String? = nil
+                            deleted_at: Swift.String? = nil,
+                            search_matches: Operations.tasks_period_list.Output.Ok.Body.jsonPayloadPayload.search_matchesPayload? = nil
                         ) {
                             self.title = title
                             self.description = description
@@ -13594,6 +13676,7 @@ public enum Operations {
                             self.updated_at = updated_at
                             self.completed_at = completed_at
                             self.deleted_at = deleted_at
+                            self.search_matches = search_matches
                         }
                         public enum CodingKeys: String, CodingKey {
                             case title
@@ -13619,6 +13702,7 @@ public enum Operations {
                             case updated_at
                             case completed_at
                             case deleted_at
+                            case search_matches
                         }
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -13715,6 +13799,10 @@ public enum Operations {
                                 Swift.String.self,
                                 forKey: .deleted_at
                             )
+                            self.search_matches = try container.decodeIfPresent(
+                                Operations.tasks_period_list.Output.Ok.Body.jsonPayloadPayload.search_matchesPayload.self,
+                                forKey: .search_matches
+                            )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
                                 "title",
                                 "description",
@@ -13738,7 +13826,8 @@ public enum Operations {
                                 "created_at",
                                 "updated_at",
                                 "completed_at",
-                                "deleted_at"
+                                "deleted_at",
+                                "search_matches"
                             ])
                         }
 
@@ -13814,6 +13903,11 @@ public enum Operations {
                                 try container.encodeNil(forKey: .deleted_at)
                             } else {
                                 try container.encodeIfPresent(self.deleted_at, forKey: .deleted_at)
+                            }
+                            if self.search_matches == nil && _explicitNullKeys.contains(CodingKeys.search_matches.stringValue) {
+                                try container.encodeNil(forKey: .search_matches)
+                            } else {
+                                try container.encodeIfPresent(self.search_matches, forKey: .search_matches)
                             }
                         }
                     }

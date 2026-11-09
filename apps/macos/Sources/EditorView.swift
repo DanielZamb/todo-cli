@@ -23,6 +23,14 @@ struct EditorView: View {
             if let draft = model.editor {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(draft.id).font(.system(.caption2, design: .monospaced)).textSelection(.enabled)
+                                .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("task-full-id")
+                            HStack {
+                                Button("Copy task id") { model.copyTaskID(draft.id) }.accessibilityIdentifier("copy-task-id")
+                                if let feedback = model.taskIDCopyFeedback { Text(feedback).font(.caption).accessibilityIdentifier("copy-task-id-feedback") }
+                            }
+                        }
                         if let conflict = model.conflict {
                             conflictView(draft: draft, conflict: conflict)
                         } else {

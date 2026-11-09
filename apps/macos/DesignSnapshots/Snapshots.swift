@@ -278,6 +278,37 @@ struct Snapshots {
                 }
 
             }
+            if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" {
+                for compact in [true, false] {
+                    for state in ["ready", "typing", "requesting", "empty", "error", "prefix", "prefix-invalid", "detail", "copied", "copy-failed"] {
+                        let searchModel = fixture()
+                        searchModel.selectedView = "all"
+                        searchModel.searchText = "rent"
+                        let raw = #"{"id":"6aa2647d-1234-4567-89ab-0123456789ab","profile_id":"work","row_version":1,"title":"Pay rent today","description":"Make the transfer before Friday","priority":"P1","status":"open","project_id":null,"tags":[],"source":"manual","due_at":null,"scheduled_at":null,"energy":null,"estimate_min":null,"occurrence":null,"legacy_series_detached":true,"deleted_at":null,"search_matches":[{"field":"title","start":4,"end":8}]}"#
+                        var descriptionTask = try JSONDecoder().decode(TaskSnapshot.self, from: Data(raw.replacingOccurrences(of: "Pay rent today", with: "Transfer receipt").replacingOccurrences(of: "Make the transfer before Friday", with: "A receipt for the rent payment before Friday").replacingOccurrences(of: "6aa2647d", with: "7aa2647d").replacingOccurrences(of: #"{"field":"title","start":4,"end":8}"#, with: #"{"field":"description","start":18,"end":22}"#).utf8))
+                        descriptionTask.search_matches = [.init(field: .description, start: 18, end: 22)]
+                        let titleTask = try JSONDecoder().decode(TaskSnapshot.self, from: Data(raw.utf8))
+                        let rows = state == "empty" ? [] : [titleTask, descriptionTask]
+                        searchModel.tasks = rows
+                        searchModel.appliedSearchSnapshot = .init(appliedIdentity: searchModel.requestedIdentity, rows: rows, groups: [])
+                        searchModel.searchPhase = .showing
+                        if ["typing", "requesting", "error"].contains(state) { searchModel.searchText = "rent friday" }
+                        if state == "typing" { searchModel.searchPhase = .debouncing }
+                        if state == "requesting" { searchModel.searchPhase = .requesting }
+                        if state == "error" { searchModel.searchPhase = .error; searchModel.searchError = "Couldn't search. Showing results for \"rent\"." }
+                        if ["detail", "copied", "copy-failed"].contains(state) { searchModel.beginEditing(titleTask) }
+                        if state == "copied" { searchModel.taskIDCopyFeedback = "Copied" }
+                        if state == "copy-failed" { searchModel.taskIDCopyFeedback = "Couldn't copy. Try again." }
+                        let screen = compact ? AnyView(TaskListView(model: searchModel, compactMode: true).compactContent) : AnyView(WorkspaceSnapshot(model: searchModel))
+                        let content = ["prefix", "prefix-invalid"].contains(state) ? AnyView(screen.overlay {
+                            TaskFilterView(draft: .init(prefix: state == "prefix-invalid" ? "zz" : "6AA2"), compact: compact, apply: { _ in }, close: {})
+                                .background(.background, in: .rect(cornerRadius: 12)).shadow(radius: 12)
+                        }) : screen
+                        try await render("search-\(compact ? "compact" : "full")-\(state)", content, width: compact ? 393 : 1100, height: compact ? 426 : 720)
+                    }
+                }
+                continue
+            }
             if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] != "1" && ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] != "1" {
                 for compact in [true, false] {
                     for state in ["ready", "preview", "applied", "conflict", "empty", "loading", "error"] {
@@ -863,7 +894,7 @@ struct Snapshots {
         try JSONEncoder().encode(importLayouts).write(to: directory.appendingPathComponent("import-layout.json"))
         try JSONEncoder().encode(transferLayouts).write(to: directory.appendingPathComponent("transfer-layout.json"))
         try JSONSerialization.data(withJSONObject: compactLayouts, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("compact-layout.json"))
-        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 346))
+        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" ? 40 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 346))
     }
 
     private func fixture() -> TodoModel {
@@ -950,6 +981,7 @@ private struct WorkspaceSnapshot: View {
                     Text(model.selectedView == "all" ? "All tasks" : model.selectedView.capitalized).font(.headline)
                     Text("\(model.profileName) · \(TaskCount.text(TaskListView(model: model).visibleTasks.count))").foregroundStyle(.secondary)
                     Spacer()
+                    TaskListView(model: model).searchField.frame(width: 260)
                     Image(systemName: "plus")
                 }.padding(16)
                 Divider()

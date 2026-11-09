@@ -4,6 +4,7 @@ struct TaskSnapshot: Codable, Identifiable, Equatable, Sendable {
     let id: String
     let profile_id: String
     let row_version: Int
+    var search_matches: [TaskSearchMatch]? = nil
     var external_id: String? = nil
     let title: String
     let description: String?

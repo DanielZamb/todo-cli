@@ -10,11 +10,12 @@ struct TaskListFilters: Equatable {
     var attachment = ""
     var energy = ""
     var estimate = ""
-    var count: Int { [status, priority, due, scheduled, attachment, energy, estimate].filter { !$0.isEmpty }.count }
+    var prefix = ""
+    var count: Int { [status, priority, due, scheduled, attachment, energy, estimate, prefix].filter { !$0.isEmpty }.count }
     var isEmpty: Bool { count == 0 }
     private func optional(_ value: String) -> String? { value.isEmpty ? nil : value }
     var query: Operations.tasks_period_list.Input.Query {
-        .init(status: .init(rawValue: status), priority: .init(rawValue: priority), due: optional(due), scheduled: optional(scheduled),
+        .init(prefix: optional(prefix), status: .init(rawValue: status), priority: .init(rawValue: priority), due: optional(due), scheduled: optional(scheduled),
               attachment: optional(attachment), energy: .init(rawValue: energy), estimate: optional(estimate))
     }
     var summary: String {
@@ -23,10 +24,12 @@ struct TaskListFilters: Equatable {
          scheduled.isEmpty ? "" : scheduled == "none" ? "Not scheduled" : "Scheduled \(scheduled)",
          attachment.isEmpty ? "" : "Attachment: \(attachment)",
          energy.isEmpty ? "" : energy == "none" ? "No Energy" : "Energy \(energy)",
-         estimate.isEmpty ? "" : estimate == "none" ? "No estimate" : "\(estimate) min"].filter { !$0.isEmpty }.joined(separator: " · ")
+         estimate.isEmpty ? "" : estimate == "none" ? "No estimate" : "\(estimate) min",
+         prefix.isEmpty ? "" : "Id starts with \(prefix)"].filter { !$0.isEmpty }.joined(separator: " · ")
     }
+    var prefixIsValid: Bool { prefix.isEmpty || prefix.range(of: "^[A-Fa-f0-9-]{1,36}$", options: .regularExpression) == prefix.startIndex..<prefix.endIndex }
     var isValid: Bool {
-        estimate.isEmpty || estimate == "none" || estimate.range(of: "^[1-9][0-9]*$", options: .regularExpression) != nil
+        prefixIsValid && (estimate.isEmpty || estimate == "none" || estimate.range(of: "^[1-9][0-9]*$", options: .regularExpression) != nil)
     }
 }
 
@@ -57,6 +60,9 @@ struct TaskFilterView: View {
                 dateFilter("Scheduled date", value: $draft.scheduled)
                 TextField("Attachment contains", text: $draft.attachment, prompt: Text("Name, label, path or URL"))
                     .accessibilityIdentifier("filter-attachment")
+                TextField("Id starts with", text: $draft.prefix, prompt: Text("Hex digits and hyphens"))
+                    .accessibilityIdentifier("filter-prefix")
+                if !draft.prefixIsValid { Text("Use 1 to 36 hex digits or hyphens.").font(.caption).foregroundStyle(TodoColors.color("destructive")) }
                 Picker("Energy", selection: $draft.energy) {
                     Text("Any").tag("")
                     ForEach(1...5, id: \.self) { Text(String($0)).tag(String($0)) }
@@ -66,7 +72,7 @@ struct TaskFilterView: View {
                     .accessibilityIdentifier("filter-estimate")
                 Toggle("No estimate", isOn: Binding(get: { draft.estimate == "none" }, set: { draft.estimate = $0 ? "none" : "" }))
             }.formStyle(.grouped)
-            if !draft.isValid { Text("Enter a positive whole number of minutes.").foregroundStyle(TodoColors.color("destructive")) }
+            if !draft.isValid && draft.prefixIsValid { Text("Enter a positive whole number of minutes.").foregroundStyle(TodoColors.color("destructive")) }
             HStack {
                 Button("Clear all") { draft = .init() }
                 Spacer()

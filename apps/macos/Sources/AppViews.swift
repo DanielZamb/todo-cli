@@ -191,7 +191,8 @@ struct TaskListView: View {
     @Bindable var model: TodoModel
     var compactMode = false
     var referenceDate: Date? = nil
-    @State private var search = ""
+    @FocusState private var searchFocused: Bool
+    private var searchBinding: Binding<String> { Binding(get: { model.searchText }, set: { model.setSearchText($0) }) }
     @State private var selection: String?
     @State private var pendingDelete: TaskSnapshot?
     @State private var showingTaskFilters = false
@@ -219,9 +220,9 @@ struct TaskListView: View {
             })
     }
     var visibleTasks: [TaskSnapshot] {
-        (model.selectedView == "all" ? model.tasks : model.planning.map { $0.groups.flatMap(\.tasks) } ?? []).filter { task in
-            (search.isEmpty || task.title.localizedCaseInsensitiveContains(search))
-                && (model.selectedProject == nil || task.project_id == model.selectedProject)
+        if let snapshot = model.appliedSearchSnapshot { return snapshot.rows }
+        return (model.selectedView == "all" ? model.tasks : model.planning.map { $0.groups.flatMap(\.tasks) } ?? []).filter { task in
+            (model.selectedProject == nil || task.project_id == model.selectedProject)
                 && (model.selectedTag == nil || task.tags.contains(model.selectedTag ?? ""))
                 && (model.taskFilters.isEmpty || (model.matchingTaskIDs?.contains(task.id) ?? true))
         }
@@ -234,6 +235,7 @@ struct TaskListView: View {
             }
         }
         let visibleIDs = Set(tasks.map(\.id))
+        if let snapshot = model.appliedSearchSnapshot { return snapshot.groups }
         return (model.planning?.groups ?? []).compactMap { group in
             let filtered = group.tasks.filter { visibleIDs.contains($0.id) }
             return filtered.isEmpty ? nil : .init(name: group.name, tasks: filtered)
@@ -288,7 +290,12 @@ struct TaskListView: View {
             DraftNavigationMessage(hasConflict: model.conflict != nil)
         }
         .onChange(of: model.editor?.id) { _, id in if let id { selection = id } }
-        .onChange(of: model.profile) { _, _ in showingTaskFilters = false }
+        .onChange(of: model.profile) { _, _ in showingTaskFilters = false; selection = nil }
+        .onChange(of: model.selectedView) { _, _ in showingTaskFilters = false; selection = nil }
+        .background {
+            Button("Find a task") { searchFocused = true }.keyboardShortcut("f", modifiers: .command).hidden()
+        }
+        .onExitCommand { model.setSearchText("") }
     }
 
     private var expandedContent: some View {
@@ -298,8 +305,12 @@ struct TaskListView: View {
             taskContent
                 .navigationTitle(title)
                 .navigationSubtitle("\(model.profileName) · \(TaskCount.text(visibleTasks.count))")
-                .searchable(text: $search, prompt: "Find a task")
+                .searchable(text: searchBinding, placement: .toolbar, prompt: "Find a task")
+                .searchFocused($searchFocused)
                 .toolbar {
+                    ToolbarItem {
+                        if model.searchPending { ProgressView().controlSize(.small).accessibilityLabel("Searching") }
+                    }
                     ToolbarItem {
                         Button("Edit Tasks…") { Task { await model.beginBatchEdit() } }.disabled(!model.canWrite).accessibilityIdentifier("batch-edit-tasks")
                     }
@@ -370,26 +381,31 @@ struct TaskListView: View {
             } else if model.editor != nil {
                 EditorView(model: model, compact: true)
             } else {
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                    TextField("Find a task", text: $search).textFieldStyle(.plain)
-                        .accessibilityIdentifier("compact-search")
-                    if !search.isEmpty {
-                        Button { search = "" } label: { Image(systemName: "xmark.circle.fill") }
-                            .buttonStyle(.plain).foregroundStyle(.secondary).accessibilityLabel("Clear search")
-                    }
-                }.padding(10).background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
-                    .padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 4)
+                searchField.padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 4)
                 taskContent
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .compactBounds("task-screen")
         .onExitCommand {
-            if !model.busy {
+            if !model.searchText.isEmpty { model.setSearchText("") }
+            else if !model.busy {
                 if model.quickAdd { model.quickAdd = false } else { closeInspector() }
             }
         }
+    }
+
+    var searchField: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+            TextField("Find a task", text: searchBinding).textFieldStyle(.plain).focused($searchFocused)
+                .accessibilityIdentifier("compact-search")
+            if model.searchPending { ProgressView().controlSize(.small).accessibilityLabel("Searching") }
+            if !model.searchText.isEmpty {
+                Button { model.setSearchText("") } label: { Image(systemName: "xmark.circle.fill") }
+                    .buttonStyle(.plain).foregroundStyle(.secondary).accessibilityLabel("Clear search")
+            }
+        }.padding(10).background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
     }
 
     private var compactNavigation: some View {
@@ -510,12 +526,26 @@ struct TaskListView: View {
         VStack(spacing: 0) {
             if let result = model.transferResult { TaskTransferResultView(model: model, result: result) }
             taskFilters
+            if let error = model.searchError {
+                HStack(alignment: .top) {
+                    Text(error).font(.caption).fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 4)
+                    Button("Retry") { Task { await model.retrySearch() } }.accessibilityIdentifier("retry-search")
+                }.padding(12).accessibilityIdentifier("search-error")
+            }
             if compactMode && model.connection == .offline {
                 compactState("Your tasks are read only while offline.", action: "Reconnect") { model.connect() }
                     .accessibilityIdentifier("connection-status")
-            } else if compactMode, let message = model.taskLoadError {
+            } else if compactMode, model.appliedSearchSnapshot == nil, let message = model.taskLoadError {
                 compactState("Could not load tasks.", action: "Retry") { model.connect() }.help(message)
             } else {
+            if let filterError = model.taskLoadError, model.appliedSearchSnapshot != nil {
+                HStack {
+                    Text(filterError).font(.caption)
+                    Spacer()
+                    Button("Retry") { Task { await model.retrySearch() } }
+                }.padding(12)
+            }
             if let message = model.message {
                 HStack {
                     Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(TodoColors.color("destructive"))
@@ -523,8 +553,10 @@ struct TaskListView: View {
                     Button("Retry") { model.connect() }
                 }.padding()
             }
-            if model.loading {
+            if model.loading && model.appliedSearchSnapshot == nil {
                 ProgressView("Loading tasks…").frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if visibleTasks.isEmpty && model.searchActive {
+                compactState("No matching tasks.", action: "Clear search") { model.setSearchText("") }
             } else if visibleTasks.isEmpty && model.selectedView != "all" {
                 if hasFilters {
                     if compactMode {
@@ -539,15 +571,15 @@ struct TaskListView: View {
                         }
                     }
                 } else if compactMode {
-                    compactState(search.isEmpty ? "No tasks yet." : "No matching tasks.", action: search.isEmpty ? "Add task" : "Clear search") {
-                        if search.isEmpty { model.quickAdd = true } else { search = "" }
+                    compactState(model.searchText.isEmpty ? "No tasks yet." : "No matching tasks.", action: model.searchText.isEmpty ? "Add task" : "Clear search") {
+                        if model.searchText.isEmpty { model.quickAdd = true } else { model.setSearchText("") }
                     }
                 } else { ContentUnavailableView {
-                    Label(search.isEmpty ? "No tasks yet" : "No matching tasks", systemImage: "checkmark.circle")
+                    Label(model.searchText.isEmpty ? "No tasks yet" : "No matching tasks", systemImage: "checkmark.circle")
                 } description: {
-                    Text(search.isEmpty ? "Add a task in \(model.profileName)." : "Try another title.")
+                    Text(model.searchText.isEmpty ? "Add a task in \(model.profileName)." : "Try different words.")
                 } actions: {
-                    if search.isEmpty { Button("Add task") { model.quickAdd = true }.disabled(!model.canWrite) }
+                    if model.searchText.isEmpty { Button("Add task") { model.quickAdd = true }.disabled(!model.canWrite) }
                 } }
             } else {
                 List(selection: $selection) {
@@ -576,6 +608,7 @@ struct TaskListView: View {
                         }
                     }
                 }.listStyle(.inset)
+                    .opacity(model.searchStale && model.appliedSearchSnapshot != nil ? 0.55 : 1)
                     .environment(\.defaultMinListRowHeight, compactMode ? 4 : minimumRowHeight)
                     .modifier(WholeTaskRows(enabled: compactMode && model.selectedView == "all"))
                     .onChange(of: selection) { old, id in
@@ -593,9 +626,9 @@ struct TaskListView: View {
                     }
                     .onDeleteCommand { if model.canWrite { pendingDelete = selectedTask } }
                 if visibleTasks.isEmpty {
-                    Button(hasFilters ? "Clear filters" : search.isEmpty ? "Add task" : "Clear search") {
-                        if hasFilters { clearFilters() } else if search.isEmpty { model.quickAdd = true } else { search = "" }
-                    }.buttonStyle(.borderedProminent).controlSize(.large).disabled(!model.canWrite && !hasFilters && search.isEmpty)
+                    Button(hasFilters ? "Clear filters" : model.searchText.isEmpty ? "Add task" : "Clear search") {
+                        if hasFilters { clearFilters() } else if model.searchText.isEmpty { model.quickAdd = true } else { model.setSearchText("") }
+                    }.buttonStyle(.borderedProminent).controlSize(.large).disabled(!model.canWrite && !hasFilters && model.searchText.isEmpty)
                         .frame(minHeight: 28).padding(12).compactBounds("state-action")
                 }
             }
@@ -648,6 +681,7 @@ struct TaskListView: View {
                 task: task, now: referenceDate ?? context.date, canWrite: model.canWrite, overdue: overdue, compact: compactMode,
                 projectName: model.projects.first { $0.id == task.project_id }?.name,
                 tagNames: task.tagNames(from: model.tags),
+                searchActive: model.appliedSearchSnapshot?.appliedIdentity.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false,
                 complete: { transition(task, action: task.status == "open" ? "complete" : "reopen") }
             )
         }
@@ -677,6 +711,7 @@ struct TaskRow: View {
     var compact = false
     let projectName: String?
     let tagNames: [String]
+    var searchActive = false
     let complete: () -> Void
     private var presentation: TaskRowPresentation { TaskRowPresentation(task: task, tagNames: tagNames, now: now) }
     var body: some View {
@@ -687,7 +722,7 @@ struct TaskRow: View {
                 .accessibilityIdentifier("transition-\(task.id)").compactBounds("complete-\(task.id)")
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(task.title).lineLimit(1).strikethrough(presentation.isDone).foregroundStyle(
+                    Text(TaskSearchPresentation.highlighted(task.title, spans: searchActive ? task.search_matches ?? [] : [], field: .title)).lineLimit(1).strikethrough(presentation.isDone).foregroundStyle(
                         presentation.isDone ? .secondary : .primary)
                     Spacer(minLength: 8)
                     if compact && ["cancelled", "snoozed"].contains(task.status) {
@@ -699,6 +734,10 @@ struct TaskRow: View {
                         Label(priority, systemImage: "flag.fill").font(.caption.weight(.medium)).foregroundStyle(
                             TodoColors.color("priority-\(priority.dropFirst())"))
                     }
+                }
+                if searchActive, let excerpt = TaskSearchPresentation.descriptionExcerpt(task) {
+                    Text(excerpt).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        .accessibilityIdentifier("search-excerpt-\(task.id)")
                 }
                 if compact {
                     CompactRowMetadata(items: compactMetadata).compactBounds("metadata-\(task.id)")
@@ -723,7 +762,7 @@ struct TaskRow: View {
                     }
                 }.font(.caption).foregroundStyle(.secondary).lineLimit(1) }
             }.fixedSize(horizontal: false, vertical: true)
-        }.padding(.vertical, 8).frame(height: compact ? 56 : nil)
+        }.padding(.vertical, 8).frame(height: compact ? (searchActive && TaskSearchPresentation.descriptionExcerpt(task) != nil ? 76 : 56) : nil)
             .overlay(alignment: .bottom) {
                 if compact { Divider().frame(height: 1).compactBounds("separator-\(task.id)").padding(.leading, 36) }
             }
