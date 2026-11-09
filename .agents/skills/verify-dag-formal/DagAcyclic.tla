@@ -142,7 +142,8 @@ Init == /\ IF Scenario = "statuses" THEN initialTasks \in [Tasks -> [status: Sta
  /\ operations = [w \in Writers |-> SeedOp(w)] /\ witness = [w \in Writers |-> EmptyWitness]
  /\ audit = [crash |-> TRUE, rejection |-> TRUE, noop |-> TRUE, boundary |-> TRUE]
 Resolve(w) == /\ pc[w] = "resolve"
- /\ observed' = [observed EXCEPT ![w] = Durable]
+ /\ observed' = [observed EXCEPT ![w] = IF operations[w].kind = "revert"
+    THEN State(edges,tasks,history[operations[w].inverse].afterVersions) ELSE Durable]
  /\ pc' = [pc EXCEPT ![w] = "begin"]
  /\ UNCHANGED <<edges,tasks,versions,history,rejected,lock,tx,operations,witness,reverted,audit>>
 Begin(w) == /\ pc[w] = "begin" /\ (lock = "none" \/ Mutation = "no-lock")
@@ -263,4 +264,6 @@ NeverWitnessGap == ~\E i \in 1..Len(rejected): rejected[i].reason = "cycle" /\ r
 NeverGroupedDelete == ~\E i \in 1..Len(history): history[i].kind = "delete" /\ Cardinality(history[i].removed) = 2 /\ Cardinality(history[i].touched) = 3
 NeverAccepted13 == Cardinality(In(edges,N)) # 13
 NeverRefused14 == ~\E i \in 1..Len(rejected): rejected[i].reason = "degree" /\ Cardinality(In(rejected[i].candidate,N)) = 14
+NeverStaleRevertRefusal == ~(reverted /\ Len(history) = 2 /\ \E w \in Writers:
+ operations[w].kind = "revert" /\ pc[w] = "rejectWait" /\ witness[w].reason = "version")
 =============================================================================

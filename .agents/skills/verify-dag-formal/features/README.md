@@ -1,11 +1,11 @@
-# Formal coverage index
+# Formal and production coverage index
 
 | Feature | Current proof | Entry |
 | --- | --- | --- |
-| Dependency writes and concurrent writers | Finite DagAcyclic model with five failing controls | [transactions](transactions.md) |
-| Delete, Revert and resolved History | Finite grouped lifecycle/replay model; production pending A | [lifecycle](lifecycle.md) |
-| Planning graph queries | Required properties recorded; real generated-input checks pending A/B | [queries](queries.md) |
+| Dependency writes and concurrent writers | Finite model and committed candidate drives | [transactions](transactions.md) |
+| Delete, Revert and resolved History | Finite lifecycle model, independent raw replay and candidate integration | [lifecycle](lifecycle.md) |
+| Planning graph queries | Generated real-import properties and isolated real-source sensitivity | [queries](queries.md) |
 
-The one command is `bun .agents/skills/verify-dag-formal/check.mjs` from the root.
-Exit 0 covers only the stated model checkpoint. Read the report and mapping
-before treating it as evidence about changed product source.
+Run `bun .agents/skills/verify-dag-formal/check.mjs` from the root. Exit 0 covers
+the stated checkpoint, pinned to f140c7b09bcb1db48ce4ccaee797ecfe60019ce4.
+Final public commands, clients and fresh discovery remain pending.

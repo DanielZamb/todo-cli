@@ -330,6 +330,16 @@
     "purpose": "reachability witness, not a mutant"
   },
   {
+    "name": "reach-stale-revert",
+    "scenario": "remove",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "NeverStaleRevertRefusal",
+    "purpose": "reachability witness, not a mutant"
+  },
+  {
     "name": "clean-recheck",
     "scenario": "statuses",
     "n": 3,

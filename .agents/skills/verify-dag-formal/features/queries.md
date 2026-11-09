@@ -7,23 +7,26 @@ loops, Ready/Blocked, inclusive lightest_next and tree orientation.
 
 ## How to get to it (user POV)
 
-The approved entries are list --ready/--blocked/--order, graph, HTTP planning
-reads and both clients. B has not committed these algorithms at this checkpoint.
+The approved public entries are list --ready/--blocked/--order, graph, HTTP
+planning reads and both clients. This checkpoint imports their committed shared
+algorithms at f140c7b09bcb1db48ce4ccaee797ecfe60019ce4. Final public commands
+and clients remain pending.
 
-## Driving it with production imports
+## Driving it with compiled production imports
 
-This coverage is pending. mapping.md specifies the exhaustive directed graphs
-through four nodes, status/weight subsets, seeded DAGs through 40 nodes, literal
-diamond and long cycle, independent oracles, replay comparisons and real-code
-sensitivity obligations. A has supplied candidate traversal signatures; that
-interface information is not a committed proof. No stand-in query implementation
-or hand-copy is shipped to make a test pass.
+Run the skill command, or production-check.mjs for production only. The driver
+exhausts directed graphs through four nodes, status vectors and weight vectors
+separately, then 256 seeded DAGs through 40 nodes. See graph-properties.ts and
+mapping.md. Each expectation comes from independent sets, paths, permutations
+or scalar keys. The literal diamond totals 10. Unknown weights remain traversable.
+The 103-edge chain produces a closed loop without a depth cap. Every raw input
+and seed needed for reproduction is specified or saved in the corpus receipt.
+Real-source mutants must fail their intended assertions and restore exactly.
 
 ## Gotchas
 
-Done and cancelled are neither Ready nor Blocked. Filters accept true only.
-lightest_next includes a Ready unresolved root. Terminal nodes prune energy,
-but never cycle detection or whole-Profile Kahn ordering. Tree classification
-uses n-1 edges with converging/diverging/mixed orientation and chain precedence.
-The exact seed and corpus counts must accompany actual executed production
-checks later. None are fabricated for this checkpoint.
+Done and cancelled are neither Ready nor Blocked. lightest_next includes a Ready
+unresolved root. Terminal nodes prune energy but never cycle detection or Kahn
+ordering. Tree classification uses n-1 edges, orientation and chain precedence.
+Public true-only filters, response warnings and formats are pending final B;
+the domain count/advice/refusal check does not stand in for those responses.

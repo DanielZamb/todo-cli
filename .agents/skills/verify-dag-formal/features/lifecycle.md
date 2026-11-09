@@ -2,28 +2,31 @@
 
 ## Sub-features
 
-Delete with Dependencies, Revert of every modeled operation, exact affected
-Versions, resolved replay, private pending state, crashes and rejection evidence.
+Delete with Dependencies, Revert of modeled operations, exact affected Versions,
+resolved replay, private pending state, crashes and captured rejection evidence.
 
 ## How to get to it (user POV)
 
-Delete removes incident Dependencies in one History event. Revert restores the
-inverse after checking current graph rules. The product entries are approved;
-A's committed implementation and B's public controls are pending.
+Delete removes incident Dependencies in one History event. Revert applies the
+inverse after checking current graph rules and the original event's Versions.
+This checkpoint drives the committed OperationStore. Public confirmation and
+final command controls remain pending B.
 
-## Driving it with TLC
+## Driving it with TLC and compiled production imports
 
-The delete scenario removes two incident edges, affecting the deleted Task and
-two surviving dependents. The delete-fanin scenario removes two incoming edges from the primary Task, which advances once through its lifecycle transition.
-delete-blocker/delete-dependent race an add with deleting either endpoint.
-cancel-complete permits cancellation then completion and checks that Revert
-cannot reopen that cancelled blocker under a done dependent. The command also
-requires reachable grouped Delete, committed Revert and post-rollback witness
-traces. AtomicGraphHistory folds only committed resolved facts.
+Run the skill command. The finite model checks Delete fan-out and fan-in,
+competing endpoint deletion/addition, cancellation/completion and one later
+Revert. The independent replay driver compares literal issued edges, Versions
+and complete Tasks against raw SQL through 93 cases and 186 rebuilds. It uses
+compact deltas and TaskCreated v2 initial edges. The unchanged candidate DAG
+fixtures add Delete/Revert/Move/Purge, authenticated initial edges, FK checks,
+Purge row-effect audit, rejection redaction and Snapshot restore. Every owned
+candidate mutation restores exact bytes and must pass a clean targeted rerun.
 
 ## Gotchas
 
-The model applies edge deltas, never old whole adjacency arrays, for grouped
-Revert. Rejection witnesses belong to the validation graph, not the graph at
-RejectCommit. A crash can erase an uncommitted rejection. Move/Purge, real FK
-ordering, checkpoints and redaction are pending concrete production checks.
+The model inverts edge deltas, never old adjacency arrays. A Revert must reject
+when a newer accepted change advanced an affected dependent. Refusal witnesses
+belong to the validation graph, not the graph at RejectCommit. Crashes can lose
+uncommitted rejected History. Move, Purge, creation, checkpoints and filesystem
+protocols are concrete drives, outside the finite TLA+ claim.
