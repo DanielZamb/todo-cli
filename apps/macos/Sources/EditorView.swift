@@ -23,16 +23,9 @@ struct EditorView: View {
             if let draft = model.editor {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(draft.id).font(.system(.caption2, design: .monospaced)).textSelection(.enabled)
-                                .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("task-full-id")
-                            HStack {
-                                Button("Copy task id") { model.copyTaskID(draft.id) }.accessibilityIdentifier("copy-task-id")
-                                if let feedback = model.taskIDCopyFeedback { Text(feedback).font(.caption).accessibilityIdentifier("copy-task-id-feedback") }
-                            }
-                        }
                         if let conflict = model.conflict {
                             conflictView(draft: draft, conflict: conflict)
+                            taskIdentifier(draft.id)
                         } else {
                             editorForm(draft: draft)
                         }
@@ -136,6 +129,8 @@ struct EditorView: View {
                 TextField("Task title", text: binding(\.title, default: ""), axis: .vertical)
                     .font(.title2.weight(.semibold)).textFieldStyle(.plain).frame(maxWidth: .infinity, alignment: .leading)
                     .focused($titleFocused).accessibilityIdentifier("edit-title")
+                    .compactBounds("task-title")
+                taskIdentifier(draft.id)
             }
             VStack(alignment: .leading, spacing: 8) {
                 Text("Description").foregroundStyle(.secondary)
@@ -263,6 +258,21 @@ struct EditorView: View {
                 }
             }.frame(maxWidth: .infinity, alignment: .leading)
         }.disabled(model.busy)
+    }
+
+    private func taskIdentifier(_ id: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Text(id).font(.system(.caption2, design: .monospaced)).foregroundStyle(.secondary).textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("task-full-id")
+                Button { model.copyTaskID(id) } label: { Image(systemName: "doc.on.doc") }
+                    .buttonStyle(.plain).frame(minWidth: 28, minHeight: 28)
+                    .accessibilityLabel("Copy task id").help("Copy task id").accessibilityIdentifier("copy-task-id")
+            }
+            if let feedback = model.taskIDCopyFeedback {
+                Text(feedback).font(.caption2).foregroundStyle(.secondary).accessibilityIdentifier("copy-task-id-feedback")
+            }
+        }.compactBounds("task-id")
     }
 
     private func fieldLabel(_ title: String) -> some View {

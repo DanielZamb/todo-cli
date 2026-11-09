@@ -12,6 +12,7 @@ root = Path(__file__).resolve().parents[3]
 evidence = Path(sys.argv[1]).resolve()
 evidence.mkdir(parents=True, exist_ok=False)
 source_files = sorted(path for pattern in ['Sources/*.swift', 'StateTests/*.swift', 'Tests/*.swift', 'DesignSnapshots/*.swift', 'API/Sources/TodoAPI/GeneratedSources/*.swift'] for path in (root / 'apps/macos').glob(pattern))
+source_files += sorted((root / 'design/macos/Assets.xcassets').glob('search-highlight.colorset/Contents.json'))
 (evidence / 'source-provenance.json').write_text(json.dumps({
     'head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip(),
     'sources': {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest() for path in source_files}

@@ -26,7 +26,7 @@ enum TaskSearchPresentation {
             guard let range = Range(NSRange(location: span.start, length: span.end - span.start), in: text),
                   let start = AttributedString.Index(range.lowerBound, within: result),
                   let end = AttributedString.Index(range.upperBound, within: result) else { continue }
-            result[start..<end].backgroundColor = .yellow.opacity(0.3)
+            result[start..<end].backgroundColor = TodoColors.color("search-highlight")
             result[start..<end].inlinePresentationIntent = .stronglyEmphasized
         }
         return result

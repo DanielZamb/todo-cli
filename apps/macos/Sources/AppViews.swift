@@ -230,8 +230,9 @@ struct TaskListView: View {
     var taskGroups: [PlanningResult.Group] {
         let tasks = visibleTasks
         if model.selectedView == "all" {
-            return ["P1", "P2", "P3", "P4"].map { priority in
-                .init(name: priority, tasks: tasks.filter { $0.priority == priority })
+            return ["P1", "P2", "P3", "P4"].compactMap { priority in
+                let rows = tasks.filter { $0.priority == priority }
+                return model.searchActive && rows.isEmpty ? nil : .init(name: priority, tasks: rows)
             }
         }
         let visibleIDs = Set(tasks.map(\.id))
@@ -530,7 +531,10 @@ struct TaskListView: View {
                 HStack(alignment: .top) {
                     Text(error).font(.caption).fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 4)
-                    Button("Retry") { Task { await model.retrySearch() } }.accessibilityIdentifier("retry-search")
+                    if model.connection == .live {
+                        Button("Retry") { Task { await model.retrySearch() } }
+                            .accessibilityIdentifier("retry-search").compactBounds("search-retry")
+                    }
                 }.padding(12).accessibilityIdentifier("search-error")
             }
             if model.appliedSearchSnapshot == nil, let message = model.taskLoadError {
@@ -641,7 +645,7 @@ struct TaskListView: View {
                         systemImage: model.connection == .connecting ? "arrow.trianglehead.2.clockwise" : "wifi.slash")
                     Spacer()
                     Button("Reconnect") { model.connect() }.buttonStyle(.plain)
-                }.font(.caption).foregroundStyle(.secondary).padding(12).accessibilityIdentifier("connection-status")
+                }.font(.caption).foregroundStyle(.secondary).padding(12).accessibilityIdentifier("connection-status").compactBounds("connection-status")
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

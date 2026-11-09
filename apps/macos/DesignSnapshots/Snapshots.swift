@@ -46,7 +46,15 @@ struct Snapshots {
         var transferLayouts: [TransferLayoutReceipt] = []
         var compactLayouts: [String: [String: [Double]]] = [:]
         for scheme in [ColorScheme.light, .dark] {
-            NSApplication.shared.appearance = NSAppearance(named: scheme == .light ? .aqua : .darkAqua)
+            let appearance = try #require(NSAppearance(named: scheme == .light ? .aqua : .darkAqua))
+            NSApplication.shared.appearance = appearance
+            var highlightComponents: [Int] = []
+            appearance.performAsCurrentDrawingAppearance {
+                if let highlight = NSColor(named: "search-highlight", bundle: TodoColors.bundle)?.usingColorSpace(.sRGB) {
+                    highlightComponents = [highlight.redComponent, highlight.greenComponent, highlight.blueComponent].map { Int(($0 * 255).rounded()) }
+                }
+            }
+            #expect(highlightComponents == (scheme == .light ? [221, 239, 216] : [52, 88, 63]))
             let mode = scheme == .light ? "light" : "dark"
             let model = fixture()
             func render<V: View>(_ name: String, _ view: V, width: CGFloat, height: CGFloat, scrollEditor: Bool = false, scrollTasks: CGFloat? = nil) async throws {
@@ -122,6 +130,13 @@ struct Snapshots {
                     if name == "search-compact-offline" {
                         let row = try #require(frames["row-6aa2647d-1234-4567-89ab-0123456789ab"])
                         #expect(row.maxY > 0 && row.minY < height)
+                        #expect(frames["search-retry"] == nil)
+                        _ = try #require(frames["connection-status"])
+                    }
+                    if name.hasSuffix("detail") || name.hasSuffix("copied") || name.hasSuffix("copy-failed") {
+                        let title = try #require(frames["task-title"])
+                        let id = try #require(frames["task-id"])
+                        #expect(id.minY >= title.maxY)
                     }
                 }
                 if name == "full-priority-ready" {

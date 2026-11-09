@@ -411,7 +411,7 @@ final class TodoModel {
                 taskLoadError = "Could not apply filters. Your previous filters are still active."
             } else if !identity.text.isEmpty || appliedSearchSnapshot?.appliedIdentity.text.isEmpty == false {
                 let applied = appliedSearchSnapshot?.appliedIdentity.text ?? ""
-                searchError = "Couldn't search. Showing results for \"\(applied)\"."
+                searchError = applied.isEmpty ? "Couldn't search. Showing tasks without search." : "Couldn't search. Showing results for \"\(applied)\"."
             } else {
                 taskLoadError = describe(error)
             }

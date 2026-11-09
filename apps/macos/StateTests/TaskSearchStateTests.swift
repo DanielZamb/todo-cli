@@ -75,6 +75,19 @@ struct TaskSearchStateTests {
     }
     enum SearchProofError: Error { case timeout(Int) }
 
+    @Test func activeSearchHidesEmptyPriorityGroups() throws {
+        let task = try JSONDecoder().decode(TaskSnapshot.self, from: Data(#"{"id":"group-proof","profile_id":"work","row_version":1,"title":"Pay rent","description":null,"priority":"P1","status":"open","project_id":null,"tags":[],"source":"manual","due_at":null,"scheduled_at":null,"energy":null,"estimate_min":null,"occurrence":null,"legacy_series_detached":true,"deleted_at":null}"#.utf8))
+        let model = TodoModel(configuration: .init(server: URL(string: "http://127.0.0.1:1")!, initialProfile: "work", vaultService: "unused-groups"))
+        model.selectedView = "all"
+        model.tasks = [task]
+        model.searchText = "rent"
+        for compact in [true, false] {
+            #expect(TaskListView(model: model, compactMode: compact).taskGroups.map(\.name) == ["P1"])
+        }
+        model.searchText = ""
+        #expect(TaskListView(model: model).taskGroups.map(\.name) == ["P1", "P2", "P3", "P4"])
+    }
+
     @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_W06_SERVER"] != nil))
     func viewResetPreservesDraftAndReschedulesProjectAndTag() async throws {
         let server = try #require(ProcessInfo.processInfo.environment["TODO_W06_SERVER"].flatMap(URL.init(string:)))
@@ -135,6 +148,12 @@ struct TaskSearchStateTests {
         #expect(model.searchPhase == .showing)
         #expect(model.taskLoadError == nil)
         #expect(model.appliedSearchSnapshot != nil)
+        await transport.fail()
+        model.setSearchText("rent")
+        try await wait { model.searchPhase == .error }
+        #expect(model.searchError == "Couldn't search. Showing tasks without search.")
+        model.setSearchText("")
+        try await wait { model.searchPhase == .showing }
         await transport.failRead()
         await model.refreshAfterWrite("Task updated")
         #expect(model.message == "Task updated. The live view is reconnecting.")

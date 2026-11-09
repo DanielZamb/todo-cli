@@ -38,6 +38,8 @@ It also holds a view-reset request, changes Project and Tag before the reply,
 and requires a replacement response to finish loading. An unsaved editor draft
 and conflict survive view/Project/Tag navigation. Initial blank-text read failure
 returns an explicit failed outcome, keeps the error visible, and succeeds on Retry.
+With blank applied text, a later search failure says "Couldn't search. Showing
+tasks without search." Active text omits empty priority groups in both layouts.
 Project and Tag filters remain identity fields and filter the same-response
 rows by their ids. Planning responses supply only membership and order.
 
@@ -67,6 +69,10 @@ initial load failure with Retry, and offline search with retained highlights.
 Geometry assertions require the shared Compact search field within the viewport
 in every state, including detail and Quick add. Offline retains a visible Task
 row; initial failure renders the error and recovery action in both layouts.
+Offline search offers only Reconnect; its search Retry appears while live.
+Detail places the secondary monospace id and icon-only Copy below the title.
+Both appearances resolve the shared search-highlight token to literal sRGB
+values, and geometry assertions require the id below the title.
 The full-window fixture uses
 the production search-field content because unordered NSHostingView cannot
 capture native `.searchable` toolbar chrome. Compact retains `compact-search`.
