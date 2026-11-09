@@ -44,7 +44,6 @@ export function TaskIdCopy({
       </Button>
       <span
         role={current === "failed" ? "alert" : "status"}
-        aria-label="Task id copy feedback"
         className={current === "failed" ? "copy-error" : "copy-feedback"}
       >
         {current === "copied"

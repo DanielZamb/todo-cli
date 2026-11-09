@@ -594,16 +594,14 @@ try {
       await page
         .getByRole("button", { name: "Copy task id", exact: true })
         .click();
-      await expect(
-        page.getByLabel("Task id copy feedback", { exact: true }),
-      ).toHaveText("Copied");
+      await expect(page.locator(".task-id-copy [role=status]")).toHaveText(
+        "Copied",
+      );
       expect(
         await desktop.evaluate(async ({ clipboard }) => clipboard.readText()),
       ).toBe(passport.id);
       await shot(`${prefix}-detail-copied`);
-      await expect(
-        page.getByLabel("Task id copy feedback", { exact: true }),
-      ).toHaveText("");
+      await expect(page.locator(".task-id-copy [role=status]")).toHaveText("");
       await desktop.evaluate(() => {
         process.emit("todo:verify-copy-failure");
       });
