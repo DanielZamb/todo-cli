@@ -104,3 +104,14 @@ for an unsubmitted field value. Offline advances publication generation, clears
 rows, and retains the prior submission only as a Retry template. An unsubmitted
 lookup has no Offline Retry action. The compiled regression preserves its red
 request-count/phase failures and requires both to pass after the fix.
+
+Draft alert dismissal only clears pendingNavigation through
+dismissNavigationPrompt. Both alert bindings use it; only explicit Cancel calls
+cancelNavigation and revokes the Show intent. Save and Discard capture the target,
+including its attempt UUID, before their Task starts. The production headless
+regression enqueues each action, resets the presentation binding to false before
+the Task runs, then requires Show, full-id rows and reload. Save durably stores
+the draft at Version 2; Discard leaves the original at Version 1. Explicit Cancel
+clears the intent, keeps the local draft and rejects the retained action without
+navigation. Require discovery-alert-actions-http.json from the state proof.
+This drives the documented alert-binding ordering without native activation.

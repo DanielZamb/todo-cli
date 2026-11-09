@@ -734,6 +734,7 @@ final class TodoModel {
             guard let task = await save() else { return false }
             saved = task
         } else { saved = draft.base }
+        if case .showDiscovery(let intent) = target, !canShowDiscovery(intent) { return false }
         if case .move(let task, let destination) = target, task.id == draft.id, saved.id == task.id {
             return await applyNavigation(.move(saved, to: destination))
         }
@@ -780,8 +781,12 @@ final class TodoModel {
         return true
     }
 
-    func cancelNavigation() {
+    func dismissNavigationPrompt() {
         pendingNavigation = nil
+    }
+
+    func cancelNavigation() {
+        dismissNavigationPrompt()
         discovery.showIntent = nil
     }
 

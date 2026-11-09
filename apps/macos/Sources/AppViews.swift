@@ -286,7 +286,7 @@ struct TaskListView: View {
         .sheet(item: $model.transferRequest) { request in TaskTransferPicker(model: model, request: request) }
         .alert(
             DraftNavigationPrompt.title(hasConflict: model.conflict != nil),
-            isPresented: Binding(get: { model.pendingNavigation != nil && model.discovery.dialog == nil }, set: { if !$0 { model.cancelNavigation() } }),
+            isPresented: Binding(get: { model.pendingNavigation != nil && model.discovery.dialog == nil }, set: { if !$0 { model.dismissNavigationPrompt() } }),
             presenting: model.pendingNavigation
         ) { target in
             DraftNavigationActions(model: model, target: target)
@@ -1012,7 +1012,7 @@ struct DraftNavigationActions: View {
     var saveFirst = true
     var body: some View {
         if saveFirst { save }
-        Button("Discard", role: .destructive) { Task { await model.discardAndNavigate(target) } }
+        Button("Discard", role: .destructive) { Task { [target] in await model.discardAndNavigate(target) } }
             .tint(TodoColors.color("destructive")).disabled(model.busy).accessibilityIdentifier("discard-before-navigation")
         Button("Cancel", role: .cancel) { model.cancelNavigation() }
             .tint(nil as Color?).accessibilityIdentifier("cancel-navigation")
@@ -1020,7 +1020,7 @@ struct DraftNavigationActions: View {
     }
     @ViewBuilder private var save: some View {
         if model.conflict == nil {
-            Button("Save") { Task { await model.saveAndNavigate(target) } }
+            Button("Save") { Task { [target] in await model.saveAndNavigate(target) } }
                 .buttonStyle(.borderedProminent)
                 .disabled(
                     !model.canWrite || model.editor?.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false

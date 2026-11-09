@@ -3,6 +3,7 @@ import Foundation
 import HTTPTypes
 import OpenAPIRuntime
 import OpenAPIURLSession
+import SwiftUI
 import Testing
 import TodoAPI
 @testable import TodoState
@@ -44,6 +45,79 @@ private actor DiscoveryTransport: ClientTransport {
         let error = RequestFailure(status: 404, message: "Task missing in Profile Work (work). Try GET /tasks/lookup?prefix=aa.", exitCode: 3, exitMeaning: "not found or auth missing", details: .init(profile: .init(id: "work", name: "Work"), taskID: "aa"))
         #expect(error.humanMessage == "Task not found in Work.\nerror 3 - not found or auth missing")
         #expect(RequestFailure(status: 422, message: "Bad prefix", exitCode: 2, exitMeaning: "validation or usage").exitDetail == "error 2 - validation or usage")
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_W06_SERVER"] != nil))
+    func queuedDraftActionsSurviveAlertDismissalAndExplicitCancelRevokesShow() async throws {
+        let server = try #require(ProcessInfo.processInfo.environment["TODO_W06_SERVER"].flatMap(URL.init(string:)))
+        let session = try await todoClient(server: server, credential: "").signIn_period_signIn(body: .json(.init(passphrase: "scratch verification passphrase"))).ok.body.json.credential
+        let direct = todoClient(server: server, credential: session)
+        let create = try JSONDecoder().decode(Operations.tasks_period_create.Input.Body.jsonPayload.self, from: Data(#"{"title":"D queued Show target"}"#.utf8))
+        let destination = try await TaskSnapshot.decode(direct.tasks_period_create(path: .init(profile: "personal"), body: .json(create)).ok.body.json)
+        let cases = [
+            (action: "Save", original: "D queued Save original", draft: "D queued Save persisted", stored: "D queued Save persisted", version: 2),
+            (action: "Discard", original: "D queued Discard original", draft: "D queued Discard rejected", stored: "D queued Discard original", version: 1),
+            (action: "Cancel", original: "D queued Cancel original", draft: "D queued Cancel retained", stored: "D queued Cancel original", version: 1)
+        ]
+        for item in cases {
+            let body = try JSONDecoder().decode(Operations.tasks_period_create.Input.Body.jsonPayload.self, from: JSONSerialization.data(withJSONObject: ["title": item.original]))
+            let source = try await TaskSnapshot.decode(direct.tasks_period_create(path: .init(profile: "work"), body: .json(body)).ok.body.json)
+            let model = TodoModel(configuration: .init(server: server, initialProfile: "work", vaultService: "unused-queued-discovery-\(UUID())"), clientFactory: { url, _ in
+                todoClient(server: url, credential: session)
+            })
+            model.replaceCredential(session)
+            model.signedIn = true
+            model.connection = .live
+            model.beginEditing(source)
+            model.editor?.title = item.draft
+            await model.openDiscovery(.lookup)
+            model.editDiscoveryPrefix(destination.id)
+            await model.requestDiscovery()
+            let match = try #require(model.discovery.appliedSnapshot?.matches.first)
+            #expect(await model.showDiscoveryMatch(match) == false)
+            let target = try #require(model.pendingNavigation)
+            let attempt = try #require(model.discovery.showIntent)
+            let presented = Binding(get: { model.pendingNavigation != nil }, set: { if !$0 { model.dismissNavigationPrompt() } })
+            var started = false
+            let action = Task { @MainActor [target] in
+                started = true
+                if item.action == "Save" { return await model.saveAndNavigate(target) }
+                return await model.discardAndNavigate(target)
+            }
+            #expect(started == false)
+            if item.action == "Cancel" { model.cancelNavigation() }
+            presented.wrappedValue = false
+            #expect(model.pendingNavigation == nil)
+            if item.action == "Cancel" {
+                #expect(model.discovery.showIntent == nil)
+                #expect(await action.value == false)
+                #expect(model.profile == "work")
+                #expect(model.editor?.id == source.id)
+                #expect(model.editor?.title == "D queued Cancel retained")
+            } else {
+                #expect(model.discovery.showIntent?.id == attempt.id)
+                let revealed = await action.value
+                #expect(revealed == true)
+                if revealed { try await wait { model.searchPhase == .showing && !model.loading } }
+                #expect(model.profile == "personal")
+                #expect(model.selectedView == "all")
+                #expect(model.taskFilters.prefix == destination.id)
+                #expect(model.editor?.id == destination.id)
+                #expect(model.appliedSearchSnapshot?.rows.map(\.id) == [destination.id])
+                if revealed {
+                    #expect(await model.retrySearch() == .applied)
+                    #expect(model.appliedSearchSnapshot?.rows.map(\.id) == [destination.id])
+                }
+            }
+            let stored = try await TaskSnapshot.decode(direct.tasks_period_show(path: .init(profile: "work", task: source.id)).ok.body.json)
+            #expect(stored.title == item.stored)
+            #expect(stored.row_version == item.version)
+            if item.action == "Discard" { #expect(model.editor?.changedFields == []) }
+            model.signedIn = false
+            model.connect()
+        }
+        let receipt = try #require(ProcessInfo.processInfo.environment["TODO_W06_RECEIPT"]).replacingOccurrences(of: "http-receipt.json", with: "discovery-alert-actions-http.json")
+        try Data(#"{"queuedSaveRevealed":true,"savedTitle":"D queued Save persisted","savedVersion":2,"queuedDiscardRevealed":true,"discardedStoredTitle":"D queued Discard original","discardedVersion":1,"explicitCancelRevoked":true,"cancelledDraft":"D queued Cancel retained","bindingResetBeforeTask":true,"reload":true}"#.utf8).write(to: URL(fileURLWithPath: receipt))
     }
 
     @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_W06_SERVER"] != nil))
