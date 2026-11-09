@@ -32,3 +32,10 @@ Preconditions: run Doctor and Launch from [verify-auth](../SKILL.md).
 SQLite failures use `StoreError`; denials use `AuthError` with code `auth`.
 A rejection's safe detail names the denial without copying submitted input.
 Auth records remain in History during projection rebuild.
+
+The compiled CLI/HTTP regression in apps/cli/test/auth-history.test.ts uses a fresh
+scratch database per revoked/expired show/edit case. It asserts exactly one row
+with profile default, action read for show or mutate for edit, and the literal
+denial detail. Selection uses auth.resolveProfile with that action before CLI
+pre-reads. Run it with TODO_CLI_BINARY and TODO_SERVER_BINARY from the same source
+hash; TODO_CLI_EVIDENCE retains auth-history-actions.json without bearer secrets.

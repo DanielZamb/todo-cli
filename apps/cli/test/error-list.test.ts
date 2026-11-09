@@ -137,10 +137,10 @@ it("always returns list tasks and explains actual not-found exits with authorize
 }, 120000);
 
 it("keeps HTTP error tags, adds matching pairs at decoding boundaries and hides foreign Profile names", async () => {
-  expect(run(["init", "--profile", "private-profile"]).status).toBe(0);
+  expect(run(["init", "--profile", "Private Profile"]).status).toBe(0);
   expect(
     run(
-      ["login", "--profile", "private-profile", "--password-stdin"],
+      ["login", "--profile", "Private Profile", "--password-stdin"],
       "scratch-passphrase\n",
     ).status,
   ).toBe(0);
@@ -148,7 +148,7 @@ it("keeps HTTP error tags, adds matching pairs at decoding boundaries and hides 
     "add",
     "Foreign private title",
     "--profile",
-    "private-profile",
+    "Private Profile",
     "--format",
     "json",
   ]);
@@ -215,14 +215,14 @@ it("keeps HTTP error tags, adds matching pairs at decoding boundaries and hides 
   expect(token.status).toBe(200);
   credential = token.body.credential;
   writeFileSync(
-    join(home, ".todo-cli/session_private-profile.json"),
+    join(home, ".todo-cli/session_Private%20Profile.json"),
     JSON.stringify({ token: credential }),
   );
   const deniedCli = run([
     "show",
     foreignId,
     "--profile",
-    "private-profile",
+    "Private Profile",
     "--format",
     "json",
   ]);
@@ -231,13 +231,45 @@ it("keeps HTTP error tags, adds matching pairs at decoding boundaries and hides 
     exit_code: 3,
     exit_meaning: "not found or auth missing",
   });
-  expect(deniedCli.stdout).not.toContain("private-profile");
+  expect(deniedCli.stdout).not.toContain("Private Profile");
   expect(deniedCli.stdout).not.toContain("Foreign private title");
+  const scopedOutcomes = [];
+  for (const profile of ["Private Profile", "No Such"]) {
+    writeFileSync(
+      join(home, `.todo-cli/session_${encodeURIComponent(profile)}.json`),
+      JSON.stringify({ token: credential }),
+    );
+    const result = run([
+      "show",
+      foreignId,
+      "--profile",
+      profile,
+      "--format",
+      "json",
+    ]);
+    expect(result.status).toBe(3);
+    const { generated_at: _generated, ...outcome } = JSON.parse(result.stdout);
+    scopedOutcomes.push(outcome);
+  }
+  expect(scopedOutcomes).toEqual([
+    {
+      code: "not_found",
+      message: "Profile not found; run todo init --profile <name>",
+      exit_code: 3,
+      exit_meaning: "not found or auth missing",
+    },
+    {
+      code: "not_found",
+      message: "Profile not found; run todo init --profile <name>",
+      exit_code: 3,
+      exit_meaning: "not found or auth missing",
+    },
+  ]);
   const transfer = run([
     "copy",
     "45a312ac",
     "--to",
-    "private-profile",
+    "Private Profile",
     "--format",
     "json",
   ]);
@@ -327,7 +359,7 @@ it("keeps HTTP error tags, adds matching pairs at decoding boundaries and hides 
   });
   const denied = await request(
     "GET",
-    `/profiles/private-profile/tasks/${foreignId}`,
+    `/profiles/Private Profile/tasks/${foreignId}`,
   );
   expect(denied).toMatchObject({
     status: 403,
@@ -337,7 +369,7 @@ it("keeps HTTP error tags, adds matching pairs at decoding boundaries and hides 
       exit_meaning: "not found or auth missing",
     },
   });
-  expect(JSON.stringify(denied.body)).not.toContain("private-profile");
+  expect(JSON.stringify(denied.body)).not.toContain("Private Profile");
   expect(JSON.stringify(denied.body)).not.toContain("Foreign private title");
   const unknownProfile = await request(
     "GET",

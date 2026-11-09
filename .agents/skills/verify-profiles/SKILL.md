@@ -87,3 +87,11 @@ message and details, with the additive equivalent exit pair. The compiled
 apps/cli/test/error-list.test.ts checks foreign exact-id failures through both
 CLI and HTTP and selected-Profile-only Task recovery. Keep the two cached
 binaries on the same source hash when running that test.
+
+Selected CLI operations resolve names and ids with auth.resolveProfile. Pass the
+real AuthAction before reading Task data. Revoked or expired show/edit requests
+must produce one rejection for the selected Profile, matching HTTP's read/mutate
+action. Run apps/cli/test/auth-history.test.ts with the compiled binary overrides;
+auth-history-actions.json records the eight literal CLI/HTTP cases. The
+error-list test compares a spaced foreign name and No Such under one scoped
+credential and requires identical generic Profile-not-found responses.

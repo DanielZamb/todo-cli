@@ -154,3 +154,12 @@ point for B's credentialProfileName(cfg); this isolated unit uses cfg.profile.
 Batch edit, attach-many and import preserve their row fields while reusing that
 same CLI presentation path for missing Tasks. Domain commands and authorization
 do not resolve credential names.
+
+`test/auth-history.test.ts` drives revoked and expired Sessions through compiled
+CLI show/edit and HTTP GET/PATCH on fresh scratch databases. Each request must
+leave exactly one rejected auth History row for default, with read for show and
+mutate for edit, and keep the Task at Version 1. Profile selection calls the
+shared auth.resolveProfile with the operation's action before any Task pre-read.
+The error-list test also requires a scoped credential to receive the same generic
+Profile-not-found response for a spaced foreign name and the absent name No Such.
+Neither case may expose another Profile's name or Task data.

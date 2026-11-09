@@ -25,6 +25,7 @@ import {
   AttachManyItem,
   AttachManyReport,
   AttachManyRequest,
+  type AuthAction,
   BatchEditReport,
   BatchEditRequest,
   batchEditTasks,
@@ -285,21 +286,22 @@ const access = (cfg: Settings) =>
 const selectProfile = Effect.fn(function* (
   store: OperationStore,
   cfg: Settings,
+  action: AuthAction = "read",
 ) {
   const credential = yield* io(() => loadCredential(cfg.profile));
-  const profiles = yield* store.profiles();
-  const profile = profiles.find(
-    (p) => p.name === cfg.profile || p.id === cfg.profile,
-  );
-  if (!profile) {
-    return yield* Effect.fail(
-      new CommandError(
-        3,
-        "not_found",
-        "Profile not found; run todo init --profile <name>",
+  const profile = yield* store.auth
+    .resolveProfile({ credential, profile: cfg.profile, action })
+    .pipe(
+      Effect.catchTag("ProfileResolutionError", () =>
+        Effect.fail(
+          new CommandError(
+            3,
+            "not_found",
+            "Profile not found; run todo init --profile <name>",
+          ),
+        ),
       ),
     );
-  }
   return { credential, profile: profile.id };
 });
 const cliLookupError = (
@@ -553,7 +555,7 @@ const whoami = Command.make("whoami", {}, () =>
     const cfg = yield* root;
     yield* withStore(cfg, (store) =>
       Effect.gen(function* () {
-        const request = yield* selectProfile(store, cfg);
+        const request = yield* selectProfile(store, cfg, "authenticate");
         const credential = yield* store.auth.authenticate({
           ...request,
           access: "read",
@@ -642,7 +644,7 @@ const add = Command.make(
       const flags = taskInput({ ...input, title: Option.none() });
       yield* withStore(cfg, (store) =>
         Effect.gen(function* () {
-          const request = yield* selectProfile(store, cfg);
+          const request = yield* selectProfile(store, cfg, "mutate");
           const result = yield* createTask(
             store,
             request,
@@ -853,7 +855,7 @@ const transfer = (kind: "move" | "copy") =>
           );
         yield* withStore(cfg, (store) =>
           Effect.gen(function* () {
-            const request = yield* selectProfile(store, cfg);
+            const request = yield* selectProfile(store, cfg, "authenticate");
             const destination = (yield* store.profiles()).find(
               (p) => p.id === input.to || p.name === input.to,
             );
@@ -1094,7 +1096,7 @@ const batchEditCommand = Command.make(
       });
       yield* withStore(cfg, (store) =>
         Effect.gen(function* () {
-          const request = yield* selectProfile(store, cfg);
+          const request = yield* selectProfile(store, cfg, "authenticate");
           const result = yield* batchEditTasks(store, request, {
             ...body,
             dry_run: input.dryRun || body.dry_run || false,
@@ -1168,7 +1170,7 @@ const attachManyCommand = Command.make(
       });
       yield* withStore(cfg, (store) =>
         Effect.gen(function* () {
-          const request = yield* selectProfile(store, cfg);
+          const request = yield* selectProfile(store, cfg, "authenticate");
           const result = yield* new AttachmentCommands(store).attachMany(
             request,
             {
@@ -1225,8 +1227,12 @@ const attachmentCommand = (detach: boolean) =>
         const cfg = yield* root;
         yield* withStore(cfg, (store) =>
           Effect.gen(function* () {
-            const request = yield* selectProfile(store, cfg);
             const dryRun = "dryRun" in input && input.dryRun === true;
+            const request = yield* selectProfile(
+              store,
+              cfg,
+              dryRun ? "authenticate" : "mutate",
+            );
             const task = yield* changeAttachment(store, request, {
               id: input.id,
               value: input.value,
@@ -1270,7 +1276,7 @@ const labelAttachmentCommand = Command.make(
       const cfg = yield* root;
       yield* withStore(cfg, (store) =>
         Effect.gen(function* () {
-          const request = yield* selectProfile(store, cfg);
+          const request = yield* selectProfile(store, cfg, "mutate");
           const task = yield* labelAttachment(
             store,
             request,
@@ -1329,7 +1335,7 @@ const mutation = (name: Mutation) =>
         const cfg = yield* root;
         yield* withStore(cfg, (store) =>
           Effect.gen(function* () {
-            const request = yield* selectProfile(store, cfg);
+            const request = yield* selectProfile(store, cfg, "mutate");
             yield* mutateTask(
               store,
               request,
@@ -1524,7 +1530,7 @@ const importCommand = makeImportCommand((input) =>
     const items = yield* readImportFile(input.file);
     yield* withStore(cfg, (store) =>
       Effect.gen(function* () {
-        const request = yield* selectProfile(store, cfg);
+        const request = yield* selectProfile(store, cfg, "authenticate");
         const result = yield* importTasks(store, request, {
           items,
           file_name: input.file === "-" ? "stdin" : basename(input.file),
