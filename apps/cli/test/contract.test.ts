@@ -275,6 +275,7 @@ it("validates every command's single JSON object against its published JSON Sche
       )(JSON.parse(result.out));
       schema = SchemaRepresentation.fromJsonSchemaDocument(
         JsonSchema.fromSchemaDraft2020_12(json),
+        { patterns: "apply" },
       );
       expect(Schema.is(schema)(null)).toBe(false);
       schemas.set(name, schema);

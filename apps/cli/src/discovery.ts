@@ -28,7 +28,10 @@ export const lookupOutput = (
 ) => {
   if (!matches.length) return "No matches\n";
   const rows = matches.map((match) => {
-    const command = `todo show ${quote(match.task_id)} --profile ${quote(match.profile.id)}`;
+    const profileFlag = match.profile.id.startsWith("--")
+      ? `--profile=${quote(match.profile.id)}`
+      : `--profile ${quote(match.profile.id)}`;
+    const command = `todo show ${quote(match.task_id)} ${profileFlag}`;
     const values = [
       match.profile.name,
       match.profile.id,

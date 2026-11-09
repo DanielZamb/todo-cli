@@ -23,7 +23,7 @@ let serverLog = "";
 let passed = false;
 const passphrase = "scratch discovery passphrase";
 const cli = (args: string[], expected = 0, input?: string, format = "json") => {
-  const result = spawnSync(manifest.cli, [...(args.includes("--profile") ? [] : ["--profile", "work"]), "--format", format, ...args], { env, encoding: "utf8", input, timeout: 20000 });
+  const result = spawnSync(manifest.cli, [...(args.some((arg) => arg === "--profile" || arg.startsWith("--profile=")) ? [] : ["--profile", "work"]), "--format", format, ...args], { env, encoding: "utf8", input, timeout: 20000 });
   if (result.error) throw result.error;
   actions.push({ args, format, exit: result.status, stdout: result.stdout, stderr: result.stderr });
   assert.equal(result.status, expected, result.stdout || result.stderr);
@@ -171,6 +171,17 @@ try {
   const schema = cli(["schema", "lookup"]);
   assert.deepEqual(schema.required, ["generated_at", "prefix", "matches"]);
   assert.ok(cli(["man", "lookup"]).text.includes("mutations"));
+  cli(["init", "--profile=--boundary"]);
+  writeFileSync(join(home, ".todo-cli/session_--boundary.json"), JSON.stringify({ token: owner }));
+  const boundaryTask = cli(["add", "Leading flag Profile", "--profile=--boundary"]).task;
+  const boundaryOutput = cli(["lookup", "--prefix", boundaryTask.id], 0, undefined, "md");
+  const showCommand = boundaryOutput.slice(boundaryOutput.indexOf("todo show ")).trim();
+  assert.equal(showCommand, `todo show ${boundaryTask.id} --profile=--boundary`);
+  const quotedBinary = "'" + manifest.cli.replaceAll("'", "'\\''") + "'";
+  const shown = spawnSync("/bin/sh", ["-c", quotedBinary + " " + showCommand.slice(5) + " --format json"], { env, encoding: "utf8", timeout: 20000 });
+  actions.push({ command: showCommand, exit: shown.status, stdout: shown.stdout, stderr: shown.stderr });
+  assert.equal(shown.status, 0, shown.stdout || shown.stderr);
+  assert.equal(JSON.parse(shown.stdout).task.id, boundaryTask.id);
   passed = true;
 } finally {
   let serverExit: number | null = null;

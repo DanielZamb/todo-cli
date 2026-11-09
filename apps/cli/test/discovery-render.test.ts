@@ -15,3 +15,16 @@ it("prints a shell-quoted full-id next command without adding JSON row fields", 
   );
   expect(Object.keys(row)).toEqual(["profile", "task_id", "title", "project"]);
 });
+
+it("uses flag=value for Profile ids starting with a long-flag marker", () => {
+  const row = Schema.decodeUnknownSync(LookupMatch)({
+    profile: { id: "--owner's tasks", name: "Owner" },
+    task_id: "ab000000-0000-4000-8000-000000000001",
+    title: "Read",
+    project: null,
+  });
+  for (const format of ["md", "table"] as const)
+    expect(lookupOutput([row], format)).toContain(
+      "todo show ab000000-0000-4000-8000-000000000001 --profile='--owner'\\''s tasks'",
+    );
+});
