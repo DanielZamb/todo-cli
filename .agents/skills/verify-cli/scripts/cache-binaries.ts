@@ -12,9 +12,12 @@ import { join, resolve } from "node:path";
 const root = resolve(import.meta.dirname, "../../../..");
 const sources = [
   "apps/cli/src",
+  "apps/cli/scripts",
+  "apps/cli/test",
   "apps/server/src",
   "apps/server/scripts",
   "packages/domain/src",
+  "packages/domain/test",
   "packages/api/src",
 ]
   .flatMap((directory) =>

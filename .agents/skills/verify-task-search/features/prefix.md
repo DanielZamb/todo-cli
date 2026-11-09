@@ -22,4 +22,5 @@ The drive compares filtered order to each interface's original order.
 
 Prefix is not trimmed and never tolerates typos. Prefix alone omits spans.
 Show, edit, done, cancel, reopen, rm, history, attach, detach, move and copy keep
-exact-id behavior; history of a nonexistent full or partial id remains empty.
+exact-id behavior. History of a nonexistent id is empty until rejected attempts
+are recorded for that exact id. The matched full-id Task keeps its Version.

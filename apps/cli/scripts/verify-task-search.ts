@@ -137,12 +137,12 @@ export async function verifyTaskSearch(
   );
   const short = first.id.slice(0, 8);
   cli(["show", short], undefined, 3);
-  for (const action of ["edit", "done", "cancel", "reopen", "rm"])
-    cli([action, short, "--expected-version", "1"], undefined, 3);
   const history = Schema.decodeUnknownSync(
     Schema.Struct({ entries: Schema.Array(Schema.Unknown) }),
   )(cli(["history", short]));
   assert.deepEqual(history.entries, []);
+  for (const action of ["edit", "done", "cancel", "reopen", "rm"])
+    cli([action, short, "--expected-version", "1"], undefined, 3);
   cli(["attach", short, "https://example.test/search"], undefined, 3);
   cli(["detach", short, "missing"], undefined, 3);
   for (const action of ["move", "copy"])
@@ -160,6 +160,10 @@ export async function verifyTaskSearch(
     ["Stable search first"],
   );
   assert.ok(prefixOnly.tasks?.every((task) => !("search_matches" in task)));
+  const unchanged = Schema.decodeUnknownSync(TaskResponse)(
+    cli(["show", first.id]),
+  ).task;
+  assert.equal(unchanged.row_version, 1);
   for (const created of [first, second])
     cli(["rm", created.id, "--expected-version", "1"]);
   writeFileSync(
