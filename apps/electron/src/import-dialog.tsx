@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "./components/ui/dialog.tsx";
 import { Input } from "./components/ui/input.tsx";
-import { taskLookupDetails } from "./error-reply.ts";
+import { errorReply, taskLookupDetails } from "./error-reply.ts";
 import { importChangesText } from "./import-presentation.ts";
 import { countTasks } from "./presentation.ts";
 import { type FindTask, TaskLookupStatus } from "./task-lookup-status.tsx";
@@ -182,7 +182,9 @@ export function ImportDialog({
       details: taskLookupDetails(row.error),
       changes: taskLookupDetails(row.error)
         ? ""
-        : (row.error?.message ?? importChangesText(row)),
+        : row.error
+          ? errorReply(row.error).message
+          : importChangesText(row),
     };
   });
   const count = (report?.totals.created ?? 0) + (report?.totals.updated ?? 0);
@@ -355,7 +357,13 @@ export function ImportDialog({
                         >
                           {outcome}
                         </td>
-                        <td>
+                        <td
+                          className={
+                            row.error && !details
+                              ? "whitespace-pre-line"
+                              : undefined
+                          }
+                        >
                           {details ? (
                             <TaskLookupStatus
                               details={details}

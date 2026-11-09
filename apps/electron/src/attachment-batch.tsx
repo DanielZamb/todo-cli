@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "./components/ui/dialog.tsx";
 import { Input } from "./components/ui/input.tsx";
-import { taskLookupDetails } from "./error-reply.ts";
+import { errorReply, taskLookupDetails } from "./error-reply.ts";
 import type { Reply, Request } from "./protocol.ts";
 import { type FindTask, TaskLookupStatus } from "./task-lookup-status.tsx";
 
@@ -209,18 +209,20 @@ export function AttachmentBatchDialog({
                     ) : (
                       result && (
                         <small
+                          className="whitespace-pre-line"
                           role={
                             result.outcome === "rejected" ? "alert" : undefined
                           }
                         >
-                          {result.error?.message ??
-                            (report?.dry_run
+                          {result.error
+                            ? errorReply(result.error).message
+                            : report?.dry_run
                               ? result.outcome === "attached"
                                 ? "Ready to attach"
                                 : "Already attached"
                               : result.outcome === "attached"
                                 ? "Attached"
-                                : "Already attached")}
+                                : "Already attached"}
                         </small>
                       )
                     )}

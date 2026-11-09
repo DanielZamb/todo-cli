@@ -3,7 +3,7 @@ import { type PlanningView, seriesForTask, type TaskId } from "@todo/domain";
 import { Effect } from "effect";
 import type { HttpClient } from "effect/http";
 import { HttpApiClient } from "effect/http-api";
-import { errorReply } from "./error-reply.ts";
+import { errorReply, exitDetail } from "./error-reply.ts";
 import type { NativeAttachmentRequest, Reply, Request } from "./protocol.ts";
 import { historyTaskIds, seriesFromHistory, seriesKey } from "./recurrence.ts";
 
@@ -93,9 +93,11 @@ export const taskRequest = (
         });
         const row = report.items[0];
         if (row?.outcome === "rejected") {
-          if (row.error?.code === "occ_conflict")
+          if (row.error?.code === "occ_conflict") {
+            const exit_detail = exitDetail(row.error);
             return {
               _tag: "conflict",
+              ...(exit_detail === undefined ? {} : { exit_detail }),
               latest: yield* http.tasks.show({
                 params: {
                   profile: request.profile,
@@ -103,6 +105,7 @@ export const taskRequest = (
                 },
               }),
             };
+          }
           return errorReply(
             row.error ?? { message: "Attachments were rejected." },
           );

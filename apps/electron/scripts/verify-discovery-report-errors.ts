@@ -30,6 +30,7 @@ export async function verifyDiscoveryReportErrors({
   const reports: unknown[] = [];
   const screenshots: string[] = [];
   const appearance: unknown[] = [];
+  const genericPairs: unknown[] = [];
   const create = (...args: string[]) =>
     Schema.decodeUnknownSync(Created)(cli("work", "add", ...args)).task;
   const open = async (name: string) => {
@@ -38,7 +39,11 @@ export async function verifyDiscoveryReportErrors({
       .click();
     await page.getByRole("menuitem", { name, exact: true }).click();
   };
-  const shot = async (name: string, layouts: readonly boolean[] = [true]) => {
+  const shot = async (
+    name: string,
+    layouts: readonly boolean[] = [true],
+    expectedPair?: string,
+  ) => {
     for (const compact of layouts) {
       await page.setViewportSize({
         width: compact ? 393 : 1100,
@@ -60,6 +65,34 @@ export async function verifyDiscoveryReportErrors({
           dark,
         );
         await settleRenderer(page);
+        if (expectedPair) {
+          const row = page
+            .locator('[data-slot="dialog-content"][data-open]')
+            .locator(
+              ".batch-edit-row small[role=alert], .attachment-batch-row small[role=alert], .import-row-changes.import-rejected, .import-table tbody tr td:last-child",
+            )
+            .first();
+          await expect(row).toContainText(expectedPair);
+          const text = await row.innerText();
+          const whiteSpace = await row.evaluate(
+            (node) => getComputedStyle(node).whiteSpace,
+          );
+          assert.equal(text.split("\n").at(-1), expectedPair);
+          assert.equal(text.split(expectedPair).length - 1, 1);
+          assert.equal(whiteSpace, "pre-line");
+          genericPairs.push({
+            name,
+            compact,
+            dark,
+            expectedPair,
+            text,
+            whiteSpace,
+          });
+          writeFileSync(
+            join(evidence, "generic-row-pairs.json"),
+            JSON.stringify(genericPairs, null, 2),
+          );
+        }
         const style = await page.evaluate(() => {
           const popup = document.querySelector<HTMLElement>(
             '[data-slot="dialog-content"][data-open]',
@@ -215,6 +248,43 @@ export async function verifyDiscoveryReportErrors({
   await expect(page.getByTestId("task-lookup-status")).toBeVisible();
   assert.equal(batch.report.items[0]?.error?.exit_code, 3);
   await recover(target.id);
+  const genericBatch = create("Generic batch conflict target");
+  await open("Edit Tasks…");
+  await page
+    .getByRole("checkbox", {
+      name: "Select Generic batch conflict target",
+      exact: true,
+    })
+    .check();
+  cli(
+    "work",
+    "edit",
+    genericBatch.id,
+    "--title",
+    "Concurrent batch edit",
+    "--expected-version",
+    "1",
+  );
+  await page.getByRole("button", { name: "Preview", exact: true }).click();
+  await expect
+    .poll(() => replies.filter((reply) => reply._tag === "batchEdit").length)
+    .toBe(2);
+  const batchConflict = replies
+    .filter((reply) => reply._tag === "batchEdit")
+    .at(-1);
+  assert.ok(batchConflict?._tag === "batchEdit");
+  assert.equal(batchConflict.report.items[0]?.error?.code, "occ_conflict");
+  assert.equal(batchConflict.report.items[0]?.error?.exit_code, 4);
+  reports.push({
+    surface: "generic batch Conflict",
+    source: "real HTTP",
+    report: batchConflict.report,
+  });
+  await shot("batch-generic-conflict", [true], "error 4 - Conflict");
+  await expect(page.locator(".batch-edit-row small[role=alert]")).toContainText(
+    "Version 2",
+  );
+  await page.getByRole("button", { name: "Close", exact: true }).click();
   const source = create(
     "Attachment report source",
     "--link",
@@ -257,6 +327,77 @@ export async function verifyDiscoveryReportErrors({
   await shot("attachment-not-found");
   assert.equal(attachments.report.items[0]?.error?.exit_code, 3);
   await recover(attachmentTarget.id);
+  const genericAttachment = create("Generic Attachment conflict target");
+  await page
+    .getByRole("button", {
+      name: "Attachment actions for example.com",
+      exact: true,
+    })
+    .click();
+  await page
+    .getByRole("menuitem", { name: "Attach to Tasks…", exact: true })
+    .click();
+  await page
+    .getByRole("checkbox", {
+      name: "Select Generic Attachment conflict target",
+      exact: true,
+    })
+    .check();
+  cli(
+    "work",
+    "edit",
+    genericAttachment.id,
+    "--title",
+    "Concurrent Attachment edit",
+    "--expected-version",
+    "1",
+  );
+  await page.getByRole("button", { name: "Preview", exact: true }).click();
+  await expect
+    .poll(
+      () => replies.filter((reply) => reply._tag === "attachmentBatch").length,
+    )
+    .toBe(2);
+  const attachmentConflict = replies
+    .filter((reply) => reply._tag === "attachmentBatch")
+    .at(-1);
+  assert.ok(attachmentConflict?._tag === "attachmentBatch");
+  assert.equal(attachmentConflict.report.items[0]?.error?.code, "occ_conflict");
+  assert.equal(attachmentConflict.report.items[0]?.error?.exit_code, 4);
+  reports.push({
+    surface: "generic Attachment Conflict",
+    source: "real HTTP",
+    report: attachmentConflict.report,
+  });
+  await shot("attachment-generic-conflict", [true], "error 4 - Conflict");
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  const singleConflict = await page.evaluate(
+    (task) =>
+      window.desktop.request({
+        _tag: "attachMany",
+        profile: task.profile,
+        payload: {
+          task_id: task.id,
+          from_version: task.version,
+          attachments: [{ kind: "link", url: "https://example.com/reference" }],
+        },
+      }),
+    {
+      profile: Schema.decodeUnknownSync(ProfileId)("work"),
+      id: genericAttachment.id,
+      version: genericAttachment.row_version,
+    },
+  );
+  assert.equal(singleConflict._tag, "conflict");
+  if (singleConflict._tag !== "conflict")
+    throw new Error("Expected Attachment Conflict");
+  assert.equal(singleConflict.exit_detail, "error 4 - Conflict");
+  assert.equal(singleConflict.latest?.row_version, 2);
+  reports.push({
+    surface: "single attachMany Conflict pair",
+    source: "real HTTP",
+    reply: singleConflict,
+  });
   const single = await page.evaluate(
     async (task) =>
       window.desktop.request({
@@ -316,6 +457,8 @@ export async function verifyDiscoveryReportErrors({
     .toBe(1);
   const importedReply = replies.find((reply) => reply._tag === "importReport");
   assert.ok(importedReply?._tag === "importReport");
+  assert.equal(importedReply.report.items[0]?.error?.code, "task_deleted");
+  assert.equal(importedReply.report.items[0]?.error?.exit_code, 2);
   reports.push({
     surface: "import",
     source: "real HTTP",
@@ -323,7 +466,62 @@ export async function verifyDiscoveryReportErrors({
     actualExitCode: importedReply.report.items[0]?.error?.exit_code,
     report: importedReply.report,
   });
-  await shot("import-real-rejection");
+  await shot(
+    "import-real-rejection",
+    [true, false],
+    "error 2 - validation or usage",
+  );
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  const importConflictTask = create(
+    "Import Conflict target",
+    "--external-id",
+    "report-import-occ",
+  );
+  await open("Import…");
+  const conflictFile = {
+    name: "import-conflict.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(
+      JSON.stringify([
+        {
+          external_id: "report-import-occ",
+          task_id: importConflictTask.id,
+          from_version: 1,
+          title: "Imported Conflict title",
+        },
+      ]),
+    ),
+  };
+  await page
+    .getByLabel("Import file", { exact: true })
+    .setInputFiles(conflictFile);
+  cli(
+    "work",
+    "edit",
+    importConflictTask.id,
+    "--title",
+    "Concurrent import edit",
+    "--expected-version",
+    "1",
+  );
+  await page
+    .getByRole("button", { name: "Preview changes", exact: true })
+    .click();
+  await expect
+    .poll(() => replies.filter((reply) => reply._tag === "importReport").length)
+    .toBe(2);
+  const importConflict = replies
+    .filter((reply) => reply._tag === "importReport")
+    .at(-1);
+  assert.ok(importConflict?._tag === "importReport");
+  assert.equal(importConflict.report.items[0]?.error?.code, "occ_conflict");
+  assert.equal(importConflict.report.items[0]?.error?.exit_code, 4);
+  reports.push({
+    surface: "generic import Conflict",
+    source: "real HTTP",
+    report: importConflict.report,
+  });
+  await shot("import-real-conflict", [true, false], "error 4 - Conflict");
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   const singleFixture = Schema.decodeUnknownSync(ImportReport)({
     generated_at: "2026-11-09T00:00:00Z",

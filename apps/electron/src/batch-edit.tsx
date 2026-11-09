@@ -15,7 +15,7 @@ import {
 } from "./components/ui/dialog.tsx";
 import { Input } from "./components/ui/input.tsx";
 import { NativeSelect } from "./components/ui/native-select.tsx";
-import { taskLookupDetails } from "./error-reply.ts";
+import { errorReply, taskLookupDetails } from "./error-reply.ts";
 import type { Reply, Request } from "./protocol.ts";
 import { type FindTask, TaskLookupStatus } from "./task-lookup-status.tsx";
 
@@ -293,11 +293,19 @@ export function BatchEditDialog({
                         }
                       />
                     ) : (
-                      <small role={row?.error ? "alert" : undefined}>
+                      <small
+                        className="whitespace-pre-line"
+                        role={row?.error ? "alert" : undefined}
+                      >
                         {row?.error
-                          ? row.error.code === "occ_conflict"
-                            ? `Conflict · Version ${row.current_version}. Reload Tasks.`
-                            : row.error.message
+                          ? errorReply(
+                              row.error.code === "occ_conflict"
+                                ? {
+                                    ...row.error,
+                                    message: `Conflict · Version ${row.current_version}. Reload Tasks.`,
+                                  }
+                                : row.error,
+                            ).message
                           : row
                             ? report?.dry_run
                               ? `Ready · Version ${task.row_version}`

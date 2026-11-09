@@ -140,6 +140,17 @@ not submit. An optional TODO_DISCOVERY_RENDERER_ROOT selects an immutable
 source-only renderer extraction for a before proof. It does not change the
 server or the current checkout.
 
+The same report drive also previews live batch-edit, Attachment batch and import
+Conflicts after a compiled CLI edit advances the selected Task to Version 2.
+Generic rows use the existing errorReply formatter once, with its exit detail on
+a separate preserved line. Assert the real task_deleted import row ends with
+`error 2 - validation or usage` and each Conflict ends with `error 4 - Conflict`.
+Keep the batch Conflict's Version 2 and Reload Tasks copy. The single attachMany
+Conflict reply must retain the same exit detail and latest Version 2. Compact
+light/dark and full import captures assert innerText's final line and computed
+white-space: pre-line; generic-row-pairs.json records each literal observation.
+Contextual TaskLookupStatus recovery remains unchanged.
+
 Report screenshots await the production renderer's finite animations and theme
 transitions with settleRenderer. Infinite progress indicators are excluded.
 Each capture asserts literal settled popup/card background and foreground
