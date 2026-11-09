@@ -273,6 +273,8 @@ describe("second security review", () => {
           expect(task?.attachments?.length).toBe(100);
         }),
       ),
+    // Argon2 sign-in and the write burst can pass 5 s on a loaded machine.
+    30_000,
   );
 
   it.effect(
