@@ -1,3 +1,220 @@
+# Unit F public continuation under G11 hold
+
+This is a partial implementation checkpoint. The unaffected public/replay subset
+passes at immutable B product source `e7170510a376b51eaf3525bb9933cb0dd588b233`.
+The default public command still fails the required malformed CLI usage property.
+G11 graph-response and client conformance are paused pending an explicit corrected
+B SHA. No final B, F, client or whole-feature approval is claimed.
+
+Branch: feat/task-dag-f-formal. F source/proof commit:
+`deec35cc5ef1a45df74d1ca98a06e8f8d43d09ed`. B delivery:
+`8ea84c32e18634ac48767b5a6035502bbd78c079`.
+The terminal notifications and ignored delivery-provenance.json name the full
+local F delivery SHA after this report is committed. No product file or domain
+module was added or edited. The existing relative Claude skill link is unchanged.
+
+## Commands, exits and retained receipts
+
+| Command | Actual exit | Scope and evidence |
+| --- | --- | --- |
+| bun .agents/skills/verify-dag-formal/public-check.mjs | 1 | Required Version-0 usage assertion fails at e717; /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/public-0lx9mw |
+| bun .agents/skills/verify-dag-formal/public-check.mjs unaffected | 0 | diagnostic-pass only; /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/public-krrGtO |
+| bun .agents/skills/verify-dag-formal/check.mjs --model-only | 0 | finite model, five controls, seven reachability receipts; /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/check-n6XlTn |
+| pnpm check | 0 | F worktree only; /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/pnpm-check-public.stdout and .stderr |
+| git diff --check | 0 | owned source/document edits |
+
+The final public diagnostic baseline and clean recheck each drove
+120 CLI/HTTP actions, plus direct HTTP positive-list reads,
+TTY interactions and literal SQLite inspections. Strict F-driver and reachable
+candidate-domain TypeScript checks exited 0. Real CLI and server source compiled
+successfully. The final restored CLI, server and public driver were compiled
+again before the clean public recheck. Independent replay exited 0 for 93 cases
+and 186 full/checkpoint rebuilds. Nineteen concrete integration checks exited 0.
+Every driver has an actual completed exit in commands.json; no timeout occurred.
+
+This does not claim a full e717 repository pnpm check. The F command exercises
+this branch's existing product tree. B/L1 own the separately reported final
+candidate repository check and AtomicCAS maintenance. F did not change or renew
+verify-occ-atomicity or verify-dag. AtomicCAS remains a separate one-Task/no-edge
+proof, not the Task dependency graph proof.
+
+## Immutable inputs and actual coverage
+
+The public runner materialized 163 unchanged committed files from Git objects,
+without another checkout or worktree, and checked six dependency manifests against
+the installed tree. All production package dependency versions were checked.
+Bun 1.4.4 is enforced. CLI/server imports resolve to these exact candidate domain
+and API modules; source outside the candidate or installed node_modules is refused.
+Changed source produces a distinct cached binary under this worktree's .scratch/bin.
+Binary hashes, compiler import paths/hashes, Git blob ids, installed versions and
+all F verification-input hashes survive in the receipt. No moving B tree was used.
+
+public-coverage.json maps 22 files and their actual covered functions at e717.
+Its recorded SHA-256 is
+`681812db3fc424733d070a6ca2e2034146243cd09de78deb10ac0a346adf9270`.
+The verification-input receipt SHA-256 is
+`f5632e06cc34e01e111142473081bdfe406a0567480e319e985b95a50bee958f`.
+The run checked that all four core files graph-model.ts, graph-order.ts,
+graph-energy.ts and dependency-rules.ts are byte-identical to the retained f140
+proof. This does not infer unchanged graph-query or Mermaid response code.
+The older exhaustive algorithm corpus and its 36 controls remain tied to the
+historical f140 receipt below; they were not relabeled as a new graph-response proof.
+
+Concrete public assertions cover true-only CLI/HTTP filters and false recovery,
+positive Ready/Blocked sets and terminal exclusion, topo/lightest ordering of the
+whole Profile before open membership, valid stale edge no-ops without History,
+malformed HTTP and authorization before no-op, read-only Token refusal, real
+stale conflicts, exact G9 warnings at 9..13 and refusal/count 14 through both CLI
+and HTTP, redundant paths, envelopes/schema discovery and command-aware formats.
+They also cover per-item batch dry-run and SQL rollback of History/edges/Versions,
+Delete confirmation and a fingerprint mismatch after Dependencies change to [],
+forward external ids, successful adoption and failed-adoption isolation, and the
+canonical HTTP import details shape with current_version plus DependencyError.
+
+The full CLI and HTTP refused-completion responses each preserve the same
+40,000-character blocker description. Their durable History is separately bounded:
+witness null, truncated true, total greater than 40,000 and serialized event below
+32,768 bytes. Purge redacts both rejected rows to TaskHistoryRedacted. Fresh full
+and checkpoint rebuilds reproduce complete Tasks, sorted task_dependencies and
+surviving Versions. These are concrete paths, not properties modeled by DagAcyclic.
+No captured refusal is reconstructed from a later durable graph after rollback.
+
+The unchanged production TTY drive proves n, EOF and empty input retain state,
+y accepts, and a dependency change during confirmation refuses the old preview.
+The initial daily Snapshot must finish within the same 60-second startup deadline
+before no-write measurements begin. An early calibration caught a transient
+Snapshot .tmp changing during startup; the driver now waits for that setup work.
+No failed operation or changed assertion is retried to manufacture a pass.
+
+## Real-source sensitivity
+
+All 31 controls compile successfully, then exit 1 at the intended named behavioral
+AssertionError. Every mutated source is restored byte-for-byte in finally and
+rerun clean with exit 0. Compiler/hash failures, SchemaError-only failures, timeouts
+and unrelated properties are rejected. The final full clean compilation and rerun
+also pass. Mutations affect only F-owned isolated committed-input copies.
+
+| Broken real source | Intended property | Broken exit | Restored exit |
+| --- | --- | --- | --- |
+| cli-false-guard | public-false-cli | 1 | 0 |
+| http-false-recovery | public-false-http | 1 | 0 |
+| terminal-ready-blocked | public-terminal-filters | 1 | 0 |
+| filter-before-order | public-whole-profile-order | 1 | 0 |
+| stale-valid-noop | public-stale-noop | 1 | 0 |
+| noop-history | public-stale-noop | 1 | 0 |
+| malformed-noop-version | public-malformed-http | 1 | 0 |
+| readonly-noop-write | public-read-token-noop | 1 | 0 |
+| ninth-warning | public-counted-warning | 1 | 0 |
+| fourteenth-add | public-count-refusal | 1 | 0 |
+| redundant-warning | public-redundant-path | 1 | 0 |
+| batch-dry-run-real-store | public-batch-dry-run | 1 | 0 |
+| batch-split-history | public-batch-rollback | 1 | 0 |
+| delete-without-confirmation | public-delete-confirmation | 1 | 0 |
+| empty-fingerprint-bypass | public-empty-fingerprint | 1 | 0 |
+| preallocated-import-map | public-import-successful-map | 1 | 0 |
+| import-encoding-witness | public-import-encoding | 1 | 0 |
+| full-response-witness | public-full-witness | 1 | 0 |
+| unbounded-history-witness | public-bounded-history | 1 | 0 |
+| purge-keeps-refusal | public-purge-redaction | 1 | 0 |
+| mermaid-non-graph-format | public-format-boundary | 1 | 0 |
+| tty-default-yes | public-tty-confirmation | 1 | 0 |
+| revert-recorded-version | integration-revertPreservesContent | 1 | 0 |
+| checkpoint-edges | replay-checkpoint | 1 | 0 |
+| beginning-edges | replay-beginning | 1 | 0 |
+| dependent-versions | replay-versions | 1 | 0 |
+| delete-cleanup | integration-groupedDelete | 1 | 0 |
+| move-cleanup | integration-move | 1 | 0 |
+| purge-witness-redaction | integration-purge-A | 1 | 0 |
+| authenticated-initial | integration-authenticatedInitial | 1 | 0 |
+| projection-migration-version | integration-n1 | 1 | 0 |
+
+The split batch publication control commits History before applying its edge.
+The injected SQL abort leaves a committed History row with no edge. The literal
+expected committed-row set is [], so the safety assertion catches the stranded
+row. The no-op History control returns unchanged but writes rejected History;
+whole-state equality catches that extra row. Removing write-scope protection lets
+a read-only Token receive an existing-edge no-op instead of 403. The preallocated
+import-map control creates a dependent after adoption failed; the actual successful
+mapping assertion catches it. Schema encoding that omits nested dependency_error
+loses the typed HTTP witness and fails the preserved-payload assertion.
+
+Calibration failures were retained and not credited: the first dropped-witness
+control initially failed only a schema decoder, and an early clean import rerun
+observed startup Snapshot work. The final controls above use explicit literal
+behavior assertions and a completed setup boundary. Exact broken-source bytes,
+restoration receipts, result.json, sensitivity.json, compiler receipts and
+checkpoint-summary.json are in the evidence directory.
+
+## Preserved finite model and bounds
+
+DagAcyclic and its configs are unchanged. The committed-source rerun passes
+25 positive configurations plus the clean status recheck. Every positive queue
+is empty. All five intended mutants exit 12 at their intended invariant and all
+seven reachability controls produce the required invariant-violation witness.
+The clean status run has 64 initial states, 32,816 generated, 19,784 distinct,
+depth 27 and queue 0. The complete per-config counts/depths/queues and traces are
+in /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/check-n6XlTn/result.json and the retained historical table below.
+
+Most configurations use three Tasks, one Profile, two writers CLI/server,
+four statuses, Versions 1..4, one operation each and at most one grouped Revert.
+The two-Profile scenario checks isolation. The degree-two race uses four Tasks;
+it is not a literal degree-13 proof. Separate 15-Task, single-add configurations
+exhaustively check 13 acceptance and 14 refusal. The five mutants still test
+outside-transaction graph validation, omitted writer lock, status-pruned cycles,
+omitted reopen guard and split Delete publication. The no-lock mutant applies
+edge facts to durable state rather than replacing a stale private snapshot.
+Rejected History can be lost before its separate commit. Refusal evidence stays
+captured from validation and is never replaced with a later durable graph.
+
+TLC is pinned to tla2tools 1.7.4, SHA-256
+936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88.
+Each configuration has a 120-second limit, 768 MiB heap, one worker, fingerprint
+polynomial 0 and seed 26, with no symmetry or state constraints. Public drivers
+have a 180-second deadline, individual CLI calls 20 seconds, TTY asks 10 seconds
+and server startup 60 seconds. Independent replay uses seed 260911, all DAGs
+through three nodes plus 64 seeded DAGs through twelve nodes. The public corpus
+is literal synthetic data, not a generated random sample.
+
+## Required next candidate and gaps
+
+The preserved failing input is an existing edge with --expected-version 0.
+Expected CLI result: exit 2/invalid_args. Actual e717 result: exit 1/runtime_error
+with SchemaError at from_version. HTTP correctly returns 400 and may record a
+rejected validation row without projection change. L1 deduplicated the CLI
+finding into seat 1's P2 for B's combined correction round. Keep the assertion
+and rerun it against the next explicit committed SHA. No product fix was made here.
+
+G11 at ca142014 supersedes per-node closures and response lightest_next ordering.
+root-response-fixture.mjs is explicitly unexecuted: it specifies a 1,000-Task
+chain, root index 500, exactly eight node keys, 500 ancestors, 499 descendants
+and a separate unequal-energy fork whose root sets follow whole-Profile topo.
+Actual before/after serialized response bytes, amended root-only conformance,
+typed Mermaid identity/readGraph, CLI Markdown, final schemas/OpenAPI/Swift,
+both client decoders/runtime mapping, independent review seats and fresh Claude
+skill discovery remain pending. The unknown-energy lightest key is unchanged.
+The fixture is not claimed as a proof. Final F approval is still held.
+
+All 46 recorded public servers in the final diagnostic run completed cleanup;
+their cleanup receipts record exit and owned scratch removal. No other process
+was stopped. Disk guard exited 0 at 29.9 GB free before the source commit.
+Local no-comments audit found no added code comments, casts or TS suppressions;
+no child agent was launched under the explicit no-children instruction. No
+dependency was added or upgraded, and no product module was edited or added.
+No real Todo data, native apps, signing, Keychain, installed binaries or Python
+were used. No push, rebase, merge, PR or checkout/worktree setup occurred.
+
+SQLite single-writer serialization and atomic commit remain assumptions. These
+are finite safety/generated/concrete checks, with no unbounded, liveness,
+SQLite-engine, power-loss, renderer or client-runtime proof.
+
+---
+
+# Historical f140 algorithm and model checkpoint
+
+The following earlier receipt is preserved at its original candidate and F
+proof/delivery commits. The public continuation above supersedes its pending
+public status only for the explicit unaffected diagnostic subset.
+
 # Unit F conformance-ready checkpoint
 
 Status: the finite model, committed algorithm/replay corpus and real-source
