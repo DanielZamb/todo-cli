@@ -20,6 +20,8 @@ import {
   CredentialInfo,
   FinishTaskRequest,
   OwnerRequest,
+  ProfileResolutionError,
+  type ResolveProfileRequest,
   StartSeriesRequest,
   TokenOptions,
 } from "./model.ts";
@@ -95,6 +97,10 @@ type Ports<Read> = {
     occurred_at: Instant;
   }) => OpLogEntry;
 };
+
+class ResolvedProfileRejection {
+  constructor(readonly profile: () => ProfileId | null) {}
+}
 
 export class Authentication<Read> {
   constructor(
@@ -266,10 +272,14 @@ export class Authentication<Read> {
           } catch (error) {
             if (!(error instanceof AuthError)) throw error;
             const target =
-              Schema.is(ProfileId)(profile) &&
-              this.db.query("SELECT 1 FROM profiles WHERE id=?").get(profile)
-                ? profile
-                : null;
+              profile instanceof ResolvedProfileRejection
+                ? profile.profile()
+                : Schema.is(ProfileId)(profile) &&
+                    this.db
+                      .query("SELECT 1 FROM profiles WHERE id=?")
+                      .get(profile)
+                  ? profile
+                  : null;
             this.transaction(() =>
               this.record({
                 action,
@@ -286,6 +296,28 @@ export class Authentication<Read> {
           cause instanceof AuthError ? cause : new StoreError(cause),
       });
     });
+  }
+
+  private resolvedProfileForHistory(value: string): ProfileId | null {
+    const row = this.db
+      .query<{ id: string }, [string, string, string]>(
+        "SELECT id FROM profiles WHERE id NOT IN (SELECT profile FROM profile_deletions) AND (id=? OR name=?) ORDER BY CASE WHEN id=? THEN 0 ELSE 1 END,id LIMIT 1",
+      )
+      .get(value, value, value);
+    if (row) return Schema.decodeUnknownSync(ProfileId)(row.id);
+    return Schema.is(ProfileId)(value) &&
+      this.db.query("SELECT 1 FROM profiles WHERE id=?").get(value)
+      ? value
+      : null;
+  }
+
+  private authorizedProfiles(credential: CredentialInfo) {
+    return this.ports
+      .profiles()
+      .filter(
+        (profile) =>
+          credential.profile === null || profile.id === credential.profile,
+      );
   }
 
   private requireCredential(
@@ -491,6 +523,39 @@ export class Authentication<Read> {
       );
     });
 
+  readonly resolveProfile = (input: ResolveProfileRequest) =>
+    Effect.suspend(() => {
+      let selected: ProfileId | null = null;
+      const rejection = new ResolvedProfileRejection(() => selected);
+      return this.perform(input.action, rejection, (time) => {
+        selected = this.resolvedProfileForHistory(input.profile);
+        const credential = this.requireCredential(input, time, "profiles");
+        const profiles = this.authorizedProfiles(credential);
+        const profile =
+          profiles.find((row) => row.id === input.profile) ??
+          profiles.find((row) => row.name === input.profile);
+        if (profile) selected = profile.id;
+        this.requireCredential(
+          input,
+          time,
+          "read",
+          selected ?? parse(ProfileId, input.profile),
+        );
+        return profile ? { id: profile.id, name: profile.name } : null;
+      }).pipe(
+        Effect.catchTag("AuthError", (error) =>
+          error.detail === "profile_scope" || error.detail === "profile_deleted"
+            ? Effect.succeed(null)
+            : Effect.fail(error),
+        ),
+        Effect.flatMap((profile) =>
+          profile === null
+            ? Effect.fail(new ProfileResolutionError())
+            : Effect.succeed(profile),
+        ),
+      );
+    });
+
   readonly requireOwner = (input: { readonly credential: string }) =>
     this.perform("authenticate", null, (time) =>
       this.requireCredential(input, time, "owner"),
@@ -642,12 +707,7 @@ export class Authentication<Read> {
   readonly profiles = (input: { readonly credential: string }) =>
     this.perform("read", null, (time) => {
       const credential = this.requireCredential(input, time, "profiles");
-      return this.ports
-        .profiles()
-        .filter(
-          (profile) =>
-            credential.profile === null || profile.id === credential.profile,
-        );
+      return this.authorizedProfiles(credential);
     });
 
   readonly read = (input: AccessRequest) =>
