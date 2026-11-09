@@ -330,6 +330,7 @@ export async function verifyImport({
   await page
     .getByRole("button", { name: "Expand window", exact: true })
     .click();
+  await expect(page.locator(".shell")).not.toHaveClass(/compact/);
   const closeFile = join(scratch, "close-missing.json");
   writeFileSync(
     closeFile,

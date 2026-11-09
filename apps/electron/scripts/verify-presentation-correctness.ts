@@ -107,7 +107,8 @@ export async function verifyPresentationCorrectness({
       profile: "work",
     });
   });
-  await expect(page.locator(".compact-state")).toBeVisible();
+  await expect(page.locator(".search-error")).toBeVisible();
+  await expect(row).toBeVisible();
   await page.screenshot({
     path: join(evidence, "correctness-load-error.png"),
     animations: "disabled",
@@ -131,7 +132,7 @@ export async function verifyPresentationCorrectness({
   );
   const recovered =
     (await row.isVisible()) &&
-    (await page.locator(".compact-state").count()) === 0;
+    (await page.locator(".search-error").count()) === 0;
   results.push({
     name: "successful automatic list refresh clears load failure",
     passed: recovered,

@@ -109,7 +109,11 @@ async function boot() {
     );
     const notice = (state: "connected" | "offline") => {
       if (generation === current && !window.isDestroyed())
-        window.webContents.send("todo:notice", { _tag: "connection", state });
+        window.webContents.send("todo:notice", {
+          _tag: "connection",
+          profile,
+          state,
+        });
     };
     stream = Effect.runFork(
       Effect.gen(function* () {
@@ -118,56 +122,65 @@ async function boot() {
           window.webContents.send("todo:notice", outdated);
           return;
         }
-        const response = yield* client.changes.stream({
-          params: { profile },
-          headers: { ...headers, "x-todo-client": "electron" },
-        });
-        yield* Stream.runForEach(response.body, (frame) =>
-          Effect.sync(() => {
-            if (frame.event === "ready") notice("connected");
-            if (
-              frame.event === "reload" &&
-              generation === current &&
-              !window.isDestroyed()
-            ) {
-              streamState = restoreStreamState(profile, frame.data);
-              writeFileSync(
-                join(app.getPath("userData"), "reload.json"),
-                JSON.stringify(frame.data),
-              );
-              window.webContents.send("todo:notice", { _tag: "reload" });
-            }
-            if (
-              frame.event === "operation" &&
-              generation === current &&
-              !window.isDestroyed()
-            ) {
-              streamState = {
-                ...streamState,
-                cursors: { ...streamState.cursors, [profile]: frame.id },
-              };
-              operations.push({
-                profile,
-                seq: frame.data.seq,
-                kind: frame.data.event.kind,
+        while (current === generation && credential) {
+          yield* Effect.exit(
+            Effect.gen(function* () {
+              const response = yield* client.changes.stream({
+                params: { profile },
+                headers: { ...headers, "x-todo-client": "electron" },
               });
-              writeFileSync(
-                join(app.getPath("userData"), "operations.json"),
-                JSON.stringify(operations),
-              );
-              window.webContents.send(
-                "todo:notice",
-                frame.data.event.kind === "ProfileDeleted"
-                  ? {
-                      _tag: "profileDeleted",
+              yield* Stream.runForEach(response.body, (frame) =>
+                Effect.sync(() => {
+                  if (frame.event === "ready") notice("connected");
+                  if (
+                    frame.event === "reload" &&
+                    generation === current &&
+                    !window.isDestroyed()
+                  ) {
+                    streamState = restoreStreamState(profile, frame.data);
+                    writeFileSync(
+                      join(app.getPath("userData"), "reload.json"),
+                      JSON.stringify(frame.data),
+                    );
+                    window.webContents.send("todo:notice", { _tag: "reload" });
+                  }
+                  if (
+                    frame.event === "operation" &&
+                    generation === current &&
+                    !window.isDestroyed()
+                  ) {
+                    streamState = {
+                      ...streamState,
+                      cursors: { ...streamState.cursors, [profile]: frame.id },
+                    };
+                    operations.push({
                       profile,
-                      name: frame.data.event.profile.name,
-                    }
-                  : { _tag: "changed", profile },
+                      seq: frame.data.seq,
+                      kind: frame.data.event.kind,
+                    });
+                    writeFileSync(
+                      join(app.getPath("userData"), "operations.json"),
+                      JSON.stringify(operations),
+                    );
+                    window.webContents.send(
+                      "todo:notice",
+                      frame.data.event.kind === "ProfileDeleted"
+                        ? {
+                            _tag: "profileDeleted",
+                            profile,
+                            name: frame.data.event.profile.name,
+                          }
+                        : { _tag: "changed", profile },
+                    );
+                  }
+                }),
               );
-            }
-          }),
-        );
+            }),
+          );
+          if (current !== generation || !credential) return;
+          notice("offline");
+          yield* Effect.sleep("250 millis");
+        }
       }).pipe(
         Effect.provide(FetchHttpClient.layer),
         Effect.onExit(() => Effect.sync(() => notice("offline"))),
@@ -175,6 +188,10 @@ async function boot() {
     );
   };
   app.on("before-quit", stopStream);
+  let failNextCopy = false;
+  process.on("todo:verify-copy-failure", () => {
+    failNextCopy = true;
+  });
   let failNextList = false;
   process.on("todo:verify-list-failure", () => {
     failNextList = true;
@@ -208,6 +225,10 @@ async function boot() {
       if (request._tag === "list" && failNextList) {
         failNextList = false;
         return { _tag: "error", message: "Scratch list read failed." };
+      }
+      if (request._tag === "copyTaskId" && failNextCopy) {
+        failNextCopy = false;
+        return { _tag: "error", message: "Scratch clipboard write failed." };
       }
       if (isNativeAttachmentRequest(request))
         return nativeAttachmentRequest(request);

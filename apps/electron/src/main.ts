@@ -105,7 +105,11 @@ const watch = (profile: typeof Request.Type & { _tag: "watch" }) => {
   const follow = Effect.gen(function* () {
     const http = yield* client();
     while (current === generation && credential) {
-      send({ _tag: "connection", state: "reconnecting" });
+      send({
+        _tag: "connection",
+        profile: profile.profile,
+        state: "reconnecting",
+      });
       const result = yield* Effect.exit(
         Effect.gen(function* () {
           const outdated = yield* compatibility.check();
@@ -128,7 +132,11 @@ const watch = (profile: typeof Request.Type & { _tag: "watch" }) => {
             Effect.sync(() => {
               if (current !== generation) return;
               if (frame.event === "ready")
-                send({ _tag: "connection", state: "connected" });
+                send({
+                  _tag: "connection",
+                  profile: profile.profile,
+                  state: "connected",
+                });
               else if (frame.event === "reload") {
                 state = {
                   ...state,
@@ -194,7 +202,7 @@ const watch = (profile: typeof Request.Type & { _tag: "watch" }) => {
         }),
       );
       if (current !== generation || compatibility.outdated) return;
-      send({ _tag: "connection", state: "offline" });
+      send({ _tag: "connection", profile: profile.profile, state: "offline" });
       if (result._tag === "Failure")
         yield* Effect.logWarning("Todo stream disconnected");
       yield* Effect.sleep("2 seconds");

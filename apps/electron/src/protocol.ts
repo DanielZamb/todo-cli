@@ -38,6 +38,7 @@ import {
   Task,
   TaskFilters,
   TaskId,
+  TaskRead,
   TransitionTask,
   UploadAttachment,
 } from "@todo/domain";
@@ -50,6 +51,7 @@ export const ViewName = Schema.Union([
 ]);
 export type ViewName = typeof ViewName.Type;
 export const NativeAttachmentRequest = Schema.Union([
+  Schema.TaggedStruct("copyTaskId", { task: TaskId }),
   Schema.TaggedStruct("attachmentClipboard", {}),
   Schema.TaggedStruct("pickAttachment", {}),
   Schema.TaggedStruct("pasteAttachment", {}),
@@ -201,7 +203,7 @@ export const Reply = Schema.Union([
   Schema.TaggedStruct("signedOut", {}),
   Schema.TaggedStruct("tasks", {
     tasks: Schema.Array(Task),
-    matching_task_ids: Schema.optionalKey(Schema.Array(TaskId)),
+    matching_tasks: Schema.optionalKey(Schema.Array(TaskRead)),
     profiles: Schema.Array(ProfileSummary),
     projects: Schema.Array(ProjectSummary),
     tags: Schema.Array(TagSummary),
@@ -228,6 +230,7 @@ export const Notice = Schema.Union([
   Schema.TaggedStruct("reload", {}),
   Schema.TaggedStruct("windowMode", { compact: Schema.Boolean }),
   Schema.TaggedStruct("connection", {
+    profile: ProfileId,
     state: Schema.Literals(["connected", "reconnecting", "offline"]),
   }),
   Schema.TaggedStruct("profileDeleted", {
