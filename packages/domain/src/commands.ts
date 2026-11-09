@@ -46,7 +46,7 @@ import {
   TaskPatch,
   type TransitionTask,
 } from "./task-commands.ts";
-import { filterTaskRecords, type TaskFilters } from "./task-filters.ts";
+import { filterTaskRecordsEffect, type TaskFilters } from "./task-filters.ts";
 import { CalendarDate, Instant, TaskTime } from "./time.ts";
 
 export class CommandError extends Error {
@@ -271,8 +271,8 @@ export class TaskCommands {
 
   readonly list = (request: AccessRequest, filters: TaskFilters = {}) =>
     this.store.auth.read(request).pipe(
-      Effect.map((view) =>
-        filterTaskRecords(
+      Effect.flatMap((view) =>
+        filterTaskRecordsEffect(
           view.tasks.filter(
             (task) =>
               task.profile_id === request.profile && task.deleted_at === null,

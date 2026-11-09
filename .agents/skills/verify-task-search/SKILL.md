@@ -49,6 +49,15 @@ fold expansions retain literal acceptance and span checks. Phrase word order
 and repetition inside a phrase remain significant. These are behavior checks
 without wall-clock thresholds; HTTP health responsiveness is measured separately.
 
+`task-search-equivalence.test.ts` compares acceptance and exact ordered spans
+with the archived c11f7ec9 evaluator in `task-search-reference.ts`. It covers
+the literal corpus, 3,000 seeded Unicode/syntax cases and 12,000 seeded typo
+pairs, including repeated words and clauses that exercise request-local memoization.
+`task-search-yield.test.ts` requires an event-loop callback to run before a large
+search publishes its complete result. The shared core yields after 512 word
+occurrences; the server also yields between Tasks. The synchronous CLI drains
+the same core. Preparation and response serialization remain synchronous.
+
 Use `todo man list` and `todo schema list` to inspect syntax and response shape.
 HTTP remains `GET /profiles/work/tasks?text=...&prefix=...`. Closed quotes are
 whole-word phrases. An unclosed phrase permits its last word to prefix-match.

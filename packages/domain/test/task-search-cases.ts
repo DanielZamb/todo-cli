@@ -1,5 +1,22 @@
 export const searchCases = [
   {
+    text: "z".repeat(200),
+    title: "z".repeat(200) + "tail",
+    matches: [{ field: "title", start: 0, end: 204 }],
+  },
+  {
+    text: "z".repeat(200),
+    title: "z".repeat(198),
+    matches: [{ field: "title", start: 0, end: 198 }],
+  },
+  { text: "z".repeat(200), title: "z".repeat(197), matches: null },
+  {
+    text: "𐐨".repeat(5),
+    title: "𐐀".repeat(4),
+    matches: [{ field: "title", start: 0, end: 8 }],
+  },
+  { text: "𐐨".repeat(5), title: "𐐀".repeat(3), matches: null },
+  {
     text: "\ufdfa".repeat(200),
     title: "Expansion probe",
     description: "\ufdfa".repeat(1000),

@@ -119,6 +119,16 @@ metadata. CLI JSON and HTTP list results carry the same matched strings and
 spans; clients highlight those spans without repeating matching. No migration
 or FTS index is needed. See [ADR-0014](adr/0014-task-search.md).
 
+Normalized duplicate clauses execute once. Word clauses memoize acceptance for
+each distinct folded word within one field evaluation and retain every original
+occurrence for spans. Typo prefixes use a reusable banded unrestricted Damerau
+buffer. The synchronous CLI and the server share one generator core. The server
+drains it through `filterTaskRecordsEffect`, yielding between Tasks and after
+512 evaluated word occurrences. `TaskCommands.list` starts that drain after
+`auth.read` has returned its authorized in-memory view, with no SQLite read
+transaction open. Field preparation remains synchronous. No search cache
+survives the request.
+
 Each client retains one applied response snapshot while requesting a newer
 identity. Search text survives Profile and view switches. Failed reads offer
 Retry and recover on current-Profile SSE reconnection or operations, without
