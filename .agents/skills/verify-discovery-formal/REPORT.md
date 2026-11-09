@@ -14,7 +14,7 @@ merged-source semantic review, current root regression receipts and fresh real
 Electron/Swift behavioral failures, byte restoration and clean reruns.
 TaskSearch's ONE semantic/source renewal followed merged matcher sensitivity.
 Final exact-proof-SHA executions are recorded under
-`docs/evidence/discovery-formal/final-frozen-checks/commands.json` and its logs.
+`docs/evidence/discovery-formal/final-locked-proof/commands.json` and its logs.
 Those actual receipts, followed by parent-owned same-SHA seats, determine final
 readiness. Earlier pre-freeze commands below retain their original execution
 HEAD. No producer's builtHead is relabeled as an integration or proof commit.
@@ -184,7 +184,7 @@ remain. Order30 censuses after every control record 0 created/retired/remaining.
 
 Final frozen commands use fixed B9 overrides and
 `VITEST_MAX_WORKERS=1 /usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check`.
-Their final immutable proof SHA and actual exits are in final-frozen-checks;
+Their final immutable proof SHA and actual exits are in final-locked-proof;
 no carried root check is relabeled as an execution at E's proof SHA. The final
 handoff reports source/pin cleanliness and owned-process cleanup, then stops.
 No push/PR/merge or child review is performed. Final same-SHA Solmax seat1 and
@@ -212,3 +212,11 @@ product input changes. Final-doc-checks records the changed-path allowlist and
 actual locked check/doc-link execution at that final documentation head. Formal
 results carry from c858 solely by byte-identical proof inputs; they are not
 relabeled as new executions. Fresh-session discovery remains parent-owned.
+
+The descriptive audit then corrected the remaining c488 TaskSearch HOLD label
+in coverage classification and marked the historical mapping statements in the
+past tense. Current regressions name root36f9/81c alongside the earlier C/D
+receipts. Source hashes, candidates, model, executable checks and fixtures are
+unchanged. The b29 documentation-head locked check and doc links also exited0
+in final-doc-checks. Replacement-head actual formal commands and locked check
+are recorded separately in final-locked-proof, without relabeling earlier runs.

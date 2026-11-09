@@ -214,14 +214,14 @@
     }
   ],
   "mapping": "SOURCE-MAPPING.md",
-  "pending": "Frozen proof-SHA command/check receipts and parent-owned final same-SHA correctness/coordinator seats; native HOLD limitations remain.",
+  "pending": "Parent-owned final same-SHA correctness/coordinator seats; final frozen commands recorded in final-locked-proof; native HOLD limitations remain.",
   "candidateCommit": "f85aef6faf7d93be80feef930554206e09d61be3",
   "classification": {
     "model": "bounded safety only; Discovery.tla bytes unchanged from500cdc38",
     "domain": "separate verify-discovery generated projection/snapshot properties, not model conclusions",
-    "regressions": "carried reviewed C75052/D205 immutable-equivalent source; original SHA/exits retained",
+    "regressions": "current root36f9/81c and earlier reviewed C75052/D205 regressions carried by immutable product-input equivalence; original SHA/exits retained",
     "sensitivity": "Fresh f85 Electron7 and Swift4 intended behavioral failures, every byte restoration/clean rerun and final clean; own independent copies only",
-    "source": "whole-file hashes with function-limited discovery mapping; TaskSearch mapping unchanged/HOLD",
+    "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
   "previousProductionSyncCommit": "c4882258d95bb8d8e80315d2f3d5f88fd5bd9901"

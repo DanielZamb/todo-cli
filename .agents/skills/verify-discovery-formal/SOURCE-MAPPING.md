@@ -235,7 +235,7 @@ is erased when the authentication view changes.
 | Asynchronous path | Guard before relevant late error/publication |
 | --- | --- |
 | followChanges | Captures epoch once; lifecycle/cancellation guards on stream and frames. SSE Unauthorized frame and thrown401 both pass that epoch to expireSession. Nested404-recovery and sleep catches also check it. |
-| refresh | Captures epoch, guards catch before human error/authorization, then also checks lifecycle, latest request and complete search identity. Credential replacement invalidates lifecycle/search generations for success. TaskSearch renewal is held separately. |
+| refresh | Captures epoch, guards catch before human error/authorization, then also checks lifecycle, latest request and complete search identity. Credential replacement invalidates lifecycle/search generations for success. The c488 checkpoint held TaskSearch renewal; the final merged renewal is recorded above. |
 | discoverProfiles and refreshConflictDefinitions | Capture epoch before profiles or Project/Tag awaits; check before metadata publication and before error handling. |
 | parseDraft | Captures parseGeneration before sleep/parse awaits; replacement increments it. Both parsed result and error check the captured generation and cancellation. It does not call expireSession. |
 | loadHistory | Captures historyGeneration, lifecycle generation, Profile and editor id before the read; checks on both branches. Replacement increments both generations. It does not call expireSession. |
@@ -283,9 +283,9 @@ U5 is a production presentation/recovery regression, outside TLC publication.
   publication/MainActor assignment, and eventual environmental events only where
   another proof explicitly assumes them. Discovery has no liveness claim.
 
-TaskSearch model/matcher/coverage files remain unchanged. feat/task-search is
-still c11f7ec9; SEC work is absent from c488. The coordinator requires final SEC
-integration by L1 before a single TaskSearch semantic reproof/hash renewal.
-AtomicCAS drift/renewal is separate and L1-owned. This checkpoint covers neither
-future SEC code nor a future integration merge. Fresh same-SHA E seats remain
-parent-owned after final source/report freeze and actual lockedcheck.
+At this historical c488 checkpoint, TaskSearch model/matcher/coverage files were
+unchanged and feat/task-search was c11f7ec9. SEC was absent, so renewal was held
+for L1's final integration. That checkpoint made no future-SEC coverage claim.
+The final merged review and single renewal are recorded at the top of this map
+and in verify-task-search-formal. AtomicCAS closure at 81c remains parent-owned.
+Final same-SHA E seats remain parent-owned after actual frozen checks.
