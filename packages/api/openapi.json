@@ -3739,6 +3739,28 @@
             "required": true
           },
           {
+            "name": "text",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 200,
+              "description": "Search title and description with word prefixes, typo tolerance, quoted phrases and exclusions. Blank text returns empty search_matches."
+            },
+            "required": false
+          },
+          {
+            "name": "prefix",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 36,
+              "pattern": "^[0-9A-Fa-f-]+$",
+              "description": "Case-insensitive literal Task id prefix. Hex digits and hyphens only."
+            },
+            "required": false
+          },
+          {
             "name": "project",
             "in": "query",
             "schema": {
@@ -4107,6 +4129,31 @@
                             "type": "null"
                           }
                         ]
+                      },
+                      "search_matches": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "field": {
+                              "type": "string",
+                              "enum": ["title", "description"]
+                            },
+                            "start": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "end": {
+                              "type": "integer",
+                              "maximum": 9007199254740991,
+                              "exclusiveMinimum": 0
+                            }
+                          },
+                          "required": ["field", "start", "end"],
+                          "additionalProperties": false,
+                          "description": "Whole matched word in the same response's original title or description. start is inclusive and end exclusive, in UTF-16 code units on grapheme boundaries. Ordered, deduplicated and overlap-merged; exclusions and id prefixes have no spans."
+                        }
                       }
                     },
                     "required": [

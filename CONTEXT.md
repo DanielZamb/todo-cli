@@ -18,6 +18,15 @@ _Avoid_: List, folder, area
 One thing to do. It has a title, a status, and optional scheduling and effort metadata.
 _Avoid_: Todo, item, ticket
 
+**Task search**:
+Find Tasks by words in their title and description, or by the start of their id. Search combines with other filters and keeps the view's order.
+
+**Energy**:
+How much energy a Task takes, from 1 light to 5 draining.
+
+**Estimate**:
+How many minutes you expect a Task to take. It is optional.
+
 **External id**:
 A stable identifier supplied by another system to match a Task during import. It is optional and unique inside a Profile. Copy creates a new Task in another Profile and clears the external id; provenance records the source Task. Move keeps the external id because it is the same Task. A Move is rejected if that external id already exists in the destination Profile.
 

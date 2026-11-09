@@ -41,6 +41,7 @@ import {
   Task,
   TaskFilters,
   TaskId,
+  TaskRead,
   TokenOptions,
   TransitionTask,
   UploadAttachment,
@@ -212,7 +213,7 @@ const Tasks = HttpApiGroup.make("tasks")
     HttpApiEndpoint.get("list", "/profiles/:profile/tasks", {
       params: profile,
       query: TaskFilters,
-      success: Schema.Array(Task),
+      success: Schema.Array(TaskRead),
       error: taskErrors,
     }),
     HttpApiEndpoint.get("show", "/profiles/:profile/tasks/:task", {

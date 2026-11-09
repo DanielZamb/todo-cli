@@ -15,6 +15,7 @@ export const inputLimits = {
   url: 8_192,
   rrule: 1_000,
   quickAdd: 2_000,
+  searchText: 200,
   reason: 1_000,
   passphrase: 1_024,
   tagsPerTask: 100,
