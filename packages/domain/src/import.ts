@@ -10,6 +10,7 @@ import {
   TaskIdInput,
 } from "./limits.ts";
 import { TaskPatch } from "./task-commands.ts";
+import { TaskLookupDetails } from "./task-lookup-error.ts";
 import { Instant } from "./time.ts";
 
 export const ImportItem = Schema.Struct({
@@ -54,10 +55,22 @@ export const ImportRow = Schema.Struct({
   changed_fields: Schema.Array(Schema.String),
   error: Schema.optionalKey(
     Schema.Struct({
+      exit_code: Schema.Literals([1, 2, 3, 4]),
+      exit_meaning: Schema.Literals([
+        "runtime failure",
+        "validation or usage",
+        "not found or auth missing",
+        "Conflict",
+      ]),
       code: Schema.String,
       message: Schema.String,
       details: Schema.optionalKey(
-        Schema.Struct({ current_version: Schema.NullOr(Version) }),
+        Schema.Struct({
+          current_version: Schema.NullOr(Version),
+          profile: Schema.optionalKey(TaskLookupDetails.fields.profile),
+          task_id: Schema.optionalKey(Schema.String),
+          recovery: Schema.optionalKey(Schema.String),
+        }),
       ),
     }),
   ),

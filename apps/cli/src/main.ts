@@ -28,6 +28,7 @@ import {
   BatchEditRequest,
   batchEditTasks,
   ClientReads,
+  exitStatus,
   filterTaskRecords,
   inputLimits,
   ProfileDeletionReport,
@@ -39,6 +40,7 @@ import {
   TaskFilters,
   TaskId,
   TaskStatus,
+  taskLookupError,
   Version,
 } from "@todo/domain";
 import { attachmentInput } from "@todo/domain/attachment-input";
@@ -70,9 +72,9 @@ import {
   renderError,
   renderExport,
   renderHistory,
+  renderList,
   renderReview,
   renderTask,
-  renderTasks,
   taskView,
 } from "@todo/domain/presentation";
 import { type OperationStore, openStore, StoreError } from "@todo/domain/store";
@@ -240,8 +242,37 @@ const withStore = <A, E, R>(
     yield* io(() =>
       mkdirSync(dirname(resolve(path)), { recursive: true, mode: 0o700 }),
     );
-    return yield* Effect.acquireUseRelease(openStore({ path }), use, (store) =>
-      Effect.orDie(store.close()),
+    return yield* Effect.acquireUseRelease(
+      openStore({ path }),
+      (store) =>
+        use(store).pipe(
+          Effect.catch((error) =>
+            Effect.gen(function* () {
+              if (
+                !(error instanceof CommandError) ||
+                error.code !== "not_found" ||
+                error.task_id === undefined
+              )
+                return yield* Effect.fail(error);
+              const request = yield* selectProfile(store, cfg);
+              const context = yield* taskLookupError(
+                store,
+                request,
+                error.task_id,
+              );
+              return yield* Effect.fail(
+                new CommandError(
+                  error.exit,
+                  error.code,
+                  context.message,
+                  error.latest,
+                  context.details,
+                ),
+              );
+            }),
+          ),
+        ),
+      (store) => Effect.orDie(store.close()),
     );
   });
 const access = (cfg: Settings) =>
@@ -254,11 +285,16 @@ const selectProfile = Effect.fn(function* (
   cfg: Settings,
 ) {
   const credential = yield* io(() => loadCredential(cfg.profile));
-  const profiles = yield* store.profiles();
+  const profiles = yield* store.auth.profiles({ credential });
   const profile = profiles.find(
     (p) => p.name === cfg.profile || p.id === cfg.profile,
   );
-  if (!profile)
+  if (!profile) {
+    yield* store.auth.authenticate({
+      credential,
+      profile: profileId(cfg.profile),
+      access: "read",
+    });
     return yield* Effect.fail(
       new CommandError(
         3,
@@ -266,6 +302,7 @@ const selectProfile = Effect.fn(function* (
         "Profile not found; run todo init --profile <name>",
       ),
     );
+  }
   return { credential, profile: profile.id };
 });
 const taskOptions = {
@@ -695,7 +732,7 @@ const list = Command.make(
             yield* selectProfile(store, cfg),
           );
           yield* write(
-            renderTasks(
+            renderList(
               filterTasks(
                 filterTaskRecords(data.tasks, filters, data).map((task) =>
                   taskView(task, data.projects, data.tags, data.series),
@@ -790,10 +827,15 @@ const transfer = (kind: "move" | "copy") =>
         yield* withStore(cfg, (store) =>
           Effect.gen(function* () {
             const request = yield* selectProfile(store, cfg);
-            const destination = (yield* store.profiles()).find(
+            const destination = (yield* store.auth.profiles(request)).find(
               (p) => p.id === input.to || p.name === input.to,
             );
-            if (!destination)
+            if (!destination) {
+              yield* store.auth.authenticate({
+                ...request,
+                profile: profileId(input.to),
+                access: "write",
+              });
               return yield* Effect.fail(
                 new CommandError(
                   3,
@@ -801,6 +843,7 @@ const transfer = (kind: "move" | "copy") =>
                   "target Profile not found; run todo init --profile <name>",
                 ),
               );
+            }
             if (kind === "move" && destination.id === request.profile)
               return yield* Effect.fail(
                 new CommandError(
@@ -832,7 +875,7 @@ const transfer = (kind: "move" | "copy") =>
                   target_id: null,
                   outcome: "not-found",
                   occurrence_as_plain_task: false,
-                  message: "Task not found in the selected Profile and filters",
+                  ...(yield* taskLookupError(store, request, id)),
                 });
                 continue;
               }
@@ -883,6 +926,9 @@ const transfer = (kind: "move" | "copy") =>
                       ...copyStats,
                     }
                   : {
+                      ...(result.outcome === "not-found"
+                        ? yield* taskLookupError(store, request, id)
+                        : {}),
                       source_id: id,
                       target_id: null,
                       outcome:
@@ -909,12 +955,18 @@ const transfer = (kind: "move" | "copy") =>
             const rejectionDetails = results.find(
               (result) => result.details,
             )?.details;
+            const exit = conflict
+              ? 4
+              : results.some((r) => r.outcome === "not-found")
+                ? 3
+                : 2;
             const report = {
               generated_at: iso(nowInstant()),
               dry_run: input.dryRun,
               results,
               ...(failed
                 ? {
+                    ...exitStatus(exit),
                     code: conflict
                       ? "occ_conflict"
                       : results.some((r) => r.outcome === "not-found")
@@ -945,14 +997,13 @@ const transfer = (kind: "move" | "copy") =>
                       (r) =>
                         `${r.source_id}: ${r.outcome}${r.message ? `: ${r.message}` : ""}${r.target_id ? ` -> ${r.target_id}` : ""}${r.occurrence_as_plain_task ? " (Occurrence becomes a plain Task)" : ""}${r.current_version ? ` (current Version ${r.current_version})` : ""}${r.managed_image_count === undefined ? "" : ` (${r.managed_image_count} managed images, ${r.managed_image_bytes} bytes)`}`,
                     )
-                    .join("\n") + "\n",
+                    .join("\n") +
+                    "\n" +
+                    (failed
+                      ? `error ${exit} - ${exitStatus(exit).exit_meaning}\n`
+                      : ""),
             );
-            if (failed)
-              process.exitCode = conflict
-                ? 4
-                : results.some((r) => r.outcome === "not-found")
-                  ? 3
-                  : 2;
+            if (failed) process.exitCode = exit;
           }),
         );
       }),
@@ -972,7 +1023,14 @@ const show = Command.make(
           const task = data.views.find((t) => t.id === id);
           if (!task)
             return yield* Effect.fail(
-              new CommandError(3, "not_found", "task not found"),
+              new CommandError(
+                3,
+                "not_found",
+                "task not found",
+                undefined,
+                undefined,
+                id,
+              ),
             );
           yield* write(
             renderTask(
@@ -1022,7 +1080,7 @@ const batchEditCommand = Command.make(
           yield* write(
             cfg.format === "json"
               ? encodeResponse(BatchEditReport, report)
-              : `${report.dry_run ? "Dry run\n" : ""}${report.items.map((row) => `${row.task_id}\t${row.outcome}\t${row.error?.message ?? `Version ${row.current_version}`}`).join("\n")}\n`,
+              : `${report.dry_run ? "Dry run\n" : ""}${report.items.map((row) => `${row.task_id}\t${row.outcome}\t${row.error ? `${row.error.message}\nerror ${row.error.exit_code} - ${row.error.exit_meaning}` : `Version ${row.current_version}`}`).join("\n")}\n`,
           );
           if (report.totals.rejected)
             process.exitCode = report.items.some(
@@ -1080,7 +1138,7 @@ const attachManyCommand = Command.make(
           yield* write(
             cfg.format === "json"
               ? encodeResponse(AttachManyReport, report)
-              : `${report.dry_run ? "Dry run\n" : ""}${report.items.map((row) => `${row.task_id ?? "?"}\t${row.outcome}\t${row.error?.message ?? row.attached}`).join("\n")}\n`,
+              : `${report.dry_run ? "Dry run\n" : ""}${report.items.map((row) => `${row.task_id ?? "?"}\t${row.outcome}\t${row.error ? `${row.error.message}\nerror ${row.error.exit_code} - ${row.error.exit_meaning}` : row.attached}`).join("\n")}\n`,
           );
           if (report.totals.rejected)
             process.exitCode = report.items.some(
@@ -1561,16 +1619,15 @@ const profiles = Command.make("profile").pipe(
               });
               if (result.outcome === "refused") {
                 yield* write(
-                  cfg.format === "json"
-                    ? renderError(
-                        result.error.code,
-                        result.error.message,
-                        cfg.format,
-                        result.error.generated_at,
-                        undefined,
-                        result.error.details,
-                      )
-                    : result.error.message + "\n",
+                  renderError(
+                    result.error.code === "not_found" ? 3 : 2,
+                    result.error.code,
+                    result.error.message,
+                    cfg.format,
+                    result.error.generated_at,
+                    undefined,
+                    result.error.details,
+                  ),
                 );
                 yield* Effect.sync(() => {
                   process.exitCode = result.error.code === "not_found" ? 3 : 2;
@@ -1885,11 +1942,13 @@ const program = Effect.gen(function* () {
       (format === "json" && !follow ? process.stdout : process.stderr).write(
         terminalSafe(
           renderError(
+            failure.exit,
             failure.code,
             failure.message,
             follow ? "json" : format,
             nowInstant(),
             failure.latest,
+            failure.details,
           ),
         ),
       );

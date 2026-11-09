@@ -134,6 +134,16 @@ Normal Task lookup and mutations remain Profile-scoped. The workflow
 frames are `agent-errors`, `agent-lookup-errors`, `agent-directory`, `agent-prefix`,
 and `agent-list` in the shared Excalidraw scene.
 
+`exit-status.ts` owns the process exit pair and its constrained schema. HTTP
+errors keep their tags and statuses and add the equivalent pair. Request decoding
+uses the API-wide RequestDecoding middleware, while ValidationHistory keeps
+authenticated rejection recording for Task mutations. `task-lookup-error.ts`
+reads the selected Profile through Authentication before formatting recovery.
+The CLI enriches missing Task errors while its store is open. Normal History
+reads, exact-id selection and mutation authorization retain their existing rules.
+ListResponse requires tasks, including an empty array. Export and Review retain
+TasksResponse and their original output.
+
 ## Live updates
 
 ![Live updates: a desktop client, the SSE route, op_log, and a CLI writer](diagrams/live.png)

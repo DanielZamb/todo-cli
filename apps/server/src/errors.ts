@@ -4,12 +4,13 @@ import {
   ProfileNotFound,
   Unauthorized,
 } from "@todo/api";
-import type { AuthError } from "@todo/domain";
+import { type AuthError, exitStatus } from "@todo/domain";
 import { Effect, Schema } from "effect";
 
 const authError = (error: AuthError) =>
   error.detail === "profile_deleted"
     ? Schema.decodeUnknownSync(ProfileNotFound)({
+        ...exitStatus(3),
         generated_at: new Date().toISOString(),
         code: "not_found",
         message: "Profile not found; choose a Profile from GET /profiles",

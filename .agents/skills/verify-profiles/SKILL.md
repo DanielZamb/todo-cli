@@ -76,3 +76,13 @@ must show exits [0, 0, 0] and exactly one pre-migration Snapshot at schema 3.
 The domain concurrent-open regression uses three real Bun processes and the
 same held-writer scenario. Version inspection, Snapshot and migration share
 one immediate transaction.
+
+## Error context isolation
+
+CLI selection reads Authentication.profiles before resolving names. A scoped
+credential cannot enrich an error with another Profile's display name. HTTP
+Profile-not-found and Profile-delete refusal errors retain generated_at, code,
+message and details, with the additive equivalent exit pair. The compiled
+apps/cli/test/error-list.test.ts checks foreign exact-id failures through both
+CLI and HTTP and selected-Profile-only Task recovery. Keep the two cached
+binaries on the same source hash when running that test.

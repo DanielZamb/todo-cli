@@ -106,8 +106,18 @@ it("publishes the Task and shared error schemas", () => {
   const error = run(["schema", "error"]);
   expect(error.code, error.err).toBe(0);
   expect(JSON.parse(error.out)).toMatchObject({
-    type: "object",
-    required: ["generated_at", "code", "message"],
+    anyOf: expect.arrayContaining([
+      expect.objectContaining({
+        type: "object",
+        required: [
+          "generated_at",
+          "code",
+          "message",
+          "exit_code",
+          "exit_meaning",
+        ],
+      }),
+    ]),
   });
 });
 

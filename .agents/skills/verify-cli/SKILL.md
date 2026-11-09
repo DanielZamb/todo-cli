@@ -131,3 +131,16 @@ The install verifier requires --version to report build and contract without cha
 ## Batch edit
 
 Read [Edit several Tasks](features/batch-edit.md) for the shared batch-edit contract and the compiled scratch proof. Both client flows retain selections and loaded Versions through preview, apply and Conflict reload.
+
+## Exit meanings and empty lists
+
+`test/error-list.test.ts` drives cached compiled CLI and server binaries on its
+own scratch HOME. Set TODO_CLI_BINARY and TODO_SERVER_BINARY to the binaries
+built from the same source hash. It checks actual process exits, every empty
+list filter mode, the matching exit pair, selected Profile context, both generic
+recovery commands, transfer rows and unauthorized Profile isolation. Its HTTP
+cases cover Task, Attachment and Series failures, batch context, malformed
+requests, missing authentication and forbidden Profile access. Evidence includes
+error-list-actions.json. The server is stopped before the test removes scratch.
+`todo schema error` constrains matching exit_code/exit_meaning pairs. List uses
+its own required-tasks schema; export and review keep their original schemas.
