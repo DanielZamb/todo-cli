@@ -1,0 +1,63 @@
+{
+  "productCommit": "65033c86ec00889f84642fb76289094a23762ebb",
+  "scope": "Confirmed fixed source65033: whole-cache Purge/restore epoch fencing, incremental committed hygiene and indexed restore headers; same-source matching, literal charged bounds and bounded formal evidence",
+  "seed": "0x5ea2c001",
+  "files": [
+    {
+      "path": "task-search-cache.ts",
+      "sha256": "a7a24d8211ebf7aaf1cf559547f7339150d680db9ac3a81c4ccea283e2b76baf"
+    },
+    {
+      "path": "task-search.ts",
+      "sha256": "1a82bab698508fe98c1d7de11fddbaf910454d69c3f6534e45e8b0ce9203c23c"
+    },
+    {
+      "path": "task-filters.ts",
+      "sha256": "59b835514b51dc7c301cefabce5954c77160857ace8b75a6d994f83b6925369d"
+    },
+    {
+      "path": "commands.ts",
+      "sha256": "ac3f0bd632b5f8e2d3f871ca3b2d403b1306d4149f5d2b8089ffe6b7e871121d"
+    },
+    {
+      "path": "store/store.ts",
+      "sha256": "bb3f0f0855c3bd5128b8d5f4c164734d13a04250ad7dfe32eacc18cf3ac69a60"
+    },
+    {
+      "path": "store/snapshots.ts",
+      "sha256": "14774139fc4c323eedd7d2b31f28182b0b447a4b776bad1e58b354b434b1adb8"
+    },
+    {
+      "path": "store/search-cache-events.ts",
+      "sha256": "4f0276e1953a56db0a31844c51faec02835eea134b04a06ed2ba6e9231d6d600"
+    }
+  ],
+  "review": "Exact immutable65033 one-command verify-2pGXUu passed generated/meter/store controls, seven model mutants, eleven real Effect mutants, three hygiene/query mutants and restoration/strict checks; compiled lifecycle, moved-Purge/Profile delete1000ms and CLI defect envelope passed. Official search/CLI goldens/op-log/Profile/Snapshot/HTTP/SSE/scheduler and AtomicCAS clean/sensitivity passed. Protected SEC matcher/runner/evaluator unchanged. Final metadata head has identical covered source bytes; no retiming.",
+  "reviewedCandidate": false,
+  "hygieneFiles": [
+    {
+      "path": "apps/server/src/task-search-cache-hygiene.ts",
+      "sha256": "be77122a27f471e8d9804f6215bdd5c8622bfcdf952130cdb7e58ebd8b61883b"
+    },
+    {
+      "path": "apps/server/src/server.ts",
+      "sha256": "fba09e7f897593561059c4e074d3030156b1854794576144d5a26ece9560e02f"
+    },
+    {
+      "path": "packages/domain/src/store/search-cache-events.ts",
+      "sha256": "4f0276e1953a56db0a31844c51faec02835eea134b04a06ed2ba6e9231d6d600"
+    },
+    {
+      "path": "packages/domain/src/store/snapshots.ts",
+      "sha256": "14774139fc4c323eedd7d2b31f28182b0b447a4b776bad1e58b354b434b1adb8"
+    },
+    {
+      "path": "packages/domain/src/store/store.ts",
+      "sha256": "bb3f0f0855c3bd5128b8d5f4c164734d13a04250ad7dfe32eacc18cf3ac69a60"
+    },
+    {
+      "path": "apps/cli/src/main.ts",
+      "sha256": "2bd03f2abd052dcb284009652539808c47916db1dfea3aea29fac512006077f4"
+    }
+  ]
+}

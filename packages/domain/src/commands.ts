@@ -52,7 +52,7 @@ import {
   type TaskFilters,
 } from "./task-filters.ts";
 import type { TaskRead } from "./task-read.ts";
-import type { SearchTooBroad } from "./task-search.ts";
+import { type SearchTooBroad, taskSearchExecution } from "./task-search.ts";
 import { CalendarDate, Instant, TaskTime } from "./time.ts";
 
 export class CommandError extends Error {
@@ -283,17 +283,23 @@ export class TaskCommands {
     filters: TaskFilters,
   ): Effect.Effect<TaskRead[], AuthError | StoreError | SearchTooBroad>;
   list(request: AccessRequest, filters: TaskFilters = {}) {
-    return this.store.auth.read(request).pipe(
-      Effect.flatMap((view) => {
-        const tasks = view.tasks.filter(
-          (task) =>
-            task.profile_id === request.profile && task.deleted_at === null,
-        );
-        return filters.text === undefined
-          ? Effect.sync(() => filterTaskRecords(tasks, filters, view))
-          : filterTaskRecordsEffect(tasks, filters, view);
-      }),
-    );
+    return Effect.suspend(() => {
+      const read = this.store.searchWords.read(request.profile);
+      return this.store.auth.read(request).pipe(
+        Effect.flatMap((view) => {
+          const tasks = view.tasks.filter(
+            (task) =>
+              task.profile_id === request.profile && task.deleted_at === null,
+          );
+          return filters.text === undefined
+            ? Effect.sync(() => filterTaskRecords(tasks, filters, view))
+            : filterTaskRecordsEffect(tasks, filters, view, {
+                ...taskSearchExecution(),
+                prepare: (text) => this.store.searchWords.words(read, text),
+              });
+        }),
+      );
+    });
   }
 
   readonly get = (request: Target) =>

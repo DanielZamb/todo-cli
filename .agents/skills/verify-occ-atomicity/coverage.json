@@ -1,9 +1,9 @@
 {
-  "confirmedCommit": "d83d61863b95d2482ca9281a34d5db4494abffbb",
+  "confirmedCommit": "65033c86ec00889f84642fb76289094a23762ebb",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "7121f6621af44a03846124ccbffc6b9841b903e1047eb6b2464ef842caf15353",
+      "sha256": "bb3f0f0855c3bd5128b8d5f4c164734d13a04250ad7dfe32eacc18cf3ac69a60",
       "functions": [
         "OperationStore.constructor",
         "OperationStore.transaction",
@@ -69,5 +69,7 @@
         "validAttachmentLocation"
       ]
     }
-  ]
+  ],
+  "reviewedCandidate": false,
+  "review": "Confirmed immutable65033 covered source. Pure cache clear replaced historical cache eviction; restore callback and read-only metadata tail do not change Validate/Record/Apply/WriteVersion/Commit/rejection/replay/crash boundaries. Actual-worktree AtomicCAS one-command0 at fv01-check-ciYXwL; two isolated source sensitivity breaks fail1/restored0 at sensitivity-CW3gRs. Other covered hashes unchanged. No model change."
 }

@@ -109,3 +109,14 @@ S03 status now also reports the installed executable, database and port as
 `configuration`, or null when absent. The macOS lifecycle client consumes it
 without inferring an owner database path. Its separate headless proof is
 [verify-macos-lifecycle](../verify-macos-lifecycle/SKILL.md); native UI is held.
+
+The server also starts Task-search cache hygiene before serving HTTP. Its independent
+250 ms poll uses a domain narrow committed-event query and Snapshot generation.
+Purge, external Profile deletion and restore clear the entire memo and fence old
+reads; this does not change SSE delivery or scheduler writes. The cache skill's
+check-hygiene.mjs and compiled erase-lifecycle.mjs cover these paths, including
+restore then external Purge before the next poll and literal 1000 ms eviction.
+The generation metadata query filters canonical NULL Profile/snapshot-restore
+headers using the existing Profile/seq index before JSON extraction. No historical
+Task payloads are decoded per tick. No launchd or installed server is needed for
+this cache proof; use only recorded scratch processes.

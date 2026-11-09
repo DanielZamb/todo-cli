@@ -28,7 +28,7 @@ import {
   BatchEditRequest,
   batchEditTasks,
   ClientReads,
-  filterTaskRecords,
+  filterTaskRecordsEffect,
   inputLimits,
   ProfileDeletionReport,
   ProfileSummary,
@@ -40,6 +40,7 @@ import {
   TaskFilters,
   TaskId,
   TaskStatus,
+  taskSearchExecution,
   Version,
 } from "@todo/domain";
 import { attachmentInput } from "@todo/domain/attachment-input";
@@ -693,12 +694,24 @@ const list = Command.make(
       });
       yield* withStore(cfg, (store) =>
         Effect.gen(function* () {
-          const data = yield* readTasks(
-            store,
-            yield* selectProfile(store, cfg),
-          );
-          const records = yield* io(() =>
-            filterTaskRecords(data.tasks, filters, data),
+          const request = yield* selectProfile(store, cfg);
+          const read = store.searchWords.read(request.profile);
+          const data = yield* readTasks(store, request);
+          const records = yield* filterTaskRecordsEffect(
+            data.tasks,
+            filters,
+            data,
+            {
+              ...taskSearchExecution(),
+              prepare: (text) => store.searchWords.words(read, text),
+            },
+          ).pipe(
+            Effect.mapError(
+              (error) => new CommandError(2, error.code, error.message),
+            ),
+            Effect.catchDefect((error) =>
+              Effect.fail(new CommandError(1, "runtime_error", String(error))),
+            ),
           );
           yield* write(
             renderTasks(

@@ -130,14 +130,53 @@ SSE/reconnect, selection resets and Snapshot reload keep full catalog coverage.
 Normalized duplicate clauses execute once. Word clauses memoize acceptance for
 each distinct folded word within one field evaluation and retain every original
 occurrence for spans. Typo prefixes use a reusable banded unrestricted Damerau
-buffer. The synchronous CLI and the server share one generator core. The server
-drains it through `filterTaskRecordsEffect`, yielding between Tasks and after
+buffer. The CLI and the server share one generator core. Both drain it through
+`filterTaskRecordsEffect`, yielding between Tasks and after
 512 evaluated word occurrences. `TaskCommands.list` starts that drain after
 `auth.read` has returned its authorized in-memory view, with no SQLite read
 transaction open. Field preparation uses the same generator, yielding after
 512 graphemes or segmented parts while preserving normalization across chunks.
 Client disconnect interrupts the HTTP fiber at a checkpoint through the Bun
-HTTP adapter's request abort listener. No search cache survives the request.
+HTTP adapter's request abort listener.
+
+Each OperationStore owns a bounded TaskSearchCache keyed by Profile and exact
+field text. It retains complete PreparedFields across requests; a hit returns
+the words and preparation count without refolding or preparation yields. Query
+results and empty-clause work are not cached. The LRU retains at most 4,096
+entries. Retained entries and up to 4,096 current pending slots share a 16 MiB
+charged budget; a completed entry over 4 MiB computes without retention. Charges
+include exact keys, Profile strings, containers and Words. These accounting
+bounds exclude transient preparation buffers, superseded invocation-local tokens,
+allocator overhead and separately reported per-Profile generation metadata;
+they are not RSS limits. V3's expanding 100,000-character field is not retained.
+
+A read captures the cache-wide epoch and its Profile's cache-local purge
+generation before authorization and the SQLite Task read. A miss registers a
+fresh ownership token, yields during preparation and admits only while its token,
+epoch and generation remain current. Later misses supersede earlier tokens;
+interruption or failure removes only the invocation's own current token.
+
+Every Purge clears the whole memo and advances its epoch inside the transaction.
+This erases moved Tasks' earlier Profile keys and fences in-flight reads even
+before they register a pending slot. Snapshot restore also clears and fences the
+memo before returning. Local Profile deletion advances that Profile's generation
+and evicts its entries and pending slots. Rollback can lose retention only.
+Close empties all cache state and permanently fences admission.
+
+Before serving HTTP, the server captures the current operation sequence. Its
+250 ms hygiene observer reads only new committed seq/kind/original_kind fields.
+The domain owns that SQL query. Restore metadata uses the existing Profile/seq
+index with canonical NULL Profile and snapshot-restore actor headers before JSON
+extraction. Task payloads are not decoded by the observer. A committed
+TaskHistoryRedacted row with original_kind TaskPurged, a TaskPurged row or a
+ProfileDeleted row clears the whole memo. A Snapshot generation change clears it
+and resets the cursor to the current maximum, including a Purge at a reused
+sequence before the next poll. Compiled CLI/server proofs require eviction within
+1000 ms, including CLI startup. The observer can clear again after this server's
+own Purge; that harmless extra refill is deliberate. A Purge is rare owner work,
+and the next search pays one uncached refill. External Profile deletion also
+clears all Profiles. This is memory hygiene, not database coherence for matching.
+Exact current text keys preserve search results after other writers and restore.
 
 `PreparedField` carries words and the exact folded UTF-16 field length.
 Search charges that length after each field is ready, including supplied stored

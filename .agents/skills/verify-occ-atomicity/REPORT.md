@@ -146,3 +146,25 @@ Evidence is local and ignored:
 `docs/evidence/fv01/sensitivity-d7gc1J/`.
 The restored checker retains its own result and model logs at the path printed
 in `sensitivity-d7gc1J/restored.stdout`. No model bounds or invariants changed.
+
+## Whole-cache erasure review fix
+
+The cache review fix advances a cache-local epoch and clears maps inside Purge
+instead of scanning History for cache eviction. The sole remaining full History
+read is for redaction. The constructor supplies a cache-only post-restore callback,
+and the new metadata tail is a separate read-only SQLite transaction. These
+changes do not alter Validate, Record, Apply, WriteVersion, Commit, rejection,
+replay or crash boundaries in this model. Other covered source hashes are
+unchanged. The store diff was reviewed before the mapping hash was renewed.
+
+Both real-code sensitivity variants failed their behavioral assertions with exit
+1 and the restored checker passed with exit 0 in the isolated actual-source copy
+at .scratch/occ-review-fix/docs/evidence/fv01/sensitivity-CW3gRs. The source was
+restored byte for byte. This evidence targets the fixed candidate hashes, not
+historical measured cc5777 code. The final committed-input one-command result is
+listed in the worker's ignored final delivery receipt. No AtomicOCC model bounds,
+invariants, package dependency or SQLite configuration changed.
+
+The exact fixed code commit65033c86ec00889f84642fb76289094a23762ebb passed the
+actual-worktree one-command at docs/evidence/fv01/fv01-check-ciYXwL, exit 0.
+The later mapping-only head has identical covered source hashes.
