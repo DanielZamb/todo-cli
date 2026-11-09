@@ -4,9 +4,11 @@ Historical candidate status at 8ea84c32: implementation reported complete within
 B's authorized scope. Both review seats subsequently withheld approval for G11
 and CLI input validation. The combined closure section records their fixes and
 new source proof. E/S feature UI, both-client L3 and final F remain unclaimed.
+Current combined closure source: 3cceb41efc08b8cd835d5c883c3d370709865c3f.
 Branch: feat/task-dag-b-commands.
-Final source head: e7170510a376b51eaf3525bb9933cb0dd588b233.
-The delivery commit contains this report, reviewed AtomicCAS mapping metadata
+Original reviewed source head: e7170510a376b51eaf3525bb9933cb0dd588b233.
+Original delivery: 8ea84c32e18634ac48767b5a6035502bbd78c079. It contains this
+report, reviewed AtomicCAS mapping metadata
 and the read verification helper's 60-second readiness correction. It changes
 no production source after that head. Its full SHA is recorded after commit in
 the local delivery receipt and terminal notifications.
@@ -216,3 +218,192 @@ No dependency version changed. No children, owner Tasks, real Todo data,
 installed binaries, native apps, signing, Keychain, merge, rebase, push or PR
 were used. All recorded own servers were stopped; cleanup receipts retain PIDs
 and actual exits. Final work is ready for review, not integrated or published.
+
+## Combined review closure
+
+Both seats withheld approval on delivery 8ea84c32e18634ac48767b5a6035502bbd78c079,
+source e7170510a376b51eaf3525bb9933cb0dd588b233. This is the one authorized
+combined fix round for G11 and the CLI input boundary. Its status is fixes
+verified and ready for fresh max closure review and coordinator delta review.
+No review approval or integration is claimed.
+
+Corrected product/source SHA: 3cceb41efc08b8cd835d5c883c3d370709865c3f.
+Branch remains feat/task-dag-b-commands. The closure delivery commit contains
+this report and AtomicCAS identity-review metadata only. Its full SHA is saved
+after commit in the closure delivery receipt and both terminal notifications.
+No checkout, merge, rebase, push, PR, child or self-arranged review occurred.
+
+### G11 response and retained baseline
+
+GraphNode now has only mermaid_id, task, in_degree, out_degree, ready, blocked,
+depth and remaining_energy. GraphReport has strict ancestors, strict descendants
+and lightest_next for the requested Task only. All three use whole-Profile
+topological order. Root reachability and next-set membership are computed outside
+node assembly. Shared temporary energy bitsets remain as approved; this change
+does not claim linear query computation time.
+
+The compiled e717 baseline ran before product edits on a fresh scratch database
+seeded with the review's exact literal Task data and ids. The committed reusable
+fixture is packages/domain/test/fixtures/dag/chain-1000.json. Its SHA-256 is
+9954c8d86f6e9abac1ac3fb46be0ea16a7043297e2815dff32533a4c5de93c8f.
+Requested root: 90d7ac86-4b7e-4eb6-abb0-f76343e124c2.
+Before and after have the same 1,000 Tasks, 999 edges and exact 999 root ancestors,
+zero root descendants and the first Task as lightest_next. The old response
+contains 999,000 repeated ancestor/descendant id references across nodes.
+
+| Deterministic size for this exact fixture | e717 before | 3cceb41e after |
+| --- | ---: | ---: |
+| Actual compiled CLI JSON stdout, UTF-8 bytes | 49,255,186 | 1,206,265 |
+| Compact re-encoding of the parsed object, bytes | 39,853,167 | 844,214 |
+
+These are response-size observations, not HTTP-size, latency or speedup claims.
+The actual CLI graph command exits 0 in both runs. The compiled desired-contract
+assertion fails before with exit 1 and passes after with exit 0. Every direct
+query node and every raw public node must have exactly the eight fields; closure
+arrays cannot survive hidden in assembly and then be stripped by the encoder.
+The full before/after stdout, exact ids/root sets, fixture hash and output digests
+are retained. The small branching fixture has topological order A,B,R,C,D and
+energy order B,A,R,D,C, requiring root sets A,B / C,D / A,B. Ready-root inclusion
+and terminal-root exclusion remain covered.
+
+G11 is the embedded coordinator amendment committed on L1 as ca142014. This
+worker did not merge it or edit the L1 gate/draft files. Production schemas,
+CLI Markdown/help, architecture, OpenAPI and generated Swift reflect it.
+There are no changes to graph-model.ts, graph-order.ts, graph-energy.ts or
+dependency-rules.ts relative to f140c7b0. Shape logic is also unchanged. Unknown-
+energy sorting remains deferred. Final F must re-pin this explicit corrected
+source; no final F result is claimed or F restart requested.
+
+### CLI boundary audit
+
+New apps/cli/src/input.ts converts pure schema/JSON decoding failures into typed
+CommandError(2, invalid_args, recovery). File reads stay in io, so actual file
+failure keeps runtime_error and exit 1. Depend/undepend validate request fields
+before no-op detection. Revert validates seq and Version before lookup. Graph
+validates its nonempty id. Add validates --depends-on with flag-specific recovery.
+rm validates dependency fields while retaining its existing current-Version and
+latest-Task recovery. An optional fingerprint distinguishes omission from an
+explicit empty string; the latter is invalid input, and agent omission still works.
+
+The repeatable matrix is packages/domain/scripts/dag-cli-input-proof.ts, invoked
+by .agents/skills/verify-dag/scripts/verify-closure.sh. All 31 final cases exit 2,
+return exactly one invalid_args JSON object with the named recovery, and preserve
+the actual SQLite Task payloads, edges and task_versions after every refusal.
+
+| Boundary | Cases | Malformed/out-of-range inputs and required recovery |
+| --- | ---: | --- |
+| depend | 7 | Missing, zero and malformed Version; existing-edge and missing-edge zero; empty dependent/blocker; 201-character blocker. Names task-id, --on and --expected-version. |
+| undepend | 5 | Zero on an absent edge with visible endpoints, negative/malformed Version, empty/201-character blocker. Names --from and --expected-version. |
+| graph | 2 | Empty id and unsupported format. Names task-id or --format. The read id schema has no maximum length; a valid missing 201-character id remains not_found, not usage. |
+| batch-depend | 3 | Zero Version, text Version and malformed JSON. Names --file, from_version and batch-depend-input. |
+| rm dependency flags | 6 | Zero/malformed Version, bad/explicit-empty fingerprint, empty id and malformed confirmation boolean. Names the invalid flags; existing Version recovery remains intact. |
+| add --depends-on | 4 | Empty/201-character ids, 14 entries and duplicates. Names --depends-on and its count/id requirements. |
+| Revert | 4 | Zero/malformed seq, omitted Version and zero Version with a nonexistent valid seq. Names seq and --expected-version before lookup. |
+
+The e717 before receipts retain actual runtime_error/exit 1 for invalid edge
+Versions, including an existing linked edge and absent undepend; empty stdout
+for malformed graph id/Revert seq; incorrect not_found before Version validation;
+and missing --depends-on recovery. The explicit-empty fingerprint baseline
+accepted Delete with exit 0 and failed the SQLite projection-equality assertion.
+The final case refuses it with exit 2 and no projection change. This belongs to
+the same input-boundary finding, not another implementation round.
+
+Controls preserve valid missing Task/reference classification, real missing-file
+runtime_error/1, and valid stale existing-add/absent-remove no-ops. Authenticated
+HTTP still returns 400 for Version 0 on an existing linked edge and changes no
+Task/edge projection. F's independent e717 baseline remains untouched at
+/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/public-xOPnjF.
+
+### Client decode alignment and delta
+
+New apps/electron/src/http-client.ts contains the production HttpApiClient factory
+used by main.ts and the typed task-client boundary. This small approved extraction
+is transport-only. The live proof calls that exact factory, receives the actual
+HttpApi response and asserts all three ordered root sets, eight decoded node
+fields and encoded root facts. There are no controls, focus, selector, renderer,
+safeStorage or native changes.
+
+GeneratedContractTests uses generated Swift calls to create the branching graph,
+checks typed mixed-tree and single-Task response variants, root arrays and eight
+node fields, and re-encodes the facts. The existing live test passes without a
+skip. Numeric version, forbidden-key, contradiction and old/DAG-kind assertions
+remain intact. No generator was weakened and generated files were not hand edited.
+All Swift commands used swift-slot. The first new Swift assertion selected the
+non-tree union branch for a mixed tree; its failed receipt is retained, followed
+by the corrected typed assertion and passing live run.
+
+Changed domain source files are graph-contract.ts and graph-queries.ts only.
+No new packages/domain/src file was added in closure. New reusable proof files
+are graph-response-proof.ts, dag-cli-input-proof.ts and chain-1000.json. CLI
+input.ts and Electron http-client.ts are explicitly part of the closure delta.
+The existing filter-draft correction and prefix/text regression still pass;
+the previously recorded L1 search rebase checklist remains unchanged.
+
+### Final corrected-source proof
+
+Absolute closure evidence root:
+/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-b-commands/docs/evidence/task-dag/unit-b/closure.
+The before receipts are graph-before-2 and input-before-expanded, both compiled
+property exit 1; input-before-fullmatrix retains the explicit-empty fingerprint
+projection failure. Early graph seed setup failure is retained in graph-before.
+final/graph-size-comparison.json and final/input-audit-comparison.json collect
+the comparisons without relabeling observed bad command exits as passes.
+
+All final runs below use binaries built from clean corrected source 3cceb41e.
+Their paths and SHA-256s, CLI version, live server health, contract identity
+825e73aec777703499d20a728dd93ba41d92c20a9f75f4beb9da82a170702dfc and source
+content hash 799f273d00a4f2153550e5d0ce6f068d8bbc82d7f40e70c010697fb7c45a3a89
+are in final/build/provenance.json. Each table path is under the absolute root.
+
+| Proof | Level | Actual exit | Evidence |
+| --- | --- | ---: | --- |
+| pnpm check: 321 domain, 46 CLI, 30 server, 35 Electron passes | L1 | 0 | final/check.log |
+| 1,000-Task direct/public response and 31-case CLI audit | L2 | 0 | final/closure/graph-response/result.json, final/closure/dag-cli-input/result.json and both driver exit files |
+| Compiled public CLI/HTTP/PTY/DAG/import/export | L2 | 0 | final/public/actions.json, result.json and cleanup.json |
+| Compiled DAG library, replay and race | L2 library | 0 | final/library/result.json, race.json |
+| Compiled CLI and unchanged goldens | L2 | 0 | final/cli/commands.log, goldens.json |
+| Compiled base/read/write HTTP and regressions | L2 | 0/0/0 | final/server/result.json, final/server-reads/result.json, final/server-writes/result.json |
+| Combined filters | L2 | 0 | final/filters/result.json |
+| Import, migrations and transfer | L2 | 0 | final/import/commands.log |
+| Operation store, Purge and replay | L2 library | 0 | final/op-log/result.json |
+| Real SSE | L2 | 0 | final/sse/result.json |
+| Live protocol, Electron factory decode and generated Swift | L2 protocol | 0 | final/protocol/electron-graph.json, generated-tests-result.json, generated-tests.log, swift-result.json |
+| Filter draft roundtrip | L1 | 0 | final/filter-draft.log |
+| AtomicCAS final command | finite formal + real code | 0 | final/atomic.log |
+
+The live Swift run has all 20 tests passing with no skip. pnpm check retains one
+existing Electron skip and does not claim UI parity. The final AtomicCAS evidence
+is /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-b-commands/docs/evidence/fv01/fv01-check-lhKZOj.
+Fresh sensitivity evidence is /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-b-commands/docs/evidence/fv01/sensitivity-pkZuib:
+both real mutations exit 1 and restored source exits 0. Every covered production
+file is byte-identical to e717; the mapping review names the unchanged functions
+and retains the finite single-Task/no-edge limits. No source hashes were advanced
+to bypass a failed check.
+
+### Disk-order cleanup and final audit
+
+Applied the coordinator's disk order after final proofs without compiling or
+changing product code. Removed 83 superseded private .scratch/bin files,
+7,453,502,862 logical bytes actually unlinked. Observed free space was separately
+24.86394 to 25.20131 GiB by df during cleanup; the guard reported 26.7 to 27.1 GB.
+APFS sharing and concurrent filesystem activity mean this is not a claim that
+7.45 GB of capacity was reclaimed. Both disk guards exited 0.
+
+The complete 83 removed paths, sizes/inodes, ownership checks, kept-file reasons,
+reference audit and lsof in-use check are explicitly retained in
+[cleanup-receipt.json](/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-b-commands/docs/evidence/task-dag/unit-b/closure/final/cleanup-receipt.json).
+The exact 3cceb41e and e717 CLI/server binaries, current proof drivers, immutable
+baseline drivers and ambiguous cited N1/N2 binaries remain. No evidence directory
+was removed: cited, current and ambiguous receipts were protected. No symlink was
+followed and no other worker's tree was touched. The initial cleanup planner
+stopped before any unlink because a cached driver had no build log; the corrected
+plan's exit 0 and setup-failure receipt are retained.
+
+Local no-comments and structure audits ran before each commit. No new manual
+comments/suppressions or unresolved constraint flags were introduced. Shared
+rules remain in the domain/store; the new CLI conversion handles input only and
+the Electron extraction handles transport only. Core abstraction and caller
+usability now match the requested-Task contract and shared usage-error contract.
+All own servers were stopped. E/S feature UI, both-client L3, final F, fresh max
+closure review and coordinator delta review remain unclaimed. No integration or
+approval is implied by these passing proofs.

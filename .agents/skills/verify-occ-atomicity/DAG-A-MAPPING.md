@@ -142,3 +142,17 @@ all 216 literal outcomes. Import resolves successful external-id mappings under
 the existing writer transaction and rolls back each failed Task; its multi-Task
 planning is outside this finite model and has separate compiled public proof.
 Advance this schema pin only with fresh real-code sensitivity and clean check.
+
+## Unit B combined review closure
+
+Reviewed corrected source 3cceb41efc08b8cd835d5c883c3d370709865c3f against
+e7170510a376b51eaf3525bb9933cb0dd588b233. Every covered production file is
+byte-identical, including transaction, validate, appendSync, recordRejection,
+projection/replay and Event/Version schemas. G11 changes graph-contract and
+graph-queries only; CLI pure-input conversion remains outside these functions.
+No source pin or finite model changes. Advancing confirmedCommit records this
+identity review, not a stronger claim. Fresh real-code sensitivity removes the
+Task before check and edit projection in turn, requires exit 1 for each, restores
+bytes and requires exit 0. Final source runs the one command again. AtomicCAS
+remains bounded single-Task/no-edge safety; graph response and CLI boundaries
+have separate compiled public proofs, and final F remains coordinator-owned.

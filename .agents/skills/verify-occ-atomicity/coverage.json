@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "e7170510a376b51eaf3525bb9933cb0dd588b233",
+  "confirmedCommit": "3cceb41efc08b8cd835d5c883c3d370709865c3f",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
