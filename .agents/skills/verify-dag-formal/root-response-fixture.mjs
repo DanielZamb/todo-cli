@@ -52,7 +52,9 @@ export const rootSetOrderRows = () => [
     depends_on: ["f-root-first", "f-root-second", "f-root-unknown"],
   },
 ];
-export function assertRootSetOrder(response, [first, second, unknown, goal]) {
+export function assertRootSetOrder(response, issuedIds) {
+  assert.equal(issuedIds.length, 4);
+  const [first, second, unknown, goal] = issuedIds;
   assert.ok(first && second && unknown && goal);
   assert.equal(response.task_id, goal);
   assert.deepEqual(response.topological_order, [first, second, unknown, goal]);

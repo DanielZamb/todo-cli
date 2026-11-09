@@ -418,7 +418,8 @@ try {
     assert.ok(base);
     const health = await fetch(base + "/health");
     same("build-identity", health.status, 200);
-    same("build-identity", await health.json(), {
+    const healthBody: unknown = await health.json();
+    same("build-identity", healthBody, {
       service: "todo-server",
       build: process.env.DAG_F_PRODUCT_SHA?.slice(0, 8),
       contract: process.env.DAG_F_PRODUCT_CONTRACT,
@@ -430,6 +431,12 @@ try {
     assert.ok(
       version.includes("contract=" + process.env.DAG_F_PRODUCT_CONTRACT),
     );
+    writeFileSync(join(evidence, "build-identity.json"), JSON.stringify({
+      health: healthBody,
+      cliVersion: version,
+      productCommit: process.env.DAG_F_PRODUCT_SHA,
+      contract: process.env.DAG_F_PRODUCT_CONTRACT,
+    }, null, 2));
     const forkBytes = invoke(
       cli,
       ["graph", forkRoot.id, "--format", "json"],

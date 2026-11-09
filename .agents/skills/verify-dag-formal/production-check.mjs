@@ -13,7 +13,7 @@ import {
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import mutants from "./production-mutants.mjs";
-import { digest, materialize } from "./candidate-inputs.mjs";
+import { digest, materialize, workspaceTypePaths } from "./candidate-inputs.mjs";
 import {
   beforeCompile,
   DiskStop,
@@ -197,6 +197,7 @@ try {
       "production-mutants.mjs",
       "compile-safety.mjs",
       "compile-preload.mjs",
+      "guarded-runtime.mjs",
       "graph-properties.ts",
       "replay-properties.ts",
       "integration-properties.ts",
@@ -247,7 +248,10 @@ try {
     join(candidate, "verify/tsconfig.json"),
     JSON.stringify({
       extends: "../tsconfig.base.json",
-      compilerOptions: { types: ["bun"], noEmit: true },
+      compilerOptions: {
+        types: ["bun"], noEmit: true,
+        paths: workspaceTypePaths(candidate, ["domain"]),
+      },
       include: ["*.ts"],
     }),
   );
@@ -304,7 +308,9 @@ try {
       join(tools, "tla2tools-1.7.4.jar"),
     );
     process.env.DAG_F_GUARD_EVIDENCE = evidence;
+    process.env.DAG_F_REAL_BUN = process.execPath;
     const atomic = await run("candidate-atomiccas", "bun", [
+      join(skill, "guarded-runtime.mjs"),
       "--preload",
       join(skill, "compile-preload.mjs"),
       join(candidate, ".agents/skills/verify-occ-atomicity/check.ts"),

@@ -54,15 +54,24 @@ export function verifyContractArtifacts(candidate, evidence) {
     swiftPath = join(candidate, "apps/macos/API/Sources/TodoAPI/openapi.json");
   const api = readFileSync(apiPath),
     swift = readFileSync(swiftPath);
-  assert.equal(
-    digest(api),
-    digest(swift),
-    "Published API/Swift schema mismatch",
-  );
+  const apiDocument = JSON.parse(api), swiftDocument = JSON.parse(swift);
+  assert.equal(apiDocument.openapi, "3.1.0");
+  assert.equal(swiftDocument.openapi, "3.0.3");
   const schema =
-    JSON.parse(api).paths["/profiles/{profile}/tasks/{task}/graph"].get
+    apiDocument.paths["/profiles/{profile}/tasks/{task}/graph"].get
       .responses["200"].content["application/json"].schema;
+  const swiftSchema = swiftDocument.paths["/profiles/{profile}/tasks/{task}/graph"].get
+    .responses["200"].content["application/json"].schema;
   graphSchemaProperties(schema);
+  graphSchemaProperties(swiftSchema);
+  for (const [index, variant] of schema.anyOf.entries())
+    for (const key of ["ancestors", "descendants", "lightest_next"])
+      assert.deepEqual(variant.properties[key], swiftSchema.anyOf[index].properties[key]);
+  const apiIdentity = readFileSync(join(candidate, "packages/api/src/contract.ts"), "utf8")
+    .match(/"([a-f0-9]{64})"/)?.[1];
+  assert.ok(apiIdentity);
+  assert.ok(readFileSync(join(candidate, "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift"), "utf8")
+    .includes('"' + apiIdentity + '"'));
   const factory = readFileSync(
     join(candidate, "apps/electron/src/http-client.ts"),
     "utf8",
@@ -93,7 +102,8 @@ export function verifyContractArtifacts(candidate, evidence) {
   const receipt = {
     status: "pass",
     scope:
-      "published OpenAPI copies and production factory caller mapping; not Swift/Electron runtime proof",
+      "OpenAPI 3.1 and normalized Swift 3.0 graph keys/root fields and shared identity; production factory caller mapping, not native runtime proof",
+    apiIdentity,
     openapiSha256: digest(api),
     swiftOpenapiSha256: digest(swift),
     factorySha256: digest(factory),

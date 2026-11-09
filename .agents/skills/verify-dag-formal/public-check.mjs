@@ -12,7 +12,7 @@ import {
 } from "node:fs";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { digest, materialize, object } from "./candidate-inputs.mjs";
+import { digest, materialize, object, workspaceTypePaths } from "./candidate-inputs.mjs";
 import mutants from "./public-mutants.mjs";
 import retainedMutants from "./production-mutants.mjs";
 import boundaryMutants from "./boundary-mutants.mjs";
@@ -262,6 +262,7 @@ try {
           "graph-response-properties.ts",
           "root-response-fixture.mjs",
           "contract-properties.mjs",
+          "candidate-inputs.mjs",
         ]
       : []),
   ])
@@ -326,7 +327,7 @@ try {
   assert.equal(baseline.exitCode, 0, "Public baseline failed: " + evidence);
   if (mode === "all" || mode === "boundary-controls") {
     const matrix = await build(
-      "candidate-input-matrix",
+      "candidate-input-matrix-driver",
       "packages/domain/scripts/dag-cli-input-proof.ts",
     );
     const matrixDirectory = join(evidence, "candidate-input-matrix");
@@ -391,7 +392,10 @@ try {
     join(candidate, "verify/tsconfig.json"),
     JSON.stringify({
       extends: "../tsconfig.base.json",
-      compilerOptions: { types: ["bun"], noEmit: true, allowJs: true },
+      compilerOptions: {
+        types: ["bun"], noEmit: true, allowJs: true,
+        paths: workspaceTypePaths(candidate, ["domain", "api"]),
+      },
       include: ["*.ts"],
     }),
   );

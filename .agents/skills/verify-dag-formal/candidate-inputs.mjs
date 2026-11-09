@@ -2,7 +2,17 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+export function workspaceTypePaths(candidate, names) {
+  return Object.fromEntries(names.flatMap((name) => {
+    const directory = join(candidate, "packages", name);
+    const exports = JSON.parse(readFileSync(join(directory, "package.json"), "utf8")).exports;
+    return Object.entries(exports).map(([key, path]) => [
+      `@todo/${name}` + (key === "." ? "" : key.slice(1)),
+      [resolve(directory, path)],
+    ]);
+  }));
+}
 export const digest = (bytes) =>
   createHash("sha256").update(bytes).digest("hex");
 export function object(root, ref, path) {
