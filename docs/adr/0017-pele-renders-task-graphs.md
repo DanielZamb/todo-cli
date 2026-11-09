@@ -1,6 +1,6 @@
 # Pele renders Task graphs in both clients
 
-Proposed, 2026-11-09. Phase 0 approval is pending.
+Accepted with coordinator corrections G1 through G10, 2026-11-09.
 
 Pin Pele 1.13.0 behind a small adapter shared by Electron and SwiftUI's local
 WKWebView resources. The domain returns a typed graph and deterministic Mermaid
@@ -20,8 +20,9 @@ with click or keyboard, and provide a whole-group overview. List and search
 stay primary above about 50 Tasks. Native accessible lists and menus offer all
 actions; diagram semantics alone do not establish VoiceOver support. Click opens
 a Task, context/keyboard actions open Depends on or Blocks pickers. List drag
-is included; diagram edge dragging is deferred. If Pele fails, the fallback
-is our own simple renderer of typed nodes and edges, never Dagre.
+is included; the source blocks the drop target. Diagram edge dragging is
+deferred. If Pele fails to render, show the keyboard-accessible Task/Dependency
+list, the error and Retry. V1 has no second runtime renderer.
 
 The read-only investigation is
 `.orchestrator/runs/2026-11-07-task-search-dag/research/pele/report.md` in the
@@ -32,4 +33,5 @@ both clients' Compact, light and dark designs before integration.
 We rejected Mermaid as the application renderer because the tested bundle and
 layout costs are larger. Mermaid remains an interoperable export. Dagre is
 rejected as a fallback by owner decision. A new layout engine has no v1
-justification. An Excalidraw-based renderer remains a deferred experiment.
+justification. Our own renderer is the deferred strategic replacement if Pele
+is abandoned. An Excalidraw-based renderer remains a deferred experiment.

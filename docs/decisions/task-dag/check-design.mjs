@@ -6,6 +6,15 @@ mkdirSync(evidence, { recursive: true });
 const expect = (actual, expected, label) => {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error(`${label}: ${JSON.stringify(actual)} != ${JSON.stringify(expected)}`);
 };
+const schemas = JSON.parse(readFileSync(new URL("contract.schema.json", import.meta.url))).$defs;
+expect(schemas.ListExtension.properties.ready, {const: true}, "Ready filter is true-only");
+expect(schemas.ListExtension.properties.blocked, {const: true}, "Blocked filter is true-only");
+const shapes = schemas.GraphReport.oneOf;
+expect(shapes.map(s=>s.properties.shape.const), ["tree","single","chain","dag"], "graph shape variants");
+expect(shapes[0].properties.orientation.enum, ["converging","diverging","mixed"], "tree orientations");
+expect(shapes[0].required.includes("orientation"), true, "tree orientation required");
+expect(shapes.slice(1).every(s=>!("orientation" in s.properties)), true, "only trees have orientation");
+for(const n of [9,14]) expect(new RegExp(schemas.DependencyAdvice.pattern).test(`This Task depends on ${n} Tasks. That's a lot for one Task. It might be a whole Project, or it might be clearer split under a few more parent Tasks.`), true, "counted advice");
 const scene = JSON.parse(readFileSync(new URL("../../diagrams/todo.excalidraw", import.meta.url)));
 const all = new Map(scene.elements.map((e) => [e.id, e]));
 expect(all.size, scene.elements.length, "unique element ids");

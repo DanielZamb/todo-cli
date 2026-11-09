@@ -204,7 +204,6 @@ Colors follow `design/electron/TOKENS.md`.
 
 The proposed Task dependency workflows are also frames in the scene, with
 `dag-` prefixes for CLI edge edits, Delete, status refusals, and each client's
-picker, list drag, Delete dialog, and graph view. They remain a design proposal
-until the coordinator approves [Task DAG Phase 0](decisions/task-dag-phase-0.md).
-ADRs 0016 through 0018 are drafts; no graph runtime is implemented by those
-workflow diagrams.
+picker, list drag, Delete dialog, and graph view. The coordinator approved [Task DAG Phase 0](decisions/task-dag-phase-0.md)
+with corrections G1 through G10. ADRs 0016 through 0018 are accepted; their
+runtime implementation and verification follow in units A, F, B, E and S.

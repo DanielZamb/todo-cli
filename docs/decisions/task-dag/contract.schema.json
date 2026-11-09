@@ -813,10 +813,10 @@
       "type": "object",
       "properties": {
         "ready": {
-          "type": "boolean"
+          "const": true
         },
         "blocked": {
-          "type": "boolean"
+          "const": true
         },
         "order": {
           "enum": [
@@ -828,6 +828,10 @@
       "required": [],
       "additionalProperties": false
     },
+    "DependencyAdvice": {
+      "type": "string",
+      "pattern": "^This Task depends on [0-9]+ Tasks[.] That's a lot for one Task[.] It might be a whole Project, or it might be clearer split under a few more parent Tasks[.]$"
+    },
     "Warning": {
       "oneOf": [
         {
@@ -837,8 +841,7 @@
               "const": "many_dependencies"
             },
             "message": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/$defs/DependencyAdvice"
             },
             "dependent_id": {
               "type": "string",
@@ -1022,8 +1025,7 @@
               "const": "too_many_dependencies"
             },
             "message": {
-              "type": "string",
-              "minLength": 1
+              "$ref": "#/$defs/DependencyAdvice"
             },
             "details": {
               "type": "object",
@@ -1311,7 +1313,8 @@
           "items": {
             "type": "string",
             "minLength": 1
-          }
+          },
+          "description": "Ready Tasks in this Task's remaining set, including itself. A Ready unresolved Task returns itself; terminal Tasks return an empty array."
         }
       },
       "required": [
@@ -1329,79 +1332,296 @@
       "additionalProperties": false
     },
     "GraphReport": {
-      "type": "object",
-      "properties": {
-        "generated_at": {
-          "type": "string"
-        },
-        "profile_id": {
-          "type": "string",
-          "minLength": 1
-        },
-        "task_id": {
-          "type": "string",
-          "minLength": 1
-        },
-        "nodes": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/GraphNode"
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "generated_at": {
+              "type": "string"
+            },
+            "profile_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "task_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "nodes": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/GraphNode"
+              },
+              "minItems": 1
+            },
+            "edges": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Edge"
+              }
+            },
+            "sources": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "sinks": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "topological_order": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "mermaid": {
+              "type": "string",
+              "minLength": 1
+            },
+            "shape": {
+              "const": "tree"
+            },
+            "orientation": {
+              "enum": [
+                "converging",
+                "diverging",
+                "mixed"
+              ]
+            }
           },
-          "minItems": 1
+          "required": [
+            "generated_at",
+            "profile_id",
+            "task_id",
+            "nodes",
+            "edges",
+            "sources",
+            "sinks",
+            "topological_order",
+            "mermaid",
+            "shape",
+            "orientation"
+          ],
+          "additionalProperties": false
         },
-        "edges": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/Edge"
-          }
+        {
+          "type": "object",
+          "properties": {
+            "generated_at": {
+              "type": "string"
+            },
+            "profile_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "task_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "nodes": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/GraphNode"
+              },
+              "minItems": 1
+            },
+            "edges": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Edge"
+              }
+            },
+            "sources": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "sinks": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "topological_order": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "mermaid": {
+              "type": "string",
+              "minLength": 1
+            },
+            "shape": {
+              "const": "single"
+            }
+          },
+          "required": [
+            "generated_at",
+            "profile_id",
+            "task_id",
+            "nodes",
+            "edges",
+            "sources",
+            "sinks",
+            "topological_order",
+            "mermaid",
+            "shape"
+          ],
+          "additionalProperties": false
         },
-        "sources": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
+        {
+          "type": "object",
+          "properties": {
+            "generated_at": {
+              "type": "string"
+            },
+            "profile_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "task_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "nodes": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/GraphNode"
+              },
+              "minItems": 1
+            },
+            "edges": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Edge"
+              }
+            },
+            "sources": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "sinks": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "topological_order": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "mermaid": {
+              "type": "string",
+              "minLength": 1
+            },
+            "shape": {
+              "const": "chain"
+            }
+          },
+          "required": [
+            "generated_at",
+            "profile_id",
+            "task_id",
+            "nodes",
+            "edges",
+            "sources",
+            "sinks",
+            "topological_order",
+            "mermaid",
+            "shape"
+          ],
+          "additionalProperties": false
         },
-        "sinks": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "topological_order": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "shape": {
-          "enum": [
-            "single",
-            "chain",
-            "tree",
-            "dag"
-          ]
-        },
-        "mermaid": {
-          "type": "string",
-          "minLength": 1
+        {
+          "type": "object",
+          "properties": {
+            "generated_at": {
+              "type": "string"
+            },
+            "profile_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "task_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "nodes": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/GraphNode"
+              },
+              "minItems": 1
+            },
+            "edges": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Edge"
+              }
+            },
+            "sources": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "sinks": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "topological_order": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "mermaid": {
+              "type": "string",
+              "minLength": 1
+            },
+            "shape": {
+              "const": "dag"
+            }
+          },
+          "required": [
+            "generated_at",
+            "profile_id",
+            "task_id",
+            "nodes",
+            "edges",
+            "sources",
+            "sinks",
+            "topological_order",
+            "mermaid",
+            "shape"
+          ],
+          "additionalProperties": false
         }
-      },
-      "required": [
-        "generated_at",
-        "profile_id",
-        "task_id",
-        "nodes",
-        "edges",
-        "sources",
-        "sinks",
-        "topological_order",
-        "shape",
-        "mermaid"
-      ],
-      "additionalProperties": false
+      ]
     },
     "DeleteReport": {
       "type": "object",

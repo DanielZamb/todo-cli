@@ -1,6 +1,7 @@
 # Task dependency graph design gate
 
-Status: proposed. Product implementation waits for the coordinator's APPROVE.
+Status: approved with coordinator corrections G1 through G10 on 2026-11-09.
+The corrections are incorporated below. A and F may start without another gate.
 Integration branch: `feat/task-dag`, based on `feat/task-search` at
 `228e3485004eb9ccef670467fcbd4e88e48f806f`.
 Timebox starts conservatively at 2026-11-09 03:14 UTC and ends at 19:14 UTC.
@@ -21,10 +22,12 @@ Occurrences can link to ordinary Tasks or other Occurrences. Successors inherit
 no edges. No Series-level edge controls appear.
 
 A Task is Ready when its status is open or snoozed and all direct blockers are
-done or cancelled. Blocked means it has an open or snoozed direct blocker.
-A cancelled Task can therefore be Blocked, but can never be Ready. Both true
-filters compose by AND. Boolean false filters select the complement of the
-corresponding predicate. All predicates run before the read adapter returns.
+done or cancelled. A Task is Blocked when its status is open or snoozed and
+it has at least one open or snoozed direct blocker. Done and cancelled Tasks
+are neither Ready nor Blocked. Both true filters compose by AND. Filters are
+true-only: CLI switches or HTTP ready=true and blocked=true. Supplying false
+is a usage error, exit 2 or HTTP 400, with a message pointing to --blocked or
+--status. All predicates run before the read adapter returns.
 Cancelled blockers display explicit Cancelled text.
 
 `addDependency` runs under `OperationStore.transaction`, which acquires
@@ -47,9 +50,10 @@ A separate reachability query reports the shortest existing implying path for
 an allowed redundant edge. The stored edge remains in every graph/export.
 
 At most 13 direct Dependencies are allowed. Adds resulting in 9 through 13
-return many_dependencies with this text: "This Task has many Dependencies. It
-may be a whole Project. Split it into smaller Tasks that depend on each other."
-The 14th returns too_many_dependencies with the same advice. Out-degree is
+return many_dependencies with this exact text, replacing N with the count:
+"This Task depends on N Tasks. That's a lot for one Task. It might be a whole
+Project, or it might be clearer split under a few more parent Tasks."
+The 14th returns too_many_dependencies with the same advice and count 14. Out-degree is
 unlimited. A create input over 13 is refused before writing anything.
 
 A single consistent read transaction loads a Profile's Tasks and edges.
@@ -66,16 +70,20 @@ cancelled nodes stop this weighted walk. A resolved root has zero remaining
 energy and zero unweighted. An unresolved node without energy contributes one
 to unweighted and still permits upstream traversal. A 1,2,3,4 diamond totals 10.
 Profile-wide ranking uses temporary ancestor bitsets and weight masks, never
-stored sums. `lightest_next` contains strict Ready ancestors sorted by their
-own energy, unknown last, then whole-Profile topological position. A Ready root
-has no strict Ready ancestors. No estimates or critical path are exposed.
+stored sums. `lightest_next` contains the Ready Tasks in T's remaining set,
+including T itself, sorted by their own energy, unknown last, then whole-Profile
+topological position. A Ready unresolved T gives [T]. A done or cancelled T
+gives []. No estimates or critical path are exposed.
 
 The connected group is the weakly connected visible component. Sources have
 in-degree zero; sinks have out-degree zero. Ancestors and descendants are
 strict sets in topological order. Depth is longest edge-count from a source.
 `single` means one node; `chain` means every in-degree and out-degree is at most
 one; `tree` means a non-chain connected graph with n-1 edges; otherwise `dag`.
-This includes converging trees. Redundant stored edges affect the shape.
+Tree results also carry orientation: converging when every Task blocks at most
+one other Task, diverging when every Task has at most one blocker, or mixed.
+The single and chain cases take precedence, so those two tree orientations
+cannot overlap. Redundant stored edges affect the shape.
 
 ## Wire and CLI contract
 
@@ -256,8 +264,9 @@ the recovery, Conflict requires Reload rather than a blind retry. A cancelled
 blocker is labelled Cancelled. No-op feedback is quiet Already linked or
 Already removed. Batch selection offers preview before apply.
 
-List drag source depends on drop target. The drop target says "<source> depends
-on <target>" before release. An already linked target says Already depends on
+Dropping a source Task onto a target makes the target depend on the source.
+The source blocks the target, matching the parent model. The hover label says
+"<target> will depend on <source>" before release. An already linked target says Already depends on
 and drops without a write. Self and foreign-Profile targets cannot commit.
 The menu action Add dependency and a keyboard shortcut open the same picker.
 No drag-to-connect inside the diagram ships in v1.
@@ -291,7 +300,13 @@ Task returns to the region root if it survives; otherwise show the deleted
 notice and list. Stale errors cannot replace a newer graph. Offline retains the
 last graph read-only and reconnect fetches current data. Error offers Retry
 while connected and the Task list remains usable. Pele render failure shows
-our own simple accessible node-and-edge renderer, with no Dagre dependency.
+the keyboard-accessible Task/Dependency list, the render error, and Retry
+while connected. There is no second renderer at runtime in v1. Our own renderer
+is a deferred strategic replacement if Pele is abandoned, alongside the deferred
+Excalidraw experiment. Dagre remains rejected.
+
+Both apps and the TTY prompt always submit dependency_fingerprint from the
+reviewed Delete preview; agents may omit it.
 
 The adapter binds pointerdown on node anchors before Pele zoom capture for
 issue 130 and returns focus to the graph when a zoom/reset control disappears
@@ -377,17 +392,27 @@ recheck. Model mappings refresh after the final clients land.
 | S | SwiftUI parity using generated HTTP types; WKWebView local resources, production TodoModel state tests, offscreen renders and identifiers. | Same gate, parallel with E. L1, unsigned build, state reload proof and light/dark full/Compact captures. |
 
 Every launch gets the full CONTRACT section, unit scope and standing.md verbatim.
-Workers use delegate_task, Codex gpt-6.1-sol xhigh, isolated worktree,
-implementation role or test for F. At most three run together. They commit
-locally and never push, merge, rebase or launch children. Only L1 integrates.
+Workers and seat-1 reviewers launch as top-level T3 Code threads with
+t3_thread_launch, never delegate_task, under standing order 26. Use projectId
+3a523920-22c1-494c-9832-b6ba933b7fb8 and modelSelection with instanceId codex,
+model gpt-6.1-sol, and reasoningEffort xhigh for workers or max for seat 1.
+Each code thread gets workspaceStrategy type worktree, baseRef feat/task-dag,
+a unique unit branch and startFromOrigin false. At most three workers run
+together. They commit locally and never push, merge, rebase or launch children.
+Only L1 integrates. Every brief requires a terminal t3_thread_send to DAG-L1
+and coordinator d1f1e5d1-fb49-4fdd-8fed-b1d95dbef97b, finished or blocked, with
+branch, head SHA and status. L1 reads worker threads periodically using
+t3_thread_read. If launch is unavailable, report blocked without fallback.
 Before each launch, install, Electron build or xcodebuild, run disk-guard.sh.
 Exit 3 stops work with DISK STOP and a WIP commit.
 
 Each unit first proves itself at a commit. Then one read-only seat-1
-Codex gpt-6.1-sol max delegate reviews correctness, boundaries and comments.
+Codex gpt-6.1-sol max thread reviews correctness, boundaries and comments.
 Seat 2 and every visual review go to the coordinator. Merge only after both
 pass. Run pnpm check after every merge and read its real exit code. Small
-findings are fixed by L1; every new review/recheck is a new delegate_task.
+findings are fixed by L1; every new review or recheck gets a new read-only
+t3_thread_launch worktree thread based on feat/task-dag. The reviewer inspects
+the explicit unit SHA with git show and git diff; no checkout change is needed.
 
 The no-comments skill requests an extra research child, which this run forbids.
 As recorded in the search Phase 0 gate, inspect comments locally before commits
@@ -416,9 +441,10 @@ this run explicitly forbids owner Task edits.
 
 Schema generation, migration-on-scratch checks, deterministic scene generation,
 arrow binding/frame checks and render logs go to ignored
-`docs/evidence/task-dag/phase-0`. Drafts are ADRs 0016, 0017 and 0018.
+`docs/evidence/task-dag/phase-0`. Accepted records are ADRs 0016, 0017 and 0018.
 No feature behavior is implemented or claimed proven by Phase 0 documents.
-The coordinator must reply APPROVE before A/F launches or product edits.
+The coordinator approved Phase 0 with G1 through G10. A/F launches and product
+implementation are authorized after committing these corrections.
 
 The design check command is
 `bun docs/decisions/task-dag/check-design.mjs <evidence-directory>`.
@@ -429,12 +455,10 @@ migrator proof. Schema generation resolves every internal reference. Render
 success proves PNG production; the coordinator still reviews workflow/design.
 No package install or pnpm check is needed for this documentation-only gate.
 
-The following implementation choices become fixed only on Phase 0 approval:
-boolean false filters select complements; shape tree includes converging trees;
-strict lightest_next excludes a Ready root; batch-depend is per-item atomic;
-list drag means source depends on target; Obsidian links target blocks within
-the same note; and optional dependency_fingerprint protects a reviewed deletion
-preview from changed edge sets. These choices fill gaps without replacing the
-owner's settled rules. Any coordinator correction is applied before workers
-start. Unit B owns the final CONTEXT.md and architecture update alongside the
-approved ADR status changes.
+Coordinator G1 through G10 supersede the earlier proposals. They settle
+nonterminal Ready/Blocked, true-only filters, tree orientation, inclusive
+lightest_next, per-item batch atomicity, source-blocks-target list drag, same-note
+Obsidian block links, mandatory client/TTY fingerprints, exact counted warning
+text, and accessible-list recovery without a runtime second renderer.
+Unit B owns the final CONTEXT.md and architecture update. The graph frames need
+a further legibility pass before Phase 2, as requested by the coordinator.

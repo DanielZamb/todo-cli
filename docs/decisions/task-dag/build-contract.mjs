@@ -20,10 +20,11 @@ defs.DependRequest = obj({ blocker_id: inputId, from_version: version });
 defs.UndependRequest = defs.DependRequest;
 defs.DeleteQuery = obj({ from_version: version, with_dependencies: { type: "boolean", default: false }, dry_run: { type: "boolean", default: false }, dependency_fingerprint: { type: "string", pattern: "^[a-f0-9]{64}$" } }, ["with_dependencies", "dry_run", "dependency_fingerprint"]);
 defs.CreateExtension = obj({ depends_on: arr(inputId, { maxItems: 13, uniqueItems: true }) }, ["depends_on"]);
-defs.ListExtension = obj({ ready: { type: "boolean" }, blocked: { type: "boolean" }, order: { enum: ["topo", "lightest"] } }, ["ready", "blocked", "order"]);
-defs.Warning = { oneOf: [obj({ code: lit("many_dependencies"), message: str, dependent_id: str, count }), obj({ code: lit("redundant_dependency"), message: str, dependent_id: str, blocker_id: str, path: arr(str, { minItems: 3 }) })] };
+defs.ListExtension = obj({ ready: lit(true), blocked: lit(true), order: { enum: ["topo", "lightest"] } }, ["ready", "blocked", "order"]);
+defs.DependencyAdvice = {type: "string", pattern: "^This Task depends on [0-9]+ Tasks[.] That's a lot for one Task[.] It might be a whole Project, or it might be clearer split under a few more parent Tasks[.]$"};
+defs.Warning = { oneOf: [obj({ code: lit("many_dependencies"), message: ref("DependencyAdvice"), dependent_id: str, count }), obj({ code: lit("redundant_dependency"), message: str, dependent_id: str, blocker_id: str, path: arr(str, { minItems: 3 }) })] };
 defs.EdgeReport = obj({ generated_at: stamp, outcome: { enum: ["added", "removed", "unchanged"] }, dependent_id: str, blocker_id: str, from_version: version, to_version: version, seq: nullable(version), warnings: arr(ref("Warning")), dry_run: { type: "boolean" } }, ["dry_run"]);
-const error = (code, details) => obj({ generated_at: stamp, code: lit(code), message: str, details });
+const error = (code, details) => obj({ generated_at: stamp, code: lit(code), message: code === "too_many_dependencies" ? ref("DependencyAdvice") : str, details });
 defs.DependencyError = { oneOf: [
   error("dependency_cycle", obj({ dependent_id: str, blocker_id: str, path: arr(str, { minItems: 2 }) })),
   error("too_many_dependencies", obj({ dependent_id: str, count, limit: lit(13) })),
@@ -33,8 +34,9 @@ defs.DependencyError = { oneOf: [
   error("dependency_profile_mismatch", obj({ dependent_id: str, blocker_id: str, profile_id: str })),
 ] };
 defs.Energy = obj({ energy: count, unweighted: count });
-defs.GraphNode = obj({ task: ref("Task"), in_degree: count, out_degree: count, ready: { type: "boolean" }, blocked: { type: "boolean" }, ancestors: arr(str), descendants: arr(str), depth: count, remaining_energy: ref("Energy"), lightest_next: arr(str) });
-defs.GraphReport = obj({ generated_at: stamp, profile_id: str, task_id: str, nodes: arr(ref("GraphNode"), { minItems: 1 }), edges: arr(ref("Edge")), sources: arr(str), sinks: arr(str), topological_order: arr(str), shape: { enum: ["single", "chain", "tree", "dag"] }, mermaid: str });
+defs.GraphNode = obj({ task: ref("Task"), in_degree: count, out_degree: count, ready: { type: "boolean" }, blocked: { type: "boolean" }, ancestors: arr(str), descendants: arr(str), depth: count, remaining_energy: ref("Energy"), lightest_next: { ...arr(str), description: "Ready Tasks in this Task's remaining set, including itself. A Ready unresolved Task returns itself; terminal Tasks return an empty array." } });
+const graphFields = { generated_at: stamp, profile_id: str, task_id: str, nodes: arr(ref("GraphNode"), { minItems: 1 }), edges: arr(ref("Edge")), sources: arr(str), sinks: arr(str), topological_order: arr(str), mermaid: str };
+defs.GraphReport = { oneOf: [obj({ ...graphFields, shape: lit("tree"), orientation: { enum: ["converging", "diverging", "mixed"] } }), ...["single", "chain", "dag"].map(shape => obj({ ...graphFields, shape: lit(shape) }))] };
 defs.DeleteReport = obj({ generated_at: stamp, task: ref("Task"), removed_dependencies: arr(ref("Edge")), affected_versions: arr(ref("VersionChange")), dependency_fingerprint: { type: "string", pattern: "^[a-f0-9]{64}$" }, dry_run: { type: "boolean" } });
 defs.BatchEdgeItem = obj({ action: { enum: ["depend", "undepend"] }, dependent_id: inputId, blocker_id: inputId, from_version: version });
 defs.BatchEdgeRequest = obj({ items: arr(ref("BatchEdgeItem"), { minItems: 1, maxItems: 1000 }), dry_run: { type: "boolean", default: false } }, ["dry_run"]);

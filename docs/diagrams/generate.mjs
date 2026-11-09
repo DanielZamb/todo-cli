@@ -1108,8 +1108,8 @@ for (const [suffix, name, entry] of [["electron", "Electron", "renderer.tsx / ac
   ]);
   dagMachine(`dag-${suffix}-drag`, `${name} list drag with keyboard alternative`, 28000 + shift, [
     ["idle", 0, 0, "Task list / idle", `${entry}\nAdd dependency menu + keyboard opens picker\nproposed dependency-drop-target identifier`],
-    ["drag", 1, 0, "Dragging Task source", "source id / Profile captured\nsource will depend on drop target\nvisible relation text"],
-    ["target", 2, 0, "Drop target / allowed", "show source depends on target\nsource Version retained\nrefuse self or foreign Profile"],
+    ["drag", 1, 0, "Dragging Task source", "source id / Profile captured\ndrop target will depend on source\nvisible relation text"],
+    ["target", 2, 0, "Drop target / allowed", "show target will depend on source\ntarget Version retained\nrefuse self or foreign Profile"],
     ["linked", 0, 1, "Already depends on", "existing edge / quiet state\nrelease without request or Version bump\nkeyboard can open checked picker"],
     ["write", 1, 1, "tasks.depend / pending", "same command as picker\nserver checks current graph under lock\nno optimistic committed edge"],
     ["error", 2, 1, "Drop refused / recover", "loop path, blockers or Conflict\nretain list selection\nReload or choose another target", true],
@@ -1117,7 +1117,7 @@ for (const [suffix, name, entry] of [["electron", "Electron", "renderer.tsx / ac
     ["idle", "drag", "drag start [enabled]\n/ capture source"],
     ["drag", "target", "drag over [valid target]\n/ show direction"],
     ["drag", "linked", "drag over [edge exists]\n/ show Already depends on"],
-    ["target", "write", "drop [allowed]\n/ send expected source Version"],
+    ["target", "write", "drop [allowed]\n/ send expected target Version"],
     ["write", "idle", "response [accepted or unchanged]\n/ refresh graph; announce quietly"],
     ["write", "error", "response [refused]\n/ display recovery"],
     ["error", "target", "choose target [reloaded]\n/ use current Version"],
@@ -1157,7 +1157,7 @@ for (const [suffix, name, offset] of [["electron", "Electron", 0], ["swift", "Sw
   ["load", 0, 0, "GraphView / loading", "tasks.graph / selected Task id\nlatest Profile + root + request generation\nlocal resources only"],
   ["ready", 1, 0, "GraphView / region ready", "selected + direct blockers + dependents\napp-owned x/y/scale/selection/focus\nclick opens Task; context/key opens picker"],
   ["expand", 2, 0, "GraphView / expanding", "expand one level by click or key\nretain existing viewport and focus\nshow nodes outside region"],
-  ["error", 0, 1, "GraphView / error", "retain last good data; Retry if connected\nPele failure uses our own renderer\nTask list/search remains available", true],
+  ["error", 0, 1, "GraphView / error", "retain last good data; Retry if connected\nPele failure shows accessible relation list\nTask list/search remains available", true],
   ["overview", 1, 1, "GraphView / whole-group overview", "explicit toggle; list primary above ~50\nkeep saved region and selected Task\nall stored edges including redundant ones"],
   ["refresh", 2, 1, "GraphView / SSE refresh", "current Profile operations invalidate graph\nretain expanded ids + transform + selection\nlatest response only; never mount.update"],
   ["offline", 0, 2, "GraphView / offline", "retain readable last graph\nall writes disabled; no retry action\nselected Task list still available"],

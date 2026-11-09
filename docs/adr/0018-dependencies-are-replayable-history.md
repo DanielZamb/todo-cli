@@ -1,6 +1,6 @@
 # Dependencies are replayable History
 
-Proposed, 2026-11-09. Phase 0 approval is pending. Extends ADR-0007 and ADR-0008.
+Accepted with coordinator corrections G1 through G10, 2026-11-09. Extends ADR-0007 and ADR-0008.
 
 DependencyAdded and DependencyRemoved record endpoint ids and the dependent's
 resolved Version transition. Only the dependent changes Version. Their edge
