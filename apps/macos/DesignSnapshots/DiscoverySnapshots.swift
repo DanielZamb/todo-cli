@@ -27,7 +27,9 @@ import TodoAPI
             ("show-gone", .lookup, .error), ("editor-not-found", .lookup, .error),
             ("history-not-found", .lookup, .error), ("batch-not-found", .lookup, .error),
             ("import-not-found", .lookup, .error), ("attachment-not-found", .lookup, .error),
-            ("batch-not-found-end", .lookup, .error), ("import-not-found-end", .lookup, .error), ("attachment-not-found-end", .lookup, .error)
+            ("batch-not-found-end", .lookup, .error), ("import-not-found-end", .lookup, .error), ("attachment-not-found-end", .lookup, .error),
+            ("batch-generic-error", .lookup, .error), ("attachment-generic-error", .lookup, .error),
+            ("import-task-deleted", .lookup, .error), ("import-occ-conflict", .lookup, .error)
         ]
         for compact in [true, false] {
             for scheme in [ColorScheme.light, .dark] {
@@ -50,30 +52,35 @@ import TodoAPI
                         model.discovery.copiedID = match.id
                         model.taskIDCopyFeedback = name == "lookup-copied" ? "Copied" : "Couldn't copy. Try again."
                     }
-                    let contextual = name == "show-gone" || name.contains("not-found")
+                    let reportScreen = name.hasPrefix("batch-") || name.hasPrefix("attachment-") || name.hasPrefix("import-")
+                    let customScreen = name == "show-gone" || name.contains("not-found") || reportScreen
                     let failure = ServerFailure(message: "Run todo list --prefix aa. HTTP: GET /tasks/lookup?prefix=aa.", code: "not_found", exitCode: 3, exitMeaning: "not found or auth missing", details: .init(profile: .init(id: "work", name: "Work"), taskID: match.task_id))
                     let reportIDs = ["ordinary-before", "aa", "bb", "ordinary-after"]
                     let reportTitles = ["Ordinary before", "First missing Task", "Second missing Task", "Ordinary after"]
                     let reportTasks = reportIDs.indices.map { TaskSnapshot(id: reportIDs[$0], profile_id: "work", row_version: 1, title: reportTitles[$0], description: nil, priority: "P3", source: "manual", status: "open", project_id: nil, tags: [], due_at: nil, scheduled_at: nil, energy: nil, estimate_min: nil, occurrence: nil, legacy_series_detached: nil, deleted_at: nil) }
                     func reportFailure(_ index: Int) -> ServerFailure? {
                         guard index == 1 || index == 2 else { return nil }
+                        if name == "import-task-deleted" { return .init(message: "This Task is deleted. Restore it before importing changes.", code: "task_deleted", exitCode: 2, exitMeaning: "validation or usage", details: .init(currentVersion: 2)) }
+                        if name == "import-occ-conflict" { return .init(message: "Task changed since preview. Preview again and apply the current Version.", code: "occ_conflict", exitCode: 4, exitMeaning: "Conflict") }
+                        if name == "batch-generic-error" { return .init(message: "Conflict. Reload Tasks, preview and apply with the current Version.", code: "occ_conflict", exitCode: 4, exitMeaning: "Conflict", details: .init(currentVersion: 2)) }
+                        if name == "attachment-generic-error" { return .init(message: "Task changed. Read its current Version and retry.", code: "occ_conflict", exitCode: 4, exitMeaning: "Conflict", details: .init(currentVersion: 2)) }
                         return .init(message: "Run todo lookup --prefix aa. HTTP: GET /tasks/lookup?prefix=aa.", code: "not_found", exitCode: 3, exitMeaning: "not found or auth missing", details: .init(profile: .init(id: "work", name: "Work"), taskID: reportIDs[index]))
                     }
-                    if name.hasPrefix("batch-not-found") {
+                    if name.hasPrefix("batch-") {
                         model.batchEdit = BatchEditDraft(profile: "work")
                         model.batchEdit?.targets = reportTasks
                         model.batchEdit?.selected = Set(reportIDs)
                         model.batchEdit?.loading = false
-                        model.batchEdit?.report = .init(dry_run: true, items: reportIDs.indices.map { .init(task_id: reportIDs[$0], from_version: 1, current_version: 1, outcome: reportFailure($0) == nil ? "updated" : "rejected", error: reportFailure($0)) })
+                        model.batchEdit?.report = .init(dry_run: true, items: reportIDs.indices.map { .init(task_id: reportIDs[$0], from_version: 1, current_version: name.hasSuffix("generic-error") ? 2 : 1, outcome: reportFailure($0) == nil ? "updated" : "rejected", error: reportFailure($0)) })
                     }
-                    if name.hasPrefix("attachment-not-found") {
+                    if name.hasPrefix("attachment-") {
                         model.attachmentBatch = .init(profile: "work", reference: .init(id: "reference", location: .link(URL(string: "https://example.com/report")!), added_at: "2026-11-09T00:00:00Z"))
                         model.attachmentBatch?.targets = reportTasks
                         model.attachmentBatch?.selected = Set(reportIDs)
                         model.attachmentBatch?.loading = false
-                        model.attachmentBatch?.report = .init(dry_run: true, items: reportIDs.indices.map { .init(task_id: reportIDs[$0], outcome: reportFailure($0) == nil ? "attached" : "rejected", current_version: 1, error: reportFailure($0)) })
+                        model.attachmentBatch?.report = .init(dry_run: true, items: reportIDs.indices.map { .init(task_id: reportIDs[$0], outcome: reportFailure($0) == nil ? "attached" : "rejected", current_version: name.hasSuffix("generic-error") ? 2 : 1, error: reportFailure($0)) })
                     }
-                    if name.hasPrefix("import-not-found") {
+                    if name.hasPrefix("import-") {
                         model.loadImport(data: try JSONSerialization.data(withJSONObject: reportIDs.indices.map { ["external_id": reportIDs[$0], "title": reportTitles[$0]] }), name: "Typed UI fixture; live import returns Conflict")
                         model.importReport = .init(generated_at: "2026-11-09T00:00:00Z", dry_run: true, items: reportIDs.indices.map { .init(external_id: reportIDs[$0], outcome: reportFailure($0) == nil ? "updated" : "rejected", task_id: reportIDs[$0], from_version: 1, changed_fields: [], error: reportFailure($0)) }, totals: .init(created: 0, updated: 2, unchanged: 0, rejected: 2))
                     }
@@ -89,13 +96,13 @@ import TodoAPI
                             }.frame(width: width, height: height)
                             Color.black.opacity(0.08)
                         }
-                        if name.hasPrefix("batch-not-found") {
+                        if name.hasPrefix("batch-") {
                             BatchEditView(model: model, compact: compact).background(.background)
-                        } else if name.hasPrefix("attachment-not-found") {
+                        } else if name.hasPrefix("attachment-") {
                             AttachmentBatchView(model: model).background(.background)
-                        } else if name.hasPrefix("import-not-found") {
+                        } else if name.hasPrefix("import-") {
                             ImportView(model: model, compact: compact).background(.background)
-                        } else if contextual {
+                        } else if customScreen {
                             VStack(alignment: .leading, spacing: 16) {
                                 Text(name == "show-gone" ? "All tasks" : name.replacingOccurrences(of: "-not-found", with: "").capitalized).font(.headline)
                                 ServerErrorNotice(model: model, failure: failure)
@@ -120,7 +127,7 @@ import TodoAPI
                     host.layoutSubtreeIfNeeded()
                     try await Task.sleep(for: .milliseconds(120))
                     host.layoutSubtreeIfNeeded()
-                    if name.contains("not-found") && !name.hasPrefix("editor") && !name.hasPrefix("history") {
+                    if reportScreen {
                         func scrollViews(_ view: NSView) -> [NSScrollView] { (view as? NSScrollView).map { [$0] } ?? view.subviews.flatMap(scrollViews) }
                         let target = try #require(frames.reportFrames["viewport"])
                         func distance(_ scroll: NSScrollView) -> CGFloat { abs(scroll.bounds.width - target.width) + abs(scroll.bounds.height - target.height) }
@@ -141,7 +148,7 @@ import TodoAPI
                         }
                     }
                     let file = "discovery-\(compact ? "compact" : "full")-\(name)-\(scheme == .light ? "light" : "dark").png"
-                    for key in contextual ? [] : dialog == .lookup ? ["discovery-close", "discovery-find", "discovery-prefix"] : ["discovery-close"] {
+                    for key in customScreen ? [] : dialog == .lookup ? ["discovery-close", "discovery-find", "discovery-prefix"] : ["discovery-close"] {
                         let frame = try #require(frames.frames[key])
                         #expect(frame.minX >= 0 && frame.maxX <= width && frame.minY >= 0 && frame.maxY <= height, "\(file) \(key) \(frame)")
                     }
@@ -154,7 +161,7 @@ import TodoAPI
                 }
             }
         }
-        #expect(files.count == 100)
+        #expect(files.count == 116)
         try JSONSerialization.data(withJSONObject: ["files": files], options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("manifest.json"))
         try JSONSerialization.data(withJSONObject: geometry, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("discovery-layout.json"))
     }

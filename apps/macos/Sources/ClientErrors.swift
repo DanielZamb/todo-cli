@@ -59,11 +59,13 @@ struct ServerErrorNotice: View {
     let model: TodoModel
     let failure: ServerFailure
     var neutral = false
+    var currentVersion: Int? = nil
     var body: some View {
         if failure.isTaskLookup { TaskLookupErrorNotice(model: model, failure: failure) }
         else {
             VStack(alignment: .leading, spacing: 4) {
                 Text(failure.primaryMessage).foregroundStyle(neutral ? Color.primary : TodoColors.color("destructive"))
+                if failure.code == "occ_conflict", let currentVersion { Text("Version \(currentVersion). Reload Tasks.").font(.caption).foregroundStyle(.secondary) }
                 if let detail = failure.exitDetail { Text(detail).font(.caption).foregroundStyle(.secondary) }
             }
         }

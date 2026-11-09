@@ -156,11 +156,11 @@ struct BatchEditView: View {
               })) {
                 VStack(alignment: .leading, spacing: 4) {
                   Text(task.title).font(.callout).lineLimit(1).help(task.title)
-                  if let failure = row?.error, failure.isTaskLookup {
-                    ServerErrorNotice(model: model, failure: failure)
+                  if let failure = row?.error {
+                    ServerErrorNotice(model: model, failure: failure, currentVersion: row?.current_version)
                   } else {
-                    Text(row.map { row in row.error.map { error in error.code == "occ_conflict" ? "Conflict · Version \(row.current_version ?? 0). Reload Tasks." : error.humanMessage } ?? (draft.report?.dry_run == true ? "Ready · Version \(task.row_version)" : "Updated · Version \(row.current_version ?? 0)") } ?? "\(task.priority) · Version \(task.row_version)")
-                      .font(.caption).foregroundStyle(row?.error == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(TodoColors.color("destructive")))
+                    Text(row.map { row in draft.report?.dry_run == true ? "Ready · Version \(task.row_version)" : "Updated · Version \(row.current_version ?? 0)" } ?? "\(task.priority) · Version \(task.row_version)")
+                      .font(.caption).foregroundStyle(.secondary)
                   }
                 }.frame(maxWidth: .infinity, alignment: .leading)
               }.toggleStyle(.checkbox).frame(minHeight: 56).disabled(model.busy || draft.loading).accessibilityLabel("Select \(task.title)").reportErrorBounds("row-" + task.id)

@@ -31,7 +31,7 @@ the credential epoch and rejects navigation. The assertions use literal outcomes
 ## Offscreen sheets
 
 Run TODO_SNAPSHOT_DISCOVERY_ONLY=1 with apps/macos/scripts/verify-design.py and a
-fresh absolute evidence path. Require exit 0, 100 PNGs, manifest.json,
+fresh absolute evidence path. Require exit 0, 116 PNGs, manifest.json,
 discovery-layout.json and accessibility.json. Inspect Compact 393 by 426 first,
 light and dark, then full. Both dialogs cover ready, empty, loading, error,
 offline and dense scrolling content. Lookup adds Editing, Invalid, Copied and
@@ -85,7 +85,15 @@ ImportView, BatchEditView and AttachmentBatchView in both appearances and sizes.
 The offscreen state test requires each row bottom to precede the next row top,
 each recovery card inside its own row, and scrolling to reveal the final row.
 Import keeps a minimum ordinary row height and grows for recovery content.
-Twelve additional report end-scroll captures bring the focused manifest to 100.
+Twelve additional report end-scroll captures bring the focused manifest to 116.
 Read discovery-report-geometry.json from the full state proof and the report
 frames in discovery-layout.json. The original 56-point import-row failure stays
 in its red receipt; native batch and Attachment rows already size to content.
+
+Every server report error uses ServerErrorNotice, including generic errors
+without TaskLookupDetails. The real HTTP proof asserts the literal server pair
+for import task_deleted (2), import occ_conflict (4), and batch/Attachment
+occ_conflict (4), preserving each meaningful message and current Version. Sixteen
+additional captures show those generic outcomes in both sizes and appearances.
+Contextual not_found retains its structured neutral card and prefilled Find;
+generic errors retain their message and show the server pair as secondary text.

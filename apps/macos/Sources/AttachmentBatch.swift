@@ -116,7 +116,7 @@ struct AttachmentBatchView: View {
                 VStack(alignment: .leading, spacing: 4) {
                   Text(task.title).font(.callout).lineLimit(2)
                   if let row {
-                    if let failure = row.error { ServerErrorNotice(model: model, failure: failure) }
+                    if let failure = row.error { ServerErrorNotice(model: model, failure: failure, currentVersion: row.current_version) }
                     else { Text(row.outcome == "attached" ? draft.report?.dry_run == true ? "Ready to attach" : "Attached" : "Already attached").font(.caption).foregroundStyle(.secondary) }
                   }
                 }

@@ -130,10 +130,17 @@ private actor DiscoveryWithoutSSE: ClientTransport {
         model.loadImport(data: input, name: "removed.json")
         #expect(try cli(["rm", imported.id, "--profile", profile, "--expected-version", "1", "--format", "json"]) == 0)
         await model.previewImport()
-        #expect(model.importReport?.items.first?.error?.code == "task_deleted")
+        let deletedFailure = try #require(model.importReport?.items.first?.error)
+        #expect(deletedFailure.code == "task_deleted")
+        #expect(deletedFailure.message == "This Task is deleted. Restore it before importing changes.")
+        #expect(deletedFailure.exitDetail == "error 2 - validation or usage")
+        #expect(deletedFailure.details?.current_version == 2)
         #expect(try cli(["rm", imported.id, "--profile", profile, "--expected-version", "2", "--force", "--format", "json"]) == 0)
         await model.previewImport()
-        #expect(model.importReport?.items.first?.error?.code == "occ_conflict")
+        let purgedFailure = try #require(model.importReport?.items.first?.error)
+        #expect(purgedFailure.code == "occ_conflict")
+        #expect(purgedFailure.message == "Task changed since preview. Preview again and apply the current Version.")
+        #expect(purgedFailure.exitDetail == "error 4 - Conflict")
         #expect(model.importDocument?.title(at: 0) == "Keep imported draft")
         let literal = #"{"code":"not_found","message":"Run todo lookup --prefix aa. HTTP: GET /tasks/lookup?prefix=aa.","exit_code":3,"exit_meaning":"not found or auth missing","details":{"profile":{"id":"zzz-d-report-rows","name":"zzz-d-report-rows"},"task_id":"aa","recovery":"agent-only recovery","extra":"preserved"}}"#
         let fixture = try JSONDecoder().decode(ServerFailure.self, from: Data(literal.utf8))
@@ -149,7 +156,29 @@ private actor DiscoveryWithoutSSE: ClientTransport {
         #expect(await transport.lookupRequests == beforeImportFind)
         #expect(model.importDocument?.title(at: 0) == "Keep imported draft")
         model.closeDiscovery()
-        try record("discovery-report-rows-http.json", ["batch": "not_found", "attachment": "not_found", "deletedImport": "task_deleted", "purgedImport": "occ_conflict", "importNotFoundNotice": "typed UI fixture", "findRequests": 0, "detailsPreserved": true])
+        let genericBatch = try await TaskSnapshot.decode(client.tasks_period_create(path: .init(profile: profile), body: .json(.init(title: "D generic batch conflict"))).ok.body.json)
+        await model.beginBatchEdit()
+        model.batchEdit?.selected = [genericBatch.id]
+        _ = try await client.tasks_period_edit(path: .init(profile: profile, task: genericBatch.id), body: .json(.init(from_version: 1, changes: .init(title: "Changed batch target")))).ok.body.json
+        await model.applyBatchEdit(dryRun: true)
+        let batchConflict = try #require(model.batchEdit?.report?.items.first?.error)
+        #expect(batchConflict.code == "occ_conflict")
+        #expect(batchConflict.message == "Conflict. Reload Tasks, preview and apply with the current Version.")
+        #expect(batchConflict.exitDetail == "error 4 - Conflict")
+        #expect(model.batchEdit?.report?.items.first?.current_version == 2)
+        model.batchEdit = nil
+        let genericAttachment = try await TaskSnapshot.decode(client.tasks_period_create(path: .init(profile: profile), body: .json(.init(title: "D generic Attachment conflict"))).ok.body.json)
+        await model.beginAttachmentBatch(reference)
+        model.attachmentBatch?.selected = [genericAttachment.id]
+        _ = try await client.tasks_period_edit(path: .init(profile: profile, task: genericAttachment.id), body: .json(.init(from_version: 1, changes: .init(title: "Changed Attachment target")))).ok.body.json
+        await model.applyAttachmentBatch(dryRun: true)
+        let attachmentConflict = try #require(model.attachmentBatch?.report?.items.first?.error)
+        #expect(attachmentConflict.code == "occ_conflict")
+        #expect(attachmentConflict.message == "Task changed. Read its current Version and retry.")
+        #expect(attachmentConflict.exitDetail == "error 4 - Conflict")
+        #expect(model.attachmentBatch?.report?.items.first?.current_version == 2)
+        model.attachmentBatch = nil
+        try record("discovery-report-rows-http.json", ["batch": "not_found", "attachment": "not_found", "deletedImport": "task_deleted", "purgedImport": "occ_conflict", "importNotFoundNotice": "typed UI fixture", "findRequests": 0, "detailsPreserved": true, "deletedImportExit": "error 2 - validation or usage", "purgedImportExit": "error 4 - Conflict", "batchConflictExit": "error 4 - Conflict", "attachmentConflictExit": "error 4 - Conflict"])
     }
 }
 
