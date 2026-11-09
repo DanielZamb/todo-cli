@@ -198,7 +198,7 @@ for (const late of [
         publications.push("open");
       },
       error: (message) => {
-        publications.push(message);
+        publications.push(message.message);
       },
     });
     await Promise.resolve();
@@ -234,7 +234,7 @@ it("Show captures the source before Close and opens only the authorized exact Ta
   ]);
   expect(controller.snapshot()).toEqual({ kind: "Closed" });
 });
-it("preserves the server's actual exit pair and authorized recovery", () => {
+it("builds human Task lookup copy from authorized structured details", () => {
   expect(
     errorReply({
       message: "Task not found in Personal (personal)",
@@ -248,8 +248,12 @@ it("preserves the server's actual exit pair and authorized recovery", () => {
     }),
   ).toEqual({
     _tag: "error",
-    message:
-      "Task not found in Personal (personal)\nerror 3 - not found or auth missing\nUse scoped list or explicit lookup.",
+    message: "Task not found in Personal.",
+    details: {
+      profile: { id: "personal", name: "Personal" },
+      task_id: "aaaa",
+      recovery: "Use scoped list or explicit lookup.",
+    },
   });
   expect(
     errorReply({
@@ -258,4 +262,25 @@ it("preserves the server's actual exit pair and authorized recovery", () => {
       exit_meaning: "runtime failure",
     }).message,
   ).toBe("Internal failure\nerror 1 - runtime failure");
+});
+
+it("opening a prefilled lookup sends nothing until explicit submit", async () => {
+  const controller = new DiscoveryStateController();
+  const requests: Request[] = [];
+  controller.open("lookup", "aaaa");
+  expect(controller.snapshot()).toEqual({
+    kind: "Editing",
+    dialog: "lookup",
+    prefix: "aaaa",
+  });
+  expect(requests).toEqual([]);
+  await controller.submit(
+    async (request) => {
+      requests.push(request);
+      return { _tag: "lookup", matches: [] };
+    },
+    "aaaa",
+    "lookup",
+  );
+  expect(requests).toEqual([{ _tag: "lookup", prefix: "aaaa" }]);
 });

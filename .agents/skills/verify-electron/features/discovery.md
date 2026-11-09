@@ -76,5 +76,15 @@ aria-invalid and aria-describedby. Request failures keep the neutral Alert.
 The drive checks Close returns focus to Navigate tasks after layout changes.
 It also exercises prefix ABA and signedIn credential replacement through the
 production renderer notice boundary, and a real missing exact-id read after a
-Task is deleted between Find and Show. That error must retain the actual exit
-pair, selected Profile and both HTTP recovery routes.
+Task is deleted between Find and Show. The task-lookup-status uses the structured
+TaskLookupDetails Profile name, the exact error 3 line, and one Find Task by id
+action. The action prefills the full validated id prefix without submitting.
+No server message, recovery, CLI command or HTTP route is rendered for this
+contextual error. The same neutral status appears inside the editor after a
+missing-Task response, with the unsaved draft retained.
+
+U1 retains u1-lookup-id-copy-crop.png, u1-detail-id-copy-crop.png and
+u1-id-style-parity.json. The proof compares the shared type-code class, computed
+mono font family, size, color and square Copy button dimensions. U5 captures
+Show-gone, prefilled lookup and editor-gone states in both appearances/layouts.
+Invalid input has no divider beneath its FieldError.

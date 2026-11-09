@@ -15,6 +15,12 @@ export function errorReply(error: unknown): Extract<Reply, { _tag: "error" }> {
   const details = Schema.decodeUnknownExit(
     Schema.Struct({ details: TaskLookupDetails }),
   )(error);
+  if (details._tag === "Success")
+    return {
+      _tag: "error",
+      message: `Task not found in ${details.value.details.profile.name}.`,
+      details: details.value.details,
+    };
   return {
     _tag: "error",
     message: [
@@ -22,7 +28,6 @@ export function errorReply(error: unknown): Extract<Reply, { _tag: "error" }> {
         ? message.value.message
         : "Could not reach the Todo server. Your draft is saved. Retry when connected.",
       exitDetail(error),
-      details._tag === "Success" ? details.value.details.recovery : "",
     ]
       .filter(Boolean)
       .join("\n"),

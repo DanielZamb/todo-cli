@@ -390,6 +390,30 @@ try {
   release?.();
   await expect(page.getByTestId(`discovery-show-${done.id}`)).toBeVisible();
   await capture("lookup-showing");
+  const idStyles = async () =>
+    page
+      .locator(".task-id-copy")
+      .last()
+      .evaluate((element) => {
+        const code = element.querySelector("code");
+        const button = element.querySelector("button");
+        if (!code || !button) throw new Error("Expected id and Copy");
+        const style = getComputedStyle(code);
+        const rect = button.getBoundingClientRect();
+        return {
+          codeClass: code.className,
+          fontFamily: style.fontFamily,
+          fontSize: style.fontSize,
+          color: style.color,
+          copyWidth: rect.width,
+          copyHeight: rect.height,
+        };
+      });
+  const lookupIdStyles = await idStyles();
+  await page
+    .locator(".task-id-copy")
+    .last()
+    .screenshot({ path: join(evidence, "u1-lookup-id-copy-crop.png") });
   await page.getByTestId(`discovery-copy-${done.id}`).click();
   await expect(page.getByText("Copied", { exact: true })).toBeVisible();
   assert.equal(clipboard, done.id);
@@ -435,6 +459,17 @@ try {
   assert.ok(JSON.stringify(applied).includes(done.id));
   assert.ok(JSON.stringify(applied).includes("tasks"));
   assert.equal(cli("personal", "show", done.id).task.status, "done");
+  const detailIdStyles = await idStyles();
+  assert.deepEqual(lookupIdStyles, detailIdStyles);
+  assert.equal(detailIdStyles.copyWidth, detailIdStyles.copyHeight);
+  await page
+    .locator(".task-id-copy")
+    .last()
+    .screenshot({ path: join(evidence, "u1-detail-id-copy-crop.png") });
+  writeFileSync(
+    join(evidence, "u1-id-style-parity.json"),
+    JSON.stringify({ lookupIdStyles, detailIdStyles }, null, 2),
+  );
   const drafts = await page.evaluate(() => Object.values(localStorage));
   assert.ok(drafts.some((value) => value.includes("Unsaved draft protected")));
   await page.screenshot({
@@ -486,17 +521,51 @@ try {
   await expect(page.getByTestId(`discovery-show-${done.id}`)).toBeVisible();
   cli("personal", "rm", done.id, "--expected-version", "2");
   await page.getByTestId(`discovery-show-${done.id}`).click();
-  await expect(
-    page
-      .getByRole("alert")
-      .filter({ hasText: "error 3 - not found or auth missing" }),
-  ).toContainText("personal");
-  await expect(
-    page
-      .getByRole("alert")
-      .filter({ hasText: "error 3 - not found or auth missing" }),
-  ).toContainText("/tasks/lookup");
+  const missing = page.getByTestId("task-lookup-status");
+  await expect(missing).toContainText("Task not found in personal.");
+  await expect(missing).toContainText("error 3 - not found or auth missing");
+  await expect(missing).not.toContainText("/profiles/");
+  await expect(missing).not.toContainText("todo ");
   await capture("show-missing-context", false);
+  const lookupRequests = () =>
+    actions.filter(
+      (item) =>
+        item &&
+        typeof item === "object" &&
+        "request" in item &&
+        item.request &&
+        typeof item.request === "object" &&
+        "_tag" in item.request &&
+        item.request._tag === "lookup",
+    ).length;
+  const beforePrefill = lookupRequests();
+  await missing
+    .getByRole("button", { name: "Find Task by id", exact: true })
+    .click();
+  await expect(page.getByTestId("discovery-prefix")).toHaveValue(done.id);
+  assert.equal(lookupRequests(), beforePrefill);
+  await capture("lookup-prefilled-missing");
+  await page.getByTestId("discovery-find").click();
+  await expect(
+    page.getByText("No matching Tasks", { exact: true }),
+  ).toBeVisible();
+  await page.getByTestId("discovery-close").click();
+  await page.setViewportSize({ width: 1100, height: 720 });
+  await notify({ _tag: "windowMode", compact: false });
+  await page.getByRole("button", { name: "Profile", exact: true }).click();
+  await page.locator('[role="menuitemradio"][data-profile-id="work"]').click();
+  await page.getByText(draftTask.title, { exact: true }).click();
+  await page
+    .getByLabel("Title", { exact: true })
+    .fill("Keep the missing Task draft");
+  cli("work", "rm", draftTask.id, "--expected-version", "1");
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(missing).toContainText("Task not found in work.");
+  await expect(missing).toContainText("error 3 - not found or auth missing");
+  await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
+    "Keep the missing Task draft",
+  );
+  await capture("editor-missing-context", false);
   assert.deepEqual(errors, []);
   writeFileSync(
     join(evidence, "result.json"),

@@ -1,4 +1,5 @@
 import {
+  LookupQuery,
   ProfileId,
   type QuickAddDraft,
   QuickAddInput,
@@ -7,6 +8,7 @@ import {
   type Series,
   Task,
   type TaskFilters,
+  type TaskLookupDetails,
   TaskTime,
 } from "@todo/domain";
 import { cn } from "cn";
@@ -121,6 +123,7 @@ import { RowMetadata } from "./row-metadata.tsx";
 import { SnapshotSettings } from "./snapshot-settings.tsx";
 import { TaskFilterDialog, taskFilterSummary } from "./task-filter-dialog.tsx";
 import { TaskIdCopy } from "./task-id-copy.tsx";
+import { TaskLookupStatus } from "./task-lookup-status.tsx";
 import {
   DescriptionMatch,
   descriptionMatch,
@@ -307,6 +310,7 @@ type WriteIntent =
   | { kind: "skipOccurrence" };
 function App() {
   const [discovery] = useState(() => new DiscoveryStateController());
+  const discoveryReturnFocus = useRef<HTMLElement | null>(null);
   const [outdated, setOutdated] = useState<Extract<
     Reply,
     { _tag: "outdatedServer" }
@@ -377,6 +381,9 @@ function App() {
     "connected" | "reconnecting" | "offline"
   >("reconnecting");
   const [error, setError] = useState("");
+  const [lookupError, setLookupError] = useState<
+    typeof TaskLookupDetails.Type | null
+  >(null);
   const [loadError, setLoadError] = useState("");
   const [announcement, setAnnouncement] = useState("");
   const [transferResult, setTransferResult] = useState<
@@ -435,6 +442,7 @@ function App() {
     selected.current = restored?.base.id;
     refreshGeneration.current++;
     setProfileDelete(null);
+    setLookupError(null);
     setEditor(restored);
     setLatest(null);
     setChoices({});
@@ -473,6 +481,7 @@ function App() {
   };
   const endAuthentication = useCallback(() => {
     discovery.credentialChanged();
+    setLookupError(null);
     refreshGeneration.current++;
     profileGeneration.current++;
     setSignedIn(false);
@@ -514,6 +523,7 @@ function App() {
             profileNames.current.set(entry.id, entry.name);
 
         if (reply._tag === "task" && request._tag !== "showTask") {
+          setLookupError(null);
           localStorage.removeItem(
             taskDraftKey(reply.task.profile_id, reply.task.id),
           );
@@ -532,8 +542,10 @@ function App() {
           request._tag !== "list" &&
           request._tag !== "copyTaskId" &&
           (!("profile" in request) || active.current === request.profile)
-        )
-          setError(reply.message);
+        ) {
+          setLookupError(reply.details ?? null);
+          setError(reply.details ? "" : reply.message);
+        }
         if (
           reply._tag === "conflict" &&
           reply.exit_detail &&
@@ -1258,13 +1270,20 @@ function App() {
     setPending(false);
   };
   const discoveryTrigger = () =>
-    document.querySelector<HTMLElement>(
-      compact
-        ? 'button[aria-label="Navigate tasks"]'
-        : 'button[aria-label="Profile"]',
-    );
-  const openDiscovery = (kind: DiscoveryKind) => {
-    discovery.open(kind);
+    discoveryReturnFocus.current?.isConnected &&
+    discoveryReturnFocus.current.getClientRects().length
+      ? discoveryReturnFocus.current
+      : document.querySelector<HTMLElement>(
+          compact
+            ? 'button[aria-label="Navigate tasks"]'
+            : 'button[aria-label="Profile"]',
+        );
+  const openDiscovery = (kind: DiscoveryKind, prefix = "") => {
+    discoveryReturnFocus.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    discovery.open(kind, prefix);
     if (kind === "directory") {
       void discovery.submit(request, "", kind);
       if (connection !== "connected") discovery.offline();
@@ -1279,6 +1298,19 @@ function App() {
         Find Task by id
       </DropdownMenuItem>
     </>
+  );
+  const lookupStatus = lookupError && (
+    <TaskLookupStatus
+      details={lookupError}
+      onFind={() =>
+        openDiscovery(
+          "lookup",
+          Schema.is(LookupQuery.fields.prefix)(lookupError.task_id)
+            ? lookupError.task_id
+            : "",
+        )
+      }
+    />
   );
   const filtered =
     project !== null || tag !== null || Object.keys(advancedFilters).length > 0;
@@ -1496,8 +1528,12 @@ function App() {
         show={{
           prepare: () => true,
           request,
-          error: setError,
+          error: (reply) => {
+            setLookupError(reply.details ?? null);
+            setError(reply.details ? "" : reply.message);
+          },
           open: (task) => {
+            setLookupError(null);
             activateEditor(draftForTask(task, editorRef.current));
             invalidate();
             setView("tasks");
@@ -2121,6 +2157,7 @@ function App() {
             </AlertDescription>
           </Alert>
         )}
+        {!editor && lookupStatus}
         {error && (
           <Alert variant="destructive">
             <CircleAlert />
@@ -2553,6 +2590,7 @@ function App() {
             </div>
           </div>
           {compact && taskSearchField}
+          {lookupStatus}
           <form
             id="task-editor-form"
             onSubmit={(e) => {

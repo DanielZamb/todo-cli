@@ -126,7 +126,7 @@ export function DiscoveryDialog({
             </Button>
           </form>
         )}
-        <Separator />
+        {state.kind !== "Invalid" && <Separator />}
         <div className="discovery-scroll" aria-live="polite">
           {state.kind === "Editing" && lookup && (
             <p className="text-muted-foreground">

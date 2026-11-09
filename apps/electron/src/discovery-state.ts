@@ -58,9 +58,9 @@ export class DiscoveryStateController {
     this.credentialGeneration++;
     this.close();
   };
-  open(dialog: DiscoveryKind) {
+  open(dialog: DiscoveryKind, prefix = "") {
     this.close();
-    this.publish({ kind: "Editing", dialog, prefix: "" });
+    this.publish({ kind: "Editing", dialog, prefix });
   }
   editPrefix(prefix: string) {
     if (this.state.kind === "Closed") return;
@@ -164,7 +164,7 @@ export class DiscoveryStateController {
       prepare: () => boolean | Promise<boolean>;
       request: (request: Request) => Promise<Reply>;
       open: (task: Extract<Reply, { _tag: "task" }>["task"]) => void;
-      error: (message: string) => void;
+      error: (error: Extract<Reply, { _tag: "error" }>) => void;
     },
   ) {
     const authorized = () =>
@@ -204,8 +204,8 @@ export class DiscoveryStateController {
     else
       actions.error(
         result._tag === "error"
-          ? result.message
-          : "Task is unavailable. Find it again.",
+          ? result
+          : { _tag: "error", message: "Task is unavailable. Find it again." },
       );
   }
 }

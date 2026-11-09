@@ -40,6 +40,7 @@ import {
   Task,
   TaskFilters,
   TaskId,
+  TaskLookupDetails,
   TaskRead,
   TransitionTask,
   UploadAttachment,
@@ -230,7 +231,10 @@ export const Reply = Schema.Union([
     latest: Schema.NullOr(Task),
     exit_detail: Schema.optionalKey(Schema.String),
   }),
-  Schema.TaggedStruct("error", { message: Schema.String }),
+  Schema.TaggedStruct("error", {
+    message: Schema.String,
+    details: Schema.optionalKey(TaskLookupDetails),
+  }),
 ]);
 export type Reply = typeof Reply.Type;
 export const Notice = Schema.Union([
