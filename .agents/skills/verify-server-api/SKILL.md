@@ -148,3 +148,9 @@ The compiled HTTP recipes compare health with CONTRACT_ID and reject unknown que
 ## Batch edit
 
 Read [Edit several Tasks](features/batch-edit.md) for the shared batch-edit contract and the compiled scratch proof. Both client flows retain selections and loaded Versions through preview, apply and Conflict reload.
+
+The compiled public [verify-dag](../verify-dag/SKILL.md) drive exercises the new
+Dependency routes and full structured 422 witnesses, equivalent CLI refusals,
+true-only filters, Delete previews/fingerprints and public edge Revert. Its
+fresh server uses the same readiness/owned-process cleanup policy as this skill.
+TaskWrite names additive response metadata; stored Task schemas stay separate.

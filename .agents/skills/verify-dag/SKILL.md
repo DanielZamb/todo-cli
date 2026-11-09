@@ -65,3 +65,16 @@ Use /maintain-verification-skill when B adds public graph commands.
 The compiled drive also invokes graph-proof.ts, which imports the production
 query/order/energy/format exports. See queries.md for its literal fixtures.
 It remains compiled library proof until the public command drive is added.
+
+## Public commands and routes
+
+Run `scripts/verify-public.sh <fresh-absolute-evidence-directory>` for compiled
+CLI/HTTP commands on a fresh scratch database. It reuses source-hash CLI/server
+binaries from .scratch/bin, compiles the driver once per source hash, and checks
+actual exits/statuses. Optional TODO_CLI_BINARY and TODO_SERVER_BINARY select
+already-provenanced binaries. actions.json retains commands and HTTP bodies
+without credentials; cleanup.json records the owned server PID and real exit.
+The current corpus covers edge no-ops/Conflicts, cycles, redundant warnings,
+9/13/14, Ready/Blocked, atomic creation, public edge Revert, blocked completion,
+Delete previews/refusals/fingerprint changes, batch previews, Series inheritance,
+and move/copy. TTY and import/export proof are added in the final B unit.

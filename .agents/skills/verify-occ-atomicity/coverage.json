@@ -3,7 +3,7 @@
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "2c660357bf2409637264af627b88dc7efc8e192d36d1dddf3e3e1bf915e40e81",
+      "sha256": "d9c9e4c5c09e1616c1b46ff0e8077a8d58ef3f7d2b7ea67db82dcccce2fef443",
       "functions": [
         "OperationStore.constructor",
         "OperationStore.transaction",

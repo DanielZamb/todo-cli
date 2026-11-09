@@ -9,6 +9,7 @@ import {
   limitedItems,
   NameInput,
   TagNamesInput,
+  TaskIdInput,
   TaskTimeInput,
   TitleInput,
 } from "./limits.ts";
@@ -27,6 +28,15 @@ const TaskInput = Schema.Struct({
 });
 export const TaskPatch = TaskInput.mapFields(Struct.map(Schema.optionalKey));
 export const CreateTask = Schema.Struct({
+  depends_on: Schema.optionalKey(
+    limitedItems(TaskIdInput, 13).check(
+      Schema.makeFilter(
+        (ids) =>
+          new Set(ids).size === ids.length ||
+          "Each Dependency must occur once.",
+      ),
+    ),
+  ),
   attachments: Schema.optionalKey(
     limitedItems(AttachmentInput, inputLimits.attachmentsPerTask),
   ),

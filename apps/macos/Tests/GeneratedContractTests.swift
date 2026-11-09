@@ -201,7 +201,7 @@ final class GeneratedContractTests: XCTestCase {
         try roundTrip(Operations.tasks_period_move.Input.Body.jsonPayload.self, json)
         try roundTrip(Operations.tasks_period_copy.Input.Body.jsonPayload.self, json)
         let task = #"{"id":"copied-1","profile_id":"personal","entity_version":1,"row_version":1,"title":"Copied","description":null,"project_id":null,"priority":"P3","scheduled_at":null,"due_at":null,"energy":null,"estimate_min":null,"source":"manual","tags":[],"status":"done","occurrence":null,"created_at":"2020-01-01T00:00:00Z","updated_at":"2026-10-29T00:00:00Z","completed_at":"2020-01-02T00:00:00Z","deleted_at":null}"#
-        try roundTrip(Operations.tasks_period_copy.Output.Ok.Body.jsonPayload.self, task)
+        try roundTrip(Components.Schemas.TaskWrite.self, task)
     }
     func testGeneratedStreamSendsResumeHeader() async throws {
         let client = Client(serverURL: URL(string: "http://127.0.0.1:4310")!, transport: ResumeTransport())
@@ -241,8 +241,8 @@ final class GeneratedContractTests: XCTestCase {
 
     func testResponseAndNestedNullableOccurrenceSurviveGeneratedCoding() throws {
         let json = #"{"id":"task-1","profile_id":"work","entity_version":1,"row_version":7,"title":"Nested fields","description":null,"project_id":null,"priority":"P3","scheduled_at":null,"due_at":{"kind":"date","date":"2026-10-28"},"energy":null,"estimate_min":null,"source":"manual","tags":[],"status":"open","occurrence":{"id":"occ-1","series_id":"series-1","date":"2026-10-27","time":null},"created_at":"2026-10-27T00:00:00Z","updated_at":"2026-10-27T00:00:00Z","completed_at":null,"deleted_at":null}"#
-        try roundTrip(Operations.tasks_period_create.Output.Ok.Body.jsonPayload.self, json)
-        try roundTrip(Operations.tasks_period_edit.Output.Ok.Body.jsonPayload.self, json)
+        try roundTrip(Components.Schemas.TaskWrite.self, json)
+        try roundTrip(Components.Schemas.TaskWrite.self, json)
         try roundTrip(Operations.tasks_period_show.Output.Ok.Body.jsonPayload.self, json)
     }
 

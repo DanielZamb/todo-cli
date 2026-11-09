@@ -24,11 +24,19 @@ import {
   AttachManyItem,
   AttachManyReport,
   AttachManyRequest,
+  BatchEdgeReport,
+  BatchEdgeRequest,
   BatchEditReport,
   BatchEditRequest,
+  batchDepend,
   batchEditTasks,
   ClientReads,
+  DependencyCommands,
+  DependRequest,
+  EdgeReport,
+  edgeFailure,
   filterTaskRecords,
+  GraphReport,
   inputLimits,
   ProfileDeletionReport,
   ProfileSummary,
@@ -36,6 +44,8 @@ import {
   QuickAddDraft,
   QuickAddInput,
   SearchTooBroad,
+  readGraph,
+  Sequence,
   SnapshotError,
   TaskFilters,
   TaskId,
@@ -59,6 +69,8 @@ import {
   nowInstant,
   profileId,
   readTasks,
+  revertTarget,
+  revertTask,
   type TaskFlags,
   taskFlags,
 } from "@todo/domain/commands";
@@ -74,6 +86,7 @@ import {
   renderReview,
   renderTask,
   renderTasks,
+  TaskResponse,
   taskView,
 } from "@todo/domain/presentation";
 import { type OperationStore, openStore, StoreError } from "@todo/domain/store";
@@ -553,6 +566,7 @@ const add = Command.make(
   "add",
   {
     ...addOptions,
+    dependsOn: stringFlag("depends-on").pipe(Flag.atLeast(0)),
     attach: stringFlag("attach").pipe(Flag.atLeast(0)),
     link: stringFlag("link").pipe(Flag.atLeast(0)),
     label: stringFlag("label").pipe(Flag.optional),
@@ -610,6 +624,7 @@ const add = Command.make(
               catch: (error) =>
                 new CommandError(2, "invalid_args", String(error)),
             }),
+            input.dependsOn,
           );
           const data = yield* readTasks(store, request);
           yield* write(
@@ -620,6 +635,7 @@ const add = Command.make(
               ),
               cfg.format,
               nowInstant(),
+              result.dependency_warnings,
             ),
           );
         }),
@@ -629,6 +645,9 @@ const add = Command.make(
 const list = Command.make(
   "list",
   {
+    ready: bool("ready"),
+    blocked: bool("blocked"),
+    order: string("order"),
     status: string("status"),
     project: string("project"),
     tag: string("tag"),
@@ -655,7 +674,8 @@ const list = Command.make(
               key !== "today" &&
               key !== "overdue" &&
               key !== "inbox" &&
-              value !== "",
+              value !== "" &&
+              value !== false,
           ),
         ),
         ...Option.match(text, {
@@ -693,12 +713,11 @@ const list = Command.make(
       });
       yield* withStore(cfg, (store) =>
         Effect.gen(function* () {
-          const data = yield* readTasks(
-            store,
-            yield* selectProfile(store, cfg),
-          );
+          const request = yield* selectProfile(store, cfg);
+          const data = yield* readTasks(store, request);
+          const graph = yield* store.graph(request.profile);
           const records = yield* io(() =>
-            filterTaskRecords(data.tasks, filters, data),
+            filterTaskRecords(data.tasks, filters, data, undefined, graph),
           );
           yield* write(
             renderTasks(
@@ -887,6 +906,12 @@ const transfer = (kind: "move" | "copy") =>
                           : "copied",
                       occurrence_as_plain_task,
                       ...copyStats,
+                      ...(result.removed_dependencies
+                        ? { removed_dependencies: result.removed_dependencies }
+                        : {}),
+                      ...(result.affected_versions
+                        ? { affected_versions: result.affected_versions }
+                        : {}),
                     }
                   : {
                       source_id: id,
@@ -899,8 +924,13 @@ const transfer = (kind: "move" | "copy") =>
                       ...(result.outcome === "rejected" && result.message
                         ? { message: result.message }
                         : {}),
-                      ...(result.outcome === "rejected" && result.details
-                        ? { details: result.details }
+                      ...(result.outcome === "rejected" &&
+                      (result.dependency_error || result.details)
+                        ? {
+                            details:
+                              result.dependency_error?.details ??
+                              result.details,
+                          }
                         : {}),
                       ...(result.outcome === "rejected" && result.latest
                         ? { current_version: result.latest.row_version }
@@ -949,7 +979,7 @@ const transfer = (kind: "move" | "copy") =>
                 : results
                     .map(
                       (r) =>
-                        `${r.source_id}: ${r.outcome}${r.message ? `: ${r.message}` : ""}${r.target_id ? ` -> ${r.target_id}` : ""}${r.occurrence_as_plain_task ? " (Occurrence becomes a plain Task)" : ""}${r.current_version ? ` (current Version ${r.current_version})` : ""}${r.managed_image_count === undefined ? "" : ` (${r.managed_image_count} managed images, ${r.managed_image_bytes} bytes)`}`,
+                        `${r.source_id}: ${r.outcome}${r.message ? `: ${r.message}` : ""}${r.target_id ? ` -> ${r.target_id}` : ""}${r.occurrence_as_plain_task ? " (Occurrence becomes a plain Task)" : ""}${r.current_version ? ` (current Version ${r.current_version})` : ""}${r.managed_image_count === undefined ? "" : ` (${r.managed_image_count} managed images, ${r.managed_image_bytes} bytes)`}${r.removed_dependencies?.map((edge) => `\n${edge.dependent_id} depended on ${edge.blocker_id}`).join("") ?? ""}`,
                     )
                     .join("\n") + "\n",
             );
@@ -1211,6 +1241,9 @@ const mutation = (name: Mutation) =>
       id: Argument.String("task-id"),
       expected: Flag.Int("expected-version").pipe(Flag.withDefault(0)),
       force: bool("force"),
+      withDependencies: bool("with-dependencies"),
+      dryRun: bool("dry-run"),
+      fingerprint: string("dependency-fingerprint"),
     },
     (input) =>
       Effect.gen(function* () {
@@ -1218,7 +1251,47 @@ const mutation = (name: Mutation) =>
         yield* withStore(cfg, (store) =>
           Effect.gen(function* () {
             const request = yield* selectProfile(store, cfg);
-            yield* mutateTask(
+            let fingerprint = input.fingerprint;
+            let withDependencies = input.withDependencies;
+            if (
+              name === "rm" &&
+              !input.force &&
+              !input.dryRun &&
+              !withDependencies &&
+              cfg.format === "md" &&
+              process.stdin.isTTY &&
+              process.stdout.isTTY
+            ) {
+              const preview = yield* mutateTask(
+                store,
+                request,
+                name,
+                input.id,
+                input.expected,
+                taskInput(input),
+                false,
+                { dry_run: true },
+              );
+              if (preview.removed_dependencies?.length) {
+                const data = yield* readTasks(store, request);
+                const title = (id: string) =>
+                  data.tasks.find((task) => task.id === id)?.title ?? id;
+                yield* write(
+                  `${preview.removed_dependencies.map((edge) => `${title(edge.dependent_id)} depends on ${title(edge.blocker_id)} (${edge.dependent_id} <- ${edge.blocker_id})`).join("\n")}\n`,
+                );
+                const confirmed = yield* Prompt.run(
+                  Prompt.Confirm({
+                    message: "Delete Task and remove these Dependencies?",
+                    initial: false,
+                  }),
+                ).pipe(Effect.catch(() => Effect.succeed(false)));
+                if (!confirmed)
+                  return yield* status(cfg.format, "cancelled", "Cancelled\n");
+                withDependencies = true;
+              }
+              fingerprint = preview.dependency_fingerprint ?? "";
+            }
+            const result = yield* mutateTask(
               store,
               request,
               name,
@@ -1226,9 +1299,41 @@ const mutation = (name: Mutation) =>
               input.expected,
               taskInput(input),
               input.force,
+              {
+                with_dependencies: withDependencies,
+                dry_run: input.dryRun,
+                ...(fingerprint ? { dependency_fingerprint: fingerprint } : {}),
+              },
             );
-            if (name === "rm")
-              return yield* status(cfg.format, "deleted", "deleted\n");
+            if (name === "rm") {
+              if (input.force) {
+                if (input.dryRun)
+                  return yield* response(
+                    cfg.format,
+                    StatusResponse,
+                    {
+                      generated_at: iso(nowInstant()),
+                      status: "would_purge",
+                      dry_run: true,
+                    },
+                    "Dry run: would Purge Task\n",
+                  );
+                return yield* status(cfg.format, "deleted", "deleted\n");
+              }
+              const report = {
+                generated_at: nowInstant(),
+                task: result.task,
+                removed_dependencies: result.removed_dependencies ?? [],
+                affected_versions: result.affected_versions ?? [],
+                dependency_fingerprint: result.dependency_fingerprint ?? "",
+                dry_run: result.dry_run ?? false,
+              };
+              return yield* write(
+                cfg.format === "json"
+                  ? JSON.stringify({ ...report, status: "deleted" }) + "\n"
+                  : `${input.dryRun ? "Dry run\n" : "deleted\n"}${report.removed_dependencies.map((edge) => `${edge.dependent_id} depended on ${edge.blocker_id}\n`).join("")}`,
+              );
+            }
             const data = yield* readTasks(store, request);
             const task = data.views.find((t) => t.id === input.id);
             if (task) yield* write(renderTask(task, cfg.format, nowInstant()));
@@ -1236,6 +1341,230 @@ const mutation = (name: Mutation) =>
         );
       }),
   ).pipe(withGuide(name));
+let graphMermaidOutput = false;
+registerCommandSchema("depend", EdgeReport);
+registerCommandSchema("undepend", EdgeReport);
+registerCommandSchema("depend-input", DependRequest, "input");
+registerCommandSchema("undepend-input", DependRequest, "input");
+registerCommandSchema("graph", GraphReport);
+registerCommandSchema("batch-depend", BatchEdgeReport);
+registerCommandSchema("batch-depend-input", BatchEdgeRequest, "input");
+registerCommandSchema("revert", TaskResponse);
+const dependencyCommand = (action: "depend" | "undepend") =>
+  Command.make(
+    action,
+    {
+      id: Argument.String("task-id"),
+      blocker: stringFlag(action === "depend" ? "on" : "from"),
+      expected: Flag.Int("expected-version").pipe(Flag.withDefault(0)),
+    },
+    (input) =>
+      Effect.gen(function* () {
+        const cfg = yield* root;
+        const parsed = yield* io(() =>
+          Schema.decodeUnknownSync(DependRequest)({
+            blocker_id: input.blocker,
+            from_version: input.expected,
+          }),
+        );
+        yield* withStore(cfg, (store) =>
+          Effect.gen(function* () {
+            const request = yield* selectProfile(store, cfg);
+            const result = yield* new DependencyCommands(store).change(
+              {
+                ...request,
+                task_id: Schema.decodeUnknownSync(TaskId)(input.id),
+              },
+              parsed,
+              action,
+            );
+            if (result.outcome === "rejected") {
+              const data = yield* readTasks(store, request);
+              const failure = edgeFailure(result, nowInstant());
+              return yield* Effect.fail(
+                new CommandError(
+                  failure.exit_code,
+                  result.reason === "conflict"
+                    ? "occ_conflict"
+                    : failure.error.code,
+                  failure.error.message,
+                  result.latest
+                    ? taskView(
+                        result.latest,
+                        data.projects,
+                        data.tags,
+                        data.series,
+                      )
+                    : undefined,
+                  result.dependency_error,
+                ),
+              );
+            }
+            yield* write(
+              cfg.format === "json"
+                ? encodeResponse(EdgeReport, result.report)
+                : `${result.report.outcome}: ${result.report.dependent_id} depends on ${result.report.blocker_id}\n${result.report.warnings.map((w) => `${w.message}\n`).join("")}`,
+            );
+          }),
+        );
+      }),
+  ).pipe(withGuide(action));
+const graphCommand = Command.make(
+  "graph",
+  { id: Argument.String("task-id") },
+  (input) =>
+    Effect.gen(function* () {
+      const cfg = yield* root;
+      if (cfg.format === "table")
+        return yield* Effect.fail(
+          new CommandError(
+            2,
+            "invalid_args",
+            "graph accepts json, md or mermaid. Choose --format json, md or mermaid.",
+          ),
+        );
+      yield* withStore(cfg, (store) =>
+        Effect.gen(function* () {
+          const request = yield* selectProfile(store, cfg);
+          const graph = yield* readGraph(
+            store,
+            { ...request, task_id: Schema.decodeUnknownSync(TaskId)(input.id) },
+            nowInstant(),
+          );
+          if (!graph)
+            return yield* Effect.fail(
+              new CommandError(
+                3,
+                "not_found",
+                "Task not found. Read todo list and select again.",
+              ),
+            );
+          yield* write(
+            graphMermaidOutput
+              ? graph.mermaid
+              : cfg.format === "json"
+                ? encodeResponse(GraphReport, graph)
+                : `# Task graph\n\n${graph.shape}${graph.shape === "tree" ? ` (${graph.orientation})` : ""}\n\n\`\`\`mermaid\n${graph.mermaid}\`\`\`\n\n${graph.nodes.map((n) => `- ${n.task.title} (${n.task.id}), ${n.ready ? "Ready" : n.blocked ? "Blocked" : n.task.status}, remaining energy ${n.remaining_energy.energy}, unweighted ${n.remaining_energy.unweighted}\n`).join("")}`,
+          );
+        }),
+      );
+    }),
+).pipe(withGuide("graph"));
+const batchDependCommand = Command.make(
+  "batch-depend",
+  { file: stringFlag("file"), dryRun: bool("dry-run") },
+  (input) =>
+    Effect.gen(function* () {
+      const cfg = yield* root;
+      const body = yield* io(() =>
+        Schema.decodeUnknownSync(BatchEdgeRequest, {
+          onExcessProperty: "error",
+        })(
+          JSON.parse(readFileSync(input.file === "-" ? 0 : input.file, "utf8")),
+        ),
+      );
+      yield* withStore(cfg, (store) =>
+        Effect.gen(function* () {
+          const report = yield* batchDepend(
+            store,
+            yield* selectProfile(store, cfg),
+            { ...body, dry_run: input.dryRun || body.dry_run || false },
+          );
+          yield* write(
+            cfg.format === "json"
+              ? encodeResponse(BatchEdgeReport, report)
+              : `${report.dry_run ? "Dry run\n" : ""}${report.results.map((row) => `${row.index}: ${"result" in row ? row.result.outcome : row.error.message}`).join("\n")}\n`,
+          );
+          process.exitCode = Math.max(
+            0,
+            ...report.results.map((row) =>
+              "error" in row ? row.exit_code : 0,
+            ),
+          );
+        }),
+      );
+    }),
+).pipe(withGuide("batch-depend"));
+const revertCommand = Command.make(
+  "revert",
+  {
+    seq: Argument.Int("seq"),
+    expected: Flag.Int("expected-version").pipe(Flag.withDefault(0)),
+  },
+  (input) =>
+    Effect.gen(function* () {
+      const cfg = yield* root;
+      yield* withStore(cfg, (store) =>
+        Effect.gen(function* () {
+          const request = yield* selectProfile(store, cfg);
+          const data = yield* readTasks(store, request);
+          const seq = Schema.decodeUnknownSync(Sequence)(input.seq);
+          const entry = data.history.find((entry) => entry.seq === seq);
+          const task_id = entry ? revertTarget(entry) : null;
+          if (!task_id)
+            return yield* Effect.fail(
+              new CommandError(
+                3,
+                "not_found",
+                "Operation not found for a Task in this Profile. Read todo history <task-id>.",
+              ),
+            );
+          const result = yield* revertTask(
+            store,
+            { ...request, task_id },
+            {
+              seq,
+              from_version: Schema.decodeUnknownSync(Version)(input.expected),
+            },
+          );
+          if (result.outcome === "not-found")
+            return yield* Effect.fail(
+              new CommandError(
+                3,
+                "not_found",
+                "Task not found. Read todo list.",
+              ),
+            );
+          if (result.outcome === "rejected")
+            return yield* Effect.fail(
+              new CommandError(
+                result.reason === "conflict" ? 4 : 2,
+                result.dependency_error?.code ??
+                  (result.reason === "conflict"
+                    ? "occ_conflict"
+                    : result.reason),
+                result.dependency_error?.message ??
+                  result.message ??
+                  "Revert refused. Read the current Task and its History before retrying.",
+                result.latest
+                  ? taskView(
+                      result.latest,
+                      data.projects,
+                      data.tags,
+                      data.series,
+                    )
+                  : undefined,
+                result.dependency_error,
+              ),
+            );
+          const latest = yield* readTasks(store, request);
+          yield* write(
+            renderTask(
+              taskView(
+                result.task,
+                latest.projects,
+                latest.tags,
+                latest.series,
+              ),
+              cfg.format,
+              nowInstant(),
+            ),
+          );
+        }),
+      );
+    }),
+).pipe(withGuide("revert"));
+
 const reviewCommand = (period: "daily" | "weekly") =>
   Command.make(period, {}, () =>
     Effect.gen(function* () {
@@ -1692,6 +2021,11 @@ const app = root.pipe(
     transfer("move"),
     transfer("copy"),
     history,
+    dependencyCommand("depend"),
+    dependencyCommand("undepend"),
+    graphCommand,
+    batchDependCommand,
+    revertCommand,
     mutation("edit"),
     mutation("done"),
     mutation("cancel"),
@@ -1841,6 +2175,34 @@ const program = Effect.gen(function* () {
       text,
     );
   }
+  const firstCommand = flagArgs.find(
+    (arg, index) =>
+      !arg.startsWith("-") &&
+      !stringFlags.has(flagArgs[index - 1] ?? "") &&
+      flagArgs[index - 1] !== "--format",
+  );
+  if (formatValue === "mermaid" && firstCommand === "graph") {
+    graphMermaidOutput = true;
+    for (let index = 0; index < args.length; index++) {
+      if (args[index] === "--format=mermaid") args[index] = "--format=md";
+      else if (args[index] === "--format" && args[index + 1] === "mermaid")
+        args[index + 1] = "md";
+    }
+  }
+  for (const name of ["ready", "blocked"])
+    if (
+      flagArgs.includes(`--${name}=false`) ||
+      flagArgs.some(
+        (arg, index) => arg === `--${name}` && flagArgs[index + 1] === "false",
+      )
+    )
+      return yield* Effect.fail(
+        new CommandError(
+          2,
+          "invalid_args",
+          `--${name} accepts true only. Use --blocked or --status for another set of Tasks.`,
+        ),
+      );
   const command = Command.runWith(app, {
     version: `0.1.0 build=${BUILD_ID} contract=${CONTRACT_ID}`,
     renderErrors: false,
@@ -1895,7 +2257,8 @@ const program = Effect.gen(function* () {
             failure.message,
             follow ? "json" : format,
             nowInstant(),
-            failure.latest,
+            failure.dependency_error ? undefined : failure.latest,
+            failure.dependency_error?.details,
           ),
         ),
       );

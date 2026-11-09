@@ -388,6 +388,57 @@ it("validates every command's single JSON object against its published JSON Sche
     ]);
     success(command, [command, transferTask, "--to", "transfer-target"]);
   }
+  const graphTaskId = (value: unknown) =>
+    Schema.decodeUnknownSync(
+      Schema.Struct({ task: Schema.Struct({ id: Schema.String }) }),
+    )(value).task.id;
+  const blocker = graphTaskId(success("add", ["add", "Dependency blocker"]));
+  const dependent = graphTaskId(
+    success("add", ["add", "Dependency dependent"]),
+  );
+  success("depend", [
+    "depend",
+    dependent,
+    "--on",
+    blocker,
+    "--expected-version",
+    "1",
+  ]);
+  success("graph", ["graph", dependent]);
+  const removed = Schema.decodeUnknownSync(Schema.Struct({ seq: Schema.Int }))(
+    success("undepend", [
+      "undepend",
+      dependent,
+      "--from",
+      blocker,
+      "--expected-version",
+      "2",
+    ]),
+  );
+  success("revert", ["revert", String(removed.seq), "--expected-version", "3"]);
+  success("undepend", [
+    "undepend",
+    dependent,
+    "--from",
+    blocker,
+    "--expected-version",
+    "4",
+  ]);
+  const edgesFile = join(home, "dependency-batch.json");
+  writeFileSync(
+    edgesFile,
+    JSON.stringify({
+      items: [
+        {
+          action: "depend",
+          dependent_id: dependent,
+          blocker_id: blocker,
+          from_version: 5,
+        },
+      ],
+    }),
+  );
+  success("batch-depend", ["batch-depend", "--file", edgesFile, "--dry-run"]);
   const created = success("add", [
     "add",
     "Conformance Task",
@@ -537,6 +588,16 @@ it("validates every command's single JSON object against its published JSON Sche
     success(name, [...name.split(" "), "--help"], "", "help");
   success("help", ["help"]);
   success("rm", ["rm", id, "--expected-version", "5"]);
+  expect(
+    success("rm", [
+      "rm",
+      id,
+      "--force",
+      "--dry-run",
+      "--expected-version",
+      "6",
+    ]),
+  ).toMatchObject({ status: "would_purge", dry_run: true });
   success("rm", ["rm", id, "--force", "--expected-version", "6"]);
   diagnosticsServer = spawn(serverBinary, [], {
     env: { ...process.env, HOME: home, TODO_DB: db, TODO_PORT: "0" },

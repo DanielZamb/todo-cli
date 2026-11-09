@@ -3,6 +3,8 @@ export * from "./auth/model.ts";
 export * from "./batch-edit.ts";
 export * from "./client-reads.ts";
 export * from "./dependencies.ts";
+export * from "./dependency-commands.ts";
+export * from "./dependency-contract.ts";
 export * from "./dependency-rules.ts";
 export * from "./diagnostics.ts";
 export * from "./entities.ts";

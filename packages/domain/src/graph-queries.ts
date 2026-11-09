@@ -1,3 +1,5 @@
+import { Effect } from "effect";
+import type { AccessRequest } from "./auth/model.ts";
 import type { GraphReport } from "./graph-contract.ts";
 import { graphEnergy } from "./graph-energy.ts";
 import { graphMermaid } from "./graph-mermaid.ts";
@@ -9,6 +11,7 @@ import {
 } from "./graph-model.ts";
 import { topologicalOrder } from "./graph-order.ts";
 import type { TaskId } from "./ids.ts";
+import type { OperationStore } from "./store/store.ts";
 import type { Instant } from "./time.ts";
 
 export function graphShape(graph: TaskGraph):
@@ -119,3 +122,17 @@ export function queryGraph(
     };
   return { ...fields, shape: shape.shape };
 }
+
+export const readGraph = (
+  store: OperationStore,
+  request: AccessRequest & { readonly task_id: TaskId },
+  generated_at: Instant,
+) =>
+  Effect.gen(function* () {
+    yield* store.auth.read(request);
+    return queryGraph(
+      yield* store.graph(request.profile),
+      request.task_id,
+      generated_at,
+    );
+  });

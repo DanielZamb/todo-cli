@@ -1,4 +1,5 @@
 import {
+  DeleteReport,
   SnapshotList,
   SnapshotManifest,
   SnapshotPruneReport,
@@ -34,6 +35,7 @@ export function registerCommandSchema(
 
 export type StatusResponse = typeof StatusResponse.Type;
 export const StatusResponse = Schema.Struct({
+  dry_run: Schema.optionalKey(Schema.Boolean),
   generated_at: Schema.String,
   status: Schema.String,
 });
@@ -130,7 +132,7 @@ registerCommandSchema("snapshot restore", SnapshotRestoreResponse);
 registerCommandSchema("snapshot prune", SnapshotPruneResponse);
 registerCommandSchema("help", TextResponse);
 
-for (const name of ["init", "logout", "rm", "config set"])
+for (const name of ["init", "logout", "config set"])
   registerCommandSchema(name, StatusResponse);
 registerCommandSchema("reset-passphrase", PassphraseResetResponse);
 for (const name of ["login", "whoami"])
@@ -143,4 +145,15 @@ registerCommandSchema("sync obsidian", PathResponse);
 registerCommandSchema(
   "schema",
   Schema.Union([SchemaResponse, SchemaListResponse]),
+);
+
+registerCommandSchema(
+  "rm",
+  Schema.Union([
+    StatusResponse,
+    Schema.Struct({
+      ...DeleteReport.fields,
+      status: Schema.Literal("deleted"),
+    }),
+  ]),
 );

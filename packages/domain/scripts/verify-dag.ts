@@ -18,6 +18,7 @@ import {
   runDagCase,
   task,
 } from "./dag-proof.ts";
+import { proveDependencyCommands } from "./dependency-command-proof.ts";
 import { proveGraphAlgorithms } from "./graph-proof.ts";
 
 const [mode, directory, evidence] = process.argv.slice(2);
@@ -100,6 +101,17 @@ if (mode === "A" || mode === "B") {
     );
     receipts.push({ name: `purge-${target}`, outcome: "passed" });
   }
+  mkdirSync(join(directory, "public-commands"));
+  await Effect.runPromise(
+    runDagCase(
+      join(directory, "public-commands/scratch.db"),
+      proveDependencyCommands,
+    ),
+  );
+  receipts.push({
+    name: "authenticated-dependency-commands",
+    outcome: "passed",
+  });
   mkdirSync(join(directory, "migration"));
   await Effect.runPromise(
     proveMigrationAndGuards(join(directory, "migration/scratch.db")),

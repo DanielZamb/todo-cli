@@ -207,3 +207,37 @@ The proposed Task dependency workflows are also frames in the scene, with
 picker, list drag, Delete dialog, and graph view. The coordinator approved [Task DAG Phase 0](decisions/task-dag-phase-0.md)
 with corrections G1 through G10. ADRs 0016 through 0018 are accepted; their
 runtime implementation and verification follow in units A, F, B, E and S.
+
+## Task Dependencies
+
+Tasks and direct Dependency edges are independent facts. Migration 0007 creates
+task_dependencies with composite same-Profile endpoint foreign keys, a primary
+key by Profile/dependent/blocker and a reverse covering index. Projection schema
+recreation creates DDL without changing user_version. Only migrate advances it.
+Compact edge events and grouped lifecycle v2 deltas replay through the operation
+store; existing v1 events and checkpoints without edges remain readable.
+
+The authoritative dependency-rules and store/dependency-validation modules own
+endpoint, cycle, degree and lifecycle guards inside BEGIN IMMEDIATE. Public
+commands authenticate and validate visible endpoints before no-op detection.
+A no-op writes no History or Version even when its valid expected Version is
+stale. A real change CASes only the dependent. Captured full DependencyError
+responses survive rollback; History retains the bounded copy.
+
+OperationStore.graph(Profile) reads Tasks and edges in one SQLite read
+transaction. graph-model builds temporary adjacency; graph-order uses a Kahn
+min-heap over the whole Profile before filters; graph-energy uses temporary
+ancestor bitsets and weight masks for distinct pruned sums. graph-queries owns
+components, Ready/Blocked, strict ancestry, depth and shape/orientation.
+graph-mermaid formats typed identities and escaped labels without a renderer.
+TaskRead/TaskView carry optional response metadata, and TaskWrite names additive
+write reports. None changes stored Task content. Optional graph metadata stays
+omitted on default reads of Profiles with no edges, preserving legacy payloads;
+explicit graph filters and ordering still compute the complete result.
+
+The CLI and HttpApi share Dependency commands, initial creation, public Revert,
+and Delete fingerprint checks. Batch edge edits commit per item; previews use
+an authenticated in-memory fork without source History or Snapshot changes.
+TTY md Delete prompts show both directions, default No, and submit the reviewed
+fingerprint. JSON and non-TTY requests use explicit confirmation. Client feature
+UI and renderer integration remain later units under ADR-0009.

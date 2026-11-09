@@ -13,6 +13,7 @@ import { Field, FieldGroup, FieldLabel } from "./components/ui/field.tsx";
 import { Input } from "./components/ui/input.tsx";
 import { NativeSelect } from "./components/ui/native-select.tsx";
 import { DatePicker } from "./date-picker.tsx";
+import { applyTaskFilterDraft, taskFilterDraft, type TaskFilterDraft } from "./task-filter-draft.ts";
 
 type DateFilterDraft =
   | { kind: "any" }
@@ -63,19 +64,18 @@ export function TaskFilterDialog({
   onApply: (filters: TaskFilters) => void;
   onClose: () => void;
 }) {
-  const [draft, setDraft] =
-    useState<{ [Key in keyof TaskFilters]: string }>(filters);
+  const [draft, setDraft] = useState(() => taskFilterDraft(filters));
   const [dates, setDates] = useState(() => ({
     due: dateDraft(filters.due),
     scheduled: dateDraft(filters.scheduled),
   }));
   const [error, setError] = useState("");
   const prefixInvalid =
-    Boolean(draft.prefix) &&
-    !Schema.is(TaskFilters.fields.prefix)(draft.prefix);
-  const change = (field: keyof TaskFilters, value: string) => {
+    Boolean(draft.fields.prefix) &&
+    !Schema.is(TaskFilters.fields.prefix)(draft.fields.prefix);
+  const change = (field: keyof TaskFilterDraft["fields"], value: string) => {
     setError("");
-    setDraft((current) => ({ ...current, [field]: value }));
+    setDraft((current) => ({ ...current, fields: { ...current.fields, [field]: value } }));
   };
   const select = (
     field: "status" | "priority" | "energy",
@@ -86,7 +86,7 @@ export function TaskFilterDialog({
       <FieldLabel htmlFor={`filter-${field}`}>{label}</FieldLabel>
       <NativeSelect
         id={`filter-${field}`}
-        value={draft[field] ?? ""}
+        value={draft.fields[field] ?? ""}
         onChange={(event) => change(field, event.target.value)}
         className="w-full"
         disabled={field === "status" && planning}
@@ -188,23 +188,13 @@ export function TaskFilterDialog({
                 );
                 return;
               }
-              const value = Schema.decodeUnknownSync(TaskFilters)({
-                ...Object.fromEntries(
-                  Object.entries(draft).filter(
-                    ([field, value]) =>
-                      field !== "due" &&
-                      field !== "scheduled" &&
-                      !(field === "status" && planning) &&
-                      value !== "",
-                  ),
-                ),
-                ...(dates.due.kind === "any"
-                  ? {}
-                  : { due: dateValue(dates.due) }),
-                ...(dates.scheduled.kind === "any"
-                  ? {}
-                  : { scheduled: dateValue(dates.scheduled) }),
-              });
+              const value = applyTaskFilterDraft(
+                { ...draft, fields: { ...draft.fields, ...(planning ? { status: "" } : {}) } },
+                {
+                  ...(dates.due.kind === "any" ? {} : { due: dateValue(dates.due) }),
+                  ...(dates.scheduled.kind === "any" ? {} : { scheduled: dateValue(dates.scheduled) }),
+                },
+              );
               onApply(value);
               onClose();
             } catch {
@@ -228,7 +218,7 @@ export function TaskFilterDialog({
               <FieldLabel htmlFor="filter-prefix">Id starts with</FieldLabel>
               <Input
                 id="filter-prefix"
-                value={draft.prefix ?? ""}
+                value={draft.fields.prefix ?? ""}
                 placeholder="Any Task id"
                 aria-invalid={prefixInvalid}
                 aria-describedby={
@@ -274,13 +264,13 @@ export function TaskFilterDialog({
                 inputMode="numeric"
                 pattern="[1-9][0-9]*"
                 placeholder="Any"
-                value={draft.estimate === "none" ? "" : (draft.estimate ?? "")}
+                value={draft.fields.estimate === "none" ? "" : (draft.fields.estimate ?? "")}
                 onChange={(event) => change("estimate", event.target.value)}
               />
               <label className="filter-checkbox">
                 <input
                   type="checkbox"
-                  checked={draft.estimate === "none"}
+                  checked={draft.fields.estimate === "none"}
                   onChange={(event) =>
                     change("estimate", event.target.checked ? "none" : "")
                   }
@@ -295,7 +285,7 @@ export function TaskFilterDialog({
               <Input
                 id="filter-attachment"
                 placeholder="Name, label, path or URL"
-                value={draft.attachment ?? ""}
+                value={draft.fields.attachment ?? ""}
                 onChange={(event) => change("attachment", event.target.value)}
               />
             </Field>
@@ -306,7 +296,7 @@ export function TaskFilterDialog({
               type="button"
               variant="ghost"
               onClick={() => {
-                setDraft({});
+                setDraft(taskFilterDraft({}));
                 setDates({ due: { kind: "any" }, scheduled: { kind: "any" } });
                 setError("");
               }}

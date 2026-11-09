@@ -31,6 +31,7 @@ const taskFlags = [
   "--energy <1..5> (default unset)",
   "--estimate <minutes> (default unset)",
   "--source manual|agent|import (default manual on add)",
+  "--depends-on <task-id> (repeatable on add, at most 13; initial edges commit with the Task)",
 ];
 const versionFlag = "--expected-version <N> (required, N > 0)";
 const concurrency =
@@ -52,6 +53,59 @@ const reference = (input: {
   ...input,
 });
 const guides = {
+  depend: reference({
+    purpose: "Make a Task depend on a visible Task in the same Profile.",
+    synopsis: "todo depend <task-id> --on <blocker-id> --expected-version N",
+    flags: ["--on <blocker-id>", versionFlag],
+    examples: [
+      "todo depend TASK --on BLOCKER --expected-version 1 --format json",
+    ],
+    concurrency:
+      "A real change advances only the dependent. Existing edges return unchanged even with a stale valid Version. Cycles and unresolved blockers of a done Task are refused with recovery.",
+  }),
+  undepend: reference({
+    purpose: "Remove a direct Dependency.",
+    synopsis:
+      "todo undepend <task-id> --from <blocker-id> --expected-version N",
+    flags: ["--from <blocker-id>", versionFlag],
+    examples: [
+      "todo undepend TASK --from BLOCKER --expected-version 2 --format json",
+    ],
+    concurrency:
+      "A real change advances only the dependent. An absent edge returns unchanged even with a stale valid Version.",
+  }),
+  graph: reference({
+    purpose:
+      "Read the selected Task connected group, status and remaining energy.",
+    synopsis: "todo graph <task-id> --format json|md|mermaid",
+    flags: ["--format json|md|mermaid"],
+    examples: [
+      "todo graph TASK --format json",
+      "todo graph TASK --format mermaid",
+    ],
+    output:
+      "One typed graph report includes deterministic Mermaid. Shapes are single, chain, tree with orientation, and dag. Remaining energy sums distinct unresolved ancestors and the root, pruning done/cancelled branches. Missing weights are counted separately. No minutes or critical path.",
+  }),
+  "batch-depend": reference({
+    purpose:
+      "Preview or apply ordered Dependency changes, one transaction per item.",
+    synopsis: "todo batch-depend --file <path|-> [--dry-run]",
+    flags: ["--file <path|->", "--dry-run"],
+    examples: [
+      "todo schema batch-depend-input",
+      "todo batch-depend --file edges.json --dry-run --format json",
+    ],
+    concurrency:
+      "Each item supplies action depend or undepend, dependent_id, blocker_id and from_version. A later item sees earlier results. Preview changes no source History or Snapshots. Apply can succeed partly and returns the highest failing exit code.",
+  }),
+  revert: reference({
+    purpose: "Revert an accepted operation against the current Task Version.",
+    synopsis: "todo revert <seq> --expected-version N",
+    flags: [versionFlag],
+    examples: ["todo revert 42 --expected-version 3 --format json"],
+    concurrency:
+      "The operation identifies the Task, or the dependent for DependencyAdded/Removed. Revert checks current graph and lifecycle rules and records the grouped inverse atomically. Purged content cannot be recovered.",
+  }),
   attach: reference({
     purpose: "Attach a local file path or HTTP/HTTPS link to a Task.",
     synopsis: "todo attach <task-id> <path|url> [--label jira]",
@@ -409,14 +463,22 @@ const guides = {
   rm: reference({
     purpose:
       "Delete a Task recoverably. Use --force to Purge an already deleted Task. History keeps operation metadata and erases content on Purge.",
-    synopsis: "todo rm <task-id> --expected-version <N> [--force]",
-    flags: [versionFlag, "--force (default false, Purge a deleted Task)"],
+    synopsis:
+      "todo rm <task-id> --expected-version <N> [--with-dependencies] [--dry-run] [--force]",
+    flags: [
+      versionFlag,
+      "--force (default false, Purge a deleted Task)",
+      "--with-dependencies (confirm incident edge removal)",
+      "--dry-run (no Task, History or Snapshot writes)",
+      "--dependency-fingerprint <sha256> (reviewed preview)",
+    ],
     examples: [
       "todo rm TASK --expected-version 1",
       "todo rm TASK --expected-version 2 --force",
     ],
     concurrency,
-    output: "json returns generated_at and status. md and table print deleted.",
+    output:
+      "json retains generated_at/status and adds the Task, removed_dependencies, affected_versions, dependency_fingerprint and dry_run. On a TTY in md, incident Dependencies require a [y/N] confirmation with default No. JSON and non-TTY never prompt; use --with-dependencies. A changed fingerprint requires renewed confirmation.",
   }),
   review: reference({
     purpose: "Review Tasks for daily or weekly planning.",

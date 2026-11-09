@@ -112,3 +112,18 @@ schema and literal migrated Tasks. N2 changes verification only, observing actua
 SQLite DELETE effects with a scratch audit trigger around Delete then Purge.
 AtomicCAS retains its one-Task/no-edge bounds. Renew the projection pin only
 with this review and fresh real-code sensitivity plus the clean one command.
+
+## Unit B command error forwarding
+
+Reviewed store.ts against algorithm checkpoint f140c7b09bcb1db48ce4ccaee797ecfe60019ce4.
+Rejection optionally carries a captured DependencyError through the Move outer
+transaction. recordRejection now returns that same full witness in AppendResult,
+while its History copy retains the existing bounded RejectionDetails and Purge
+redaction. The SQL transaction, before-value/Version checks, record/apply/commit,
+replay, and all seven instrumentation boundaries stay in the same positions.
+No graph guard is moved out of authoritative validation. The no-edge AtomicCAS
+fixtures produce no witness and retain their literal results. Command handoff,
+public edge Revert, fingerprints and graph batch operations remain outside this
+single-Task model and are exercised by compiled verify-dag public commands.
+Renew the store source pin only with this review, real-code sensitivity and the
+clean full check. Do not infer a grouped graph proof from AtomicCAS.

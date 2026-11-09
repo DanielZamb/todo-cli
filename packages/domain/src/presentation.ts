@@ -1,6 +1,8 @@
 import { Schema } from "effect";
 import { AttachmentStatus } from "./attachments.ts";
 import { isInboxTask } from "./client-reads.ts";
+import { DependencyError } from "./dependencies.ts";
+import { DependencyWarning } from "./dependency-contract.ts";
 import type { DiagnosticsSnapshot } from "./diagnostics.ts";
 import {
   OccurrenceOrigin,
@@ -14,7 +16,7 @@ import {
 } from "./entities.ts";
 import { OpLogEntry } from "./events.ts";
 import { ProfileId } from "./ids.ts";
-import type { TaskRead } from "./task-read.ts";
+import { DependencyReadFields, type TaskRead } from "./task-read.ts";
 import { SearchMatches } from "./task-search.ts";
 import type { TaskTime } from "./time.ts";
 
@@ -36,6 +38,13 @@ export function taskView(
     (p) => p.profile_id === task.profile_id && p.id === task.project_id,
   );
   return {
+    ...(task.depends_on === undefined ? {} : { depends_on: task.depends_on }),
+    ...(task.blocks === undefined ? {} : { blocks: task.blocks }),
+    ...(task.ready === undefined ? {} : { ready: task.ready }),
+    ...(task.blocked === undefined ? {} : { blocked: task.blocked }),
+    ...(task.remaining_energy === undefined
+      ? {}
+      : { remaining_energy: task.remaining_energy }),
     ...(task.search_matches === undefined
       ? {}
       : { search_matches: task.search_matches }),
@@ -91,6 +100,7 @@ export const jsonText = (value: unknown) =>
   `${JSON.stringify(value, null, 2)}\n`;
 
 export const TaskViewSchema = Schema.Struct({
+  ...DependencyReadFields,
   search_matches: Schema.optionalKey(SearchMatches),
   attachments: Schema.optionalKey(Schema.Array(AttachmentStatus)),
   external_id: Schema.optionalKey(Schema.String),
@@ -118,6 +128,7 @@ export const TaskViewSchema = Schema.Struct({
 });
 export type TaskResponse = typeof TaskResponse.Type;
 export const TaskResponse = Schema.Struct({
+  dependency_warnings: Schema.optionalKey(Schema.Array(DependencyWarning)),
   generated_at: Schema.String,
   task: TaskViewSchema,
 });
@@ -149,6 +160,7 @@ export const ErrorResponse = Schema.Struct({
       }),
       Schema.Struct({ visible_task_count: Schema.Int }),
       ExternalIdConflictDetails,
+      ...DependencyError.members.map((member) => member.fields.details),
     ]),
   ),
 });
@@ -194,9 +206,18 @@ export function renderTasks(
     });
   return format === "table" ? tableTasks(tasks) : markdownTasks(tasks);
 }
-export function renderTask(task: TaskView, format: Format, now: string) {
+export function renderTask(
+  task: TaskView,
+  format: Format,
+  now: string,
+  warnings?: readonly DependencyWarning[],
+) {
   if (format === "json")
-    return encodeResponse(TaskResponse, { generated_at: iso(now), task });
+    return encodeResponse(TaskResponse, {
+      generated_at: iso(now),
+      task,
+      ...(warnings?.length ? { dependency_warnings: warnings } : {}),
+    });
   if (format === "table") return tableTasks([task]);
   return `# Task\n\n${taskLine(task)}\n\n- status: ${task.status}\n- entity_version: ${task.entity_version}\n- created_at: ${task.created_at}\n- updated_at: ${task.updated_at}\n${task.description ? `\n## Description\n\n${task.description}\n` : ""}${task.attachments?.length ? `\n## Attachments\n\n${task.attachments.map((value) => `- ${value.label ? `[${value.label}] ` : ""}${value.kind === "link" ? value.url : value.path}${value.exists === false ? " (missing file)" : ""} (id: ${value.id})`).join("\n")}\n` : ""}`;
 }

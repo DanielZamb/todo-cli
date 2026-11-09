@@ -270,3 +270,11 @@ feedback, and Error recovery through actual SSE reconnect/operations.
 `TODO_VERIFY_TASK_SEARCH=1` selects that drive. The host now reconnects its SSE
 stream for this proof; production cursor persistence and native HOLD remain
 separate limits.
+
+Unit B's shared-contract alignment extracts taskFilterDraft/applyTaskFilterDraft
+in src/task-filter-draft.ts. Run `pnpm --filter @todo/electron test task-filter-draft.test.ts`.
+It drives the same draft initialization/Apply/Clear boundary used by the existing
+dialog, with prefix/text, true-or-absent readiness, false rejection and exact
+other filter values. This is contract proof only, with no new controls or native
+client parity claim. L1 reapplies this correction to the final search dialog and
+reruns the actual filter feature after its own rebase.
