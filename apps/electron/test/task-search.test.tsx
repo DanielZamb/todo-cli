@@ -34,6 +34,20 @@ const task = Schema.decodeUnknownSync(TaskRead)({
   search_matches: [{ field: "title", start: 0, end: 7 }],
 });
 
+it("preserves a deterministic search refusal through IPC", () => {
+  expect(
+    Schema.decodeUnknownSync(Reply)({
+      _tag: "error",
+      code: "search_too_broad",
+      message: "Narrow the search with a Project, Tag or Status filter.",
+    }),
+  ).toEqual({
+    _tag: "error",
+    code: "search_too_broad",
+    message: "Narrow the search with a Project, Tag or Status filter.",
+  });
+});
+
 it("starts a trimmed description at a whole word and marks the original match", () => {
   expect(
     renderToStaticMarkup(

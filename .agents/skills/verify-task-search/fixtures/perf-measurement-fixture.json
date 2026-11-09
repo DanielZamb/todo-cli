@@ -1,0 +1,27 @@
+{
+  "operations": 25,
+  "warmup": 3,
+  "queries": ["rent", "cafe", "-absent", "\"rent cafe\"", "marker17"],
+  "scenarios": [
+    {
+      "name": "short",
+      "tasks": 1000,
+      "description": "Pay invoice tomorrow ",
+      "repeat": 1
+    },
+    { "name": "long", "tasks": 1, "description": "rent café ", "repeat": 9999 },
+    { "name": "dense", "tasks": 1, "description": "a ", "repeat": 49995 },
+    {
+      "name": "mixed",
+      "tasks": 1000,
+      "description": "Pay invoice tomorrow ",
+      "repeat": 1
+    },
+    {
+      "name": "churn",
+      "tasks": 1000,
+      "description": "rent café ",
+      "repeat": 200
+    }
+  ]
+}

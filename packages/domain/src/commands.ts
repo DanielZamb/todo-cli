@@ -46,7 +46,13 @@ import {
   TaskPatch,
   type TransitionTask,
 } from "./task-commands.ts";
-import { filterTaskRecords, type TaskFilters } from "./task-filters.ts";
+import {
+  filterTaskRecords,
+  filterTaskRecordsEffect,
+  type TaskFilters,
+} from "./task-filters.ts";
+import type { TaskRead } from "./task-read.ts";
+import type { SearchTooBroad } from "./task-search.ts";
 import { CalendarDate, Instant, TaskTime } from "./time.ts";
 
 export class CommandError extends Error {
@@ -269,19 +275,26 @@ const now = Clock.currentTimeMillis.pipe(
 export class TaskCommands {
   constructor(private readonly store: OperationStore) {}
 
-  readonly list = (request: AccessRequest, filters: TaskFilters = {}) =>
-    this.store.auth.read(request).pipe(
-      Effect.map((view) =>
-        filterTaskRecords(
-          view.tasks.filter(
-            (task) =>
-              task.profile_id === request.profile && task.deleted_at === null,
-          ),
-          filters,
-          view,
-        ),
-      ),
+  list(
+    request: AccessRequest,
+  ): Effect.Effect<TaskRead[], AuthError | StoreError>;
+  list(
+    request: AccessRequest,
+    filters: TaskFilters,
+  ): Effect.Effect<TaskRead[], AuthError | StoreError | SearchTooBroad>;
+  list(request: AccessRequest, filters: TaskFilters = {}) {
+    return this.store.auth.read(request).pipe(
+      Effect.flatMap((view) => {
+        const tasks = view.tasks.filter(
+          (task) =>
+            task.profile_id === request.profile && task.deleted_at === null,
+        );
+        return filters.text === undefined
+          ? Effect.sync(() => filterTaskRecords(tasks, filters, view))
+          : filterTaskRecordsEffect(tasks, filters, view);
+      }),
     );
+  }
 
   readonly get = (request: Target) =>
     this.list(request).pipe(

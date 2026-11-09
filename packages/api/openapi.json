@@ -4253,7 +4253,28 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InvalidTaskEncoded"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidTaskEncoded"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "generated_at": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": ["search_too_broad"]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["generated_at", "code", "message"],
+                      "additionalProperties": false
+                    }
+                  ]
                 }
               }
             }

@@ -13,6 +13,16 @@ struct TaskSearchIdentity: Equatable {
 enum TaskSearchPhase { case idle, showing, debouncing, requesting, error }
 enum TaskSearchRefreshOutcome: Equatable { case applied, superseded, failed }
 
+enum TaskSearchFailure: Equatable {
+    case transient(String), tooBroad(String)
+    var message: String {
+        switch self { case .transient(let message), .tooBroad(let message): message }
+    }
+    var canRetry: Bool {
+        switch self { case .transient: true; case .tooBroad: false }
+    }
+}
+
 struct TaskSearchSnapshot {
     let appliedIdentity: TaskSearchIdentity
     let rows: [TaskSnapshot]

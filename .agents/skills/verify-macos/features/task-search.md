@@ -1,5 +1,13 @@
 # Task search
 
+`deterministicRefusalRetainsSnapshotAndRecoversFromSse` creates three maximum-size
+U+FDFA descriptions on compiled scratch HTTP. It requires `search_too_broad`,
+the server recovery text, retained typed text and applied rows, and `canRetry ==
+false`. Shrinking one description must recover through a real SSE operation
+without Retry. Search-only offscreen renders include `budget-error` in light/dark,
+full/Compact; their bounds check requires no `search-retry` element. Existing
+transient errors retain Retry and the search-error identifier stays unchanged.
+
 Search the toolbar with title or description words, quoted phrases or exclusions.
 Cmd+F focuses search and Esc clears it. The toolbar text survives Profile and view
 switches. Filters adds Id starts with. Clear all in that dialog affects its draft;

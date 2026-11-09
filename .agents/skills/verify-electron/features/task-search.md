@@ -1,5 +1,20 @@
 # Task search and id prefix
 
+The Task-search drive also creates three maximum-size U+FDFA descriptions and
+requires a real `search_too_broad` response. It retains typed text, focus and the
+applied rows, shows the complete server recovery text in the neutral `Search
+failed` status, and requires no Retry button. Four `*-budget-error.png` captures
+cover Compact/full and light/dark. Shrinking one description through HTTP must
+make SSE publish the results without Retry. Transient-error Retry and the Copy
+step remain covered by the same drive.
+
+`attachment-native.test.ts` mocks the clipboard at the Electron main boundary.
+It checks the exact valid id write and rejects newline, oversized and non-string
+payloads without clipboard calls, plus UTF-16 and forbidden-control boundaries.
+The main boundary requires no control characters and no format characters;
+literal RLO (U+202E), LRI (U+2066) and ZWSP (U+200B) payloads must be rejected.
+The production Copy step in the unsigned Task-search drive must still pass.
+
 Run the production renderer, task-client, IPC decoder and sandboxed preload in
 an unsigned host against fresh compiled scratch CLI/server data:
 

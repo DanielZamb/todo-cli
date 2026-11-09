@@ -70,6 +70,11 @@ export const ProfileDeleteError = Schema.Struct({
   message: Schema.String,
   details: Schema.Struct({ visible_task_count: Schema.Int }),
 }).annotate({ httpApiStatus: 422 });
+export const SearchTooBroadResponse = Schema.Struct({
+  generated_at: Schema.String,
+  code: Schema.Literal("search_too_broad"),
+  message: Schema.String,
+}).annotate({ httpApiStatus: 422 });
 
 export class Unauthorized extends Schema.TaggedError<Unauthorized>()(
   "Unauthorized",
@@ -214,7 +219,7 @@ const Tasks = HttpApiGroup.make("tasks")
       params: profile,
       query: TaskFilters,
       success: Schema.Array(TaskRead),
-      error: taskErrors,
+      error: [...taskErrors, SearchTooBroadResponse],
     }),
     HttpApiEndpoint.get("show", "/profiles/:profile/tasks/:task", {
       params: target,
