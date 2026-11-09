@@ -44,10 +44,23 @@ final class TodoModel {
     var seriesLoading = false
     private var seriesGeneration = 0
     var selectedView = "today"
-    var selectedProject: String?
-    var selectedTag: String?
+    var selectedProject: String? { didSet { if oldValue != selectedProject, appliedSearchSnapshot != nil || loading || searchPending { scheduleSearch() } } }
+    var selectedTag: String? { didSet { if oldValue != selectedTag, appliedSearchSnapshot != nil || loading || searchPending { scheduleSearch() } } }
     var taskFilters = TaskListFilters()
-    private var requestedTaskFilters = TaskListFilters()
+    private(set) var requestedTaskFilters = TaskListFilters()
+    var searchText = ""
+    var searchPhase = TaskSearchPhase.idle
+    var appliedSearchSnapshot: TaskSearchSnapshot?
+    var searchError: String?
+    @ObservationIgnored private var searchDebounce: Task<Void, Never>?
+    var requestedIdentity: TaskSearchIdentity {
+        .init(profile: profile, view: selectedView, filters: requestedTaskFilters, text: searchText, project: selectedProject, tag: selectedTag)
+    }
+    var searchStale: Bool { appliedSearchSnapshot?.appliedIdentity != requestedIdentity }
+    var searchPending: Bool { searchPhase == .debouncing || searchPhase == .requesting }
+    var searchActive: Bool { !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    var taskIDCopyFeedback: String?
+    @ObservationIgnored private var copyFeedbackTask: Task<Void, Never>?
     var matchingTaskIDs: Set<String>?
     var parsedTask: ParsedTask?
     var parsedInput = ""
@@ -228,6 +241,9 @@ final class TodoModel {
             signedIn = false
             diagnostics = nil
             tasks = []
+            appliedSearchSnapshot = nil
+            searchError = nil
+            searchPhase = .idle
             editor = nil
             quickAdd = false
             newTitle = ""
@@ -300,6 +316,9 @@ final class TodoModel {
         showingImport = false
         UserDefaults.standard.set(value, forKey: "profile")
         tasks = []
+        appliedSearchSnapshot = nil
+        searchError = nil
+        searchPhase = .idle
         taskLoadError = nil
         planning = nil
         viewCounts = [:]
@@ -329,56 +348,125 @@ final class TodoModel {
         generation += 1
         streamTask?.cancel()
         streamTask = nil
+        invalidateSearch()
     }
 
-    private func refresh(generation run: Int) async throws {
-        guard outdatedServerBuild == nil else { return }
+    private func refresh(generation run: Int) async -> TaskSearchRefreshOutcome {
+        guard outdatedServerBuild == nil, generation == run, !Task.isCancelled else { return .superseded }
+        searchDebounce?.cancel()
         refreshGeneration += 1
         let request = refreshGeneration
-        let requestedProfile = profile
-        let requestedView = selectedView
-        let requestedFilters = requestedTaskFilters
+        let identity = requestedIdentity
+        searchPhase = .requesting
         do {
-            let response = try await client.tasks_period_list(path: .init(profile: requestedProfile))
-            let values = try response.ok.body.json
+            let values = try await client.tasks_period_list(path: .init(profile: identity.profile)).ok.body.json
             let decoded = try values.map(TaskSnapshot.decode)
-            var matching: Set<String>?
-            if !requestedFilters.isEmpty {
-                let filtered = try await client.tasks_period_list(path: .init(profile: requestedProfile), query: requestedFilters.query).ok.body.json
-                matching = Set(filtered.map(\.id))
+            var query = identity.filters.query
+            query.text = identity.text.isEmpty ? nil : identity.text
+            let filteredResponse: [TaskSnapshot]
+            if identity.filters.isEmpty && identity.text.isEmpty && identity.project == nil && identity.tag == nil {
+                filteredResponse = decoded
+            } else {
+                filteredResponse = try await client.tasks_period_list(path: .init(profile: identity.profile), query: query).ok.body.json.map(TaskSnapshot.decode)
+            }
+            let filtered = filteredResponse.filter {
+                (identity.project == nil || $0.project_id == identity.project) && (identity.tag == nil || $0.tags.contains(identity.tag ?? ""))
             }
             let profileValues = try await client.reads_period_profiles().ok.body.json
-            let projectValues = try await client.reads_period_projects(path: .init(profile: requestedProfile)).ok.body.json
-            let tagValues = try await client.reads_period_tags(path: .init(profile: requestedProfile)).ok.body.json
+            let projectValues = try await client.reads_period_projects(path: .init(profile: identity.profile)).ok.body.json
+            let tagValues = try await client.reads_period_tags(path: .init(profile: identity.profile)).ok.body.json
             let decodedProfiles = try decode([DiscoveryEntry].self, profileValues)
             let decodedProjects = try decode([DiscoveryEntry].self, projectValues)
             let decodedTags = try decode([DiscoveryEntry].self, tagValues)
-            let today = try await decode(PlanningResult.self, client.reads_period_view(path: .init(profile: requestedProfile, view: .today)).ok.body.json)
-            let overdue = try await decode(PlanningResult.self, client.reads_period_view(path: .init(profile: requestedProfile, view: .overdue)).ok.body.json)
-            let scheduled = try await decode(PlanningResult.self, client.reads_period_view(path: .init(profile: requestedProfile, view: .scheduled)).ok.body.json)
-            let inbox = try await decode(PlanningResult.self, client.reads_period_view(path: .init(profile: requestedProfile, view: .inbox)).ok.body.json)
+            let today = try await decode(PlanningResult.self, client.reads_period_view(path: .init(profile: identity.profile, view: .today)).ok.body.json)
+            let overdue = try await decode(PlanningResult.self, client.reads_period_view(path: .init(profile: identity.profile, view: .overdue)).ok.body.json)
+            let scheduled = try await decode(PlanningResult.self, client.reads_period_view(path: .init(profile: identity.profile, view: .scheduled)).ok.body.json)
+            let inbox = try await decode(PlanningResult.self, client.reads_period_view(path: .init(profile: identity.profile, view: .inbox)).ok.body.json)
             let views = ["today": today, "overdue": overdue, "scheduled": scheduled, "inbox": inbox]
-            guard generation == run, refreshGeneration == request, profile == requestedProfile, selectedView == requestedView, requestedTaskFilters == requestedFilters, !Task.isCancelled else { return }
+            guard canPublishSearch(run: run, request: request, identity: identity) else { return .superseded }
+            let byID = Dictionary(uniqueKeysWithValues: filtered.map { ($0.id, $0) })
+            let groups = views[identity.view]?.groups.compactMap { group -> PlanningResult.Group? in
+                let rows = group.tasks.compactMap { byID[$0.id] }
+                return rows.isEmpty ? nil : .init(name: group.name, tasks: rows)
+            } ?? []
+            appliedSearchSnapshot = .init(appliedIdentity: identity, rows: identity.view == "all" ? filtered : groups.flatMap(\.tasks), groups: groups)
             tasks = decoded
-            matchingTaskIDs = matching
-            taskFilters = requestedFilters
+            matchingTaskIDs = identity.filters.isEmpty ? nil : Set(filtered.map(\.id))
+            taskFilters = identity.filters
             profiles = decodedProfiles
             projects = decodedProjects.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
             tags = decodedTags.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-            planning = views[requestedView]
+            planning = views[identity.view]
             viewCounts = views.mapValues { $0.groups.flatMap(\.tasks).filter { $0.status == "open" }.count }
             viewCounts["all"] = decoded.filter { $0.status == "open" }.count
             loading = false
             taskLoadError = nil
+            searchError = nil
+            searchPhase = .showing
+            return .applied
         } catch {
-            if generation == run, refreshGeneration == request, profile == requestedProfile, selectedView == requestedView, !Task.isCancelled {
-                let reason = taskFilters == requestedFilters ? describe(error) : "Could not apply filters. Your previous filters are still active."
+            guard canPublishSearch(run: run, request: request, identity: identity) else { return .superseded }
+            if taskFilters != identity.filters {
                 requestedTaskFilters = taskFilters
-                taskLoadError = reason
-                message = reason
-                loading = false
+                taskLoadError = "Could not apply filters. Your previous filters are still active."
+            } else if !identity.text.isEmpty || appliedSearchSnapshot?.appliedIdentity.text.isEmpty == false {
+                let applied = appliedSearchSnapshot?.appliedIdentity.text ?? ""
+                searchError = applied.isEmpty ? "Couldn't search. Showing tasks without search." : "Couldn't search. Showing results for \"\(applied)\"."
+            } else {
+                taskLoadError = describe(error)
             }
-            throw error
+            loading = false
+            searchPhase = .error
+            handleAuthorization(error)
+            return .failed
+        }
+    }
+
+    private func canPublishSearch(run: Int, request: Int, identity: TaskSearchIdentity) -> Bool {
+        generation == run && refreshGeneration == request && requestedIdentity == identity && !Task.isCancelled
+    }
+
+    private func invalidateSearch() {
+        refreshGeneration += 1
+        searchDebounce?.cancel()
+        searchDebounce = nil
+    }
+
+    func setSearchText(_ text: String) {
+        guard searchText != text else { return }
+        searchText = text
+        scheduleSearch()
+    }
+
+    private func scheduleSearch() {
+        invalidateSearch()
+        searchPhase = .debouncing
+        taskLoadError = nil
+        searchError = nil
+        let run = generation
+        let identity = requestedIdentity
+        searchDebounce = Task {
+            do { try await Task.sleep(for: .milliseconds(250)) } catch { return }
+            guard generation == run, requestedIdentity == identity, !Task.isCancelled else { return }
+            searchDebounce = nil
+            _ = await retrySearch()
+        }
+    }
+
+    @discardableResult
+    func retrySearch() async -> TaskSearchRefreshOutcome {
+        await refresh(generation: generation)
+    }
+
+    func copyTaskID(_ id: String, pasteboard: NSPasteboard = .general) {
+        copyFeedbackTask?.cancel()
+        pasteboard.clearContents()
+        let copied = pasteboard.setString(id, forType: .string)
+        taskIDCopyFeedback = copied ? "Copied" : "Couldn't copy. Try again."
+        guard copied else { return }
+        copyFeedbackTask = Task {
+            do { try await Task.sleep(for: .seconds(2)) } catch { return }
+            taskIDCopyFeedback = nil
         }
     }
 
@@ -396,7 +484,7 @@ final class TodoModel {
                     for event in try parser.append(chunk) {
                         guard generation == run, !Task.isCancelled else { return }
                         if event.name == "ready" {
-                            try await refresh(generation: run)
+                            _ = await refresh(generation: run)
                             guard generation == run, !Task.isCancelled else { return }
                             connection = .live
                             message = nil
@@ -415,6 +503,8 @@ final class TodoModel {
                             UserDefaults.standard.set(lastSequence, forKey: cursorKey)
                             tasks = []; projects = []; tags = []; planning = nil; viewCounts = [:]
                             selectedProject = nil; selectedTag = nil
+                            appliedSearchSnapshot = nil
+                            searchError = nil
                             taskFilters = .init(); matchingTaskIDs = nil
                             requestedTaskFilters = .init()
                             editor = nil; conflict = nil; history = []; series = nil
@@ -432,7 +522,7 @@ final class TodoModel {
                                 connect()
                                 return
                             }
-                            try await refresh(generation: run)
+                            _ = await refresh(generation: run)
                             await loadSnapshots()
                         } else if event.name == "operation" {
                             let wire = try JSONDecoder().decode(Components.Schemas.CommittedOperation.self, from: Data(event.data.utf8))
@@ -444,7 +534,7 @@ final class TodoModel {
                                 try await leaveDeletedProfile(named: operation.event.profile?.name)
                                 return
                             }
-                            try await refresh(generation: run)
+                            _ = await refresh(generation: run)
                             guard generation == run, !Task.isCancelled else { return }
                             if operation.event.kind == "ReminderFired" {
                                 try await reminders.deliver(operation, server: configuration.server.absoluteString, profile: profile)
@@ -635,6 +725,8 @@ final class TodoModel {
     }
 
     func beginEditing(_ task: TaskSnapshot, focusTitle: Bool = false) {
+        copyFeedbackTask?.cancel()
+        taskIDCopyFeedback = nil
         focusEditorTitle = focusTitle
         historyGeneration += 1
         editorError = nil
@@ -671,7 +763,7 @@ final class TodoModel {
             let payload = try JSONDecoder().decode(Operations.tasks_period_transition.Input.Body.jsonPayload.self, from: data)
             let response = try await client.tasks_period_transition(path: .init(profile: profile, task: task.id), body: .json(payload))
             if case .conflict = response {
-                try await refresh(generation: generation)
+                _ = await refresh(generation: generation)
                 editorError = "The Task changed. Close and reopen it before trying that action again."
                 message = editorError
                 return
@@ -894,52 +986,48 @@ final class TodoModel {
     }
 
     func refreshAfterWrite(_ accepted: String) async {
-        do {
-            try await refresh(generation: generation)
+        switch await refresh(generation: generation) {
+        case .applied:
             message = nil
-        } catch {
-            handleAuthorization(error)
+        case .failed:
             if signedIn {
                 message = accepted + ". The live view is reconnecting."
                 connect()
             }
+        case .superseded:
+            break
         }
     }
 
     func selectView(_ name: String) {
+        invalidateSearch()
         selectedView = name
+        tasks = []
         planning = nil
+        appliedSearchSnapshot = nil
+        searchError = nil
+        taskLoadError = nil
         loading = true
         selectedProject = nil
         selectedTag = nil
         taskFilters = .init()
         requestedTaskFilters = .init()
         matchingTaskIDs = nil
+        searchPhase = .requesting
         let run = generation
-        Task {
-            do { try await refresh(generation: run) }
-            catch {
-                guard generation == run, selectedView == name else { return }
-                loading = false
-                message = describe(error)
-                handleAuthorization(error)
-            }
-        }
+        Task { await refresh(generation: run) }
     }
 
     func applyTaskFilters(_ filters: TaskListFilters) {
         guard requestedTaskFilters != filters || taskFilters != filters else { return }
+        invalidateSearch()
         requestedTaskFilters = filters
-        if filters.isEmpty { taskFilters = filters; matchingTaskIDs = nil }
-        loading = !filters.isEmpty
+        searchError = nil
+        taskLoadError = nil
+        loading = true
+        searchPhase = .requesting
         let run = generation
-        Task {
-            do { try await refresh(generation: run) }
-            catch {
-                guard generation == run else { return }
-                handleAuthorization(error)
-            }
-        }
+        Task { await refresh(generation: run) }
     }
 
     func parseDraft() async {
@@ -1064,6 +1152,9 @@ final class TodoModel {
         diagnostics = nil
         credential = ""
         tasks = []
+        appliedSearchSnapshot = nil
+        searchError = nil
+        searchPhase = .idle
         message = "Your Session ended. Sign in again."
     }
 

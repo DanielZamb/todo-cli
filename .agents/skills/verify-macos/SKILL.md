@@ -357,3 +357,11 @@ empty and error states. The complete run now has 346 captures including batch ed
 ## Batch edit
 
 Read [Edit several Tasks](features/batch-edit.md) for the shared batch-edit contract and the compiled scratch proof. Both client flows retain selections and loaded Versions through preview, apply and Conflict reload.
+
+## Task search during HOLD
+
+Read [Task search](features/task-search.md) for the regenerated contract,
+production TodoModel response-order and SSE recovery proof, scratch pasteboard,
+40 focused offscreen captures and new identifiers. Search retains toolbar text
+across Profile and view switches. Every Swift command uses the shared slot.
+Native toolbar keyboard interaction and glass remain under HOLD.

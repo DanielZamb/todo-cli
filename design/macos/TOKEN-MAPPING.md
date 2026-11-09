@@ -39,6 +39,7 @@ Every row is an opaque sRGB Color asset with Any and Dark appearances in `Assets
 | `ring` | `ring` | `#285D46` | `#A6D7B8` |
 | `secondary-foreground` | `secondary-foreground` | `#263C2F` | `#E0EBDD` |
 | `secondary` | `secondary` | `#E8EDE7` | `#2C3B30` |
+| `search-highlight` | `search-highlight` | `#DDEFD8` | `#34583F` |
 | `selection-foreground` | `selection-foreground` | `#161D19` | `#F0F3EF` |
 | `selection` | `selection` | `#F3F7F3` | `#222E25` |
 | `sidebar-accent-foreground` | `sidebar-accent-foreground` | `#244E37` | `#DBF1DF` |
@@ -109,7 +110,7 @@ Native text wraps and uses system font metrics. SwiftUI styles replace forced CS
 | `warning`, `destructive`, `success` | Text plus status icons. Overdue date text uses destructive with an explicit Overdue label. Status meanings remain independent of task priority |
 | `chart-1..5`, `primary-active` | Reserved roles. No v1 chart or custom pressed-control renderer |
 
-The 43 named Color assets retain D01's exact light and dark values. The opaque-pair contrast audit checks those reference values. It does not claim that system glass pixels equal an opaque color, or that their contrast is independent of underlying content.
+The 44 named Color assets retain D01's exact light and dark values. The opaque-pair contrast audit checks those reference values. It does not claim that system glass pixels equal an opaque color, or that their contrast is independent of underlying content.
 
 The glass implementation uses `GlassEffectContainer`, `.glassEffect`, `.glass`, `.glassProminent`, and the glass supplied by native toolbar, sidebar, and menu-bar scenes. There is no custom blur or opaque fill behind the floating panels. The screenshots show the system effect over actual task rows.
 

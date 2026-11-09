@@ -25,6 +25,7 @@ Names are shared roles for Electron CSS and SwiftUI named colors. Values are opa
 | `border` | `#D7DED5` | `#405045` | Structural hairline, not a control boundary |
 | `input` | `#7B897E` | `#82978A` | Visible field boundary |
 | `ring` | `#285D46` | `#A6D7B8` | 2px focus outline, 2px offset |
+| `search-highlight` | `#DDEFD8` | `#34583F` | Matched words; inherit the surrounding text foreground |
 | `primary-active` | `#1D4935` | `#C1E7CE` | Pressed primary |
 | `sidebar` / `sidebar-foreground` | background / foreground | background / foreground | Planning navigation |
 | `sidebar-accent` / `sidebar-accent-foreground` | accent pair | accent pair | Selected navigation |

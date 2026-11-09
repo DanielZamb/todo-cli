@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import hashlib
 import os
 import plistlib
 import platform
@@ -10,6 +11,12 @@ import sys
 root = Path(__file__).resolve().parents[3]
 evidence = Path(sys.argv[1]).resolve()
 evidence.mkdir(parents=True, exist_ok=False)
+source_files = sorted(path for pattern in ['Sources/*.swift', 'StateTests/*.swift', 'Tests/*.swift', 'DesignSnapshots/*.swift', 'API/Sources/TodoAPI/GeneratedSources/*.swift'] for path in (root / 'apps/macos').glob(pattern))
+source_files += sorted((root / 'design/macos/Assets.xcassets').glob('search-highlight.colorset/Contents.json'))
+(evidence / 'source-provenance.json').write_text(json.dumps({
+    'head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip(),
+    'sources': {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest() for path in source_files}
+}, indent=2) + '\n')
 commands = []
 
 def run(command, log, env=None):
@@ -38,7 +45,7 @@ assert (resources / 'Assets.car').is_file(), 'actool did not compile the product
 environment = dict(os.environ, TODO_SNAPSHOT_DIR=str(evidence))
 run(['swift', 'test', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--skip-build', '--filter', 'Snapshots'], 'render.log', environment)
 manifest = json.loads((evidence / 'manifest.json').read_text())
-assert len(manifest['files']) == (2 if os.environ.get('TODO_SNAPSHOT_QUICK_ONLY') == '1' else 18 if os.environ.get('TODO_SNAPSHOT_PRIORITY_ONLY') == '1' else 28 if os.environ.get('TODO_SNAPSHOT_BATCH_EDIT_ONLY') == '1' else 346)
+assert len(manifest['files']) == (52 if os.environ.get('TODO_SNAPSHOT_SEARCH_ONLY') == '1' else 2 if os.environ.get('TODO_SNAPSHOT_QUICK_ONLY') == '1' else 18 if os.environ.get('TODO_SNAPSHOT_PRIORITY_ONLY') == '1' else 28 if os.environ.get('TODO_SNAPSHOT_BATCH_EDIT_ONLY') == '1' else 346)
 assert all((evidence / name).is_file() for name in manifest['files'])
 (evidence / 'result.json').write_text(json.dumps({'status': 'PASS', 'pngs': len(manifest['files']), 'appLaunched': False, 'signed': False, 'keychainAccess': False, 'nativeGlassVerified': False}, indent=2) + '\n')
 print(f"PASS: {len(manifest['files'])} offscreen PNGs in {evidence}")

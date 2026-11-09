@@ -1072,6 +1072,7 @@ func priorityGroupsSurviveModelSaveFiltersAndReload() async throws {
     }
     let project = try #require(value.projects.first { $0.name == "UI01 Priority proof" })
     value.selectedProject = project.id
+    await value.retrySearch()
     for compact in [true, false] {
         let groups = TaskListView(model: value, compactMode: compact).taskGroups
         #expect(groups.map(\.name) == ["P1", "P2", "P3", "P4"])
@@ -1084,10 +1085,12 @@ func priorityGroupsSurviveModelSaveFiltersAndReload() async throws {
     let reloaded = model()
     await reloaded.refreshAfterWrite("Reload priority groups")
     reloaded.selectedProject = project.id
+    await reloaded.retrySearch()
     #expect(reloaded.taskLoadError == nil)
     #expect(TaskListView(model: reloaded).taskGroups.map { $0.tasks.map(\.title) } == [[], ["UI01 Urgent"], ["UI01 Normal"], ["UI01 Later"]])
     #expect(reloaded.tasks.first { $0.id == urgent.id }?.row_version == 3)
     reloaded.selectedProject = "no-matching-project"
+    await reloaded.retrySearch()
     #expect(TaskListView(model: reloaded).taskGroups.map { $0.tasks.count } == [0, 0, 0, 0])
     try JSONSerialization.data(withJSONObject: ["priorities": ["P1", "P2", "P3", "P4"], "titles": [[], ["UI01 Urgent"], ["UI01 Normal"], ["UI01 Later"]], "version": 3, "emptyCounts": [0, 0, 0, 0]], options: [.sortedKeys]).write(to: URL(fileURLWithPath: try #require(ProcessInfo.processInfo.environment["TODO_W06_RECEIPT"])).deletingLastPathComponent().appendingPathComponent("ui01-priority-http.json"))
 }

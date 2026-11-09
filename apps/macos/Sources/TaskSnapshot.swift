@@ -4,6 +4,7 @@ struct TaskSnapshot: Codable, Identifiable, Equatable, Sendable {
     let id: String
     let profile_id: String
     let row_version: Int
+    var search_matches: [TaskSearchMatch]? = nil
     var external_id: String? = nil
     let title: String
     let description: String?
@@ -35,6 +36,13 @@ struct TaskSnapshot: Codable, Identifiable, Equatable, Sendable {
     static func decode<T: Encodable>(_ value: T) throws -> Self {
         try JSONDecoder().decode(Self.self, from: JSONEncoder().encode(value))
     }
+}
+
+struct TaskSearchMatch: Codable, Equatable, Sendable {
+    enum Field: String, Codable, Sendable { case title, description }
+    let field: Field
+    let start: Int
+    let end: Int
 }
 
 struct TaskTime: Codable, Equatable, Sendable {
