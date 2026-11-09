@@ -1,0 +1,12 @@
+{
+  "status": "approved-contract-model-only; production conformance unproven",
+  "contractCommit": "7c9d3b7d3f9fd5d06cf8cc533ee42f1811230efa",
+  "contract": {
+    "path": "docs/decisions/agent-discovery-phase-0.md",
+    "sha256": "5a93634c3717713745470bfd299dc035e2f1563f6c3530cc23d1b234b29b8a42"
+  },
+  "productionSyncCommit": null,
+  "productionFiles": [],
+  "mapping": "SOURCE-MAPPING.md",
+  "pending": "Reviewed integrated C/D immutable source, semantic mapping, production regressions, real-code sensitivity and TaskSearch renewal"
+}
