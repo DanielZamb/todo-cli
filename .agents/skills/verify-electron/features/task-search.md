@@ -8,6 +8,11 @@ cover Compact/full and light/dark. Shrinking one description through HTTP must
 make SSE publish the results without Retry. Transient-error Retry and the Copy
 step remain covered by the same drive.
 
+`attachment-native.test.ts` mocks the clipboard at the Electron main boundary.
+It checks the exact valid id write and rejects newline, oversized and non-string
+payloads without clipboard calls, plus UTF-16 and forbidden-control boundaries.
+The production Copy step in the unsigned Task-search drive must still pass.
+
 Run the production renderer, task-client, IPC decoder and sandboxed preload in
 an unsigned host against fresh compiled scratch CLI/server data:
 
