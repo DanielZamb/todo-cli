@@ -114,7 +114,7 @@ it("always returns list tasks and explains actual not-found exits with authorize
       "todo list --profile default --prefix 45a312ac",
     );
     expect(JSON.parse(result.stdout).details.recovery).toContain(
-      "todo lookup --prefix 45a312ac",
+      "todo lookup --prefix 45a312ac --credential-profile default",
     );
   }
   const invalidId = run(["show", "invalid-id", "--format", "json"]);

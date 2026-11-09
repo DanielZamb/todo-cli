@@ -21,6 +21,7 @@ import {
 import { BunServices } from "@effect/platform-bun";
 import { BUILD_ID, CONTRACT_ID } from "@todo/api";
 import {
+  type AccessRequest,
   AttachManyItem,
   AttachManyReport,
   AttachManyRequest,
@@ -255,8 +256,9 @@ const withStore = <A, E, R>(
               )
                 return yield* Effect.fail(error);
               const request = yield* selectProfile(store, cfg);
-              const context = yield* taskLookupError(
+              const context = yield* cliLookupError(
                 store,
+                cfg,
                 request,
                 error.task_id,
               );
@@ -304,6 +306,36 @@ const selectProfile = Effect.fn(function* (
     );
   }
   return { credential, profile: profile.id };
+});
+const cliLookupError = (
+  store: OperationStore,
+  cfg: Settings,
+  request: AccessRequest,
+  task_id: string,
+) =>
+  taskLookupError(store, request, task_id, "cli", {
+    credentialProfile: cfg.profile,
+  });
+const cliLookupRowError = Effect.fn(function* <
+  E extends {
+    readonly code: string;
+    readonly message: string;
+    readonly details?: object;
+  },
+>(
+  store: OperationStore,
+  cfg: Settings,
+  request: AccessRequest,
+  task_id: string | null,
+  error: E,
+) {
+  if (error.code !== "not_found" || task_id === null) return error;
+  const context = yield* cliLookupError(store, cfg, request, task_id);
+  return {
+    ...error,
+    ...context,
+    details: { ...error.details, ...context.details },
+  };
 });
 const taskOptions = {
   title: stringFlag("title").pipe(Flag.optional),
@@ -875,7 +907,7 @@ const transfer = (kind: "move" | "copy") =>
                   target_id: null,
                   outcome: "not-found",
                   occurrence_as_plain_task: false,
-                  ...(yield* taskLookupError(store, request, id)),
+                  ...(yield* cliLookupError(store, cfg, request, id)),
                 });
                 continue;
               }
@@ -927,7 +959,7 @@ const transfer = (kind: "move" | "copy") =>
                     }
                   : {
                       ...(result.outcome === "not-found"
-                        ? yield* taskLookupError(store, request, id)
+                        ? yield* cliLookupError(store, cfg, request, id)
                         : {}),
                       source_id: id,
                       target_id: null,
@@ -1072,11 +1104,30 @@ const batchEditCommand = Command.make(
       });
       yield* withStore(cfg, (store) =>
         Effect.gen(function* () {
-          const report = yield* batchEditTasks(
-            store,
-            yield* selectProfile(store, cfg),
-            { ...body, dry_run: input.dryRun || body.dry_run || false },
-          );
+          const request = yield* selectProfile(store, cfg);
+          const result = yield* batchEditTasks(store, request, {
+            ...body,
+            dry_run: input.dryRun || body.dry_run || false,
+          });
+          const report = {
+            ...result,
+            items: yield* Effect.forEach(result.items, (row) =>
+              Effect.gen(function* () {
+                return row.error
+                  ? {
+                      ...row,
+                      error: yield* cliLookupRowError(
+                        store,
+                        cfg,
+                        request,
+                        row.task_id,
+                        row.error,
+                      ),
+                    }
+                  : row;
+              }),
+            ),
+          };
           yield* write(
             cfg.format === "json"
               ? encodeResponse(BatchEditReport, report)
@@ -1128,13 +1179,32 @@ const attachManyCommand = Command.make(
       yield* withStore(cfg, (store) =>
         Effect.gen(function* () {
           const request = yield* selectProfile(store, cfg);
-          const report = yield* new AttachmentCommands(store).attachMany(
+          const result = yield* new AttachmentCommands(store).attachMany(
             request,
             {
               ...requestBody,
               dry_run: input.dryRun || (requestBody.dry_run ?? false),
             },
           );
+          const report = {
+            ...result,
+            items: yield* Effect.forEach(result.items, (row) =>
+              Effect.gen(function* () {
+                return row.error
+                  ? {
+                      ...row,
+                      error: yield* cliLookupRowError(
+                        store,
+                        cfg,
+                        request,
+                        row.task_id,
+                        row.error,
+                      ),
+                    }
+                  : row;
+              }),
+            ),
+          };
           yield* write(
             cfg.format === "json"
               ? encodeResponse(AttachManyReport, report)
@@ -1465,12 +1535,31 @@ const importCommand = makeImportCommand((input) =>
     yield* withStore(cfg, (store) =>
       Effect.gen(function* () {
         const request = yield* selectProfile(store, cfg);
-        const report = yield* importTasks(store, request, {
+        const result = yield* importTasks(store, request, {
           items,
           file_name: input.file === "-" ? "stdin" : basename(input.file),
           dry_run: input.dryRun,
           close_missing: input.closeMissing,
         });
+        const report = {
+          ...result,
+          items: yield* Effect.forEach(result.items, (row) =>
+            Effect.gen(function* () {
+              return row.error
+                ? {
+                    ...row,
+                    error: yield* cliLookupRowError(
+                      store,
+                      cfg,
+                      request,
+                      row.task_id ?? row.error.details?.task_id ?? null,
+                      row.error,
+                    ),
+                  }
+                : row;
+            }),
+          ),
+        };
         yield* write(renderImport(report, cfg.format));
         if (report.totals.rejected)
           process.exitCode = report.items.some(

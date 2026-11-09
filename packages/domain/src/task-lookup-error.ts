@@ -18,30 +18,44 @@ export const shellQuote = (value: string) =>
 export const shellFlag = (flag: string, value: string) =>
   `${flag}${value.startsWith("--") ? "=" : " "}${shellQuote(value)}`;
 
+export type TaskLookupErrorOptions = { readonly credentialProfile?: string };
+
 export const taskLookupError = Effect.fn(function* (
   store: OperationStore,
   request: AccessRequest,
   task_id: string,
   transport: "cli" | "http" = "cli",
+  options: TaskLookupErrorOptions = {},
 ) {
   const { profiles } = yield* store.auth.read(request);
   const profile = profiles.find((value) => value.id === request.profile);
-  return authorizedTaskLookupError(profile, task_id, transport);
+  return authorizedTaskLookupError(
+    profile,
+    task_id,
+    transport,
+    options.credentialProfile ?? request.profile,
+  );
 });
 
 function authorizedTaskLookupError(
   profile: Pick<Profile, "id" | "name"> | undefined,
   task_id: string,
-  transport: "cli" | "http" = "cli",
+  transport: "cli" | "http",
+  credentialProfile: string,
 ): { message: string; details?: typeof TaskLookupDetails.Type } {
   if (!profile) return { message: "Task not found" };
   const validPrefix = Schema.is(TaskIdPrefix)(task_id);
   const prefix = shellFlag("--prefix", validPrefix ? task_id : "<hex-prefix>");
+  const credential =
+    transport === "cli"
+      ? ` ${shellFlag("--credential-profile", credentialProfile)}`
+      : "";
+  const listCredential = credentialProfile === profile.id ? "" : credential;
   const routes =
     transport === "http"
       ? ` HTTP: GET /profiles/${encodeURIComponent(profile.id)}/tasks?prefix=${validPrefix ? encodeURIComponent(task_id) : "<hex-prefix>"} or GET /tasks/lookup?prefix=${validPrefix ? encodeURIComponent(task_id) : "<hex-prefix>"}.`
       : "";
-  const recovery = `Run todo list ${shellFlag("--profile", profile.id)} ${prefix} for this Profile, or todo lookup ${prefix} across Profiles this credential can access.${routes} Mutations need the full Task id and an explicit Profile.`;
+  const recovery = `Run todo list ${shellFlag("--profile", profile.id)} ${prefix}${listCredential} for this Profile, or todo lookup ${prefix}${credential} across Profiles this credential can access.${routes} Mutations need the full Task id and an explicit Profile.`;
   return {
     message: `Task not found in Profile ${profile.name} (${profile.id}). ${recovery}`,
     details: {

@@ -144,3 +144,13 @@ requests, missing authentication and forbidden Profile access. Evidence includes
 error-list-actions.json. The server is stopped before the test removes scratch.
 `todo schema error` constrains matching exit_code/exit_meaning pairs. List uses
 its own required-tasks schema; export and review keep their original schemas.
+
+Lookup recovery also names the credential key used by the failed CLI call.
+`taskLookupError` takes an optional fifth `{credentialProfile}` argument after
+transport. CLI lookup hints always include --credential-profile; scoped list
+hints include it when the credential key differs from the target Profile id.
+HTTP hints are unchanged. `cliLookupError` in main.ts is the single integration
+point for B's credentialProfileName(cfg); this isolated unit uses cfg.profile.
+Batch edit, attach-many and import preserve their row fields while reusing that
+same CLI presentation path for missing Tasks. Domain commands and authorization
+do not resolve credential names.

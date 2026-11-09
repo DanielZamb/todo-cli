@@ -86,7 +86,7 @@ with (evidence / 'server.log').open('w') as log:
         request('POST', '/profiles/work/quick-add/parse', 401, draft_input)
         request('POST', '/profiles/work/quick-add/parse', 400, {**draft_input, 'time_zone': 'invalid'}, reader)
         request('POST', '/profiles/work/quick-add/parse', 422, {**draft_input, 'text': 'tomorrow p1'}, reader)
-        assert request('POST', '/profiles/work/quick-add/parse', 422, {**draft_input, 'text': 'Meet tomorrow 10:60am'}, reader) == {'_tag': 'InvalidTask', 'message': 'Minute must be between 0 and 59'}
+        assert request('POST', '/profiles/work/quick-add/parse', 422, {**draft_input, 'text': 'Meet tomorrow 10:60am'}, reader) == {'_tag': 'InvalidTask', 'exit_code': 2, 'exit_meaning': 'validation or usage', 'message': 'Minute must be between 0 and 59'}
         request('PATCH', '/profiles/work/tasks/inbox', 200, {'from_version': 1, 'changes': {'title': 'Edited Inbox'}}, writer)
         request('PATCH', '/profiles/work/tasks/inbox', 409, {'from_version': 1, 'changes': {'title': 'Stale'}}, writer)
         request('PATCH', '/profiles/work/tasks/inbox', 422, {'from_version': 2, 'changes': {'project_id': 'personal-project', 'tags': ['personal-tag']}}, writer)
@@ -114,7 +114,7 @@ with (evidence / 'server.log').open('w') as log:
         for content in ['P01 HTTP private title', 'P01 HTTP private description', 'P01 HTTP rejected title']:
             assert content not in json.dumps(private_history)
         request('GET', private_path, 404, credential=reader)
-        assert request('POST', private_path + '/revert', 422, {'from_version': 2, 'seq': private_history[0]['seq']}, writer) == {'_tag': 'InvalidTask', 'message': 'task_purged'}
+        assert request('POST', private_path + '/revert', 422, {'from_version': 2, 'seq': private_history[0]['seq']}, writer) == {'_tag': 'InvalidTask', 'exit_code': 2, 'exit_meaning': 'validation or usage', 'message': 'task_purged'}
         assert request('GET', '/profiles/personal/tasks/' + private['id'] + '/history', 200, credential=session) == []
         (evidence / 'purge-history.json').write_text(json.dumps(private_history, indent=2) + '\n')
         contract = request('GET', '/openapi.json', 200)
