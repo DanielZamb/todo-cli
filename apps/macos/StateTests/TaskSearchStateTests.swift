@@ -79,6 +79,10 @@ struct TaskSearchStateTests {
         #expect(rendered.runs.filter { $0.backgroundColor != nil }.map { String(rendered[$0.range].characters) } == ["Cancio\u{301}n"])
         let invalid = TaskSearchPresentation.highlighted(text, spans: [.init(field: .title, start: 1, end: 2), .init(field: .title, start: -1, end: 900)], field: .title)
         #expect(invalid.runs.allSatisfy { $0.backgroundColor == nil })
+        let multiline = try JSONDecoder().decode(TaskSnapshot.self, from: Data(#"{"id":"excerpt","profile_id":"work","row_version":1,"title":"Receipt","description":"First line\nPay rent today","priority":"P3","source":"manual","status":"open","project_id":null,"tags":[],"due_at":null,"scheduled_at":null,"energy":null,"estimate_min":null,"occurrence":null,"legacy_series_detached":true,"deleted_at":null,"search_matches":[{"field":"description","start":15,"end":19}]}"#.utf8))
+        let excerpt = try #require(TaskSearchPresentation.descriptionExcerpt(multiline))
+        #expect(String(excerpt.characters) == "First line Pay rent today")
+        #expect(excerpt.runs.filter { $0.backgroundColor != nil }.map { String(excerpt[$0.range].characters) } == ["rent"])
     }
 
     @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_W06_SERVER"] != nil))

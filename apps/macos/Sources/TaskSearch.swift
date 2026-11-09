@@ -48,6 +48,9 @@ enum TaskSearchPresentation {
         var result = highlighted(text, spans: spans, field: .description)
         guard let a = AttributedString.Index(start, within: result), let b = AttributedString.Index(end, within: result) else { return nil }
         result = AttributedString(result[a..<b])
+        for whitespace in ["\n", "\r", "\t"] {
+            while let range = result.range(of: whitespace) { result.replaceSubrange(range, with: AttributedString(" ")) }
+        }
         return AttributedString(start == text.startIndex ? "" : "…") + result + AttributedString(end == text.endIndex ? "" : "…")
     }
 }
