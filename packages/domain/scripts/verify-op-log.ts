@@ -9,6 +9,7 @@ import { Effect, Schema } from "effect";
 import { ActorId, Instant, ProfileId, Sequence } from "../src/index.ts";
 
 import { provePurge, proveSharedMetadataPurge } from "./purge-proof.ts";
+import { proveProjectionTagSets, proveTagLinks } from "./tag-link-proof.ts";
 
 const directory = process.argv[2];
 const evidence = process.argv[3];
@@ -288,4 +289,13 @@ const sharedPurgeProof = await Effect.runPromise(
 writeFileSync(
   join(evidence, "shared-purge.json"),
   `${JSON.stringify(sharedPurgeProof, null, 2)}\n`,
+);
+
+proveProjectionTagSets();
+const tagLinkProof = await Effect.runPromise(
+  proveTagLinks(join(directory, "tag-links.db")),
+);
+writeFileSync(
+  join(evidence, "tag-links.json"),
+  `${JSON.stringify(tagLinkProof, null, 2)}\n`,
 );
