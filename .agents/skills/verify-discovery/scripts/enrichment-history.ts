@@ -50,7 +50,7 @@ try {
           yield* store.putProfile(work);
           yield* store.auth.setupOwner("scratch enrichment passphrase");
           const owner = yield* store.auth.signIn("scratch enrichment passphrase");
-          const token = yield* store.auth.issueToken({ credential: owner.credential, token: { name: "row-expiry", profile: Schema.decodeUnknownSync(ProfileId)("work"), scope: "read-write", expires_at: Schema.decodeUnknownSync(Instant)(new Date(start + 1).toISOString()) } });
+          const token = yield* store.auth.issueToken({ credential: owner.credential, token: { name: "row-expiry", profile: Schema.decodeUnknownSync(ProfileId)("work"), scope: "read-write", expires_at: Schema.decodeUnknownSync(Instant)(new Date(start + 10000).toISOString()) } });
           return { owner, token };
         } finally { yield* store.close(); }
       }).pipe(Effect.provideService(Clock.Clock, clockAt(clock, () => start)));
@@ -60,14 +60,15 @@ try {
     copyFileSync(seed, cliPath);
     copyFileSync(seed, httpPath);
     const token = seeded.token;
+    const cliIssueTime = Date.now() - 60000;
     const cliToken = await Effect.runPromise(Effect.gen(function* () {
       const clock = yield* Clock.Clock;
       return yield* Effect.gen(function* () {
         const store = yield* openStore({ path: cliPath });
         try {
-          return yield* store.auth.issueToken({ credential: seeded.owner.credential, token: { name: "cli-expired", profile: Schema.decodeUnknownSync(ProfileId)("work"), scope: "read-write", expires_at: Schema.decodeUnknownSync(Instant)(new Date(Date.now() - 9999).toISOString()) } });
+          return yield* store.auth.issueToken({ credential: seeded.owner.credential, token: { name: "cli-expired", profile: Schema.decodeUnknownSync(ProfileId)("work"), scope: "read-write", expires_at: Schema.decodeUnknownSync(Instant)(new Date(cliIssueTime + 10000).toISOString()) } });
         } finally { yield* store.close(); }
-      }).pipe(Effect.provideService(Clock.Clock, clockAt(clock, () => Date.now() - 10000)));
+      }).pipe(Effect.provideService(Clock.Clock, clockAt(clock, () => cliIssueTime)));
     }));
     const home = join(directory, "home");
     mkdirSync(join(home, ".todo-cli"), { recursive: true });
@@ -80,7 +81,7 @@ try {
     assert.equal(cliRows.length, 1);
     assert.deepEqual(cliRows.map((row) => [row.profile, row.event.action, row.event.detail]), [["work", "authenticate", "expired"]]);
     assert.equal(cliRows[0].actor, cliToken.id);
-    const rejectionTime = start + 1;
+    const rejectionTime = start + 20000;
     let current = start;
     let used = 0;
     let ready = () => {};
