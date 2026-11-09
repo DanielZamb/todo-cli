@@ -153,3 +153,59 @@ it("renders original UTF-16 spans without normalization or matching", () => {
   ).toEqual({ field: "description", start: 8, end: 12 });
   expect(descriptionMatch(task)).toBeNull();
 });
+
+it("resolves synthetic same-name Projects and raw-append case-fold Tags while preserving dialog names", async () => {
+  const { taskSearchQuery } = await import("../src/task-search-results.ts");
+  const definitions = Schema.decodeUnknownSync(Reply)({
+    ...catalog(),
+    projects: [
+      {
+        id: "small-a",
+        profile_id: "work",
+        name: "Small",
+        created_at: task.created_at,
+        updated_at: task.created_at,
+        open_task_count: 1,
+      },
+      {
+        id: "small-b",
+        profile_id: "work",
+        name: "Small",
+        created_at: task.created_at,
+        updated_at: task.created_at,
+        open_task_count: 1,
+      },
+    ],
+    tags: [
+      { id: "keep-a", profile_id: "work", name: "keep", open_task_count: 1 },
+      { id: "keep-b", profile_id: "work", name: "KEEP", open_task_count: 1 },
+    ],
+  });
+  if (definitions._tag !== "tasks") throw new Error("Expected Task catalog");
+  const identity = {
+    profile: task.profile_id,
+    view: "tasks",
+    filters: { status: "open" },
+    project: "small-b",
+    tag: "keep-b",
+    text: "probe",
+  } satisfies import("../src/task-search-results.ts").SearchIdentity;
+  expect(taskSearchQuery(identity, definitions)).toEqual({
+    project: "Small",
+    tag: "KEEP",
+    status: "open",
+    text: "probe",
+  });
+  expect(
+    taskSearchQuery(
+      { ...identity, filters: { project: "Dialog", tag: "explicit" } },
+      definitions,
+    ),
+  ).toEqual({ project: "Dialog", tag: "explicit", text: "probe" });
+  expect(
+    taskSearchQuery(
+      { ...identity, project: "deleted", tag: "deleted" },
+      definitions,
+    ),
+  ).toEqual({ status: "open", text: "probe" });
+});
