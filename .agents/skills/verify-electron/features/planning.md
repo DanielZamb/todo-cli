@@ -64,3 +64,9 @@ Profile choices show display names without counts. Quick add repeats only the di
 Membership and parsing come only from HttpApi. New Project and Tag names resolve
 when the Task is saved. Quoted names such as `@"Client Project"` and
 `#"deep focus"` use the shared parser.
+
+The Filters grid scrolls a focused control fully into view, including Attachment
+contains at the end of the Compact form. `filters-panel-bounds.json` records the
+focused control and scroll viewport. The drive requires the focused control's
+bottom inside that viewport, the dialog inside the window, and zero horizontal
+scroll in the dialog, form and field grid.

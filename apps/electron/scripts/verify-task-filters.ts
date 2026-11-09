@@ -229,6 +229,25 @@ export async function verifyTaskFilters({
           ?.getBoundingClientRect();
         return {
           viewport: window.innerHeight,
+          width: window.innerWidth,
+          dialog: element.getBoundingClientRect().toJSON(),
+          containers: [
+            element,
+            ...element.querySelectorAll("form, .task-filter-grid"),
+          ].map((node) => ({
+            left: node.scrollLeft,
+            width: node.clientWidth,
+            content: node.scrollWidth,
+          })),
+          fields: element
+            .querySelector(".task-filter-grid")
+            ?.getBoundingClientRect()
+            .toJSON(),
+          focused: document.activeElement?.getBoundingClientRect().toJSON(),
+          scroll: {
+            left: document.documentElement.scrollLeft,
+            width: document.documentElement.scrollWidth,
+          },
           bottom: footer?.bottom,
           buttons: [
             ...element.querySelectorAll('[data-slot="dialog-footer"] button'),
@@ -236,6 +255,16 @@ export async function verifyTaskFilters({
         };
       });
       expect(panel.bottom).toBeLessThanOrEqual(panel.viewport);
+      writeFileSync(
+        join(evidence, "filters-panel-bounds.json"),
+        JSON.stringify(panel, null, 2),
+      );
+      expect(panel.containers.map((node) => node.left)).toEqual([0, 0, 0]);
+      expect(panel.focused?.bottom).toBeLessThanOrEqual(
+        panel.fields?.bottom ?? 0,
+      );
+      expect(panel.dialog.left).toBeGreaterThanOrEqual(0);
+      expect(panel.dialog.right).toBeLessThanOrEqual(panel.width);
       for (const button of panel.buttons)
         expect(button.height).toBeGreaterThanOrEqual(32);
       receipts.push({ compact, appearance, panel });

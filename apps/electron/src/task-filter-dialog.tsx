@@ -214,7 +214,16 @@ export function TaskFilterDialog({
             }
           }}
         >
-          <FieldGroup className="task-filter-grid">
+          <FieldGroup
+            className="task-filter-grid"
+            onFocusCapture={(event) => {
+              if (event.currentTarget.contains(event.target))
+                event.target.scrollIntoView({
+                  block: "nearest",
+                  inline: "nearest",
+                });
+            }}
+          >
             <Field data-invalid={prefixInvalid || undefined}>
               <FieldLabel htmlFor="filter-prefix">Id starts with</FieldLabel>
               <Input

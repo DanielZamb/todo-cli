@@ -81,3 +81,7 @@ and remove only their own scratch directory. Evidence stays ignored by Git.
 Native HOLD remains in force. No installed Todo app, signing, safeStorage,
 Keychain, owner data or real credentials enter these commands. This proof does
 not establish VoiceOver behavior or signed production app startup.
+
+Empty search hides the header Quick add in both layouts, leaving Clear search
+as the single primary action. Cmd+F preserves the open full-window detail; in
+Compact it returns to the Task view to focus the search field.

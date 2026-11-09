@@ -439,6 +439,9 @@ try {
       expect(
         await page.locator('[data-slot="empty"] button').allTextContents(),
       ).toEqual(["Clear search"]);
+      await expect(
+        page.getByRole("button", { name: "Quick add", exact: true }),
+      ).toHaveCount(0);
       await shot(`${prefix}-empty`);
       await page
         .getByRole("button", { name: "Clear search", exact: true })
@@ -545,8 +548,18 @@ try {
       expect(cli("show", passport.id).task.row_version).toBe(1);
       await page.keyboard.press("Meta+f");
       await expect(field).toBeFocused();
+      if (!compact)
+        await expect(page.getByLabel("Title", { exact: true })).toBeVisible();
       await field.press("Escape");
       await showing("");
+      if (!compact) {
+        await page
+          .getByRole("button", { name: "Task actions", exact: true })
+          .click();
+        await page
+          .getByRole("menuitem", { name: "Close editor", exact: true })
+          .click();
+      }
     }
     if (compact) {
       await query("pasaprote", ["Renovar el pasaporte"]);

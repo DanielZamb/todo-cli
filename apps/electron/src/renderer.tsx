@@ -630,13 +630,13 @@ function App() {
     const focus = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f") {
         event.preventDefault();
-        setEditor(null);
+        if (compact) setEditor(null);
         requestAnimationFrame(() => searchInput.current?.focus());
       }
     };
     window.addEventListener("keydown", focus);
     return () => window.removeEventListener("keydown", focus);
-  }, []);
+  }, [compact]);
   useEffect(() => {
     void request({ _tag: "windowMode" }).then((reply) => {
       if (reply._tag === "windowMode") setCompact(reply.compact);
@@ -1795,9 +1795,8 @@ function App() {
               </Button>
             )}
             {!(
-              compact &&
-              (connection === "offline" ||
-                loadError ||
+              (compact && (connection === "offline" || loadError)) ||
+              ((compact || searchText.length > 0) &&
                 groups.every((group) => group.tasks.length === 0))
             ) && (
               <Button
