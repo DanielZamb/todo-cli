@@ -1,13 +1,37 @@
-# Current F1 integration gate
+# Current main-based performance integration
 
-The incoming SEC base is `75614cfff568085e09336b755e9ad436f76e21b9`.
-Its selected Project/Tag name forwarding is combined with both refresh scopes,
-and the recovery drives build their own seed. Resolver guards and per-command
-Package.resolved diff receipts cover every future Swift package invocation.
-Compiled F1 recovery, new request-count inputs and formal reproof are held by
-standing order 29 because disk is below 30 GB. The source merge has only static
-review at this checkpoint. Earlier proof and measurement receipts below remain
-historical and do not approve this F1 integration.
+Product `ada9f31907322f626c90224573dba283b1d5f254` merges final main
+`9de893454cb6e3f5729407e9313c73e56bfd0481` with minimal refresh and R1.
+Verifier-only `12124354` leaves all covered production bytes unchanged.
+
+`check-XmY6pO` exits 0 for the complete finite model, real immutable matcher,
+strict checks, all nine expected-failure controls and restored run. The full
+identity graph has 3,053,160 states and the three-request graph has 1,954,050.
+The model remains finite and manually mapped; this is no mechanical refinement.
+The main matcher and five real-code controls passed separately in
+`matcher-6dcbM8` before only the three merged client hashes were renewed.
+The initial `matcher-SntXwq` receipt failed its runner typecheck on unresolved
+coverage merge markers; it is retained and is not counted as a clean proof.
+
+Compiled 105 Swift tests plus generated contracts/diagnostics, real Snapshot
+restore/reload, 5 tests, Electron full/query F1a/F1b and R1 regressions, unsigned
+Xcode and 346 offscreen renders all exit 0. Project and Tag names survive the
+correct reset boundaries; padded Tags add no inferred server predicate.
+Original synthetic fixture failures are retained in
+`docs/evidence/perf-refresh/main-9de/electron-final`; the corrected navigation
+fixture uses actual changed selections and passes in `electron-nav-fixed`.
+
+Final-main frozen inputs run against one identical SEC plus reviewed Tag D1
+backend. Five alternating pairs per client all exit 0. Every 25 successful query
+action run uses 215 to 45 Swift or 225 to 45 Electron data requests. Health, full,
+warmup and controlled-failure reads are separate. All successful query reads
+complete without failures or cancellation. All tracked Package.resolved files
+remain unchanged. No shipping latency claim is made.
+
+Receipts: `docs/evidence/perf-refresh/main-9de`, especially
+`frozen-inputs.json` and `paired-summary.json`. The local PERF-refresh report and delivery receipt carry the final same-head
+locked check and both review verdicts.
+The records below are historical and do not supersede this integration status.
 
 # Historical integrated PERF-refresh proof at 51711cf4
 
