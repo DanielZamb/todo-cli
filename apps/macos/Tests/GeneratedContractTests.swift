@@ -8,7 +8,7 @@ import OpenAPIRuntime
 
 final class GeneratedContractTests: XCTestCase {
     func testDiscoveryDirectoryAndLookupKeepFullIdsAndNullProject() throws {
-        try roundTrip(Operations.reads_period_profiles.Output.Ok.Body.jsonPayload.self, #"[{"id":"work","name":"Work","open_task_count":0,"inbox_task_count":0,"visible_task_count":0,"projects":[{"id":"project-full-id","name":"Empty Project"}]}]"#)
+        try roundTrip(Operations.reads_period_profiles.Output.Ok.Body.jsonPayload.self, #"[{"id":"work","name":"Work","created_at":"2026-10-27T00:00:00Z","updated_at":"2026-10-27T00:00:00Z","open_task_count":0,"inbox_task_count":0,"visible_task_count":0,"projects":[{"id":"project-full-id","name":"Empty Project"}]}]"#)
         try roundTrip(Operations.reads_period_lookup.Output.Ok.Body.jsonPayload.self, #"[{"profile":{"id":"personal","name":"Personal"},"task_id":"aaaaaaaa-1111-4222-8333-444444444444","title":"Done Task","project":null}]"#)
         XCTAssertEqual(Operations.reads_period_profiles.Input.Query(include_projects: ._true).include_projects, ._true)
         XCTAssertEqual(Operations.reads_period_lookup.Input.Query(prefix: "AAa").prefix, "AAa")

@@ -33,11 +33,14 @@ struct DiscoveryView: View {
                     }
                 }
             }
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    content
-                }.frame(maxWidth: .infinity, alignment: .leading)
-            }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            if state.phase == .showing && state.dialog == .directory {
+                directoryList
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 14) { content }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
             Divider()
             HStack {
                 Spacer()
@@ -72,24 +75,7 @@ struct DiscoveryView: View {
         case .empty:
             Text(state.dialog == .directory ? "No Profiles available." : "No Tasks found.").foregroundStyle(.secondary)
         case .showing:
-            if state.dialog == .directory {
-                VStack(alignment: .leading, spacing: 16) {
-                    ForEach(state.appliedSnapshot?.profiles ?? []) { profile in
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(profile.name).font(.headline)
-                            fullID(profile.id)
-                            if profile.projects.isEmpty { Text("No Projects").foregroundStyle(.secondary) }
-                            ForEach(profile.projects) { project in
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(project.name)
-                                    fullID(project.id)
-                                }.padding(.leading, 12)
-                            }
-                        }
-                        Divider()
-                    }
-                }.accessibilityIdentifier("discovery-directory-list")
-            } else {
+            if state.dialog == .lookup {
                 VStack(alignment: .leading, spacing: 16) {
                     ForEach(state.appliedSnapshot?.matches ?? []) { match in
                         VStack(alignment: .leading, spacing: 6) {
@@ -105,10 +91,39 @@ struct DiscoveryView: View {
                             Button("Show in \(match.profile.name)") { Task { await model.showDiscoveryMatch(match) } }
                                 .accessibilityIdentifier("discovery-show-\(match.task_id)")
                         }
-                        Divider()
                     }
                 }.accessibilityIdentifier("discovery-results")
             }
+        }
+    }
+    private var directoryList: some View {
+        List {
+            ForEach(state.appliedSnapshot?.profiles ?? []) { profile in
+                Section {
+                    if profile.projects.isEmpty {
+                        Text("No Projects").foregroundStyle(.secondary).listRowSeparator(.hidden)
+                    } else {
+                        Text("Projects").font(.caption).foregroundStyle(.secondary).listRowSeparator(.hidden)
+                        ForEach(profile.projects) { project in
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(project.name).textSelection(.enabled)
+                                if project.id != project.name { labeledID(project.id) }
+                            }.padding(.leading, 12).listRowSeparator(.hidden)
+                        }
+                    }
+                } header: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(profile.name).font(.body.weight(.semibold)).foregroundStyle(.primary).textSelection(.enabled)
+                        if profile.id != profile.name { labeledID(profile.id) }
+                    }
+                }
+            }
+        }.listStyle(.inset).accessibilityIdentifier("discovery-directory-list")
+    }
+    private func labeledID(_ value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text("id").font(.caption).foregroundStyle(.secondary)
+            fullID(value)
         }
     }
     private var retry: some View {

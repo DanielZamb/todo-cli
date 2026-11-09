@@ -45,14 +45,24 @@ import Testing
                         model.taskIDCopyFeedback = name == "lookup-copied" ? "Copied" : "Couldn't copy. Try again."
                     }
                     let frames = DiscoveryFrames()
-                    let width: CGFloat = compact ? 393 : 560
-                    let height: CGFloat = compact ? 426 : 600
-                    let view = DiscoveryView(model: model, compact: compact)
+                    let width: CGFloat = compact ? 393 : 1024
+                    let height: CGFloat = compact ? 426 : 720
+                    let view = ZStack {
+                        if !compact {
+                            HStack(spacing: 0) {
+                                TaskListView(model: model).sidebar.frame(width: 220)
+                                Divider()
+                                TaskListView(model: model).taskContent
+                            }.frame(width: width, height: height)
+                            Color.black.opacity(0.08)
+                        }
+                        DiscoveryView(model: model, compact: compact).background(.background, in: RoundedRectangle(cornerRadius: compact ? 0 : 12))
+                    }.frame(width: width, height: height)
                         .onPreferenceChange(CompactLayoutKey.self) { value in MainActor.assumeIsolated { frames.frames = value } }
                         .environment(\.colorScheme, scheme).environment(\.controlActiveState, .key)
                         .tint(TodoColors.color("primary")).background(.background)
                     let controller = NSHostingController(rootView: view)
-                    let window = NSWindow(contentRect: .init(x: -10000, y: -10000, width: width, height: height), styleMask: [.titled], backing: .buffered, defer: false)
+                    let window = NSWindow(contentRect: .init(x: -10000, y: -10000, width: width, height: height), styleMask: [.borderless], backing: .buffered, defer: false)
                     window.isReleasedWhenClosed = false
                     window.appearance = appearance
                     window.contentViewController = controller

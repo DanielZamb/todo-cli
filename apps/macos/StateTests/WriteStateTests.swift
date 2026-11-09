@@ -38,7 +38,7 @@ private func fixture(_ transport: Transport, json: String = taskJSON()) throws -
 
 @Test @MainActor func moveConflictPreservesDraftAndRetriesAtLatestVersion() async throws {
     let transport = Transport([
-        .init(operation: "tasks.move", status: 409, json: #"{"_tag":"Conflict","latest":\#(taskJSON(version: 4, title: "Remote"))}"#),
+        .init(operation: "tasks.move", status: 409, json: #"{"_tag":"Conflict","exit_code":4,"exit_meaning":"Conflict","latest":\#(taskJSON(version: 4, title: "Remote"))}"#),
         .init(operation: "tasks.move", status: 422, json: #"{"message":"series_move_not_supported"}"#)
     ])
     let model = try fixture(transport)
@@ -73,7 +73,7 @@ private func fixture(_ transport: Transport, json: String = taskJSON()) throws -
 }
 
 @Test @MainActor func unavailableConflictCannotRetry() async throws {
-    let transport = Transport([.init(operation: "tasks.revert", status: 409, json: #"{"_tag":"Conflict","latest":null}"#)])
+    let transport = Transport([.init(operation: "tasks.revert", status: 409, json: #"{"_tag":"Conflict","exit_code":4,"exit_meaning":"Conflict","latest":null}"#)])
     let model = try fixture(transport)
     await model.write(.revert(7))
     await model.resolveConflict()
@@ -85,7 +85,7 @@ private func fixture(_ transport: Transport, json: String = taskJSON()) throws -
 @Test @MainActor func seriesConflictRequiresFieldChoiceAndPreservesExclusions() async throws {
     let recurrence = Recurrence(dtstart: TaskTime(kind: "date", date: "2026-10-28"), rrule: "FREQ=DAILY", exdate: [TaskTime(kind: "date", date: "2026-10-29")])
     let transport = Transport([
-        .init(operation: "tasks.editSeries", status: 409, json: #"{"_tag":"Conflict","latest":\#(taskJSON(version: 3, title: "Remote"))}"#),
+        .init(operation: "tasks.editSeries", status: 409, json: #"{"_tag":"Conflict","exit_code":4,"exit_meaning":"Conflict","latest":\#(taskJSON(version: 3, title: "Remote"))}"#),
         .init(operation: "tasks.editSeries", status: 422, json: #"{"message":"invalid_recurrence"}"#)
     ])
     let model = try fixture(transport)
@@ -458,7 +458,7 @@ func liveGeneratedWritesAgainstScratchServer() async throws {
     }
     @Test func deletingAnotherConflictingRowLeavesInspectorErrorsAlone() async throws {
         let otherJSON = taskJSON().replacingOccurrences(of: "task-1", with: "task-2")
-        let transport = Transport([.init(operation: "tasks.delete", status: 409, json: #"{"_tag":"Conflict","latest":\#(otherJSON)}"#)])
+        let transport = Transport([.init(operation: "tasks.delete", status: 409, json: #"{"_tag":"Conflict","exit_code":4,"exit_meaning":"Conflict","latest":\#(otherJSON)}"#)])
         let model = try fixture(transport)
         model.editorError = "Existing editor warning"
         model.editor?.title = "Inspector draft"
@@ -666,7 +666,7 @@ func liveMetadataQuickAddAndEditorSurviveReloadAndReachSecondClient() async thro
 
 @Test @MainActor func copyConflictPreservesDraftAndUsesCurrentVersion() async throws {
     let transport = Transport([
-        .init(operation: "tasks.copy", status: 409, json: #"{"_tag":"Conflict","latest":\#(taskJSON(version: 4, title: "Remote"))}"#),
+        .init(operation: "tasks.copy", status: 409, json: #"{"_tag":"Conflict","exit_code":4,"exit_meaning":"Conflict","latest":\#(taskJSON(version: 4, title: "Remote"))}"#),
         .init(operation: "tasks.copy", status: 422, json: #"{"message":"destination_rejected"}"#)
     ])
     let model = try fixture(transport)
@@ -789,7 +789,7 @@ func liveCopyKeepsSourceAndOtherTasks() async throws {
 }
 
 @Test @MainActor func cancellingTransferConflictPreservesSourceDraft() async throws {
-    let transport = Transport([.init(operation: "tasks.copy", status: 409, json: #"{"_tag":"Conflict","latest":\#(taskJSON(version: 4, title: "Remote"))}"#)])
+    let transport = Transport([.init(operation: "tasks.copy", status: 409, json: #"{"_tag":"Conflict","exit_code":4,"exit_meaning":"Conflict","latest":\#(taskJSON(version: 4, title: "Remote"))}"#)])
     let model = try fixture(transport)
     model.editor?.title = "Local source draft"
     await model.write(.copy("personal"))
