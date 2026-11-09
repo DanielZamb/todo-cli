@@ -67,3 +67,15 @@ it("quotes a colon and apostrophe and renders any dash-leading flag value inline
       "todo show ab --profile 'Team: It'\\''s Work' --credential-profile=-key",
     );
 });
+
+it("uses the shared shell spelling for a colon-only Profile id", () => {
+  const row = Schema.decodeUnknownSync(LookupMatch)({
+    profile: { id: "work:private", name: "Work" },
+    task_id: "ab",
+    title: "Plain",
+    project: null,
+  });
+  expect(lookupOutput([row], "md", "work:private")).toBe(
+    "Work | work:private | ab | Plain | No Project | todo show ab --profile work:private\n",
+  );
+});

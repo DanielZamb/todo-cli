@@ -17,6 +17,7 @@ import {
   ValidationHistory,
 } from "@todo/api";
 import {
+  type AuthAction,
   batchEditTasks,
   ClientReads,
   Discovery,
@@ -244,7 +245,10 @@ export const serverLayer = (options: {
       );
       yield* scheduler(store).pipe(Effect.forkScoped);
       const commands = new TaskCommands(store);
-      const missingTask = (params: { profile: ProfileId; task: TaskId }) =>
+      const missingTask = (
+        params: { profile: ProfileId; task: TaskId },
+        action: AuthAction = "read",
+      ) =>
         Effect.gen(function* () {
           const credential = yield* BearerCredential;
           return new NotFound(
@@ -254,12 +258,16 @@ export const serverLayer = (options: {
                 { credential, profile: params.profile },
                 params.task,
                 "http",
+                { action },
               ),
             ),
           );
         });
       const taskResultFor =
-        (params: { profile: ProfileId; task?: TaskId }) =>
+        (
+          params: { profile: ProfileId; task?: TaskId },
+          action: AuthAction = "mutate",
+        ) =>
         (result: TaskCommandResult) =>
           Effect.gen(function* () {
             if (
@@ -268,10 +276,13 @@ export const serverLayer = (options: {
               params.task !== undefined
             )
               return yield* Effect.fail(
-                yield* missingTask({
-                  profile: params.profile,
-                  task: params.task,
-                }),
+                yield* missingTask(
+                  {
+                    profile: params.profile,
+                    task: params.task,
+                  },
+                  action,
+                ),
               );
             return yield* taskResult(result);
           });
@@ -567,7 +578,7 @@ export const serverLayer = (options: {
                   { credential, profile: params.profile, task_id: params.task },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResultFor(params)));
+              ).pipe(Effect.flatMap(taskResultFor(params, "authenticate")));
             }),
           copy: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -578,7 +589,7 @@ export const serverLayer = (options: {
                   { credential, profile: params.profile, task_id: params.task },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResultFor(params)));
+              ).pipe(Effect.flatMap(taskResultFor(params, "authenticate")));
             }),
           revert: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -589,7 +600,7 @@ export const serverLayer = (options: {
                   { credential, profile: params.profile, task_id: params.task },
                   payload,
                 ),
-              ).pipe(Effect.flatMap(taskResultFor(params)));
+              ).pipe(Effect.flatMap(taskResultFor(params, "read")));
             }),
           createSeries: ({ params, payload }) =>
             Effect.gen(function* () {

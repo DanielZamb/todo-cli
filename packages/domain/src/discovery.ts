@@ -2,7 +2,6 @@ import { Effect, Schema } from "effect";
 import { ProfileSummary, profileTaskCounts } from "./client-reads.ts";
 import { Profile } from "./entities.ts";
 import { TaskId } from "./ids.ts";
-import { StoreError } from "./store/error.ts";
 import type { OperationStore } from "./store/store.ts";
 import { filterTaskRecords, TaskFilters } from "./task-filters.ts";
 
@@ -62,9 +61,7 @@ export class Discovery {
   readonly lookup = (credential: string, input: typeof LookupQuery.Type) =>
     this.store.auth.readSnapshot((auth) =>
       Effect.gen(function* () {
-        const { prefix } = yield* Schema.decodeUnknownEffect(LookupQuery)(
-          input,
-        ).pipe(Effect.mapError((cause) => new StoreError(cause)));
+        const { prefix } = input;
         const profiles = yield* auth.profiles({ credential });
         const groups = yield* Effect.forEach(
           [...profiles].sort(byName),

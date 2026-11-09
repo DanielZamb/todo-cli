@@ -230,6 +230,7 @@ type Settings = Effect.Success<typeof root>;
 const withStore = <A, E, R>(
   cfg: Settings,
   use: (store: OperationStore) => Effect.Effect<A, E, R>,
+  action: AuthAction = "read",
 ) =>
   Effect.gen(function* () {
     const path = yield* io(
@@ -254,12 +255,13 @@ const withStore = <A, E, R>(
                 error.task_id === undefined
               )
                 return yield* Effect.fail(error);
-              const request = yield* selectProfile(store, cfg);
+              const request = yield* selectProfile(store, cfg, action);
               const context = yield* cliLookupError(
                 store,
                 cfg,
                 request,
                 error.task_id,
+                action,
               );
               return yield* Effect.fail(
                 new CommandError(
@@ -299,9 +301,11 @@ const cliLookupError = (
   cfg: Settings,
   request: AccessRequest,
   task_id: string,
+  action: AuthAction = "read",
 ) =>
   taskLookupError(store, request, task_id, "cli", {
-    credentialProfile: cfg.profile,
+    credentialProfile: credentialProfileName(cfg),
+    action,
   });
 const cliLookupRowError = Effect.fn(function* <
   E extends {
@@ -317,7 +321,13 @@ const cliLookupRowError = Effect.fn(function* <
   error: E,
 ) {
   if (error.code !== "not_found" || task_id === null) return error;
-  const context = yield* cliLookupError(store, cfg, request, task_id);
+  const context = yield* cliLookupError(
+    store,
+    cfg,
+    request,
+    task_id,
+    "authenticate",
+  );
   return {
     ...error,
     ...context,
@@ -634,50 +644,53 @@ const add = Command.make(
         ? yield* quickDraft(input.parse.value)
         : undefined;
       const flags = taskInput({ ...input, title: Option.none() });
-      yield* withStore(cfg, (store) =>
-        Effect.gen(function* () {
-          const request = yield* selectProfile(store, cfg, "mutate");
-          const result = yield* createTask(
-            store,
-            request,
-            {
-              ...flags,
-              title: draft?.title ?? Option.getOrElse(titleArg, () => ""),
-            },
-            draft,
-            yield* Effect.try({
-              try: () => [
-                ...input.attach.map((path) =>
-                  attachmentInput(
-                    path,
-                    "file",
-                    Option.getOrUndefined(input.label),
+      yield* withStore(
+        cfg,
+        (store) =>
+          Effect.gen(function* () {
+            const request = yield* selectProfile(store, cfg, "mutate");
+            const result = yield* createTask(
+              store,
+              request,
+              {
+                ...flags,
+                title: draft?.title ?? Option.getOrElse(titleArg, () => ""),
+              },
+              draft,
+              yield* Effect.try({
+                try: () => [
+                  ...input.attach.map((path) =>
+                    attachmentInput(
+                      path,
+                      "file",
+                      Option.getOrUndefined(input.label),
+                    ),
                   ),
-                ),
-                ...input.link.map((uri) =>
-                  attachmentInput(
-                    uri,
-                    "link",
-                    Option.getOrUndefined(input.label),
+                  ...input.link.map((uri) =>
+                    attachmentInput(
+                      uri,
+                      "link",
+                      Option.getOrUndefined(input.label),
+                    ),
                   ),
+                ],
+                catch: (error) =>
+                  new CommandError(2, "invalid_args", String(error)),
+              }),
+            );
+            const data = yield* readTasks(store, request);
+            yield* write(
+              renderTask(
+                withAttachmentStatus(
+                  taskView(result.task, data.projects, data.tags, data.series),
+                  result.task.attachments ?? [],
                 ),
-              ],
-              catch: (error) =>
-                new CommandError(2, "invalid_args", String(error)),
-            }),
-          );
-          const data = yield* readTasks(store, request);
-          yield* write(
-            renderTask(
-              withAttachmentStatus(
-                taskView(result.task, data.projects, data.tags, data.series),
-                result.task.attachments ?? [],
+                cfg.format,
+                nowInstant(),
               ),
-              cfg.format,
-              nowInstant(),
-            ),
-          );
-        }),
+            );
+          }),
+        "mutate",
       );
     }),
 ).pipe(withGuide("add"));
@@ -888,7 +901,13 @@ const transfer = (kind: "move" | "copy") =>
                   target_id: null,
                   outcome: "not-found",
                   occurrence_as_plain_task: false,
-                  ...(yield* cliLookupError(store, cfg, request, id)),
+                  ...(yield* cliLookupError(
+                    store,
+                    cfg,
+                    request,
+                    id,
+                    "authenticate",
+                  )),
                 });
                 continue;
               }
@@ -940,7 +959,13 @@ const transfer = (kind: "move" | "copy") =>
                     }
                   : {
                       ...(result.outcome === "not-found"
-                        ? yield* cliLookupError(store, cfg, request, id)
+                        ? yield* cliLookupError(
+                            store,
+                            cfg,
+                            request,
+                            id,
+                            "authenticate",
+                          )
                         : {}),
                       source_id: id,
                       target_id: null,
@@ -1215,41 +1240,44 @@ const attachmentCommand = (detach: boolean) =>
     (input) =>
       Effect.gen(function* () {
         const cfg = yield* root;
-        yield* withStore(cfg, (store) =>
-          Effect.gen(function* () {
-            const dryRun = "dryRun" in input && input.dryRun === true;
-            const request = yield* selectProfile(
-              store,
-              cfg,
-              dryRun ? "authenticate" : "mutate",
-            );
-            const task = yield* changeAttachment(store, request, {
-              id: input.id,
-              value: input.value,
-              expected: input.expected,
-              detach,
-              dryRun,
-              ...(Option.isSome(input.label)
-                ? { label: input.label.value }
-                : {}),
-            });
-            if (cfg.format === "json")
-              return yield* write(
-                encodeResponse(AttachmentCommandResponse, {
-                  generated_at: nowInstant(),
-                  dry_run: dryRun,
-                  task: {
-                    id: task.id,
-                    row_version: task.row_version,
-                    attachments: attachmentStatus(task.attachments ?? []),
-                  },
-                }),
+        const dryRun = "dryRun" in input && input.dryRun === true;
+        yield* withStore(
+          cfg,
+          (store) =>
+            Effect.gen(function* () {
+              const request = yield* selectProfile(
+                store,
+                cfg,
+                dryRun ? "authenticate" : "mutate",
               );
-            const data = yield* readTasks(store, request);
-            yield* write(
-              `${dryRun ? "Dry run\n\n" : ""}${renderTask(withAttachmentStatus(taskView(task, data.projects, data.tags, data.series), task.attachments ?? []), cfg.format, nowInstant())}`,
-            );
-          }),
+              const task = yield* changeAttachment(store, request, {
+                id: input.id,
+                value: input.value,
+                expected: input.expected,
+                detach,
+                dryRun,
+                ...(Option.isSome(input.label)
+                  ? { label: input.label.value }
+                  : {}),
+              });
+              if (cfg.format === "json")
+                return yield* write(
+                  encodeResponse(AttachmentCommandResponse, {
+                    generated_at: nowInstant(),
+                    dry_run: dryRun,
+                    task: {
+                      id: task.id,
+                      row_version: task.row_version,
+                      attachments: attachmentStatus(task.attachments ?? []),
+                    },
+                  }),
+                );
+              const data = yield* readTasks(store, request);
+              yield* write(
+                `${dryRun ? "Dry run\n\n" : ""}${renderTask(withAttachmentStatus(taskView(task, data.projects, data.tags, data.series), task.attachments ?? []), cfg.format, nowInstant())}`,
+              );
+            }),
+          dryRun ? "authenticate" : "mutate",
         );
       }),
   ).pipe(withGuide(detach ? "detach" : "attach"));
@@ -1264,31 +1292,34 @@ const labelAttachmentCommand = Command.make(
   (input) =>
     Effect.gen(function* () {
       const cfg = yield* root;
-      yield* withStore(cfg, (store) =>
-        Effect.gen(function* () {
-          const request = yield* selectProfile(store, cfg, "mutate");
-          const task = yield* labelAttachment(
-            store,
-            request,
-            input.id,
-            input.attachment,
-            Option.getOrNull(input.label),
-            input.expected,
-          );
-          if (cfg.format === "json")
-            return yield* write(
-              encodeResponse(AttachmentCommandResponse, {
-                generated_at: nowInstant(),
-                dry_run: false,
-                task: {
-                  id: task.id,
-                  row_version: task.row_version,
-                  attachments: attachmentStatus(task.attachments ?? []),
-                },
-              }),
+      yield* withStore(
+        cfg,
+        (store) =>
+          Effect.gen(function* () {
+            const request = yield* selectProfile(store, cfg, "mutate");
+            const task = yield* labelAttachment(
+              store,
+              request,
+              input.id,
+              input.attachment,
+              Option.getOrNull(input.label),
+              input.expected,
             );
-          yield* write("Attachment label updated");
-        }),
+            if (cfg.format === "json")
+              return yield* write(
+                encodeResponse(AttachmentCommandResponse, {
+                  generated_at: nowInstant(),
+                  dry_run: false,
+                  task: {
+                    id: task.id,
+                    row_version: task.row_version,
+                    attachments: attachmentStatus(task.attachments ?? []),
+                  },
+                }),
+              );
+            yield* write("Attachment label updated");
+          }),
+        "mutate",
       );
     }),
 ).pipe(withGuide("label-attachment"));
@@ -1323,24 +1354,28 @@ const mutation = (name: Mutation) =>
     (input) =>
       Effect.gen(function* () {
         const cfg = yield* root;
-        yield* withStore(cfg, (store) =>
-          Effect.gen(function* () {
-            const request = yield* selectProfile(store, cfg, "mutate");
-            yield* mutateTask(
-              store,
-              request,
-              name,
-              input.id,
-              input.expected,
-              taskInput(input),
-              input.force,
-            );
-            if (name === "rm")
-              return yield* status(cfg.format, "deleted", "deleted\n");
-            const data = yield* readTasks(store, request);
-            const task = data.views.find((t) => t.id === input.id);
-            if (task) yield* write(renderTask(task, cfg.format, nowInstant()));
-          }),
+        yield* withStore(
+          cfg,
+          (store) =>
+            Effect.gen(function* () {
+              const request = yield* selectProfile(store, cfg, "mutate");
+              yield* mutateTask(
+                store,
+                request,
+                name,
+                input.id,
+                input.expected,
+                taskInput(input),
+                input.force,
+              );
+              if (name === "rm")
+                return yield* status(cfg.format, "deleted", "deleted\n");
+              const data = yield* readTasks(store, request);
+              const task = data.views.find((t) => t.id === input.id);
+              if (task)
+                yield* write(renderTask(task, cfg.format, nowInstant()));
+            }),
+          "mutate",
         );
       }),
   ).pipe(withGuide(name));

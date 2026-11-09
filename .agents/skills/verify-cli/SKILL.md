@@ -146,11 +146,13 @@ error-list-actions.json. The server is stopped before the test removes scratch.
 its own required-tasks schema; export and review keep their original schemas.
 
 Lookup recovery also names the credential key used by the failed CLI call.
-`taskLookupError` takes an optional fifth `{credentialProfile}` argument after
+`taskLookupError` takes an optional fifth `{credentialProfile, action}` argument after
 transport. CLI lookup hints always include --credential-profile; scoped list
 hints include it when the credential key differs from the target Profile id.
 HTTP hints are unchanged. `cliLookupError` in main.ts is the single integration
-point for B's credentialProfileName(cfg); this isolated unit uses cfg.profile.
+point for credentialProfileName(cfg), and passes the operation's AuthAction to
+metadata-only auth.resolveProfile. Both transports preserve rejected History
+attribution without reading the Profile's Task data to get its name.
 Batch edit, attach-many and import preserve their row fields while reusing that
 same CLI presentation path for missing Tasks. Domain commands and authorization
 do not resolve credential names.
@@ -170,6 +172,14 @@ the exact table output and process exit for a scoped credential targeting Privat
 Profile or No Such, in apply and dry-run modes. Owner requests for No Such keep
 the existing target Profile-not-found response. The auth-history regression also
 checks one authenticate rejection for revoked move/copy through CLI and HTTP.
+
+`test/discovery-integration.test.ts` logs out the destination credential, then
+executes both printed recovery hints and the resulting Show command unchanged
+through an owned scratch PATH. It checks the actual stored credential selector,
+a credential name containing a colon and apostrophe, and the `--prefix=-a`
+boundary. The domain enrichment regression also requires one mutate rejection
+when that is the operation supplied to the metadata resolver.
+
 ## Authorized discovery
 
 [verify-discovery](../verify-discovery/SKILL.md) owns the compiled Profile directory

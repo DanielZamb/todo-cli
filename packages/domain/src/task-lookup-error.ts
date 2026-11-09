@@ -1,6 +1,7 @@
 import { Effect, Schema } from "effect";
 import type { AccessRequest } from "./auth/model.ts";
 import type { Profile } from "./entities.ts";
+import type { AuthAction } from "./events.ts";
 import { ProfileId } from "./ids.ts";
 import { TaskIdPrefix } from "./limits.ts";
 import type { OperationStore } from "./store/store.ts";
@@ -16,9 +17,12 @@ export const shellQuote = (value: string) =>
     : `'${value.replaceAll("'", "'\\''")}'`;
 
 export const shellFlag = (flag: string, value: string) =>
-  `${flag}${value.startsWith("--") ? "=" : " "}${shellQuote(value)}`;
+  `${flag}${value.startsWith("-") ? "=" : " "}${shellQuote(value)}`;
 
-export type TaskLookupErrorOptions = { readonly credentialProfile?: string };
+export type TaskLookupErrorOptions = {
+  readonly credentialProfile?: string;
+  readonly action?: AuthAction;
+};
 
 export const taskLookupError = Effect.fn(function* (
   store: OperationStore,
@@ -27,8 +31,13 @@ export const taskLookupError = Effect.fn(function* (
   transport: "cli" | "http" = "cli",
   options: TaskLookupErrorOptions = {},
 ) {
-  const { profiles } = yield* store.auth.read(request);
-  const profile = profiles.find((value) => value.id === request.profile);
+  const profile = yield* store.auth
+    .resolveProfile({ ...request, action: options.action ?? "read" })
+    .pipe(
+      Effect.catchTag("ProfileResolutionError", () =>
+        Effect.succeed(undefined),
+      ),
+    );
   return authorizedTaskLookupError(
     profile,
     task_id,

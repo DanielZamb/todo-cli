@@ -63,6 +63,11 @@ it("requires list tasks without changing empty export or review JSON", () => {
 
 it("quotes recovery flags and preserves dash-leading values as flag values", () => {
   expect(shellFlag("--prefix", "--")).toBe("--prefix=--");
+  expect(shellFlag("--prefix", "-a")).toBe("--prefix=-a");
+  expect(shellFlag("--profile", "work:private")).toBe("--profile work:private");
+  expect(shellFlag("--profile", "Team: It's Work")).toBe(
+    "--profile 'Team: It'\\''s Work'",
+  );
   expect(shellFlag("--profile", "owner's tasks")).toBe(
     "--profile 'owner'\\''s tasks'",
   );

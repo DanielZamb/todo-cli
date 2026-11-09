@@ -1,13 +1,10 @@
-import type { LookupMatch, ProfileSummary } from "@todo/domain";
+import {
+  type LookupMatch,
+  type ProfileSummary,
+  shellFlag,
+  shellQuote,
+} from "@todo/domain";
 import type { Format } from "@todo/domain/presentation";
-
-const quote = (value: string) =>
-  /^[A-Za-z0-9_./-]+$/u.test(value)
-    ? value
-    : `'${value.replaceAll("'", "'\\''")}'`;
-
-const shellFlag = (flag: string, value: string) =>
-  `${flag}${value.startsWith("-") ? "=" : " "}${quote(value)}`;
 
 export const directoryOutput = (
   profiles: readonly (typeof ProfileSummary.Type)[],
@@ -38,8 +35,8 @@ export const lookupOutput = (
         : " " + shellFlag("--credential-profile", credentialProfile);
     const flags = `${shellFlag("--profile", match.profile.id)}${credentialFlag}`;
     const command = match.task_id.startsWith("-")
-      ? `todo show ${flags} -- ${quote(match.task_id)}`
-      : `todo show ${quote(match.task_id)} ${flags}`;
+      ? `todo show ${flags} -- ${shellQuote(match.task_id)}`
+      : `todo show ${shellQuote(match.task_id)} ${flags}`;
     const values = [
       match.profile.name,
       match.profile.id,

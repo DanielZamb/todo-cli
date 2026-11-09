@@ -7,6 +7,7 @@ import {
   Instant,
   ProfileId,
   ProfileResolutionError,
+  taskLookupError,
 } from "@todo/domain";
 import {
   type OperationStore,
@@ -46,6 +47,42 @@ const setup = (store: OperationStore) =>
     yield* store.auth.setupOwner("scratch resolution passphrase");
     return yield* store.auth.signIn("scratch resolution passphrase");
   });
+
+it.effect(
+  "lookup enrichment retains the supplied operation's rejection action",
+  () =>
+    using((store) =>
+      Effect.gen(function* () {
+        const owner = yield* setup(store);
+        yield* store.auth.signOut({ credential: owner.credential });
+        const before = (yield* store.history()).length;
+        const options = {
+          credentialProfile: "work",
+          action: "mutate" as const,
+        };
+        expect(
+          yield* Effect.flip(
+            taskLookupError(
+              store,
+              { credential: owner.credential, profile: id("work") },
+              "ab",
+              "cli",
+              options,
+            ),
+          ),
+        ).toBeInstanceOf(AuthError);
+        const rows = (yield* store.history()).slice(before);
+        expect(
+          rows.map((row) => [
+            row.profile,
+            row.event.kind,
+            row.event.kind === "AuthAttemptRejected" ? row.event.action : null,
+            row.event.kind === "AuthAttemptRejected" ? row.event.detail : null,
+          ]),
+        ).toEqual([["work", "AuthAttemptRejected", "mutate", "revoked"]]);
+      }),
+    ),
+);
 
 it.effect(
   "resolves only authorized metadata and conceals absent, foreign and deleted Profiles",
