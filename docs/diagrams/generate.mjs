@@ -980,6 +980,70 @@ frame("search-copy", "Task search: copy full id", 4000, 8000, 1840, (X, Y) => {
   ]);
 });
 
+frame("perf-tags", "PERF: putTask Tag links", 0, 16000, 2800, (x, y) => {
+  heading("pt", x + 50, y + 32, "putTask: unchanged task_tags", "Proposed fast path inside the existing OperationStore.transaction. Task payload and Version writes remain mandatory.");
+  card("pt-begin", x + 50, y + 200, 650, { title: "OperationStore.appendSync", body: "transaction / BEGIN IMMEDIATE\nvalidate; record committed op_log\napplyEvent -> applyChanges -> putTask", h: 150 });
+  card("pt-compare", x + 1800, y + 200, 850, { title: "putTask / compare Tag ids", body: "SELECT tag_id FROM task_tags WHERE task_id=?\ncompare stored ids with task.tags as sets\nINSERT / UPDATE tasks payload", h: 150 });
+  card("pt-keep", x + 1800, y + 700, 850, { title: "Equal sets / keep task_tags", body: "skip task_tags DELETE and INSERT\npreserve task.tags order in payload", fill: c.accent, h: 130 });
+  card("pt-relink", x + 50, y + 700, 850, { title: "Different sets / existing relink path", body: "DELETE FROM task_tags WHERE task_id=?\nINSERT INTO task_tags for every task.tags id\nempty/new/rebuild projections use actual rows", h: 150 });
+  card("pt-commit", x + 950, y + 1180, 850, { title: "putTask / task_versions -> COMMIT", body: "upsert row_version; publish History + projection\nSQL error rolls the whole transaction back", h: 140 });
+  arrow("pt-enter", "pt-begin", "pt-compare", { label: "validated Event", from: "right", to: "left", labelFont: SANS });
+  arrow("pt-equal", "pt-compare", "pt-keep", { label: "equal sets", from: "bottom", to: "top", labelFont: SANS });
+  arrow("pt-different", "pt-compare", "pt-relink", { label: "different sets", from: "left", to: "top", labelFont: SANS, labelAt: [x + 1200, y + 540] });
+  arrow("pt-kept", "pt-keep", "pt-commit", { label: "unchanged links", from: "bottom", to: "right", labelFont: SANS });
+  arrow("pt-relinked", "pt-relink", "pt-commit", { label: "replaced links", from: "bottom", to: "left", labelFont: SANS });
+  marker("pt-m1", x + 1760, y + 180, 1);
+  marker("pt-m2", x + 910, y + 1160, 2);
+  notes("pt-notes", x + 50, y + 1450, 2650, "Numbered notes", [
+    "Compare task_tags, including after rebuild. Payload Tag order stays unchanged. Domain guard triggers remain active.",
+    "Measure WAL frames per real Task edit. verify-op-log compares exact task_tags; verify-occ-atomicity rechecks crash stages.",
+  ]);
+});
+
+frame("perf-cache", "PERF: folded-word cache", 3000, 16000, 3000, (x, y) => {
+  heading("pc", x + 50, y + 32, "fieldWords: content-addressed memo per Profile", "Coordinator C1: every lookup uses the exact text read from SQLite in this request. No Version key or coherence protocol.");
+  card("pc-read", x + 50, y + 220, 820, { title: "OperationStore / auth.read", body: "current Task title + description + profile_id\nTaskCommands.list -> filterTaskRecords\nempty search clauses skip preparation", h: 150 });
+  card("pc-lookup", x + 2000, y + 220, 850, { title: "TaskSearchCache / proposed lookup", body: "key = profile_id + exact field text\nexact string equality or SHA-256\nvalue = fieldWords(text), with UTF-16 offsets", h: 150 });
+  card("pc-serve", x + 2000, y + 850, 850, { title: "filterTaskRecords / matchTaskSearch", body: "evaluate clauses with prepared Word arrays\nreturn strings + original UTF-16 spans\ncached and uncached outputs must be identical", fill: c.accent, h: 150 });
+  card("pc-purge", x + 50, y + 850, 1000, { title: "Local TaskPurged / deleteProfileSync", body: "Purge evicts entries for prior text in its Profile\nProfile delete evicts every entry for that Profile\nexternal Purge entries age out through LRU", fill: c.warningFill, h: 150 });
+  card("pc-evict", x + 1100, y + 1400, 1150, { title: "TaskSearchCache / proposed LRU bound", body: "4,096 entries; 16 MiB charged including key text\noversize >4 MiB entry computes without retention\nevict before insertion; store.close clears entries", h: 150 });
+  arrow("pc-start", "pc-read", "pc-lookup", { label: "profile_id + field text", from: "right", to: "left", labelFont: SANS });
+  arrow("pc-use", "pc-lookup", "pc-serve", { label: "hit / reuse fieldWords(text)", from: "bottom", to: "top", labelFont: SANS });
+  arrow("pc-hygiene", "pc-purge", "pc-evict", { label: "synchronous local hygiene eviction", from: "bottom", to: "left", labelFont: SANS });
+  arrow("pc-bound", "pc-lookup", "pc-evict", { label: "miss / compute; evict before retaining", from: "left", fromT: 0.8, to: "top", via: [[x + 1500, y + 340], [x + 1500, y + 1320]], labelFont: SANS });
+  arrow("pc-prepared", "pc-evict", "pc-serve", { label: "prepared words / retained or oversize", from: "top", to: "left", labelFont: SANS });
+  marker("pc-m1", x + 1960, y + 200, 1);
+  marker("pc-m2", x + 20, y + 830, 2);
+  marker("pc-m3", x + 1060, y + 1380, 3);
+  notes("pc-notes", x + 50, y + 1700, 2850, "Numbered notes", [
+    "Generated properties compare real cached/uncached Word arrays and full JSON/spans after edits, Revert, restore and rebuild. No cache TLA+ model.",
+    "Profile is part of the key. Local Purge/Profile delete evict synchronously for hygiene. External physical heap retention follows LRU.",
+    "Mutations omit text, Profile, eviction or Purge hygiene and must fail. Measure 100k-text hit cost, bounds and actual heap separately.",
+  ]);
+});
+
+frame("perf-refresh", "PERF: minimal client refresh", 6400, 16000, 3000, (x, y) => {
+  heading("pr", x + 50, y + 32, "TodoModel.refresh / renderer refresh: request scope", "Proposed full/query split. Existing requestedIdentity, appliedSearchSnapshot, appliedSearch and canPublishSearch remain authoritative.");
+  card("pr-input", x + 50, y + 220, 900, { title: "setSearchText / changeSearch / filter Apply", body: "invalidate refreshGeneration immediately\ncapture full requestedIdentity after debounce\nretain rows + highlights while Requesting", h: 150 });
+  card("pr-query", x + 1950, y + 220, 900, { title: "Proposed query-only refresh", body: "tasks.list with current text and filters\nreads.view only for current planning view\nasync let / Effect.all: await both", h: 150 });
+  card("pr-full", x + 50, y + 850, 1000, { title: "Full refresh / startup, SSE, write, reset", body: "tasks + matching_tasks; Profiles/Projects/Tags\nfour reads.view counts, concurrently\nno catalog yet: Retry uses full refresh", h: 150 });
+  card("pr-guard", x + 1950, y + 850, 900, { title: "canPublishSearch / activeQuery guards", body: "latest request + generation + full identity\naccept all awaited reads or guarded Error\nobsolete success/error changes no visible state", h: 150 });
+  card("pr-publish", x + 800, y + 1450, 1400, { title: "appliedSearchSnapshot / appliedSearch", body: "publish response strings + spans + planning membership together\nquery keeps catalog; full refresh updates discovery and counts\nError retains rows; Retry or current-Profile SSE recovers", fill: c.accent, h: 150 });
+  arrow("pr-request", "pr-input", "pr-query", { label: "query change / catalog ready", from: "right", to: "left", labelFont: SANS });
+  arrow("pr-queryready", "pr-query", "pr-guard", { label: "1 request for All tasks; 2 for planning", from: "bottom", to: "top", labelFont: SANS });
+  arrow("pr-fullready", "pr-full", "pr-guard", { label: "all full-refresh reads settle", from: "right", to: "left", labelFont: SANS });
+  arrow("pr-fallback", "pr-input", "pr-full", { label: "catalog absent", from: "bottom", to: "top", labelFont: SANS });
+  arrow("pr-current", "pr-guard", "pr-publish", { label: "current response only", from: "bottom", to: "right", labelFont: SANS });
+  marker("pr-m1", x + 1910, y + 200, 1);
+  marker("pr-m2", x + 1910, y + 830, 2);
+  marker("pr-m3", x + 760, y + 1430, 3);
+  notes("pr-notes", x + 50, y + 1780, 2850, "Numbered notes", [
+    "Electron already runs nine reads concurrently. Swift currently awaits them sequentially. Count real HTTP calls through both clients.",
+    "TaskSearch.tla guards every response, including full/query races, ABA and late errors. Only one applied snapshot owns rows and spans.",
+    "Keep offline unfiltered cache, drafts and dialog rollback. Compact-first headless drives and offscreen captures respect native HOLD.",
+  ]);
+});
+
 const scene = {
   type: "excalidraw",
   version: 2,
