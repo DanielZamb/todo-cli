@@ -3,14 +3,14 @@
 Status: model checkpoint complete; production conformance and final F approval
 pending committed A/B interfaces. Branch: feat/task-dag-f-formal. Reviewed
 product/design base: 8745cdd0247fb8cc0ff74f95bff257fd95cfa4d3. Proof run HEAD:
-8745cdd0247fb8cc0ff74f95bff257fd95cfa4d3. The terminal handoff names the final local commit.
+a91dcf8917e242bce6c0f3521a1b2727114d0ef7. The terminal handoff names the final local commit.
 
 ## Delivered and run
 
 The one command is `bun .agents/skills/verify-dag-formal/check.mjs`.
 Overall exit 0, model checkpoint only. It checks 25 positive finite
 scenarios, five safety mutants, six reachability controls, and the final clean
-64-initial-status recheck. TLC process times total 34.11 seconds. No state
+64-initial-status recheck. TLC process times total 34.79 seconds. No state
 constraint, symmetry reduction or silent state truncation is used. Every
 positive queue finishes at zero. Safety only, with no fairness or liveness claim.
 `--full` intentionally exits 2 until production conformance is implemented.
@@ -22,7 +22,7 @@ mapping.md name the required later real-code checks. No product modules or
 stand-in graph algorithms were added.
 
 Evidence is retained locally at:
-`docs/evidence/dag-formal/check-2XfCEZ`.
+`docs/evidence/dag-formal/check-zZ3DR3`.
 The directory includes the copied model/configs, verified tool, commands, actual
 process exits/signals, stdout/stderr with full counterexamples, progress.json,
 provenance.json and result.json. Verification output remains ignored by Git.
