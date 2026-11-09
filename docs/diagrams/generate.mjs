@@ -1001,24 +1001,24 @@ frame("perf-tags", "PERF: putTask Tag links", 0, 16000, 2800, (x, y) => {
 });
 
 frame("perf-cache", "PERF: folded-word cache", 3000, 16000, 3000, (x, y) => {
-  heading("pc", x + 50, y + 32, "fieldWords: content-addressed memo per Profile", "Coordinator C1: every lookup uses the exact text read from SQLite in this request. No Version key or coherence protocol.");
-  card("pc-read", x + 50, y + 220, 820, { title: "OperationStore / auth.read", body: "current Task title + description + profile_id\nTaskCommands.list / CLI list -> filterTaskRecords\nempty search clauses skip preparation", h: 150 });
-  card("pc-lookup", x + 2000, y + 220, 850, { title: "TaskSearchCache.words(profile, text)", body: "key = profile_id + exact field text\nlength-prefixed Profile + exact string key\nvalue = fieldWords(text), with UTF-16 offsets", h: 150 });
-  card("pc-serve", x + 2000, y + 850, 850, { title: "filterTaskRecords / matchTaskSearch(prepareWords)", body: "evaluate clauses with prepared Word arrays\nreturn strings + original UTF-16 spans\ncached and uncached outputs must be identical", fill: c.accent, h: 150 });
-  card("pc-purge", x + 50, y + 850, 1000, { title: "Local TaskPurged / deleteProfileSync", body: "evictSearchTask evicts all prior text in its Profile\nProfile delete evicts every entry for that Profile\nexternal Purge entries age out through LRU", fill: c.warningFill, h: 150 });
-  card("pc-evict", x + 1100, y + 1400, 1150, { title: "TaskSearchCache.words / drop / clear", body: "4,096 entries; 16 MiB charged including key text\noversize >4 MiB entry computes without retention\nevict before insertion; store.close clears entries", h: 150 });
-  arrow("pc-start", "pc-read", "pc-lookup", { label: "profile_id + field text", from: "right", to: "left", labelFont: SANS });
-  arrow("pc-use", "pc-lookup", "pc-serve", { label: "hit / reuse fieldWords(text)", from: "bottom", to: "top", labelFont: SANS });
-  arrow("pc-hygiene", "pc-purge", "pc-evict", { label: "synchronous local hygiene eviction", from: "bottom", to: "left", labelFont: SANS });
-  arrow("pc-bound", "pc-lookup", "pc-evict", { label: "miss / compute; evict before retaining", from: "left", fromT: 0.8, to: "top", via: [[x + 1500, y + 340], [x + 1500, y + 1320]], labelFont: SANS });
-  arrow("pc-prepared", "pc-evict", "pc-serve", { label: "prepared words / retained or oversize", from: "top", to: "left", labelFont: SANS });
-  marker("pc-m1", x + 1960, y + 200, 1);
-  marker("pc-m2", x + 20, y + 830, 2);
-  marker("pc-m3", x + 1060, y + 1380, 3);
-  notes("pc-notes", x + 50, y + 1700, 2850, "Numbered notes", [
-    "Generated properties compare real cached/uncached Word arrays and full JSON/spans after edits, Revert, restore and rebuild. No cache TLA+ model.",
-    "Profile is part of the key. Local Purge/Profile delete evict synchronously for hygiene. External physical heap retention follows LRU.",
-    "Mutations omit text, Profile, eviction or Purge hygiene and must fail. Measure 100k-text hit cost, bounds and actual heap separately.",
+  heading("pc", x + 50, y + 32, "TaskSearchCache: PreparedField per Profile + exact text", "Coordinator C1: the content key preserves output correctness; tokens and purgeGen protect cache-local hygiene.\nNo Version key, DB coherence protocol or stored query results.");
+  card("pc-read", x + 50, y + 200, 1050, { title: "TaskCommands.list / CLI list: capture read", body: "read = searchWords.read(request.profile)\nbefore auth.read / SQLite Task read\ncarry captured generation to EVERY field lookup\ncurrent Task title + description + profile_id\nblank clauses skip field preparation", bodySize: 16, h: 230 });
+  card("pc-lookup", x + 1850, y + 200, 1050, { title: "TaskSearchCache.words(read, text)", body: "key = length-prefixed Profile + exact text\nPreparedField { words, preparedUnits }\nhit: entries.get(key).prepared; no prep yield\nmiss: register(read, key, bytes) -> fresh token\nyield* fieldWords(text) prepares words + offsets\nfailed registration computes without retention", bodySize: 16, h: 240 });
+  card("pc-serve", x + 1850, y + 900, 1050, { title: "matchTaskSearchSteps / TaskSearchWork", body: "filterTaskRecordsEffect -> runTaskRecordSteps\nexecution.prepare returns complete PreparedField\ncharge preparedUnits ONCE per field, hit or miss\nsame original strings + ordered UTF-16 spans\nshared search_too_broad; no partial rows", bodySize: 16, fill: c.accent, h: 230 });
+  card("pc-purge", x + 50, y + 900, 1050, { title: "Local TaskPurged / deleteProfileSync / close", body: "TaskPurged: revoke(profile); evictSearchTask(...)\nevict(profile, text) drops entry + pending token\nProfile delete: evictProfile(profile) revokes both\nclose(): clear entries/pending/purgeGen; closed=true\nold reads may finish, never re-admit after revoke", bodySize: 16, fill: c.warningFill, h: 230 });
+  card("pc-admit", x + 1150, y + 1510, 1750, { title: "TaskSearchCache.prepare / retain / dropPending", body: "pending.get(key) === token && canAdmit(read)\ncanAdmit: !closed && captured generation == current purgeGen\nretain only completed PreparedField; later token wins\nfinally: dropPending(key, token), OWN current slot only\nretained + pending cocharged <= 16 MiB; LRU reserve()\nentries <= 4096 AND pending <= 4096\nentry > 4 MiB / no slot -> compute without retention\ntransient buffers + purgeGen metadata outside charge", bodySize: 16, h: 270 });
+  arrow("pc-start", "pc-read", "pc-lookup", { label: "read + exact current text", from: "right", to: "left", labelFont: SANS });
+  arrow("pc-use", "pc-lookup", "pc-serve", { label: "synchronous hit / complete payload", from: "bottom", to: "top", labelFont: SANS });
+  arrow("pc-hygiene", "pc-purge", "pc-admit", { label: "local hygiene revokes admission", from: "bottom", to: "left", labelFont: SANS });
+  arrow("pc-bound", "pc-lookup", "pc-admit", { label: "miss / yield* fieldWords(text)", from: "left", fromT: 0.8, to: "top", via: [[x + 1450, y + 392], [x + 1450, y + 1420]], labelFont: SANS });
+  arrow("pc-prepared", "pc-admit", "pc-serve", { label: "PreparedField / retained or uncached", from: "top", fromT: 0.78, to: "bottom", toT: 0.7, labelFont: SANS });
+  marker("pc-m1", x + 1810, y + 180, 1);
+  marker("pc-m2", x + 20, y + 880, 2);
+  marker("pc-m3", x + 1110, y + 1490, 3);
+  notes("pc-notes", x + 50, y + 1900, 2850, "Numbered notes", [
+    "The exact Profile/text key preserves words, original UTF-16 offsets and preparedUnits after edits, Revert, Snapshot restore and rebuild.\nThe matcher charges the same preparation count on both paths. This memo does not mitigate the first fold of expanding text.",
+    "Local Purge, Profile delete and close revoke retention synchronously. Rollback can lose retention only; external Purge entries age out through LRU.\nThese are cache-local hygiene rules, not DB coherence. Interruption/failure closes the generator and cleans only its own pending slot.",
+    "TaskSearchCacheAdmission.tla checks admission provenance, stale reads, pending cleanup, complete hits and bounds at 2 keys / 2 preparations / capacity 2.\nReal-Effect controls and same-source cold/partial/warm/uncached work, full JSON/spans and literal bounds complement the finite model; charged bytes are not RSS.",
   ]);
 });
 

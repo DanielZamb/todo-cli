@@ -104,6 +104,12 @@ the 1-minute value, process CPU/RSS and separate oracle/validation costs survive
 Freeze the driver and fixture hashes before either side runs. Old synchronous
 and unlocked pilot receipts are preliminary and excluded.
 
+The series records df before entry and after every complete A/B pair. Below
+30 GB it finishes that pair, writes last-complete-pair and disk-hold.txt, then
+exits 75. Stop, prune only superseded owned binaries and report; never divide a
+batch to evade the floor. check-series-floor.mjs proves literal no-start,
+whole-pair stop and five-pair completion with isolated command fixtures.
+
 Run micro.ts in a coordinated locked slot for actual 100k hit cost. It uses fresh
 equal input strings, awaits the real Effect runner, validates complete payloads
 outside intervals and labels oversized dense fields uncached. counts.mjs instruments
