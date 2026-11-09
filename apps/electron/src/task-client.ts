@@ -1,8 +1,8 @@
-import { SearchTooBroadResponse, TodoApi } from "@todo/api";
+import { SearchTooBroadResponse } from "@todo/api";
 import { type PlanningView, seriesForTask, type TaskId } from "@todo/domain";
 import { Effect, Schema } from "effect";
 import type { HttpClient } from "effect/http";
-import { HttpApiClient } from "effect/http-api";
+import type { taskHttpClient } from "./http-client.ts";
 import type { NativeAttachmentRequest, Reply, Request } from "./protocol.ts";
 import { historyTaskIds, seriesFromHistory, seriesKey } from "./recurrence.ts";
 
@@ -22,8 +22,7 @@ export type TaskRequest = Exclude<
         | "snapshotReveal";
     }
 >;
-const makeClient = () => HttpApiClient.make(TodoApi);
-type Client = Effect.Success<ReturnType<typeof makeClient>>;
+type Client = Effect.Success<ReturnType<typeof taskHttpClient>>;
 export const taskRequest = (
   http: Client,
   request: TaskRequest,

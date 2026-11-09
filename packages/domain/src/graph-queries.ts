@@ -73,6 +73,9 @@ export function queryGraph(
         a.blocker_id.localeCompare(b.blocker_id),
     );
   const energy = graphEnergy(graph);
+  const ancestors = reachable(task_id, index.upstream);
+  const descendants = reachable(task_id, index.downstream);
+  const next = new Set(energy.lightestNext(task_id));
   const depths = new Map<TaskId, number>();
   const mermaidIds = mermaidNodeIds(tasks);
   const nodes = tasks.map((task) => {
@@ -85,22 +88,17 @@ export function queryGraph(
       0,
     );
     depths.set(task.id, depth);
-    const ancestors = reachable(task.id, index.upstream);
-    const descendants = reachable(task.id, index.downstream);
     return {
       mermaid_id,
       task,
       in_degree: blockers.length,
       out_degree: index.downstream.get(task.id)?.length ?? 0,
       ...dependencyState(task, index),
-      ancestors: order.filter((id) => ancestors.has(id)),
-      descendants: order.filter((id) => descendants.has(id)),
       depth,
       remaining_energy: energy.values.get(task.id) ?? {
         energy: 0,
         unweighted: 0,
       },
-      lightest_next: energy.lightestNext(task.id),
     };
   });
   const shape = graphShape({ tasks, edges });
@@ -108,6 +106,9 @@ export function queryGraph(
     generated_at,
     profile_id: task.profile_id,
     task_id,
+    ancestors: wholeOrder.filter((id) => ancestors.has(id)),
+    descendants: wholeOrder.filter((id) => descendants.has(id)),
+    lightest_next: wholeOrder.filter((id) => next.has(id)),
     nodes,
     edges,
     sources: nodes

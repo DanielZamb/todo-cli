@@ -88,3 +88,24 @@ Mermaid. The public graph corpus also checks a 105-Task cycle with its full
 shortest witness, terminal-pruned energy, terminal-node ordering and changed-to-
 empty preview fingerprints. graph-public.json and import-export.json retain
 literal observations. Client feature UI and both-client proof remain separate.
+
+## Combined review closure
+
+Run scripts/verify-closure.sh with a fresh absolute evidence directory. It reuses
+the selected compiled CLI and compiles two cached production-importing drivers.
+graph-response-proof.ts seeds the literal chain-1000.json fixture into a fresh
+scratch database, retaining all reviewed ids, Task fields and root. It saves the
+actual CLI stdout and its UTF-8 byte count separately from compact re-encoding.
+It requires 1,000 nodes, 999 edges, exact requested root sets, and exactly the
+eight G11 fields on both direct query results and encoded public nodes.
+The original e717 compiled baseline is retained in Unit B closure evidence and
+fails this property with 49,255,186 actual CLI stdout bytes. This is response size
+for that fixture, not a latency or HTTP-size measurement.
+
+dag-cli-input-proof.ts audits malformed and out-of-range applicable inputs for
+depend, undepend, graph, batch-depend, rm dependency flags, add --depends-on and
+Revert. Every usage refusal must exit 2 with one invalid_args object and named
+recovery, including zero Versions on existing-edge and absent-edge no-ops.
+Tasks, edges and Versions remain equal. Valid missing references retain domain
+not-found/profile errors, actual file I/O retains runtime_error, and valid stale
+no-ops still succeed. result.json contains the repeatable matrix and all exits.

@@ -5,6 +5,11 @@ description: Verify the compiled Todo CLI in a scratch HOME. Use after changing 
 
 # Verify the CLI
 
+New DAG usage boundaries also require verify-dag/scripts/verify-closure.sh.
+Its matrix asserts actual exit 2, one invalid_args JSON object, flag-specific
+recovery and unchanged projection for malformed/zero/negative inputs, before
+no-op detection. Missing files retain runtime classification.
+
 Generated with `create-verification-skill`.
 Read [the feature map](features/README.md) before selecting coverage.
 

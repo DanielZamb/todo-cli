@@ -52,18 +52,56 @@ export function proveGraphAlgorithms() {
       n.in_degree,
       n.out_degree,
       n.depth,
-      n.ancestors,
-      n.descendants,
       n.ready,
       n.blocked,
     ]),
     [
-      ["A", 0, 2, 0, [], ["B", "C", "D"], true, false],
-      ["B", 1, 1, 1, ["A"], ["D"], false, true],
-      ["C", 1, 1, 1, ["A"], ["D"], false, true],
-      ["D", 2, 0, 2, ["A", "B", "C"], [], false, true],
+      ["A", 0, 2, 0, true, false],
+      ["B", 1, 1, 1, false, true],
+      ["C", 1, 1, 1, false, true],
+      ["D", 2, 0, 2, false, true],
     ],
   );
+  assert.deepEqual(report.ancestors, ["A", "B", "C"]);
+  assert.deepEqual(report.descendants, []);
+  assert.deepEqual(report.lightest_next, ["A"]);
+  const branching = {
+    tasks: [
+      task("A", { priority: "P1", energy: 5 }),
+      task("B", { priority: "P2", energy: 1 }),
+      task("R", { priority: "P3", energy: 2 }),
+      task("C", { priority: "P1", energy: 4 }),
+      task("D", { priority: "P2", energy: 1 }),
+    ],
+    edges: [edge("R", "A"), edge("R", "B"), edge("C", "R"), edge("D", "R")],
+  };
+  const branch = queryGraph(branching, task("R").id, at);
+  assert.ok(branch);
+  assert.deepEqual(branch.topological_order, ["A", "B", "R", "C", "D"]);
+  assert.deepEqual(topologicalOrder(branching, graphEnergy(branching).values), [
+    "B",
+    "A",
+    "R",
+    "D",
+    "C",
+  ]);
+  assert.deepEqual(branch.ancestors, ["A", "B"]);
+  assert.deepEqual(branch.descendants, ["C", "D"]);
+  assert.deepEqual(branch.lightest_next, ["A", "B"]);
+  for (const node of branch.nodes)
+    assert.deepEqual(Object.keys(node).sort(), [
+      "blocked",
+      "depth",
+      "in_degree",
+      "mermaid_id",
+      "out_degree",
+      "ready",
+      "remaining_energy",
+      "task",
+    ]);
+  assert.deepEqual(queryGraph(branching, task("A").id, at)?.lightest_next, [
+    "A",
+  ]);
   const missing = {
     ...diamond,
     tasks: diamond.tasks.map((t) =>

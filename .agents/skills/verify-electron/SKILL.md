@@ -278,3 +278,10 @@ dialog, with prefix/text, true-or-absent readiness, false rejection and exact
 other filter values. This is contract proof only, with no new controls or native
 client parity claim. L1 reapplies this correction to the final search dialog and
 reruns the actual filter feature after its own rebase.
+
+G11 protocol proof uses scripts/verify-graph-contract.ts against the compiled
+scratch server through taskHttpClient, the production Electron HttpApiClient
+factory also used by main.ts. It asserts the branching root's topologically
+ordered sets, eight decoded node fields and encoded facts. The shared
+verify-history-unions.sh drive invokes it with TODO_DAG_CONTRACT_TESTS=1.
+No Electron/native UI, safeStorage or Keychain starts for this decoder proof.

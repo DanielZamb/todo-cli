@@ -1,7 +1,9 @@
 # Unit B delivery
 
-Status: implementation complete within B's authorized scope; ready for L1's two
-review seats. E/S feature UI, both-client L3 and final F review are not claimed.
+Historical candidate status at 8ea84c32: implementation reported complete within
+B's authorized scope. Both review seats subsequently withheld approval for G11
+and CLI input validation. The combined closure section records their fixes and
+new source proof. E/S feature UI, both-client L3 and final F remain unclaimed.
 Branch: feat/task-dag-b-commands.
 Final source head: e7170510a376b51eaf3525bb9933cb0dd588b233.
 The delivery commit contains this report, reviewed AtomicCAS mapping metadata

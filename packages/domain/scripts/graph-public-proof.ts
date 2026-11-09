@@ -355,10 +355,14 @@ export async function proveGraphPublic(input: {
   );
   assert.equal(terminal?.ready, false);
   assert.equal(terminal?.blocked, false);
-  assert.deepEqual(terminal?.lightest_next, []);
+  assert.deepEqual(
+    Schema.decodeUnknownSync(GraphReport)(run(["graph", id("rank-terminal")]))
+      .lightest_next,
+    [],
+  );
   const goal = graph.nodes.find((node) => node.task.id === id("rank-goal"));
   assert.deepEqual(goal?.remaining_energy, { energy: 3, unweighted: 0 });
-  assert.deepEqual(goal?.lightest_next, [id("rank-goal")]);
+  assert.deepEqual(graph.lightest_next, [id("rank-goal")]);
   for (const order of ["topo", "lightest"]) {
     const rows = Schema.decodeUnknownSync(TasksResponse)(
       run(["list", "--text", "Rank", "--order", order]),

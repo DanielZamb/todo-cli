@@ -45,8 +45,8 @@ import {
   QuickAddDraft,
   QuickAddInput,
   SearchTooBroad,
+  RevertTask,
   readGraph,
-  Sequence,
   SnapshotError,
   TaskFilters,
   TaskId,
@@ -92,7 +92,7 @@ import {
   taskView,
 } from "@todo/domain/presentation";
 import { type OperationStore, openStore, StoreError } from "@todo/domain/store";
-import { Console, Effect, Option, Redacted, Schema } from "effect";
+import { Console, Effect, Option, Redacted, Schema, Struct } from "effect";
 import { Argument, CliError, Command, Flag, Prompt } from "effect/cli";
 import "./diagnostics.schema.ts";
 import { AttachmentCommandResponse } from "./attachments.schema.ts";
@@ -105,6 +105,7 @@ import {
 import { diagnosticsOutput, diagnosticsRead } from "./diagnostics.ts";
 import { manualPage, withGuide } from "./help.ts";
 import { makeImportCommand, readImportFile, renderImport } from "./import.ts";
+import { decodeInput } from "./input.ts";
 import { verifyMacPassword } from "./macos-password.ts";
 import {
   ConfigResponse,
@@ -595,6 +596,13 @@ const add = Command.make(
         ? yield* quickDraft(input.parse.value)
         : undefined;
       const flags = taskInput({ ...input, title: Option.none() });
+      const dependencies = yield* decodeInput(
+        () =>
+          Schema.decodeUnknownSync(
+            Schema.Struct({ depends_on: CreateTask.fields.depends_on }),
+          )({ depends_on: input.dependsOn }),
+        `--depends-on requires distinct nonempty Task ids, at most 13 and at most ${inputLimits.id} characters each. Choose visible Tasks in this Profile and retry.`,
+      );
       yield* withStore(cfg, (store) =>
         Effect.gen(function* () {
           const request = yield* selectProfile(store, cfg);
@@ -626,7 +634,7 @@ const add = Command.make(
               catch: (error) =>
                 new CommandError(2, "invalid_args", String(error)),
             }),
-            input.dependsOn,
+            dependencies.depends_on,
           );
           const data = yield* readTasks(store, request);
           yield* write(
@@ -1239,15 +1247,34 @@ const mutation = (name: Mutation) =>
       force: bool("force"),
       withDependencies: bool("with-dependencies"),
       dryRun: bool("dry-run"),
-      fingerprint: string("dependency-fingerprint"),
+      fingerprint: stringFlag("dependency-fingerprint").pipe(Flag.optional),
     },
     (input) =>
       Effect.gen(function* () {
         const cfg = yield* root;
+        const suppliedFingerprint = Option.getOrUndefined(input.fingerprint);
+        if (name === "rm")
+          yield* decodeInput(
+            () =>
+              Schema.decodeUnknownSync(
+                Schema.Struct({
+                  task_id: TaskId,
+                  ...Struct.omit(DeleteTask.fields, ["from_version"]),
+                }),
+              )({
+                task_id: input.id,
+                with_dependencies: input.withDependencies,
+                dry_run: input.dryRun,
+                ...(suppliedFingerprint !== undefined
+                  ? { dependency_fingerprint: suppliedFingerprint }
+                  : {}),
+              }),
+            "rm requires a nonempty task-id, --expected-version <positive integer> and, when supplied, --dependency-fingerprint <64 lowercase hex characters>. Preview with --dry-run, then retry with the current Version and confirmation.",
+          );
         yield* withStore(cfg, (store) =>
           Effect.gen(function* () {
             const request = yield* selectProfile(store, cfg);
-            let fingerprint = input.fingerprint;
+            let fingerprint = suppliedFingerprint ?? "";
             let withDependencies = input.withDependencies;
             if (
               name === "rm" &&
@@ -1361,11 +1388,16 @@ const dependencyCommand = (action: "depend" | "undepend") =>
     (input) =>
       Effect.gen(function* () {
         const cfg = yield* root;
-        const parsed = yield* io(() =>
-          Schema.decodeUnknownSync(DependRequest)({
-            blocker_id: input.blocker,
-            from_version: input.expected,
-          }),
+        const { task_id, ...parsed } = yield* decodeInput(
+          () =>
+            Schema.decodeUnknownSync(
+              Schema.Struct({ task_id: TaskId, ...DependRequest.fields }),
+            )({
+              task_id: input.id,
+              blocker_id: input.blocker,
+              from_version: input.expected,
+            }),
+          `${action} requires a nonempty task-id, --${action === "depend" ? "on" : "from"} <nonempty blocker-id, at most ${inputLimits.id} characters> and --expected-version <positive integer>. Choose visible Tasks in the same Profile and retry.`,
         );
         yield* withStore(cfg, (store) =>
           Effect.gen(function* () {
@@ -1373,7 +1405,7 @@ const dependencyCommand = (action: "depend" | "undepend") =>
             const result = yield* new DependencyCommands(store).change(
               {
                 ...request,
-                task_id: Schema.decodeUnknownSync(TaskId)(input.id),
+                task_id,
               },
               parsed,
               action,
@@ -1415,6 +1447,10 @@ const graphCommand = Command.make(
   (input) =>
     Effect.gen(function* () {
       const cfg = yield* root;
+      const task_id = yield* decodeInput(
+        () => Schema.decodeUnknownSync(TaskId)(input.id),
+        "graph requires a nonempty task-id. Read todo list and retry with a full Task id.",
+      );
       if (cfg.format === "table")
         return yield* Effect.fail(
           new CommandError(
@@ -1428,7 +1464,7 @@ const graphCommand = Command.make(
           const request = yield* selectProfile(store, cfg);
           const graph = yield* readGraph(
             store,
-            { ...request, task_id: Schema.decodeUnknownSync(TaskId)(input.id) },
+            { ...request, task_id },
             nowInstant(),
           );
           if (!graph)
@@ -1444,7 +1480,7 @@ const graphCommand = Command.make(
               ? graph.mermaid
               : cfg.format === "json"
                 ? encodeResponse(GraphReport, graph)
-                : `# Task graph\n\n${graph.shape}${graph.shape === "tree" ? ` (${graph.orientation})` : ""}\n\n\`\`\`mermaid\n${graph.mermaid}\`\`\`\n\n${graph.nodes.map((n) => `- ${n.task.title} (${n.task.id}), ${n.ready ? "Ready" : n.blocked ? "Blocked" : n.task.status}, remaining energy ${n.remaining_energy.energy}, unweighted ${n.remaining_energy.unweighted}\n`).join("")}`,
+                : `# Task graph\n\n${graph.shape}${graph.shape === "tree" ? ` (${graph.orientation})` : ""}\n\nRequested Task: ${graph.task_id}\nAncestors: ${graph.ancestors.join(", ") || "none"}\nDescendants: ${graph.descendants.join(", ") || "none"}\nReady next: ${graph.lightest_next.join(", ") || "none"}\n\n\`\`\`mermaid\n${graph.mermaid}\`\`\`\n\n${graph.nodes.map((n) => `- ${n.task.title} (${n.task.id}), ${n.ready ? "Ready" : n.blocked ? "Blocked" : n.task.status}, remaining energy ${n.remaining_energy.energy}, unweighted ${n.remaining_energy.unweighted}\n`).join("")}`,
           );
         }),
       );
@@ -1456,12 +1492,15 @@ const batchDependCommand = Command.make(
   (input) =>
     Effect.gen(function* () {
       const cfg = yield* root;
-      const body = yield* io(() =>
-        Schema.decodeUnknownSync(BatchEdgeRequest, {
-          onExcessProperty: "error",
-        })(
-          JSON.parse(readFileSync(input.file === "-" ? 0 : input.file, "utf8")),
-        ),
+      const text = yield* io(() =>
+        readFileSync(input.file === "-" ? 0 : input.file, "utf8"),
+      );
+      const body = yield* decodeInput(
+        () =>
+          Schema.decodeUnknownSync(BatchEdgeRequest, {
+            onExcessProperty: "error",
+          })(JSON.parse(text)),
+        "Invalid --file input. Supply a JSON object with items containing action depend|undepend, nonempty dependent_id/blocker_id and a positive integer from_version. Check todo schema batch-depend-input, fix the file and retry.",
       );
       yield* withStore(cfg, (store) =>
         Effect.gen(function* () {
@@ -1494,11 +1533,19 @@ const revertCommand = Command.make(
   (input) =>
     Effect.gen(function* () {
       const cfg = yield* root;
+      const payload = yield* decodeInput(
+        () =>
+          Schema.decodeUnknownSync(RevertTask)({
+            seq: input.seq,
+            from_version: input.expected,
+          }),
+        "revert requires seq and --expected-version to be positive integers. Read todo history <task-id>, then retry with its operation seq and the Task's current Version.",
+      );
       yield* withStore(cfg, (store) =>
         Effect.gen(function* () {
           const request = yield* selectProfile(store, cfg);
           const data = yield* readTasks(store, request);
-          const seq = Schema.decodeUnknownSync(Sequence)(input.seq);
+          const { seq } = payload;
           const entry = data.history.find((entry) => entry.seq === seq);
           const task_id = entry ? revertTarget(entry) : null;
           if (!task_id)
@@ -1512,10 +1559,7 @@ const revertCommand = Command.make(
           const result = yield* revertTask(
             store,
             { ...request, task_id },
-            {
-              seq,
-              from_version: Schema.decodeUnknownSync(Version)(input.expected),
-            },
+            payload,
           );
           if (result.outcome === "not-found")
             return yield* Effect.fail(

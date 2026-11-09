@@ -181,6 +181,15 @@ try {
     run(["depend", "B", "--on", "A", "--expected-version", "1"]),
   );
   assert.equal(linked.outcome, "added");
+  const beforeHttpUsage = state();
+  await http(
+    "POST",
+    "/profiles/default/tasks/B/dependencies",
+    { blocker_id: "A", from_version: 0 },
+    400,
+  );
+  assert.deepEqual(state().tasks, beforeHttpUsage.tasks);
+  assert.deepEqual(state().edges, beforeHttpUsage.edges);
   run(["depend", "C", "--on", "B", "--expected-version", "1"]);
   assert.deepEqual(
     fail(

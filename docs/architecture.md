@@ -251,3 +251,11 @@ Export reads one consistent graph snapshot and emits depends_on only when
 nonempty. Obsidian keeps one managed note with stable Task blocks, same-note
 wiki links and pure Mermaid formatting. GraphNode.mermaid_id maps diagram nodes
 to full Task identity without relying on labels or diagram parsing.
+
+Under approved G11, GraphNode carries only mermaid_id, task, in_degree,
+out_degree, ready, blocked, depth and remaining_energy. GraphReport carries
+strict ancestors, strict descendants and lightest_next for its requested Task
+only, each in whole-Profile topological order. Query another Task for its sets.
+Reachability and Ready-set membership are computed outside node assembly, so
+the serialized report has O(n+m) content plus the requested root's sets.
+Shared ranking energy and unknown-energy tie behavior are unchanged.
