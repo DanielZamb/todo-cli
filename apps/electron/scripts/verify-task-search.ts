@@ -1339,7 +1339,7 @@ try {
   const bothScopeFilters = async (
     text: string,
     name: string,
-    value: string,
+    value: string | null,
   ) => {
     await fullScopeRefresh(text);
     const full = filteredReplies.findLast((reply) => reply.text === text);
@@ -1468,6 +1468,65 @@ try {
     },
   ]);
   checks.push({ projectAndTagRecoverMeteredWork: true });
+  const lastSearchQuery = (text: string) => {
+    const path = receipts
+      .flatMap((entry) =>
+        typeof entry === "object" &&
+        entry !== null &&
+        "path" in entry &&
+        typeof entry.path === "string" &&
+        entry.path.startsWith("/profiles/work/tasks?")
+          ? [entry.path]
+          : [],
+      )
+      .findLast(
+        (value) =>
+          new URLSearchParams(value.slice(value.indexOf("?"))).get("text") ===
+          text,
+      );
+    if (!path) throw new Error(`Missing search request for ${text}`);
+    return new URLSearchParams(path.slice(path.indexOf("?")));
+  };
+  for (const compactNavigation of [false, true]) {
+    await page
+      .getByRole("button", {
+        name: compactNavigation ? "Compact mode" : "Expand window",
+        exact: true,
+      })
+      .click();
+    await field.fill("");
+    await showing("");
+    await page.getByLabel("Filter by Project").selectOption("");
+    await showing("");
+    await page.getByLabel("Filter by Tag").selectOption("");
+    await showing("");
+    await field.fill("probe");
+    await expect(pane).toHaveAttribute("data-search-phase", "Error");
+    await expect(page.getByLabel("Search failed")).toHaveAttribute(
+      "data-code",
+      "search_too_broad",
+    );
+    if (compactNavigation) {
+      await page
+        .getByRole("button", { name: "Navigate tasks", exact: true })
+        .click();
+      await page
+        .getByRole("menuitemradio", { name: "Small", exact: true })
+        .click();
+    } else
+      await page
+        .getByRole("navigation", { name: "Projects" })
+        .getByRole("button", { name: /^Small/ })
+        .click();
+    await showing("probe");
+    expect(await titles()).toEqual(["Scope probe 0"]);
+    await expect(page.getByLabel("Search failed")).toHaveCount(0);
+    expect(lastSearchQuery("probe").get("project")).toBe("Small");
+    checks.push({
+      projectNavigationRecovery: compactNavigation ? "compact menu" : "sidebar",
+      query: lastSearchQuery("probe").toString(),
+    });
+  }
   await field.fill("");
   await showing("");
   await selectScope("Filter by Project", "", "");
@@ -1580,6 +1639,37 @@ try {
   }
   checks.push({ syntheticSameNameProjectSupersetKeepsSelectedId: true });
   syntheticProjectSuperset = false;
+  await field.fill("");
+  await showing("");
+  await selectScope("Filter by Project", "", "");
+  await selectScope("Filter by Tag", "", "");
+  const paddedSeed = spawnSync(recoverySeed, ["work", "padded"], {
+    env,
+    encoding: "utf8",
+  });
+  receipts.push({
+    compiledRawAppendSeed: "padded Tag from raw append or old data",
+    exit: paddedSeed.status,
+    stderr: paddedSeed.stderr,
+  });
+  expect(paddedSeed.status).toBe(0);
+  const paddedTag = Schema.decodeUnknownSync(
+    Schema.Array(Schema.Struct({ task: Task })),
+  )(JSON.parse(paddedSeed.stdout))[0]?.task.tags[0];
+  if (!paddedTag) throw new Error("Missing padded Tag");
+  await field.fill("padded");
+  await showing("padded");
+  expect(await titles()).toEqual(["Padded marker"]);
+  await page.getByLabel("Filter by Tag").selectOption(paddedTag);
+  await showing("padded");
+  expect(await titles()).toEqual(["Padded marker"]);
+  await bothScopeFilters("padded", "tag", null);
+  expect(await titles()).toEqual(["Padded marker"]);
+  expect(lastSearchQuery("padded").has("tag")).toBe(false);
+  checks.push({
+    paddedTagKeepsSelectedRowWithoutInferredName: true,
+    query: lastSearchQuery("padded").toString(),
+  });
   expect(pageErrors).toEqual([]);
   await page.screenshot({
     path: join(evidence, "tasks.png"),

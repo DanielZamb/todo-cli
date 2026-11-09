@@ -1,6 +1,6 @@
 {
   "sourceCommit": "51711cf41e19b9fcd654c19ae24b957e13591940",
-  "status": "F1-and-refresh-integration; compiled-reproof-pending",
+  "status": "main9de-C3-R1 manual source review; compiled-and-final-formal-reproof-pending",
   "files": [
     {
       "path": "apps/electron/src/renderer.tsx",
@@ -14,9 +14,12 @@
         "changed/connection notice handlers",
         "catalogRef",
         "catalogOwedRef",
-        "invalidate"
+        "invalidate",
+        "searchDefinitions Profile-keyed metadata",
+        "endAuthentication",
+        "changed/connection/reload notice handlers"
       ],
-      "sha256": "2811622e9a15bea2f12269e0016a617f0fcfac6c99ba3eafedb6d69dfbb739a4"
+      "sha256": "b91a4e29671d200dd74b4522de03321dbbbeb788c2c34d71b27b4ee3d7e2d8d8"
     },
     {
       "path": "apps/electron/src/task-search-results.ts",
@@ -27,7 +30,7 @@
         "searchGroups",
         "taskSearchQuery"
       ],
-      "sha256": "bbb664ff484bfb8782f8b2422bf31fccb71b4a67eecea68c989eba8e354dcf05"
+      "sha256": "764b89fbeaca10894d7346a916719453416d8aff1c89608e3411ec674265c0ae"
     },
     {
       "path": "apps/electron/src/task-client.ts",
@@ -66,7 +69,7 @@
         "readSearchPlanning",
         "readSearchCatalog"
       ],
-      "sha256": "b0c415fb84aaec9b31a072e16388f2a7f5891ed31ab600136d3e3c4ef83deecf"
+      "sha256": "c610116cba2f148cde375cef8e1c3320082336dd376ce454af2df1d7069e01bd"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -173,10 +176,12 @@
     "refresh": "Integrated SEC492d9453 plus refresh/R1 at51711cf4: catalog debt survives superseded and failed full reads. Full model, controls, immutable matcher, compiled Swift104 and unsigned Electron regressions pass. Fresh correctness seats pending; UI seat2 passed prior presentation at2041ed44, with integrated60 renders available.",
     "security": "SEC-W1 local source review, literal client/core proofs, immutable real matcher properties and all five behavioral mutations passed at0a2eef1c in matcher-zwScvg. Covered source bytes unchanged at this product commit. Seat1 held for SEC-L1 to launch; seat2 coordinator.",
     "v1": "Reviewed display-only diff against CLIENT-MAPPING.md: shared applied-context helpers, unchanged refusal sentence, secondary context, no state transition/publication guard/generation/identity changes. Immutable matcher properties and all five behavioral mutations passed at064b2667 in matcher-1eyrdt before these four hashes were renewed. Seat1/visual review pending.",
-    "f1": "Reviewed F1 against CLIENT-MAPPING.md: catalog-name request narrowing only; explicit dialog names win, unresolved ids add no name, same-response id joins remain. No state transition, publication guard, generation, identity, snapshot or SSE recovery change. Immutable real matcher properties and all five behavioral mutations passed at5d42f32b in matcher-uo9W7V before renewing only the three changed source hashes. Compiled Electron/Swift recovery, ordinary JSON, real raw-append case-fold Tags and synthetic same-name Projects passed."
+    "f1": "Reviewed F1 against CLIENT-MAPPING.md: catalog-name request narrowing only; explicit dialog names win, unresolved ids add no name, same-response id joins remain. No state transition, publication guard, generation, identity, snapshot or SSE recovery change. Immutable real matcher properties and all five behavioral mutations passed at5d42f32b in matcher-uo9W7V before renewing only the three changed source hashes. Compiled Electron/Swift recovery, ordinary JSON, real raw-append case-fold Tags and synthetic same-name Projects passed.",
+    "f1ab": "Reviewed F1a/F1b against CLIENT-MAPPING.md: Electron keeps a Profile-keyed name catalog ref refreshed from each published result and cleared on Profile switch, endAuthentication and reload, used only for a matching Profile; both clients infer a Tag name only when trimming leaves it unchanged (Swift: whitespacesAndNewlines plus U+FEFF, a superset of JS trim), Project names stay exact. Request narrowing only: no state transition, publication guard, generation, identity, snapshot or SSE recovery change. Immutable real matcher properties and all five behavioral mutations passed at c1437107 in matcher-qRXiUP before renewing only the three changed source hashes.",
+    "main9deRefresh": "Reviewed final main F1a/F1b through the shared full/query request construction. Profile-keyed metadata survives view clearing and resets on Profile/auth/reload. Swift trim-invariance guard is inside readSearchRows used by both filtered scopes. Catalog debt and guarded publication are unchanged. Immutable main matcher properties, five behavioral controls and strict checks passed in matcher-6dcbM8 before renewing only these three client hashes. Compiled F1a/F1b and final C3 proofs remain pending."
   },
   "productionMatcher": "Immutable real source with generated properties, behavioral mutations and byte restoration; final-tip command uses its explicit full SHA.",
   "recovery": "Transient errors offer Retry; search_too_broad hides Retry and retains text/snapshot. Current-Profile SSE op/reconnect remains available. Liveness requires a later affordable successful response and a fair available recovery source.",
   "clientRefinement": "Mapped full/query publication, catalog retention and bootstrap fallback with compiled regressions; no mechanical TypeScript/Swift refinement theorem.",
-  "securityBase": "75614cfff568085e09336b755e9ad436f76e21b9"
+  "securityBase": "9de893454cb6e3f5729407e9313c73e56bfd0481"
 }

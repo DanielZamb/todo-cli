@@ -256,3 +256,47 @@ join. Immutable matcher properties and all five behavioral sensitivity mutations
 passed at `5d42f32b0b3b5b84ca82df0a07af2d4fe0ae9887` in
 `docs/evidence/task-search-formal/matcher-uo9W7V` before renewing the three changed
 source hashes. TLA+ is unchanged because the publication design is unchanged.
+
+## F1a and F1b review (2026-11-09)
+
+SEC seat 1 found two gaps in F1 at `75614cff`.
+
+F1a: Electron built its Project and Tag name catalog from the applied result
+snapshot. `activateView` clears that snapshot, so sidebar or Compact Project
+navigation sent its search without the selected Project and was refused. The
+catalog is now a ref keyed by Profile. It is refreshed from each published
+`appliedSearch`, cleared in `activateProfile`, `endAuthentication` and the reload
+notice, and used only when its Profile equals the request's Profile. Swift keeps
+`projects` and `tags` across `selectView`. A headless case that follows the
+sidebar binding (`selectView("all")`, then the selection's debounced search)
+publishes the narrowed result before and after the fix.
+
+F1b: the server compares Project names exactly (`task-filters.ts:92`) but trims
+only the Tag query (`task-filters.ts:99`). A stored Tag name with leading or
+trailing whitespace therefore never matches itself. Both clients now infer a Tag
+name only when trimming leaves it unchanged. Electron uses `name === name.trim()`.
+Swift rejects a first or last scalar in `whitespacesAndNewlines` or U+FEFF, a
+superset of the JavaScript trim set. Project names still pass through. Without an
+inferred name, the request is unnarrowed and the id join keeps the selected rows.
+
+This is request narrowing only: no state transition, publication guard,
+generation, requested or applied identity, snapshot, unfiltered snapshot or SSE
+recovery change. The red runs failed on F1a in Electron and on F1b in both
+clients. Swift's navigation case passed before the fix. Immutable matcher
+properties and all five behavioral sensitivity mutations passed at
+`c14371075593a4a163f15797c495ac821510a449` in
+`docs/evidence/task-search-formal/matcher-qRXiUP` before the three changed source
+hashes were renewed. TLA+ is unchanged.
+
+## Main9de refresh integration
+
+The refresh unit keeps SEC's Profile-keyed `searchDefinitions` separately from
+`catalogRef`. View reset clears the retained Task catalog and keeps only the
+matching Profile's Project and Tag names. Profile switch, authentication end
+and reload clear both. `taskSearchQuery` uses that same metadata before selecting
+`list` or `search`, so full and query scopes preserve F1a/F1b. Swift applies the
+reviewed Tag-edge check inside `readSearchRows`, shared by both filtered paths.
+Unfiltered catalog reads remain unfiltered. Explicit dialog filters still win.
+Catalog obligation, generation, complete identity and publication are unchanged.
+The source review does not replace the compiled sidebar, padded Tag, full/query
+and catalog-debt regressions, or the final finite model and real matcher checks.

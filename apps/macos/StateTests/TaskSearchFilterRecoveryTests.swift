@@ -115,6 +115,22 @@ struct TaskSearchFilterRecoveryTests {
                 #expect(query.contains { $0.name == (project ? "project" : "tag") && $0.value == (project ? "Small" : "keep") })
             }
         }
+        for project in [true, false] {
+            model.selectView("all")
+            #expect(model.searchText == "probe")
+            #expect(model.projects.contains { $0.id == selected.project_id && $0.name == "Small" })
+            #expect(model.tags.contains { $0.id == selected.tags.first && $0.name == "keep" })
+            if project { model.selectedProject = selected.project_id } else { model.selectedTag = selected.tags.first }
+            for _ in 0..<1500 where model.searchPhase != .showing && model.searchPhase != .error {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+            #expect(model.searchPhase == .showing)
+            #expect(model.searchError == nil)
+            #expect(model.appliedSearchSnapshot?.rows.map(\.title) == ["Scope probe 0"])
+            let read = try #require(await transport.latestSearch())
+            #expect(URLComponents(string: read.path)?.queryItems?.contains { $0.name == (project ? "project" : "tag") && $0.value == (project ? "Small" : "keep") } == true)
+        }
+        model.selectView("all")
         for task in tasks {
             let payload = try JSONDecoder().decode(Operations.tasks_period_edit.Input.Body.jsonPayload.self, from: Data(#"{"from_version":2,"changes":{"description":"ordinary"}}"#.utf8))
             _ = try await direct.tasks_period_edit(path: .init(profile: profile, task: task.id), body: .json(payload)).ok
@@ -164,8 +180,35 @@ struct TaskSearchFilterRecoveryTests {
             #expect(URLComponents(string: after.path)?.queryItems?.contains { $0.name == "project" && $0.value == "Small" } == true)
             #expect(try canonicalRows(after.data, id: row.id) == canonicalRows(collisionJSON.data, id: row.id))
         }
+        let paddedSeed = Process()
+        paddedSeed.executableURL = URL(fileURLWithPath: try #require(ProcessInfo.processInfo.environment["SEC_SEARCH_RECOVERY_SEED"]))
+        paddedSeed.arguments = [profile, "padded"]
+        paddedSeed.environment = ProcessInfo.processInfo.environment
+        let paddedOutput = Pipe()
+        paddedSeed.standardOutput = paddedOutput
+        paddedSeed.standardError = Pipe()
+        try paddedSeed.run()
+        _ = paddedOutput.fileHandleForReading.readDataToEndOfFile()
+        paddedSeed.waitUntilExit()
+        #expect(paddedSeed.terminationStatus == 0)
+        model.selectedProject = nil
+        model.selectedTag = nil
+        model.setSearchText("padded")
+        await model.refreshAfterWrite("Padded Tag fixture catalog changed")
+        #expect(model.searchError == nil)
+        #expect(model.appliedSearchSnapshot?.rows.map(\.title) == ["Padded marker"])
+        let paddedTag = try #require(model.tags.first { $0.name == " keep " }?.id)
+        model.selectedTag = paddedTag
+        for full in [false, true] {
+            if full { await model.refreshAfterWrite("Padded Tag full-path proof") }
+            else { #expect(await model.retrySearch() == .applied) }
+            #expect(model.searchError == nil)
+            #expect(model.appliedSearchSnapshot?.rows.map(\.title) == ["Padded marker"])
+            let paddedRead = try #require(await transport.latestSearch())
+            #expect(URLComponents(string: paddedRead.path)?.queryItems?.contains { $0.name == "tag" } == false)
+        }
         if let path = ProcessInfo.processInfo.environment["TODO_W06_RECEIPT"] {
-            try JSONSerialization.data(withJSONObject: ["fullAndQueryPaths": true, "projectRecovery": true, "tagRecovery": true, "ordinaryRowsAndSpansByteIdentical": true, "rawAppendOrOldDataCaseFoldTagSuperset": true, "syntheticSameNameProjectSuperset": true]).write(to: URL(fileURLWithPath: path).deletingLastPathComponent().appendingPathComponent("search-filter-recovery.json"))
+            try JSONSerialization.data(withJSONObject: ["fullAndQueryPaths": true, "projectRecovery": true, "tagRecovery": true, "navigationRecovery": true, "paddedTagKeepsSelectedRow": true, "ordinaryRowsAndSpansByteIdentical": true, "rawAppendOrOldDataCaseFoldTagSuperset": true, "syntheticSameNameProjectSuperset": true]).write(to: URL(fileURLWithPath: path).deletingLastPathComponent().appendingPathComponent("search-filter-recovery.json"))
         }
     }
 }

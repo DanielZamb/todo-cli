@@ -322,6 +322,17 @@ function App() {
   const catalogRef = useRef(catalog);
   const catalogOwedRef = useRef(true);
   catalogRef.current = catalog;
+  const searchDefinitions = useRef<
+    Pick<TaskCatalog, "projects" | "tags"> & {
+      profile: typeof ProfileId.Type | null;
+    }
+  >({ profile: null, projects: [], tags: [] });
+  if (appliedSearch)
+    searchDefinitions.current = {
+      profile: appliedSearch.appliedIdentity.profile,
+      projects: appliedSearch.catalog.projects,
+      tags: appliedSearch.catalog.tags,
+    };
   const unfilteredSearch = useRef<AppliedSearch | null>(null);
   const tasks = catalog?.tasks ?? [];
   const [searchText, setSearchText] = useState("");
@@ -450,6 +461,7 @@ function App() {
     catalogRef.current = null;
     catalogOwedRef.current = true;
     unfilteredSearch.current = null;
+    searchDefinitions.current = { profile: null, projects: [], tags: [] };
     setSearchPhase("Idle");
     clearTimeout(debounce.current);
     setProject(null);
@@ -483,6 +495,7 @@ function App() {
     catalogRef.current = null;
     catalogOwedRef.current = true;
     unfilteredSearch.current = null;
+    searchDefinitions.current = { profile: null, projects: [], tags: [] };
     setSearchPhase("Idle");
     clearTimeout(debounce.current);
     setEditor(null);
@@ -590,7 +603,9 @@ function App() {
         view,
         filters: taskSearchQuery(
           identity,
-          retained ?? { projects: [], tags: [] },
+          searchDefinitions.current.profile === identity.profile
+            ? searchDefinitions.current
+            : { projects: [], tags: [] },
         ),
       });
       if (
@@ -818,6 +833,7 @@ function App() {
         catalogRef.current = null;
         catalogOwedRef.current = true;
         unfilteredSearch.current = null;
+        searchDefinitions.current = { profile: null, projects: [], tags: [] };
         setSearchPhase("Idle");
         clearTimeout(debounce.current);
         setEditor(null);

@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "f709549c30d7f76543b103f6d31b7c78d2840664",
+  "confirmedCommit": "d83d61863b95d2482ca9281a34d5db4494abffbb",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
@@ -19,7 +19,7 @@
     },
     {
       "path": "packages/domain/src/store/projection.ts",
-      "sha256": "b148e244a30e955a969941018bcc737c24f301bc719fc47a1eb13ae41cbef316",
+      "sha256": "944adc71cfe493c8631119daeba165e16c688426de7e3694112cb3f8b84d465a",
       "functions": [
         "changes",
         "applyEvent",
@@ -46,17 +46,28 @@
     {
       "path": "packages/domain/src/entities.ts",
       "sha256": "ee505f78a6434528dbfe5f072463ec77cd6823bab1781f3f656d01c77f2d52f9",
-      "functions": ["Task", "Profile"]
+      "functions": [
+        "Task",
+        "Profile"
+      ]
     },
     {
       "path": "packages/domain/src/ids.ts",
       "sha256": "c1081994f401f4898f950348587ff4633fd36eb822628ca00d3d215e73defd0f",
-      "functions": ["ActorId", "ProfileId", "TaskId", "Version"]
+      "functions": [
+        "ActorId",
+        "ProfileId",
+        "TaskId",
+        "Version"
+      ]
     },
     {
       "path": "packages/domain/src/attachments.ts",
       "sha256": "d6ba1579e84f5db261ecae9c12b9000757c42514ae99192b97c6da5a31668e26",
-      "functions": ["Attachment", "validAttachmentLocation"]
+      "functions": [
+        "Attachment",
+        "validAttachmentLocation"
+      ]
     }
   ]
 }

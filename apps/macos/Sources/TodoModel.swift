@@ -24,6 +24,7 @@ final class TodoModel {
     var profileDeletionError: String?
     var projects: [DiscoveryEntry] = []
     var tags: [DiscoveryEntry] = []
+    private static let tagNameEdges = CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "\u{FEFF}"))
     var planning: PlanningResult?
     var viewCounts: [String: Int] = [:]
     var profileName: String { profiles.first { $0.id == profile }?.name ?? "Profile" }
@@ -438,7 +439,11 @@ final class TodoModel {
         if filtered {
             query.text = identity.text.isEmpty ? nil : identity.text
             if query.project == nil { query.project = projects.first { $0.id == identity.project }?.name }
-            if query.tag == nil { query.tag = tags.first { $0.id == identity.tag }?.name }
+            if query.tag == nil, let name = tags.first(where: { $0.id == identity.tag })?.name,
+               let first = name.unicodeScalars.first, let last = name.unicodeScalars.last,
+               !Self.tagNameEdges.contains(first), !Self.tagNameEdges.contains(last) {
+                query.tag = name
+            }
         }
         return try await client.tasks_period_list(path: .init(profile: identity.profile), query: query).ok.body.json.map(TaskSnapshot.decode)
     }
