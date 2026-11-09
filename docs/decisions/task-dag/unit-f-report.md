@@ -597,3 +597,129 @@ Only the report changed in Git. A local prose/no-comments audit found no added
 code comments or suppressions. No child agent, checkout change, merge, rebase,
 push, native app, signing, Keychain, real Todo data or arbitrary cleanup occurred.
 The terminal notification names the report's full housekeeping delivery SHA.
+
+
+## Merged-source preparation checkpoint, 2026-11-09
+
+Held at the owner's latest instruction. Final B conformance must resume at L1's
+exact merged integration SHA after the held B closure passes and B merges.
+Leaf 6486b347f611e118a0d60ead4ebe40ac77d86666 was not pinned. The last inspected
+candidate remains 3cceb41efc08b8cd835d5c883c3d370709865c3f, with known response-order
+and captured-credential issues. Both pins now set awaitMergedIntegration.
+No B merge, source checkout, product edit or child agent was used.
+
+Preparation source commit: a237869c0e0adf444d379202743e9daf01c1c48d.
+The report-only delivery SHA is named in terminal notifications and this new
+ignored receipt's delivery fields. No final merged-source proof is claimed.
+
+Current one-command check at that committed preparation source:
+`bun .agents/skills/verify-dag-formal/check.mjs` exited 2 with
+awaiting-merged-source, before any compiler, model or child command started.
+This is the intended hold gate, not a proof pass. The standalone production
+and public entry points also refuse superseded source compilation while held.
+Gate receipt: `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/merged-hold-YEGKoo/default-gate.json`.
+Aggregate preparation receipt: `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/merged-hold-YEGKoo/preparation-summary.json`.
+
+### Completed unaffected calibration
+
+These diagnostic runs preceded the final hold and used immutable 3cce Git objects.
+Their verifier inputs were uncommitted calibration bytes recorded by hash in
+verification-inputs.json. They do not prove the expanded committed preparation
+pipeline or any merged-source property.
+
+- public-check.mjs boundaries exited 0 at
+  `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/public-zfoCK2`.
+- public-check.mjs boundary-controls exited 0, diagnostic-pass, at
+  `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/public-NjVzFG`. It passed 17 malformed-input cases across depend,
+  undepend, add, graph, batch-depend, rm and Revert, four genuine missing/I/O
+  classifications, and valid stale no-ops with unchanged History. The three
+  Version-0 cases cover existing add, missing add and absent remove. Errors
+  carry one JSON object, invalid_args, exit 2 and the literal recovery token.
+- All seven new actual-source boundary controls compiled successfully, failed
+  the intended AssertionError with exit 1, restored source byte-for-byte and
+  reran clean with exit 0. They cover runtime versus usage classification,
+  edge/graph/add/batch/Revert decoding and explicit-present empty fingerprint.
+  The calibration recorded 14 canonical per-compiler disk guards, all exit 0.
+- Independent replay exited 0 for 93 cases/186 full and checkpoint rebuilds,
+  seed 260911, all DAGs through 3 nodes plus 64 seeded DAGs through 12 nodes.
+  Nineteen concrete lifecycle, Move/Purge/FK, initial-edge and N1 integration
+  checks exited 0. B's 31-case matrix was inspected; its new F rerun path is
+  prepared but was not executed before the hold.
+- check.mjs --model-only exited 0 at
+  `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/check-x0dfU4`: 25 positive configurations plus the clean recheck,
+  all positive queues 0, five intended mutant counterexamples at exit 12 and
+  seven reachability witnesses at exit 12. Clean counts remain 64 initial,
+  32,816 generated, 19,784 distinct, depth 27, queue 0. DagAcyclic and its configs
+  are unchanged, with the previously stated finite bounds and tool pin.
+- The synthetic prior-stop sentinel check exited 0 at
+  `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/guard-check-op00WH`. It prevented compiler entry and restored
+  an isolated scratch copy exactly. It is not an actual low-disk observation
+  or a product sensitivity pass. pnpm check was not rerun in this continuation.
+
+### Prepared and explicitly unproven
+
+The full command now has the intended library/public pipeline, guarded actual
+compiler calls, a cross-process disk-stop latch and safe exact restoration.
+Nested AtomicCAS Bun.build calls are wrapped without editing B's skill; that
+new nested wrapper still needs its merged-source execution. AtomicCAS remains
+separately owned by B and limited to one Task without graph edges.
+
+The coordinator withdrew all-three-topo G11 ordering. Ancestors/descendants stay
+in whole-Profile topo; lightest_next is own energy ascending, unknown last,
+then whole-Profile topo position. The --order lightest remaining-energy key is
+unchanged. The updated root fixture and graph-response-properties.ts prepare:
+
+- exact eight direct, encoded and public node keys, including a hidden direct
+  field control and a separate count-only observation of reachable calls;
+- an independent 1,000-chain/root 500 in both strict directions, an unequal-energy
+  fork with unknown last, equal-energy topo ties, Ready-root inclusion and
+  terminal-root exclusion, and separate CLI/HTTP/compact size measurements;
+- the committed B chain fixture hash/root, typed Mermaid identities/arrows,
+  readGraph, schemas/OpenAPI/generated Swift source mapping and CLI Markdown;
+- a portable production client constructed once while signed out, with a getter
+  read inside each request, real HTTP through a forwarding header observer,
+  profiles 200 with the current bearer after sign-in and no Authorization header
+  after sign-out. A 401 alone is insufficient. Prepared controls freeze the
+  signed-out value or retain the revoked bearer, rather than recreate a client.
+
+These expanded response/client helpers and controls are UNCOMPILED and UNPROVEN.
+Do not treat written assertions as completed coverage. Full algorithm/read corpus,
+source sensitivity, 31-case matrix, nested AtomicCAS and response/client clean
+runs must execute against the exact merged source after a function review and
+committed F verifier source. The former f140/e717 receipts stay at their original
+candidates. Final E/S feature/runtime mappings, fresh Claude discovery and
+independent final F review seats remain pending. No final F, B or whole-feature
+approval is claimed.
+
+### Retired artifacts and disk
+
+After completed calibration mutants, retired seven idle F-owned superseded
+.scratch/bin binaries, 634,868,654 logical bytes. Every adjacent provenance
+manifest, source/behavior receipt and cited evidence directory was preserved.
+The receipt lists their exact SHA-256, completed control references and in-use
+checks. All isolated product input files were rechecked byte-identical to their
+captured immutable manifests before this checkpoint. No own cached binary was
+running. The retained e717 hash group is
+1aa1db7f8ede6a9401d4f9eaf5e52823ed8ec52a3275cd02b71e71040c95713b;
+the retained 3cce review group is
+33dcee7ebeb0d870b69f28562f42ad36125c0daccf26f3ef23bed8e9cbaa3bca.
+
+| Retired relative path | Logical bytes unlinked |
+| --- | ---: |
+| `.scratch/bin/dag-f-todo-cc56e644dff43dbe05798850d1414105a85d885695484929d0b87ab01cc0007a` | 90695522 |
+| `.scratch/bin/dag-f-todo-e2f5ad2f638ed1e86c0f98193d4b60c11ea444b016423d89ac23bc2cb4bcdaf9` | 90695522 |
+| `.scratch/bin/dag-f-todo-392f56c8d89dff172974bdc6330b323120788949d681b9c90959b1230c5a6ef8` | 90695522 |
+| `.scratch/bin/dag-f-todo-f9d240ccd298fe34038566f133191b071490ffca5e14614f1eca8c1d1353219c` | 90695522 |
+| `.scratch/bin/dag-f-todo-132c1c4528aff07f7456b373f302c927400a45128e51fd80d1553f2e9ce90f9a` | 90695522 |
+| `.scratch/bin/dag-f-todo-92a8c4b9f97e062565b29e44ee3c42c5f771499e10ca4b0ba537a5c5436b5d5f` | 90695522 |
+| `.scratch/bin/dag-f-todo-e173fa888aedcc478ad678051e84937882969b57449237e53d62226edaaa5024` | 90695522 |
+
+Initial compile-setup guard reported 26.6 GB; the checkpoint guard exited 0 and
+df observed 19.04984883 GB available. These span concurrent activity,
+not a reclaimed-capacity measurement. Per-unlink free capacity was not sampled
+in this calibration; the retirement helper now records before/after df for
+future runs. No APFS capacity gain is inferred from logical bytes. No DISK STOP
+occurred. There was no cleanup outside owned files and no cited evidence
+was deleted. No product, model/config, native app, signing, Keychain, real data,
+installed binary, dependency or checkout change was made. git diff --check
+passed. Local prose/no-comments audit added no code comments or suppressions.
