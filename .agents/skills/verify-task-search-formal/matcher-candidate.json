@@ -1,6 +1,6 @@
 {
-  "commit": "0d5b2198e5728565a57ff3170b84182ff776a148",
-  "status": "reviewed-integration-product-source",
+  "commit": "c240677ec3b381ca1411e955847f75d064600067",
+  "status": "worker-reviewed-budget-product-source; independent-seats-pending",
   "normalization": "normalizeTaskSearch",
   "parsing": "parseTaskSearch",
   "matching": "matchTaskSearch",
