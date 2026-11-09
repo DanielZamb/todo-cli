@@ -6,3 +6,4 @@
 
 These are library entry points in Unit A. Public commands and client workflows
 remain with later units.
+- [Queries and ranking](queries.md): deterministic Kahn ordering, pruned distinct energy, Ready/Blocked, connected shape and safe Mermaid.

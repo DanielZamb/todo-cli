@@ -18,6 +18,7 @@ import {
   runDagCase,
   task,
 } from "./dag-proof.ts";
+import { proveGraphAlgorithms } from "./graph-proof.ts";
 
 const [mode, directory, evidence] = process.argv.slice(2);
 if (
@@ -63,6 +64,8 @@ if (mode === "A" || mode === "B") {
     );
   mkdirSync(evidence, { recursive: true });
   const receipts: unknown[] = [];
+  proveGraphAlgorithms();
+  receipts.push({ name: "graph-algorithms", outcome: "passed" });
   for (const [name, run] of Object.entries(dagCases)) {
     const caseDirectory = join(directory, name);
     mkdirSync(caseDirectory);

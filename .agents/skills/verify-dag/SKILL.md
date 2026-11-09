@@ -61,3 +61,7 @@ The .claude/skills/verify-dag link is relative to this checkout. Check it with
 `realpath .claude/skills/verify-dag`. Runtime Claude discovery requires a fresh
 Claude session and is not established by the symlink alone.
 Use /maintain-verification-skill when B adds public graph commands.
+
+The compiled drive also invokes graph-proof.ts, which imports the production
+query/order/energy/format exports. See queries.md for its literal fixtures.
+It remains compiled library proof until the public command drive is added.
