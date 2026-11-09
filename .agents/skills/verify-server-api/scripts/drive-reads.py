@@ -22,7 +22,7 @@ with (evidence / 'server.log').open('w') as log:
     server = subprocess.Popen([str(scratch / 'server')], env={**os.environ, 'TODO_DB': str(scratch / 'scratch.db'), 'TODO_PORT': '0', 'NO_COLOR': '1'}, stdout=log, stderr=log)
     try:
         base = None
-        for _ in range(100):
+        for _ in range(1200):
             match = re.search(r'http://127\.0\.0\.1:\d+', (evidence / 'server.log').read_text())
             if match:
                 base = match.group()
