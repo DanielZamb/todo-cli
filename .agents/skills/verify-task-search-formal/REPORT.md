@@ -2,8 +2,9 @@
 
 The approved response-order model, including SSE recovery, is proven within the bounds below at model code commit f42fc7f5. Generated
 checks against the real unit 1 candidate also pass, with production-code
-sensitivity. Integration recheck and final client mapping are PENDING. This is
-not a complete Task search feature proof.
+sensitivity. The reviewed Unit 1 integration recheck at `8272b610` passed.
+The final integration recheck and production client mapping are PENDING.
+This is not a complete Task search feature proof.
 
 The model's first delivery before Phase 2 is local commit
 `1cdb35340b7df59882f979880e622dec8308a444`. Candidate matcher results are recorded
