@@ -6,6 +6,8 @@ Run: 2026-11-09-sec-perf-agent. The five Tasks are 6e1e556e, dc04f3e9, 0a9fef38,
 
 ## Contract
 
+The later approved [CLI credential selection amendment](agent-discovery-credential-selection.md) separates the stored key from the target Profile through global `--credential-profile`. That amendment takes precedence over the original credential-selection and next-command wording below. HTTP and both clients already carry the key separately; their UI and request-order contract are unchanged.
+
 The following contracts include the coordinator's approved corrections. Existing fields, command behavior, error codes, exit statuses, exact-id rules, and authorization remain compatible. All successful CLI responses contain generated_at and are one JSON object. HTTP retains its existing array responses and tagged errors.
 
 ### Exit-code meanings
@@ -28,13 +30,13 @@ Example JSON error:
 {
   "generated_at": "2026-11-09T15:00:00.000Z",
   "code": "not_found",
-  "message": "Task not found in Profile work (work). Mutations need the full Task id and an explicit Profile. Run todo list --profile work --prefix 45a312ac for this Profile, or todo lookup --prefix 45a312ac across Profiles this credential can access.",
+  "message": "Task not found in Profile work (work). Mutations need the full Task id and an explicit Profile. Run todo list --profile work --prefix 45a312ac for this Profile, or todo lookup --prefix 45a312ac --credential-profile work across Profiles this credential can access.",
   "exit_code": 3,
   "exit_meaning": "not found or auth missing",
   "details": {
     "profile": { "id": "work", "name": "work" },
     "task_id": "45a312ac",
-    "recovery": "Run todo list --profile work --prefix 45a312ac for this Profile, or todo lookup --prefix 45a312ac across Profiles this credential can access. Mutations need the full Task id and an explicit Profile."
+    "recovery": "Run todo list --profile work --prefix 45a312ac for this Profile, or todo lookup --prefix 45a312ac --credential-profile work across Profiles this credential can access. Mutations need the full Task id and an explicit Profile."
   }
 }
 ```
