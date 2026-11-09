@@ -988,7 +988,7 @@ const discoveryFrames = [
       ["failure", "CommandError / HTTP error", "CommandError.exit / actual process exit\nCLI program catch / follow stderr\nHTTP tagged errors keep _tag"],
       ["mapping", "exit-status.ts / proposed", "0 success / 1 runtime failure\n2 validation or usage\n3 not found or auth missing / 4 Conflict"],
       ["output", "renderError / HTTP boundary", "exit_code + exit_meaning\ntodo schema error / manual examples\nmd, json, table; one JSON object"],
-      ["client", "Electron / TodoModel error", "retain message, details and draft\nsecondary error <code> - <meaning>\nrecovery action remains available"],
+      ["client", "TaskLookupStatus / lookupErrorNotice", "details -> human Profile context / retain draft\nsecondary error <code> - <meaning>\nneutral status / Find Task by id"],
     ],
     edges: [
       ["failure", "mapping", "failure / map actual exit", "right", "left"],
@@ -1009,16 +1009,21 @@ const discoveryFrames = [
       ["auth", "Authentication.resolveProfile / operation auth", "authorized set / return only {id,name}\none rejected-auth row / real Profile and action\nno preliminary null-Profile discovery rejection"],
       ["missing", "Task not found", "commands.cliResult / show / History\nnot_found exit 3 / HTTP NotFound 404\nno cross-Profile probe"],
       ["recover", "task-lookup-error.ts / proposed", "details.profile {id,name} / task_id\nlist --profile <id> --prefix <p> [--credential-profile <used>]\nlookup --prefix <p> --credential-profile <used> / HTTP both routes"],
+      ["human", "TaskLookupStatus / lookupErrorNotice", "Task not found in <Profile name>.\nsecondary error 3 - not found or auth missing\nneutral status / no agent commands"],
+      ["prefill", "openDiscovery / findTaskAfterLookupError", "Find Task by id / retain draft\nprefill discovery-prefix / no request yet\nexplicit Find continues in agent-prefix"],
     ],
     edges: [
       ["request", "auth", "request / authorize first", "right", "left"],
       ["auth", "missing", "authorized + absent / existing outcome", "right", "left"],
       ["missing", "recover", "safe context / enrich message + details", "bottom", "top"],
       ["recover", "request", "explicit user recovery / retain draft", "left", "bottom"],
+      ["recover", "human", "apps / project structured details", "bottom", "top"],
+      ["human", "prefill", "Find Task by id / prefill only", "bottom", "top"],
     ],
     notes: [
       "1. Enrich only an authorized missing Task, never a missing Attachment on an existing Task. Absent and unauthorized Profile outcomes are identical.",
       "2. Both hints query nothing. Mutations need full ids and an explicit Profile. Human detail uses error 3 - not found or auth missing.",
+      "3. Apps also use the shared human status for report rows. CLI and HTTP retain full recovery; apps never concatenate message and recovery.",
     ],
   },
   {

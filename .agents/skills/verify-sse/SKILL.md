@@ -28,6 +28,9 @@ Never edit that checkout or use the retired Go binary.
 The helper compiles `apps/server/src/main.ts` and the existing S01 provisioning
 driver with `bun build --compile`. It creates a `todo-s01-verify-*` temporary
 directory because the shared provisioning driver validates that prefix.
+Set TODO_SERVER_BINARY and TODO_SEED_BINARY to matching source-hash cache
+executables to reuse them. The helper links those provided binaries into its
+owned scratch directory instead of compiling them again.
 The database and HOME both live there. Each run owns its server, CLI copy,
 credentials, port and database, so independent runs can coexist.
 

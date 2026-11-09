@@ -9,7 +9,8 @@ const root = resolve(import.meta.dirname, "../../../..");
 const evidence = process.argv[2];
 assert.ok(evidence && isAbsolute(evidence) && !existsSync(evidence));
 const manifest = Schema.decodeUnknownSync(Schema.Struct({ cli: Schema.String, sourceHash: Schema.String, head: Schema.String }))(JSON.parse(readFileSync(join(root, ".scratch/bin/build.json"), "utf8")));
-const source = join(import.meta.dirname, "review-boundaries.ts");
+const driver = Schema.decodeUnknownSync(Schema.Literals(["review-boundaries", "enrichment-history"]))(process.argv[3] ?? "review-boundaries");
+const source = join(import.meta.dirname, `${driver}.ts`);
 const scriptHash = createHash("sha256").update(readFileSync(source)).digest("hex");
 const binary = join(root, ".scratch/bin", `review-${manifest.sourceHash.slice(0, 12)}-${scriptHash.slice(0, 12)}`, "driver");
 if (!existsSync(binary)) {

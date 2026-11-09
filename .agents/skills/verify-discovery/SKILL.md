@@ -55,6 +55,16 @@ empty global flag validation and exact unchanged printed shell execution. Eight
 real HTTP/CLI rejected-auth comparisons assert every stored field on independent
 seed clones; see [the boundary recipe](features/authorization-boundaries.md).
 
+The compiled enrichment-history driver runs production HTTP handlers for
+batch-edit, attach-many and import and the actual CLI against isolated databases.
+Batch-edit and attach-many expire a scoped Token after its authorized missing
+Task check by advancing the injected Clock through the diagnostics use callback.
+Import's missing-id conflict guard precedes enrichment, so its case expires at
+aggregate entry. Each HTTP and CLI request records one selected-Profile
+authenticate rejection. Separate Token actors and clocks are checked against
+their fixtures; the compared projection includes Profile, action, detail,
+outcome and reason. No production auth or query implementation is replaced.
+
 The compiled credential-selection recipe signs in under source and dest, logs
 dest out and executes the printed Show command using source. It checks global
 precedence, reads and mutations, scoped refusal, missing-file isolation, explicit
@@ -78,6 +88,8 @@ actions.json,driver-provenance.json,cleanup.json} and compiled/{actions.json,aut
 server.log,binary-provenance.json,cleanup.json,result.json}. Actions pair input
 with actual process exits or HTTP statuses. Bearer credentials are omitted.
 Outputs remain ignored by Git; reusable scripts and expected values are tracked.
+`enrichment-history/{comparisons.json,result.json,cleanup.json}` retains the
+three compiled aggregate expiry cases and their boundary labels.
 
 ## Cleanup
 

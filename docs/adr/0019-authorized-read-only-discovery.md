@@ -115,3 +115,18 @@ Printed commands protect every dash-leading flag value with `--flag=value`.
 A dash-leading Task id follows an argument delimiter after all flags, such as
 `todo show --profile work -- -ab`. One domain shell-quoting implementation
 formats CLI discovery commands and recovery hints, including colons and quotes.
+
+## Amendment, 2026-11-09: human Task lookup recovery
+
+Desktop clients project structured Task lookup details into a neutral status:
+`Task not found in <Profile name>.`, the server's `error 3 - not found or auth
+missing` secondary detail, and one `Find Task by id` action. That action opens
+lookup with the requested id prefix; it does not submit until explicit Find.
+This presentation also applies to contextual errors in bulk report rows.
+Clients do not display or concatenate the agent message, recovery commands or
+HTTP routes. CLI and HTTP keep the complete agent recovery payload unchanged.
+
+Task lookup enrichment requires an explicit AuthAction at every shared helper
+boundary. Batch edit, import and attach-many supply authenticate; ordinary
+reads supply read and ordinary mutations mutate. There is no default action
+that can change rejected-auth History attribution when a credential expires.
