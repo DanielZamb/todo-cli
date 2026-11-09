@@ -14,4 +14,6 @@ export * from "./recurrence.ts";
 export * from "./snapshots.ts";
 export * from "./task-commands.ts";
 export * from "./task-filters.ts";
+export * from "./task-read.ts";
+export * from "./task-search.ts";
 export * from "./time.ts";

@@ -7,6 +7,27 @@ import OpenAPIRuntime
 #endif
 
 final class GeneratedContractTests: XCTestCase {
+    func testSearchBudgetRefusalKeepsItsCodeAndRecoveryMessage() throws {
+        typealias Failure = Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload
+        let json = #"{"generated_at":"2026-11-09T12:00:00Z","code":"search_too_broad","message":"Narrow the search with a Project, Tag or Status filter."}"#
+        try roundTrip(Failure.self, json)
+        let refusal = try JSONDecoder().decode(Failure.self, from: Data(json.utf8))
+        XCTAssertNil(refusal.value1)
+        XCTAssertEqual(refusal.value2?.code.rawValue, "search_too_broad")
+        XCTAssertEqual(refusal.value2?.message, "Narrow the search with a Project, Tag or Status filter.")
+        XCTAssertThrowsError(try JSONDecoder().decode(Failure.self, from: Data(json.replacingOccurrences(of: "search_too_broad", with: "different_code").utf8)))
+    }
+
+    func testSearchReadKeepsOriginalUTF16Spans() throws {
+        let json = #"{"id":"task-1","profile_id":"work","entity_version":1,"row_version":7,"title":"🎵 Canción","description":"Pay rent today","project_id":null,"priority":"P3","scheduled_at":null,"due_at":null,"energy":null,"estimate_min":null,"source":"manual","tags":[],"status":"open","occurrence":null,"created_at":"2026-10-27T00:00:00Z","updated_at":"2026-10-27T00:00:00Z","completed_at":null,"deleted_at":null,"search_matches":[{"field":"title","start":3,"end":10},{"field":"description","start":4,"end":8}]}"#
+        try roundTrip(Operations.tasks_period_list.Output.Ok.Body.jsonPayloadPayload.self, json)
+        let task = try JSONDecoder().decode(Operations.tasks_period_list.Output.Ok.Body.jsonPayloadPayload.self, from: Data(json.utf8))
+        XCTAssertEqual(task.search_matches?.map(\.start), [3, 4])
+        let query = Operations.tasks_period_list.Input.Query(text: "cancion", prefix: "6AA2", priority: .P1)
+        XCTAssertEqual(query.text, "cancion")
+        XCTAssertEqual(query.prefix, "6AA2")
+    }
+
     func testBatchEditKeepsPerTaskVersionsAndSharedChange() throws {
       try roundTrip(Operations.tasks_period_batchEdit.Input.Body.jsonPayload.self, #"{"items":[{"task_id":"first","from_version":2},{"task_id":"second","from_version":7}],"changes":{"priority":"P1"},"dry_run":true}"#)
       try roundTrip(Operations.tasks_period_batchEdit.Input.Body.jsonPayload.self, #"{"items":[{"task_id":"first","from_version":2}],"changes":{"due_at":null}}"#)

@@ -46,7 +46,15 @@ struct Snapshots {
         var transferLayouts: [TransferLayoutReceipt] = []
         var compactLayouts: [String: [String: [Double]]] = [:]
         for scheme in [ColorScheme.light, .dark] {
-            NSApplication.shared.appearance = NSAppearance(named: scheme == .light ? .aqua : .darkAqua)
+            let appearance = try #require(NSAppearance(named: scheme == .light ? .aqua : .darkAqua))
+            NSApplication.shared.appearance = appearance
+            var highlightComponents: [Int] = []
+            appearance.performAsCurrentDrawingAppearance {
+                if let highlight = NSColor(named: "search-highlight", bundle: TodoColors.bundle)?.usingColorSpace(.sRGB) {
+                    highlightComponents = [highlight.redComponent, highlight.greenComponent, highlight.blueComponent].map { Int(($0 * 255).rounded()) }
+                }
+            }
+            #expect(highlightComponents == (scheme == .light ? [221, 239, 216] : [52, 88, 63]))
             let mode = scheme == .light ? "light" : "dark"
             let model = fixture()
             func render<V: View>(_ name: String, _ view: V, width: CGFloat, height: CGFloat, scrollEditor: Bool = false, scrollTasks: CGFloat? = nil) async throws {
@@ -107,6 +115,33 @@ struct Snapshots {
                     }
                 }
                 try await Task.sleep(for: .milliseconds(100))
+                if name.hasPrefix("search-") {
+                    let frames = compactMeasurements.frames
+                    compactLayouts[name + "-" + mode] = frames.mapValues { [Double($0.minX), Double($0.minY), Double($0.width), Double($0.height)] }
+                    if name.hasPrefix("search-compact-") {
+                        let search = try #require(frames["search"])
+                        #expect(search.minX >= 0 && search.maxX <= width && search.minY >= 0 && search.maxY <= height)
+                    }
+                    if name.hasSuffix("initial-error") {
+                        _ = try #require(frames["task-load-error"])
+                        _ = try #require(frames["state-action"])
+                        #expect(frames.keys.allSatisfy { !$0.hasPrefix("row-") })
+                    }
+                    if name.hasSuffix("budget-error") {
+                        #expect(frames["search-retry"] == nil)
+                    }
+                    if name == "search-compact-offline" {
+                        let row = try #require(frames["row-6aa2647d-1234-4567-89ab-0123456789ab"])
+                        #expect(row.maxY > 0 && row.minY < height)
+                        #expect(frames["search-retry"] == nil)
+                        _ = try #require(frames["connection-status"])
+                    }
+                    if name.hasSuffix("detail") || name.hasSuffix("copied") || name.hasSuffix("copy-failed") {
+                        let title = try #require(frames["task-title"])
+                        let id = try #require(frames["task-id"])
+                        #expect(id.minY >= title.maxY)
+                    }
+                }
                 if name == "full-priority-ready" {
                     let frames = compactMeasurements.frames
                     let header = try #require(frames["section-label-P1"])
@@ -277,6 +312,60 @@ struct Snapshots {
                     #expect(actionOrder == true)
                 }
 
+            }
+            if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" {
+                for compact in [true, false] {
+                    for state in ["ready", "excerpt-trimmed", "typing", "requesting", "empty", "error", "budget-error", "initial-error", "offline", "prefix", "prefix-invalid", "detail", "quick-add", "copied", "copy-failed"] {
+                        let searchModel = fixture()
+                        searchModel.selectedView = "all"
+                        searchModel.searchText = "rent"
+                        let raw = #"{"id":"6aa2647d-1234-4567-89ab-0123456789ab","profile_id":"work","row_version":1,"title":"Pay rent today","description":"Make the transfer before Friday","priority":"P1","status":"open","project_id":null,"tags":[],"source":"manual","due_at":null,"scheduled_at":null,"energy":null,"estimate_min":null,"occurrence":null,"legacy_series_detached":true,"deleted_at":null,"search_matches":[{"field":"title","start":4,"end":8}]}"#
+                        var descriptionTask = try JSONDecoder().decode(TaskSnapshot.self, from: Data(raw.replacingOccurrences(of: "Pay rent today", with: "Transfer receipt").replacingOccurrences(of: "Make the transfer before Friday", with: "A receipt for the rent payment before Friday").replacingOccurrences(of: "6aa2647d", with: "7aa2647d").replacingOccurrences(of: #"{"field":"title","start":4,"end":8}"#, with: #"{"field":"description","start":18,"end":22}"#).utf8))
+                        descriptionTask.search_matches = [.init(field: .description, start: 18, end: 22)]
+                        let titleTask = try JSONDecoder().decode(TaskSnapshot.self, from: Data(raw.utf8))
+                        var rows = state == "empty" ? [] : [titleTask, descriptionTask]
+                        if state == "excerpt-trimmed" {
+                            searchModel.searchText = "cancion"
+                            rows = [try JSONDecoder().decode(TaskSnapshot.self, from: Data(#"{"id":"long-excerpt","profile_id":"work","row_version":1,"title":"Receipt","description":"This is a deliberately long introductory phrase. Find the blue Canción receipt in the cabinet.","priority":"P3","source":"manual","status":"open","project_id":null,"tags":[],"due_at":null,"scheduled_at":null,"energy":null,"estimate_min":null,"occurrence":null,"legacy_series_detached":true,"deleted_at":null,"search_matches":[{"field":"description","start":63,"end":70}]}"#.utf8))]
+                        }
+                        searchModel.tasks = rows
+                        searchModel.appliedSearchSnapshot = .init(appliedIdentity: searchModel.requestedIdentity, rows: rows, groups: [])
+                        searchModel.searchPhase = .showing
+                        if ["typing", "requesting", "error"].contains(state) { searchModel.searchText = "rent friday" }
+                        if state == "typing" { searchModel.searchPhase = .debouncing }
+                        if state == "requesting" { searchModel.searchPhase = .requesting }
+                        if state == "error" { searchModel.searchPhase = .error; searchModel.searchError = .transient("Couldn't search. Showing results for \"rent\".") }
+                        if state == "budget-error" {
+                            searchModel.searchText = "probe"
+                            searchModel.searchPhase = .error
+                            searchModel.searchError = .tooBroad("Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.", context: TaskSearchPresentation.appliedContext(searchModel.appliedSearchSnapshot?.appliedIdentity.text))
+                        }
+                        if state == "initial-error" {
+                            searchModel.searchText = ""
+                            searchModel.appliedSearchSnapshot = nil
+                            searchModel.tasks = []
+                            searchModel.searchPhase = .error
+                            searchModel.taskLoadError = "The server could not be reached."
+                        }
+                        if state == "offline" {
+                            searchModel.connection = .offline
+                            searchModel.searchText = "rent friday"
+                            searchModel.searchPhase = .error
+                            searchModel.searchError = .transient("Couldn't search. Showing results for \"rent\".")
+                        }
+                        if ["detail", "copied", "copy-failed"].contains(state) { searchModel.beginEditing(titleTask) }
+                        if state == "quick-add" { searchModel.quickAdd = true; searchModel.newTitle = "Keep this draft" }
+                        if state == "copied" { searchModel.taskIDCopyFeedback = "Copied" }
+                        if state == "copy-failed" { searchModel.taskIDCopyFeedback = "Couldn't copy. Try again." }
+                        let screen = compact ? AnyView(TaskListView(model: searchModel, compactMode: true).compactContent) : AnyView(WorkspaceSnapshot(model: searchModel))
+                        let content = ["prefix", "prefix-invalid"].contains(state) ? AnyView(screen.overlay {
+                            TaskFilterView(draft: .init(prefix: state == "prefix-invalid" ? "zz" : "6AA2"), compact: compact, apply: { _ in }, close: {})
+                                .background(.background, in: .rect(cornerRadius: 12)).shadow(radius: 12)
+                        }) : screen
+                        try await render("search-\(compact ? "compact" : "full")-\(state)", content, width: compact ? 393 : 1100, height: compact ? 426 : 720)
+                    }
+                }
+                continue
             }
             if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] != "1" && ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] != "1" {
                 for compact in [true, false] {
@@ -863,7 +952,7 @@ struct Snapshots {
         try JSONEncoder().encode(importLayouts).write(to: directory.appendingPathComponent("import-layout.json"))
         try JSONEncoder().encode(transferLayouts).write(to: directory.appendingPathComponent("transfer-layout.json"))
         try JSONSerialization.data(withJSONObject: compactLayouts, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("compact-layout.json"))
-        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 346))
+        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" ? 60 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 346))
     }
 
     private func fixture() -> TodoModel {
@@ -950,6 +1039,7 @@ private struct WorkspaceSnapshot: View {
                     Text(model.selectedView == "all" ? "All tasks" : model.selectedView.capitalized).font(.headline)
                     Text("\(model.profileName) · \(TaskCount.text(TaskListView(model: model).visibleTasks.count))").foregroundStyle(.secondary)
                     Spacer()
+                    TaskListView(model: model).searchField.frame(width: 260)
                     Image(systemName: "plus")
                 }.padding(16)
                 Divider()

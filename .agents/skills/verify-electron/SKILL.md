@@ -261,3 +261,12 @@ native Electron IPC, window behavior and Keychain remain under HOLD.
 ## Batch edit
 
 Read [Edit several Tasks](features/batch-edit.md) for the shared batch-edit contract and the compiled scratch proof. Both client flows retain selections and loaded Versions through preview, apply and Conflict reload.
+
+## Task search
+
+Read [Task search and id prefix](features/task-search.md) for the Compact-first
+unsigned drive, response provenance, selectors, delayed HTTP races, clipboard
+feedback, and Error recovery through actual SSE reconnect/operations.
+`TODO_VERIFY_TASK_SEARCH=1` selects that drive. The host now reconnects its SSE
+stream for this proof; production cursor persistence and native HOLD remain
+separate limits.

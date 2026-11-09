@@ -1,6 +1,6 @@
-import { TodoApi } from "@todo/api";
+import { SearchTooBroadResponse, TodoApi } from "@todo/api";
 import { type PlanningView, seriesForTask, type TaskId } from "@todo/domain";
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
 import type { HttpClient } from "effect/http";
 import { HttpApiClient } from "effect/http-api";
 import type { NativeAttachmentRequest, Reply, Request } from "./protocol.ts";
@@ -29,7 +29,11 @@ export const taskRequest = (
   request: TaskRequest,
   draft = "",
 ): Effect.Effect<Reply, unknown, HttpClient.HttpClient> =>
-  Effect.gen(function* () {
+  Effect.gen(function* (): Effect.gen.Return<
+    Reply,
+    unknown,
+    HttpClient.HttpClient
+  > {
     switch (request._tag) {
       case "diagnostics":
         return {
@@ -110,7 +114,10 @@ export const taskRequest = (
         return {
           _tag: "task",
           task: yield* http.tasks.show({
-            params: { profile: request.profile, task: request.payload.task_id },
+            params: {
+              profile: request.profile,
+              task: request.payload.task_id,
+            },
           }),
         };
       }
@@ -197,9 +204,7 @@ export const taskRequest = (
         return {
           _tag: "tasks",
           tasks,
-          ...(matching === null
-            ? {}
-            : { matching_task_ids: matching.map((task) => task.id) }),
+          ...(matching === null ? {} : { matching_tasks: matching }),
           profiles,
           projects: [...projects].sort((a, b) =>
             a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
@@ -353,4 +358,12 @@ export const taskRequest = (
           }),
         };
     }
-  });
+  }).pipe(
+    Effect.catchIf(Schema.is(SearchTooBroadResponse), (error) =>
+      Effect.succeed<Reply>({
+        _tag: "error",
+        code: error.code,
+        message: error.message,
+      }),
+    ),
+  );

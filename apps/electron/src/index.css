@@ -30,6 +30,7 @@
   --accent: #e0ede3;
   --accent-foreground: #244e37;
   --selection: #f3f7f3;
+  --search-highlight: #ddefd8;
   --selection-foreground: #161d19;
   --destructive: #af302d;
   --destructive-foreground: #ffffff;
@@ -78,6 +79,7 @@
   --accent: #324b3a;
   --accent-foreground: #dbf1df;
   --selection: #222e25;
+  --search-highlight: #34583f;
   --selection-foreground: #f0f3ef;
   --destructive: #ffb4aa;
   --destructive-foreground: #4e1716;

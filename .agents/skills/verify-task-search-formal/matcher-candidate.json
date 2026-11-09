@@ -1,0 +1,9 @@
+{
+  "commit": "c14371075593a4a163f15797c495ac821510a449",
+  "status": "sec-l1-reviewed-F1a-F1b; independent-seats-pending",
+  "normalization": "normalizeTaskSearch",
+  "parsing": "parseTaskSearch",
+  "matching": "matchTaskSearch",
+  "prefix": "filterTaskRecords",
+  "integrationRecheck": "Use an explicit full final-tip SHA; the L1 final ledger records its process result."
+}

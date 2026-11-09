@@ -27,6 +27,8 @@ import { TasksResponse } from "@todo/domain/presentation";
 import { openStore } from "@todo/domain/store";
 import { Effect, Schema } from "effect";
 
+import { taskInput as searchTaskInput } from "../../../packages/domain/test/store-fixtures.ts";
+
 const root = resolve(import.meta.dirname, "../../..");
 const scratch = mkdtempSync(join(tmpdir(), "todo-c05-test-"));
 const binary = process.env.TODO_CLI_BINARY || join(scratch, "todo");
@@ -2054,3 +2056,65 @@ it("parses without writing and keeps literal add titles verbatim", () => {
     normalize(before),
   );
 });
+
+it.effect(
+  "searches a literal uppercase id prefix without changing exact-id reads",
+  () =>
+    Effect.gen(function* () {
+      const home = setup("search-prefix", "work");
+      yield* Effect.acquireUseRelease(
+        openStore({ path: join(home, ".todo-cli/todo.db") }),
+        (store) =>
+          store.append({
+            actor: Schema.decodeUnknownSync(ActorId)("search-fixture"),
+            profile: Schema.decodeUnknownSync(Profile.fields.id)("work"),
+            event: {
+              kind: "TaskCreated",
+              entity_version: 1,
+              occurred_at: "2026-11-09T00:00:00Z",
+              task: Schema.decodeUnknownSync(Task)({
+                ...searchTaskInput,
+                id: "6aa2647d-1111-4111-8111-111111111111",
+                title: "Renovar el pasaporte",
+              }),
+              series: null,
+              project: null,
+              tags: [],
+            },
+          }),
+        (store) => Effect.orDie(store.close()),
+      );
+      const result = Schema.decodeUnknownSync(TasksResponse)(
+        JSON.parse(
+          ok(home, [
+            "list",
+            "--profile",
+            "work",
+            "--prefix",
+            "6AA2",
+            "--text",
+            "reno",
+            "--format",
+            "json",
+          ]),
+        ),
+      );
+      expect(
+        result.tasks?.map(({ id, title, search_matches }) => ({
+          id,
+          title,
+          search_matches,
+        })),
+      ).toEqual([
+        {
+          id: "6aa2647d-1111-4111-8111-111111111111",
+          title: "Renovar el pasaporte",
+          search_matches: [{ field: "title", start: 0, end: 7 }],
+        },
+      ]);
+      expect(
+        run(home, ["show", "6aa2", "--profile", "work", "--format", "json"])
+          .code,
+      ).toBe(3);
+    }),
+);

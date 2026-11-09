@@ -140,7 +140,9 @@ struct TaskFilterTests {
         #expect(model.taskLoadError == "Could not apply filters. Your previous filters are still active.")
         #expect(TaskListView(model: model).visibleTasks.map(\.title).sorted() == ["Native filter dated", "Native filter revenue"])
         model.applyTaskFilters(.init())
-        #expect(TaskListView(model: model).visibleTasks.map(\.title).sorted() == ["Native filter cancelled", "Native filter dated", "Native filter done", "Native filter revenue"])
+        #expect(TaskListView(model: model).visibleTasks.map(\.title).sorted() == ["Native filter dated", "Native filter revenue"])
+        try await waitForFilters()
+        #expect(model.taskFilters.status == "open")
         for original in created {
             let latest = try await client.tasks_period_show(path: .init(profile: "work", task: original.id)).ok.body.json
             _ = try await client.tasks_period_delete(path: .init(profile: "work", task: original.id), query: .init(from_version: String(latest.row_version))).ok

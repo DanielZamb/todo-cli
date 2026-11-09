@@ -16,12 +16,14 @@ import {
   Series,
   TagSummary,
   Task,
+  TaskRead,
 } from "@todo/domain";
 import { openStore } from "@todo/domain/store";
 import { Context, Effect, Layer, Schema } from "effect";
 import { HttpServer } from "effect/http";
 import { OpenApi } from "effect/http-api";
 import { TestClock } from "effect/testing";
+import { searchCases } from "../../../packages/domain/test/task-search-cases.ts";
 import { serverLayer } from "../src/server.ts";
 
 const fixture = Effect.gen(function* () {
@@ -2378,4 +2380,206 @@ it.effect(
         ).toEqual(["Client Project", "Release Project"]);
       }),
     ),
+);
+
+it.effect(
+  "returns shared Task search spans and validates text and prefix boundaries",
+  () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const { request, credential, store } = yield* fixture;
+        for (const entry of searchCases) {
+          const created = parseTask(
+            (yield* request(
+              "POST",
+              "/profiles/work/tasks",
+              {
+                title: entry.title,
+                ...("description" in entry
+                  ? { description: entry.description }
+                  : {}),
+              },
+              credential,
+            )).body,
+          );
+          const filters = new URLSearchParams({
+            prefix: created.id.toUpperCase(),
+            text: entry.text,
+          });
+          const result = yield* request(
+            "GET",
+            `/profiles/work/tasks?${filters}`,
+            undefined,
+            credential,
+          );
+          expect(result.status).toBe(200);
+          const tasks = Schema.decodeUnknownSync(Schema.Array(TaskRead))(
+            result.body,
+          );
+          expect(
+            tasks.map(({ title, search_matches }) => ({
+              title,
+              search_matches,
+            })),
+          ).toEqual(
+            entry.matches === null
+              ? []
+              : [{ title: entry.title, search_matches: entry.matches }],
+          );
+          const shown = yield* request(
+            "GET",
+            `/profiles/work/tasks/${created.id}`,
+            undefined,
+            credential,
+          );
+          expect(shown.body).toEqual(created);
+        }
+        for (const filters of [
+          { text: "x".repeat(201) },
+          { text: "😀".repeat(101) },
+          { prefix: "zz" },
+          { prefix: "" },
+          { prefix: "a".repeat(37) },
+        ]) {
+          expect(
+            (yield* request(
+              "GET",
+              `/profiles/work/tasks?${new URLSearchParams(filters)}`,
+              undefined,
+              credential,
+            )).status,
+          ).toBe(400);
+        }
+        const seed = parseTask(
+          (yield* request(
+            "POST",
+            "/profiles/work/tasks",
+            { title: "Prefix original" },
+            credential,
+          )).body,
+        );
+        yield* store.auth.append({
+          credential,
+          profile: seed.profile_id,
+          event: {
+            kind: "TaskCreated",
+            entity_version: 1,
+            occurred_at: seed.created_at,
+            task: {
+              ...seed,
+              id: "6aa2647d-1111-4111-8111-111111111111",
+              title: "Prefix literal",
+            },
+            series: null,
+            project: null,
+            tags: [],
+          },
+        });
+        const prefixed = yield* request(
+          "GET",
+          "/profiles/work/tasks?prefix=6AA2",
+          undefined,
+          credential,
+        );
+        expect(prefixed.status).toBe(200);
+        expect(
+          Schema.decodeUnknownSync(Schema.Array(TaskRead))(prefixed.body).map(
+            ({ id, title, search_matches }) => ({ id, title, search_matches }),
+          ),
+        ).toEqual([
+          {
+            id: "6aa2647d-1111-4111-8111-111111111111",
+            title: "Prefix literal",
+            search_matches: undefined,
+          },
+        ]);
+        expect(
+          (yield* request(
+            "GET",
+            "/profiles/work/tasks/6aa2",
+            undefined,
+            credential,
+          )).status,
+        ).toBe(404);
+        const data = yield* store.auth.read({
+          credential,
+          profile: seed.profile_id,
+        });
+        expect(data.tasks.every((task) => !("search_matches" in task))).toBe(
+          true,
+        );
+        expect(
+          data.history.every(
+            (entry) =>
+              !JSON.stringify(entry.event).includes('"search_matches"'),
+          ),
+        ).toBe(true);
+      }),
+    ),
+);
+
+it.effect(
+  "refuses broad search with a shared 422 and recovers after narrowing",
+  () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const { request, credential } = yield* fixture;
+        const created = [];
+        for (let index = 0; index < 3; index++) {
+          const response = yield* request(
+            "POST",
+            "/profiles/work/tasks",
+            {
+              title: `Budget probe ${index}`,
+              description: "\ufdfa".repeat(100000),
+            },
+            credential,
+          );
+          expect(response.status).toBe(200);
+          created.push(parseTask(response.body));
+        }
+        const text = "\ufdfa".repeat(200);
+        const response = yield* request(
+          "GET",
+          `/profiles/work/tasks?${new URLSearchParams({ text })}`,
+          undefined,
+          credential,
+        );
+        expect(response.status).toBe(422);
+        const error = Schema.decodeUnknownSync(
+          Schema.Struct({
+            generated_at: Schema.String,
+            code: Schema.String,
+            message: Schema.String,
+          }),
+        )(response.body);
+        expect({ code: error.code, message: error.message }).toEqual({
+          code: "search_too_broad",
+          message:
+            "Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.",
+        });
+        const first = created[0];
+        expect(first).toBeDefined();
+        if (!first) throw new Error("Fixture missing");
+        const narrowed = yield* request(
+          "GET",
+          `/profiles/work/tasks?${new URLSearchParams({ text, prefix: first.id })}`,
+          undefined,
+          credential,
+        );
+        expect(narrowed.status).toBe(200);
+        const rows = Schema.decodeUnknownSync(Schema.Array(TaskRead))(
+          narrowed.body,
+        );
+        expect(
+          rows.map(({ title, search_matches }) => ({ title, search_matches })),
+        ).toEqual([
+          {
+            title: "Budget probe 0",
+            search_matches: [{ field: "description", start: 0, end: 100000 }],
+          },
+        ]);
+      }),
+    ),
+  30_000,
 );

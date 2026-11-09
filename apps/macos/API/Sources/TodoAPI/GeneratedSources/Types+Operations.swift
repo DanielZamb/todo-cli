@@ -12917,6 +12917,10 @@ public enum Operations {
             public var path: Operations.tasks_period_list.Input.Path
             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/query`.
             public struct Query: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/query/text`.
+                public var text: Swift.String?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/query/prefix`.
+                public var prefix: Swift.String?
                 /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/query/project`.
                 public var project: Swift.String?
                 /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/query/tag`.
@@ -12962,6 +12966,8 @@ public enum Operations {
                 /// Creates a new `Query`.
                 ///
                 /// - Parameters:
+                ///   - text:
+                ///   - prefix:
                 ///   - project:
                 ///   - tag:
                 ///   - status:
@@ -12972,6 +12978,8 @@ public enum Operations {
                 ///   - energy:
                 ///   - estimate:
                 public init(
+                    text: Swift.String? = nil,
+                    prefix: Swift.String? = nil,
                     project: Swift.String? = nil,
                     tag: Swift.String? = nil,
                     status: Operations.tasks_period_list.Input.Query.statusPayload? = nil,
@@ -12982,6 +12990,8 @@ public enum Operations {
                     energy: Operations.tasks_period_list.Input.Query.energyPayload? = nil,
                     estimate: Swift.String? = nil
                 ) {
+                    self.text = text
+                    self.prefix = prefix
                     self.project = project
                     self.tag = tag
                     self.status = status
@@ -13520,6 +13530,76 @@ public enum Operations {
                         public var completed_at: Swift.String?
                         /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/200/content/jsonPayload/deleted_at`.
                         public var deleted_at: Swift.String?
+                        /// Whole matched word in the same response's original title or description. start is inclusive and end exclusive, in UTF-16 code units on grapheme boundaries. Ordered, deduplicated and overlap-merged; exclusions and id prefixes have no spans.
+                        ///
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/200/content/jsonPayload/search_matchesPayload`.
+                        public struct search_matchesPayloadPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/200/content/jsonPayload/search_matchesPayload/field`.
+                            @frozen public enum fieldPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case title = "title"
+                                case description = "description"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/200/content/jsonPayload/search_matchesPayload/field`.
+                            public var field: Operations.tasks_period_list.Output.Ok.Body.jsonPayloadPayload.search_matchesPayloadPayload.fieldPayload
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/200/content/jsonPayload/search_matchesPayload/start`.
+                            public var start: Swift.Int
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/200/content/jsonPayload/search_matchesPayload/end`.
+                            public var end: Swift.Int
+                            /// Creates a new `search_matchesPayloadPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - field:
+                            ///   - start:
+                            ///   - end:
+                            public init(
+                                field: Operations.tasks_period_list.Output.Ok.Body.jsonPayloadPayload.search_matchesPayloadPayload.fieldPayload,
+                                start: Swift.Int,
+                                end: Swift.Int
+                            ) {
+                                self.field = field
+                                self.start = start
+                                self.end = end
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case field
+                                case start
+                                case end
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.field = try container.decode(
+                                    Operations.tasks_period_list.Output.Ok.Body.jsonPayloadPayload.search_matchesPayloadPayload.fieldPayload.self,
+                                    forKey: .field
+                                )
+                                self.start = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .start
+                                )
+                                self.end = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .end
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "field",
+                                    "start",
+                                    "end"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.field, forKey: .field)
+                                try container.encode(self.start, forKey: .start)
+                                try container.encode(self.end, forKey: .end)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/200/content/jsonPayload/search_matches`.
+                        public typealias search_matchesPayload = [Operations.tasks_period_list.Output.Ok.Body.jsonPayloadPayload.search_matchesPayloadPayload]
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/200/content/jsonPayload/search_matches`.
+                        public var search_matches: Operations.tasks_period_list.Output.Ok.Body.jsonPayloadPayload.search_matchesPayload?
                         /// Creates a new `jsonPayloadPayload`.
                         ///
                         /// - Parameters:
@@ -13546,6 +13626,7 @@ public enum Operations {
                         ///   - updated_at:
                         ///   - completed_at:
                         ///   - deleted_at:
+                        ///   - search_matches:
                         public init(
                             title: Swift.String,
                             description: Swift.String? = nil,
@@ -13569,7 +13650,8 @@ public enum Operations {
                             created_at: Swift.String,
                             updated_at: Swift.String,
                             completed_at: Swift.String? = nil,
-                            deleted_at: Swift.String? = nil
+                            deleted_at: Swift.String? = nil,
+                            search_matches: Operations.tasks_period_list.Output.Ok.Body.jsonPayloadPayload.search_matchesPayload? = nil
                         ) {
                             self.title = title
                             self.description = description
@@ -13594,6 +13676,7 @@ public enum Operations {
                             self.updated_at = updated_at
                             self.completed_at = completed_at
                             self.deleted_at = deleted_at
+                            self.search_matches = search_matches
                         }
                         public enum CodingKeys: String, CodingKey {
                             case title
@@ -13619,6 +13702,7 @@ public enum Operations {
                             case updated_at
                             case completed_at
                             case deleted_at
+                            case search_matches
                         }
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -13715,6 +13799,10 @@ public enum Operations {
                                 Swift.String.self,
                                 forKey: .deleted_at
                             )
+                            self.search_matches = try container.decodeIfPresent(
+                                Operations.tasks_period_list.Output.Ok.Body.jsonPayloadPayload.search_matchesPayload.self,
+                                forKey: .search_matches
+                            )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
                                 "title",
                                 "description",
@@ -13738,7 +13826,8 @@ public enum Operations {
                                 "created_at",
                                 "updated_at",
                                 "completed_at",
-                                "deleted_at"
+                                "deleted_at",
+                                "search_matches"
                             ])
                         }
 
@@ -13814,6 +13903,11 @@ public enum Operations {
                                 try container.encodeNil(forKey: .deleted_at)
                             } else {
                                 try container.encodeIfPresent(self.deleted_at, forKey: .deleted_at)
+                            }
+                            if self.search_matches == nil && _explicitNullKeys.contains(CodingKeys.search_matches.stringValue) {
+                                try container.encodeNil(forKey: .search_matches)
+                            } else {
+                                try container.encodeIfPresent(self.search_matches, forKey: .search_matches)
                             }
                         }
                     }
@@ -14217,13 +14311,121 @@ public enum Operations {
             public struct UnprocessableContent: Sendable, Hashable {
                 /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content`.
                 @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json`.
+                    public struct jsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json/value1`.
+                        public var value1: Components.Schemas.InvalidTaskEncoded?
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json/value2`.
+                        public struct Value2Payload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json/value2/generated_at`.
+                            public var generated_at: Swift.String
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json/value2/code`.
+                            @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case search_too_broad = "search_too_broad"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json/value2/code`.
+                            public var code: Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload.Value2Payload.codePayload
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json/value2/message`.
+                            public var message: Swift.String
+                            /// Creates a new `Value2Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - generated_at:
+                            ///   - code:
+                            ///   - message:
+                            public init(
+                                generated_at: Swift.String,
+                                code: Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload.Value2Payload.codePayload,
+                                message: Swift.String
+                            ) {
+                                self.generated_at = generated_at
+                                self.code = code
+                                self.message = message
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case generated_at
+                                case code
+                                case message
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.generated_at = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .generated_at
+                                )
+                                self.code = try container.decode(
+                                    Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload.Value2Payload.codePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "generated_at",
+                                    "code",
+                                    "message"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.generated_at, forKey: .generated_at)
+                                try container.encode(self.code, forKey: .code)
+                                try container.encode(self.message, forKey: .message)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/json/value2`.
+                        public var value2: Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload.Value2Payload?
+                        /// Creates a new `jsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - value1:
+                        ///   - value2:
+                        public init(
+                            value1: Components.Schemas.InvalidTaskEncoded? = nil,
+                            value2: Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload.Value2Payload? = nil
+                        ) {
+                            self.value1 = value1
+                            self.value2 = value2
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self.value1 = try .init(from: decoder)
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self.value2 = try .init(from: decoder)
+                            } catch {
+                                errors.append(error)
+                            }
+                            try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                [
+                                    self.value1,
+                                    self.value2
+                                ],
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
+                            )
+                        }
+                        public func encode(to encoder: any Swift.Encoder) throws {
+                            try self.value1?.encode(to: encoder)
+                            try self.value2?.encode(to: encoder)
+                        }
+                    }
                     /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/GET/responses/422/content/application\/json`.
-                    case json(Components.Schemas.InvalidTaskEncoded)
+                    case json(Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload)
                     /// The associated value of the enum case if `self` is `.json`.
                     ///
                     /// - Throws: An error if `self` is not `.json`.
                     /// - SeeAlso: `.json`.
-                    public var json: Components.Schemas.InvalidTaskEncoded {
+                    public var json: Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload {
                         get throws {
                             switch self {
                             case let .json(body):

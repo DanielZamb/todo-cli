@@ -34,3 +34,7 @@ with their attempted kinds and Versions, and an empty Task projection.
 Reopen also accepts legacy snoozed Tasks through the shared domain command.
 The import verification driver proves the compiled legacy transition at Versions
 8 and 9, no-write preview, and unchanged Task payloads in other Profiles.
+
+Task search and id-prefix filters have a compiled CLI and authenticated HTTP
+matrix in [verify-task-search](../../verify-task-search/SKILL.md). `list --text`
+returns original UTF-16 spans in JSON; `--prefix` never relaxes exact-id commands.

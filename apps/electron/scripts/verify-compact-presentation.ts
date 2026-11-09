@@ -354,13 +354,15 @@ export async function verifyCompactPresentation({
     await desktop.evaluate(({ BrowserWindow }) =>
       BrowserWindow.getAllWindows()[0]?.webContents.send("todo:notice", {
         _tag: "connection",
+        profile: "work",
         state: "offline",
       }),
     );
     await expect(
       page.getByRole("button", { name: "Reconnect", exact: true }),
     ).toBeVisible();
-    await expect(page.locator(".compact-state button")).toHaveCount(1);
+    await expect(page.locator(".connection-status button")).toHaveCount(1);
+    await expect(page.locator(".task-row").first()).toBeVisible();
     await shot("offline", theme);
     await page.getByRole("button", { name: "Reconnect", exact: true }).click();
     await expect(page.locator(".compact-state")).toBeHidden();
@@ -371,7 +373,7 @@ export async function verifyCompactPresentation({
         profile: "work",
       });
     });
-    await expect(page.locator(".compact-state button")).toHaveText("Retry");
+    await expect(page.locator(".search-error button")).toHaveText("Retry");
     await shot("error", theme);
     await page.getByRole("button", { name: "Retry", exact: true }).click();
     await expect(page.locator(".compact-state")).toBeHidden();

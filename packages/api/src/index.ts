@@ -41,6 +41,7 @@ import {
   Task,
   TaskFilters,
   TaskId,
+  TaskRead,
   TokenOptions,
   TransitionTask,
   UploadAttachment,
@@ -68,6 +69,11 @@ export const ProfileDeleteError = Schema.Struct({
   code: Schema.String,
   message: Schema.String,
   details: Schema.Struct({ visible_task_count: Schema.Int }),
+}).annotate({ httpApiStatus: 422 });
+export const SearchTooBroadResponse = Schema.Struct({
+  generated_at: Schema.String,
+  code: Schema.Literal("search_too_broad"),
+  message: Schema.String,
 }).annotate({ httpApiStatus: 422 });
 
 export class Unauthorized extends Schema.TaggedError<Unauthorized>()(
@@ -212,8 +218,8 @@ const Tasks = HttpApiGroup.make("tasks")
     HttpApiEndpoint.get("list", "/profiles/:profile/tasks", {
       params: profile,
       query: TaskFilters,
-      success: Schema.Array(Task),
-      error: taskErrors,
+      success: Schema.Array(TaskRead),
+      error: [...taskErrors, SearchTooBroadResponse],
     }),
     HttpApiEndpoint.get("show", "/profiles/:profile/tasks/:task", {
       params: target,

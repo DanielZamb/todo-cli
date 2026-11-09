@@ -25,11 +25,13 @@ import {
   History,
   Inbox,
   ListTodo,
+  LoaderCircle,
   Maximize2,
   Minimize2,
   Moon,
   MoreHorizontal,
   Plus,
+  Search,
   Sun,
   X,
 } from "lucide-react";
@@ -100,7 +102,6 @@ import {
   editorFor,
   type FieldName,
   merge,
-  priorityGroups,
   rebaseEditor,
   taskPayload,
   taskTagNames,
@@ -114,6 +115,21 @@ import { RecurrenceDialog } from "./recurrence-dialog.tsx";
 import { RowMetadata } from "./row-metadata.tsx";
 import { SnapshotSettings } from "./snapshot-settings.tsx";
 import { TaskFilterDialog, taskFilterSummary } from "./task-filter-dialog.tsx";
+import { TaskIdCopy } from "./task-id-copy.tsx";
+import {
+  DescriptionMatch,
+  descriptionMatch,
+  SearchErrorMessage,
+  SearchHighlight,
+} from "./task-search-presentation.tsx";
+import {
+  type AppliedSearch,
+  identityKey,
+  type SearchIdentity,
+  searchGroups,
+  type TaskCatalog,
+  taskSearchQuery,
+} from "./task-search-results.ts";
 import { TaskTags } from "./task-tags.tsx";
 import "./index.css";
 import "./app.css";
@@ -299,10 +315,32 @@ function App() {
   const [passphrase, setPassphrase] = useState("");
   const [profile, setProfile] = useState(defaultProfile);
   const [view, setView] = useState<ViewName>("tasks");
-  const [catalog, setCatalog] = useState<Extract<
-    Reply,
-    { _tag: "tasks" }
-  > | null>(null);
+  const [appliedSearch, setAppliedSearch] = useState<AppliedSearch | null>(
+    null,
+  );
+  const catalog = appliedSearch?.catalog ?? null;
+  const searchDefinitions = useRef<
+    Pick<TaskCatalog, "projects" | "tags"> & {
+      profile: typeof ProfileId.Type | null;
+    }
+  >({ profile: null, projects: [], tags: [] });
+  if (appliedSearch)
+    searchDefinitions.current = {
+      profile: appliedSearch.appliedIdentity.profile,
+      projects: appliedSearch.catalog.projects,
+      tags: appliedSearch.catalog.tags,
+    };
+  const unfilteredSearch = useRef<AppliedSearch | null>(null);
+  const tasks = catalog?.tasks ?? [];
+  const [searchText, setSearchText] = useState("");
+  const searchTextRef = useRef("");
+  const searchInput = useRef<HTMLInputElement>(null);
+  const debounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [searchPhase, setSearchPhase] = useState<
+    "Idle" | "Showing" | "Debouncing" | "Requesting" | "Error"
+  >("Idle");
+  const searchPhaseRef = useRef(searchPhase);
+  searchPhaseRef.current = searchPhase;
   const [project, setProject] = useState<string | null>(null);
   const [tag, setTag] = useState<string | null>(null);
   const [advancedFilters, setAdvancedFilters] = useState<TaskFilters>({});
@@ -343,12 +381,15 @@ function App() {
   const [ignored, setIgnored] = useState<readonly string[]>([]);
   const draftRef = useRef("");
   const needsDraft = useRef(true);
-  const [tasks, setTasks] = useState<readonly (typeof Task.Type)[]>([]);
   const [connection, setConnection] = useState<
     "connected" | "reconnecting" | "offline"
   >("reconnecting");
   const [error, setError] = useState("");
-  const [loadError, setLoadError] = useState("");
+  const [loadFailure, setLoadFailure] = useState<{
+    kind: "transient" | "search_too_broad";
+    message: string;
+  } | null>(null);
+  const loadError = loadFailure?.message ?? "";
   const [announcement, setAnnouncement] = useState("");
   const [transferResult, setTransferResult] = useState<
     | ({ task: Task; profileName: string } & (
@@ -376,11 +417,28 @@ function App() {
   active.current = profile;
   const selected = useRef(editor?.base.id);
   selected.current = editor?.base.id;
-  const activeQuery = useRef(`${profile}:${view}`);
-  activeQuery.current = `${profile}:${view}`;
+  const requestedIdentity: SearchIdentity = {
+    profile,
+    view,
+    filters: advancedFiltersRef.current,
+    project,
+    tag,
+    text: searchText,
+  };
+  const activeQuery = useRef(requestedIdentity);
+  activeQuery.current = requestedIdentity;
+  const stale =
+    appliedSearch === null ||
+    identityKey(requestedIdentity) !==
+      identityKey(appliedSearch.appliedIdentity);
+  const setPhase = useCallback((phase: typeof searchPhase) => {
+    searchPhaseRef.current = phase;
+    setSearchPhase(phase);
+  }, []);
   const refreshGeneration = useRef(0);
   const profileGeneration = useRef(0);
   const activateProfile = useCallback((next: typeof ProfileId.Type) => {
+    if (active.current === next) return;
     const restored = storedEditor(next);
     active.current = next;
     profileGeneration.current++;
@@ -396,8 +454,11 @@ function App() {
     setMoveOpen(false);
     setSeriesDialog(null);
     setWriteIntent(null);
-    setTasks([]);
-    setCatalog(null);
+    setAppliedSearch(null);
+    unfilteredSearch.current = null;
+    searchDefinitions.current = { profile: null, projects: [], tags: [] };
+    setSearchPhase("Idle");
+    clearTimeout(debounce.current);
     setProject(null);
     setTag(null);
     setAdvancedFilters({});
@@ -410,7 +471,7 @@ function App() {
     setProfile(next);
     localStorage.setItem("profile", next);
     setError("");
-    setLoadError("");
+    setLoadFailure(null);
     setTransferResult(null);
   }, []);
   const activateEditor = (next: Editor) => {
@@ -425,8 +486,11 @@ function App() {
     profileGeneration.current++;
     setSignedIn(false);
     setConnection("offline");
-    setTasks([]);
-    setCatalog(null);
+    setAppliedSearch(null);
+    unfilteredSearch.current = null;
+    searchDefinitions.current = { profile: null, projects: [], tags: [] };
+    setSearchPhase("Idle");
+    clearTimeout(debounce.current);
     setEditor(null);
     setLatest(null);
     setHistory(null);
@@ -470,6 +534,7 @@ function App() {
         if (
           reply._tag === "error" &&
           request._tag !== "list" &&
+          request._tag !== "copyTaskId" &&
           (!("profile" in request) || active.current === request.profile)
         )
           setError(reply.message);
@@ -482,40 +547,72 @@ function App() {
           _tag: "error",
           message: "Could not contact Todo. Retry.",
         };
-        if (request._tag !== "list") setError(reply.message);
+        if (request._tag !== "list" && request._tag !== "copyTaskId")
+          setError(reply.message);
         return reply;
       }
     },
     [endAuthentication],
   );
   const refresh = useCallback(async () => {
-    const target = profile;
-    const query = `${profile}:${view}`;
+    if (
+      active.current !== profile ||
+      activeQuery.current.profile !== profile ||
+      activeQuery.current.view !== view ||
+      activeQuery.current.project !== project ||
+      activeQuery.current.tag !== tag
+    )
+      return;
+    clearTimeout(debounce.current);
+    const identity: SearchIdentity = {
+      profile,
+      view,
+      filters: advancedFiltersRef.current,
+      project,
+      tag,
+      text: searchTextRef.current,
+    };
+    activeQuery.current = identity;
+    const query = identityKey(identity);
     const generation = ++refreshGeneration.current;
-    const requestedFilters = advancedFiltersRef.current;
     const changingFilters =
-      JSON.stringify(requestedFilters) !==
+      JSON.stringify(identity.filters) !==
       JSON.stringify(appliedFiltersRef.current);
+    setPhase("Requesting");
     const result = await request({
       _tag: "list",
-      profile: target,
+      profile,
       view,
-      ...(Object.keys(requestedFilters).length
-        ? { filters: requestedFilters }
-        : {}),
+      filters: taskSearchQuery(
+        identity,
+        searchDefinitions.current.profile === identity.profile
+          ? searchDefinitions.current
+          : { projects: [], tags: [] },
+      ),
     });
     if (
-      activeQuery.current !== query ||
+      active.current !== profile ||
+      identityKey(activeQuery.current) !== query ||
       refreshGeneration.current !== generation
     )
       return;
     if (result._tag === "tasks") {
-      setLoadError("");
-      setTasks(result.tasks);
-      setCatalog(result);
-      appliedFiltersRef.current = requestedFilters;
-      setAdvancedFilters(requestedFilters);
+      setLoadFailure(null);
+      setAppliedSearch({ catalog: result, appliedIdentity: identity });
+      unfilteredSearch.current = {
+        catalog: { ...result, matching_tasks: result.tasks },
+        appliedIdentity: {
+          ...identity,
+          filters: {},
+          project: null,
+          tag: null,
+          text: "",
+        },
+      };
+      appliedFiltersRef.current = identity.filters;
+      setAdvancedFilters(identity.filters);
       setApplyingFilters(false);
+      setPhase("Showing");
       if (changingFilters)
         setError((current) => (current === filterApplyError ? "" : current));
       if (needsDraft.current) {
@@ -525,10 +622,73 @@ function App() {
     } else if (result._tag === "error") {
       advancedFiltersRef.current = appliedFiltersRef.current;
       setApplyingFilters(false);
-      if (changingFilters) setError(filterApplyError);
-      setLoadError(result.message);
+      if (changingFilters) {
+        if (result.code !== "search_too_broad") setError(filterApplyError);
+        activeQuery.current = {
+          ...identity,
+          filters: appliedFiltersRef.current,
+        };
+      }
+      setPhase("Error");
+      setLoadFailure(
+        result.code === "search_too_broad"
+          ? { kind: "search_too_broad", message: result.message }
+          : changingFilters
+            ? null
+            : { kind: "transient", message: result.message },
+      );
     }
-  }, [profile, request, view]);
+  }, [profile, project, tag, request, view, setPhase]);
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
+  const changeSearch = (text: string) => {
+    clearTimeout(debounce.current);
+    refreshGeneration.current++;
+    searchTextRef.current = text;
+    activeQuery.current = { ...activeQuery.current, text };
+    setSearchText(text);
+    setLoadFailure(null);
+    setPhase("Debouncing");
+    debounce.current = setTimeout(() => {
+      void refreshRef.current();
+    }, 250);
+  };
+  useEffect(() => () => clearTimeout(debounce.current), []);
+  useLayoutEffect(() => {
+    if (!quick || !signedIn) return;
+    const field = document.querySelector(
+      compact && editor?.base.id
+        ? ".editor .task-search-field"
+        : ".task-pane .task-search-field",
+    );
+    if (!field) return;
+    const update = () =>
+      document.documentElement.style.setProperty(
+        "--quick-search-bottom",
+        `${field.getBoundingClientRect().bottom}px`,
+      );
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(field);
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+      document.documentElement.style.removeProperty("--quick-search-bottom");
+    };
+  }, [quick, signedIn, compact, editor?.base.id]);
+  useEffect(() => {
+    const focus = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        requestAnimationFrame(() => searchInput.current?.focus());
+      }
+    };
+    window.addEventListener("keydown", focus);
+    return () => window.removeEventListener("keydown", focus);
+  }, []);
   useEffect(() => {
     void request({ _tag: "windowMode" }).then((reply) => {
       if (reply._tag === "windowMode") setCompact(reply.compact);
@@ -624,17 +784,24 @@ function App() {
   useEffect(() => {
     if (!signedIn) return;
     setConnection("reconnecting");
-    void refresh();
     void request({ _tag: "watch", profile });
     return window.desktop.subscribe((notice) => {
+      if (active.current !== profile) return;
       if (notice._tag === "profileDeleted" && notice.profile === profile)
         void leaveDeletedProfile(notice.profile, notice.name);
-      if (notice._tag === "changed" && notice.profile === profile)
-        void refresh();
+      if (
+        notice._tag === "changed" &&
+        notice.profile === profile &&
+        active.current === profile
+      )
+        void refreshRef.current();
       if (notice._tag === "reload") {
         refreshGeneration.current++;
-        setTasks([]);
-        setCatalog(null);
+        setAppliedSearch(null);
+        unfilteredSearch.current = null;
+        searchDefinitions.current = { profile: null, projects: [], tags: [] };
+        setSearchPhase("Idle");
+        clearTimeout(debounce.current);
         setEditor(null);
         setHistory(null);
         setLatest(null);
@@ -664,11 +831,17 @@ function App() {
             reply.profiles[0]
           )
             activateProfile(reply.profiles[0].id);
-          else void refresh();
+          else void refreshRef.current();
         });
       }
-      if (notice._tag === "connection") {
+      if (
+        notice._tag === "connection" &&
+        notice.profile === profile &&
+        active.current === profile
+      ) {
         setConnection(notice.state);
+        if (notice.state === "connected" && searchPhaseRef.current === "Error")
+          void refreshRef.current();
         if (notice.state === "offline")
           void request({ _tag: "profiles" }).then((result) => {
             if (
@@ -681,14 +854,7 @@ function App() {
       if (notice._tag === "notificationError") setError(notice.message);
       if (notice._tag === "quickAdd") setQuick(true);
     });
-  }, [
-    signedIn,
-    profile,
-    refresh,
-    request,
-    activateProfile,
-    leaveDeletedProfile,
-  ]);
+  }, [signedIn, profile, request, activateProfile, leaveDeletedProfile]);
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
     localStorage.setItem("theme", dark ? "dark" : "light");
@@ -1084,29 +1250,61 @@ function App() {
   };
   const filtered =
     project !== null || tag !== null || Object.keys(advancedFilters).length > 0;
+  const invalidate = () => {
+    clearTimeout(debounce.current);
+    refreshGeneration.current++;
+  };
   const clearFilters = () => {
+    invalidate();
     setProject(null);
     setTag(null);
-    setAdvancedFilters({});
+    advancedFiltersRef.current = {};
+    if (searchTextRef.current === "" && unfilteredSearch.current) {
+      setAppliedSearch(unfilteredSearch.current);
+      appliedFiltersRef.current = {};
+      setAdvancedFilters({});
+    }
+    setApplyingFilters(true);
+    setError((current) => (current === filterApplyError ? "" : current));
+    void refreshRef.current();
+  };
+  const activateView = (next: ViewName, nextProject: string | null = null) => {
+    invalidate();
+    setAppliedSearch(null);
+    unfilteredSearch.current = null;
+    setEditor(null);
+    setHistory(null);
+    setLatest(null);
+    setLoadFailure(null);
+    setProject(nextProject);
+    setTag(null);
     advancedFiltersRef.current = {};
     appliedFiltersRef.current = {};
+    setAdvancedFilters({});
     setApplyingFilters(false);
-    setError((current) => (current === filterApplyError ? "" : current));
-    void refresh();
+    setView(next);
+    if (view === next && project === nextProject && tag === null)
+      void refreshRef.current();
   };
-  const groups = (catalog?.planning?.groups ?? priorityGroups(tasks)).map(
-    (group) => ({
-      ...group,
-      tasks: group.tasks.filter(
-        (task) =>
-          (project === null || task.project_id === project) &&
-          (tag === null || task.tags.some((id) => id === tag)) &&
-          (Object.keys(advancedFilters).length === 0 ||
-            catalog?.matching_task_ids === undefined ||
-            catalog.matching_task_ids.some((id) => id === task.id)),
-      ),
-    }),
-  );
+  useEffect(() => {
+    if (signedIn) void refresh();
+  }, [signedIn, refresh]);
+  const groups = catalog
+    ? searchGroups(catalog)
+        .map((group) => ({
+          ...group,
+          tasks: group.tasks.filter(
+            (task) =>
+              (appliedSearch?.appliedIdentity.project == null ||
+                task.project_id === appliedSearch.appliedIdentity.project) &&
+              (appliedSearch?.appliedIdentity.tag == null ||
+                task.tags.some(
+                  (id) => id === appliedSearch.appliedIdentity.tag,
+                )),
+          ),
+        }))
+        .filter((group) => !searchText.trim() || group.tasks.length > 0)
+    : [];
   const overlaps = editor && latest ? conflicts(editor, latest) : [];
   const rowDateOptions = { now: new Date(presentationNow) };
   const date = rowDateOptions.now.toLocaleDateString("en-US", {
@@ -1213,12 +1411,41 @@ function App() {
         </form>
       </main>
     );
+  const taskSearchField = (
+    <Field className="task-search-field">
+      <div className="task-search-input">
+        <Search aria-hidden="true" />
+        <Input
+          id="compact-search"
+          ref={searchInput}
+          aria-label="Search tasks"
+          placeholder="Search tasks"
+          value={searchText}
+          aria-busy={
+            searchPhase === "Debouncing" || searchPhase === "Requesting"
+          }
+          onChange={(event) => changeSearch(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              event.stopPropagation();
+              changeSearch("");
+            }
+          }}
+        />
+        {(searchPhase === "Debouncing" || searchPhase === "Requesting") && (
+          <LoaderCircle className="search-progress" aria-label="Searching" />
+        )}
+      </div>
+    </Field>
+  );
   return (
     <div
       className={cn(
         "shell",
         compact && "compact",
         compact && editor && "editing",
+        quick && "quick-search",
       )}
     >
       {filtersOpen && (
@@ -1227,6 +1454,7 @@ function App() {
           filters={advancedFilters}
           onClose={() => setFiltersOpen(false)}
           onApply={(value) => {
+            invalidate();
             advancedFiltersRef.current = value;
             setApplyingFilters(true);
             void refresh();
@@ -1416,8 +1644,7 @@ function App() {
               aria-current={view === name ? "page" : undefined}
               className="nav-row"
               onClick={() => {
-                clearFilters();
-                setView(name);
+                activateView(name);
               }}
             >
               <Icon data-icon="inline-start" />
@@ -1437,10 +1664,7 @@ function App() {
               data-selected={project === entry.id}
               className="nav-row"
               onClick={() => {
-                clearFilters();
-                setProject(entry.id);
-                setTag(null);
-                setView("tasks");
+                activateView("tasks", entry.id);
               }}
             >
               <Folder data-icon="inline-start" />
@@ -1463,7 +1687,15 @@ function App() {
           </Button>
         </div>
       </aside>
-      <main className="task-pane">
+      <main
+        className="task-pane"
+        data-search-phase={searchPhase}
+        data-search-stale={stale}
+        data-requested-identity={identityKey(requestedIdentity)}
+        data-applied-identity={
+          appliedSearch ? identityKey(appliedSearch.appliedIdentity) : ""
+        }
+      >
         <header className="view-header">
           <div className="view-title">
             {compact ? (
@@ -1491,8 +1723,7 @@ function App() {
                         key={name}
                         value={name}
                         onClick={() => {
-                          clearFilters();
-                          setView(name);
+                          activateView(name);
                         }}
                       >
                         <Icon data-icon="inline-start" />
@@ -1513,10 +1744,7 @@ function App() {
                         key={entry.id}
                         value={entry.id}
                         onClick={() => {
-                          clearFilters();
-                          setProject(entry.id);
-                          setTag(null);
-                          setView("tasks");
+                          activateView("tasks", entry.id);
                         }}
                       >
                         <Folder data-icon="inline-start" />
@@ -1653,9 +1881,8 @@ function App() {
               </Button>
             )}
             {!(
-              compact &&
-              (connection === "offline" ||
-                loadError ||
+              (compact && (connection === "offline" || loadError)) ||
+              ((compact || searchText.length > 0) &&
                 groups.every((group) => group.tasks.length === 0))
             ) && (
               <Button
@@ -1669,6 +1896,7 @@ function App() {
             )}
           </div>
         </header>
+        {!(compact && editor) && taskSearchField}
         <FieldSet className="task-filters" aria-label="Task filters">
           <FieldGroup className="task-filter-fields">
             <Field>
@@ -1677,7 +1905,10 @@ function App() {
                 id="filter-project"
                 aria-label="Filter by Project"
                 value={project ?? ""}
-                onChange={(event) => setProject(event.target.value || null)}
+                onChange={(event) => {
+                  invalidate();
+                  setProject(event.target.value || null);
+                }}
                 className="w-full"
               >
                 <option value="">All Projects</option>
@@ -1694,7 +1925,10 @@ function App() {
                 id="filter-tag"
                 aria-label="Filter by Tag"
                 value={tag ?? ""}
-                onChange={(event) => setTag(event.target.value || null)}
+                onChange={(event) => {
+                  invalidate();
+                  setTag(event.target.value || null);
+                }}
                 className="w-full"
               >
                 <option value="">All Tags</option>
@@ -1769,7 +2003,7 @@ function App() {
             </AlertDescription>
           </Alert>
         )}
-        {compact && (connection === "offline" || loadError) && (
+        {compact && connection === "offline" && !catalog && (
           <div
             className="compact-state"
             role="status"
@@ -1783,7 +2017,7 @@ function App() {
             <Button
               onClick={() => {
                 setError("");
-                setLoadError("");
+                setLoadFailure(null);
                 void request({ _tag: "watch", profile });
                 void refresh();
               }}
@@ -1792,16 +2026,44 @@ function App() {
             </Button>
           </div>
         )}
-        {(error || (!compact && loadError)) && (
+        {searchPhase === "Error" && loadError && (
+          <Alert
+            role="status"
+            className="search-error"
+            data-code={loadFailure?.kind}
+            aria-label="Search failed"
+          >
+            <CircleAlert />
+            <AlertDescription>
+              <SearchErrorMessage
+                kind={loadFailure?.kind ?? "transient"}
+                message={loadError}
+                appliedText={appliedSearch?.appliedIdentity.text}
+              />
+              {connection === "connected" &&
+                loadFailure?.kind !== "search_too_broad" && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      void refresh();
+                    }}
+                  >
+                    Retry
+                  </Button>
+                )}
+            </AlertDescription>
+          </Alert>
+        )}
+        {error && (
           <Alert variant="destructive">
             <CircleAlert />
             <AlertDescription>
-              {error || loadError}
+              {error}
               <Button
                 variant="ghost"
                 onClick={() => {
                   setError("");
-                  setLoadError("");
+                  setLoadFailure(null);
                   void refresh();
                 }}
               >
@@ -1810,251 +2072,263 @@ function App() {
             </AlertDescription>
           </Alert>
         )}
-        <TaskGroups
-          compact={
-            compact &&
-            !catalog?.planning &&
-            connection !== "offline" &&
-            !loadError
-          }
-        >
-          {!(compact && (connection === "offline" || loadError)) &&
-            groups.map((group) => (
-              <section
-                key={group.name}
-                aria-label={group.name}
-                className={!catalog?.planning ? "priority-group" : undefined}
-              >
-                {(!catalog?.planning ||
-                  !compact ||
-                  groups.filter((group) => group.tasks.length > 0).length >
-                    1) && (
-                  <div className="list-heading">
-                    <h2>{group.name}</h2>
-                    <span
-                      className={
-                        group.tasks.length === 0 ? "empty-priority" : undefined
-                      }
-                    >
-                      {countTasks(group.tasks.length)}
-                    </span>
-                  </div>
-                )}
-                <div className="task-list">
-                  {group.tasks.map((task) => {
-                    const projectName = catalog?.projects.find(
-                      (entry) => entry.id === task.project_id,
-                    )?.name;
-                    const tags = taskTagNames(task, catalog?.tags ?? []);
-                    const tagNames = tags.map((name) => `#${name}`).join(" · ");
-                    const metadata = [projectName, tagNames]
-                      .filter(Boolean)
-                      .join(" · ");
-                    const overdue =
-                      task.status === "open" &&
-                      task.due_at &&
-                      (task.due_at.kind === "date"
-                        ? task.due_at.date <
-                          rowDateOptions.now.toLocaleDateString("en-CA")
-                        : Date.parse(task.due_at.utc) < presentationNow);
-                    return (
-                      <div
-                        className={cn(
-                          "task-row",
-                          editor?.base.id === task.id && "selected",
-                        )}
-                        key={task.id}
-                        data-task-id={task.id}
+        <div className="search-results" data-stale={stale}>
+          <TaskGroups compact={compact && !catalog?.planning}>
+            {!(compact && connection === "offline" && !catalog) &&
+              groups.map((group) => (
+                <section
+                  key={group.name}
+                  aria-label={group.name}
+                  className={!catalog?.planning ? "priority-group" : undefined}
+                >
+                  {(!catalog?.planning ||
+                    !compact ||
+                    groups.filter((group) => group.tasks.length > 0).length >
+                      1) && (
+                    <div className="list-heading">
+                      <h2>{group.name}</h2>
+                      <span
+                        className={
+                          group.tasks.length === 0
+                            ? "empty-priority"
+                            : undefined
+                        }
                       >
-                        <button
-                          type="button"
-                          className="complete"
-                          aria-label={`${task.status === "done" ? "Reopen" : "Complete"} ${task.title}`}
-                          disabled={readOnly}
-                          onClick={() => {
-                            void transition(
-                              task,
-                              task.status === "done" ? "reopen" : "complete",
-                            );
-                          }}
+                        {countTasks(group.tasks.length)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="task-list">
+                    {group.tasks.map((task) => {
+                      const projectName = catalog?.projects.find(
+                        (entry) => entry.id === task.project_id,
+                      )?.name;
+                      const tags = taskTagNames(task, catalog?.tags ?? []);
+                      const tagNames = tags
+                        .map((name) => `#${name}`)
+                        .join(" · ");
+                      const metadata = [projectName, tagNames]
+                        .filter(Boolean)
+                        .join(" · ");
+                      const overdue =
+                        task.status === "open" &&
+                        task.due_at &&
+                        (task.due_at.kind === "date"
+                          ? task.due_at.date <
+                            rowDateOptions.now.toLocaleDateString("en-CA")
+                          : Date.parse(task.due_at.utc) < presentationNow);
+                      const excerpt = appliedSearch?.appliedIdentity.text
+                        ? descriptionMatch(task)
+                        : null;
+                      return (
+                        <div
+                          className={cn(
+                            "task-row",
+                            excerpt && "has-search-excerpt",
+                            editor?.base.id === task.id && "selected",
+                          )}
+                          key={task.id}
+                          data-task-id={task.id}
                         >
-                          {task.status === "done" ? <Check /> : <Circle />}
-                        </button>
-                        <button
-                          type="button"
-                          className="task-content"
-                          onContextMenu={(event) => {
-                            event.preventDefault();
-                            setContextTask(task);
-                          }}
-                          onClick={() => {
-                            setEditor((current) => draftForTask(task, current));
-                            setLatest(null);
-                            setWriteIntent(null);
-                            setSeriesDialog(null);
-                            setHistory(null);
-                            setMoveOpen(false);
-                          }}
-                          title={task.title}
-                        >
-                          <span
-                            className={`priority priority-${task.priority.toLowerCase()}`}
+                          <button
+                            type="button"
+                            className="complete"
+                            aria-label={`${task.status === "done" ? "Reopen" : "Complete"} ${task.title}`}
+                            disabled={readOnly}
+                            onClick={() => {
+                              void transition(
+                                task,
+                                task.status === "done" ? "reopen" : "complete",
+                              );
+                            }}
                           >
-                            {task.priority}
-                            {compact && task.status !== "open" && (
-                              <span className="task-status">
-                                {" "}
-                                {task.status}
+                            {task.status === "done" ? <Check /> : <Circle />}
+                          </button>
+                          <button
+                            type="button"
+                            className="task-content"
+                            onContextMenu={(event) => {
+                              event.preventDefault();
+                              setContextTask(task);
+                            }}
+                            onClick={() => {
+                              setEditor((current) =>
+                                draftForTask(task, current),
+                              );
+                              setLatest(null);
+                              setWriteIntent(null);
+                              setSeriesDialog(null);
+                              setHistory(null);
+                              setMoveOpen(false);
+                            }}
+                            title={task.title}
+                          >
+                            <span
+                              className={`priority priority-${task.priority.toLowerCase()}`}
+                            >
+                              {task.priority}
+                              {compact && task.status !== "open" && (
+                                <span className="task-status">
+                                  {" "}
+                                  {task.status}
+                                </span>
+                              )}
+                            </span>
+                            <span className="task-title">
+                              <SearchHighlight
+                                text={task.title}
+                                matches={task.search_matches}
+                                field="title"
+                              />
+                            </span>
+                            {excerpt && <DescriptionMatch task={task} />}
+                            <JiraMarker task={task} />
+                            {!compact && task.external_id && (
+                              <span
+                                className="task-external-id"
+                                title={task.external_id}
+                              >
+                                {task.external_id}
                               </span>
                             )}
-                          </span>
-                          <span className="task-title">{task.title}</span>
-                          <JiraMarker task={task} />
-                          {!compact && task.external_id && (
-                            <span
-                              className="task-external-id"
-                              title={task.external_id}
-                            >
-                              {task.external_id}
-                            </span>
-                          )}
-                          {compact ? (
-                            <RowMetadata
-                              items={[
-                                ...(task.due_at
-                                  ? [
-                                      {
-                                        id: "due",
-                                        label: `Due ${rowDateText(task.due_at, rowDateOptions)}`,
-                                        overdue: Boolean(overdue),
-                                      },
-                                    ]
-                                  : []),
-                                ...(!task.due_at && task.scheduled_at
-                                  ? [
-                                      {
-                                        id: "scheduled",
-                                        label: `Scheduled ${rowDateText(task.scheduled_at, rowDateOptions)}`,
-                                      },
-                                    ]
-                                  : []),
-                                ...(projectName
-                                  ? [{ id: "project", label: projectName }]
-                                  : []),
-                                ...tags.map((tag) => ({
-                                  id: `tag:${tag}`,
-                                  label: `#${tag}`,
-                                })),
-                                ...(task.external_id
-                                  ? [
-                                      {
-                                        id: "external",
-                                        label: task.external_id,
-                                      },
-                                    ]
-                                  : []),
-                              ]}
-                            />
-                          ) : (
-                            <>
-                              <span className="task-meta" title={metadata}>
-                                {projectName && (
-                                  <span className="task-project">
-                                    {projectName}
-                                  </span>
-                                )}
-                                {projectName && tagNames && " · "}
-                                {tagNames && (
-                                  <TaskTags tags={tags} compact={compact} />
-                                )}
-                              </span>
-                              <span
-                                className={cn(
-                                  "task-dates",
-                                  overdue && "overdue",
-                                )}
-                              >
-                                <span>
-                                  {task.due_at &&
-                                    `Due ${rowDateText(task.due_at, rowDateOptions)}`}
-                                </span>
-                                <span className="quiet">
-                                  {task.scheduled_at &&
-                                    `Scheduled ${rowDateText(task.scheduled_at, rowDateOptions)}`}
-                                </span>
-                                {task.status !== "open" && (
-                                  <span className="quiet">{task.status}</span>
-                                )}
-                              </span>
-                            </>
-                          )}
-                        </button>
-                        <DropdownMenu
-                          open={contextTask?.id === task.id}
-                          onOpenChange={(open) =>
-                            setContextTask(open ? task : null)
-                          }
-                        >
-                          <DropdownMenuTrigger
-                            render={
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label={`Task actions for ${task.title}`}
-                                disabled={readOnly}
+                            {compact ? (
+                              <RowMetadata
+                                items={[
+                                  ...(task.due_at
+                                    ? [
+                                        {
+                                          id: "due",
+                                          label: `Due ${rowDateText(task.due_at, rowDateOptions)}`,
+                                          overdue: Boolean(overdue),
+                                        },
+                                      ]
+                                    : []),
+                                  ...(!task.due_at && task.scheduled_at
+                                    ? [
+                                        {
+                                          id: "scheduled",
+                                          label: `Scheduled ${rowDateText(task.scheduled_at, rowDateOptions)}`,
+                                        },
+                                      ]
+                                    : []),
+                                  ...(projectName
+                                    ? [{ id: "project", label: projectName }]
+                                    : []),
+                                  ...tags.map((tag) => ({
+                                    id: `tag:${tag}`,
+                                    label: `#${tag}`,
+                                  })),
+                                  ...(task.external_id
+                                    ? [
+                                        {
+                                          id: "external",
+                                          label: task.external_id,
+                                        },
+                                      ]
+                                    : []),
+                                ]}
                               />
+                            ) : (
+                              <>
+                                <span className="task-meta" title={metadata}>
+                                  {projectName && (
+                                    <span className="task-project">
+                                      {projectName}
+                                    </span>
+                                  )}
+                                  {projectName && tagNames && " · "}
+                                  {tagNames && (
+                                    <TaskTags tags={tags} compact={compact} />
+                                  )}
+                                </span>
+                                <span
+                                  className={cn(
+                                    "task-dates",
+                                    overdue && "overdue",
+                                  )}
+                                >
+                                  <span>
+                                    {task.due_at &&
+                                      `Due ${rowDateText(task.due_at, rowDateOptions)}`}
+                                  </span>
+                                  <span className="quiet">
+                                    {task.scheduled_at &&
+                                      `Scheduled ${rowDateText(task.scheduled_at, rowDateOptions)}`}
+                                  </span>
+                                  {task.status !== "open" && (
+                                    <span className="quiet">{task.status}</span>
+                                  )}
+                                </span>
+                              </>
+                            )}
+                          </button>
+                          <DropdownMenu
+                            open={contextTask?.id === task.id}
+                            onOpenChange={(open) =>
+                              setContextTask(open ? task : null)
                             }
                           >
-                            <MoreHorizontal />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            <DropdownMenuGroup>
-                              {(["move", "copy"] as const).map((kind) => (
-                                <DropdownMenuItem
-                                  key={kind}
-                                  onClick={() => {
-                                    setEditor((current) =>
-                                      draftForTask(task, current),
-                                    );
-                                    setLatest(null);
-                                    setWriteIntent(null);
-                                    setHistory(null);
-                                    setSeriesDialog(null);
-                                    setDestination(
-                                      catalog?.profiles.find(
-                                        (entry) => entry.id !== profile,
-                                      )?.id ?? "",
-                                    );
-                                    setError("");
-                                    setTransferKind(kind);
-                                    setMoveOpen(true);
-                                    setContextTask(null);
-                                  }}
-                                >
-                                  {kind === "move"
-                                    ? "Move to Profile"
-                                    : "Copy to Profile"}
-                                </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuGroup>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-            ))}
-        </TaskGroups>
-        {!(compact && (connection === "offline" || loadError)) &&
+                            <DropdownMenuTrigger
+                              render={
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label={`Task actions for ${task.title}`}
+                                  disabled={readOnly}
+                                />
+                              }
+                            >
+                              <MoreHorizontal />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                              <DropdownMenuGroup>
+                                {(["move", "copy"] as const).map((kind) => (
+                                  <DropdownMenuItem
+                                    key={kind}
+                                    onClick={() => {
+                                      setEditor((current) =>
+                                        draftForTask(task, current),
+                                      );
+                                      setLatest(null);
+                                      setWriteIntent(null);
+                                      setHistory(null);
+                                      setSeriesDialog(null);
+                                      setDestination(
+                                        catalog?.profiles.find(
+                                          (entry) => entry.id !== profile,
+                                        )?.id ?? "",
+                                      );
+                                      setError("");
+                                      setTransferKind(kind);
+                                      setMoveOpen(true);
+                                      setContextTask(null);
+                                    }}
+                                  >
+                                    {kind === "move"
+                                      ? "Move to Profile"
+                                      : "Copy to Profile"}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuGroup>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+          </TaskGroups>
+        </div>
+        {!(compact && connection === "offline" && !catalog) &&
           groups.every((group) => group.tasks.length === 0) && (
             <Empty
               className={!catalog?.planning ? "empty-priorities" : undefined}
             >
-              {(catalog?.planning || !compact || filtered) && (
+              {(catalog?.planning || !compact || filtered || searchText) && (
                 <EmptyHeader>
                   <EmptyTitle>
-                    {filtered
+                    {filtered || searchText
                       ? "No matching tasks"
                       : compact
                         ? "No tasks here."
@@ -2062,7 +2336,9 @@ function App() {
                   </EmptyTitle>
                 </EmptyHeader>
               )}
-              {filtered ? (
+              {searchText ? (
+                <Button onClick={() => changeSearch("")}>Clear search</Button>
+              ) : filtered ? (
                 <Button variant="outline" onClick={clearFilters}>
                   Clear filters
                 </Button>
@@ -2071,7 +2347,7 @@ function App() {
               )}
             </Empty>
           )}
-        {(!compact || connection === "reconnecting") && (
+        {(!compact || connection !== "connected") && (
           <footer className="view-footer">
             {!compact && (
               <span className="quiet">
@@ -2209,6 +2485,7 @@ function App() {
               </DropdownMenu>
             </div>
           </div>
+          {compact && taskSearchField}
           <form
             id="task-editor-form"
             onSubmit={(e) => {
@@ -2226,6 +2503,11 @@ function App() {
                   disabled={readOnly}
                 />
               </Field>
+              <TaskIdCopy
+                key={editor.base.id}
+                task={editor.base.id}
+                request={request}
+              />
               <Field>
                 <FieldLabel htmlFor="description">
                   Description <span className="quiet">Markdown</span>
@@ -2569,8 +2851,30 @@ function App() {
           }}
         />
       )}
-      <Dialog open={quick} onOpenChange={setQuick}>
-        <DialogContent className="quick-dialog">
+      <Dialog
+        open={quick}
+        modal={false}
+        onOpenChange={(open, details) => {
+          const field = searchInput.current?.closest(".task-search-field");
+          const target = details.event.target;
+          if (
+            !open &&
+            ((details.reason === "focus-out" &&
+              document.activeElement === searchInput.current) ||
+              (details.reason === "outside-press" &&
+                target instanceof Node &&
+                field?.contains(target)))
+          ) {
+            details.cancel();
+            return;
+          }
+          setQuick(open);
+        }}
+      >
+        <DialogContent
+          className="quick-dialog"
+          initialFocus={() => document.getElementById("quick-title")}
+        >
           <div className="quick-heading">
             <DialogTitle>New task</DialogTitle>
             <DialogDescription className="profile-chip">

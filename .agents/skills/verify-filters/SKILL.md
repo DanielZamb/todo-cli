@@ -1,6 +1,6 @@
 ---
 name: verify-filters
-description: Verify combined Task filters through the compiled Todo CLI and authenticated HTTP on scratch SQLite. Use after changing Project, Tag, Status, Priority, date, Attachment text, Energy or Estimated time filtering.
+description: Verify combined Task filters through the compiled Todo CLI and authenticated HTTP on scratch SQLite. Use after changing Project, Tag, Status, Priority, date, Attachment text, Energy, Estimated time, Task text or id-prefix filtering.
 ---
 
 # Verify Task filters
@@ -19,6 +19,9 @@ From the checkout root, run:
 Pass a fresh absolute evidence directory. The helper compiles the production CLI
 and server with Bun, initializes a scratch owner and Profile through the CLI,
 imports the reusable business fixture, then starts its own server on port 0.
+Set `TODO_CLI_BINARY` and `TODO_SERVER_BINARY` to absolute cached executables to
+skip their compilation. `TODO_BINARY_PROVENANCE` optionally names the cache
+manifest recorded in actions. The server readiness deadline is 60 seconds.
 It never opens the owner's database, starts either desktop app, or uses Keychain.
 
 ## Doctor
@@ -37,8 +40,13 @@ Energy and Estimated time. It includes missing values, empty intersections,
 Deleted Tasks and an instant whose stored time zone has the previous date.
 It queries file paths, link URLs, labels and a real copied image's original name.
 Invalid values must return CLI exit 2 and HTTP 400.
+The Task search matrix also checks literal query clauses, Unicode spans, blank
+text metadata, limits, stable order and exact-id command behavior. It is mapped
+in [verify-task-search](../verify-task-search/SKILL.md).
 The emitted OpenAPI parameter schemas must retain literal Status, Priority and
-Energy choices and date/minute patterns. `filter-parameters.json` records them.
+Energy choices, date/minute patterns, the literal hex-prefix pattern and its
+1/36 length bounds, and the 200-code-unit text limit. `filter-parameters.json`
+records them.
 
 For both desktop entry points, also run the existing
 [Electron](../verify-electron/SKILL.md) compiled host and

@@ -144,3 +144,10 @@ The compiled legacy write fixture includes cancelled and snoozed Tasks. The
 correctness drive checks each visible status label and its horizontal bounds in
 both appearances, then captures `compact-{cancelled,snoozed}-{light,dark}.png`.
 Status stays beside Priority so metadata overflow cannot hide the lifecycle.
+
+Task search adds the always-visible `compact-search` field above the Project,
+Tag and Filters row. Loaded rows remain visible with a search error and in
+Offline; the Error notice offers Retry and the connection footer offers
+Reconnect. Description-only matches may use a 64 px row with one centered
+excerpt line. The [Task search recipe](task-search.md) records those states and
+full response identities in addition to the existing Compact layout drive.

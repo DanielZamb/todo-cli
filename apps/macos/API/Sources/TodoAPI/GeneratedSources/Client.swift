@@ -2452,6 +2452,20 @@ public struct Client: APIProtocol {
                     in: &request,
                     style: .form,
                     explode: true,
+                    name: "text",
+                    value: input.query.text
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "prefix",
+                    value: input.query.prefix
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
                     name: "project",
                     value: input.query.project
                 )
@@ -2643,7 +2657,7 @@ public struct Client: APIProtocol {
                     switch chosenContentType {
                     case "application/json":
                         body = try await converter.getResponseBodyAsJSON(
-                            Components.Schemas.InvalidTaskEncoded.self,
+                            Operations.tasks_period_list.Output.UnprocessableContent.Body.jsonPayload.self,
                             from: responseBody,
                             transforming: { value in
                                 .json(value)

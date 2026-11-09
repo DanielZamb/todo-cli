@@ -251,13 +251,13 @@ const arrow = (id, from, to, o = {}) => {
   bind(b, { type: "arrow", id });
   if (o.label) {
     const n = abs.length;
-    const mid =
+    const mid = o.labelAt ?? (
       n % 2 === 1
         ? abs[(n - 1) / 2]
         : [
             (abs[n / 2 - 1][0] + abs[n / 2][0]) / 2,
             (abs[n / 2 - 1][1] + abs[n / 2][1]) / 2,
-          ];
+          ]);
     const size = o.labelSize ?? 14;
     const font = o.labelFont ?? MONO;
     const m = measure(o.label, size, font);
@@ -265,11 +265,11 @@ const arrow = (id, from, to, o = {}) => {
       size,
       font,
       color: o.labelColor ?? color,
-      containerId: id,
+      containerId: o.labelAt && !o.bindLabel ? null : id,
     });
     t.textAlign = "center";
     t.verticalAlign = "middle";
-    bind(el, { type: "text", id: t.id });
+    if (!o.labelAt || o.bindLabel) bind(el, { type: "text", id: t.id });
   }
   return el;
 };
@@ -844,6 +844,139 @@ frame("live", "Live updates", 5880, 0, 1840, (X, Y) => {
     "Delivery is ordered by seq and resumable: reconnecting with Last-Event-ID: 42 replays from 43.",
     "Credentials are checked on every poll. A revoked or expired credential ends the stream.",
     "After a Snapshot restore, clients drop their cache, refetch, and resume from restore_seq.",
+  ]);
+});
+
+frame("search-cli", "Task search: CLI", 0, 8000, 1840, (X, Y) => {
+  heading("sc", X + 40, Y + 32, "Task search through todo list", "Phase 0 design. Existing names are literal; task-search.ts and search_matches are proposed additions.");
+  card("sc-list", X + 40, Y + 140, 510, { title: "list / Command.make", body: "--text <query> / --prefix <hex>\nexisting list flags stay AND filters" });
+  card("sc-decode", X + 650, Y + 140, 510, { title: "Schema.decodeUnknownSync(TaskFilters)", body: "inputLimits.searchText = 200\nprefix: /^[0-9a-f-]{1,36}$/i" });
+  card("sc-invalid", X + 1260, Y + 140, 510, { title: "CommandError / exit 2", body: "invalid_args names --text or --prefix\nJSON: generated_at, code, message", fill: c.warningFill });
+  card("sc-read", X + 650, Y + 365, 510, { title: "withStore / selectProfile / readTasks", body: "Profile-visible Tasks only\nno database migration or writes" });
+  card("sc-filter", X + 650, Y + 570, 510, { title: "filterTaskRecords / task-search.ts", body: "title + description / all query terms\ntext AND prefix AND existing filters\nkeep input order; original UTF-16 spans" });
+  card("sc-render", X + 650, Y + 800, 510, { title: "filterTasks / renderTasks / write", body: "today / overdue / inbox still apply\nJSON adds per-Task search_matches\nexit 0 also for tasks: []" });
+  arrow("sc-a", "sc-list", "sc-decode", { from: "right", to: "left" });
+  arrow("sc-b", "sc-decode", "sc-invalid", { from: "right", to: "left", color: c.warning, label: "invalid --text/--prefix / exit 2", labelSize: 12, labelAt: [X + 1205, Y + 115] });
+  arrow("sc-c", "sc-decode", "sc-read");
+  arrow("sc-d", "sc-read", "sc-filter");
+  arrow("sc-e", "sc-filter", "sc-render", { label: "matches or [] / exit 0", labelSize: 12 });
+  marker("sc-step1", X + 630, Y + 120, 1);
+  marker("sc-step2", X + 630, Y + 550, 2);
+  marker("sc-step3", X + 20, Y + 120, 3);
+  notes("sc-notes", X + 40, Y + 1040, 1720, "Numbered workflow notes", [
+    "Validation happens before opening the store. Whitespace-only text has no predicate; prefix never resolves a mutation id.",
+    "One domain matcher returns acceptance and spans. CLI JSON decorates views without changing persisted Task payloads.",
+    "show, edit, done, cancel, reopen, rm, history, attach, detach, move and copy still require exact full ids.",
+  ]);
+});
+
+frame("search-http", "Task search: HTTP", 2000, 8000, 1840, (X, Y) => {
+  heading("sh", X + 40, Y + 32, "Task search through HttpApi", "One Task list route and additive response metadata; clients do not implement matching.");
+  card("sh-routes", X + 40, Y + 150, 760, { title: "HttpApi tasks.list", body: "GET /profiles/:profile/tasks?text=...&prefix=...\nSwift generated operation: tasks_period_list\nTaskFilters remains the shared query schema" });
+  card("sh-boundary", X + 990, Y + 150, 760, { title: "TaskFilters decode / authenticate", body: "invalid text or prefix -> HTTP 400\nexisting credential and Profile checks stay\nunknown query parameters still rejected" });
+  card("sh-list", X + 990, Y + 420, 760, { title: "TaskCommands.list / filterTaskRecords", body: "authorized Profile / visible Tasks\ntask-search.ts: one matcher, stable order\nsearch_matches is response-only metadata" });
+  card("sh-reply", X + 990, Y + 690, 760, { title: "HttpApi success / HTTP 200", body: "existing array envelope remains unchanged\nper-Task search_matches when text is supplied\n[] for no matches; CLI keeps { tasks: [] }" });
+  arrow("sh-a", "sh-routes", "sh-boundary", { from: "right", to: "left" });
+  arrow("sh-b", "sh-boundary", "sh-list");
+  arrow("sh-c", "sh-list", "sh-reply", { label: "matches or [] / HTTP 200", labelSize: 12 });
+  card("sh-invalid", X + 40, Y + 420, 760, { title: "HttpApi validation error", body: "invalid TaskFilters query / HTTP 400", fill: c.warningFill });
+  arrow("sh-invalid-a", "sh-boundary", "sh-invalid", { label: "invalid query / HTTP 400", labelSize: 12, from: "bottom", to: "right", via: [[X + 1370, Y + 360], [X + 900, Y + 360], [X + 900, Y + 460]], labelAt: [X + 1110, Y + 350], color: c.warning });
+  marker("sh-step1", X + 20, Y + 130, 1);
+  marker("sh-step2", X + 970, Y + 400, 2);
+  marker("sh-step3", X + 970, Y + 670, 3);
+  notes("sh-notes", X + 40, Y + 960, 1720, "Numbered workflow notes", [
+    "The dotted tasks_period_list operation is the generated-client name for the same URL, not a new endpoint.",
+    "search_matches contains title/description and start/end offsets in the original UTF-16 string. It is never persisted.",
+    "Regenerate OpenAPI and the Swift contract. Do not hand-edit generated Swift or copy matching logic into either client.",
+  ]);
+});
+
+const searchClientFrame = (id, name, X, swift) => frame(id, name, X, 9600, 3000, (x, y) => {
+  const p = id;
+  const node = (key, dx, dy, title, body, fill) => card(`${p}-${key}`, x + dx, y + dy, 620, { title, body, fill, h: 145 });
+  const transition = (key, from, to, label, o = {}) => arrow(`${p}-${key}`, `${p}-${from}`, `${p}-${to}`, { label, labelSize: 15, labelFont: SANS, bindLabel: true, ...o });
+  heading(p, x + 50, y + 32, `${name}: search state machine`, "Approved C1/C5. Stale rows stay visible; generation guards publish one response snapshot. Compact first.");
+  card(`${p}-variables`, x + 50, y + 115, 2670, { title: "State variables and code mapping", body: [
+    { t: "requestedIdentity = { Profile, view, dialog filters, typed text }; appliedSnapshot = { appliedIdentity, rows, search_matches }" },
+    { t: "issuedGeneration; appliedGeneration; stale = requestedIdentity != appliedIdentity; phase = Idle | Showing | Debouncing | Requesting | Error" },
+    { t: swift ? "TodoModel: generation, refreshGeneration, requestedTaskFilters, taskFilters; TaskListView: .searchable / compact-search" : "renderer.tsx: refreshGeneration, activeQuery, advancedFiltersRef, appliedFiltersRef; TaskFilterDialog; shadcn Input" },
+  ], h: 150 });
+  node("idle", 50, 350, "Idle", "Profile/view reset clears old selection\nkeep toolbar text; snapshot absent");
+  node("showing", 50, 780, "Showing / empty", "rows + spans = appliedSnapshot\nsearch empty: Clear search is primary\ndescription excerpt: one centered line");
+  node("debounce", 1080, 780, "Debouncing", "250 ms timer; generation invalidated now\nretain applied rows + highlights\nfield progress / stale emphasis");
+  node("request", 2100, 780, "Requesting", "refresh() / refresh(generation:)\ncapture identity + new issuedGeneration\nretain appliedSnapshot");
+  node("error", 2100, 1450, "Error", "keep typed text + appliedSnapshot\nCouldn't search. Showing results for\n\"<applied text>\". / Retry", c.warningFill);
+  transition("initial", "idle", "request", "refresh [selection ready] / issue current request", { from: "right", to: "top", via: [[x + 2380, y + 420]], labelAt: [x + 1580, y + 390] });
+  transition("input", "showing", "debounce", "input change or Esc [enabled]\n/ update requestedIdentity; invalidate; schedule", { from: "right", to: "left", labelAt: [x + 875, y + 810] });
+  transition("fired", "debounce", "request", "debounce fired [current timer]\n/ refresh; issue latest identity", { from: "right", to: "left", labelAt: [x + 1900, y + 810] });
+  transition("success", "request", "showing", "response(generation) ok [latest + identity current]\n/ atomically publish rows, spans, appliedIdentity", { from: "bottom", to: "bottom", via: [[x + 2410, y + 1120], [x + 360, y + 1120]], labelAt: [x + 1350, y + 1090] });
+  transition("newinput", "request", "debounce", "input change or Esc [enabled] / invalidate; debounce", { from: "top", to: "top", via: [[x + 2420, y + 640], [x + 1390, y + 640]], labelAt: [x + 1900, y + 610] });
+  transition("failed", "request", "error", "response(generation) error [latest]\n/ keep text; retain snapshot; report", { fromT: 0.95, toT: 0.95, labelAt: [x + 2550, y + 1260], color: c.warning });
+  transition("retry", "error", "request", "Retry or SSE reconnect or SSE op\n[Error + current Profile] / issue requestedIdentity", { from: "left", to: "left", via: [[x + 1840, y + 1520], [x + 1840, y + 850]], labelAt: [x + 1840, y + 1370] });
+  transition("errorinput", "error", "debounce", "input change or Esc [enabled]\n/ keep snapshot; invalidate; debounce", { from: "bottom", to: "left", toT: 0.8, via: [[x + 2400, y + 1650], [x + 2400, y + 1740], [x + 1000, y + 1740], [x + 1000, y + 896]], labelAt: [x + 1570, y + 1710] });
+  transition("repeatinput", "debounce", "debounce", "input change [enabled] / replace timer", { from: "bottom", to: "bottom", fromT: 0.15, toT: 0.85, via: [[x + 1173, y + 1030], [x + 1607, y + 1030]], labelAt: [x + 1390, y + 470] });
+  transition("obsolete", "request", "request", "response(generation) ok/error\n[obsolete] / discard", { from: "bottom", to: "bottom", fromT: 0.15, toT: 0.75, via: [[x + 2193, y + 1030], [x + 2565, y + 1030]], labelAt: [x + 2520, y + 1020] });
+  transition("sse", "showing", "request", "SSE op [current Profile] / refresh latest requestedIdentity", { from: "top", to: "top", via: [[x + 360, y + 590], [x + 2400, y + 590]], labelAt: [x + 820, y + 560] });
+  transition("focus", "showing", "showing", "Cmd+F [search visible] / focus field", { from: "top", to: "top", fromT: 0.15, toT: 0.85, via: [[x + 143, y + 690], [x + 577, y + 690]], labelAt: [x + 350, y + 990] });
+  transition("reset", "error", "idle", "Profile switch or view switch [changed]\n/ keep text; clear selection; invalidate", { from: "top", to: "left", via: [[x + 2220, y + 1400], [x + 2220, y + 1350], [x + 20, y + 1350], [x + 20, y + 420]], labelAt: [x + 1060, y + 1320] });
+  zone(`${p}-freshness`, x + 50, y + 1930, 2670, 400, "Orthogonal freshness state / retained rows stay visible");
+  node("current", 180, 2040, "Current", "requestedIdentity == appliedIdentity\nnormal rows and their matching highlights", c.accent);
+  node("stale", 1910, 2040, "Stale", "requestedIdentity != appliedIdentity\nreduced emphasis; field progress if pending\nerror keeps typed text and Retry", c.secondary);
+  transition("staleon", "current", "stale", "input or dialog Apply [identity differs]\n/ stale := true; retain snapshot", { from: "right", to: "left", labelAt: [x + 1340, y + 2040] });
+  transition("staleoff", "stale", "current", "response ok [latest + requested identity] or input [equals applied]\n/ stale := false; publish snapshot only on response", { from: "bottom", to: "bottom", via: [[x + 2220, y + 2290], [x + 490, y + 2290]], labelAt: [x + 1350, y + 2270] });
+  marker(`${p}-step1`, x + 1060, y + 760, 1);
+  marker(`${p}-step2`, x + 2080, y + 1430, 2);
+  marker(`${p}-step3`, x + 1890, y + 2020, 3);
+  notes(`${p}-notes`, x + 50, y + 2390, 2670, "Numbered state-machine notes", [
+    "Input, Esc and dialog Apply invalidate immediately. Profile/view switch from every phase uses Idle reset. Cmd+F focuses in every phase.",
+    "Error -> Requesting on Retry or current-Profile SSE reconnect/op. Error -> Debouncing on input. Obsolete replies discard in every phase.",
+    "Freshness is orthogonal to request phase: stale iff identities differ. Rows and spans share appliedIdentity. SSE refresh can run while Current.",
+    "Recovery hooks: Electron connection(connected) / changed; Swift followChanges ready / operation. Filters are drawn in their separate frame.",
+    "Weak-fair debounce, successful replies and recovery from Error imply convergence after input stops. Recovery is Retry or SSE reconnect/op; no retry timer.",
+  ]);
+});
+searchClientFrame("search-electron", "Electron search", 0, false);
+searchClientFrame("search-swift", "SwiftUI search", 3200, true);
+
+const searchFilterFrame = (id, name, X, swift) => frame(id, name, X, 12600, 2600, (x, y) => {
+  const node = (key, dx, dy, title, body, fill) => card(`${id}-${key}`, x + dx, y + dy, 620, { title, body, fill, h: 145 });
+  const transition = (key, from, to, label, o = {}) => arrow(`${id}-${key}`, `${id}-${from}`, `${id}-${to}`, { label, labelFont: SANS, labelSize: 16, ...o });
+  heading(id, x + 50, y + 32, `${name}: Filters state machine`, "Entry and exit connect to the client's search phase. Toolbar text survives dialog editing and filter rollback.");
+  node("parent", 50, 270, "Parent search phase", swift ? "TaskListView / showingTaskFilters\nreturn to retained appliedSnapshot\nrequested text stays typed" : "renderer.tsx / filtersOpen\nreturn to retained appliedSnapshot\nrequested text stays typed");
+  node("draft", 1550, 270, swift ? "TaskFilterView / editing draft" : "TaskFilterDialog / editing draft", "Id starts with / filter-prefix\ndraft fields separate from applied filters\nCancel discards draft");
+  node("request", 1550, 870, "Requesting / parent search phase", "compose dialog fields + current text\nnew generation; retain applied snapshot\nrequest state's freshness guard applies");
+  node("rollback", 50, 870, "Filter application failed", "filterApplyError / restore dialog fields\nkeep typed search text\nretain applied snapshot", c.warningFill);
+  transition("entry", "parent", "draft", "Filters [enabled] / snapshot dialog fields", { from: "right", to: "left" });
+  transition("cancel", "draft", "parent", "dialog Cancel [open] / close; retain applied values", { from: "top", to: "top", via: [[x + 1860, y + 170], [x + 360, y + 170]] });
+  transition("invalid", "draft", "draft", "dialog Apply [invalid prefix]\n/ show inline validation; retain draft", { from: "right", to: "right", fromT: 0.2, toT: 0.8, via: [[x + 2390, y + 299], [x + 2390, y + 386]] });
+  transition("apply", "draft", "request", "dialog Apply [valid]\n/ close; request latest identity", { from: "bottom", to: "top" });
+  transition("error", "request", "rollback", "response(generation) error [latest filter apply]\n/ restore dialog filters; keep text", { from: "left", to: "right", color: c.warning });
+  transition("return", "rollback", "parent", "rollback [complete] / show filterApplyError", { from: "top", to: "bottom" });
+  transition("success", "request", "parent", "response(generation) ok [latest + identity current]\n/ publish snapshot; return to Showing or empty", { from: "right", to: "left", fromT: 0.3, toT: 0.3, via: [[x + 2420, y + 914], [x + 2420, y + 1270], [x + 20, y + 1270], [x + 20, y + 314]] });
+  marker(`${id}-step1`, x + 1530, y + 250, 1);
+  marker(`${id}-step2`, x + 30, y + 850, 2);
+  notes(`${id}-notes`, x + 50, y + 1360, 2480, "Numbered sub-machine notes", [
+    "Entry copies dialog fields. Clear all changes dialog draft fields only. Apply composes the toolbar's current text; Cancel leaves applied fields alone.",
+    "The parent search phase owns stale, Retry/SSE recovery, Profile/view resets and obsolete-response discard. Filter failure preserves today's dialog rollback behavior.",
+  ]);
+});
+searchFilterFrame("search-electron-filters", "Electron", 0, false);
+searchFilterFrame("search-swift-filters", "SwiftUI", 3000, true);
+
+frame("search-copy", "Task search: copy full id", 4000, 8000, 1840, (X, Y) => {
+  heading("si", X + 40, Y + 32, "Copy full Task id: state machine", "Electron reuses attachment-native.ts clipboard IPC. SwiftUI uses NSPasteboard.general. No Task mutation.");
+  card("si-idle", X + 630, Y + 170, 550, { title: "Idle", body: "full task.id / small selectable monospace\nCopy task id enabled", h: 120 });
+  card("si-copied", X + 40, Y + 650, 550, { title: "Copied", body: "success feedback / start feedback timer\nexact full id written to clipboard", fill: c.accent, h: 120 });
+  card("si-failed", X + 1240, Y + 650, 550, { title: "Failed", body: "accessible copy error / allow retry\nno false success feedback", fill: c.warningFill, h: 120 });
+  arrow("si-copyok", "si-idle", "si-copied", { label: "Copy [clipboard write succeeds]\n/ announce Copied; start timer", labelFont: SANS, labelAt: [X + 390, Y + 430] });
+  arrow("si-copyfail", "si-idle", "si-failed", { label: "Copy [clipboard write fails]\n/ announce failure", labelFont: SANS, labelAt: [X + 1450, Y + 430] });
+  arrow("si-timeout", "si-copied", "si-idle", { from: "left", to: "left", via: [[X + 20, Y + 710], [X + 20, Y + 230]], label: "feedback timeout [Copied]\n/ clear feedback", labelFont: SANS, labelAt: [X + 240, Y + 270] });
+  arrow("si-retry", "si-failed", "si-idle", { from: "right", to: "right", via: [[X + 1810, Y + 710], [X + 1810, Y + 230]], label: "Retry or dismiss [Failed]\n/ clear feedback", labelFont: SANS, labelAt: [X + 1570, Y + 270] });
+  marker("si-step1", X + 610, Y + 150, 1);
+  marker("si-step2", X + 20, Y + 630, 2);
+  notes("si-notes", X + 40, Y + 900, 1720, "Numbered state-machine notes", [
+    "Copy reads the complete id of the shown Task, including while search is stale. A new Task detail resets feedback to Idle.",
+    "Copied returns to Idle on timeout; Failed returns on Retry or dismiss. Headless tests prove the copied value; offscreen renders prove feedback.",
   ]);
 });
 
