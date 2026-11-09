@@ -139,3 +139,25 @@ all report errors, and requests are counted at dispatch to prove prefill does
 not submit. An optional TODO_DISCOVERY_RENDERER_ROOT selects an immutable
 source-only renderer extraction for a before proof. It does not change the
 server or the current checkout.
+
+Report screenshots await the production renderer's finite animations and theme
+transitions with settleRenderer. Infinite progress indicators are excluded.
+Each capture asserts literal settled popup/card background and foreground
+colors, opacity 1 and a hit-test point inside the popup. The scrim must not
+cover the dialog. report-appearance.json retains these observations.
+
+I1/I2 were capture timing defects in this report drive. The shared Dialog and
+import styles also transition on main; an isolated source archive reproduced
+the old-theme computed popup color immediately after a root theme change and
+correct settled light/dark colors afterward. No production theme or stacking
+change was needed. Do not infer a stacking bug from a mid-transition PNG.
+
+The typed import matrix is normal/recovery/recovery/normal. Compact and full,
+light and dark captures assert every row ends before the next begins, each
+recovery card stays inside its row, and scrolling reaches the final normal row.
+Recovery rows grow in ordinary document flow; normal Compact rows keep 56 px.
+Import uses rows.map into a ul or table, with no virtualizer or index-based top.
+Batch-edit and Attachment batch also map every row into ordinary flow and use
+min-height rather than a fixed height. Their report captures assert containment
+and row ordering too. report-appearance.json and report-row-layout.json retain
+the measured geometry. Final-row captures are named with last-row.

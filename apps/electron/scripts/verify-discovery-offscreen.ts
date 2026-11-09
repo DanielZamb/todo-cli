@@ -20,6 +20,7 @@ import { build } from "vite";
 import { errorReply } from "../src/error-reply.ts";
 import { Reply, Request } from "../src/protocol.ts";
 import { taskRequest } from "../src/task-client.ts";
+import { settleRenderer } from "./settle-renderer.ts";
 import { verifyDiscoveryReportErrors } from "./verify-discovery-report-errors.ts";
 
 const root = resolve(import.meta.dirname, "../../..");
@@ -288,7 +289,7 @@ try {
           (dark) => document.documentElement.classList.toggle("dark", dark),
           dark,
         );
-        await page.waitForTimeout(130);
+        await settleRenderer(page);
         if (dialog) {
           const bounds = await page
             .locator(".discovery-dialog")

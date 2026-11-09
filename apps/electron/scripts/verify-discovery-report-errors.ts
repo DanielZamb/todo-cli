@@ -5,6 +5,7 @@ import { expect, type Page } from "@playwright/test";
 import { ImportReport, ProfileId, TaskId, Version } from "@todo/domain";
 import { Schema } from "effect";
 import type { Reply } from "../src/protocol.ts";
+import { settleRenderer } from "./settle-renderer.ts";
 
 const Created = Schema.Struct({
   task: Schema.Struct({ id: TaskId, row_version: Version }),
@@ -28,6 +29,7 @@ export async function verifyDiscoveryReportErrors({
 }) {
   const reports: unknown[] = [];
   const screenshots: string[] = [];
+  const appearance: unknown[] = [];
   const create = (...args: string[]) =>
     Schema.decodeUnknownSync(Created)(cli("work", "add", ...args)).task;
   const open = async (name: string) => {
@@ -36,27 +38,141 @@ export async function verifyDiscoveryReportErrors({
       .click();
     await page.getByRole("menuitem", { name, exact: true }).click();
   };
-  const shot = async (name: string) => {
-    const status = page.getByTestId("task-lookup-status");
-    if (await status.count())
-      await status
-        .getByRole("button", { name: "Find Task by id", exact: true })
-        .scrollIntoViewIfNeeded();
-    for (const dark of [false, true]) {
-      await page.evaluate(
-        (dark) => document.documentElement.classList.toggle("dark", dark),
-        dark,
-      );
-      const path = join(
-        evidence,
-        `${name}-compact-${dark ? "dark" : "light"}.png`,
-      );
-      await page.screenshot({ path });
-      screenshots.push(path);
+  const shot = async (name: string, layouts: readonly boolean[] = [true]) => {
+    for (const compact of layouts) {
+      await page.setViewportSize({
+        width: compact ? 393 : 1100,
+        height: compact ? 426 : 720,
+      });
+      await notify({ _tag: "windowMode", compact });
+      const status = page.getByTestId("task-lookup-status").first();
+      if (!name.includes("MIXED") && (await status.count()))
+        await status
+          .getByRole("button", { name: "Find Task by id", exact: true })
+          .scrollIntoViewIfNeeded();
+      for (const dark of [false, true]) {
+        if (name.includes("MIXED"))
+          await page.locator(".import-list-scroll").evaluate((node) => {
+            node.scrollTop = 0;
+          });
+        await page.evaluate(
+          (dark) => document.documentElement.classList.toggle("dark", dark),
+          dark,
+        );
+        await settleRenderer(page);
+        const style = await page.evaluate(() => {
+          const popup = document.querySelector<HTMLElement>(
+            '[data-slot="dialog-content"][data-open]',
+          );
+          if (!popup) throw new Error("Missing open dialog");
+          const computed = getComputedStyle(popup);
+          const box = popup.getBoundingClientRect();
+          const hit = document.elementFromPoint(
+            box.x + box.width / 2,
+            box.y + Math.min(100, box.height / 2),
+          );
+          return {
+            dark: document.documentElement.classList.contains("dark"),
+            background: computed.backgroundColor,
+            color: computed.color,
+            opacity: computed.opacity,
+            popupContainsHit: hit !== null && popup.contains(hit),
+            rows: [
+              ...popup.querySelectorAll(
+                ".import-row, .import-table tbody tr, .batch-edit-row, .attachment-batch-row",
+              ),
+            ].map((row) => {
+              const rect = row.getBoundingClientRect();
+              const card = row
+                .querySelector('[data-testid="task-lookup-status"]')
+                ?.getBoundingClientRect();
+              return {
+                top: rect.top,
+                bottom: rect.bottom,
+                cardTop: card?.top ?? rect.top,
+                cardBottom: card?.bottom ?? rect.bottom,
+              };
+            }),
+            cards: [
+              ...popup.querySelectorAll('[data-testid="task-lookup-status"]'),
+            ].map((card) => ({
+              background: getComputedStyle(card).backgroundColor,
+              color: getComputedStyle(card).color,
+            })),
+          };
+        });
+        assert.equal(style.dark, dark);
+        assert.equal(
+          style.background,
+          dark ? "rgb(36, 47, 39)" : "rgb(255, 255, 255)",
+        );
+        assert.equal(
+          style.color,
+          dark ? "rgb(240, 243, 239)" : "rgb(22, 29, 25)",
+        );
+        assert.equal(style.opacity, "1");
+        assert.equal(style.popupContainsHit, true);
+        for (const card of style.cards) {
+          assert.equal(
+            card.background,
+            dark ? "rgb(29, 38, 32)" : "rgb(255, 255, 255)",
+          );
+          assert.equal(card.color, style.color);
+        }
+        for (let index = 0; index < style.rows.length; index++) {
+          const row = style.rows[index];
+          if (!row) throw new Error("Missing row");
+          assert.ok(
+            row.cardTop >= row.top && row.cardBottom <= row.bottom,
+            "Recovery card must fit its row",
+          );
+          const next = style.rows[index + 1];
+          if (next) assert.ok(row.bottom <= next.top, "Rows must not overlap");
+        }
+        appearance.push({ name, compact, ...style });
+        writeFileSync(
+          join(evidence, "report-appearance.json"),
+          JSON.stringify(appearance, null, 2),
+        );
+        const path = join(
+          evidence,
+          `${name}-${compact ? "compact" : "full"}-${dark ? "dark" : "light"}.png`,
+        );
+        await page.screenshot({ path });
+        screenshots.push(path);
+        if (name.includes("MIXED")) {
+          const rows = page.locator(
+            compact ? ".import-row" : ".import-table tbody tr",
+          );
+          await expect(rows).toHaveCount(4);
+          await rows.last().scrollIntoViewIfNeeded();
+          const last = await rows.last().boundingBox();
+          const viewport = await page
+            .locator(".import-list-scroll")
+            .boundingBox();
+          assert.ok(
+            last &&
+              viewport &&
+              last.y >= viewport.y &&
+              last.y + last.height <= viewport.y + viewport.height + 1,
+            "Final row must be reachable in the scroll viewport",
+          );
+          await settleRenderer(page);
+          const lastPath = join(
+            evidence,
+            `${name}-last-row-${compact ? "compact" : "full"}-${dark ? "dark" : "light"}.png`,
+          );
+          await page.screenshot({ path: lastPath });
+          screenshots.push(lastPath);
+        }
+      }
     }
+    await page.setViewportSize({ width: 393, height: 426 });
+    await notify({ _tag: "windowMode", compact: true });
+    await settleRenderer(page);
   };
   const recover = async (task: string) => {
-    const status = page.getByTestId("task-lookup-status");
+    const status = page.getByTestId("task-lookup-status").first();
     await expect(status).toContainText("Task not found in work.");
     await expect(status).toContainText("error 3 - not found or auth missing");
     await expect(status).not.toContainText("GET /");
@@ -209,7 +325,7 @@ export async function verifyDiscoveryReportErrors({
   });
   await shot("import-real-rejection");
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
-  const fixture = Schema.decodeUnknownSync(ImportReport)({
+  const singleFixture = Schema.decodeUnknownSync(ImportReport)({
     generated_at: "2026-11-09T00:00:00Z",
     dry_run: true,
     items: [
@@ -237,14 +353,95 @@ export async function verifyDiscoveryReportErrors({
     ],
     totals: { created: 0, updated: 0, unchanged: 0, rejected: 1 },
   });
+  const missing = singleFixture.items[0];
+  assert.ok(missing);
+  const fixture = Schema.decodeUnknownSync(ImportReport)({
+    ...singleFixture,
+    items: [
+      {
+        external_id: "normal-first",
+        task_id: source.id,
+        from_version: 1,
+        outcome: "unchanged",
+        changed_fields: [],
+      },
+      missing,
+      {
+        ...missing,
+        external_id: "report-import-gone-second",
+        task_id: attachmentTarget.id,
+        error: {
+          ...missing.error,
+          details: {
+            current_version: null,
+            profile: { id: "work", name: "work" },
+            task_id: attachmentTarget.id,
+            recovery: "GET /profiles/work/tasks or GET /tasks/lookup",
+          },
+        },
+      },
+      {
+        external_id: "normal-last",
+        task_id: source.id,
+        from_version: 1,
+        outcome: "unchanged",
+        changed_fields: [],
+      },
+    ],
+    totals: { ...singleFixture.totals, unchanged: 2, rejected: 2 },
+  });
   setImportFixture(fixture);
+  const fixtureFile = {
+    ...file,
+    name: "mixed-report-TYPED-FIXTURE.json",
+    buffer: Buffer.from(
+      JSON.stringify([
+        { external_id: "normal-first", title: "Normal first row" },
+        { external_id: "report-import-gone", title: "Missing import target" },
+        {
+          external_id: "report-import-gone-second",
+          title: "Second missing import target",
+        },
+        { external_id: "normal-last", title: "Normal final row" },
+      ]),
+    ),
+  };
   await open("Import…");
-  await page.getByLabel("Import file", { exact: true }).setInputFiles(file);
+  await page
+    .getByLabel("Import file", { exact: true })
+    .setInputFiles(fixtureFile);
   await page
     .getByRole("button", { name: "Preview changes", exact: true })
     .click();
-  await expect(page.getByTestId("task-lookup-status")).toBeVisible();
-  await shot("import-not-found-TYPED-FIXTURE");
+  await expect(page.getByTestId("task-lookup-status")).toHaveCount(2);
+  await shot("import-MIXED-TYPED-FIXTURE", [true, false]);
+  const rowLayout = await page.locator(".import-row").evaluateAll((rows) =>
+    rows.map((row) => {
+      const rect = row.getBoundingClientRect();
+      const card = row
+        .querySelector('[data-testid="task-lookup-status"]')
+        ?.getBoundingClientRect();
+      return {
+        top: rect.top,
+        bottom: rect.bottom,
+        cardBottom: card?.bottom ?? rect.bottom,
+      };
+    }),
+  );
+  writeFileSync(
+    join(evidence, "report-row-layout.json"),
+    JSON.stringify(rowLayout, null, 2),
+  );
+  assert.equal(rowLayout.length, 4);
+  for (let index = 0; index + 1 < rowLayout.length; index++) {
+    const row = rowLayout[index],
+      next = rowLayout[index + 1];
+    assert.ok(row && next);
+    assert.ok(
+      row.bottom <= next.top && row.cardBottom <= row.bottom,
+      "Recovery cards must fit ordered rows",
+    );
+  }
   reports.push({
     surface: "import not-found",
     source: "explicit typed UI fixture, not backend evidence",
