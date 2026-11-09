@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 export const rootResponsePlan = {
-  status: "pending explicit amended B source SHA; no response proof claimed",
+  status:
+    "pending amended G4/G11 source; lightest_next uses own energy, unknown last, then whole-Profile topo",
   nodes: 1000,
   requestedIndex: 500,
   allowedNodeKeys: [
@@ -31,28 +32,33 @@ export const rootSetOrderRows = () => [
     external_id: "f-root-first",
     title: "F root first",
     priority: "P1",
-    energy: 5,
+    energy: 4,
   },
   {
     external_id: "f-root-second",
     title: "F root second",
-    priority: "P4",
+    priority: "P2",
     energy: 1,
+  },
+  {
+    external_id: "f-root-unknown",
+    title: "F root unknown",
+    priority: "P3",
   },
   {
     external_id: "f-root-goal",
     title: "F root goal",
     energy: 3,
-    depends_on: ["f-root-first", "f-root-second"],
+    depends_on: ["f-root-first", "f-root-second", "f-root-unknown"],
   },
 ];
-export function assertRootSetOrder(response, [first, second, goal]) {
-  assert.ok(first && second && goal);
+export function assertRootSetOrder(response, [first, second, unknown, goal]) {
+  assert.ok(first && second && unknown && goal);
   assert.equal(response.task_id, goal);
-  assert.deepEqual(response.topological_order, [first, second, goal]);
-  assert.deepEqual(response.ancestors, [first, second]);
+  assert.deepEqual(response.topological_order, [first, second, unknown, goal]);
+  assert.deepEqual(response.ancestors, [first, second, unknown]);
   assert.deepEqual(response.descendants, []);
-  assert.deepEqual(response.lightest_next, [first, second]);
+  assert.deepEqual(response.lightest_next, [second, first, unknown]);
 }
 export function assertRootOnlyResponse(response, issuedIds) {
   assert.equal(issuedIds.length, 1000);

@@ -122,3 +122,37 @@ GraphReport, queryGraph/readGraph, Mermaid identity, CLI graph Markdown,
 OpenAPI/Swift or clients. The unexecuted root-response fixture specifies the
 literal 1,000-node assertion for a later explicit corrected candidate. B's
 unknown-energy tie key is expressly unchanged and outside this amendment.
+
+## Merged-source hold and corrected references
+
+The owner now requires final B conformance at L1's exact merged integration SHA,
+after the held B closure passes and B merges. Leaf6486b347 is not pinned. The
+preparation pins retain the last inspected3cceb41e and set awaitMergedIntegration.
+All full product/compiler entry points return awaiting-merged-source before any
+compile while that flag is true. Model-only checks remain separate.
+
+The coordinator withdrew all-three-topo G11 ordering. Ancestors and descendants
+remain whole-Profile topo. Root lightest_next is own energy ascending, unknown
+last, then whole-Profile topo position. The graph-order remaining-energy ranking
+key is unchanged. root-response-fixture.mjs now encodes the corrected order.
+
+At3cce the CLI input boundary calibration passed17 cases across depend, undepend,
+add, graph, batch-depend, rm and Revert, plus four missing/I/O classifications
+and stale no-ops. Seven actual-source controls passed intended behavior/restore
+checks with14 per-compiler guard receipts. Model preparation also passed. These
+receipts are not a committed merged-source proof.
+
+The expanded graph-response-properties.ts, response-mutants.mjs and client-mutants.mjs
+are prepared but uncompiled/unproven. They cover direct hidden fields, separate
+count-only reachability observation, root500 strict sets, next energy/unknown/tie
+order, raw/encoded/public schemas, Mermaid identity and a real portable client
+with a request-time credential getter. The client uses one instance across
+sign-in/sign-out and observes forwarded Authorization headers. No native Electron
+module is imported. B's31-case matrix rerun path is prepared but not executed.
+
+compile-safety.mjs gates each actual compiler and retires only idle owned mutation
+cache binaries while preserving manifests. compile-preload.mjs wraps nested
+AtomicCAS builds without editing B's skill. disk-safety-self-check.mjs tests an
+injected prior-stop sentinel and exact scratch restoration; it is not a physical
+disk observation. Expanded full-path and nested-preload behavior still need the
+merged-source run. Do not clear a source/hash/compiler gate to make a run pass.

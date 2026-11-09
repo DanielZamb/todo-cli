@@ -1,3 +1,8 @@
+Current status: full conformance is held for L1 exact merged integration SHA.
+The following earlier checkpoint remains candidate-specific. Corrected G4 next
+order is own energy, unknown last, then whole-Profile topo; the old all-three-topo
+wording is withdrawn. New response/getter fixtures are prepared, not proven.
+
 # Formal and production coverage index
 
 | Feature | Current proof | Entry |

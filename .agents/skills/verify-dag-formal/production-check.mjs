@@ -14,6 +14,13 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import mutants from "./production-mutants.mjs";
 import { digest, materialize } from "./candidate-inputs.mjs";
+import {
+  beforeCompile,
+  DiskStop,
+  diskStopped,
+  guardContext,
+  retiredArtifact,
+} from "./compile-safety.mjs";
 const skill = dirname(fileURLToPath(import.meta.url));
 const root = resolve(skill, "../../..");
 const evidence = mkdtempSync(
@@ -21,16 +28,21 @@ const evidence = mkdtempSync(
 );
 const candidate = join(evidence, "candidate");
 mkdirSync(candidate);
+guardContext(evidence);
 const pin = JSON.parse(
   readFileSync(join(skill, "production-pin.json"), "utf8"),
 );
 const receipts = [];
+let provenance;
+class AwaitMergedSource extends Error {}
 const record = (name, value) =>
   writeFileSync(
     join(evidence, `${name}.json`),
     JSON.stringify(value, null, 2) + "\n",
   );
 async function run(label, command, args, timeout = 180000) {
+  if (args.some((arg) => arg.includes("typescript/bin/tsc")))
+    beforeCompile({ evidence, label });
   const started = performance.now();
   const child = spawn(command, args, {
     cwd: candidate,
@@ -67,6 +79,8 @@ async function run(label, command, args, timeout = 180000) {
   record("commands", receipts);
   writeFileSync(join(evidence, label + ".stdout"), stdout);
   writeFileSync(join(evidence, label + ".stderr"), stderr);
+  if (result.exitCode === 3)
+    throw new DiskStop({ stdout: stdout + stderr, exitCode: 3 });
   assert.equal(timedOut, false, `Incomplete timeout: ${label}`);
   return { ...result, stdout, stderr };
 }
@@ -75,7 +89,25 @@ async function build(label, filename) {
   const packageExports = JSON.parse(
     readFileSync(join(candidate, "packages/domain/package.json"), "utf8"),
   ).exports;
-  const output = join(evidence, label);
+  const temporary = label.startsWith("mutant-");
+  const sourceHash = digest(
+    JSON.stringify({
+      commit: pin.commit,
+      filename,
+      driver: digest(readFileSync(join(candidate, "verify", filename))),
+      files: provenance.files
+        .filter((file) => file.path.startsWith("packages/domain/src/"))
+        .map((file) => [
+          file.path,
+          digest(readFileSync(join(candidate, file.path))),
+        ]),
+    }),
+  );
+  const output = temporary
+    ? join(root, ".scratch/bin", `dag-f-${label}-${sourceHash}`)
+    : join(evidence, label);
+  mkdirSync(dirname(output), { recursive: true });
+  beforeCompile({ evidence, label });
   const result = await Bun.build({
     entrypoints: [join(candidate, "verify", filename)],
     target: "bun",
@@ -118,15 +150,28 @@ async function build(label, filename) {
       },
     ],
   });
-  record(label + "-build", {
+  const compiled = {
     success: result.success,
     logs: result.logs.map(String),
     imports,
-  });
+    sourceHash,
+    productCommit: pin.commit,
+    ...(result.success ? { binarySha256: digest(readFileSync(output)) } : {}),
+  };
+  record(label + "-build", compiled);
+  if (temporary && result.success)
+    writeFileSync(
+      output + ".provenance.json",
+      JSON.stringify(compiled, null, 2) + "\n",
+    );
   assert.equal(result.success, true, `Compiler failure: ${label}`);
   return output;
 }
 try {
+  if (pin.awaitMergedIntegration)
+    throw new AwaitMergedSource(
+      "Await L1 exact merged integration SHA; superseded source compilation held",
+    );
   const coverage = JSON.parse(
     readFileSync(join(skill, "coverage.json"), "utf8"),
   );
@@ -135,7 +180,7 @@ try {
     coverage.confirmedCommit,
     "Candidate changed without mapping review",
   );
-  const provenance = materialize(root, candidate, pin);
+  provenance = materialize(root, candidate, pin);
   record("candidate-inputs", provenance);
   for (const file of coverage.files)
     assert.equal(
@@ -150,6 +195,8 @@ try {
       "candidate-inputs.mjs",
       "production-pin.json",
       "production-mutants.mjs",
+      "compile-safety.mjs",
+      "compile-preload.mjs",
       "graph-properties.ts",
       "replay-properties.ts",
       "integration-properties.ts",
@@ -256,7 +303,10 @@ try {
       join(root, "docs/evidence/dag-formal/tools/tla2tools-1.7.4.jar"),
       join(tools, "tla2tools-1.7.4.jar"),
     );
+    process.env.DAG_F_GUARD_EVIDENCE = evidence;
     const atomic = await run("candidate-atomiccas", "bun", [
+      "--preload",
+      join(skill, "compile-preload.mjs"),
       join(candidate, ".agents/skills/verify-occ-atomicity/check.ts"),
     ]);
     assert.equal(
@@ -322,11 +372,12 @@ try {
       const changed = source.replace(mutant.from, mutant.to);
       const label = "mutant-" + mutant.name;
       writeFileSync(join(evidence, label + "-source.ts"), changed);
-      let mutantResult;
+      let mutantResult, produced;
       try {
         writeFileSync(path, changed);
         const driver = mutant.driver ?? "graph";
         const binary = await build(label, driver + "-properties.ts");
+        produced = binary;
         const args =
           driver === "graph"
             ? ["literals"]
@@ -351,7 +402,6 @@ try {
           observed.stderr,
           new RegExp("BEHAVIORAL_FAILURE:" + mutant.property),
         );
-        rmSync(binary, { force: true });
       } finally {
         writeFileSync(path, original);
         assert.equal(
@@ -359,6 +409,7 @@ try {
           digest(original),
           "Byte restoration failed",
         );
+        retiredArtifact({ root, evidence, label, binary: produced });
       }
       const driver = mutant.driver ?? "graph";
       const cleanBinary =
@@ -373,6 +424,11 @@ try {
           : driver === "replay"
             ? [evidence, "--literal"]
             : [evidence, mutant.mode];
+      if (diskStopped())
+        throw new DiskStop({
+          stdout: "disk guard stopped the current mutation",
+          exitCode: 3,
+        });
       const clean = await run(label + "-restored", cleanBinary, cleanArgs);
       assert.equal(clean.exitCode, 0, label + ": restored behavior must pass");
       outcomes.push({
@@ -438,12 +494,18 @@ try {
   );
 } catch (error) {
   record("result", {
-    status: "fail",
+    status:
+      error instanceof DiskStop
+        ? "DISK STOP"
+        : error instanceof AwaitMergedSource
+          ? "awaiting-merged-source"
+          : "fail",
     candidate: pin.commit,
     error: String(error),
     commands: receipts,
   });
   console.error(error);
   console.error(evidence);
-  process.exitCode = 1;
+  process.exitCode =
+    error instanceof DiskStop ? 3 : error instanceof AwaitMergedSource ? 2 : 1;
 }

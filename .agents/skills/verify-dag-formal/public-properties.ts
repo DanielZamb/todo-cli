@@ -1064,20 +1064,218 @@ try {
     await proveTtyDelete({ cli, env: publicEnvironment, evidence, run, state });
     passed.push("production-tty-default-no-eof-yes-and-fingerprint-race");
   }
-  if (selected("malformed")) {
+  if (
+    selected("malformed") ||
+    mode === "boundaries" ||
+    mode === "boundary-controls"
+  ) {
     const a = add("F malformed A"),
-      b = add("F malformed B");
+      b = add("F malformed B"),
+      c = add("F malformed C");
     edge(b.id, a.id, 1);
-    property = "public-malformed-cli";
-    const before = state();
-    same(
-      property,
-      errors(run(["depend", b.id, "--on", a.id, "--expected-version", "0"], 2))
-        .code,
-      "invalid_args",
+    const batch = join(directory, "bad-boundary-batch.json"),
+      badJson = join(directory, "bad-boundary-json.json");
+    writeFileSync(
+      batch,
+      JSON.stringify({
+        items: [
+          {
+            action: "depend",
+            dependent_id: b.id,
+            blocker_id: c.id,
+            from_version: 0,
+          },
+        ],
+      }),
     );
-    same(property, state(), before);
-    passed.push("malformed-cli-version-usage-boundary");
+    writeFileSync(badJson, "{");
+    const cases: {
+      name: string;
+      args: string[];
+      recovery: string;
+      property: string;
+    }[] = [
+      {
+        name: "existing add zero Version",
+        args: ["depend", b.id, "--on", a.id, "--expected-version", "0"],
+        recovery: "--expected-version",
+        property: "public-malformed-cli",
+      },
+      {
+        name: "missing add zero Version",
+        args: ["depend", b.id, "--on", c.id, "--expected-version", "0"],
+        recovery: "--expected-version",
+        property: "public-malformed-cli",
+      },
+      {
+        name: "absent remove zero Version",
+        args: ["undepend", b.id, "--from", c.id, "--expected-version", "0"],
+        recovery: "--expected-version",
+        property: "public-malformed-cli",
+      },
+      {
+        name: "depend empty endpoint",
+        args: ["depend", "", "--on", a.id, "--expected-version", "2"],
+        recovery: "task-id",
+        property: "public-malformed-cli",
+      },
+      {
+        name: "depend empty blocker",
+        args: ["depend", b.id, "--on", "", "--expected-version", "2"],
+        recovery: "--on",
+        property: "public-malformed-cli",
+      },
+      {
+        name: "undepend empty blocker",
+        args: ["undepend", b.id, "--from", "", "--expected-version", "2"],
+        recovery: "--from",
+        property: "public-malformed-cli",
+      },
+      {
+        name: "graph empty endpoint",
+        args: ["graph", ""],
+        recovery: "task-id",
+        property: "public-boundary-graph",
+      },
+      {
+        name: "add empty blocker",
+        args: ["add", "F invalid", "--depends-on", ""],
+        recovery: "--depends-on",
+        property: "public-boundary-add",
+      },
+      {
+        name: "add duplicate blockers",
+        args: ["add", "F invalid", "--depends-on", a.id, "--depends-on", a.id],
+        recovery: "--depends-on",
+        property: "public-boundary-add",
+      },
+      {
+        name: "rm zero Version",
+        args: ["rm", b.id, "--with-dependencies", "--expected-version", "0"],
+        recovery: "--expected-version",
+        property: "public-boundary-delete",
+      },
+      {
+        name: "rm invalid fingerprint",
+        args: [
+          "rm",
+          b.id,
+          "--with-dependencies",
+          "--expected-version",
+          "2",
+          "--dependency-fingerprint",
+          "bad",
+        ],
+        recovery: "--dependency-fingerprint",
+        property: "public-boundary-delete",
+      },
+      {
+        name: "rm present empty fingerprint",
+        args: [
+          "rm",
+          b.id,
+          "--with-dependencies",
+          "--expected-version",
+          "2",
+          "--dependency-fingerprint",
+          "",
+        ],
+        recovery: "--dependency-fingerprint",
+        property: "public-boundary-delete",
+      },
+      {
+        name: "batch zero Version",
+        args: ["batch-depend", "--file", batch],
+        recovery: "from_version",
+        property: "public-boundary-batch",
+      },
+      {
+        name: "batch malformed JSON",
+        args: ["batch-depend", "--file", badJson],
+        recovery: "--file",
+        property: "public-boundary-batch",
+      },
+      {
+        name: "revert zero seq",
+        args: ["revert", "0", "--expected-version", "1"],
+        recovery: "seq",
+        property: "public-boundary-revert",
+      },
+      {
+        name: "revert malformed seq",
+        args: ["revert", "bad", "--expected-version", "1"],
+        recovery: "seq",
+        property: "public-boundary-revert",
+      },
+      {
+        name: "revert zero Version before missing seq lookup",
+        args: ["revert", "999999", "--expected-version", "0"],
+        recovery: "--expected-version",
+        property: "public-boundary-revert",
+      },
+    ];
+    const before = state(),
+      projection = (value: ReturnType<typeof state>) => [
+        value.tasks,
+        value.edges,
+        value.versions,
+      ];
+    for (const test of cases) {
+      property = test.property;
+      const failure = errors(run(test.args, 2));
+      same(property, failure.code, "invalid_args");
+      assert.ok(
+        failure.message.includes(test.recovery),
+        test.name + " recovery",
+      );
+      same(property, projection(state()), projection(before));
+    }
+    for (const [args, exit, code] of [
+      [["graph", "f-valid-but-missing"], 3, "not_found"],
+      [["graph", "x".repeat(201)], 3, "not_found"],
+      [
+        [
+          "depend",
+          b.id,
+          "--on",
+          "f-valid-but-missing",
+          "--expected-version",
+          "2",
+        ],
+        2,
+        "dependency_profile_mismatch",
+      ],
+      [
+        ["batch-depend", "--file", join(directory, "file-does-not-exist.json")],
+        1,
+        "runtime_error",
+      ],
+    ] satisfies [string[], number, string][]) {
+      property = "public-boundary-classification";
+      same(property, errors(run(args, exit)).code, code);
+      same(property, projection(state()), projection(before));
+    }
+    property = "public-stale-noop";
+    const historyBefore = state();
+    same(property, edge(b.id, a.id, 999).outcome, "unchanged");
+    same(property, edge(b.id, c.id, 999, "undepend").outcome, "unchanged");
+    same(property, state(), historyBefore);
+    writeFileSync(
+      join(evidence, "input-boundaries.json"),
+      JSON.stringify(
+        {
+          cases,
+          casesCount: cases.length,
+          classificationCases: 4,
+          projectionUnchanged: true,
+        },
+        null,
+        2,
+      ),
+    );
+    passed.push(
+      "malformed-seven-command-boundaries-json-recovery-projection-noop-and-classification",
+    );
   }
   writeFileSync(
     join(evidence, "result.json"),

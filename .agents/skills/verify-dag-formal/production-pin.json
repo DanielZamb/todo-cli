@@ -1,7 +1,8 @@
 {
-  "commit": "f140c7b09bcb1db48ce4ccaee797ecfe60019ce4",
+  "commit": "3cceb41efc08b8cd835d5c883c3d370709865c3f",
   "seed": 260911,
   "randomDags": 256,
   "maxRandomNodes": 40,
-  "scope": "Committed algorithm and storage conformance checkpoint; final public commands and clients pending"
+  "scope": "Preparation only; last inspected 3cceb41e. Await exact merged integration SHA; leaf 6486 is not pinned.",
+  "awaitMergedIntegration": true
 }

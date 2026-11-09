@@ -1,6 +1,6 @@
 {
-  "commit": "e7170510a376b51eaf3525bb9933cb0dd588b233",
-  "scope": "Unaffected public/model/replay checkpoint only; root-only GraphReport amendment awaits an explicit replacement B SHA",
+  "commit": "3cceb41efc08b8cd835d5c883c3d370709865c3f",
+  "scope": "Preparation only; last inspected 3cceb41e. Await exact merged integration SHA; leaf 6486 is not pinned.",
   "scopes": [
     "packages/domain",
     "packages/api",
@@ -8,7 +8,16 @@
     "apps/cli/package.json",
     "apps/server/src",
     "apps/server/package.json",
-    ".agents/skills/verify-occ-atomicity"
+    ".agents/skills/verify-occ-atomicity",
+    "apps/electron/package.json",
+    "apps/electron/src/http-client.ts",
+    "apps/electron/src/main.ts",
+    "apps/electron/src/task-client.ts",
+    "apps/electron/scripts/verify-graph-contract.ts",
+    "apps/macos/API/Sources/TodoAPI/openapi.json",
+    "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift",
+    "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Operations.swift",
+    "apps/macos/Tests/GeneratedContractTests.swift"
   ],
   "manifests": [
     "package.json",
@@ -16,6 +25,13 @@
     "packages/domain/package.json",
     "packages/api/package.json",
     "apps/cli/package.json",
-    "apps/server/package.json"
-  ]
+    "apps/server/package.json",
+    "apps/electron/package.json"
+  ],
+  "pendingCorrections": [
+    "await L1 exact merged integration SHA after B held closure and merge",
+    "G4 getter/read/client fixtures prepared but uncompiled and unproven"
+  ],
+  "contract": "825e73aec777703499d20a728dd93ba41d92c20a9f75f4beb9da82a170702dfc",
+  "awaitMergedIntegration": true
 }

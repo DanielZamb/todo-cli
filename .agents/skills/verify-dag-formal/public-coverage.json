@@ -1,19 +1,11 @@
 {
-  "confirmedCommit": "e7170510a376b51eaf3525bb9933cb0dd588b233",
-  "status": "partial checkpoint; default all intentionally remains failing at the malformed CLI boundary",
+  "confirmedCommit": "3cceb41efc08b8cd835d5c883c3d370709865c3f",
+  "status": "Preparation checkpoint; await exact merged integration SHA after B held closure/merge",
   "gateCommit": "ca142014",
-  "scope": "Unaffected public commands, independent raw replay and concrete integration; graph response and clients paused",
+  "scope": "Last-inspected3cceb41e function mapping only; no merged-source or final response/client proof",
   "knownFinding": {
-    "property": "public-malformed-cli",
-    "input": "existing edge, expected Version 0",
-    "expected": {
-      "exitCode": 2,
-      "code": "invalid_args"
-    },
-    "actual": {
-      "exitCode": 1,
-      "code": "runtime_error"
-    }
+    "property": "root-next-energy-order",
+    "status": "3cceb41e topological root next order is superseded by corrected G4"
   },
   "modelSha256": "54254524caf9a30e95bc1e12b01018eafc28ea88c4a211a46228eb137a802c48",
   "unchangedCore": [
@@ -174,12 +166,67 @@
         "false filter guard",
         "malformed Version boundary finding"
       ],
-      "sha256": "1addc1d7cf6e27cf031ec6f2d93f7c570573d140146730ecb1b21ea963217dab"
+      "sha256": "0fb7b0ed7ebd9d9d0f6cee3107a08639c73d5c4c119c9ff684e1a74e6b116462"
     },
     {
       "path": "apps/cli/src/schema.ts",
       "functions": ["registerCommandSchema"],
       "sha256": "e625c5d00fabacecf59b3a3f3c954391df16f5b3852131c80e175d83ad55b638"
+    },
+    {
+      "path": "apps/cli/src/input.ts",
+      "functions": ["decodeInput"],
+      "sha256": "dcc3c99c7b723bbacf43548bbe9e9b3fdd1c9746a2580ae597b2fd04d992e1c6"
+    },
+    {
+      "path": "packages/domain/src/graph-contract.ts",
+      "functions": ["GraphNode", "GraphReport"],
+      "sha256": "e01ebda801a4d7b3acf01695c5fe64ce66ccb5b8597eae876c46d0c44ca030df"
+    },
+    {
+      "path": "packages/domain/src/graph-queries.ts",
+      "functions": ["queryGraph", "readGraph"],
+      "sha256": "d372368bdd8f2b6c15b4c8abdc431a153781e405954788ccadcae03c54fbd39e"
+    },
+    {
+      "path": "packages/domain/src/graph-mermaid.ts",
+      "functions": ["mermaidNodeIds", "graphMermaid"],
+      "sha256": "2ed8c484956dd59c2e3f552043ce8657a4d6fe277fe08ab835066047658402cb"
+    },
+    {
+      "path": "apps/electron/src/http-client.ts",
+      "functions": ["taskHttpClient"],
+      "sha256": "b16c5222908a09b06598853aa28416b3fe2a84145261f58f5d5d5c13a5d3ca8f"
+    },
+    {
+      "path": "apps/electron/src/main.ts",
+      "functions": ["taskHttpClient caller"],
+      "sha256": "91010a6465419f9e06073126a5c9c89a0246cbfe9a987a315e975b178f191813"
+    },
+    {
+      "path": "apps/electron/src/task-client.ts",
+      "functions": ["taskHttpClient caller"],
+      "sha256": "b93392a77c932cf1e1c43bd3eca77518cc73153f62fa7e657c81ee16a44815ff"
+    },
+    {
+      "path": "packages/api/openapi.json",
+      "functions": ["graph response schema"],
+      "sha256": "18b91a39863fcdd7d95b97d872ee67a171258cc17b5c09d1b4bd0c082b18e80f"
+    },
+    {
+      "path": "apps/macos/API/Sources/TodoAPI/openapi.json",
+      "functions": ["graph response schema"],
+      "sha256": "3f0a661f2467cc41b6d13b16ead6625d7367086fff6929dd0b1ce031ff799fa5"
+    },
+    {
+      "path": "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Operations.swift",
+      "functions": ["graph response decoder"],
+      "sha256": "3ced6135461974986c7fdf5917d3d787e3295c959a8a5faa79c466af203b78e5"
+    },
+    {
+      "path": "apps/macos/Tests/GeneratedContractTests.swift",
+      "functions": ["root-only graph contract decode"],
+      "sha256": "daa9045ad2257d61796680d9c5013b14d87c9e495eed0afd5ff3785bc7f31b3a"
     }
   ],
   "pending": [
@@ -189,5 +236,16 @@
     "Mermaid identity/readGraph and final schemas/OpenAPI/Swift conformance at corrected SHA",
     "final clients, source mapping and both independent review seats",
     "fresh Claude session discovery"
-  ]
+  ],
+  "knownFindings": [
+    {
+      "property": "root-next-energy-order",
+      "status": "3cceb41e topo ordering superseded by G4 own energy/unknown last/topo ties"
+    },
+    {
+      "property": "client-credential-refresh",
+      "status": "3cceb41e captures credential value; getter inside each request required"
+    }
+  ],
+  "orderingAmendment": "ancestors/descendants whole-Profile topo; lightest_next own energy ascending, unknown last, whole-Profile topo ties"
 }

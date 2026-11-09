@@ -15,20 +15,36 @@ import { fileURLToPath } from "node:url";
 import { digest, materialize, object } from "./candidate-inputs.mjs";
 import mutants from "./public-mutants.mjs";
 import retainedMutants from "./production-mutants.mjs";
+import boundaryMutants from "./boundary-mutants.mjs";
+import responseMutants from "./response-mutants.mjs";
+import clientMutants from "./client-mutants.mjs";
+import { verifyContractArtifacts } from "./contract-properties.mjs";
+import {
+  beforeCompile,
+  DiskStop,
+  diskStopped,
+  retiredArtifact,
+  guardContext,
+} from "./compile-safety.mjs";
 const skill = dirname(fileURLToPath(import.meta.url)),
   root = resolve(skill, "../../..");
 const pin = JSON.parse(readFileSync(join(skill, "public-pin.json"), "utf8"));
 const evidence = mkdtempSync(join(root, "docs/evidence/dag-formal/public-"));
 const candidate = join(evidence, "candidate");
 mkdirSync(candidate);
+guardContext(evidence);
 const records = [];
+const mode = process.argv[2] ?? "all";
 const record = (name, value) =>
   writeFileSync(
     join(evidence, name + ".json"),
     JSON.stringify(value, null, 2) + "\n",
   );
 let manifest;
+class AwaitMergedSource extends Error {}
 async function run(label, executable, args, timeout = 180000) {
+  if (args.some((arg) => arg.includes("typescript/bin/tsc")))
+    beforeCompile({ evidence, label });
   const child = spawn(executable, args, {
     cwd: candidate,
     stdio: ["ignore", "pipe", "pipe"],
@@ -62,16 +78,29 @@ async function run(label, executable, args, timeout = 180000) {
   assert.equal(timedOut, false, "Timeout is not proof");
   return { ...receipt, stdout, stderr };
 }
-async function build(label, entry, product = false, force = false) {
+async function build(
+  label,
+  entry,
+  product = false,
+  force = false,
+  options = {},
+) {
   const inputs = manifest.files
     .filter((f) =>
       /^(packages\/(domain|api)\/src|apps\/(cli|server)\/src)/.test(f.path),
     )
     .map((f) => [f.path, digest(readFileSync(join(candidate, f.path)))]);
-  const sourceHash = digest(JSON.stringify({ commit: pin.commit, inputs }));
-  const binary = product
-    ? join(root, ".scratch/bin", `dag-f-${label}-${sourceHash}`)
-    : join(evidence, label);
+  const sourceHash = digest(
+    JSON.stringify({
+      commit: pin.commit,
+      inputs,
+      ...(options.temporary ? { entry } : {}),
+    }),
+  );
+  const binary =
+    product || options.temporary
+      ? join(root, ".scratch/bin", `dag-f-${label}-${sourceHash}`)
+      : join(evidence, label);
   mkdirSync(dirname(binary), { recursive: true });
   const metadata = binary + ".provenance.json";
   if (product && !force && existsSync(binary) && existsSync(metadata)) {
@@ -82,6 +111,7 @@ async function build(label, entry, product = false, force = false) {
     return binary;
   }
   const imports = [];
+  beforeCompile({ evidence, label });
   const result = await Bun.build({
     entrypoints: [join(candidate, entry)],
     target: "bun",
@@ -115,10 +145,35 @@ async function build(label, entry, product = false, force = false) {
                 actual.includes("/node_modules/"),
               "Source resolution escaped: " + actual,
             );
+            const bytes = readFileSync(actual);
             imports.push({
               path: actual,
-              sha256: digest(readFileSync(actual)),
+              sha256: digest(bytes),
             });
+            if (
+              options.countReachability &&
+              actual.endsWith("/packages/domain/src/graph-model.ts")
+            ) {
+              const source = bytes.toString(),
+                point = "  const seen = new Set<TaskId>([start]);";
+              assert.equal(source.split(point).length, 2);
+              const contents = source.replace(
+                point,
+                '  if(process.env.DAG_F_COUNT_REACHABILITY === "1") process.env.DAG_F_REACHABILITY_CALLS = String(Number(process.env.DAG_F_REACHABILITY_CALLS ?? "0") + 1);\n' +
+                  point,
+              );
+              writeFileSync(
+                join(evidence, label + "-instrumented-reachable.ts"),
+                contents,
+              );
+              record(label + "-instrumentation", {
+                scope:
+                  "count-only side effect in separate binary; original on-disk module untouched",
+                originalSha256: digest(bytes),
+                instrumentedSha256: digest(contents),
+              });
+              return { contents, loader: "ts" };
+            }
             return undefined;
           });
         },
@@ -135,11 +190,24 @@ async function build(label, entry, product = false, force = false) {
   };
   record(label + "-build", receipt);
   assert.equal(result.success, true, "Compilation failed " + label);
-  if (product) writeFileSync(metadata, JSON.stringify(receipt, null, 2));
+  if (product || options.temporary)
+    writeFileSync(metadata, JSON.stringify(receipt, null, 2));
   return binary;
 }
 try {
   assert.equal(Bun.version, "1.4.4", "Unreviewed Bun compiler version");
+  if (pin.awaitMergedIntegration)
+    throw new AwaitMergedSource(
+      "Await L1 exact merged integration SHA; no superseded candidate compilation",
+    );
+  if (
+    (mode === "all" || mode === "response-controls") &&
+    pin.pendingCorrections?.length
+  )
+    throw new Error(
+      "Awaiting explicit combined candidate: " +
+        pin.pendingCorrections.join(", "),
+    );
   manifest = materialize(root, candidate, pin);
   record("candidate-inputs", manifest);
   const coverage = JSON.parse(
@@ -170,6 +238,7 @@ try {
     "packages/api",
     "apps/cli",
     "apps/server",
+    "apps/electron",
   ])
     symlinkSync(
       join(root, name, "node_modules"),
@@ -185,6 +254,13 @@ try {
     "public-properties.ts",
     "replay-properties.ts",
     "integration-properties.ts",
+    ...(mode === "all" || mode === "response-controls"
+      ? [
+          "graph-response-properties.ts",
+          "root-response-fixture.mjs",
+          "contract-properties.mjs",
+        ]
+      : []),
   ])
     copyFileSync(join(skill, name), join(candidate, "verify", name));
   const installed = [];
@@ -193,6 +269,7 @@ try {
     "packages/api",
     "apps/cli",
     "apps/server",
+    "apps/electron",
   ])
     for (const [dependency, version] of Object.entries(
       JSON.parse(readFileSync(join(candidate, name, "package.json"), "utf8"))
@@ -214,6 +291,12 @@ try {
       "public-pin.json",
       "public-coverage.json",
       "public-mutants.mjs",
+      "boundary-mutants.mjs",
+      "compile-safety.mjs",
+      "compile-preload.mjs",
+      "contract-properties.mjs",
+      "response-mutants.mjs",
+      "graph-response-properties.ts",
       "production-mutants.mjs",
       "public-properties.ts",
       "replay-properties.ts",
@@ -230,7 +313,6 @@ try {
     driver = await build("public-driver", "verify/public-properties.ts");
   const baselineDirectory = join(evidence, "baseline");
   mkdirSync(baselineDirectory);
-  const mode = process.argv[2] ?? "all";
   const baseline = await run("baseline", driver, [
     cli,
     server,
@@ -238,11 +320,74 @@ try {
     mode,
   ]);
   assert.equal(baseline.exitCode, 0, "Public baseline failed: " + evidence);
+  if (mode === "all" || mode === "boundary-controls") {
+    const matrix = await build(
+      "candidate-input-matrix",
+      "packages/domain/scripts/dag-cli-input-proof.ts",
+    );
+    const matrixDirectory = join(evidence, "candidate-input-matrix");
+    mkdirSync(matrixDirectory);
+    const outcome = await run("candidate-input-matrix-run", matrix, [
+      cli,
+      matrixDirectory,
+    ]);
+    assert.equal(outcome.exitCode, 0);
+    const rows = JSON.parse(
+      readFileSync(join(matrixDirectory, "result.json"), "utf8"),
+    );
+    assert.equal(rows.cases.length, 31);
+    assert.ok(rows.cases.every((row) => row.passed));
+  }
+  let responseDriver, countDriver, beforeCli;
+  if (mode === "all" || mode === "response-controls") {
+    verifyContractArtifacts(candidate, evidence);
+    beforeCli = join(
+      root,
+      ".scratch/bin/dag-f-todo-1aa1db7f8ede6a9401d4f9eaf5e52823ed8ec52a3275cd02b71e71040c95713b",
+    );
+    const beforeMetadata = JSON.parse(
+      readFileSync(beforeCli + ".provenance.json", "utf8"),
+    );
+    assert.equal(
+      beforeMetadata.productCommit,
+      "e7170510a376b51eaf3525bb9933cb0dd588b233",
+    );
+    assert.equal(digest(readFileSync(beforeCli)), beforeMetadata.binarySha256);
+    record("preserved-before-binary", beforeMetadata);
+    process.env.DAG_F_PRODUCT_SHA = pin.commit;
+    process.env.DAG_F_PRODUCT_CONTRACT = pin.contract;
+    responseDriver = await build(
+      "graph-response-driver",
+      "verify/graph-response-properties.ts",
+    );
+    countDriver = await build(
+      "graph-response-counts-driver",
+      "verify/graph-response-properties.ts",
+      false,
+      false,
+      { countReachability: true },
+    );
+    for (const [label, binary, responseMode] of [
+      ["graph-response", responseDriver, "all"],
+      ["closure-call-counts", countDriver, "counts"],
+    ]) {
+      const directory = join(evidence, label);
+      mkdirSync(directory);
+      const response = await run(label, binary, [
+        cli,
+        server,
+        directory,
+        responseMode,
+        beforeCli,
+      ]);
+      assert.equal(response.exitCode, 0, label + " failed");
+    }
+  }
   writeFileSync(
     join(candidate, "verify/tsconfig.json"),
     JSON.stringify({
       extends: "../tsconfig.base.json",
-      compilerOptions: { types: ["bun"], noEmit: true },
+      compilerOptions: { types: ["bun"], noEmit: true, allowJs: true },
       include: ["*.ts"],
     }),
   );
@@ -254,13 +399,29 @@ try {
   ]);
   assert.equal(typecheck.exitCode, 0, "Strict types failed");
   const sensitivity = [];
-  if (mode === "unaffected" || mode === "all") {
-    const controls = [
-      ...mutants,
-      ...retainedMutants
-        .filter((item) => item.driver)
-        .map((item) => ({ ...item, file: "packages/domain/src/" + item.file })),
-    ];
+  if (
+    mode === "unaffected" ||
+    mode === "all" ||
+    mode === "boundary-controls" ||
+    mode === "response-controls"
+  ) {
+    const controls =
+      mode === "response-controls"
+        ? [...responseMutants, ...clientMutants(candidate)]
+        : mode === "boundary-controls"
+          ? boundaryMutants
+          : [
+              ...mutants,
+              ...boundaryMutants,
+              ...responseMutants,
+              ...clientMutants(candidate),
+              ...retainedMutants
+                .filter((item) => item.driver)
+                .map((item) => ({
+                  ...item,
+                  file: "packages/domain/src/" + item.file,
+                })),
+            ];
     for (const mutant of controls) {
       const source = join(candidate, mutant.file),
         original = readFileSync(source),
@@ -273,23 +434,31 @@ try {
       const directory = join(evidence, "mutations", mutant.name);
       mkdirSync(directory, { recursive: true });
       let outcome, restoredExitCode;
-      const targetDriver = mutant.driver
-        ? await build(
-            mutant.driver + "-driver",
-            "verify/" + mutant.driver + "-properties.ts",
-          )
-        : driver;
+      const retired = [];
+      const targetDriver =
+        mutant.driver === "graph-response"
+          ? mutant.mode === "counts"
+            ? countDriver
+            : responseDriver
+          : mutant.driver
+            ? await build(
+                mutant.driver + "-driver",
+                "verify/" + mutant.driver + "-properties.ts",
+              )
+            : driver;
       const argumentsFor = (
         directory,
         mutationCli = cli,
         mutationServer = server,
       ) =>
-        mutant.driver
-          ? [
-              directory,
-              ...(mutant.driver === "integration" ? [mutant.mode] : []),
-            ]
-          : [mutationCli, mutationServer, directory, mutant.mode];
+        mutant.driver === "graph-response"
+          ? [mutationCli, mutationServer, directory, mutant.mode, beforeCli]
+          : mutant.driver
+            ? [
+                directory,
+                ...(mutant.driver === "integration" ? [mutant.mode] : []),
+              ]
+            : [mutationCli, mutationServer, directory, mutant.mode];
       try {
         writeFileSync(source, text.replace(mutant.from, mutant.to));
         copyFileSync(source, join(directory, "broken-source.txt"));
@@ -297,16 +466,22 @@ try {
           mutant.driver || mutant.binaries === "server"
             ? cli
             : await build("todo", "apps/cli/src/main.ts", true);
+        if (mutationCli !== cli) retired.push(mutationCli);
         const mutationServer =
           mutant.driver || mutant.binaries === "cli"
             ? server
             : await build("todo-server", "apps/server/src/main.ts", true);
+        if (mutationServer !== server) retired.push(mutationServer);
         const brokenDriver = mutant.driver
           ? await build(
-              mutant.driver + "-mutant-driver",
+              "isolated-" + mutant.name + "-driver",
               "verify/" + mutant.driver + "-properties.ts",
+              false,
+              false,
+              { temporary: true, countReachability: mutant.mode === "counts" },
             )
           : driver;
+        if (brokenDriver !== driver) retired.push(brokenDriver);
         const result = await run(
           "mutant-" + mutant.name,
           brokenDriver,
@@ -347,15 +522,25 @@ try {
           sha256: digest(original),
           byteExact: true,
         });
-        const restored = join(directory, "restored");
-        mkdirSync(restored);
-        const clean = await run(
-          "restored-" + mutant.name,
-          targetDriver,
-          argumentsFor(restored),
-        );
-        restoredExitCode = clean.exitCode;
-        assert.equal(clean.exitCode, 0, "Restored baseline failed");
+        for (const binary of retired)
+          retiredArtifact({
+            root,
+            evidence,
+            label: mutant.name,
+            binary,
+            keep: [cli, server],
+          });
+        if (!diskStopped()) {
+          const restored = join(directory, "restored");
+          mkdirSync(restored);
+          const clean = await run(
+            "restored-" + mutant.name,
+            targetDriver,
+            argumentsFor(restored),
+          );
+          restoredExitCode = clean.exitCode;
+          assert.equal(clean.exitCode, 0, "Restored baseline failed");
+        }
       }
       sensitivity.push({
         ...outcome,
@@ -415,12 +600,18 @@ try {
   console.log("PASS diagnostic public checkpoint: " + evidence);
 } catch (error) {
   record("result", {
-    status: "fail",
+    status:
+      error instanceof DiskStop
+        ? "DISK STOP"
+        : error instanceof AwaitMergedSource
+          ? "awaiting-merged-source"
+          : "fail",
     productCommit: pin.commit,
     error: String(error),
     commands: records,
   });
   console.error(error);
   console.error(evidence);
-  process.exitCode = 1;
+  process.exitCode =
+    error instanceof DiskStop ? 3 : error instanceof AwaitMergedSource ? 2 : 1;
 }

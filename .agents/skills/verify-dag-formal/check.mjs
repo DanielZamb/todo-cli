@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { digest, object } from "./candidate-inputs.mjs";
 import { spawn } from "node:child_process";
+import { DiskStop, guardContext } from "./compile-safety.mjs";
 import { createHash } from "node:crypto";
 import {
   copyFileSync,
@@ -18,6 +19,7 @@ const root = resolve(skill, "../../..");
 const base = join(root, "docs/evidence/dag-formal");
 mkdirSync(base, { recursive: true });
 const evidence = mkdtempSync(join(base, "check-"));
+guardContext(evidence);
 const sha = (path) =>
   createHash("sha256").update(readFileSync(path)).digest("hex");
 const json = (name, value) =>
@@ -64,11 +66,24 @@ async function execute(label, command, args, timeout = 120000) {
     seconds: (performance.now() - start) / 1000,
   };
   json(label, receipt);
+  if (receipt.exitCode === 3)
+    throw new DiskStop({ stdout: stdout + stderr, exitCode: 3 });
   assert.equal(timedOut, false, `${label}: timeout is incomplete proof`);
   return { ...receipt, stdout, stderr };
 }
 let exitCode = 1;
+class AwaitMergedSource extends Error {}
 try {
+  const currentPin = JSON.parse(
+    readFileSync(join(skill, "public-pin.json"), "utf8"),
+  );
+  if (
+    !process.argv.includes("--model-only") &&
+    currentPin.awaitMergedIntegration
+  )
+    throw new AwaitMergedSource(
+      "Await L1's exact merged integration SHA; no superseded candidate compilation is authorized",
+    );
   const head = await execute("git-head", "git", ["rev-parse", "HEAD"]);
   const branch = await execute("git-branch", "git", [
     "branch",
@@ -99,6 +114,11 @@ try {
     coverage.modelSha256,
     "Reviewed model drift",
   );
+  const stopCheck = await execute("disk-safety-self-check", "node", [
+    join(skill, "disk-safety-self-check.mjs"),
+    evidence,
+  ]);
+  assert.equal(stopCheck.exitCode, 0);
   let jar = join(base, "tools/tla2tools-1.7.4.jar");
   const existing = join(root, "docs/evidence/fv01/tools/tla2tools-1.7.4.jar");
   if (!existsSync(jar) && existsSync(existing)) jar = existing;
@@ -213,12 +233,13 @@ try {
   assert.equal(original, sha(model), "Model changed during run");
   const modelOnly = process.argv.includes("--model-only");
   let production = null;
+  let publicConformance = null;
   if (!modelOnly) {
     const result = await execute(
       "production-conformance",
       "bun",
       [join(skill, "production-check.mjs")],
-      300000,
+      600000,
     );
     assert.equal(
       result.exitCode,
@@ -230,6 +251,25 @@ try {
     )?.[1];
     assert.ok(path, "Missing production evidence path");
     production = { exitCode: result.exitCode, evidence: path };
+    const publicResult = await execute(
+      "public-conformance",
+      "bun",
+      [join(skill, "public-check.mjs")],
+      600000,
+    );
+    assert.equal(
+      publicResult.exitCode,
+      0,
+      "Public/read conformance or sensitivity failed",
+    );
+    const publicPath = publicResult.stdout.match(
+      /PASS corrected public\/read conformance checkpoint: (.+)/,
+    )?.[1];
+    assert.ok(publicPath, "Missing current public/read evidence path");
+    publicConformance = {
+      exitCode: publicResult.exitCode,
+      evidence: publicPath,
+    };
   }
   exitCode = process.argv.includes("--full") ? 2 : 0;
   json("result", {
@@ -240,10 +280,11 @@ try {
       : "finite model plus pinned production conformance; final public commands and clients pending",
     results,
     production,
+    publicConformance,
     pending: [
-      "final public CLI/HTTP filters, formats and warnings",
       "final-client source mapping",
       "fresh Claude discovery",
+      "independent final review seats",
     ],
     toolSha256: sha(jar),
     sourceMapping: coverage.confirmedCommit,
@@ -252,7 +293,19 @@ try {
     `${modelOnly ? "MODEL CHECKPOINT PASS" : "CONFORMANCE CHECKPOINT PASS"}; final public commands and clients PENDING. Evidence: ${evidence}`,
   );
 } catch (error) {
-  json("result", { status: "fail", exitCode, error: String(error), results });
+  if (error instanceof DiskStop) exitCode = 3;
+  if (error instanceof AwaitMergedSource) exitCode = 2;
+  json("result", {
+    status:
+      error instanceof DiskStop
+        ? "DISK STOP"
+        : error instanceof AwaitMergedSource
+          ? "awaiting-merged-source"
+          : "fail",
+    exitCode,
+    error: String(error),
+    results,
+  });
   console.error(error);
   console.error(`Evidence: ${evidence}`);
 }
