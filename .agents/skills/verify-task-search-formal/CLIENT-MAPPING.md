@@ -122,3 +122,26 @@ reply. A query that remains over budget may remain in Error indefinitely; no
 claim says it must succeed without input or data changing. This mapping renews
 source hashes after review and successful real-matcher sensitivity. TLA+ is
 unchanged because publication, rollback and SSE transitions are unchanged.
+
+## V1 applied context display review (2026-11-09)
+
+V1 adds display text only. It changes no state transition, publication guard,
+generation, identity, rollback or recovery source. The current-response guards
+still run before either error branch can publish. The existing applied snapshot
+still owns the displayed rows and spans.
+
+Electron's pure `appliedSearchContext` and Swift's
+`TaskSearchPresentation.appliedContext` format that snapshot's text once per
+client for both error kinds. Transient messages retain their literal wording.
+For `search_too_broad`, the unchanged refusal sentence stays first; a secondary
+line says `Showing results for "rent".` or `Showing tasks without search.`.
+Swift's `TaskSearchFailure.tooBroad` stores the context captured from the applied
+snapshot when the guarded error is handled. The typed query is not its source.
+No search-error identifier, status role, Retry policy or focus structure changes.
+
+Literal presentation tests and compiled client drives cover both contexts,
+including typed `probe` over retained `rent` spans and later SSE recovery.
+Pixels and status wording remain outside the model's state transitions. The
+four existing changed source hashes were renewed after this diff review and
+successful immutable matcher sensitivity at V1 product commit `064b2667`.
+TLA+ remains unchanged.

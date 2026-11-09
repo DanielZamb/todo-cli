@@ -8,6 +8,13 @@ cover Compact/full and light/dark. Shrinking one description through HTTP must
 make SSE publish the results without Retry. Transient-error Retry and the Copy
 step remain covered by the same drive.
 
+The refusal keeps its recovery sentence first, followed by secondary
+`.search-error-context` text from the applied snapshot: `Showing results for
+"rent".` or `Showing tasks without search.`. The drive asserts both lines and
+captures the typed `probe` query over retained `rent` results. The focused
+presentation tests assert literal markup for both contexts. The existing status
+role announces both lines, and Retry remains absent for this code.
+
 `attachment-native.test.ts` mocks the clipboard at the Electron main boundary.
 It checks the exact valid id write and rejects newline, oversized and non-string
 payloads without clipboard calls, plus UTF-16 and forbidden-control boundaries.
