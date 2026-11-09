@@ -11,6 +11,7 @@ import {
   TasksResponse,
 } from "@todo/domain/presentation";
 import { Schema } from "effect";
+import { credentialSelectionDescription } from "./credential-profile.ts";
 
 const registry = new Map<
   string,
@@ -93,6 +94,7 @@ export function commandSchema(name: string) {
     ? {
         generated_at: new Date().toISOString(),
         $schema: "https://json-schema.org/draft/2020-12/schema",
+        $comment: credentialSelectionDescription,
         ...document.schema,
         ...(Object.keys(document.definitions).length
           ? { $defs: document.definitions }

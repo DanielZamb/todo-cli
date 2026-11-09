@@ -6,6 +6,9 @@ const quote = (value: string) =>
     ? value
     : `'${value.replaceAll("'", "'\\''")}'`;
 
+const shellFlag = (flag: string, value: string) =>
+  `${flag}${value.startsWith("--") ? "=" : " "}${quote(value)}`;
+
 export const directoryOutput = (
   profiles: readonly (typeof ProfileSummary.Type)[],
 ) =>
@@ -25,13 +28,15 @@ export const directoryOutput = (
 export const lookupOutput = (
   matches: readonly (typeof LookupMatch.Type)[],
   format: Format,
+  credentialProfile: string,
 ) => {
   if (!matches.length) return "No matches\n";
   const rows = matches.map((match) => {
-    const profileFlag = match.profile.id.startsWith("--")
-      ? `--profile=${quote(match.profile.id)}`
-      : `--profile ${quote(match.profile.id)}`;
-    const command = `todo show ${quote(match.task_id)} ${profileFlag}`;
+    const credentialFlag =
+      credentialProfile === match.profile.id
+        ? ""
+        : " " + shellFlag("--credential-profile", credentialProfile);
+    const command = `todo show ${quote(match.task_id)} ${shellFlag("--profile", match.profile.id)}${credentialFlag}`;
     const values = [
       match.profile.name,
       match.profile.id,

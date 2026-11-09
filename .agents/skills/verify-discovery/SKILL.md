@@ -50,6 +50,11 @@ Lookup checks original uppercase prefix, all four row keys, null Project,
 closed statuses, Deleted Task exclusion, empty success, exact next commands in
 Markdown/table, schema/manual discovery and invalid or unknown query rejection.
 
+The compiled credential-selection recipe signs in under source and dest, logs
+dest out and executes the printed Show command using source. It checks global
+precedence, reads and mutations, scoped refusal, missing-file isolation, explicit
+login/logout storage and shell-safe leading -- values. JSON row keys stay fixed.
+
 The domain WAL tests commit a competing connection's write between Profile
 reads. Directory and lookup must return the complete old snapshot, then the
 next read returns the complete new snapshot. A synchronous Clock advances past
@@ -83,5 +88,7 @@ alone does not establish registration.
 Executable `scripts/verify.sh <fresh-absolute-evidence-directory>` runs all stages.
 `bun scripts/drive.ts <fresh-absolute-evidence-directory>` drives the existing
 cache manifest. `bun scripts/properties.ts <absolute-evidence-directory>` runs
-only the isolated no-leak control. Resolve those script paths from this skill.
+only the isolated no-leak control. Resolve those script paths from this skill. `scripts/credential-selection.ts`
+is called by drive.ts with the owned scratch HOME and compiled binary; it never
+opens the real HOME or reads an installed credential.
 Use `/maintain-verification-skill` when the command or route contract changes.

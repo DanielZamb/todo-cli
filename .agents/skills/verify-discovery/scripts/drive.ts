@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { verifyCredentialSelection } from "./credential-selection.ts";
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -176,12 +177,13 @@ try {
   const boundaryTask = cli(["add", "Leading flag Profile", "--profile=--boundary"]).task;
   const boundaryOutput = cli(["lookup", "--prefix", boundaryTask.id], 0, undefined, "md");
   const showCommand = boundaryOutput.slice(boundaryOutput.indexOf("todo show ")).trim();
-  assert.equal(showCommand, `todo show ${boundaryTask.id} --profile=--boundary`);
+  assert.equal(showCommand, `todo show ${boundaryTask.id} --profile=--boundary --credential-profile work`);
   const quotedBinary = "'" + manifest.cli.replaceAll("'", "'\\''") + "'";
   const shown = spawnSync("/bin/sh", ["-c", quotedBinary + " " + showCommand.slice(5) + " --format json"], { env, encoding: "utf8", timeout: 20000 });
   actions.push({ command: showCommand, exit: shown.status, stdout: shown.stdout, stderr: shown.stderr });
   assert.equal(shown.status, 0, shown.stdout || shown.stderr);
   assert.equal(JSON.parse(shown.stdout).task.id, boundaryTask.id);
+  verifyCredentialSelection({ binary: manifest.cli, env, home, passphrase, scopedCredential: writer.credential, workTask: target.id, actions });
   passed = true;
 } finally {
   let serverExit: number | null = null;

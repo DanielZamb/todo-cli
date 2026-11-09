@@ -89,6 +89,11 @@ import {
   labelAttachment,
   withAttachmentStatus,
 } from "./attachments.ts";
+import {
+  credentialProfileName,
+  loadCredential,
+  credentialFile as sessionFile,
+} from "./credential-profile.ts";
 import { diagnosticsOutput, diagnosticsRead } from "./diagnostics.ts";
 import { directoryOutput, lookupOutput } from "./discovery.ts";
 import { manualPage, withGuide } from "./help.ts";
@@ -157,8 +162,6 @@ const io = <A>(run: () => A) =>
         : new CommandError(1, "runtime_error", String(error)),
   });
 const localDir = join(homedir(), ".todo-cli");
-const sessionFile = (profile: string) =>
-  join(localDir, `session_${encodeURIComponent(profile)}.json`);
 const Config = Schema.Struct({ db_path: Schema.optionalKey(Schema.String) });
 const loadConfig = () =>
   existsSync(join(localDir, "config.json"))
@@ -166,18 +169,6 @@ const loadConfig = () =>
         JSON.parse(readFileSync(join(localDir, "config.json"), "utf8")),
       )
     : {};
-const loadCredential = (profile: string) => {
-  try {
-    const token = Schema.decodeUnknownSync(
-      Schema.Struct({
-        token: Schema.NonEmptyString.check(Schema.isPattern(/^\S+$/)),
-      }),
-    )(JSON.parse(readFileSync(sessionFile(profile), "utf8"))).token;
-    return token;
-  } catch {
-    throw new CommandError(3, "auth_required", "run todo login");
-  }
-};
 const canonicalPath = (path: string): string => {
   if (lstatSync(path, { throwIfNoEntry: false })) return realpathSync(path);
   return join(canonicalPath(dirname(path)), basename(path));
@@ -224,6 +215,7 @@ const root = Command.make("todo").pipe(
       Flag.withDefault("md"),
     ),
     profile: string("profile", "default"),
+    credentialProfile: stringFlag("credential-profile").pipe(Flag.optional),
     noColor: bool("no-color"),
     helpHuman: bool("help-human-flag"),
   }),
@@ -250,14 +242,14 @@ const withStore = <A, E, R>(
   });
 const access = (cfg: Settings) =>
   io(() => ({
-    credential: loadCredential(cfg.profile),
+    credential: loadCredential(cfg),
     profile: profileId(cfg.profile),
   }));
 const selectProfile = Effect.fn(function* (
   store: OperationStore,
   cfg: Settings,
 ) {
-  const credential = yield* io(() => loadCredential(cfg.profile));
+  const credential = yield* io(() => loadCredential(cfg));
   const profiles = yield* store.profiles();
   const profile = profiles.find(
     (p) => p.name === cfg.profile || p.id === cfg.profile,
@@ -372,11 +364,11 @@ const login = Command.make(
           yield* ensureProfile(store, cfg.profile);
           yield* io(() => {
             writeFileSync(
-              sessionFile(cfg.profile),
+              sessionFile(credentialProfileName(cfg)),
               JSON.stringify({ token: result.credential }),
               { mode: 0o600 },
             );
-            chmodSync(sessionFile(cfg.profile), 0o600);
+            chmodSync(sessionFile(credentialProfileName(cfg)), 0o600);
           });
           yield* response(
             cfg.format,
@@ -477,12 +469,14 @@ const resetPassphrase = Command.make(
 const logout = Command.make("logout", {}, () =>
   Effect.gen(function* () {
     const cfg = yield* root;
-    if (existsSync(sessionFile(cfg.profile)))
+    if (Option.isSome(cfg.credentialProfile))
+      yield* io(() => loadCredential(cfg));
+    if (existsSync(sessionFile(credentialProfileName(cfg))))
       yield* withStore(cfg, (store) =>
         Effect.gen(function* () {
           const request = yield* access(cfg);
           yield* store.auth.signOut({ credential: request.credential });
-          yield* io(() => rmSync(sessionFile(cfg.profile)));
+          yield* io(() => rmSync(sessionFile(credentialProfileName(cfg))));
         }),
       );
     yield* status(cfg.format, "logged_out", "logged out\n");
@@ -1472,7 +1466,7 @@ const diagnostics = Command.make(
   (input) =>
     Effect.gen(function* () {
       const cfg = yield* root;
-      const credential = yield* io(() => loadCredential(cfg.profile));
+      const credential = yield* io(() => loadCredential(cfg));
       const snapshot = diagnosticsRead(input.server, credential).pipe(
         Effect.flatMap((snapshot) =>
           write(diagnosticsOutput(snapshot, cfg.format, input.follow)),
@@ -1496,7 +1490,7 @@ const top = Command.make(
   (input) =>
     Effect.gen(function* () {
       const cfg = yield* root;
-      const credential = yield* io(() => loadCredential(cfg.profile));
+      const credential = yield* io(() => loadCredential(cfg));
       const read = diagnosticsRead(input.server, credential);
       if (
         !process.stdout.isTTY ||
@@ -1526,7 +1520,7 @@ const lookup = Command.make(
         );
       yield* withStore(cfg, (store) =>
         Effect.gen(function* () {
-          const credential = yield* io(() => loadCredential(cfg.profile));
+          const credential = yield* io(() => loadCredential(cfg));
           const matches = yield* new Discovery(store).lookup(credential, input);
           yield* write(
             cfg.format === "json"
@@ -1535,7 +1529,7 @@ const lookup = Command.make(
                   prefix: input.prefix,
                   matches,
                 })
-              : lookupOutput(matches, cfg.format),
+              : lookupOutput(matches, cfg.format, credentialProfileName(cfg)),
           );
         }),
       );
@@ -1551,7 +1545,7 @@ const profiles = Command.make("profile").pipe(
         const cfg = yield* root;
         yield* withStore(cfg, (store) =>
           Effect.gen(function* () {
-            const credential = yield* io(() => loadCredential(cfg.profile));
+            const credential = yield* io(() => loadCredential(cfg));
             const profiles = yield* input.projects
               ? new Discovery(store).directory(credential)
               : new ClientReads(store).profiles(credential);
@@ -1586,7 +1580,7 @@ const profiles = Command.make("profile").pipe(
           const cfg = yield* root;
           yield* withStore(cfg, (store) =>
             Effect.gen(function* () {
-              const credential = yield* io(() => loadCredential(cfg.profile));
+              const credential = yield* io(() => loadCredential(cfg));
               const profiles = yield* store.auth.profiles({ credential });
               const target = profiles.find(
                 (p) => p.name === input.name || p.id === input.name,
@@ -1684,7 +1678,7 @@ function snapshotUse<S extends Schema.ConstraintEncoder<unknown>>(
     yield* withStore(cfg, (store) =>
       Effect.gen(function* () {
         yield* store.auth.requireOwner({
-          credential: yield* io(() => loadCredential(cfg.profile)),
+          credential: yield* io(() => loadCredential(cfg)),
         });
         const result = yield* use(store, iso(nowInstant()));
         yield* response(
