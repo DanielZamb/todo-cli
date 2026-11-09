@@ -71,11 +71,13 @@ there is no search retry timer. Without Retry or SSE activity, Error can persist
 
 The headless state drive also runs
 `filterRecoveryPreservesOrdinaryRowsWithRawAppendCaseFoldTagsAndSyntheticSameNameProjects`.
-Compile the shared recovery fixture and provide its absolute path:
+`verify-write-state.py` compiles the shared recovery fixture
+`.agents/skills/verify-task-search/seed-recovery.ts` into its scratch directory
+and passes it to the tests as `SEC_SEARCH_RECOVERY_SEED`. Set that variable to an
+absolute compiled path only to reuse an existing build:
 
 ```sh
-bun build .agents/skills/verify-task-search/seed-recovery.ts --compile --outfile .scratch/bin/search-recovery-seed
-/Users/zambamon/Work/todo-cli/scripts/swift-slot.sh env SEC_SEARCH_RECOVERY_SEED="$PWD/.scratch/bin/search-recovery-seed" python3 apps/macos/scripts/verify-write-state.py "$PWD/apps/macos/evidence/search-recovery-new"
+/Users/zambamon/Work/todo-cli/scripts/swift-slot.sh python3 apps/macos/scripts/verify-write-state.py "$PWD/apps/macos/evidence/search-recovery-new"
 ```
 
 Three 100,000-U+FDFA descriptions make `probe` fail. Project Small or Tag keep
