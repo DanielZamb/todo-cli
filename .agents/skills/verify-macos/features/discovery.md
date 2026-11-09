@@ -31,7 +31,7 @@ the credential epoch and rejects navigation. The assertions use literal outcomes
 ## Offscreen sheets
 
 Run TODO_SNAPSHOT_DISCOVERY_ONLY=1 with apps/macos/scripts/verify-design.py and a
-fresh absolute evidence path. Require exit 0, 88 PNGs, manifest.json,
+fresh absolute evidence path. Require exit 0, 100 PNGs, manifest.json,
 discovery-layout.json and accessibility.json. Inspect Compact 393 by 426 first,
 light and dark, then full. Both dialogs cover ready, empty, loading, error,
 offline and dense scrolling content. Lookup adds Editing, Invalid, Copied and
@@ -79,3 +79,13 @@ import not-found path. Raw row details survive decoding and re-encoding, while
 agent message/recovery commands and routes stay out of the human notice. Opening
 Find dismisses the originating report sheet and preserves the editor/import draft.
 Deleted Task History remains readable and is asserted as such.
+
+Mixed ordinary/recovery/recovery/ordinary rows are proven through production
+ImportView, BatchEditView and AttachmentBatchView in both appearances and sizes.
+The offscreen state test requires each row bottom to precede the next row top,
+each recovery card inside its own row, and scrolling to reveal the final row.
+Import keeps a minimum ordinary row height and grows for recovery content.
+Twelve additional report end-scroll captures bring the focused manifest to 100.
+Read discovery-report-geometry.json from the full state proof and the report
+frames in discovery-layout.json. The original 56-point import-row failure stays
+in its red receipt; native batch and Attachment rows already size to content.

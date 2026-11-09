@@ -98,6 +98,10 @@ struct ImportView: View {
     @Bindable var model: TodoModel
     var compact = false
     @State private var choosingFile = false
+    private var onlyLookupRejections: Bool {
+        let errors = model.importReport?.items.compactMap(\.error) ?? []
+        return !errors.isEmpty && errors.allSatisfy(\.isTaskLookup)
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: compact ? 8 : 16) {
             Text(model.importReport.map { $0.dry_run ? "Preview import" : "Import results" } ?? "Import Tasks")
@@ -119,7 +123,7 @@ struct ImportView: View {
                         ForEach(Array(report.totals.nonzero.enumerated()), id: \.offset) { index, outcome in
                             if index > 0 { Text(" · ").foregroundStyle(.secondary) }
                             Text("\(outcome.count) \(outcome.name)")
-                                .foregroundStyle(outcome.name == "rejected" ? TodoColors.color("destructive") : .secondary)
+                                .foregroundStyle(outcome.name == "rejected" && !onlyLookupRejections ? TodoColors.color("destructive") : .secondary)
                         }
                         if report.totals.nonzero.isEmpty { Text("No changes").foregroundStyle(.secondary) }
                     }.font(.caption).lineLimit(1).importFrame(.summary)
@@ -154,14 +158,15 @@ struct ImportView: View {
                                     }.frame(maxWidth: .infinity, alignment: .leading)
                                     Text(row.outcomeText).font(.callout).foregroundStyle(row.outcome == "rejected" && row.error?.isTaskLookup != true ? TodoColors.color("destructive") : .primary).fixedSize()
                                 }.padding(.top, compact ? 0 : 12).padding(.bottom, compact ? 8 : 12)
-                                    .frame(height: compact ? 56 : nil, alignment: .top).importFrame(.row(index))
+                                    .frame(minHeight: compact ? 56 : nil, alignment: .top).importFrame(.row(index))
+                                    .reportErrorBounds("row-" + (row.task_id ?? row.external_id))
                                     .overlay(alignment: .bottom) { if compact { Divider() } }
                                 if !compact { Divider() }
                             }
                         }.padding(.trailing, 8)
                     }.scrollIndicators(.visible)
                         .frame(minHeight: compact ? 224 : 240, maxHeight: compact ? 224 : .infinity).clipped()
-                        .importFrame(.viewport).accessibilityIdentifier("import-preview-table")
+                        .importFrame(.viewport).reportErrorBounds("viewport").accessibilityIdentifier("import-preview-table")
                 }
             } else {
                 VStack(alignment: .leading, spacing: 12) {

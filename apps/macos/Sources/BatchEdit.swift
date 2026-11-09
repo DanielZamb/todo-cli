@@ -163,10 +163,10 @@ struct BatchEditView: View {
                       .font(.caption).foregroundStyle(row?.error == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(TodoColors.color("destructive")))
                   }
                 }.frame(maxWidth: .infinity, alignment: .leading)
-              }.toggleStyle(.checkbox).frame(minHeight: 56).disabled(model.busy || draft.loading).accessibilityLabel("Select \(task.title)")
+              }.toggleStyle(.checkbox).frame(minHeight: 56).disabled(model.busy || draft.loading).accessibilityLabel("Select \(task.title)").reportErrorBounds("row-" + task.id)
             }
           }.frame(maxWidth: .infinity, alignment: .leading)
-        }.frame(height: compact ? 112 : 224).accessibilityLabel("Tasks to edit")
+        }.frame(height: compact ? 112 : 224).accessibilityLabel("Tasks to edit").reportErrorBounds("viewport")
         Divider()
         if let error = draft.error { ClientErrorNotice(model: model, text: error, position: .batchEdit) }
         HStack(spacing: 8) {

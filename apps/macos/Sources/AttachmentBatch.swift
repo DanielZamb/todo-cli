@@ -121,10 +121,10 @@ struct AttachmentBatchView: View {
                   }
                 }
               }.toggleStyle(.checkbox).frame(minHeight: 56).disabled(model.busy)
-              .accessibilityLabel("Select \(task.title)").batchBounds("batch-row-\(task.id)")
+              .accessibilityLabel("Select \(task.title)").reportErrorBounds("row-" + task.id).batchBounds("batch-row-\(task.id)")
             }
           }.frame(maxWidth: .infinity, alignment: .leading)
-        }.frame(height: 224).batchBounds("batch-viewport")
+        }.frame(height: 224).reportErrorBounds("viewport").batchBounds("batch-viewport")
         Divider()
         if let error = draft.error { ClientErrorNotice(model: model, text: error, position: .attachmentBatch) }
         HStack(spacing: 8) {

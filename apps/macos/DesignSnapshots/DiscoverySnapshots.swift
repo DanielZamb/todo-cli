@@ -4,7 +4,7 @@ import Testing
 import TodoAPI
 @testable import TodoState
 
-@MainActor private final class DiscoveryFrames { var frames: [String: CGRect] = [:] }
+@MainActor private final class DiscoveryFrames { var frames: [String: CGRect] = [:]; var reportFrames: [String: CGRect] = [:] }
 
 @MainActor struct DiscoverySnapshots {
     @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DISCOVERY_ONLY"] == "1"))
@@ -26,7 +26,8 @@ import TodoAPI
             ("lookup-copy-failed", .lookup, .showing), ("lookup-dense", .lookup, .showing),
             ("show-gone", .lookup, .error), ("editor-not-found", .lookup, .error),
             ("history-not-found", .lookup, .error), ("batch-not-found", .lookup, .error),
-            ("import-not-found", .lookup, .error), ("attachment-not-found", .lookup, .error)
+            ("import-not-found", .lookup, .error), ("attachment-not-found", .lookup, .error),
+            ("batch-not-found-end", .lookup, .error), ("import-not-found-end", .lookup, .error), ("attachment-not-found-end", .lookup, .error)
         ]
         for compact in [true, false] {
             for scheme in [ColorScheme.light, .dark] {
@@ -40,7 +41,7 @@ import TodoAPI
                     model.discovery.dialog = dialog
                     model.discovery.phase = phase
                     model.discovery.prefix = phase == .invalid ? "invalid!" : "aaaa"
-                    model.discovery.error = phase == .invalid ? "Enter 1 to 36 hexadecimal digits or hyphens." : "Task not found in Profile Work (work). Use Find Task by id to search Profiles available to this credential.\nerror 3 - not found or auth missing"
+                    model.discovery.error = phase == .invalid ? "Enter 1 to 36 hexadecimal digits or hyphens." : model.describe(RequestFailure(status: 500, message: "Couldn't read discovery. Try again.", exitCode: 1, exitMeaning: "runtime failure"), at: .discovery)
                     let identity = DiscoveryIdentity(credentialEpoch: 0, generation: 0, dialog: dialog, prefix: "aaaa")
                     let projects = [DiscoveryName(id: "63bbdd22-1111-4222-8333-444444444444", name: "ARG")]
                     let profiles = [ProfileDirectoryEntry(id: "work", name: "Work", projects: projects), ProfileDirectoryEntry(id: "personal", name: "Personal", projects: [])]
@@ -49,26 +50,32 @@ import TodoAPI
                         model.discovery.copiedID = match.id
                         model.taskIDCopyFeedback = name == "lookup-copied" ? "Copied" : "Couldn't copy. Try again."
                     }
-                    let contextual = name == "show-gone" || name.hasSuffix("not-found")
+                    let contextual = name == "show-gone" || name.contains("not-found")
                     let failure = ServerFailure(message: "Run todo list --prefix aa. HTTP: GET /tasks/lookup?prefix=aa.", code: "not_found", exitCode: 3, exitMeaning: "not found or auth missing", details: .init(profile: .init(id: "work", name: "Work"), taskID: match.task_id))
-                    let reportTask = TaskSnapshot(id: match.task_id, profile_id: "work", row_version: 1, title: "Removed selected Task", description: nil, priority: "P3", source: "manual", status: "open", project_id: nil, tags: [], due_at: nil, scheduled_at: nil, energy: nil, estimate_min: nil, occurrence: nil, legacy_series_detached: nil, deleted_at: nil)
-                    if name == "batch-not-found" {
+                    let reportIDs = ["ordinary-before", "aa", "bb", "ordinary-after"]
+                    let reportTitles = ["Ordinary before", "First missing Task", "Second missing Task", "Ordinary after"]
+                    let reportTasks = reportIDs.indices.map { TaskSnapshot(id: reportIDs[$0], profile_id: "work", row_version: 1, title: reportTitles[$0], description: nil, priority: "P3", source: "manual", status: "open", project_id: nil, tags: [], due_at: nil, scheduled_at: nil, energy: nil, estimate_min: nil, occurrence: nil, legacy_series_detached: nil, deleted_at: nil) }
+                    func reportFailure(_ index: Int) -> ServerFailure? {
+                        guard index == 1 || index == 2 else { return nil }
+                        return .init(message: "Run todo lookup --prefix aa. HTTP: GET /tasks/lookup?prefix=aa.", code: "not_found", exitCode: 3, exitMeaning: "not found or auth missing", details: .init(profile: .init(id: "work", name: "Work"), taskID: reportIDs[index]))
+                    }
+                    if name.hasPrefix("batch-not-found") {
                         model.batchEdit = BatchEditDraft(profile: "work")
-                        model.batchEdit?.targets = [reportTask]
-                        model.batchEdit?.selected = [reportTask.id]
+                        model.batchEdit?.targets = reportTasks
+                        model.batchEdit?.selected = Set(reportIDs)
                         model.batchEdit?.loading = false
-                        model.batchEdit?.report = .init(dry_run: true, items: [.init(task_id: reportTask.id, from_version: 1, current_version: nil, outcome: "rejected", error: failure)])
+                        model.batchEdit?.report = .init(dry_run: true, items: reportIDs.indices.map { .init(task_id: reportIDs[$0], from_version: 1, current_version: 1, outcome: reportFailure($0) == nil ? "updated" : "rejected", error: reportFailure($0)) })
                     }
-                    if name == "attachment-not-found" {
+                    if name.hasPrefix("attachment-not-found") {
                         model.attachmentBatch = .init(profile: "work", reference: .init(id: "reference", location: .link(URL(string: "https://example.com/report")!), added_at: "2026-11-09T00:00:00Z"))
-                        model.attachmentBatch?.targets = [reportTask]
-                        model.attachmentBatch?.selected = [reportTask.id]
+                        model.attachmentBatch?.targets = reportTasks
+                        model.attachmentBatch?.selected = Set(reportIDs)
                         model.attachmentBatch?.loading = false
-                        model.attachmentBatch?.report = .init(dry_run: true, items: [.init(task_id: reportTask.id, outcome: "rejected", current_version: nil, error: failure)])
+                        model.attachmentBatch?.report = .init(dry_run: true, items: reportIDs.indices.map { .init(task_id: reportIDs[$0], outcome: reportFailure($0) == nil ? "attached" : "rejected", current_version: 1, error: reportFailure($0)) })
                     }
-                    if name == "import-not-found" {
-                        model.loadImport(data: Data(#"[{"external_id":"fixture:a","title":"Removed selected Task"}]"#.utf8), name: "Typed UI fixture; live import returns Conflict")
-                        model.importReport = .init(generated_at: "2026-11-09T00:00:00Z", dry_run: true, items: [.init(external_id: "fixture:a", outcome: "rejected", task_id: reportTask.id, from_version: 1, changed_fields: [], error: failure)], totals: .init(created: 0, updated: 0, unchanged: 0, rejected: 1))
+                    if name.hasPrefix("import-not-found") {
+                        model.loadImport(data: try JSONSerialization.data(withJSONObject: reportIDs.indices.map { ["external_id": reportIDs[$0], "title": reportTitles[$0]] }), name: "Typed UI fixture; live import returns Conflict")
+                        model.importReport = .init(generated_at: "2026-11-09T00:00:00Z", dry_run: true, items: reportIDs.indices.map { .init(external_id: reportIDs[$0], outcome: reportFailure($0) == nil ? "updated" : "rejected", task_id: reportIDs[$0], from_version: 1, changed_fields: [], error: reportFailure($0)) }, totals: .init(created: 0, updated: 2, unchanged: 0, rejected: 2))
                     }
                     let frames = DiscoveryFrames()
                     let width: CGFloat = compact ? 393 : 1024
@@ -82,11 +89,11 @@ import TodoAPI
                             }.frame(width: width, height: height)
                             Color.black.opacity(0.08)
                         }
-                        if name == "batch-not-found" {
+                        if name.hasPrefix("batch-not-found") {
                             BatchEditView(model: model, compact: compact).background(.background)
-                        } else if name == "attachment-not-found" {
+                        } else if name.hasPrefix("attachment-not-found") {
                             AttachmentBatchView(model: model).background(.background)
-                        } else if name == "import-not-found" {
+                        } else if name.hasPrefix("import-not-found") {
                             ImportView(model: model, compact: compact).background(.background)
                         } else if contextual {
                             VStack(alignment: .leading, spacing: 16) {
@@ -100,6 +107,7 @@ import TodoAPI
                         }
                     }.frame(width: width, height: height)
                         .onPreferenceChange(CompactLayoutKey.self) { value in MainActor.assumeIsolated { frames.frames = value } }
+                        .onPreferenceChange(ReportErrorLayoutFrames.self) { value in MainActor.assumeIsolated { frames.reportFrames = value } }
                         .environment(\.colorScheme, scheme).environment(\.controlActiveState, .key)
                         .tint(TodoColors.color("primary")).background(.background)
                     let controller = NSHostingController(rootView: view)
@@ -112,12 +120,28 @@ import TodoAPI
                     host.layoutSubtreeIfNeeded()
                     try await Task.sleep(for: .milliseconds(120))
                     host.layoutSubtreeIfNeeded()
+                    if name.contains("not-found") && !name.hasPrefix("editor") && !name.hasPrefix("history") {
+                        func scrollViews(_ view: NSView) -> [NSScrollView] { (view as? NSScrollView).map { [$0] } ?? view.subviews.flatMap(scrollViews) }
+                        let scroller = try #require(scrollViews(host).max { ($0.documentView?.frame.height ?? 0) < ($1.documentView?.frame.height ?? 0) })
+                        let document = try #require(scroller.documentView)
+                        let maximum = max(0, document.frame.height - scroller.contentView.bounds.height)
+                        let offset = name.hasSuffix("-end") ? maximum : min(56, maximum)
+                        scroller.contentView.scroll(to: .init(x: 0, y: document.isFlipped ? offset : maximum - offset))
+                        scroller.reflectScrolledClipView(scroller.contentView)
+                        host.layoutSubtreeIfNeeded()
+                        try await Task.sleep(for: .milliseconds(100))
+                        if name.hasSuffix("-end") {
+                            let last = try #require(frames.reportFrames["row-ordinary-after"])
+                            let viewport = try #require(frames.reportFrames["viewport"])
+                            #expect(last.minY >= viewport.minY - 0.5 && last.maxY <= viewport.maxY + 0.5)
+                        }
+                    }
                     let file = "discovery-\(compact ? "compact" : "full")-\(name)-\(scheme == .light ? "light" : "dark").png"
                     for key in contextual ? [] : dialog == .lookup ? ["discovery-close", "discovery-find", "discovery-prefix"] : ["discovery-close"] {
                         let frame = try #require(frames.frames[key])
                         #expect(frame.minX >= 0 && frame.maxX <= width && frame.minY >= 0 && frame.maxY <= height, "\(file) \(key) \(frame)")
                     }
-                    geometry[file] = frames.frames.mapValues { [Double($0.minX), Double($0.minY), Double($0.width), Double($0.height)] }
+                    geometry[file] = frames.frames.merging(frames.reportFrames, uniquingKeysWith: { _, next in next }).mapValues { [Double($0.minX), Double($0.minY), Double($0.width), Double($0.height)] }
                     let bitmap = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
                     host.cacheDisplay(in: host.bounds, to: bitmap)
                     try #require(bitmap.representation(using: .png, properties: [:])).write(to: directory.appendingPathComponent(file))
@@ -126,7 +150,7 @@ import TodoAPI
                 }
             }
         }
-        #expect(files.count == 88)
+        #expect(files.count == 100)
         try JSONSerialization.data(withJSONObject: ["files": files], options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("manifest.json"))
         try JSONSerialization.data(withJSONObject: geometry, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("discovery-layout.json"))
     }

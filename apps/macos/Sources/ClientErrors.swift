@@ -4,8 +4,12 @@ import TodoAPI
 enum ClientErrorPosition { case message, editor, history, discovery, taskLoad, quickAdd, parse, importTasks, profileDeletion, snapshot, batchEdit, attachmentBatch }
 
 extension TodoModel {
+    func serverError(at position: ClientErrorPosition, text: String?) -> ServerFailure? {
+        guard let failure = serverErrors[position], failure.humanMessage == text else { return nil }
+        return failure
+    }
     func lookupError(at position: ClientErrorPosition, text: String?) -> ServerFailure? {
-        guard let failure = lookupErrors[position], failure.humanMessage == text else { return nil }
+        guard let failure = serverError(at: position, text: text), failure.isTaskLookup else { return nil }
         return failure
     }
 
@@ -34,6 +38,7 @@ struct TaskLookupErrorNotice: View {
             Button("Find Task by id") { Task { await model.findTaskAfterLookupError(failure) } }
                 .buttonStyle(.bordered).accessibilityIdentifier("discovery-error-find")
         }.accessibilityIdentifier("task-lookup-error")
+            .reportErrorBounds("card-" + (failure.details?.task_id ?? "unknown"))
     }
 }
 
@@ -42,8 +47,8 @@ struct ClientErrorNotice: View {
     let text: String
     let position: ClientErrorPosition
     var body: some View {
-        if let failure = model.lookupError(at: position, text: text) {
-            TaskLookupErrorNotice(model: model, failure: failure)
+        if let failure = model.serverError(at: position, text: text) {
+            ServerErrorNotice(model: model, failure: failure, neutral: position == .discovery)
         } else {
             Text(text).foregroundStyle(position == .discovery ? Color.primary : TodoColors.color("destructive")).fixedSize(horizontal: false, vertical: true)
         }
@@ -53,8 +58,25 @@ struct ClientErrorNotice: View {
 struct ServerErrorNotice: View {
     let model: TodoModel
     let failure: ServerFailure
+    var neutral = false
     var body: some View {
         if failure.isTaskLookup { TaskLookupErrorNotice(model: model, failure: failure) }
-        else { Text(failure.humanMessage).font(.caption).foregroundStyle(TodoColors.color("destructive")) }
+        else {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(failure.primaryMessage).foregroundStyle(neutral ? Color.primary : TodoColors.color("destructive"))
+                if let detail = failure.exitDetail { Text(detail).font(.caption).foregroundStyle(.secondary) }
+            }
+        }
+    }
+}
+
+struct ReportErrorLayoutFrames: PreferenceKey {
+    static let defaultValue: [String: CGRect] = [:]
+    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) { value.merge(nextValue(), uniquingKeysWith: { _, next in next }) }
+}
+
+extension View {
+    func reportErrorBounds(_ name: String) -> some View {
+        background(GeometryReader { geometry in Color.clear.preference(key: ReportErrorLayoutFrames.self, value: [name: geometry.frame(in: .global)]) })
     }
 }

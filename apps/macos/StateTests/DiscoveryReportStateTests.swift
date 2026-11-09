@@ -1,4 +1,6 @@
 import Foundation
+import AppKit
+import SwiftUI
 import HTTPTypes
 import OpenAPIRuntime
 import OpenAPIURLSession
@@ -148,5 +150,91 @@ private actor DiscoveryWithoutSSE: ClientTransport {
         #expect(model.importDocument?.title(at: 0) == "Keep imported draft")
         model.closeDiscovery()
         try record("discovery-report-rows-http.json", ["batch": "not_found", "attachment": "not_found", "deletedImport": "task_deleted", "purgedImport": "occ_conflict", "importNotFoundNotice": "typed UI fixture", "findRequests": 0, "detailsPreserved": true])
+    }
+}
+
+@MainActor private final class DiscoveryReportFrames { var frames: [String: CGRect] = [:] }
+
+@Test @MainActor func mixedReportRowsKeepCardsContainedAndReachFinalRow() async throws {
+    NSApplication.shared.setActivationPolicy(.prohibited)
+    var receipts: [[String: Any]] = []
+    for surface in ["import", "batch", "attachment"] {
+        for compact in [true, false] {
+            for dark in [false, true] {
+                let model = TodoModel(configuration: .init(server: URL(string: "http://127.0.0.1:1")!, initialProfile: "work", vaultService: "unused-report-geometry"))
+                model.signedIn = true; model.connection = .live
+                let ids = ["ordinary-before", "aa", "bb", "ordinary-after"]
+                let tasks = ids.map { TaskSnapshot(id: $0, profile_id: "work", row_version: 1, title: $0, description: nil, priority: "P3", source: "manual", status: "open", project_id: nil, tags: [], due_at: nil, scheduled_at: nil, energy: nil, estimate_min: nil, occurrence: nil, legacy_series_detached: nil, deleted_at: nil) }
+                func failure(_ index: Int) -> ServerFailure? {
+                    guard index == 1 || index == 2 else { return nil }
+                    return .init(message: "Agent-only recovery", code: "not_found", exitCode: 3, exitMeaning: "not found or auth missing", details: .init(profile: .init(id: "work", name: "Work"), taskID: ids[index]))
+                }
+                let width: CGFloat = compact ? 393 : surface == "import" ? 720 : 480
+                let height: CGFloat = compact ? 426 : surface == "import" ? 620 : 600
+                let content: AnyView
+                if surface == "import" {
+                    model.loadImport(data: try JSONSerialization.data(withJSONObject: ids.map { ["external_id": $0, "title": $0] }), name: "Typed UI fixture; live import returns Conflict")
+                    model.importReport = .init(generated_at: "2026-11-09T00:00:00Z", dry_run: true, items: ids.indices.map { .init(external_id: ids[$0], outcome: failure($0) == nil ? "updated" : "rejected", task_id: ids[$0], from_version: 1, changed_fields: [], error: failure($0)) }, totals: .init(created: 0, updated: 2, unchanged: 0, rejected: 2))
+                    content = AnyView(ImportView(model: model, compact: compact))
+                } else if surface == "batch" {
+                    model.batchEdit = BatchEditDraft(profile: "work")
+                    model.batchEdit?.targets = tasks; model.batchEdit?.selected = Set(ids); model.batchEdit?.loading = false
+                    model.batchEdit?.report = .init(dry_run: true, items: ids.indices.map { .init(task_id: ids[$0], from_version: 1, current_version: 1, outcome: failure($0) == nil ? "updated" : "rejected", error: failure($0)) })
+                    content = AnyView(BatchEditView(model: model, compact: compact))
+                } else {
+                    model.attachmentBatch = .init(profile: "work", reference: .init(id: "reference", location: .link(URL(string: "https://example.com/report")!), added_at: "2026-11-09T00:00:00Z"))
+                    model.attachmentBatch?.targets = tasks; model.attachmentBatch?.selected = Set(ids); model.attachmentBatch?.loading = false
+                    model.attachmentBatch?.report = .init(dry_run: true, items: ids.indices.map { .init(task_id: ids[$0], outcome: failure($0) == nil ? "attached" : "rejected", current_version: 1, error: failure($0)) })
+                    content = AnyView(AttachmentBatchView(model: model))
+                }
+                let frames = DiscoveryReportFrames()
+                let view = content.onPreferenceChange(ReportErrorLayoutFrames.self) { value in MainActor.assumeIsolated { frames.frames = value } }.environment(\.colorScheme, dark ? .dark : .light).frame(width: width, height: height)
+                let controller = NSHostingController(rootView: view)
+                let window = NSWindow(contentRect: .init(x: -10000, y: -10000, width: width, height: height), styleMask: [.borderless], backing: .buffered, defer: false)
+                window.isReleasedWhenClosed = false
+                window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+                window.contentViewController = controller
+                controller.view.frame = .init(x: 0, y: 0, width: width, height: height)
+                controller.view.layoutSubtreeIfNeeded()
+                try await Task.sleep(for: .milliseconds(100))
+                func scrollViews(_ view: NSView) -> [NSScrollView] { (view as? NSScrollView).map { [$0] } ?? view.subviews.flatMap(scrollViews) }
+                let scroller = try #require(scrollViews(controller.view).max { ($0.documentView?.frame.height ?? 0) < ($1.documentView?.frame.height ?? 0) })
+                let document = try #require(scroller.documentView)
+                var pairs: Set<Int> = []
+                var cards: Set<String> = []
+                for fraction in [CGFloat(0), 0.25, 0.5, 0.75, 1] {
+                    let maximum = max(0, document.frame.height - scroller.contentView.bounds.height)
+                    scroller.contentView.scroll(to: .init(x: 0, y: document.isFlipped ? maximum * fraction : maximum * (1 - fraction)))
+                    scroller.reflectScrolledClipView(scroller.contentView)
+                    controller.view.layoutSubtreeIfNeeded()
+                    try await Task.sleep(for: .milliseconds(60))
+                    for index in 0..<3 {
+                        if let first = frames.frames["row-" + ids[index]], let next = frames.frames["row-" + ids[index + 1]] {
+                            #expect(first.maxY <= next.minY + 0.5)
+                            pairs.insert(index)
+                        }
+                    }
+                    for id in ["aa", "bb"] {
+                        if let card = frames.frames["card-" + id], let row = frames.frames["row-" + id] {
+                            #expect(card.minY >= row.minY - 0.5 && card.maxY <= row.maxY + 0.5)
+                            #expect(card.minX >= row.minX - 0.5 && card.maxX <= row.maxX + 0.5)
+                            if surface == "import" { #expect(row.height >= 90) }
+                            cards.insert(id)
+                        }
+                    }
+                }
+                #expect(pairs.sorted() == [0, 1, 2])
+                #expect(cards.sorted() == ["aa", "bb"])
+                let last = try #require(frames.frames["row-ordinary-after"])
+                let viewport = try #require(frames.frames["viewport"])
+                #expect(last.minY >= viewport.minY - 0.5 && last.maxY <= viewport.maxY + 0.5)
+                receipts.append(["surface": surface, "compact": compact, "dark": dark, "adjacentPairs": pairs.sorted(), "containedCards": cards.sorted(), "finalRowVisible": true])
+                window.close()
+            }
+        }
+    }
+    #expect(receipts.count == 12)
+    if let base = ProcessInfo.processInfo.environment["TODO_W06_RECEIPT"] {
+        try JSONSerialization.data(withJSONObject: receipts, options: [.prettyPrinted, .sortedKeys]).write(to: URL(fileURLWithPath: base).deletingLastPathComponent().appendingPathComponent("discovery-report-geometry.json"))
     }
 }

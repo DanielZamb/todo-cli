@@ -77,7 +77,7 @@ final class TodoModel {
     private var importGeneration = 0
     private var parseGeneration = 0
     private var historyGeneration = 0
-    var lookupErrors: [ClientErrorPosition: ServerFailure] = [:]
+    var serverErrors: [ClientErrorPosition: ServerFailure] = [:]
     let discovery = DiscoveryState()
     var signedIn = false { didSet { if !signedIn { discovery.credentialChanged() } } }
     var canRestore = false
@@ -122,7 +122,7 @@ final class TodoModel {
         parseGeneration += 1
         historyGeneration += 1
         seriesGeneration += 1
-        lookupErrors = [:]
+        serverErrors = [:]
         credential = value
     }
     private var streamTask: Task<Void, Never>?
@@ -1286,7 +1286,7 @@ final class TodoModel {
     }
     func describe(_ error: Error, at position: ClientErrorPosition = .message) -> String {
         let server = failure(error)?.body ?? (error as? ServerFailure)
-        lookupErrors[position] = server?.isTaskLookup == true ? server : nil
+        serverErrors[position] = server
         if let server { return server.humanMessage }
         if error is DecodingError { return "The server response could not be read. Your draft is preserved." }
         if let draft = error as? DraftError { return draft.localizedDescription }
