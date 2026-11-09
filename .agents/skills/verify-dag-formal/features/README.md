@@ -9,3 +9,8 @@
 Run `bun .agents/skills/verify-dag-formal/check.mjs` from the root. Exit 0 covers
 the stated checkpoint, pinned to f140c7b09bcb1db48ce4ccaee797ecfe60019ce4.
 Final public commands, clients and fresh discovery remain pending.
+
+The [public continuation](public.md) is separately pinned to e7170510. Its
+unaffected diagnostic subset excludes the known failing malformed CLI boundary.
+G11 root-only response and clients await an explicit corrected B SHA. The f140
+proof above remains historical and is not final public acceptance.

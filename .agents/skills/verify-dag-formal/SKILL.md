@@ -1,6 +1,6 @@
 ---
 name: verify-dag-formal
-description: Check finite Task dependency transaction safety plus generated production algorithm/replay properties against a pinned immutable commit. Use after DAG validation, serialization, event, replay or graph algorithm changes. Final public commands and client mapping remain pending.
+description: Check finite Task dependency safety and immutable production conformance. Use after graph, transaction, replay or public Dependency changes. The e717 public checkpoint retains a known malformed CLI failure; G11 response and clients await a corrected candidate.
 ---
 
 # Verify Task dependency safety and production conformance
@@ -14,6 +14,49 @@ Created with create-formal-verification-skill. Read [mapping.md](mapping.md),
 [coverage.json](coverage.json), the [feature index](features/README.md) and the
 [report](../../../docs/decisions/task-dag/unit-f-report.md). This is the second
 conformance checkpoint, not final F approval or whole-feature L2/L3 proof.
+
+## Current public continuation
+
+Use [public-coverage.json](public-coverage.json) and
+[the public mapping](features/public.md) for the explicit final B candidate
+`e7170510a376b51eaf3525bb9933cb0dd588b233`. Read its code from Git objects only.
+
+```sh
+bun .agents/skills/verify-dag-formal/public-check.mjs
+```
+
+This command currently exits 1 at the literal malformed CLI Version-0 property.
+An existing-edge add with --expected-version 0 must fail usage at exit 2; e717
+returns runtime_error at exit 1. Preserve the failure. L1 included it in B's
+combined correction round. A failure is not a negative-control pass.
+
+To finish checks unaffected by that finding and the G11 response amendment:
+
+```sh
+bun .agents/skills/verify-dag-formal/public-check.mjs unaffected
+```
+
+Exit 0 means diagnostic-pass for the explicitly selected subset, not public or
+F acceptance. It runs public assertions, actual product-source mutations with
+successful compilation and intended AssertionError failures, byte-exact
+restoration and clean reruns, raw replay/integration and a final fresh clean
+compilation. The runner captures process exits and dependency/import hashes.
+Every server has a recorded PID and a 60-second startup deadline, including its
+initial daily Snapshot before no-write comparisons. Products compile once per
+source hash into this worktree's scratch; cached binary hashes are checked.
+
+G11 at ca142014 pauses old GraphReport conformance. GraphNode must have exactly
+mermaid_id, task, in_degree, out_degree, ready, blocked, depth and
+remaining_energy. Only GraphReport's requested Task gets ancestors, descendants
+and lightest_next, each in whole-Profile topological order. The unexecuted
+root-response-fixture.mjs defines a 1,000-Task chain and exact root/node-key
+assertions for the next explicit corrected B SHA. Actual serialized before/after
+bytes and final graph/client mappings remain pending. Do not run the old public
+graph driver as final G11 evidence. Unknown-energy sorting remains deferred.
+
+The original commands below reproduce the earlier f140 checkpoint. Their
+successful results must not be cited as final e717 public proof. AtomicCAS is
+still a separate one-Task/no-edge proof maintained by B.
 
 ## Run
 

@@ -25,8 +25,10 @@ export function materialize(root, directory, pin) {
       "-r",
       "-z",
       pin.commit,
-      "packages/domain",
-      ".agents/skills/verify-occ-atomicity",
+      ...(pin.scopes ?? [
+        "packages/domain",
+        ".agents/skills/verify-occ-atomicity",
+      ]),
     ],
     { cwd: root, encoding: "utf8", maxBuffer: 4 * 1024 * 1024 },
   );
@@ -45,7 +47,7 @@ export function materialize(root, directory, pin) {
       writeFileSync(join(directory, path), bytes);
       return { path, gitBlob: blob, sha256: digest(bytes) };
     });
-  const manifests = [
+  const manifests = pin.manifests ?? [
     "package.json",
     "pnpm-lock.yaml",
     "packages/domain/package.json",

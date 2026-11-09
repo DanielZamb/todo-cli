@@ -79,3 +79,46 @@ surfaces, final client/runtime mapping and fresh Claude discovery remain pending
 Do not infer whole-feature L2/L3 or unbounded safety from this checkpoint.
 AtomicCAS maintenance belongs to B; F executes its unchanged candidate command
 and records that result without editing its skill or pins.
+
+## e717 public continuation and G11 hold
+
+public-coverage.json is a separate reviewed mapping at
+`e7170510a376b51eaf3525bb9933cb0dd588b233`; production-pin.json/coverage.json
+retain the f140 algorithm checkpoint. Do not replace the historical receipts.
+The public pin materializes domain, API, CLI and server Git objects into owned
+ignored inputs. Package manifests and every installed dependency version must
+match before compilation. Workspace exports resolve to those immutable inputs.
+Cached binaries retain their exact source-hash, loaded-module and binary-hash
+receipts; changed source gets a distinct binary under this worktree's scratch.
+
+[Public coverage](features/public.md) maps each assertion to its concrete
+command and source mutation. TaskCommands.change checks deletion fingerprint
+under auth.mutate's writer transaction. DependencyCommands.change validates
+input and authorization before recognizing no-ops, and reads the graph under
+the lock. executeBatch forks for dry-run and uses one command transaction per
+item. executeImport resolves external ids against actual successful Tasks in
+its writer transaction. ImportRow's sole details shape preserves both
+current_version and nested DependencyError during HTTP encoding. TaskCommands.result
+and cliResult forward the full captured refusal while recordRejection keeps
+bounded durable details. Purge redacts rejected witnesses and preserves edge
+facts for exact replay. No refusal assertion substitutes a later durable graph.
+
+TaskFilters/filterTaskRecords uses the whole-Profile graph before view and
+filter membership. dependencyState, graphEnergy, topologicalOrder and
+checkDependencyAddition are byte-identical to the f140 reviewed source; all
+four hashes are verified again at e717. Store changes since f140 add full
+witness propagation to recordRejection and Move's rejection return. Transaction,
+projection, snapshot and dependency-Version ownership remain as mapped above.
+Retained replay/integration controls run against these exact e717 inputs.
+
+The default public command intentionally fails the malformed CLI Version-0
+property at e717. It returns exit 1/runtime_error instead of exit 2/invalid_args.
+This is a product finding, deduplicated by L1 into B's combined fix round.
+It is not converted into a pass or counted as a sensitivity control.
+
+G11 at ca142014 supersedes per-node graph closures and the prior response
+lightest_next ordering. No new final mapping is claimed for GraphNode,
+GraphReport, queryGraph/readGraph, Mermaid identity, CLI graph Markdown,
+OpenAPI/Swift or clients. The unexecuted root-response fixture specifies the
+literal 1,000-node assertion for a later explicit corrected candidate. B's
+unknown-energy tie key is expressly unchanged and outside this amendment.

@@ -1,0 +1,21 @@
+{
+  "commit": "e7170510a376b51eaf3525bb9933cb0dd588b233",
+  "scope": "Unaffected public/model/replay checkpoint only; root-only GraphReport amendment awaits an explicit replacement B SHA",
+  "scopes": [
+    "packages/domain",
+    "packages/api",
+    "apps/cli/src",
+    "apps/cli/package.json",
+    "apps/server/src",
+    "apps/server/package.json",
+    ".agents/skills/verify-occ-atomicity"
+  ],
+  "manifests": [
+    "package.json",
+    "pnpm-lock.yaml",
+    "packages/domain/package.json",
+    "packages/api/package.json",
+    "apps/cli/package.json",
+    "apps/server/package.json"
+  ]
+}
