@@ -60,3 +60,36 @@ ADR-0019 is reserved by the coordinator because the parallel DAG branch already
 reserves ADR-0016 through ADR-0018. Error responses add the actual exit code and
 its meaning. Markdown and both apps share `error 3 - not found or auth missing`
 as the human wording. JSON keeps exit_code and exit_meaning.
+
+## Amendment, 2026-11-09: CLI credential selection
+
+The CLI stores a credential under a Profile name. Previously `--profile` chose
+both that file and the target Profile. A lookup could find a Task in another
+Profile but print a Show command that failed because the destination had no
+stored credential. An unscoped agent Token could authorize the read and still
+have no way to select its stored key separately from the target.
+
+The global `--credential-profile <name>` flag explicitly selects the stored
+credential file for every command, reads and mutations. A single CLI resolver
+uses this value when supplied and otherwise uses today's `--profile` credential,
+or default. No implicit fallback searches other files. `lookup` and `profile
+list` have no target Profile. Their `--profile` selects a stored credential as
+today, and `--credential-profile` takes precedence when both are present.
+
+Lookup Markdown and table rows include `--credential-profile <used-name>` in
+the exact Show command when it differs from the result's Profile. CLI lookup
+recovery hints also carry the used credential name explicitly. A missing stored
+credential returns exit 3, auth_required, and names only that credential Profile.
+Existing behavior without the new selector stays unchanged.
+
+[ADR-0005](0005-single-owner-profiles-and-two-credential-kinds.md) is unchanged.
+Authentication still checks the selected key against the explicit target Profile.
+A scoped Token cannot read or mutate another Profile and learns no foreign
+names, ids, counts, or existence. Mutations still require the full Task id and
+the explicit target Profile. The selector chooses a key, never a Task.
+
+This is CLI credential plumbing. HTTP already carries its credential in the
+Authorization header, and both apps use one owner Session. Neither needs another
+UI control. We rejected credential-file fallback because it silently chooses a
+key the caller did not name. The compiled regression uses a source login and a
+destination logout, then proves that source lookup's printed Show command works.

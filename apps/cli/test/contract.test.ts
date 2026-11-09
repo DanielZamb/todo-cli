@@ -265,6 +265,7 @@ it("reports the current Version for every missing-Version and Conflict error", (
       .row_version,
   ).toBe(2);
 });
+// Runs the compiled CLI for every command in sequence and can pass 60 s on a loaded machine.
 it("validates every command's single JSON object against its published JSON Schema", async () => {
   const home = join(scratch, "conformance");
   const db = join(home, "scratch.db");
@@ -587,7 +588,7 @@ it("validates every command's single JSON object against its published JSON Sche
         2,
       )}\n`,
     );
-});
+}, 180000);
 it("keeps follow-mode terminal errors off the JSON stream", () => {
   expect(run(["schema", "error"]).code).toBe(0);
   for (const flags of [
