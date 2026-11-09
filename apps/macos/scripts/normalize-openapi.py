@@ -89,11 +89,36 @@ def normalize_tagged_unions(document):
         flattened = [visit(leaf) for member in members for leaf in leaves(member)]
         for key in ('kind', 'outcome'):
             values = [constant(member, key) for member in flattened]
-            if any(value is None for value in values) or len(set(values)) != len(values):
+            if any(value is None for value in values):
                 continue
+            groups = {}
+            for tag, member in zip(values, flattened):
+                groups.setdefault(tag, []).append(member)
+            disjoint = True
+            for group in groups.values():
+                if len(group) < 2:
+                    continue
+                versions = []
+                for member in group:
+                    schema = resolve(member)
+                    version = schema.get('properties', {}).get('entity_version', {})
+                    choices = version.get('enum', [version.get('const')])
+                    if 'entity_version' not in schema.get('required', []) or version.get('nullable') or len(choices) != 1 or not isinstance(choices[0], int):
+                        disjoint = False
+                        break
+                    versions.append(choices[0])
+                if len(set(versions)) != len(group):
+                    disjoint = False
+            if not disjoint:
+                continue
+            if len(groups) == 1:
+                del node['anyOf']
+                node['oneOf'] = flattened
+                return node
+            tagged = [(tag, group[0] if len(group) == 1 else {'oneOf': group}) for tag, group in groups.items()]
             references = []
             mapping = {}
-            for tag, member in zip(values, flattened):
+            for tag, member in tagged:
                 if '$ref' in member and len(member) == 1:
                     reference = member['$ref']
                 else:

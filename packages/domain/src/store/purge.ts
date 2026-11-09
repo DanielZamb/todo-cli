@@ -1,6 +1,7 @@
 import type { Database } from "bun:sqlite";
 import { Schema } from "effect";
-import type { Task, TaskDetails } from "../entities.ts";
+import { emptyDependencies } from "../dependencies.ts";
+import { Task, type TaskDetails } from "../entities.ts";
 import { Event, type OpLogEntry, TaskHistoryRedacted } from "../events.ts";
 import { type SeriesId, TaskId } from "../ids.ts";
 import { changes, metadata, Snapshot } from "./projection.ts";
@@ -10,12 +11,13 @@ const resolved = (entry: OpLogEntry) =>
     ? entry.event.replay
     : Schema.is(Event)(entry.event)
       ? {
-          ...changes(entry.event),
+          ...changes(entry.event, entry.profile),
           ...metadata(entry.event),
           versions: [],
           series_versions: [],
         }
       : {
+          dependencies: emptyDependencies(),
           tasks: [],
           series: [],
           projects: [],
@@ -32,9 +34,12 @@ const references = (value: unknown, id: TaskId): boolean =>
 const mentions = (value: unknown, id: TaskId): boolean => {
   if (Array.isArray(value)) return value.some((value) => mentions(value, id));
   if (value === null || typeof value !== "object") return false;
+  if (Schema.is(Task)(value) && value.id === id) return true;
   return Object.entries(value).some(
     ([key, value]) =>
-      (key === "task_id" && value === id) ||
+      (key === "path" && Array.isArray(value) && value.includes(id)) ||
+      (["task_id", "dependent_id", "blocker_id"].includes(key) &&
+        value === id) ||
       (["task", "before", "after", "next_occurrences"].includes(key) &&
         references(value, id)) ||
       mentions(value, id),
@@ -137,6 +142,10 @@ export function redactTaskHistory(
     const value = resolved(entry);
     const concernsTarget =
       (event.kind === "TaskHistoryRedacted" && event.task_ids.includes(id)) ||
+      [
+        ...(value.dependencies?.added ?? []),
+        ...(value.dependencies?.removed ?? []),
+      ].some((edge) => edge.dependent_id === id || edge.blocker_id === id) ||
       value.tasks.some(
         ({ before, after }) => before?.id === id || after?.id === id,
       ) ||
@@ -181,7 +190,7 @@ export function redactTaskHistory(
         );
     const redacted = Schema.decodeUnknownSync(TaskHistoryRedacted)({
       kind: "TaskHistoryRedacted",
-      entity_version: event.entity_version,
+      entity_version: 1,
       occurred_at: event.occurred_at,
       original_kind:
         event.kind === "TaskHistoryRedacted" ? event.original_kind : event.kind,
@@ -197,6 +206,7 @@ export function redactTaskHistory(
         ]),
       ],
       replay: {
+        dependencies: value.dependencies ?? emptyDependencies(),
         tasks: value.tasks.filter(keepTask),
         series: value.series.filter(keepSeries),
         projects: value.projects.filter(
@@ -210,7 +220,7 @@ export function redactTaskHistory(
         })),
       },
     });
-    db.query("UPDATE op_log SET event=? WHERE seq=?").run(
+    db.query("UPDATE op_log SET event=?,entity_version=1 WHERE seq=?").run(
       JSON.stringify(redacted),
       entry.seq,
     );
@@ -219,6 +229,9 @@ export function redactTaskHistory(
     db.query("UPDATE snapshots SET payload=? WHERE seq=?").run(
       JSON.stringify({
         ...value,
+        edges: (value.edges ?? []).filter(
+          (edge) => edge.dependent_id !== id && edge.blocker_id !== id,
+        ),
         tasks: value.tasks.filter((task) => task.id !== id),
         series: value.series.filter((value) => !removedSeries.has(value.id)),
         projects: value.projects.filter(
@@ -228,6 +241,12 @@ export function redactTaskHistory(
       }),
       seq,
     );
+  if (
+    db.query("SELECT 1 FROM sqlite_master WHERE name='task_dependencies'").get()
+  )
+    db.query(
+      "DELETE FROM task_dependencies WHERE dependent_id=? OR blocker_id=?",
+    ).run(id, id);
   db.query("DELETE FROM tasks WHERE id=?").run(id);
   for (const id of removedSeries)
     db.query("DELETE FROM series WHERE id=?").run(id);

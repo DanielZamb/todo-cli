@@ -73,7 +73,7 @@ its compiled CLI. The helper copies it into the owned scratch directory and
 keeps a fresh HOME and database.
 
 The compiled schema proof restores version-3, version-4 and version-5 Snapshots through migrations 0004, 0005 and 0006,
-requires user_version 6, refuses currentSchemaVersion + 1 with newer_schema, and compares Profile
+requires user_version 7, refuses currentSchemaVersion + 1 with newer_schema, and compares Profile
 tombstone IDs and timestamps exactly with the saved SQLite file. schema.json
 records the literal versions and result. Purge IDs remain authoritative separately.
 

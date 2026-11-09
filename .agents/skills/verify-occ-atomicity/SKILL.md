@@ -203,3 +203,12 @@ The source gate failed against `ed4e2423`, which is not an ancestor of `main`. T
 - The external reason passed to rejection recording is now capped at 64 units. The driver's reasons are short codes.
 
 No transition, invariant or fixture changed. The check exited 0 with 37,036 distinct states. `prove-sensitivity.ts` exited 0: both store breaks failed the enumeration, and the restored source passed. One earlier candidate run exited 1 when `kill-validated` exceeded its 15-second readiness timer at host load 41. A rerun on the same source exited 0.
+
+## Task dependency storage mapping
+
+[DAG-A-MAPPING.md](DAG-A-MAPPING.md) reviews the inherited source drift at
+8745cdd separately from Unit A's event, projection and validation changes.
+AtomicCAS still covers one Task without edges; verify-dag and the separate
+DagAcyclic work cover graph behavior. The reviewed crash and sensitivity
+instrumentation passes the Profile envelope to applyEvent. Run the sensitivity
+command and the complete clean command after any further covered-file change.

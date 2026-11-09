@@ -1,8 +1,16 @@
 import type { Database } from "bun:sqlite";
 import { Schema } from "effect";
+import {
+  type DependencyChanges,
+  Edge,
+  emptyDependencies,
+} from "../dependencies.ts";
 import { Project, Series, Tag, Task } from "../entities.ts";
 import type { Event, TaskHistoryRedacted } from "../events.ts";
+import type { ProfileId } from "../ids.ts";
 import { SeriesId, TaskId, Version } from "../ids.ts";
+import { dependencyMigrationSql } from "./0007.ts";
+import { applyDependencyVersions, putEdge, readEdges } from "./dependencies.ts";
 
 const taskFields = [
   "id",
@@ -76,6 +84,7 @@ export function createProjection(db: Database) {
         BEGIN SELECT RAISE(ABORT, 'domain writes only'); END;`);
     }
   }
+  db.exec(dependencyMigrationSql);
 }
 
 export const readTasks = (db: Database): Task[] =>
@@ -113,12 +122,16 @@ export function putSeries(db: Database, series: Series) {
 
 export type Change<A> = { readonly before: A | null; readonly after: A | null };
 export type Changes = {
+  readonly dependencies?: DependencyChanges;
   readonly tasks: readonly Change<Task>[];
   readonly series: readonly Change<Series>[];
 };
 
-export function changes(event: Event | TaskHistoryRedacted): Changes {
+function taskChanges(event: Event | TaskHistoryRedacted): Changes {
   switch (event.kind) {
+    case "DependencyAdded":
+    case "DependencyRemoved":
+      return { tasks: [], series: [] };
     case "TaskHistoryRedacted":
       return event.replay;
     case "TaskMovedOut":
@@ -163,7 +176,43 @@ export function changes(event: Event | TaskHistoryRedacted): Changes {
   }
 }
 
+export function changes(
+  event: Event | TaskHistoryRedacted,
+  profile: ProfileId | null,
+): Changes & { readonly dependencies: DependencyChanges } {
+  let dependencies =
+    "dependencies" in event ? event.dependencies : emptyDependencies();
+  if (event.kind === "DependencyAdded" || event.kind === "DependencyRemoved") {
+    if (profile === null)
+      throw new Error("Dependency event requires a Profile");
+    const edge = {
+      profile_id: profile,
+      dependent_id: event.dependent_id,
+      blocker_id: event.blocker_id,
+    };
+    dependencies = {
+      added: event.kind === "DependencyAdded" ? [edge] : [],
+      removed: event.kind === "DependencyRemoved" ? [edge] : [],
+      versions: [
+        {
+          id: event.dependent_id,
+          from_version: event.from_version,
+          to_version: event.to_version,
+          updated_at: event.occurred_at,
+        },
+      ],
+    };
+  }
+  if (event.kind === "TaskHistoryRedacted")
+    dependencies = event.replay.dependencies ?? emptyDependencies();
+  return { ...taskChanges(event), dependencies };
+}
+
 export function applyChanges(db: Database, resolved: Changes) {
+  for (const edge of resolved.dependencies?.removed ?? [])
+    db.query(
+      "DELETE FROM task_dependencies WHERE profile_id=? AND dependent_id=? AND blocker_id=?",
+    ).run(edge.profile_id, edge.dependent_id, edge.blocker_id);
   for (const change of resolved.series) {
     if (change.after) putSeries(db, change.after);
     else if (change.before)
@@ -174,6 +223,8 @@ export function applyChanges(db: Database, resolved: Changes) {
     else if (change.before)
       db.query("DELETE FROM tasks WHERE id=?").run(change.before.id);
   }
+  for (const edge of resolved.dependencies?.added ?? []) putEdge(db, edge);
+  if (resolved.dependencies) applyDependencyVersions(db, resolved.dependencies);
 }
 
 export function metadata(event: Event | TaskHistoryRedacted): {
@@ -229,9 +280,26 @@ export function putMetadata(
     ).run(tag.id, tag.profile_id, tag.name);
 }
 
-export function applyEvent(db: Database, event: Event | TaskHistoryRedacted) {
+export function applyEvent(
+  db: Database,
+  event: Event | TaskHistoryRedacted,
+  profile: ProfileId | null,
+) {
   putMetadata(db, metadata(event));
-  applyChanges(db, changes(event));
+  const resolved = changes(event, profile);
+  if (event.kind === "TaskHistoryRedacted") {
+    const keep = (edge: Edge) =>
+      !event.task_ids.includes(edge.dependent_id) &&
+      !event.task_ids.includes(edge.blocker_id);
+    applyChanges(db, {
+      ...resolved,
+      dependencies: {
+        ...resolved.dependencies,
+        added: resolved.dependencies.added.filter(keep),
+        removed: resolved.dependencies.removed.filter(keep),
+      },
+    });
+  } else applyChanges(db, resolved);
   if (event.kind === "TaskHistoryRedacted") {
     for (const version of event.replay.versions)
       db.query(
@@ -245,6 +313,7 @@ export function applyEvent(db: Database, event: Event | TaskHistoryRedacted) {
 }
 
 export const Snapshot = Schema.Struct({
+  edges: Schema.optionalKey(Schema.Array(Edge)),
   tasks: Schema.Array(Task),
   series: Schema.Array(Series),
   projects: Schema.Array(Project),
@@ -257,6 +326,7 @@ export const Snapshot = Schema.Struct({
 
 export function snapshot(db: Database) {
   return Schema.decodeUnknownSync(Snapshot)({
+    edges: readEdges(db),
     tasks: readTasks(db),
     series: readSeries(db),
     projects: db.query("SELECT * FROM projects ORDER BY id").all(),

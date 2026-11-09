@@ -1,4 +1,9 @@
 import { Schema } from "effect";
+import {
+  DependencyChanges,
+  type DependencyError,
+  RejectionDetails,
+} from "./dependencies.ts";
 import { Occurrence, Profile, Project, Series, Tag, Task } from "./entities.ts";
 import { ActorId, ProfileId, Sequence, TaskId, Version } from "./ids.ts";
 import { Instant } from "./time.ts";
@@ -8,7 +13,7 @@ const eventFields = {
   occurred_at: Instant,
 };
 
-export const TaskCreated = Schema.Struct({
+const TaskCreatedV1 = Schema.Struct({
   ...eventFields,
   kind: Schema.Literal("TaskCreated"),
   copied_from: Schema.optionalKey(
@@ -23,6 +28,14 @@ export const TaskCreated = Schema.Struct({
   project: Schema.NullOr(Project),
   tags: Schema.Array(Tag),
 });
+export const TaskCreated = Schema.Union([
+  TaskCreatedV1,
+  Schema.Struct({
+    ...TaskCreatedV1.fields,
+    entity_version: Schema.Literal(2),
+    dependencies: DependencyChanges,
+  }),
+]);
 export type TaskCreated = typeof TaskCreated.Type;
 
 export const TaskEdited = Schema.Struct({
@@ -65,12 +78,20 @@ export const TaskReopened = Schema.Struct({
 });
 export type TaskReopened = typeof TaskReopened.Type;
 
-export const TaskDeleted = Schema.Struct({
+const TaskDeletedV1 = Schema.Struct({
   ...eventFields,
   kind: Schema.Literal("TaskDeleted"),
   before: Task,
   after: Task,
 });
+export const TaskDeleted = Schema.Union([
+  TaskDeletedV1,
+  Schema.Struct({
+    ...TaskDeletedV1.fields,
+    entity_version: Schema.Literal(2),
+    dependencies: DependencyChanges,
+  }),
+]);
 export type TaskDeleted = typeof TaskDeleted.Type;
 
 export const AttachmentAdded = Schema.Struct({
@@ -94,7 +115,7 @@ export const TaskPurged = Schema.Struct({
 });
 export type TaskPurged = typeof TaskPurged.Type;
 
-export const TaskReverted = Schema.Struct({
+const TaskRevertedV1 = Schema.Struct({
   ...eventFields,
   kind: Schema.Literal("TaskReverted"),
   original_seq: Sequence,
@@ -108,15 +129,31 @@ export const TaskReverted = Schema.Struct({
     }),
   ),
 });
+export const TaskReverted = Schema.Union([
+  TaskRevertedV1,
+  Schema.Struct({
+    ...TaskRevertedV1.fields,
+    entity_version: Schema.Literal(2),
+    dependencies: DependencyChanges,
+  }),
+]);
 export type TaskReverted = typeof TaskReverted.Type;
 
-export const TaskMovedOut = Schema.Struct({
+const TaskMovedOutV1 = Schema.Struct({
   ...eventFields,
   kind: Schema.Literal("TaskMovedOut"),
   move_id: Schema.NonEmptyString,
   original_seq: Schema.NullOr(Sequence),
   task: Task,
 });
+export const TaskMovedOut = Schema.Union([
+  TaskMovedOutV1,
+  Schema.Struct({
+    ...TaskMovedOutV1.fields,
+    entity_version: Schema.Literal(2),
+    dependencies: DependencyChanges,
+  }),
+]);
 export const TaskMovedIn = Schema.Struct({
   ...eventFields,
   kind: Schema.Literal("TaskMovedIn"),
@@ -127,7 +164,25 @@ export const TaskMovedIn = Schema.Struct({
   task: Task,
 });
 
+const dependencyFields = {
+  ...eventFields,
+  dependent_id: TaskId,
+  blocker_id: TaskId,
+  from_version: Version,
+  to_version: Version,
+};
+export const DependencyAdded = Schema.Struct({
+  ...dependencyFields,
+  kind: Schema.Literal("DependencyAdded"),
+});
+export const DependencyRemoved = Schema.Struct({
+  ...dependencyFields,
+  kind: Schema.Literal("DependencyRemoved"),
+});
+
 export const Event = Schema.Union([
+  DependencyAdded,
+  DependencyRemoved,
   AttachmentAdded,
   AttachmentRemoved,
   TaskMovedOut,
@@ -143,9 +198,22 @@ export const Event = Schema.Union([
 ]);
 export type Event = typeof Event.Type;
 
-export const TaskMutationKind = Schema.Union(
-  Event.members.map((event) => event.fields.kind),
-);
+export const TaskMutationKind = Schema.Literals([
+  "DependencyAdded",
+  "DependencyRemoved",
+  "AttachmentAdded",
+  "AttachmentRemoved",
+  "TaskMovedOut",
+  "TaskMovedIn",
+  "TaskCreated",
+  "TaskEdited",
+  "TaskCompleted",
+  "TaskCancelled",
+  "TaskReopened",
+  "TaskDeleted",
+  "TaskPurged",
+  "TaskReverted",
+]);
 export type TaskMutationKind = typeof TaskMutationKind.Type;
 
 export const RejectionViolation = Schema.Struct({
@@ -161,6 +229,7 @@ export const TaskAttemptRejected = Schema.Struct({
   attempted_kind: TaskMutationKind,
   task_id: Schema.NullOr(TaskId),
   violations: Schema.Array(RejectionViolation),
+  details: Schema.optionalKey(RejectionDetails),
 });
 export type TaskAttemptRejected = typeof TaskAttemptRejected.Type;
 
@@ -239,8 +308,9 @@ export const TaskHistoryRedacted = Schema.Struct({
   attempted_kind: Schema.NullOr(TaskMutationKind),
   task_ids: Schema.Array(TaskId),
   replay: Schema.Struct({
-    tasks: TaskReverted.fields.tasks,
-    series: TaskReverted.fields.series,
+    dependencies: Schema.optionalKey(DependencyChanges),
+    tasks: TaskRevertedV1.fields.tasks,
+    series: TaskRevertedV1.fields.series,
     projects: Schema.Array(Project),
     tags: Schema.Array(Tag),
     versions: Schema.Array(Schema.Struct({ id: TaskId, version: Version })),
@@ -300,3 +370,7 @@ export const OpLogEntry = Schema.Union([
   }),
 ]);
 export type OpLogEntry = typeof OpLogEntry.Type;
+
+export type AppendResult = OpLogEntry & {
+  readonly dependency_error?: DependencyError;
+};

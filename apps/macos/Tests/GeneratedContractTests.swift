@@ -28,6 +28,23 @@ final class GeneratedContractTests: XCTestCase {
         XCTAssertEqual(query.prefix, "6AA2")
     }
 
+    func testExistingAndDependencyOperationsDecodeAtTheLiveClientBoundary() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+        let fixture = root.appendingPathComponent("API/Fixtures/dag-operations.json")
+        let values = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: fixture)) as? [NSDictionary])
+        var kinds: [String] = []
+        for value in values {
+            let data = try JSONSerialization.data(withJSONObject: value)
+            let wire = try JSONDecoder().decode(Components.Schemas.CommittedOperation.self, from: data)
+            let encoded = try JSONEncoder().encode(wire)
+            XCTAssertEqual(try JSONSerialization.jsonObject(with: encoded) as? NSDictionary, value)
+            let operation = try JSONDecoder().decode(CommittedOperation.self, from: encoded)
+            XCTAssertEqual(operation.outcome, "committed")
+            kinds.append(operation.event.kind)
+        }
+        XCTAssertEqual(kinds, ["AuthChanged", "DependencyAdded", "TaskCreated", "TaskDeleted", "TaskMovedOut", "TaskReverted"])
+    }
+
     func testBatchEditKeepsPerTaskVersionsAndSharedChange() throws {
       try roundTrip(Operations.tasks_period_batchEdit.Input.Body.jsonPayload.self, #"{"items":[{"task_id":"first","from_version":2},{"task_id":"second","from_version":7}],"changes":{"priority":"P1"},"dry_run":true}"#)
       try roundTrip(Operations.tasks_period_batchEdit.Input.Body.jsonPayload.self, #"{"items":[{"task_id":"first","from_version":2}],"changes":{"due_at":null}}"#)
@@ -142,7 +159,7 @@ final class GeneratedContractTests: XCTestCase {
 #endif
         }
         let anonymous = todoClient(server: url, credential: "")
-        let session = try await anonymous.signIn_period_signIn(body: .json(.init(passphrase: "scratch verification passphrase"))).ok.body.json
+        let session = try await anonymous.signIn_period_signIn(body: .json(.init(passphrase: ProcessInfo.processInfo.environment["TODO_W06_PASSPHRASE"] ?? "scratch verification passphrase"))).ok.body.json
         let client = todoClient(server: url, credential: session.credential)
         let create = Data(#"{"title":"Generated nullable HTTP","description":"Keep these notes","project_id":null,"priority":"P2","scheduled_at":{"kind":"instant","utc":"2099-10-27T12:00:00Z","time_zone":"America/Bogota"},"due_at":{"kind":"date","date":"2099-10-28"},"energy":4,"estimate_min":25,"source":"manual","tags":[]}"#.utf8)
         let payload = try JSONDecoder().decode(Operations.tasks_period_create.Input.Body.jsonPayload.self, from: create)
@@ -176,7 +193,7 @@ final class GeneratedContractTests: XCTestCase {
         let expected = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [NSDictionary])
         XCTAssertEqual(try JSONSerialization.jsonObject(with: encoded) as? NSArray, expected as NSArray)
         let kinds = Set(expected.compactMap { ($0["event"] as? NSDictionary)?["kind"] as? String })
-        XCTAssertEqual(kinds, ["AuthAttemptRejected", "AuthChanged", "DatabaseRestored", "ReminderFired", "ProfileDeleted", "ProfileDeletionRejected", "TaskAttemptRejected", "TaskCancelled", "TaskCompleted", "TaskCreated", "TaskDeleted", "TaskEdited", "TaskHistoryRedacted", "TaskMovedIn", "TaskMovedOut", "TaskPurged", "TaskReopened", "TaskReverted"])
+        XCTAssertEqual(kinds, ["AuthAttemptRejected", "AuthChanged", "DatabaseRestored", "DependencyAdded", "DependencyRemoved", "ReminderFired", "ProfileDeleted", "ProfileDeletionRejected", "TaskAttemptRejected", "TaskCancelled", "TaskCompleted", "TaskCreated", "TaskDeleted", "TaskEdited", "TaskHistoryRedacted", "TaskMovedIn", "TaskMovedOut", "TaskPurged", "TaskReopened", "TaskReverted"])
         XCTAssertTrue(expected.contains { ($0["event"] as? NSDictionary)?["original_kind"] as? String == "TaskPurged" })
         XCTAssertTrue(expected.contains { $0["outcome"] as? String == "rejected" })
     }

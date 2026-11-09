@@ -29,6 +29,20 @@ class TaggedUnionTests(unittest.TestCase):
             self.assertEqual(schemas[name], source['components']['schemas'][name])
 
 
+    def test_same_kind_versions_group_under_the_kind_discriminator(self):
+        def variant(version):
+            return {'type': 'object', 'properties': {'kind': {'const': 'TaskDeleted'}, 'entity_version': {'enum': [version]}}, 'required': ['kind', 'entity_version']}
+        other = {'type': 'object', 'properties': {'kind': {'const': 'DependencyAdded'}}, 'required': ['kind']}
+        source = {'components': {'schemas': {'Events': {'anyOf': [variant(1), variant(2), other]}}}}
+        normalized = module.normalize_tagged_unions(source)
+        events = normalized['components']['schemas']['Events']
+        self.assertEqual(sorted(events['discriminator']['mapping']), ['DependencyAdded', 'TaskDeleted'])
+        reference = events['discriminator']['mapping']['TaskDeleted'].split('/')[-1]
+        self.assertEqual(normalized['components']['schemas'][reference], {'oneOf': [variant(1), variant(2)]})
+        self.assertEqual(module.normalize_tagged_unions(normalized), normalized)
+        overlap = {'anyOf': [variant(1), variant(1), other]}
+        self.assertEqual(module.normalize_tagged_unions(overlap), overlap)
+
     def test_unrelated_document_stays_identical(self):
         source = {'openapi': '3.0.3', 'paths': {}}
         self.assertEqual(module.normalize_tagged_unions(source), source)

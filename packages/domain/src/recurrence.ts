@@ -14,6 +14,7 @@ import { ActorId, OccurrenceId, ProfileId, TaskId, Version } from "./ids.ts";
 import { CalendarDate, Instant, TaskTime } from "./time.ts";
 
 export const StartSeries = Schema.Struct({
+  depends_on: Schema.optionalKey(Schema.Array(TaskId)),
   attachments: Task.fields.attachments,
   external_id: Task.fields.external_id,
   actor: ActorId,

@@ -334,7 +334,7 @@ it.effect(
           expect(
             db.query<{ user_version: number }, []>("PRAGMA user_version").get()
               ?.user_version,
-          ).toBe(6);
+          ).toBe(7);
           expect(JSON.stringify(db.query("SELECT * FROM profiles").all())).toBe(
             rows,
           );
@@ -488,7 +488,7 @@ it.effect(
         }
         const upgraded = yield* openStore({ path });
         try {
-          expect((yield* upgraded.settings()).user_version).toBe(6);
+          expect((yield* upgraded.settings()).user_version).toBe(7);
           const snapshots = (yield* upgraded.snapshots.list()).snapshots;
           expect(snapshots.map((s) => [s.reason, s.schema_version])).toEqual([
             ["pre-migration", 3],
@@ -595,7 +595,7 @@ it.effect(
           openStore({ path }),
           (s) => Effect.orDie(s.close()),
         );
-        expect((yield* upgraded.settings()).user_version).toBe(6);
+        expect((yield* upgraded.settings()).user_version).toBe(7);
         const snapshots = (yield* upgraded.snapshots.list()).snapshots;
         expect(snapshots.map((s) => [s.reason, s.schema_version])).toEqual([
           ["pre-migration", 3],

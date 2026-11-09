@@ -1,9 +1,9 @@
 {
-  "confirmedCommit": "f709549c30d7f76543b103f6d31b7c78d2840664",
+  "confirmedCommit": "ed4e2423d696d0321bb0e19674bba1865bd2541d",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "7121f6621af44a03846124ccbffc6b9841b903e1047eb6b2464ef842caf15353",
+      "sha256": "2c660357bf2409637264af627b88dc7efc8e192d36d1dddf3e3e1bf915e40e81",
       "functions": [
         "OperationStore.constructor",
         "OperationStore.transaction",
@@ -19,7 +19,7 @@
     },
     {
       "path": "packages/domain/src/store/projection.ts",
-      "sha256": "b148e244a30e955a969941018bcc737c24f301bc719fc47a1eb13ae41cbef316",
+      "sha256": "bc79d5b8a50a07f4d5f9ca225de6bd5a0f961300ad36934253bb1272d6817573",
       "functions": [
         "changes",
         "applyEvent",
@@ -32,7 +32,7 @@
     },
     {
       "path": "packages/domain/src/events.ts",
-      "sha256": "145376a77e9dfb7e451d73169159fc0af672b0fff767f176b7a70e710719439b",
+      "sha256": "7aac89d05f7ad5e29537ac77e8881f32f4f727d4e139a3b57464556add0be266",
       "functions": [
         "TaskCreated",
         "TaskEdited",
@@ -46,17 +46,65 @@
     {
       "path": "packages/domain/src/entities.ts",
       "sha256": "ee505f78a6434528dbfe5f072463ec77cd6823bab1781f3f656d01c77f2d52f9",
-      "functions": ["Task", "Profile"]
+      "functions": [
+        "Task",
+        "Profile"
+      ]
     },
     {
       "path": "packages/domain/src/ids.ts",
       "sha256": "c1081994f401f4898f950348587ff4633fd36eb822628ca00d3d215e73defd0f",
-      "functions": ["ActorId", "ProfileId", "TaskId", "Version"]
+      "functions": [
+        "ActorId",
+        "ProfileId",
+        "TaskId",
+        "Version"
+      ]
     },
     {
       "path": "packages/domain/src/attachments.ts",
       "sha256": "d6ba1579e84f5db261ecae9c12b9000757c42514ae99192b97c6da5a31668e26",
-      "functions": ["Attachment", "validAttachmentLocation"]
+      "functions": [
+        "Attachment",
+        "validAttachmentLocation"
+      ]
+    },
+    {
+      "path": "packages/domain/src/store/dependency-validation.ts",
+      "sha256": "e73b9367e7aa93689a28e5e9e83fd53cac6dcbf949a6c50f0122ac28213ba0d5",
+      "functions": [
+        "validateDependencies"
+      ]
+    },
+    {
+      "path": "packages/domain/src/store/dependencies.ts",
+      "sha256": "b4e88ed38871bd93483a024b5ca45ba66c441b93f2aeec70ab60c8f97461f411",
+      "functions": [
+        "applyDependencyVersions",
+        "incidentRemoval",
+        "upstream",
+        "hasDependents"
+      ]
+    },
+    {
+      "path": "packages/domain/src/dependency-rules.ts",
+      "sha256": "74369b1acd741009d752f61b4986f190519421170c90d1d2cff33a36183fa26a",
+      "functions": [
+        "checkDependencyAddition",
+        "checkDependencyStatuses",
+        "dependencyCycle"
+      ]
+    },
+    {
+      "path": "packages/domain/src/dependencies.ts",
+      "sha256": "eabcf671077bae70f5509b14c0622b69b00bfca816e0e82ee2f21fcfee9f3e95",
+      "functions": [
+        "Edge",
+        "VersionChange",
+        "DependencyChanges",
+        "DependencyError",
+        "RejectionDetails"
+      ]
     }
   ]
 }

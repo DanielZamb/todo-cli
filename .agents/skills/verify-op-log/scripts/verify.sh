@@ -23,5 +23,6 @@ test -s "$evidence/05-revert.sql"
 test -s "$evidence/result.json"
 test -s "$evidence/purge.json"
 test -s "$evidence/shared-purge.json"
+test -s "$evidence/dag-replay.json"
 set +x
 echo "PASS; evidence survived cleanup: $evidence" >&3
