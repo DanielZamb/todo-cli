@@ -133,7 +133,8 @@ HTTP adapter's request abort listener. No search cache survives the request.
 
 `PreparedField` carries words and the exact folded UTF-16 field length.
 Search charges that length after each field is ready, including supplied stored
-PreparedFields, and charges the evaluated Damerau cells with one shared rational
+PreparedFields, and charges evaluated Damerau cells plus walked word occurrences
+and tested phrase start positions with one shared rational
 weight. The request meter spans Tasks that pass the other TaskFilters and checks
 at checkpoints and before publication. A refusal returns `search_too_broad`,
 CLI exit 2 or HTTP 422, with no partial rows. The limits and owner decision are

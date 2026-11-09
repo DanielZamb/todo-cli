@@ -63,7 +63,8 @@ requires an interrupted drain to publish nothing and prepare no further Task.
 Response serialization remains synchronous.
 
 `task-search-budget.test.ts` checks the shared deterministic meter, exact cell
-counts, refusal without partial publication, non-text narrowing, and identical
+and occurrence/start-position visit counts (including memo hits), integer-tenths
+comparison, refusal without partial publication, non-text narrowing, and identical
 cold, warm and uncached totals. Warm preparation returns a stored PreparedField.
 `task-search-finalizer.test.ts` requires exactly one generator return on suspended
 interruption or runner failure, and no extra return after completion or a thrown
@@ -79,6 +80,18 @@ wall time, host load, work, outcome and concurrent health responses separately.
 The budget and weight live in `taskSearchWorkLimits`. Raw input boundaries and
 all accepted response spans remain unchanged. The span-cap owner question is
 outside this verification change.
+
+Measure work as `preparedUnits + (damerauCells + clauseVisits) / 10`.
+Include `rent cafe`, `pay rent invoice` and `marker17 rent` against churn.
+For distinct-clause amplification, cycle `[a-z, 0-9, α, β, γ, δ]` with spaces
+to exactly 100,000 UTF-16 units per description. On 45 Tasks, query `a b`
+passes and `a b c` refuses; individually quoted forms behave the same.
+On five Tasks, extend the cycle with distinct folded one-character tokens:
+100 unquoted tokens (199 raw units) and 50 individually quoted tokens (199)
+still pass. Respect the 200-unit raw query limit during every sweep.
+Use process user+system CPU for five separate preparation, DP-cell and clause-visit
+calibration runs. Concurrent health sampling includes the complete response body,
+because serialization may remain a synchronous cost for an accepted result.
 
 Use `todo man list` and `todo schema list` to inspect syntax and response shape.
 HTTP remains `GET /profiles/work/tasks?text=...&prefix=...`. Closed quotes are
