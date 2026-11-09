@@ -71,9 +71,10 @@ energy and zero unweighted. An unresolved node without energy contributes one
 to unweighted and still permits upstream traversal. A 1,2,3,4 diamond totals 10.
 Profile-wide ranking uses temporary ancestor bitsets and weight masks, never
 stored sums. GraphReport's `lightest_next` contains the Ready Tasks in T's
-remaining set, including T itself, in whole-Profile topological order. A Ready
-unresolved T gives [T]. A done or cancelled T gives []. No estimates or critical
-path are exposed. This response ordering follows coordinator correction G11.
+remaining set, including T itself, sorted by their own energy ascending, unknown
+energy last, then whole-Profile topological position. A Ready unresolved T gives
+[T]. A done or cancelled T gives []. No estimates or critical path are exposed.
+This is G4's ordering, retained by the coordinator's corrected G11 wording.
 
 The connected group is the weakly connected visible component. Sources have
 in-degree zero; sinks have out-degree zero. Ancestors and descendants are
@@ -87,8 +88,9 @@ cannot overlap. Redundant stored edges affect the shape.
 
 GraphNode carries only mermaid_id, task, in_degree, out_degree, ready, blocked,
 depth and remaining_energy. GraphReport carries ancestors, descendants and
-lightest_next for the requested Task only, each in whole-Profile topological
-order. Clients request another Task's graph for that Task's sets. The response
+lightest_next for the requested Task only. Ancestors and descendants use
+whole-Profile topological order; lightest_next uses G4's energy order. Clients
+request another Task's graph for that Task's sets. The response
 contains O(n+m) graph data plus O(a+z) root sets, rather than every node's
 transitive sets. A literal 1,000-Task chain must prove the exact node keys and
 root ancestors. Record actual serialized response bytes before and after on

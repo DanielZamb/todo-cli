@@ -14,6 +14,8 @@ No additional gate is required before units A and F.
   most one blocker, or mixed. single and chain take precedence.
 - G4. lightest_next contains Ready Tasks in T's remaining set, including T.
   A Ready unresolved T gives [T]. A done or cancelled T gives [].
+  Sort by each Ready Task's own energy ascending, unknown energy last, then
+  whole-Profile topological position.
 - G5. Per-item atomic batch-depend is approved.
 - G6. Dropping source onto target makes TARGET depend on SOURCE. Source blocks
   target. The hover label is "<target> will depend on <source>". Already depends
@@ -32,15 +34,20 @@ No additional gate is required before units A and F.
 - G11. Coordinator seat 2 amended the graph response after reviewing unit B
   source e7170510 on 2026-11-09. GraphNode has only mermaid_id, task, in_degree,
   out_degree, ready, blocked, depth and remaining_energy. GraphReport carries
-  ancestors, descendants and lightest_next for its requested Task only, each
-  in whole-Profile topological order. A client requests another Task's graph
-  to obtain its sets. Response size is O(n+m) plus the root's O(a+z) sets.
-  This replaces the approved per-node closure fields and the earlier
-  lightest_next response ordering. Prove exact root ancestors and node keys
+  ancestors, descendants and lightest_next for its requested Task only.
+  Ancestors and descendants use whole-Profile topological order; lightest_next
+  uses the G4 order. A client requests another Task's graph to obtain its sets.
+  Response size is O(n+m) plus the root's O(a+z) sets. This replaces the approved
+  per-node closure fields. Prove exact root ancestors and node keys
   on a 1,000-Task chain; record actual response bytes before and after on a
   scratch database. Regenerate OpenAPI and Swift, update both client decode
   tests, and re-pin F to the corrected source. Unknown-energy sort changes
   remain deferred.
+
+The coordinator corrected G11's ordering wording after reviewing source
+3cceb41e. G11 changes where the sets appear, while lightest_next retains G4's
+energy order. A literal branching fixture must distinguish energy order from
+topological order and put unknown energy last.
 
 Standing order 26 replaces delegate_task. Workers and seat-1 reviewers launch
 as top-level t3_thread_launch threads in worktrees, from feat/task-dag, with

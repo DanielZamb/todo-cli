@@ -1381,7 +1381,7 @@
                 "type": "string",
                 "minLength": 1
               },
-              "description": "Ready Tasks in the requested Task's remaining set, including itself, in whole-Profile topological order. A Ready unresolved Task returns itself; terminal Tasks return an empty array."
+              "description": "Ready Tasks in the requested Task's remaining set, including itself, ordered by own energy ascending, unknown energy last, then whole-Profile topological position. A Ready unresolved Task returns itself; terminal Tasks return an empty array."
             },
             "mermaid": {
               "type": "string",
@@ -1484,7 +1484,7 @@
                 "type": "string",
                 "minLength": 1
               },
-              "description": "Ready Tasks in the requested Task's remaining set, including itself, in whole-Profile topological order. A Ready unresolved Task returns itself; terminal Tasks return an empty array."
+              "description": "Ready Tasks in the requested Task's remaining set, including itself, ordered by own energy ascending, unknown energy last, then whole-Profile topological position. A Ready unresolved Task returns itself; terminal Tasks return an empty array."
             },
             "mermaid": {
               "type": "string",
@@ -1579,7 +1579,7 @@
                 "type": "string",
                 "minLength": 1
               },
-              "description": "Ready Tasks in the requested Task's remaining set, including itself, in whole-Profile topological order. A Ready unresolved Task returns itself; terminal Tasks return an empty array."
+              "description": "Ready Tasks in the requested Task's remaining set, including itself, ordered by own energy ascending, unknown energy last, then whole-Profile topological position. A Ready unresolved Task returns itself; terminal Tasks return an empty array."
             },
             "mermaid": {
               "type": "string",
@@ -1674,7 +1674,7 @@
                 "type": "string",
                 "minLength": 1
               },
-              "description": "Ready Tasks in the requested Task's remaining set, including itself, in whole-Profile topological order. A Ready unresolved Task returns itself; terminal Tasks return an empty array."
+              "description": "Ready Tasks in the requested Task's remaining set, including itself, ordered by own energy ascending, unknown energy last, then whole-Profile topological position. A Ready unresolved Task returns itself; terminal Tasks return an empty array."
             },
             "mermaid": {
               "type": "string",
