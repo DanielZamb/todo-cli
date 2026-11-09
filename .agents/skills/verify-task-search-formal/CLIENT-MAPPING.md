@@ -9,7 +9,7 @@ machine-checked refinement theorem for React, Swift or HTTP.
 | --- | --- | --- |
 | `requestedIdentity` | `App` builds Profile, view, `advancedFiltersRef`, Project, Tag and toolbar text; `identityKey` sorts filter keys. | `TodoModel.requestedIdentity` builds Profile, view, `requestedTaskFilters`, Project, Tag and toolbar text. |
 | `Input`, `Esc` | `changeSearch` increments `refreshGeneration` and updates `activeQuery` and `searchTextRef` before setting the 250 ms timer. Escape calls it with empty text. | `setSearchText` calls `scheduleSearch`; `invalidateSearch` increments `refreshGeneration` and cancels the previous timer before the replacement task sleeps. |
-| `DebounceFired`, `Launch` | The timer calls `refreshRef.current`; `refresh` captures the complete identity and increments the request generation. | The debounce task checks generation, identity and cancellation, clears its own task handle, then calls `retrySearch` / `refresh(generation:)`. |
+| `DebounceFired`, `Launch` | The timer calls `refreshRef.current("query")`; `refresh` captures the complete identity and increments the request generation. | The debounce task checks generation, identity and cancellation, clears its own task handle, then calls `retrySearch` / `refresh(generation:scope: .query)`. |
 | `Current(n)` | After awaited IPC, `refresh` requires current Profile, `identityKey(activeQuery.current)` and request generation. The same check precedes success and error. | `canPublishSearch` requires Profile lifecycle generation, request generation, complete requested identity and cancellation. Success and error both call it. |
 | `ResponseOK`, `OneSnapshot` | One `setAppliedSearch` installs `{catalog, appliedIdentity}`. `TaskRead` crosses the HTTP and IPC decoders with original strings and spans together. `searchGroups` joins planning ids to matching-response Tasks, never to planning strings. | One `appliedSearchSnapshot` assignment installs identity, rows and groups. Planning contributes ids/order; rows come from `filteredResponse`. The remaining publication assignments have no await and run on MainActor. |
 | `ResponseError` | A current error restores only dialog filter refs, retains text and applied snapshot, and enters Error. | A current error restores only dialog filters when needed, retains text and snapshot, and returns `.failed`. An obsolete result returns `.superseded` without publishing or rolling back. |
@@ -20,11 +20,45 @@ machine-checked refinement theorem for React, Swift or HTTP.
 | Dialog draft | `TaskFilterDialog` owns its draft; Cancel leaves requested criteria alone, and Apply issues through the existing filter path. | `TaskFilterView` owns its draft; Cancel leaves requested criteria alone, and `applyTaskFilters` issues the requested criteria. |
 | `CmdF` | Focus changes only. One search field remains in the active shell surface, including detail and Quick add. | Focus changes only. Compact search is above the list/editor/Quick add branches. Native keyboard delivery remains under HOLD. |
 
-The publication object is the atomic boundary. HTTP reads can be concurrent
-(Electron) or sequential (SwiftUI); no intermediate response replaces its
+The publication object is the atomic boundary. Both clients await concurrent HTTP reads; no intermediate response replaces its
 strings or spans. Presentation derives highlights and excerpts from that
 object. Cropping an excerpt shifts those supplied spans for the displayed slice
 and does not evaluate the query again.
+
+## Full and query refreshes
+
+`catalogReady` records a successful full publication for the current selection.
+`issuedFull` records the scope of the latest pending request. `Launch` uses full
+scope for startup and SSE, and promotes query scope to full when no catalog has
+loaded. Retry, debounce and dialog Apply otherwise use query scope. Reset clears
+catalog readiness and invalidates the scope token. An input invalidation or
+completed current response releases that token.
+
+The model keeps scope only for the latest token. An obsolete response's own
+scope is no longer observable because `Current` rejects it before any publication.
+Pending obsolete identities remain explicit, including ABA permutations. The
+model does not distinguish individual discovery fields or catalog row values.
+Compiled client tests assert that discarded full successes and errors change
+neither counts nor discovery, and that query responses retain unfiltered Tasks.
+
+Electron's `taskRequest` search branch fetches `tasks.list` and only the current
+`reads.view` through `Effect.all`. Its list branch still loads the whole catalog
+and all counts. `refresh` captures `catalogRef`, then installs the merged query
+snapshot only after the complete identity and generation guard. Only a full
+response updates `unfilteredSearch` or restores the initial draft.
+
+Swift's `readSearchCatalog` uses `async let` for the unfiltered Tasks, discovery
+and all four planning views. `refresh(generation:scope:)` concurrently awaits
+that catalog and any filtered Task list, or just the filtered Task list and the
+current planning view. Every side effect follows `canPublishSearch`. Query
+publication replaces the applied snapshot and current planning membership while
+retaining `tasks`, discovery and `viewCounts`. Full publication sets catalog
+readiness in that same synchronous MainActor section.
+
+`QueryHasCatalog` rejects a query launch without a loaded catalog. The new
+`BrokenFallback` control must violate it after omitting bootstrap promotion.
+`OneSnapshot`, `LatestPublication`, `ShowingIsCurrent`, `ExactStale` and conditional
+`Convergence` retain their existing meanings and bounds.
 
 ## Production evidence
 
@@ -71,3 +105,16 @@ actions, long-description trimming, both appearances and Compact first.
 - Finite generation colors preserve outstanding/applied equality relationships.
   They do not prove unbounded concurrency or counter overflow. No native app,
   signing, Keychain, VoiceOver or operating-system focus proof is claimed.
+
+## SEC integration boundary
+
+SEC owns the deterministic `search_too_broad` response and its recovery controls.
+This unit does not add that policy independently. After L1 merges SEC, preserve
+its warning, recovery text, existing Clear action, retained text and focus,
+SSE rerun, and hidden search Retry. Renew this source mapping and the compiled
+client checks on that integrated source.
+
+Conditional convergence assumes later successful responses. It does not claim
+that a deterministic broad-query refusal eventually succeeds with unchanged
+input and data. Such a query needs an input or data change before that success
+assumption applies.

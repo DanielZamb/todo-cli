@@ -156,6 +156,22 @@ export const taskRequest = (
             payload: request.payload,
           }),
         };
+      case "search": {
+        const params = { profile: request.profile };
+        const [matching_tasks, planning] = yield* Effect.all(
+          [
+            http.tasks.list({ params, query: request.filters }),
+            request.view === "tasks"
+              ? Effect.succeed(null)
+              : http.reads.view({
+                  params: { ...params, view: request.view },
+                  query: {},
+                }),
+          ],
+          { concurrency: "unbounded" },
+        );
+        return { _tag: "search", matching_tasks, planning };
+      }
       case "list": {
         const params = { profile: request.profile };
         const [tasks, profiles, projects, tags, planning, matching] =

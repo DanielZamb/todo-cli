@@ -51,6 +51,7 @@ final class TodoModel {
     var searchText = ""
     var searchPhase = TaskSearchPhase.idle
     var appliedSearchSnapshot: TaskSearchSnapshot?
+    private var catalogReady = false
     var searchError: String?
     @ObservationIgnored private var searchDebounce: Task<Void, Never>?
     var requestedIdentity: TaskSearchIdentity {
@@ -242,6 +243,7 @@ final class TodoModel {
             diagnostics = nil
             tasks = []
             appliedSearchSnapshot = nil
+            catalogReady = false
             searchError = nil
             searchPhase = .idle
             editor = nil
@@ -317,6 +319,7 @@ final class TodoModel {
         UserDefaults.standard.set(value, forKey: "profile")
         tasks = []
         appliedSearchSnapshot = nil
+        catalogReady = false
         searchError = nil
         searchPhase = .idle
         taskLoadError = nil
@@ -351,7 +354,7 @@ final class TodoModel {
         invalidateSearch()
     }
 
-    private func refresh(generation run: Int) async -> TaskSearchRefreshOutcome {
+    private func refresh(generation run: Int, scope: TaskSearchRefreshScope = .full) async -> TaskSearchRefreshOutcome {
         guard outdatedServerBuild == nil, generation == run, !Task.isCancelled else { return .superseded }
         searchDebounce?.cancel()
         refreshGeneration += 1
@@ -359,46 +362,45 @@ final class TodoModel {
         let identity = requestedIdentity
         searchPhase = .requesting
         do {
-            let values = try await client.tasks_period_list(path: .init(profile: identity.profile)).ok.body.json
-            let decoded = try values.map(TaskSnapshot.decode)
-            var query = identity.filters.query
-            query.text = identity.text.isEmpty ? nil : identity.text
+            let full = scope == .full || !catalogReady
+            let catalog: TaskSearchCatalog?
             let filteredResponse: [TaskSnapshot]
-            if identity.filters.isEmpty && identity.text.isEmpty && identity.project == nil && identity.tag == nil {
-                filteredResponse = decoded
+            let currentPlanning: PlanningResult?
+            if full {
+                async let catalogRead = readSearchCatalog(identity)
+                async let matchingRead: [TaskSnapshot]? = identity.filters.isEmpty && identity.text.isEmpty && identity.project == nil && identity.tag == nil ? nil : readSearchRows(identity)
+                let (loaded, matching) = try await (catalogRead, matchingRead)
+                catalog = loaded
+                filteredResponse = matching ?? loaded.tasks
+                currentPlanning = loaded.views[identity.view]
             } else {
-                filteredResponse = try await client.tasks_period_list(path: .init(profile: identity.profile), query: query).ok.body.json.map(TaskSnapshot.decode)
+                async let matchingRead = readSearchRows(identity)
+                async let planningRead = readSearchPlanning(profile: identity.profile, view: identity.view)
+                (filteredResponse, currentPlanning) = try await (matchingRead, planningRead)
+                catalog = nil
             }
             let filtered = filteredResponse.filter {
                 (identity.project == nil || $0.project_id == identity.project) && (identity.tag == nil || $0.tags.contains(identity.tag ?? ""))
             }
-            let profileValues = try await client.reads_period_profiles().ok.body.json
-            let projectValues = try await client.reads_period_projects(path: .init(profile: identity.profile)).ok.body.json
-            let tagValues = try await client.reads_period_tags(path: .init(profile: identity.profile)).ok.body.json
-            let decodedProfiles = try decode([DiscoveryEntry].self, profileValues)
-            let decodedProjects = try decode([DiscoveryEntry].self, projectValues)
-            let decodedTags = try decode([DiscoveryEntry].self, tagValues)
-            let today = try await decode(PlanningResult.self, client.reads_period_view(path: .init(profile: identity.profile, view: .today)).ok.body.json)
-            let overdue = try await decode(PlanningResult.self, client.reads_period_view(path: .init(profile: identity.profile, view: .overdue)).ok.body.json)
-            let scheduled = try await decode(PlanningResult.self, client.reads_period_view(path: .init(profile: identity.profile, view: .scheduled)).ok.body.json)
-            let inbox = try await decode(PlanningResult.self, client.reads_period_view(path: .init(profile: identity.profile, view: .inbox)).ok.body.json)
-            let views = ["today": today, "overdue": overdue, "scheduled": scheduled, "inbox": inbox]
             guard canPublishSearch(run: run, request: request, identity: identity) else { return .superseded }
             let byID = Dictionary(uniqueKeysWithValues: filtered.map { ($0.id, $0) })
-            let groups = views[identity.view]?.groups.compactMap { group -> PlanningResult.Group? in
+            let groups = currentPlanning?.groups.compactMap { group -> PlanningResult.Group? in
                 let rows = group.tasks.compactMap { byID[$0.id] }
                 return rows.isEmpty ? nil : .init(name: group.name, tasks: rows)
             } ?? []
             appliedSearchSnapshot = .init(appliedIdentity: identity, rows: identity.view == "all" ? filtered : groups.flatMap(\.tasks), groups: groups)
-            tasks = decoded
             matchingTaskIDs = identity.filters.isEmpty ? nil : Set(filtered.map(\.id))
             taskFilters = identity.filters
-            profiles = decodedProfiles
-            projects = decodedProjects.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-            tags = decodedTags.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-            planning = views[identity.view]
-            viewCounts = views.mapValues { $0.groups.flatMap(\.tasks).filter { $0.status == "open" }.count }
-            viewCounts["all"] = decoded.filter { $0.status == "open" }.count
+            planning = currentPlanning
+            if let catalog {
+                tasks = catalog.tasks
+                profiles = catalog.profiles
+                projects = catalog.projects.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+                tags = catalog.tags.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+                viewCounts = catalog.views.mapValues { $0.groups.flatMap(\.tasks).filter { $0.status == "open" }.count }
+                viewCounts["all"] = catalog.tasks.filter { $0.status == "open" }.count
+                catalogReady = true
+            }
             loading = false
             taskLoadError = nil
             searchError = nil
@@ -420,6 +422,30 @@ final class TodoModel {
             handleAuthorization(error)
             return .failed
         }
+    }
+
+    private func readSearchRows(_ identity: TaskSearchIdentity, filtered: Bool = true) async throws -> [TaskSnapshot] {
+        var query = filtered ? identity.filters.query : .init()
+        if filtered { query.text = identity.text.isEmpty ? nil : identity.text }
+        return try await client.tasks_period_list(path: .init(profile: identity.profile), query: query).ok.body.json.map(TaskSnapshot.decode)
+    }
+
+    private func readSearchPlanning(profile: String, view: String) async throws -> PlanningResult? {
+        guard let name = Operations.reads_period_view.Input.Path.viewPayload(rawValue: view) else { return nil }
+        return try await decode(PlanningResult.self, client.reads_period_view(path: .init(profile: profile, view: name)).ok.body.json)
+    }
+
+    private func readSearchCatalog(_ identity: TaskSearchIdentity) async throws -> TaskSearchCatalog {
+        async let tasks = readSearchRows(identity, filtered: false)
+        async let profiles = client.reads_period_profiles().ok.body.json
+        async let projects = client.reads_period_projects(path: .init(profile: identity.profile)).ok.body.json
+        async let tags = client.reads_period_tags(path: .init(profile: identity.profile)).ok.body.json
+        async let today = readSearchPlanning(profile: identity.profile, view: "today")
+        async let overdue = readSearchPlanning(profile: identity.profile, view: "overdue")
+        async let scheduled = readSearchPlanning(profile: identity.profile, view: "scheduled")
+        async let inbox = readSearchPlanning(profile: identity.profile, view: "inbox")
+        let (rows, profileValues, projectValues, tagValues, todayView, overdueView, scheduledView, inboxView) = try await (tasks, profiles, projects, tags, today, overdue, scheduled, inbox)
+        return try .init(tasks: rows, profiles: decode([DiscoveryEntry].self, profileValues), projects: decode([DiscoveryEntry].self, projectValues), tags: decode([DiscoveryEntry].self, tagValues), views: ["today": todayView, "overdue": overdueView, "scheduled": scheduledView, "inbox": inboxView].compactMapValues { $0 })
     }
 
     private func canPublishSearch(run: Int, request: Int, identity: TaskSearchIdentity) -> Bool {
@@ -455,7 +481,7 @@ final class TodoModel {
 
     @discardableResult
     func retrySearch() async -> TaskSearchRefreshOutcome {
-        await refresh(generation: generation)
+        await refresh(generation: generation, scope: .query)
     }
 
     func copyTaskID(_ id: String, pasteboard: NSPasteboard = .general) {
@@ -504,6 +530,7 @@ final class TodoModel {
                             tasks = []; projects = []; tags = []; planning = nil; viewCounts = [:]
                             selectedProject = nil; selectedTag = nil
                             appliedSearchSnapshot = nil
+                            catalogReady = false
                             searchError = nil
                             taskFilters = .init(); matchingTaskIDs = nil
                             requestedTaskFilters = .init()
@@ -1005,6 +1032,7 @@ final class TodoModel {
         tasks = []
         planning = nil
         appliedSearchSnapshot = nil
+        catalogReady = false
         searchError = nil
         taskLoadError = nil
         loading = true
@@ -1027,7 +1055,7 @@ final class TodoModel {
         loading = true
         searchPhase = .requesting
         let run = generation
-        Task { await refresh(generation: run) }
+        Task { await refresh(generation: run, scope: .query) }
     }
 
     func parseDraft() async {
@@ -1153,6 +1181,7 @@ final class TodoModel {
         credential = ""
         tasks = []
         appliedSearchSnapshot = nil
+        catalogReady = false
         searchError = nil
         searchPhase = .idle
         message = "Your Session ended. Sign in again."

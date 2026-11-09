@@ -43,7 +43,7 @@ An exit other than 0, a timeout, or a nonempty TLC queue is incomplete proof.
 [tool.json](tool.json) pins TLA+ tools v1.7.4, TLC 2.19, by HTTPS URL and SHA-256.
 The first run downloads the jar into the ignored `tool-cache` after the disk
 guard passes. Every run checks its hash. Java uses one worker, fingerprint
-polynomial 17, seed 1, a 2 GiB heap, and the bundled `MemFPSet1` implementation.
+polynomial 17, seed 1, a 2 GiB heap, one temporary directory per stage, and the bundled `MemFPSet1` implementation.
 That fingerprint set avoids the disk-set reporting exception observed during
 this unit and the quadratic final distance scan in `MemFPSet`. No symmetry
 reduction or state constraint
@@ -192,8 +192,22 @@ mapping is renewed. No branch name is resolved implicitly. Mutation anchors
 that change fail closed and require a new source review. The domain worker owns
 `verify-task-search`, the matcher, and all product edits.
 
-The run forbids extra children. The `no-comments` workflow therefore receives
-only a local audit in this unit, with independent comment review left to L1's
-permitted reviewer. No child or native app is launched by this check. The relative
+The check launches no agents or native apps. Review launches follow the active
+run's standing orders. The relative
 `.claude/skills/verify-task-search-formal` link resolves to this skill. Fresh
 session skill discovery is not proven by that filesystem check.
+
+## Full and query refresh publication
+
+The model now includes `catalogReady` and the latest pending `issuedFull` token.
+Startup and current-Profile SSE request full scope. Query changes, dialog Apply
+and Retry promote to full until a catalog has successfully published. A current
+query success retains the catalog. Reset clears readiness. Obsolete success and
+error branches publish no catalog side effects. The source mapping describes
+why obsolete request scope can be forgotten after invalidation.
+
+The command also checks `QueryHasCatalog`. Its `BrokenFallback` control removes
+bootstrap promotion and must fail that invariant with TLC exit 12. The existing
+five search safety and convergence properties and their sensitivity controls
+remain required. Full/query metadata values, offline cache contents and literal
+Task strings still require the compiled client recipes.

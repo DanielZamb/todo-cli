@@ -12,6 +12,8 @@ private actor SearchTransport: ClientTransport {
     private var failNext = false
     private var failNextRead = false
     private var holdNext = false
+    private var holdNextRead = false
+    private var heldReadFailure = false
     private var held: [Int: CheckedContinuation<Void, Never>] = [:]
     private var streamContinuation: AsyncThrowingStream<HTTPBody.ByteChunk, any Error>.Continuation?
     private var shouldFailHeld = false
@@ -20,6 +22,7 @@ private actor SearchTransport: ClientTransport {
 
     func fail() { failNext = true }
     func failRead() { failNextRead = true }
+    func holdRead(failing: Bool) { holdNextRead = true; heldReadFailure = failing }
     func hold(failing: Bool) { holdNext = true; shouldFailHeld = failing }
     func release(_ index: Int? = nil) {
         guard let key = index ?? held.keys.min() else { return }
@@ -30,6 +33,16 @@ private actor SearchTransport: ClientTransport {
         if operationID == "tasks.list", failNextRead {
             failNextRead = false
             throw URLError(.notConnectedToInternet)
+        }
+        if operationID == "tasks.list", request.path?.contains("text=") != true, holdNextRead {
+            holdNextRead = false
+            let failing = heldReadFailure
+            let response = try await live.send(request, body: body, baseURL: baseURL, operationID: operationID)
+            heldCount += 1
+            let index = heldCount
+            await withCheckedContinuation { held[index] = $0 }
+            if failing { throw URLError(.notConnectedToInternet) }
+            return response
         }
         if operationID == "tasks.list", request.path?.contains("text=") == true {
             filteredRequests.append(request.path ?? "")
@@ -163,6 +176,59 @@ struct TaskSearchStateTests {
         model.connect()
     }
 
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_W06_SERVER"] != nil))
+    func queryRetainsCatalogWhenFullSuccessOrErrorArrivesLate() async throws {
+        let server = try #require(ProcessInfo.processInfo.environment["TODO_W06_SERVER"].flatMap(URL.init(string:)))
+        let credential = try await todoClient(server: server, credential: "").signIn_period_signIn(body: .json(.init(passphrase: "scratch verification passphrase"))).ok.body.json.credential
+        let direct = todoClient(server: server, credential: credential)
+        let profile = "search-catalog-\(UUID().uuidString.lowercased())"
+        let initialize = Process()
+        initialize.executableURL = URL(fileURLWithPath: try #require(ProcessInfo.processInfo.environment["TODO_F10_CLI"]))
+        initialize.arguments = ["init", "--profile", profile]
+        initialize.environment = ProcessInfo.processInfo.environment
+        initialize.standardOutput = Pipe(); initialize.standardError = Pipe()
+        try initialize.run(); initialize.waitUntilExit()
+        #expect(initialize.terminationStatus == 0)
+        func create(_ title: String, _ project: String) async throws {
+            let data = try JSONSerialization.data(withJSONObject: ["title": title, "project_name": project])
+            let payload = try JSONDecoder().decode(Operations.tasks_period_create.Input.Body.jsonPayload.self, from: data)
+            _ = try await direct.tasks_period_create(path: .init(profile: profile), body: .json(payload)).ok
+        }
+        try await create("Canción retained", "Original Project")
+        let transport = SearchTransport()
+        let model = TodoModel(configuration: .init(server: server, initialProfile: profile, vaultService: "unused-catalog-race"), clientFactory: { url, _ in
+            Client(serverURL: url, transport: transport, middlewares: [BearerMiddleware(credential: credential)])
+        })
+        model.selectedView = "all"; model.signedIn = true; model.connection = .live
+        #expect(await model.retrySearch() == .applied)
+        #expect(model.tasks.map(\.title) == ["Canción retained"])
+        for (index, failing) in [false, true].enumerated() {
+            try await create("Catalog sentinel \(index)", "Discarded Project \(index)")
+            await transport.holdRead(failing: failing)
+            let oldFull = Task { await model.refreshAfterWrite("Older full refresh") }
+            try await wait { await transport.heldCount == index + 1 }
+            model.setSearchText(index == 0 ? "cancion" : "canci")
+            try await wait { model.searchPhase == .showing && !model.searchStale }
+            #expect(model.tasks.map(\.title) == ["Canción retained"])
+            #expect(model.projects.map(\.name) == ["Original Project"])
+            #expect(model.viewCounts["all"] == 1)
+            await transport.release()
+            await oldFull.value
+            #expect(model.tasks.map(\.title) == ["Canción retained"])
+            #expect(model.projects.map(\.name) == ["Original Project"])
+            #expect(model.viewCounts["all"] == 1)
+            #expect(model.appliedSearchSnapshot?.rows.map(\.title) == ["Canción retained"])
+            #expect(model.appliedSearchSnapshot?.rows.first?.search_matches == [.init(field: .title, start: 0, end: 7)])
+            #expect(model.appliedSearchSnapshot?.appliedIdentity == model.requestedIdentity)
+            #expect(model.searchError == nil)
+            #expect(model.taskLoadError == nil)
+        }
+        await model.refreshAfterWrite("Current full reload")
+        #expect(model.tasks.map(\.title).sorted() == ["Canción retained", "Catalog sentinel 0", "Catalog sentinel 1"].sorted())
+        #expect(model.projects.map(\.name).sorted() == ["Original Project", "Discarded Project 0", "Discarded Project 1"].sorted())
+        #expect(model.viewCounts["all"] == 3)
+    }
+
     @Test func prefixConstraintsAndUTF16Presentation() throws {
         #expect(TaskListFilters(prefix: "6AA2-").isValid)
         for value in ["zz", " 6a", "6a\n", String(repeating: "a", count: 37)] { #expect(!TaskListFilters(prefix: value).isValid) }
@@ -221,6 +287,7 @@ struct TaskSearchStateTests {
         #expect(TaskListView(model: model).visibleTasks.map(\.title) == ["Renovar el pasaporte"])
         #expect(TaskListView(model: model, compactMode: true).visibleTasks.map(\.title) == ["Renovar el pasaporte"])
         #expect(model.appliedSearchSnapshot?.rows.first?.search_matches == [.init(field: .title, start: 0, end: 7)])
+        #expect(model.tasks.map(\.title).sorted() == ["Renovar el pasaporte", "Canción de cuna", "Receipt"].sorted())
         #expect(!model.searchStale)
 
         await transport.hold(failing: true)
@@ -328,6 +395,8 @@ struct TaskSearchStateTests {
         try await wait { model.searchPhase == .showing }
         #expect(model.appliedSearchSnapshot?.appliedIdentity.text == "")
         #expect(model.appliedSearchSnapshot?.rows.count == 3)
+        #expect(model.appliedSearchSnapshot?.rows.allSatisfy { $0.search_matches == nil } == true)
+        #expect(model.tasks.count == 3)
         model.setSearchText("cancion")
         try await wait { model.searchPhase == .showing }
         await transport.hold(failing: true)

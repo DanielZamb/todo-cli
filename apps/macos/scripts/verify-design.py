@@ -17,6 +17,9 @@ source_files += sorted((root / 'design/macos/Assets.xcassets').glob('search-high
     'head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip(),
     'sources': {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest() for path in source_files}
 }, indent=2) + '\n')
+build_path = Path(os.environ.get("TODO_SWIFT_BUILD_PATH", str(root / "apps/macos/DerivedData/StateProof"))).resolve()
+if not build_path.is_relative_to(root / "apps/macos"):
+    raise SystemExit("TODO_SWIFT_BUILD_PATH must stay under apps/macos")
 commands = []
 
 def run(command, log, env=None):
@@ -29,9 +32,9 @@ def run(command, log, env=None):
 
 run(['sh', 'scripts/disk-guard.sh'], 'disk-guard.log')
 run(['python3', 'apps/macos/scripts/check-design-identifiers.py', str(evidence / 'accessibility.json')], 'accessibility.log')
-run(['swift', 'build', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--disable-automatic-resolution', '--build-tests', '--jobs', '2'], 'build.log')
-run(['swift', 'test', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--skip-build', '--filter', 'PresentationTests|CompactFormattingTests|WindowLayoutTests|TaskFilterTests'], 'presentation.log')
-binary = subprocess.check_output(['swift', 'build', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--show-bin-path'], cwd=root, text=True).strip()
+run(['swift', 'build', '--package-path', 'apps/macos', '--scratch-path', str(build_path), '--disable-automatic-resolution', '--build-tests', '--jobs', '2'], 'build.log')
+run(['swift', 'test', '--package-path', 'apps/macos', '--scratch-path', str(build_path), '--skip-build', '--filter', 'PresentationTests|CompactFormattingTests|WindowLayoutTests|TaskFilterTests'], 'presentation.log')
+binary = subprocess.check_output(['swift', 'build', '--package-path', 'apps/macos', '--scratch-path', str(build_path), '--show-bin-path'], cwd=root, text=True).strip()
 run([
     'xcrun', 'swiftc', '-typecheck', '-parse-as-library', '-swift-version', '6',
     '-target', f'{platform.machine()}-apple-macosx26.0', '-I', str(Path(binary) / 'Modules'),
@@ -43,7 +46,7 @@ resources.mkdir(parents=True, exist_ok=True)
 run(['xcrun', 'actool', str(root / 'design/macos/Assets.xcassets'), '--compile', str(resources), '--platform', 'macosx', '--minimum-deployment-target', '26.0'], 'assets.log')
 assert (resources / 'Assets.car').is_file(), 'actool did not compile the production color assets'
 environment = dict(os.environ, TODO_SNAPSHOT_DIR=str(evidence))
-run(['swift', 'test', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--skip-build', '--filter', 'Snapshots'], 'render.log', environment)
+run(['swift', 'test', '--package-path', 'apps/macos', '--scratch-path', str(build_path), '--skip-build', '--filter', 'Snapshots'], 'render.log', environment)
 manifest = json.loads((evidence / 'manifest.json').read_text())
 assert len(manifest['files']) == (56 if os.environ.get('TODO_SNAPSHOT_SEARCH_ONLY') == '1' else 2 if os.environ.get('TODO_SNAPSHOT_QUICK_ONLY') == '1' else 18 if os.environ.get('TODO_SNAPSHOT_PRIORITY_ONLY') == '1' else 28 if os.environ.get('TODO_SNAPSHOT_BATCH_EDIT_ONLY') == '1' else 346)
 assert all((evidence / name).is_file() for name in manifest['files'])

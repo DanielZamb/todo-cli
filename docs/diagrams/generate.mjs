@@ -1023,10 +1023,10 @@ frame("perf-cache", "PERF: folded-word cache", 3000, 16000, 3000, (x, y) => {
 });
 
 frame("perf-refresh", "PERF: minimal client refresh", 6400, 16000, 3000, (x, y) => {
-  heading("pr", x + 50, y + 32, "TodoModel.refresh / renderer refresh: request scope", "Proposed full/query split. Existing requestedIdentity, appliedSearchSnapshot, appliedSearch and canPublishSearch remain authoritative.");
+  heading("pr", x + 50, y + 32, "TodoModel.refresh / renderer refresh: request scope", "Full/query split. Existing requestedIdentity, appliedSearchSnapshot, appliedSearch and canPublishSearch remain authoritative.");
   card("pr-input", x + 50, y + 220, 900, { title: "setSearchText / changeSearch / filter Apply", body: "invalidate refreshGeneration immediately\ncapture full requestedIdentity after debounce\nretain rows + highlights while Requesting", h: 150 });
-  card("pr-query", x + 1950, y + 220, 900, { title: "Proposed query-only refresh", body: "tasks.list with current text and filters\nreads.view only for current planning view\nasync let / Effect.all: await both", h: 150 });
-  card("pr-full", x + 50, y + 850, 1000, { title: "Full refresh / startup, SSE, write, reset", body: "tasks + matching_tasks; Profiles/Projects/Tags\nfour reads.view counts, concurrently\nno catalog yet: Retry uses full refresh", h: 150 });
+  card("pr-query", x + 1950, y + 220, 900, { title: "Query-only refresh / search IPC", body: "taskRequest search / readSearchRows\ntasks.list with current text and filters\nreads.view only for current planning view\nasync let / Effect.all: await both", h: 150 });
+  card("pr-full", x + 50, y + 850, 1000, { title: "Full refresh / startup, SSE, write, reset", body: "tasks + matching_tasks; Profiles/Projects/Tags\nfour reads.view counts, concurrently\ncatalogReady / catalogRef absent: Retry uses full", h: 150 });
   card("pr-guard", x + 1950, y + 850, 900, { title: "canPublishSearch / activeQuery guards", body: "latest request + generation + full identity\naccept all awaited reads or guarded Error\nobsolete success/error changes no visible state", h: 150 });
   card("pr-publish", x + 800, y + 1450, 1400, { title: "appliedSearchSnapshot / appliedSearch", body: "publish response strings + spans + planning membership together\nquery keeps catalog; full refresh updates discovery and counts\nError retains rows; Retry or current-Profile SSE recovers", fill: c.accent, h: 150 });
   arrow("pr-request", "pr-input", "pr-query", { label: "query change / catalog ready", from: "right", to: "left", labelFont: SANS });
@@ -1038,7 +1038,7 @@ frame("perf-refresh", "PERF: minimal client refresh", 6400, 16000, 3000, (x, y) 
   marker("pr-m2", x + 1910, y + 830, 2);
   marker("pr-m3", x + 760, y + 1430, 3);
   notes("pr-notes", x + 50, y + 1780, 2850, "Numbered notes", [
-    "Electron already runs nine reads concurrently. Swift currently awaits them sequentially. Count real HTTP calls through both clients.",
+    "Electron already runs nine reads concurrently. Swift uses async let for full and query reads. Count real HTTP calls through both clients.",
     "TaskSearch.tla guards every response, including full/query races, ABA and late errors. Only one applied snapshot owns rows and spans.",
     "Keep offline unfiltered cache, drafts and dialog rollback. Compact-first headless drives and offscreen captures respect native HOLD.",
   ]);

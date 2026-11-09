@@ -126,6 +126,7 @@ import {
   identityKey,
   type SearchIdentity,
   searchGroups,
+  type TaskCatalog,
 } from "./task-search-results.ts";
 import { TaskTags } from "./task-tags.tsx";
 import "./index.css";
@@ -316,6 +317,8 @@ function App() {
     null,
   );
   const catalog = appliedSearch?.catalog ?? null;
+  const catalogRef = useRef(catalog);
+  catalogRef.current = catalog;
   const unfilteredSearch = useRef<AppliedSearch | null>(null);
   const tasks = catalog?.tasks ?? [];
   const [searchText, setSearchText] = useState("");
@@ -437,6 +440,7 @@ function App() {
     setSeriesDialog(null);
     setWriteIntent(null);
     setAppliedSearch(null);
+    catalogRef.current = null;
     unfilteredSearch.current = null;
     setSearchPhase("Idle");
     clearTimeout(debounce.current);
@@ -468,6 +472,7 @@ function App() {
     setSignedIn(false);
     setConnection("offline");
     setAppliedSearch(null);
+    catalogRef.current = null;
     unfilteredSearch.current = null;
     setSearchPhase("Idle");
     clearTimeout(debounce.current);
@@ -514,6 +519,7 @@ function App() {
         if (
           reply._tag === "error" &&
           request._tag !== "list" &&
+          request._tag !== "search" &&
           request._tag !== "copyTaskId" &&
           (!("profile" in request) || active.current === request.profile)
         )
@@ -527,90 +533,105 @@ function App() {
           _tag: "error",
           message: "Could not contact Todo. Retry.",
         };
-        if (request._tag !== "list" && request._tag !== "copyTaskId")
+        if (
+          request._tag !== "list" &&
+          request._tag !== "search" &&
+          request._tag !== "copyTaskId"
+        )
           setError(reply.message);
         return reply;
       }
     },
     [endAuthentication],
   );
-  const refresh = useCallback(async () => {
-    if (
-      active.current !== profile ||
-      activeQuery.current.profile !== profile ||
-      activeQuery.current.view !== view ||
-      activeQuery.current.project !== project ||
-      activeQuery.current.tag !== tag
-    )
-      return;
-    clearTimeout(debounce.current);
-    const identity: SearchIdentity = {
-      profile,
-      view,
-      filters: advancedFiltersRef.current,
-      project,
-      tag,
-      text: searchTextRef.current,
-    };
-    activeQuery.current = identity;
-    const query = identityKey(identity);
-    const generation = ++refreshGeneration.current;
-    const changingFilters =
-      JSON.stringify(identity.filters) !==
-      JSON.stringify(appliedFiltersRef.current);
-    setPhase("Requesting");
-    const result = await request({
-      _tag: "list",
-      profile,
-      view,
-      filters: {
-        ...identity.filters,
-        text: identity.text,
-      },
-    });
-    if (
-      active.current !== profile ||
-      identityKey(activeQuery.current) !== query ||
-      refreshGeneration.current !== generation
-    )
-      return;
-    if (result._tag === "tasks") {
-      setLoadError("");
-      setAppliedSearch({ catalog: result, appliedIdentity: identity });
-      unfilteredSearch.current = {
-        catalog: { ...result, matching_tasks: result.tasks },
-        appliedIdentity: {
-          ...identity,
-          filters: {},
-          project: null,
-          tag: null,
-          text: "",
-        },
+  const refresh = useCallback(
+    async (scope: "full" | "query" = "full") => {
+      if (
+        active.current !== profile ||
+        activeQuery.current.profile !== profile ||
+        activeQuery.current.view !== view ||
+        activeQuery.current.project !== project ||
+        activeQuery.current.tag !== tag
+      )
+        return;
+      clearTimeout(debounce.current);
+      const identity: SearchIdentity = {
+        profile,
+        view,
+        filters: advancedFiltersRef.current,
+        project,
+        tag,
+        text: searchTextRef.current,
       };
-      appliedFiltersRef.current = identity.filters;
-      setAdvancedFilters(identity.filters);
-      setApplyingFilters(false);
-      setPhase("Showing");
-      if (changingFilters)
-        setError((current) => (current === filterApplyError ? "" : current));
-      if (needsDraft.current) {
-        needsDraft.current = false;
-        setDraft(result.draft);
+      activeQuery.current = identity;
+      const query = identityKey(identity);
+      const generation = ++refreshGeneration.current;
+      const changingFilters =
+        JSON.stringify(identity.filters) !==
+        JSON.stringify(appliedFiltersRef.current);
+      setPhase("Requesting");
+      const retained = catalogRef.current;
+      const result = await request({
+        _tag: scope === "query" && retained ? "search" : "list",
+        profile,
+        view,
+        filters: {
+          ...identity.filters,
+          text: identity.text,
+        },
+      });
+      if (
+        active.current !== profile ||
+        identityKey(activeQuery.current) !== query ||
+        refreshGeneration.current !== generation
+      )
+        return;
+      const next: TaskCatalog | null =
+        result._tag === "tasks"
+          ? result
+          : result._tag === "search" && retained
+            ? { ...retained, ...result, _tag: "tasks" }
+            : null;
+      if (next) {
+        setLoadError("");
+        setAppliedSearch({ catalog: next, appliedIdentity: identity });
+        if (result._tag === "tasks")
+          unfilteredSearch.current = {
+            catalog: { ...result, matching_tasks: result.tasks },
+            appliedIdentity: {
+              ...identity,
+              filters: {},
+              project: null,
+              tag: null,
+              text: "",
+            },
+          };
+        appliedFiltersRef.current = identity.filters;
+        setAdvancedFilters(identity.filters);
+        setApplyingFilters(false);
+        setPhase("Showing");
+        if (changingFilters)
+          setError((current) => (current === filterApplyError ? "" : current));
+        if (result._tag === "tasks" && needsDraft.current) {
+          needsDraft.current = false;
+          setDraft(result.draft);
+        }
+      } else if (result._tag === "error") {
+        advancedFiltersRef.current = appliedFiltersRef.current;
+        setApplyingFilters(false);
+        if (changingFilters) {
+          setError(filterApplyError);
+          activeQuery.current = {
+            ...identity,
+            filters: appliedFiltersRef.current,
+          };
+        }
+        setPhase("Error");
+        setLoadError(changingFilters ? "" : result.message);
       }
-    } else if (result._tag === "error") {
-      advancedFiltersRef.current = appliedFiltersRef.current;
-      setApplyingFilters(false);
-      if (changingFilters) {
-        setError(filterApplyError);
-        activeQuery.current = {
-          ...identity,
-          filters: appliedFiltersRef.current,
-        };
-      }
-      setPhase("Error");
-      setLoadError(changingFilters ? "" : result.message);
-    }
-  }, [profile, project, tag, request, view, setPhase]);
+    },
+    [profile, project, tag, request, view, setPhase],
+  );
   const refreshRef = useRef(refresh);
   refreshRef.current = refresh;
   const changeSearch = (text: string) => {
@@ -622,7 +643,7 @@ function App() {
     setLoadError("");
     setPhase("Debouncing");
     debounce.current = setTimeout(() => {
-      void refreshRef.current();
+      void refreshRef.current("query");
     }, 250);
   };
   useEffect(() => () => clearTimeout(debounce.current), []);
@@ -770,6 +791,7 @@ function App() {
       if (notice._tag === "reload") {
         refreshGeneration.current++;
         setAppliedSearch(null);
+        catalogRef.current = null;
         unfilteredSearch.current = null;
         setSearchPhase("Idle");
         clearTimeout(debounce.current);
@@ -1224,6 +1246,7 @@ function App() {
   const invalidate = () => {
     clearTimeout(debounce.current);
     refreshGeneration.current++;
+    setPhase("Debouncing");
   };
   const clearFilters = () => {
     invalidate();
@@ -1237,11 +1260,13 @@ function App() {
     }
     setApplyingFilters(true);
     setError((current) => (current === filterApplyError ? "" : current));
-    void refreshRef.current();
+    if (project === null && tag === null) void refreshRef.current("query");
   };
   const activateView = (next: ViewName, nextProject: string | null = null) => {
     invalidate();
     setAppliedSearch(null);
+    setPhase("Idle");
+    catalogRef.current = null;
     unfilteredSearch.current = null;
     setEditor(null);
     setHistory(null);
@@ -1258,7 +1283,7 @@ function App() {
       void refreshRef.current();
   };
   useEffect(() => {
-    if (signedIn) void refresh();
+    if (signedIn) void refresh("query");
   }, [signedIn, refresh]);
   const groups = catalog
     ? searchGroups(catalog)
@@ -1428,7 +1453,7 @@ function App() {
             invalidate();
             advancedFiltersRef.current = value;
             setApplyingFilters(true);
-            void refresh();
+            void refresh("query");
           }}
         />
       )}
@@ -2014,7 +2039,7 @@ function App() {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    void refresh();
+                    void refresh("query");
                   }}
                 >
                   Retry

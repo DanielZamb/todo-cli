@@ -89,3 +89,28 @@ also includes TaskSearch.swift. No native app, hosted XCTest, Keychain, signing,
 installed binary or real owner database is used. Native toolbar focus, Cmd+F,
 Esc, native glass and VoiceOver remain under HOLD. Offscreen fixture failure
 feedback does not prove an operating-system clipboard failure.
+
+## Query refresh request counts
+
+`RefreshMeasurementTests.refreshMeasurement` drives the production TodoModel
+and generated client through the shared transparent recorder in
+`apps/electron/scripts/measure-refresh.ts`. Pass `swift`, the absolute compiled
+unhosted Swift Testing bundle binary, and a fresh absolute evidence directory.
+The runner selects the frozen bundle binary and uses `swift test --skip-build`.
+It never invokes a build inside the measurement slot. Acquire `scripts/swift-slot.sh` outside
+`/tmp/todo-perf-measure.lock` before running it. Preserve the baseline executable
+before changing production sources, then alternate five compiled inputs per
+side under one measurement slot. Record every real process exit.
+
+Each run includes explicit warmup, 25 measured operations across All tasks and
+all planning views, full-refresh rows, typed text, filter Apply, Clear and Retry.
+Literal titles, spans, identities and the retained unfiltered Task count must
+pass every sample. The recorder keeps route lifetimes, failures, cancellation,
+per-interval one-minute load and artifact hashes. Candidate query counts are
+one for All tasks and two for planning when `TODO_REFRESH_EXPECT_MINIMAL=1`.
+Use `TODO_REFRESH_DELAY_MS=200` only as a separately labelled concurrency proof.
+The production state suite also rejects catalog publication from discarded full
+successes and errors, then confirms a current full reload updates it.
+
+`verify-design.py` accepts the same `TODO_SWIFT_BUILD_PATH` override as the state
+helper. The directory must remain under this checkout's `apps/macos`.

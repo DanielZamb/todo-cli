@@ -882,10 +882,23 @@ try {
   checks.push({ projectTagAndText: true });
   await field.fill("");
   await showing("");
+  const selectorClearStart = receipts.length;
   await page
     .getByRole("button", { name: "Clear filters", exact: true })
     .click();
   await showing("");
+  const selectorClearReads = receipts
+    .slice(selectorClearStart)
+    .filter(
+      (entry) =>
+        typeof entry === "object" &&
+        entry !== null &&
+        "path" in entry &&
+        typeof entry.path === "string" &&
+        /^\/profiles\/work\/tasks(?:\?|$)/.test(entry.path),
+    );
+  expect(selectorClearReads).toHaveLength(1);
+  checks.push({ selectorClearReads: 1 });
   await expect(page.locator(".search-excerpt")).toHaveCount(0);
   await query("cancion", ["😀 Canción de cuna", "Search receipt"]);
   const staleDescription = arm("reno");
@@ -937,6 +950,43 @@ try {
       title,
     });
   }
+  for (const [index, failing] of [false, true].entries()) {
+    await field.fill("reno");
+    await showing("reno");
+    const oldFull = arm("reno", failing);
+    const counts = await page
+      .getByRole("navigation", { name: "Planning views" })
+      .allTextContents();
+    const projectName = `Discarded catalog ${index}`;
+    cli("add", `Catalog sentinel ${index}`, "--project", projectName);
+    await expect.poll(() => oldFull.reached).toBe(true);
+    await field.fill("cancion");
+    await showing("cancion");
+    expect((await titles()).toSorted()).toEqual(
+      ["😀 Canción de cuna", "Search receipt"].toSorted(),
+    );
+    oldFull.release.resolve();
+    await page.waitForTimeout(100);
+    await showing("cancion");
+    expect(
+      await page
+        .getByRole("navigation", { name: "Planning views" })
+        .allTextContents(),
+    ).toEqual(counts);
+    await expect(
+      page
+        .getByLabel("Filter by Project")
+        .locator("option")
+        .filter({ hasText: projectName }),
+    ).toHaveCount(0);
+    await expect(page.getByLabel("Search failed")).toHaveCount(0);
+    checks.push({
+      fullSupersededByQuery: failing ? "obsolete error" : "obsolete success",
+      catalogRetained: true,
+    });
+  }
+  await field.fill("reno");
+  await showing("reno");
   await page.getByRole("button", { name: "More filters", exact: true }).click();
   await page.getByLabel("Priority", { exact: true }).selectOption("P2");
   await page

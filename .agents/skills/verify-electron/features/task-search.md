@@ -113,3 +113,26 @@ controls cannot pass by being filtered out of the bounds receipt.
 The drive requires search outside the New task card, above its bounds, and
 reachable by hit testing through the scrim. Search failure uses neutral inline
 status styling, with retained rows and the existing recovery actions.
+
+## Query refresh request counts
+
+`measure-refresh.ts` drives the same production unsigned background host against
+compiled scratch HTTP. Pass `electron`, an absolute compiled dist directory,
+and a fresh absolute evidence directory. The transparent recorder stores all
+route lifetimes, statuses, cancellations, startup traffic, per-interval load,
+artifact hashes and the binary provenance in `measurement.json`.
+
+Each run warms every planning view in Compact, then checks typed text, filter
+Apply, Clear filters, Clear text, an explicit failed query and Retry. Literal
+rows, whole-word spans and complete applied/requested identities must agree.
+Set `TODO_REFRESH_EXPECT_MINIMAL=1` for the candidate's one data read in All tasks
+or two in planning. Health reads remain separate. Set `TODO_REFRESH_DELAY_MS=200`
+only for the labelled delayed-proxy concurrency proof. It is not a real-server
+timing run. Compile before acquiring `/tmp/todo-perf-measure.lock`, alternate
+five frozen baseline/candidate inputs under that same slot, and record the real
+process exits. No build lock may be acquired inside the measurement slot.
+
+The full search drive additionally holds full-refresh successes and errors,
+issues a newer query, then releases the old response. Discovery and planning
+counts must retain their prior catalog values. Existing races, offline Clear,
+filter rollback, drafts and SSE recovery remain required.

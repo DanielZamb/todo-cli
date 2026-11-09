@@ -95,6 +95,7 @@ const controls = [
   "BrokenLatest",
   "BrokenStale",
   "BrokenProgress",
+  "BrokenFallback",
 ];
 function config(bounds: Bounds, live: boolean, broken = "", semanticOnly = false) {
   return [
@@ -115,8 +116,8 @@ function config(bounds: Bounds, live: boolean, broken = "", semanticOnly = false
     ),
     `SPECIFICATION ${live ? "FairSpec" : "Spec"}`,
     semanticOnly
-      ? "INVARIANTS TypeOK OneSnapshot ShowingIsCurrent ExactStale"
-      : "INVARIANTS TypeOK OneSnapshot LatestPublication ShowingIsCurrent ExactStale",
+      ? "INVARIANTS TypeOK OneSnapshot ShowingIsCurrent ExactStale QueryHasCatalog"
+      : "INVARIANTS TypeOK OneSnapshot LatestPublication ShowingIsCurrent ExactStale QueryHasCatalog",
     ...(live ? ["PROPERTY Convergence"] : []),
     "CHECK_DEADLOCK FALSE",
     "",
@@ -186,6 +187,7 @@ try {
   ) {
     const directory = join(evidence, label);
     mkdirSync(directory);
+    mkdirSync(join(directory, "tmp"));
     writeFileSync(join(directory, "TaskSearch.tla"), source);
     const cfg = config(bounds, live, broken, semanticOnly);
     writeFileSync(
@@ -202,6 +204,7 @@ try {
       "java",
       [
         "-Xmx2g",
+        `-Djava.io.tmpdir=${join(directory, "tmp")}`,
         "-XX:+UseParallelGC",
         "-Dtlc2.tool.fp.FPSet.impl=tlc2.tool.fp.MemFPSet1",
         "-cp",
@@ -294,6 +297,7 @@ try {
     small,
     true,
     "BrokenProgress",
+  "BrokenFallback",
     "Temporal properties were violated",
   );
   await tlc(
@@ -302,6 +306,13 @@ try {
     true,
     "NoRetryFairness",
     "Temporal properties were violated",
+  );
+  await tlc(
+    "broken-fallback",
+    small,
+    false,
+    "BrokenFallback",
+    "Invariant QueryHasCatalog is violated",
   );
   await tlc("restored", small, true, "", "");
   const typecheck = await execute("typecheck", "bun", [
