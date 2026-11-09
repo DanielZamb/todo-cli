@@ -1060,3 +1060,224 @@ launched because the task expressly forbids children.
 Coverage JSON SHA-256 values at the proof source:
 coverage.json 3f590f78a831490fc3e98e72d1931872b766cbc4a8a93b52bf6ceacefea38e48;
 public-coverage.json 5bedf89db0fa2fe49887e35f37279bea0220e2eb81bf0206eb2d94bb0305bde5.
+
+
+## Merged-B conformance completed after owner resume, 2026-11-09
+
+The full default command now passes at the exact merged product pin. This closes
+F's current merged-B implementation/proof work for L1-arranged review. It is not
+final F approval or whole-feature/client acceptance. Final E/S runtime mapping,
+fresh Claude discovery and both independent F review seats remain pending.
+
+| Identity | Value |
+| --- | --- |
+| Branch | feat/task-dag-f-formal |
+| Committed F proof source | 71a29afc764e2db32ed109c9314b1a8290460d46 |
+| Product Git object | 0f7a19488f15ec1f8d4c4dad14749de7720f17d0 |
+| Actual CLI and live health build | 0f7a1948 |
+| Actual API contract | 58c0026725f2d846fd4f80bd7cabaff73994d6603d04ed501c82cfa1fa6f1fe9 |
+| Delivery | Report-only commit named in terminal notifications and completion.json |
+
+Both pins and coverage maps still describe immutable Git objects at 0f7. No leaf
+6486 binary, moving branch, live removed worktree or F-HEAD product binary was
+substituted. Installed versions, Git blobs, import resolution and source hashes
+were checked. Every isolated product input is restored byte-for-byte. No product
+or packages/domain file was added or edited. No checkout, merge, rebase, push,
+PR, child/reviewer, native app, signing, Keychain, real database or owner Task was
+used. L1 arranges the reviews and integration.
+
+### Actual results and scope
+
+| Command or stage | Actual result | Evidence |
+| --- | --- | --- |
+| bun .agents/skills/verify-dag-formal/check.mjs, no subset flags | Exit 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/resume-default-nTbjKr/default.exit |
+| Finite model, 25 safety configs plus clean | All 26 exit 0, all queues empty | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/check-bvUuqU |
+| Five intended model controls | All intended invariant failures, exit 12 | Same model directory |
+| Seven reachability controls | All intended witness violations, exit 12 | Same model directory |
+| Full real-import production stage | Exit 0; all 36 controls and final clean | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/conformance-KBb0RR |
+| Full public/read stage | Exit 0; all 53 controls and final clean | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/public-VYqasx |
+| VITEST_MAX_WORKERS=1 pnpm check, guarded F-worktree scope | Exit 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f-worktree-check-YZwM7n |
+
+The successful default command is one coherent committed execution. It does
+not assemble a pass from the old stopped run or uncommitted calibrations. All
+89 source-control executions, 80 distinct variant names because nine lifecycle/
+replay controls repeat at the public boundary, compiled successfully, failed the
+intended behavioral AssertionError with exit 1, restored exact bytes and reran
+clean with exit 0. Bun API build success is recorded directly; it is not an
+invented shell compiler exit. No compiler/schema/hash failure, startup failure
+or timeout counted as sensitivity. Final full corpora matched after restore.
+
+The public baseline passed 147 actual CLI/HTTP/PTY actions. The committed
+31-case B matrix was rerun and passed. These cover true-only filters and false
+recovery; Ready/Blocked terminal exclusion; whole-Profile ordering before view
+membership; valid stale no-op/no History and malformed/auth boundaries; literal
+9/13/14 warning advice/count/refusal and formats/envelopes; per-item batch dry-run
+and actual SQL rollback; Delete confirmation and fingerprints that change to
+empty; successful-map/forward-reference import and full canonical nested error
+witnesses after encoding; full captured refusal responses versus bounded
+History; Purge redaction and replay from beginning/checkpoints. Production PTY
+proof covers default No, EOF, Yes and the fingerprint race. The final clean CLI,
+server and driver were rebuilt and rerun.
+
+The F-worktree check passed 298 domain, 46 CLI, 30 server and 32 Electron tests,
+with one existing Electron skip. This is the F checkout at 71a29afc764e2db32ed109c9314b1a8290460d46,
+not a claimed monorepo check in the merged 0f7 checkout. Ordinary-worker pnpm
+check first exited 1 on the unchanged SOL-5 five-second deadline. The successful
+run used Vitest's installed, supported VITEST_MAX_WORKERS=1 setting and the same
+assertions and per-test deadline. No product test or B skill was edited.
+L1's earlier postmerge pnpm check 0 remains a separate supplied receipt.
+
+### Bounds, source properties and retained model controls
+
+TLC remains tla2tools 1.7.4, verified SHA-256
+936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88,
+768 MiB heap, one worker, fingerprint 0, seed 26 and 120 seconds per config.
+There are no state constraints truncating queues. Typical configs have three
+Tasks, one Profile, four statuses, Versions 1 through 4, two CLI/server writers
+with one operation each and bounded grouped Revert. The count race uses four
+Tasks and degree two. Two-Profile isolation and dedicated 15-Task single-add
+13/14 scenarios have separate finite configs. The small race is not a literal
+degree-13 race proof. Clean counts are 64 initial, 32,816 generated, 19,784
+distinct, depth 27, queue 0. Every config's complete counts, bounds, hashes,
+trace and exit are preserved in model-counts.tsv and the model directory.
+
+The five counterexample narratives remain: stale graph validation before Begin
+lets serialized opposite-edge writers accept a loop; removing the lock permits
+both writers' edge facts to reach durable state; pruning terminal statuses hides
+a cycle; omitting the reopen guard accepts a blocker reopen under a done
+dependent; split Delete publication exposes edge removal without its lifecycle
+History. Each fails the intended safety property with exit 12. No-lock writers
+apply edge deltas, not whole stale graph snapshots. Captured refusal evidence
+survives rollback independently of a later durable graph. Rejection History may
+still be lost before its separate commit. Commit alone publishes private edges,
+Tasks, Versions and resolved History together. These are finite safety results,
+not liveness, unbounded safety, SQLite-engine or power-loss proofs.
+
+The actual-source corpus passed with seed 260911: 4,165 directed graphs through
+four nodes, 572 DAGs, 140,660 status vectors, 709,242 separate weight vectors,
+342,838 scalar cases, 2,304,885 cycle pairs and 30,624,590 assertions; plus 256
+seeded DAGs through 40 nodes and the 103-edge loop. Oracles use independent
+sets, paths and scalar order assertions. Kahn/weighted Kahn respect every edge,
+positive all-open lightest equals scalar sorting, pruned energy counts distinct
+ancestors and unknown weights, BFS returns shortest closed witnesses across all
+statuses, and readiness/shape rules match the current contract.
+
+Independent raw replay passed 93 cases and 186 complete/checkpoint rebuilds,
+exhaustive DAGs through three nodes plus 64 seeded DAGs through twelve nodes.
+Nineteen lifecycle, surviving-Version, N1, FK, Move/Purge and authenticated
+initial-edge cases passed. These concrete paths are outside the TLA+ model.
+The B-maintained AtomicCAS one command passed unchanged through the guarded
+runtime/preload, with 216 enumerations, 432 replay checks, seven process kills
+and two writers. It remains a separate finite single-Task/no-edge proof.
+
+### Current G11/G4, response identity and portable client
+
+Direct queryGraph objects, encoded values and public responses have exactly
+eight GraphNode fields. Only the requested root owns strict ancestors and
+descendants in whole-Profile topo order, and lightest_next in G4 own-energy
+ascending/unknown-last/topo order. The root-500 1,000-chain proves 500 strict
+ancestors and 499 strict descendants. Unequal-energy and equal-energy branches,
+Ready-root inclusion and terminal-root exclusion passed. A count-only binary
+observed three reachable calls on literals and 1,000 nodes; hidden direct-node
+fields and discarded per-node closure work each have an intended failing
+source control. This makes no total query-time claim; energy bitsets remain.
+
+F independently drove both the committed B chain, SHA-256
+9954c8d86f6e9abac1ac3fb46be0ea16a7043297e2815dff32533a4c5de93c8f,
+root 90d7ac86-4b7e-4eb6-abb0-f76343e124c2, and its distinct root-500 fixture.
+These are current F observations using preserved e717 before and merged 0f7
+after binaries, not relabelled B measurements.
+
+| Fixture | Before CLI stdout bytes | After CLI stdout bytes | Before compact bytes | After compact bytes | Current decoded HTTP JSON body bytes |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| root500 | 29035948 | 1078807 | 19643929 | 726753 | 726753 |
+| review-root999 | 49255186 | 1206265 | 39853167 | 844214 | 844214 |
+
+CLI, compact re-encoding and actual decoded HTTP body bytes stay separate.
+No earlier HTTP size or latency/speedup claim is inferred. Mermaid safe names
+map bijectively to typed Task identities, and every stored edge, including
+redundancy, renders blocker to dependent. CLI Markdown, schema and Mermaid
+wiring, readGraph and both published graph schema versions passed. API OpenAPI
+3.1 and normalized Swift OpenAPI 3.0 are deliberately different encodings with
+matching graph fields/root sets and contract identities.
+
+The production portable client was constructed once while signed out. Its real
+HTTP trace is sign-in 200/no bearer, Profiles 200/current bearer, graph reads
+200/current bearer, sign-out 204/current bearer, Profiles 401/no Authorization,
+re-sign-in 200/no bearer, Profiles 200/current bearer on the same instance.
+Header absence is observed, not inferred from 401. Both freezing the signed-out
+value and retaining the revoked bearer fail their intended assertions. Source
+mapping covers the production factory, main/task-client and proof callers.
+Native/main safeStorage, restoration, Keychain, notifications and final E/S
+feature/runtime behavior remain unproven. B's typed Swift 20/no-skip and unsigned
+THIN_PASS_NATIVE_BLOCKED receipts are inspected historical evidence only.
+
+### Cleanup, failed attempts and review handoff
+
+Every actual internal compiler call ran the canonical guard immediately before
+entry. The successful full proof and F-worktree check contain 151 canonical
+compiler-guard receipts, all exit 0. The final separate guard also returned 0,
+reporting 97.6 GB free. The final df observation is 97.633673216 GB available.
+The owner's resume observation was 148.7 GB. Concurrent activity and APFS sharing
+prevent attributing capacity changes to this worker's logical unlinks.
+
+During these successful runs, cleanup retired 136 new actual compiler-runtime
+copies, 12,057,877,504 logical bytes; one synthetic owned-copy fixture,
+89,159,906 bytes; and 107 superseded owned mutant binaries,
+9,651,631,990 bytes. Exact paths, hashes, UID/inodes, completed compiler
+snapshots, ps/lsof checks and observed before/after capacity are in cleanup.tsv
+and each cited receipt. The protected preexisting/ambiguous/symlink fixtures
+remain intentionally. No other unmatched compiler artifact was removed. Every
+provenance/source/behavior receipt, cited evidence directory and e717/3cce/0f7
+review/current binary group was preserved. No directory or other tree was
+pruned. Final audits found all 317 files in the two current candidate manifests
+byte-exact and no own cached binary running.
+
+The helper recognizes both finished output and the exact running Bun runtime
+hash, excludes its settled wrapper PID from compiler-active checks, and never
+follows a temporary symlink. It handles API compilation and CLI build dispatch.
+A full-command self-check proves new-file retirement plus preservation of prior,
+unmatched and symlink files. No physical low-disk-fill test occurred.
+
+Retained current-resume failures are outer resume-default-I4MePE with model
+directory check-eifxl2, actual exit 1 at the old 600-second public ceiling after 12 completed controls;
+outer resume-default-X05smG with model directory check-FR6Um8, actual exit 1 at inherited AtomicCAS's first
+15-second READY deadline; and F-worktree checks oJ7YRb/loePxN, actual exit 1.
+The first F check also exposed the wrapper's Bun build/preload dispatch error.
+The timeout's isolated store source was restored from the exact Git blob; its
+two retired control binaries have recovery receipts. No survivor PID or compiler
+temporary remained from that timeout. An identical guarded AtomicCAS retry
+passed at atomic-retry-cneI5u, preserving the original deadline, and the current
+full default passed independently. None of those failures became sensitivity.
+Only the outer public-stage ceiling changed to 3,600 seconds; behavioral child
+limits remain 180 seconds, TLC remains 120 seconds/config, and B's source and
+15-second readiness deadline remain unchanged.
+
+Compiler-cleanup probes HPpwu6, Kgokxh, jA4Dfm and z4HYig are separately labelled
+calibrations. HPpwu6/cleanup-capacity-clarification.json preserves the correction
+that a zero supplied to a resumed aggregate capture was not a capacity
+measurement; per-artifact observed values remain available. The old DISK STOP
+exit 3 and every f140/e717/3cce result remain unchanged. The coordinator's removal
+of 460 earlier F temporaries is its archive record, not this worker's cleanup.
+
+Historical removed-worktree paths resolve through
+/Users/zambamon/Documents/worktree-cleanup-2026-11-09/todo-cli/ARCHIVE.md.
+The archived independent B closure proof-exits file is byte-identical to F's
+previously inspected copy. No archived worktree was recreated or verified as a
+moving checkout. No direct SEC/PERF/AGENT coordination occurred.
+
+Current receipts:
+
+- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/resume-default-nTbjKr/completion.json, actual exits, identities, bounds and hashes;
+- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/resume-default-nTbjKr/model-counts.tsv, every finite config's counts/depth/queue;
+- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/resume-default-nTbjKr/source-controls.tsv, all 89 intended behavioral/restore pairs;
+- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/resume-default-nTbjKr/cleanup.tsv, exact retirement paths and per-action evidence;
+- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/public-VYqasx/graph-response/build-identity.json and client-auth-sequence.json;
+- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f-worktree-check-YZwM7n/pnpm-check.exit and scheduling.txt, F scope and one-worker setting.
+
+Coverage SHA-256: coverage.json 3f590f78a831490fc3e98e72d1931872b766cbc4a8a93b52bf6ceacefea38e48;
+public-coverage.json 5f9e3138453c51b2d371d236c3b01fcf061f0212b8afa01764a3b9872dd08986.
+No code comments or suppressions were added. The local no-comments audit used
+no child, as explicitly ordered. The delivery is documentation only; verifier
+code, model, pins and coverage bytes match the committed proof source. Review
+seats, fresh Claude discovery and final client/runtime mapping remain gates.

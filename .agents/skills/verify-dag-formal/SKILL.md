@@ -3,6 +3,8 @@ name: verify-dag-formal
 description: Check finite Task dependency safety and immutable production conformance. Use after graph, transaction, replay or public Dependency changes. The active immutable product pin is merged integration 0f7a1948; final client/runtime mapping remains pending.
 ---
 
+Latest completed merged-B checkpoint: default one command exited 0 at F proof source 71a29afc764e2db32ed109c9314b1a8290460d46, product 0f7a19488f15ec1f8d4c4dad14749de7720f17d0. All 36 library and 53 public/read source-control executions passed sensitivity and exact clean restore. Receipt: /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/resume-default-nTbjKr/completion.json. F-worktree VITEST_MAX_WORKERS=1 pnpm check exited 0 with unchanged per-test deadlines; default-worker timing failures are retained. Final E/S runtime mapping, fresh Claude discovery and independent F review seats remain pending.
+
 # Verify Task dependency safety and production conformance
 
 Dependency writes must preserve the DAG, status rules and affected Versions and
