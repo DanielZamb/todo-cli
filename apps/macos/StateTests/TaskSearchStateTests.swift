@@ -21,6 +21,13 @@ private actor SearchTransport: ClientTransport {
     private(set) var heldCount = 0
     private(set) var filteredRequests: [String] = []
     private(set) var catalogRequests = 0
+    private(set) var liveDataReads = 0
+
+    private func forward(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
+        let response = try await live.send(request, body: body, baseURL: baseURL, operationID: operationID)
+        if response.0.status == .ok, operationID == "tasks.list" || operationID.hasPrefix("reads.") { liveDataReads += 1 }
+        return response
+    }
 
     func fail() { failNext = true }
     func failRead() { failNextRead = true }
@@ -42,7 +49,7 @@ private actor SearchTransport: ClientTransport {
         if operationID == "tasks.list", request.path?.contains("text=") != true, holdNextRead {
             holdNextRead = false
             let failing = heldReadFailure
-            let response = try await live.send(request, body: body, baseURL: baseURL, operationID: operationID)
+            let response = try await forward(request, body: body, baseURL: baseURL, operationID: operationID)
             heldCount += 1
             let index = heldCount
             await withCheckedContinuation { held[index] = $0 }
@@ -56,7 +63,7 @@ private actor SearchTransport: ClientTransport {
             if holdNext {
                 holdNext = false
                 let failure = shouldFailHeld
-                let response = try await live.send(request, body: body, baseURL: baseURL, operationID: operationID)
+                let response = try await forward(request, body: body, baseURL: baseURL, operationID: operationID)
                 heldCount += 1
                 let index = heldCount
                 await withCheckedContinuation { held[index] = $0 }
@@ -65,7 +72,7 @@ private actor SearchTransport: ClientTransport {
             }
             if failing { throw URLError(.notConnectedToInternet) }
         }
-        let response = try await live.send(request, body: body, baseURL: baseURL, operationID: operationID)
+        let response = try await forward(request, body: body, baseURL: baseURL, operationID: operationID)
         if operationID == "changes.stream", let body = response.1 {
             let pair = AsyncThrowingStream<HTTPBody.ByteChunk, any Error>.makeStream()
             streamContinuation = pair.continuation
@@ -207,9 +214,11 @@ struct TaskSearchStateTests {
         model.selectedView = "all"; model.signedIn = true; model.connection = .live
         #expect(await model.retrySearch() == .applied)
         #expect(model.tasks.map(\.title) == ["Canción retained"])
+        var readReceipt = [String: Int]()
         for (index, failing) in [false, true].enumerated() {
             try await create("Catalog sentinel \(index)", "Updated Project \(index)", "updated-tag-\(index)")
             let beforeReads = await transport.catalogRequests
+            let beforeData = await transport.liveDataReads
             await transport.holdRead(failing: failing)
             let oldFull = Task { await model.refreshAfterWrite("Older full refresh") }
             try await wait { await transport.heldCount == index + 1 }
@@ -220,6 +229,9 @@ struct TaskSearchStateTests {
             let expectedTags = index == 0 ? ["original-tag", "updated-tag-0"] : ["original-tag", "updated-tag-0", "updated-tag-1"]
             let expectedCount = index == 0 ? 2 : 3
             #expect(await transport.catalogRequests == beforeReads + 2)
+            let liveReads = await transport.liveDataReads - beforeData
+            #expect(liveReads == (index == 0 ? 17 : 18))
+            readReceipt[index == 0 ? "superseded_full_success_live_reads" : "superseded_full_error_live_reads"] = liveReads
             #expect(model.tasks.map(\.title).sorted() == expectedTitles.sorted())
             #expect(model.tasks.allSatisfy { $0.search_matches == nil })
             #expect(model.projects.map(\.name).sorted() == expectedProjects.sorted())
@@ -240,13 +252,18 @@ struct TaskSearchStateTests {
         }
         try await create("Catalog sentinel 2", "Updated Project 2", "updated-tag-2")
         await transport.rejectStreamConnections()
+        let beforeFailureData = await transport.liveDataReads
         await transport.failRead()
         await model.refreshAfterWrite("Failed full refresh")
         #expect(model.searchPhase == .error)
+        readReceipt["failed_full_live_reads"] = await transport.liveDataReads - beforeFailureData
         let beforeRetry = await transport.catalogRequests
+        let beforeRetryData = await transport.liveDataReads
         model.setSearchText("cancion")
         try await wait { model.searchPhase == .showing && !model.searchStale }
         #expect(await transport.catalogRequests == beforeRetry + 1)
+        readReceipt["query_after_failed_full_live_reads"] = await transport.liveDataReads - beforeRetryData
+        #expect(readReceipt["query_after_failed_full_live_reads"] == 9)
         #expect(model.tasks.map(\.title).sorted() == ["Canción retained", "Catalog sentinel 0", "Catalog sentinel 1", "Catalog sentinel 2"].sorted())
         #expect(model.tasks.allSatisfy { $0.search_matches == nil })
         #expect(model.projects.map(\.name).sorted() == ["Original Project", "Updated Project 0", "Updated Project 1", "Updated Project 2"].sorted())
@@ -255,6 +272,9 @@ struct TaskSearchStateTests {
         #expect(model.viewCounts["all"] == 4)
         #expect(model.appliedSearchSnapshot?.rows.map(\.title) == ["Canción retained"])
         #expect(model.appliedSearchSnapshot?.rows.first?.search_matches == [.init(field: .title, start: 0, end: 7)])
+        if let path = ProcessInfo.processInfo.environment["TODO_W06_RECEIPT"] {
+            try JSONEncoder().encode(readReceipt).write(to: URL(fileURLWithPath: path).deletingLastPathComponent().appendingPathComponent("catalog-owed.json"))
+        }
         model.signedIn = false
         model.connect()
     }

@@ -1,5 +1,5 @@
 {
-  "sourceCommit": "30376a1b419dc8bb08b385182aa663f7a73d98c8",
+  "sourceCommit": "47aa4f10cfff6255f2108bf79a8b0608965f2ab8",
   "status": "mapped-production-clients-and-real-matcher",
   "files": [
     {
@@ -13,9 +13,10 @@
         "clearFilters",
         "changed/connection notice handlers",
         "catalogRef",
+        "catalogOwedRef",
         "invalidate"
       ],
-      "sha256": "e3dd1ddfbaffa2e8ca03eadcee57ff931ce34b87fc1e2b6328d1fdfb268010d9"
+      "sha256": "07b88f80b19207d044f9c501666959a9da86db0d353766013e09b66f402375c5"
     },
     {
       "path": "apps/electron/src/task-search-results.ts",
@@ -57,11 +58,12 @@
         "followChanges",
         "applyTaskFilters",
         "catalogReady",
+        "catalogStale",
         "readSearchRows",
         "readSearchPlanning",
         "readSearchCatalog"
       ],
-      "sha256": "47176e8d8939f429e28639a297526cd26197bc1cabde5dcb143b1102096c3401"
+      "sha256": "82a7400ed87f3a752e3c5fc928028c50f0becd40271494889cb6914f6343e8ce"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -153,7 +155,7 @@
     "formal": "4c8c6932; both seats complete; R1/reset amendment228e3485",
     "swift": "code76035210 + visual8fd49f25; integratedc19fd669; approved presentation alignment0d5b2198",
     "electron": "codedf13e2a8 + visuale8178e24; integratedbc288b30",
-    "refresh": "PERF-refresh product 30376a1b: local compiled client conformance, guarded discovery names, full/query sensitivity. L1 correctness and coordinator UI seats pending."
+    "refresh": "PERF-refresh R1 product 47aa4f10: catalog debt survives superseded and failed full reads. Compiled client regressions and model sensitivity renewed; fresh correctness seats pending. UI seat2 passed unchanged presentation at 2041ed44."
   },
   "productionMatcher": "Immutable real source with generated properties, behavioral mutations and byte restoration; final-tip command uses its explicit full SHA.",
   "recovery": "Manual Retry or current-Profile SSE reconnect/op, no search retry timer. Conditional liveness assumptions are in CLIENT-MAPPING.md and REPORT.md.",

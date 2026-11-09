@@ -1,4 +1,48 @@
-# Current PERF-refresh proof
+# PERF-refresh R1 proof before SEC integration
+
+The catalog-debt correction passes at product source
+`47aa4f10cfff6255f2108bf79a8b0608965f2ab8`. The exact command
+`bun .agents/skills/verify-task-search-formal/check.ts 47aa4f10cfff6255f2108bf79a8b0608965f2ab8`
+exited 0. Evidence is `docs/evidence/task-search-formal/check-Mq10TH`, with
+immutable real-matcher checks at `matcher-WIgKEi`. This proof precedes the
+integrated SEC base and must be renewed after that merge. The earlier full run
+`check-rMMaXl` passed its model stages and correctly failed the two changed
+client hashes before their reviewed renewal. It remains a failed receipt.
+
+`catalogOwed` survives failed and superseded full requests. Every query launch
+promotes to full while it is owed, and only a current full publication clears
+it. `CatalogOwedUntilPublish` checks preservation at request launch;
+`NoOwedQueryPublication` checks the publication boundary. The production mapping
+is Electron's `catalogOwedRef` and Swift's `catalogStale`. Existing identity,
+generation, bootstrap and snapshot properties retain their original bounds.
+
+| Stage | Distinct states | Generated successors | Queue | Exit |
+| --- | --- | --- | --- | --- |
+| Full identities, two pending requests | 3,053,160 | 29,482,849 | 0 | 0 |
+| Six identities, three pending requests | 1,954,050 | 20,570,013 | 0 | 0 |
+| Conditional liveness | 44,922 | 378,091 | 0 | 0 |
+| Restored model | 44,922 | 378,091 | 0 | 0 |
+
+The early-clear control fails `CatalogOwedUntilPublish` with TLC exit 12.
+Missing query promotion fails `NoOwedQueryPublication` with exit 12. All seven
+earlier snapshot, latest, Showing, stale, fallback and liveness controls still
+fail with their intended exit 12 or 13. Strict checking, Unicode matcher
+properties, real matcher mutations and restoration pass. These are finite
+design checks with a manual production mapping, not a source refinement proof.
+
+Compiled baseline regressions fail on stale catalog values. Corrected compiled
+Swift and unsigned Electron regressions pass delayed full success/error and a
+failed full followed by a query, checking literal Task counts, Project/Tag names,
+Profile counts, current rows/spans and complete identities. Receipts are under
+`docs/evidence/perf-refresh/r1/`. Swift's `swift-counts/catalog-owed.json` records
+17 and 18 successful data reads in the two supersession cases, and 9 for the
+query after a failed full. Blank full reads need 8 requests; active-query full
+reads need 9. The failed-full fixture injected one transport failure before
+HTTP and recorded 8 other successful data reads. Electron records two complete
+9-read catalog refreshes per raced write, with its controlled 503s retained.
+Steady-state query counts and final review seats require the integrated reproof.
+
+# Historical PERF-refresh proof at 30376a1b
 
 The full/query refresh amendment passes at product source
 `30376a1b419dc8bb08b385182aa663f7a73d98c8`. The final command was
