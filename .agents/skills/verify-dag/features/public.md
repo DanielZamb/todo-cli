@@ -10,7 +10,7 @@ Versions. Real stale edits return exit 4. Same-Profile and self/cycle checks,
 redundant stored edges and exact 9/13/14 counts use the public commands.
 Both public edge Revert paths target the dependent's current Version.
 
-tty-delete.json records real PTY No, EOF, default No, Yes and changed-preview
+tty.json records real PTY No, EOF, default No, Yes and changed-preview
 cases. graph-public.json includes the changed-to-empty fingerprint evidence,
 terminal Ready/Blocked exclusion, topological/lightest ordering and a 105-Task
 cycle witness returned intact by both CLI and HTTP.
