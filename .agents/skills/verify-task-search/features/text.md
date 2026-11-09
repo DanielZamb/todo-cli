@@ -20,6 +20,11 @@ separation, Unicode expansions, combining marks, astral letters, all positive
 term edit thresholds, unrestricted Damerau, 200/201 limits and empty success.
 Read `compiled/task-search.json` for exact same-response spans.
 
+SEC-L1-1 uses 200 U+FDFA characters in the query and 1,000 in the description.
+It expands to 601 word clauses before deduplication, with five distinct clauses.
+The literal description span is `[0,1000)`. The shared corpus also checks
+repeated words, phrases and exclusions, mixed signs, and compatibility folds.
+
 ## Gotchas
 
 Closed phrases cannot cross fields. Exclusions never highlight and allow no

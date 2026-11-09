@@ -91,12 +91,26 @@ export const readSeries = (db: Database): Series[] =>
     .map((row) => Schema.decodeUnknownSync(Series)(JSON.parse(row.payload)));
 
 export function putTask(db: Database, task: Task) {
+  const storedTags = db
+    .query<{ tag_id: string | null }, [string]>(
+      "SELECT task_tags.tag_id FROM tasks LEFT JOIN task_tags ON task_tags.task_id=tasks.id WHERE tasks.id=?",
+    )
+    .all(task.id);
+  const tags = new Set<string>(task.tags);
+  const existingTags = storedTags.filter((row) => row.tag_id !== null);
+  const sameTags =
+    tags.size === task.tags.length &&
+    storedTags.length > 0 &&
+    existingTags.length === tags.size &&
+    existingTags.every((row) => row.tag_id !== null && tags.has(row.tag_id));
   db.query(
     "INSERT INTO tasks(id,payload) VALUES (?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload",
   ).run(task.id, JSON.stringify(task));
-  db.query("DELETE FROM task_tags WHERE task_id=?").run(task.id);
-  for (const tag of task.tags)
-    db.query("INSERT INTO task_tags VALUES (?,?)").run(task.id, tag);
+  if (!sameTags) {
+    db.query("DELETE FROM task_tags WHERE task_id=?").run(task.id);
+    for (const tag of task.tags)
+      db.query("INSERT INTO task_tags VALUES (?,?)").run(task.id, tag);
+  }
   db.query(
     "INSERT INTO task_versions VALUES (?,?) ON CONFLICT(id) DO UPDATE SET version=excluded.version",
   ).run(task.id, task.row_version);

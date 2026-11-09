@@ -296,7 +296,7 @@ export class OperationStore {
 
   readonly close = () =>
     attempt(() => {
-      this.searchWords.clear();
+      this.searchWords.close();
       this.db.close();
     });
 
@@ -1032,6 +1032,7 @@ export class OperationStore {
         });
         applyEvent(this.db, event);
         if (event.kind === "TaskPurged") {
+          this.searchWords.revoke(input.profile);
           this.evictSearchTask(event.task_id, input.profile);
           this.queueAttachmentCleanup(event.task_id);
           redactTaskHistory(this.db, this.historySync(0), event.task_id);

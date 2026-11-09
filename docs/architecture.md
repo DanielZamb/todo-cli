@@ -119,15 +119,51 @@ metadata. CLI JSON and HTTP list results carry the same matched strings and
 spans; clients highlight those spans without repeating matching. No migration
 or FTS index is needed. See [ADR-0014](adr/0014-task-search.md).
 
-Each OperationStore owns a bounded TaskSearchCache. Search memoizes fieldWords
-by Profile and exact title or description text read from SQLite for that request.
-Query results and empty-clause work are not cached. The uncached matcher remains
-available. The LRU retains at most 4,096 entries and 16 MiB of charged storage,
-including exact keys; entries over 4 MiB compute without retention. These are
-deterministic accounting bounds, not RSS limits. Local Purge evicts matching
-prior text in its Profile, Profile deletion evicts that Profile, and close clears
-the memo. External Purge entries age out through LRU. Correct matching after
-external edits or Snapshot restore follows from the exact current text key.
+Normalized duplicate clauses execute once. Word clauses memoize acceptance for
+each distinct folded word within one field evaluation and retain every original
+occurrence for spans. Typo prefixes use a reusable banded unrestricted Damerau
+buffer. The CLI and the server share one generator core. Both drain it through
+`filterTaskRecordsEffect`, yielding between Tasks and after
+512 evaluated word occurrences. `TaskCommands.list` starts that drain after
+`auth.read` has returned its authorized in-memory view, with no SQLite read
+transaction open. Field preparation uses the same generator, yielding after
+512 graphemes or segmented parts while preserving normalization across chunks.
+Client disconnect interrupts the HTTP fiber at a checkpoint through the Bun
+HTTP adapter's request abort listener.
+
+Each OperationStore owns a bounded TaskSearchCache keyed by Profile and exact
+field text. It retains complete PreparedFields across requests; a hit returns
+the words and preparation count without refolding or preparation yields. Query
+results and empty-clause work are not cached. The LRU retains at most 4,096
+entries. Retained entries and up to 4,096 current pending slots share a 16 MiB
+charged budget; a completed entry over 4 MiB computes without retention. Charges
+include exact keys, Profile strings, containers and Words. These accounting
+bounds exclude transient preparation buffers, superseded invocation-local tokens,
+allocator overhead and separately reported per-Profile generation metadata;
+they are not RSS limits. V3's expanding 100,000-character field is not retained.
+
+A read captures its Profile's cache-local purge generation before authorization
+and the SQLite Task read. A miss registers a fresh ownership token, yields during
+preparation and admits only while that token and generation remain current.
+Later misses supersede earlier tokens; interruption or failure removes only the
+invocation's own current token. Local Purge advances the generation after applying
+the event, before historical text eviction and redaction, within its transaction.
+Profile deletion advances its generation and evicts its entries and pending slots
+before returning from the transaction. Rollback can lose retention only. Old
+reads may finish but cannot retain later fields after revocation. Close empties
+all cache state and permanently fences admission. External Purge entries age out
+through LRU. Exact current text keys preserve matching after external edits and
+Snapshot restore without database coherence tracking.
+
+`PreparedField` carries words and the exact folded UTF-16 field length.
+Search charges that length after each field is ready, including supplied stored
+PreparedFields, and charges evaluated Damerau cells plus walked word occurrences
+and tested phrase start positions with one shared rational
+weight. The request meter spans Tasks that pass the other TaskFilters and checks
+at checkpoints and before publication. A refusal returns `search_too_broad`,
+CLI exit 2 or HTTP 422, with no partial rows. The limits and owner decision are
+in the [ADR-0014 budget amendment](adr/0014-task-search.md#search-work-budget-owner-2026-11-09).
+The Effect driver closes a suspended generator on interruption or failure.
 
 Each client retains one applied response snapshot while requesting a newer
 identity. Search text survives Profile and view switches. Failed reads offer

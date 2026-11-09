@@ -1,11 +1,13 @@
-import { Schema } from "effect";
+import { Effect, Schema } from "effect";
 import { type Project, type Tag, type Task, TaskPriority } from "./entities.ts";
 import { inputLimits } from "./limits.ts";
 import type { TaskRead } from "./task-read.ts";
 import {
-  type fieldWords,
-  matchTaskSearch,
+  matchTaskSearchSteps,
   parseTaskSearch,
+  SearchTooBroad,
+  type TaskSearchExecution,
+  taskSearchExecution,
 } from "./task-search.ts";
 import { CalendarDate, type TaskTime } from "./time.ts";
 
@@ -69,15 +71,12 @@ function matchesDate(value: TaskTime | null, filter: TaskFilters["due"]) {
   return date === filter;
 }
 
-export function filterTaskRecords(
+function* filterTaskRecordSteps(
   tasks: readonly Task[],
   filters: TaskFilters,
   definitions: { projects: readonly Project[]; tags: readonly Tag[] },
-  prepareWords?: (
-    profile: Task["profile_id"],
-    text: string,
-  ) => ReturnType<typeof fieldWords>,
-) {
+  execution: TaskSearchExecution = taskSearchExecution(),
+): Generator<void, TaskRead[]> {
   const search =
     filters.text === undefined ? undefined : parseTaskSearch(filters.text);
   const prefix = filters.prefix?.toLowerCase();
@@ -123,15 +122,79 @@ export function filterTaskRecords(
           ].some((value) => value?.toLowerCase().includes(attachmentQuery)),
         )),
   );
-  return selected.flatMap((task): TaskRead[] => {
-    if (search === undefined) return [task];
-    const result = matchTaskSearch(
-      task,
-      search,
-      prepareWords === undefined
-        ? undefined
-        : (text) => prepareWords(task.profile_id, text),
+  const records: TaskRead[] = [];
+  for (const task of selected) {
+    if (search === undefined) records.push(task);
+    else {
+      const result = yield* matchTaskSearchSteps(task, search, execution);
+      if (result.accepted)
+        records.push({ ...task, search_matches: result.matches });
+    }
+    yield;
+  }
+  execution.work.check();
+  return records;
+}
+
+export function filterTaskRecords(
+  ...args: Parameters<typeof filterTaskRecordSteps>
+) {
+  const steps = filterTaskRecordSteps(...args);
+  let step = steps.next();
+  while (!step.done) step = steps.next();
+  return step.value;
+}
+
+export function runTaskRecordSteps<E = never>(
+  steps: Generator<void, TaskRead[]>,
+  checkpoint: Effect.Effect<void, E> = Effect.promise(
+    () => new Promise<void>((resolve) => setImmediate(resolve)),
+  ),
+) {
+  let completed = false;
+  const next = () =>
+    Effect.try({
+      try: () => {
+        try {
+          const step = steps.next();
+          completed = step.done === true;
+          return step;
+        } catch (error) {
+          completed = true;
+          throw error;
+        }
+      },
+      catch: (error) => error,
+    }).pipe(
+      Effect.catch((error) =>
+        error instanceof SearchTooBroad
+          ? Effect.fail(error)
+          : Effect.die(error),
+      ),
     );
-    return result.accepted ? [{ ...task, search_matches: result.matches }] : [];
-  });
+  return Effect.gen(function* () {
+    let step = yield* next();
+    while (!step.done) {
+      yield* checkpoint;
+      step = yield* next();
+    }
+    return step.value;
+  }).pipe(
+    Effect.ensuring(
+      Effect.sync(() => {
+        if (!completed) {
+          completed = true;
+          steps.return([]);
+        }
+      }),
+    ),
+  );
+}
+
+export function filterTaskRecordsEffect(
+  ...args: Parameters<typeof filterTaskRecordSteps>
+) {
+  return Effect.suspend(() =>
+    runTaskRecordSteps(filterTaskRecordSteps(...args)),
+  );
 }

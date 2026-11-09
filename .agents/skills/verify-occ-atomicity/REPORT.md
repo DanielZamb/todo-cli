@@ -113,3 +113,36 @@ A close next target is preserving the caller's expected Version through import
 adoption, especially when a Task gains an external id while another client
 edits it. The current skill protects the shared storage transaction; it does
 not prove that callers pass the Version the owner approved.
+
+## PERF-tags renewal
+
+Reviewed product `07550ecd35890094625711a5269b8d7c6eb476dc` and inherited source
+drift from the previous confirmed commit. The new link comparison is private
+within `Apply`; the Task and Version writes and commit order are unchanged.
+The model remains unchanged. See the PERF-tags mapping section in `SKILL.md`
+for the reviewed inherited guards and the separate concrete Tag coverage.
+Sensitivity caught both real-code mutations at assertions, exit 1 each, then
+the restored one command passed, exit 0. Local evidence:
+`docs/evidence/fv01/sensitivity-Km03fK/`.
+
+## PERF-tags D1 renewal
+
+Product `d83d61863b95d2482ca9281a34d5db4494abffbb` restricts the equal-set
+skip to distinct payload Tag ids and restores the original array INSERT loop.
+Duplicate ids therefore fail the link primary key and roll back. The Task
+payload, Version and transaction boundaries remain in the same order, so the
+AtomicCAS model is unchanged. The compiled Tag and operation-log proofs assert
+literal duplicate failures, unchanged rows and authenticated append rejection.
+
+The first checker run reached only the expected projection source-drift failure,
+exit 1, after its model and production checks completed. The reviewed mapping
+was then renewed. Both real-code sensitivity variants failed on behavioral
+assertions with exit 1, and the restored one-command checker passed with exit 0.
+The sensitivity helper exited 0. Store source restoration was byte-for-byte.
+
+Evidence is local and ignored:
+`docs/evidence/perf-tags/d1/atomicity-before-renewal.log`,
+`docs/evidence/perf-tags/d1/sensitivity.log` and
+`docs/evidence/fv01/sensitivity-d7gc1J/`.
+The restored checker retains its own result and model logs at the path printed
+in `sensitivity-d7gc1J/restored.stdout`. No model bounds or invariants changed.

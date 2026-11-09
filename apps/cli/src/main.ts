@@ -28,17 +28,19 @@ import {
   BatchEditRequest,
   batchEditTasks,
   ClientReads,
-  filterTaskRecords,
+  filterTaskRecordsEffect,
   inputLimits,
   ProfileDeletionReport,
   ProfileSummary,
   parseQuickAdd,
   QuickAddDraft,
   QuickAddInput,
+  SearchTooBroad,
   SnapshotError,
   TaskFilters,
   TaskId,
   TaskStatus,
+  taskSearchExecution,
   Version,
 } from "@todo/domain";
 import { attachmentInput } from "@todo/domain/attachment-input";
@@ -150,7 +152,9 @@ const io = <A>(run: () => A) =>
     catch: (error) =>
       error instanceof CommandError
         ? error
-        : new CommandError(1, "runtime_error", String(error)),
+        : error instanceof SearchTooBroad
+          ? new CommandError(2, error.code, error.message)
+          : new CommandError(1, "runtime_error", String(error)),
   });
 const localDir = join(homedir(), ".todo-cli");
 const sessionFile = (profile: string) =>
@@ -690,19 +694,22 @@ const list = Command.make(
       });
       yield* withStore(cfg, (store) =>
         Effect.gen(function* () {
-          const data = yield* readTasks(
-            store,
-            yield* selectProfile(store, cfg),
+          const request = yield* selectProfile(store, cfg);
+          const read = store.searchWords.read(request.profile);
+          const data = yield* readTasks(store, request);
+          const records = yield* filterTaskRecordsEffect(
+            data.tasks,
+            filters,
+            data,
+            {
+              ...taskSearchExecution(),
+              prepare: (text) => store.searchWords.words(read, text),
+            },
           );
           yield* write(
             renderTasks(
               filterTasks(
-                filterTaskRecords(
-                  data.tasks,
-                  filters,
-                  data,
-                  store.searchWords.words,
-                ).map((task) =>
+                records.map((task) =>
                   taskView(task, data.projects, data.tags, data.series),
                 ),
                 {
