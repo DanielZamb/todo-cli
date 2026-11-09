@@ -110,6 +110,34 @@ it.each([
     status: 401,
     action: "mutate",
   },
+  {
+    state: "revoked",
+    command: "move",
+    surface: "cli",
+    status: 3,
+    action: "authenticate",
+  },
+  {
+    state: "revoked",
+    command: "move",
+    surface: "http",
+    status: 401,
+    action: "authenticate",
+  },
+  {
+    state: "revoked",
+    command: "copy",
+    surface: "cli",
+    status: 3,
+    action: "authenticate",
+  },
+  {
+    state: "revoked",
+    command: "copy",
+    surface: "http",
+    status: 401,
+    action: "authenticate",
+  },
 ])(
   "records one selected-Profile rejection for $state $surface $command",
   async ({ state, command, surface, status, action }) => {
@@ -129,6 +157,9 @@ it.each([
       const added = run(["add", "Auth target", "--format", "json"]);
       expect(added.status, added.stderr).toBe(0);
       const id: string = JSON.parse(added.stdout).task.id;
+      const transfer = command === "move" || command === "copy";
+      if (transfer)
+        expect(run(["init", "--profile", "Private Profile"]).status).toBe(0);
       const credential: string = JSON.parse(
         readFileSync(join(home, ".todo-cli/session_default.json"), "utf8"),
       ).token;
@@ -179,7 +210,9 @@ it.each([
           id,
           ...(command === "edit"
             ? ["--title", "New title", "--expected-version", "1"]
-            : []),
+            : transfer
+              ? ["--to", "Private Profile"]
+              : []),
           "--format",
           "json",
         ]);
@@ -190,23 +223,33 @@ it.each([
           exit_meaning: "not found or auth missing",
         });
       } else {
-        const response = await fetch(`${base}/profiles/default/tasks/${id}`, {
-          method: command === "edit" ? "PATCH" : "GET",
-          headers: {
-            Authorization: `Bearer ${credential}`,
-            ...(command === "edit"
-              ? { "Content-Type": "application/json" }
-              : {}),
+        const response = await fetch(
+          `${base}/profiles/default/tasks/${id}${transfer ? `/${command}` : ""}`,
+          {
+            method: transfer ? "POST" : command === "edit" ? "PATCH" : "GET",
+            headers: {
+              Authorization: `Bearer ${credential}`,
+              ...(command === "edit" || transfer
+                ? { "Content-Type": "application/json" }
+                : {}),
+            },
+            ...(transfer
+              ? {
+                  body: JSON.stringify({
+                    from_version: 1,
+                    destination_profile: "Private Profile",
+                  }),
+                }
+              : command === "edit"
+                ? {
+                    body: JSON.stringify({
+                      from_version: 1,
+                      changes: { title: "New title" },
+                    }),
+                  }
+                : {}),
           },
-          ...(command === "edit"
-            ? {
-                body: JSON.stringify({
-                  from_version: 1,
-                  changes: { title: "New title" },
-                }),
-              }
-            : {}),
-        });
+        );
         actual = response.status;
         expect(await response.json()).toMatchObject({
           _tag: "Unauthorized",

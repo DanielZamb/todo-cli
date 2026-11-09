@@ -856,18 +856,23 @@ const transfer = (kind: "move" | "copy") =>
         yield* withStore(cfg, (store) =>
           Effect.gen(function* () {
             const request = yield* selectProfile(store, cfg, "authenticate");
-            const destination = (yield* store.profiles()).find(
-              (p) => p.id === input.to || p.name === input.to,
-            );
-            if (!destination) {
-              return yield* Effect.fail(
-                new CommandError(
-                  3,
-                  "not_found",
-                  "target Profile not found; run todo init --profile <name>",
+            const destination = yield* store.auth
+              .resolveProfile({
+                credential: request.credential,
+                profile: input.to,
+                action: "authenticate",
+              })
+              .pipe(
+                Effect.catchTag("ProfileResolutionError", () =>
+                  Effect.fail(
+                    new CommandError(
+                      3,
+                      "not_found",
+                      "target Profile not found; run todo init --profile <name>",
+                    ),
+                  ),
                 ),
               );
-            }
             if (kind === "move" && destination.id === request.profile)
               return yield* Effect.fail(
                 new CommandError(

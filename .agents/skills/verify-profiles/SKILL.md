@@ -92,6 +92,10 @@ Selected CLI operations resolve names and ids with auth.resolveProfile. Pass the
 real AuthAction before reading Task data. Revoked or expired show/edit requests
 must produce one rejection for the selected Profile, matching HTTP's read/mutate
 action. Run apps/cli/test/auth-history.test.ts with the compiled binary overrides;
-auth-history-actions.json records the eight literal CLI/HTTP cases. The
+auth-history-actions.json records the twelve literal CLI/HTTP cases. The
 error-list test compares a spaced foreign name and No Such under one scoped
 credential and requires identical generic Profile-not-found responses.
+Its move/copy matrix requires byte-identical table errors for both destinations,
+including dry-run, and the unchanged owner absent-target response. Destination
+resolution calls auth.resolveProfile with authenticate; the source and destination
+write-access checks still run afterward. Revoked move/copy History matches HTTP.

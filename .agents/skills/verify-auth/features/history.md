@@ -39,3 +39,5 @@ with profile default, action read for show or mutate for edit, and the literal
 denial detail. Selection uses auth.resolveProfile with that action before CLI
 pre-reads. Run it with TODO_CLI_BINARY and TODO_SERVER_BINARY from the same source
 hash; TODO_CLI_EVIDENCE retains auth-history-actions.json without bearer secrets.
+Four revoked move/copy cases also require exactly one authenticate rejection
+through the CLI and HTTP, with the same selected Profile and unchanged Task.

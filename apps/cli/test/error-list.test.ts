@@ -265,6 +265,46 @@ it("keeps HTTP error tags, adds matching pairs at decoding boundaries and hides 
       exit_meaning: "not found or auth missing",
     },
   ]);
+  const source = run(["add", "Transfer auth target", "--format", "json"]);
+  expect(source.status).toBe(0);
+  const sourceId: string = JSON.parse(source.stdout).task.id;
+  const transferOutcomes = [];
+  for (const selectedCredential of [credential, owner]) {
+    writeFileSync(
+      join(home, ".todo-cli/session_default.json"),
+      JSON.stringify({ token: selectedCredential }),
+    );
+    for (const command of ["move", "copy"]) {
+      for (const target of selectedCredential === owner
+        ? ["No Such"]
+        : ["Private Profile", "No Such"]) {
+        for (const dryRun of [false, true]) {
+          const result = run([
+            command,
+            sourceId,
+            "--to",
+            target,
+            ...(dryRun ? ["--dry-run"] : []),
+            "--format",
+            "table",
+          ]);
+          transferOutcomes.push({
+            status: result.status,
+            stdout: result.stdout,
+            stderr: result.stderr,
+          });
+        }
+      }
+    }
+  }
+  for (const outcome of transferOutcomes) {
+    expect(outcome).toEqual({
+      status: 3,
+      stdout: "",
+      stderr:
+        "error 3 - not found or auth missing\nERROR\tnot_found\ttarget Profile not found; run todo init --profile <name>\n",
+    });
+  }
   const transfer = run([
     "copy",
     "45a312ac",

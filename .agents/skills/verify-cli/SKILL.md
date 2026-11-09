@@ -163,3 +163,10 @@ shared auth.resolveProfile with the operation's action before any Task pre-read.
 The error-list test also requires a scoped credential to receive the same generic
 Profile-not-found response for a spaced foreign name and the absent name No Such.
 Neither case may expose another Profile's name or Task data.
+
+Move and copy resolve the destination through the same authorized Profile
+resolver, then retain both write-access checks. The error-list regression compares
+the exact table output and process exit for a scoped credential targeting Private
+Profile or No Such, in apply and dry-run modes. Owner requests for No Such keep
+the existing target Profile-not-found response. The auth-history regression also
+checks one authenticate rejection for revoked move/copy through CLI and HTTP.
