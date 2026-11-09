@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "96c0f3ea19dcab207d1d06a66d333a80d78c2f36",
+  "confirmedCommit": "50ef7c3dccd50d427bb8dfa2bfff8915c49b907e",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
@@ -32,7 +32,7 @@
     },
     {
       "path": "packages/domain/src/events.ts",
-      "sha256": "7aac89d05f7ad5e29537ac77e8881f32f4f727d4e139a3b57464556add0be266",
+      "sha256": "4d2fe50114ab16e379759bf3bbb4f6416120f323c62b9a5280c04284a597ec44",
       "functions": [
         "TaskCreated",
         "TaskEdited",

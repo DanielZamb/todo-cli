@@ -99,3 +99,109 @@ edge-Revert target routing, filters, algorithms and client controls remain B/E/S
 work. No new no-op event exists; B must return unchanged without appending.
 Whole-feature L2/L3 parity, native UI, signing, Keychain, renderer and unbounded
 formal safety are not claimed. No push, rebase, merge, PR or checkout change.
+
+## Seat-1 closure, c0380fcc review
+
+The earlier completion was a local checkpoint. Seat 1 found two P2 defects,
+and the coordinator withdrew seat-2 approval. Both fixes are implemented;
+renewed approval from both seats is still required. No merge is authorized.
+Closure source proof SHA: `50ef7c3dccd50d427bb8dfa2bfff8915c49b907e`, on
+`feat/task-dag-a-storage`. The terminal handoff names the report-only delivery
+head. No new domain files were added in this closure.
+
+The source delta removes the authenticated Series field whitelist, explicitly
+forbids dependencies on lifecycle v1 schemas, and extends the existing generation
+step to enforce component entity_version constants. Tests assert typed branch
+selection and edge/Version fields. No N1/N2 or public DAG command changes landed;
+N1/N2 remain required in B's first commit.
+
+### Failing-before and passing-after reproductions
+
+Both supplied sources were preserved unchanged and run against c0380fcc before
+product edits. The compiled auth driver observed valid and absent blockers both
+committing v1 with no edges. Swift selected case1 for every v2 while preserving
+JSON roundtrip equality. After the fixes, valid auth creation retains its edge,
+invalid creation is rejected, and all four Swift v2 cases select case2.
+
+| Supplied reproduction | Before build/assert exit | After build/assert exit | Absolute evidence |
+| --- | --- | --- | --- |
+| auth-series.ts | 0 / 1 | 0 / 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/seat1-closure/auth-series-after.json |
+| swift-boundary.swift | 0 / 1 | 0 / 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/seat1-closure/swift-repro-after.json |
+
+The before sources, observations and real exits are under
+/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/seat1-closure/before.
+reproduction-provenance.json in the parent directory binds both source heads
+and every build/assertion exit. The supplied auth source retains its original
+candidate label; that provenance receipt identifies the actual build source.
+Auth builds use `bun build --compile`; Swift builds use `swift-slot.sh swiftc`
+with the generated TodoAPI module and the preserved object response file.
+
+### Authenticated wrapper audit
+
+Authentication.startSeries now forwards all parsed StartSeriesRequest facts
+except credential, then supplies authenticated actor and Clock time. The compiled
+authenticatedInitial case proves initial edges, TaskCreated v2, one event,
+Version 1, Project/Tags, external id and Attachments. Missing and foreign blockers,
+a self-cycle and existing identity reuse preserve Tasks/Series and append exactly
+one rejected TaskAttemptRejected, never a committed creation. A fresh endpoint
+cannot already have outgoing edges; the reachable transitive-cycle construction
+requires identity reuse, which the authenticated identity guard rejects.
+
+The same case proves authenticated append forwards TaskCreated v2 and compact
+edge facts, Revert preserves the resolved edge inverse, finish refuses a blocked
+completion without a successor, and cancellation creates a successor with no
+edges. The wrappers return AppendResult intact. finishTask and revert requests
+have no dependency fields to drop; their dependency effects resolve in the store.
+TaskCommands.create and import were traced through their authenticated mutate
+boundary to append/startSeries. CreateTask and ImportItem currently declare no
+DAG fields; import rejects unknown fields. Public creation/import DAG inputs
+remain B's work. No adapter graph rule or product policy was added.
+
+### Generation strategy and limits
+
+The pinned swift-openapi-generator emits numeric enums as unchecked Double
+properties. The existing preserve-null postprocessor now resolves each component
+property's schema and emits a required numeric constant check in its Decodable
+initializer. The v1 case remains first; a v2 value fails its constant check and
+selects v2 with typed DependencyChanges. No branch reversal, dependency-presence
+selection, unknown-version coercion or handwritten client wrapper is used.
+
+Optional Never properties in the shared Effect schema reject v1 dependency
+shapes in Electron and the store. Normalization preserves that constraint as
+x-todo-forbidden-properties; generated checks reject those keys while retaining
+unrelated additional properties. The actual generated/client tests assert all
+four v1 and v2 cases, literal added/removed/Version fields, legacy nullable and
+extra-field preservation, and rejection of missing/null/string/boolean/fractional
+or unsupported versions and contradictory dependency shapes. Existing disjoint,
+optional, nullable and overlap tests remain; all nine normalizer tests pass.
+
+This postprocessing is deliberately limited to component entity_version
+constants and explicit forbidden keys. It is not a general OpenAPI constraint
+validator. Operation-local non-component schemas retain prior behavior; lifecycle
+History and CommittedOperation cases use the checked component decoders. No
+manual generated-file edit, dependency upgrade, native app, Keychain or signing.
+
+### Closure proofs at the source SHA
+
+| Check | Actual exit | Absolute evidence |
+| --- | --- | --- |
+| pnpm check, including 317 domain / 46 CLI / 30 server / 34 Electron passes | 0; one existing Electron skip | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/seat1-closure/final-check.log |
+| Compiled verify-dag, including authenticatedInitial and opposite-edge processes | 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/seat1-closure/final-dag |
+| Compiled verify-auth | 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/seat1-closure/final-auth |
+| Compiled verify-op-log | 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/seat1-closure/final-op-log |
+| Generated Swift / real scratch HTTP-SSE / all 19 GeneratedContractTests, no skips | 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/seat1-closure/final-history-unions |
+| Electron production ChangeEvent/IPC typed and negative cases | 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/seat1-closure/final-check.log |
+| AtomicCAS mapping/check | 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/seat1-closure/atomic-check.log |
+| AtomicCAS behavioral sensitivity | 0 overall; broken 1/1, restored 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/fv01/sensitivity-mxTI1h |
+
+DAG-A-MAPPING.md reviews the four changed v1 schemas. Valid no-edge legacy model
+fixtures are unchanged; transaction and projection code did not change. Source
+pins were renewed with that review and real-code sensitivity, not hashes alone.
+The library drives remain compiled-library proof. HTTP/SSE observations establish
+bounded protocol compatibility, not whole-feature L2/L3 parity or UI completion.
+
+The recorded server PID 8665 and stream PID 8692 were stopped and confirmed gone;
+cleanup.json retains exit 130 and SIGTERM respectively. Both reproduction scratch
+directories were removed after preserving evidence. Local no-comments, structure
+and post-implementation audits found no added source comments/suppressions or
+further in-scope blocker. Independent renewed reviews remain with L1/coordinator.

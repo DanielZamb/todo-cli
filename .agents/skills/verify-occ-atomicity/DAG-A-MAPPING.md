@@ -93,3 +93,5 @@ forwards all parsed Series facts except the credential and supplies actor/time
 itself. Authentication handoff remains outside AtomicCAS; authenticatedInitial
 in the compiled DAG drive covers it. Renew the event source pin only after
 reviewing these changes and rerunning behavioral sensitivity and the clean check.
+
+Closure reviewed product source: 50ef7c3dccd50d427bb8dfa2bfff8915c49b907e.
