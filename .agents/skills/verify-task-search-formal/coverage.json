@@ -1,0 +1,35 @@
+{
+  "baselineCommit": "605b84aa85e4be4e9386365b97cf64ddef2639c6",
+  "status": "approved-design-only",
+  "baselineFiles": [
+    {
+      "path": "apps/electron/src/renderer.tsx",
+      "sha256": "e85066086ad8f042018ec40b948542b937e6a0a5404f2bd4b5460fe7db2688c3",
+      "functions": [
+        "refresh",
+        "activateProfile",
+        "clearFilters",
+        "changed notice handler",
+        "planning navigation handlers",
+        "connection notice handler"
+      ],
+      "status": "baseline guards inspected; complete search identity and snapshot are approved design only"
+    },
+    {
+      "path": "apps/macos/Sources/TodoModel.swift",
+      "sha256": "f1034979cd8238efc392839205f834405a1614ff0c972b1df1eac3055c3efaa5",
+      "functions": [
+        "refresh(generation:)",
+        "activateProfile",
+        "selectView",
+        "disconnect",
+        "followChanges",
+        "applyTaskFilters"
+      ],
+      "status": "baseline guards inspected; complete search identity and snapshot are approved design only"
+    }
+  ],
+  "productionMatcher": "Generated-input properties and production-code sensitivity pass on original be876581 and reviewed integration 8272b610f6e0d4723c52a7906a2583d12721d6af. Final client mapping PENDING.",
+  "finalClientRefinement": "PENDING: clients still use pre-search guards",
+  "recoveryDesign": "Coordinator 2026-11-09: Error -> Requesting on manual Retry or current-Profile SSE connected/ready/op; WF of recovery disjunction, no timer-based retry. Final client mapping pending."
+}
