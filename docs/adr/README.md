@@ -137,7 +137,7 @@ images and redacts paths from History. External files are never deleted.
 | [0009](0009-every-capability-is-native-to-agents-and-humans.md) | Every capability is native to agents and humans | accepted |
 | [0010](0010-profile-deletion.md) | Profile deletion preserves History and reserves IDs | accepted |
 | [0011](0011-attachments-reference-local-files-and-links.md) | Attachments reference local files and links | accepted |
-| [0014](0014-task-search.md) | Task search shares one matcher and response spans | accepted |
+| [0014](0014-task-search.md) | Task search shares one matcher and response spans | accepted, amended 2026-11-09 |
 | [0015](0015-search-text-retention-and-recovery.md) | Search text retention and live-update recovery | accepted; amends ADR-0014 client reset and recovery |
 | [0013](0013-attachment-uri-and-atomic-inputs.md) | Attachment URI links and atomic input groups | accepted |
 | [0012](0012-owner-snapshots.md) | Owner Snapshots | accepted |

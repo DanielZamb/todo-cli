@@ -1,6 +1,6 @@
 {
   "sourceCommit": "47aa4f10cfff6255f2108bf79a8b0608965f2ab8",
-  "status": "mapped-production-clients-and-real-matcher",
+  "status": "reviewed-merged-SEC-and-catalog-debt; compiled-integration-proof-pending",
   "files": [
     {
       "path": "apps/electron/src/renderer.tsx",
@@ -16,7 +16,7 @@
         "catalogOwedRef",
         "invalidate"
       ],
-      "sha256": "07b88f80b19207d044f9c501666959a9da86db0d353766013e09b66f402375c5"
+      "sha256": "c21a6b905a2b1717a3ea4058a2f22cd0d7d49510ae3c9596f527aca5ef8b5793"
     },
     {
       "path": "apps/electron/src/task-search-results.ts",
@@ -34,15 +34,17 @@
         "taskRequest list branch",
         "taskRequest search branch"
       ],
-      "sha256": "8abb9d47601f62f78efb4ceed4168b044e712fb523448998768c2568718b0fdf"
+      "sha256": "d632a2d7b7b4ac1e03c5409c2cf9e2a8271feea42bf18812146ecce587de3ab4"
     },
     {
       "path": "apps/electron/src/protocol.ts",
       "functions": [
         "Request search decoder",
-        "Reply tasks/search TaskRead decoders"
+        "Reply tasks/search TaskRead decoders",
+        "Reply tasks TaskRead decoder",
+        "Reply error code decoder"
       ],
-      "sha256": "1ab22c605b466bb39edde417994021b7c9a998c8800a4ce5898bfacde9c2909b"
+      "sha256": "ea7af70c9ce170ef0bfc69915d0acd9d33cd3d0b48234405e4aa820957479c34"
     },
     {
       "path": "apps/macos/Sources/TodoModel.swift",
@@ -63,7 +65,7 @@
         "readSearchPlanning",
         "readSearchCatalog"
       ],
-      "sha256": "82a7400ed87f3a752e3c5fc928028c50f0becd40271494889cb6914f6343e8ce"
+      "sha256": "b89e4eaeb61ecedba445ce72b66cb0994126387bba8e2c86866bbb840e518553"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -71,9 +73,10 @@
         "TaskSearchIdentity",
         "TaskSearchSnapshot",
         "TaskSearchRefreshOutcome",
-        "TaskSearchPresentation"
+        "TaskSearchPresentation",
+        "TaskSearchFailure"
       ],
-      "sha256": "7364c82e9f684a8f146f1dba0e7b673e057cf54e38d36c028dad0d29ec0f0add"
+      "sha256": "2b98d8fb63ae9be6afc2983e63a0c60bf2ac640b1dbceeef842dc1b6ef8a2445"
     },
     {
       "path": "apps/macos/Sources/AppViews.swift",
@@ -84,7 +87,7 @@
         "taskContent",
         "searchField"
       ],
-      "sha256": "2c2d2eded27f1c9adefb280adaaeac458aeb995fc5f3ef0777548d2c4859b6f3"
+      "sha256": "cbd1ab46f108718e7bbf9e6a5f6faf64089d6656225686c9dd1ceb3ff9a931da"
     },
     {
       "path": "apps/macos/Sources/TaskSnapshot.swift",
@@ -99,9 +102,16 @@
       "functions": [
         "normalizeTaskSearch",
         "parseTaskSearch",
-        "matchTaskSearch"
+        "matchTaskSearch",
+        "PreparedField",
+        "taskSearchWorkLimits",
+        "TaskSearchWork",
+        "fieldWords",
+        "prefixMatcher",
+        "clauseMatches",
+        "matchTaskSearchSteps"
       ],
-      "sha256": "196d91957dc059666cca0414aa0d73204349a0075f054732479358f6061230c5"
+      "sha256": "1a82bab698508fe98c1d7de11fddbaf910454d69c3f6534e45e8b0ce9203c23c"
     },
     {
       "path": "packages/domain/src/task-search-case-fold.ts",
@@ -114,9 +124,12 @@
       "path": "packages/domain/src/task-filters.ts",
       "functions": [
         "TaskFilters",
-        "filterTaskRecords"
+        "filterTaskRecords",
+        "filterTaskRecordSteps",
+        "runTaskRecordSteps",
+        "filterTaskRecordsEffect"
       ],
-      "sha256": "7fc28cec9f3f8a21a63ebb89fe7603b434ffc61a910e3c16db249143c05962a4"
+      "sha256": "59b835514b51dc7c301cefabce5954c77160857ace8b75a6d994f83b6925369d"
     },
     {
       "path": "packages/domain/src/task-read.ts",
@@ -138,14 +151,15 @@
         "TaskViewSchema",
         "taskView"
       ],
-      "sha256": "de1787bdb5f3907c568cb53e76f39ec79cead23074953cf608b2003755a13b58"
+      "sha256": "f1063952fb0fbe58f09ce3464fad6ed93784b019db261fe0e21abe81d5b293c5"
     },
     {
       "path": "packages/domain/src/commands.ts",
       "functions": [
-        "readTasks"
+        "readTasks",
+        "TaskCommands.list"
       ],
-      "sha256": "7d181acc3033fb26f0d5d02fe3493f425174840b6042309510dd96937a8e92d6"
+      "sha256": "970d2db6c8631c3819138451c778fb79b462e079a1ccb556f5dfcca5dfbd3078"
     }
   ],
   "mapping": "CLIENT-MAPPING.md",
@@ -155,9 +169,12 @@
     "formal": "4c8c6932; both seats complete; R1/reset amendment228e3485",
     "swift": "code76035210 + visual8fd49f25; integratedc19fd669; approved presentation alignment0d5b2198",
     "electron": "codedf13e2a8 + visuale8178e24; integratedbc288b30",
-    "refresh": "PERF-refresh R1 product 47aa4f10: catalog debt survives superseded and failed full reads. Compiled client regressions and model sensitivity renewed; fresh correctness seats pending. UI seat2 passed unchanged presentation at 2041ed44."
+    "refresh": "PERF-refresh R1 product 47aa4f10: catalog debt survives superseded and failed full reads. Compiled client regressions and model sensitivity renewed; fresh correctness seats pending. UI seat2 passed unchanged presentation at 2041ed44.",
+    "security": "SEC-W1 local source review, literal client/core proofs, immutable real matcher properties and all five behavioral mutations passed at0a2eef1c in matcher-zwScvg. Covered source bytes unchanged at this product commit. Seat1 held for SEC-L1 to launch; seat2 coordinator.",
+    "v1": "Reviewed display-only diff against CLIENT-MAPPING.md: shared applied-context helpers, unchanged refusal sentence, secondary context, no state transition/publication guard/generation/identity changes. Immutable matcher properties and all five behavioral mutations passed at064b2667 in matcher-1eyrdt before these four hashes were renewed. Seat1/visual review pending."
   },
   "productionMatcher": "Immutable real source with generated properties, behavioral mutations and byte restoration; final-tip command uses its explicit full SHA.",
-  "recovery": "Manual Retry or current-Profile SSE reconnect/op, no search retry timer. Conditional liveness assumptions are in CLIENT-MAPPING.md and REPORT.md.",
-  "clientRefinement": "Mapped full/query publication, catalog retention and bootstrap fallback with compiled regressions; no mechanical TypeScript/Swift refinement theorem."
+  "recovery": "Transient errors offer Retry; search_too_broad hides Retry and retains text/snapshot. Current-Profile SSE op/reconnect remains available. Liveness requires a later affordable successful response and a fair available recovery source.",
+  "clientRefinement": "Mapped full/query publication, catalog retention and bootstrap fallback with compiled regressions; no mechanical TypeScript/Swift refinement theorem.",
+  "securityBase": "492d94537f8762b94e6114881bf149b85d6cb4b6"
 }

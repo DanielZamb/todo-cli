@@ -176,7 +176,7 @@ struct TaskSearchStateTests {
         await transport.fail()
         model.setSearchText("rent")
         try await wait { model.searchPhase == .error }
-        #expect(model.searchError == "Couldn't search. Showing tasks without search.")
+        #expect(model.searchError == .transient("Couldn't search. Showing tasks without search."))
         model.setSearchText("")
         try await wait { model.searchPhase == .showing }
         await transport.failRead()
@@ -277,6 +277,93 @@ struct TaskSearchStateTests {
         }
         model.signedIn = false
         model.connect()
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_W06_SERVER"] != nil))
+    func deterministicRefusalRetainsSnapshotAndRecoversFromSse() async throws {
+        let server = try #require(ProcessInfo.processInfo.environment["TODO_W06_SERVER"].flatMap(URL.init(string:)))
+        let credential = try await todoClient(server: server, credential: "").signIn_period_signIn(body: .json(.init(passphrase: "scratch verification passphrase"))).ok.body.json.credential
+        let direct = todoClient(server: server, credential: credential)
+        let profile = "zzz-search-budget-\(UUID().uuidString.lowercased())"
+        let initialize = Process()
+        initialize.executableURL = URL(fileURLWithPath: try #require(ProcessInfo.processInfo.environment["TODO_F10_CLI"]))
+        initialize.arguments = ["init", "--profile", profile]
+        initialize.environment = ProcessInfo.processInfo.environment
+        initialize.standardOutput = Pipe()
+        initialize.standardError = Pipe()
+        try initialize.run()
+        initialize.waitUntilExit()
+        #expect(initialize.terminationStatus == 0)
+        var created: [TaskSnapshot] = []
+        for index in 0..<3 {
+            let data = try JSONSerialization.data(withJSONObject: ["title": "probe \(index)", "description": String(repeating: "\u{FDFA}", count: 100000)])
+            let payload = try JSONDecoder().decode(Operations.tasks_period_create.Input.Body.jsonPayload.self, from: data)
+            created.append(try await TaskSnapshot.decode(direct.tasks_period_create(path: .init(profile: profile), body: .json(payload)).ok.body.json))
+        }
+        let model = TodoModel(configuration: .init(server: server, initialProfile: profile, vaultService: "unused-budget-\(UUID())"), clientFactory: { url, _ in
+            Client(serverURL: url, transport: URLSessionTransport(), middlewares: [BearerMiddleware(credential: credential)])
+        })
+        model.selectedView = "all"
+        model.signedIn = true
+        model.connect()
+        defer { model.signedIn = false; model.connect() }
+        try await wait { model.connection == .live && model.searchPhase == .showing }
+        #expect(model.appliedSearchSnapshot?.rows.map(\.title).sorted() == ["probe 0", "probe 1", "probe 2"])
+        model.setSearchText("probe")
+        try await wait { model.searchPhase == .error }
+        let recovery = "Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase."
+        #expect(model.searchError == .tooBroad(recovery, context: "Showing tasks without search."))
+        #expect(model.searchError?.message == recovery)
+        #expect(model.searchError?.context == "Showing tasks without search.")
+        #expect(model.searchError?.canRetry == false)
+        #expect(model.searchText == "probe")
+        #expect(model.appliedSearchSnapshot?.appliedIdentity.text == "")
+        #expect(model.appliedSearchSnapshot?.rows.map(\.title).sorted() == ["probe 0", "probe 1", "probe 2"])
+        #expect(model.appliedSearchSnapshot?.rows.allSatisfy { $0.search_matches == nil } == true)
+        let shrinking = try #require(created.first)
+        let payload = try JSONDecoder().decode(Operations.tasks_period_edit.Input.Body.jsonPayload.self, from: Data(#"{"from_version":1,"changes":{"description":"rent"}}"#.utf8))
+        _ = try await direct.tasks_period_edit(path: .init(profile: profile, task: shrinking.id), body: .json(payload)).ok
+        try await wait { model.searchPhase == .showing && model.appliedSearchSnapshot?.appliedIdentity.text == "probe" }
+        #expect(model.searchError == nil)
+        #expect(model.searchText == "probe")
+        #expect(model.appliedSearchSnapshot?.rows.map(\.title).sorted() == ["probe 0", "probe 1", "probe 2"])
+        #expect(model.appliedSearchSnapshot?.rows.allSatisfy { $0.search_matches == [.init(field: .title, start: 0, end: 5)] } == true)
+        model.setSearchText("rent")
+        try await wait { model.searchPhase == .showing && model.appliedSearchSnapshot?.appliedIdentity.text == "rent" }
+        #expect(model.appliedSearchSnapshot?.rows.map(\.title) == ["probe 0"])
+        #expect(model.appliedSearchSnapshot?.rows.first?.search_matches == [.init(field: .description, start: 0, end: 4)])
+        let expanded = try JSONSerialization.data(withJSONObject: ["from_version": 2, "changes": ["description": String(repeating: "\u{FDFA}", count: 100000)]])
+        let expandPayload = try JSONDecoder().decode(Operations.tasks_period_edit.Input.Body.jsonPayload.self, from: expanded)
+        _ = try await direct.tasks_period_edit(path: .init(profile: profile, task: shrinking.id), body: .json(expandPayload)).ok
+        try await wait { model.searchPhase == .error }
+        model.setSearchText("probe")
+        try await wait { model.searchPhase == .error }
+        #expect(model.searchError == .tooBroad(recovery, context: "Showing results for \"rent\"."))
+        #expect(model.searchError?.message == recovery)
+        #expect(model.searchError?.context == "Showing results for \"rent\".")
+        #expect(model.searchError?.canRetry == false)
+        #expect(model.searchText == "probe")
+        #expect(model.appliedSearchSnapshot?.appliedIdentity.text == "rent")
+        #expect(model.appliedSearchSnapshot?.rows.first?.search_matches == [.init(field: .description, start: 0, end: 4)])
+        let shrinkPayload = try JSONDecoder().decode(Operations.tasks_period_edit.Input.Body.jsonPayload.self, from: Data(#"{"from_version":3,"changes":{"description":"rent"}}"#.utf8))
+        _ = try await direct.tasks_period_edit(path: .init(profile: profile, task: shrinking.id), body: .json(shrinkPayload)).ok
+        try await wait { model.searchPhase == .showing && model.appliedSearchSnapshot?.appliedIdentity.text == "probe" }
+        #expect(model.searchError == nil)
+        #expect(model.appliedSearchSnapshot?.rows.map(\.title).sorted() == ["probe 0", "probe 1", "probe 2"])
+        if let receipt = ProcessInfo.processInfo.environment["TODO_W06_RECEIPT"] {
+            try JSONSerialization.data(withJSONObject: ["code": "search_too_broad", "retry": false, "text": "probe", "rowsAfterSse": 3, "retainedSnapshot": true, "withoutSearch": "Showing tasks without search.", "withSearch": "Showing results for \"rent\"."]).write(to: URL(fileURLWithPath: receipt).deletingLastPathComponent().appendingPathComponent("search-budget-http.json"))
+        }
+    }
+
+    @Test func searchRefusalKeepsLiteralMessageAndAppliedContext() {
+        let recovery = "Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase."
+        let contexts: [(String?, String)] = [(nil, "Showing tasks without search."), ("rent", "Showing results for \"rent\".")]
+        for (text, expected) in contexts {
+            let failure = TaskSearchFailure.tooBroad(recovery, context: TaskSearchPresentation.appliedContext(text))
+            #expect(failure.message == recovery)
+            #expect(failure.context == expected)
+            #expect(!failure.canRetry)
+        }
     }
 
     @Test func prefixConstraintsAndUTF16Presentation() throws {
@@ -381,7 +468,7 @@ struct TaskSearchStateTests {
         model.setSearchText("rent")
         try await wait { model.searchPhase == .error }
         #expect(model.searchText == "rent")
-        #expect(model.searchError == "Couldn't search. Showing results for \"reno\".")
+        #expect(model.searchError == .transient("Couldn't search. Showing results for \"reno\"."))
         #expect(model.appliedSearchSnapshot?.rows.map(\.title) == ["Renovar el pasaporte"])
         await model.retrySearch()
         #expect(model.appliedSearchSnapshot?.rows.map(\.title) == ["Receipt"])

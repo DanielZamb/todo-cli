@@ -227,7 +227,10 @@ export const Reply = Schema.Union([
   Schema.TaggedStruct("parsed", { draft: QuickAddDraft }),
   Schema.TaggedStruct("history", { entries: Schema.Array(OpLogEntry) }),
   Schema.TaggedStruct("conflict", { latest: Schema.NullOr(Task) }),
-  Schema.TaggedStruct("error", { message: Schema.String }),
+  Schema.TaggedStruct("error", {
+    message: Schema.String,
+    code: Schema.optionalKey(Schema.Literal("search_too_broad")),
+  }),
 ]);
 export type Reply = typeof Reply.Type;
 export const Notice = Schema.Union([

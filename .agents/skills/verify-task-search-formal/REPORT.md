@@ -239,3 +239,35 @@ to inspect fingerprint reporting are retained beside it. The final runner uses
 the same pinned jar's `MemFPSet1`, whose distance check sorts the stored
 fingerprints. The model and its acceptance properties were unchanged by that
 tool configuration correction.
+
+## SEC budget source renewal (2026-11-09)
+
+The work-budget, yielding, interruption and deterministic-error presentation are
+mapped in CLIENT-MAPPING.md. SEC-W1 reviewed the changed functions locally; the
+immutable matcher at `0a2eef1c` passed generated properties and all five deliberate
+behavioral mutations in `matcher-zwScvg`. The product commit in coverage.json has
+identical covered source bytes. The full renewed command records its own fresh
+model and matcher receipts. Independent review seats remain pending; this worker
+does not launch them. The unchanged model's conditional Error recovery is not a
+promise that a persistently over-budget query succeeds.
+
+The renewed command completed with exit 0 at product source `c240677e`:
+`docs/evidence/task-search-formal/check-OrFheJ/result.json`. Both safety graphs
+exhausted their queues (1,710,504 and 1,026,978 distinct states), and liveness and
+the restored model passed. All deliberate design controls produced the expected
+behavioral counterexamples (12 or 13). Immutable real-matcher properties and all
+five matcher mutations passed at that same product source in `matcher-BddZka`.
+TLA+ source remained byte-identical. These local receipts do not replace either
+independent review seat.
+
+## V1 applied context renewal (2026-11-09)
+
+V1 product commit `064b2667` adds display text only. It changes no transition,
+publication guard, generation or identity. CLIENT-MAPPING.md records that review.
+Only the four changed guarded client-file hashes were renewed, after immutable
+matcher properties and all five behavioral mutations passed in `matcher-1eyrdt`.
+The full command then exited 0 in `check-LDjXLP`, with a fresh matcher sensitivity
+pass in `matcher-ogr9wb`. Both safety graphs, conditional liveness, expected
+broken controls, restoration and source-hash checks passed. TLA+ is unchanged.
+Client literal tests and the compiled drives check both applied-context lines;
+the finite model does not evaluate their display text or pixels.

@@ -224,3 +224,16 @@ reuse an owed catalog. `BrokenCatalogPromotion` disables owed-scope promotion
 and must fail it with exit12. Both use independent transition observations,
 described in `CLIENT-MAPPING.md`, so clearing the flag cannot conceal the fault.
 Both controls and the restored run are part of the one command.
+
+## Work-budget and yielding mapping
+
+Read the 2026-11-09 section in CLIENT-MAPPING.md before renewing SEC source hashes.
+The shared work refusal follows Error without partial publication. The server
+cooperatively drains the same generator as the synchronous CLI after the complete
+in-memory view read; it never yields a SQLite read snapshot. Preparation and
+evaluation checkpoints are interruptible and the runner closes suspended generators.
+`search_too_broad` hides Retry; SSE recovery remains. Conditional convergence
+requires an affordable later response and a fair available recovery source. TLC
+does not prove a CPU, heap, health-latency, cancellation or serialization bound.
+The literal budget/cache-equivalence, finalizer, compiled abort and client SSE
+regressions complement the unchanged response-order model.

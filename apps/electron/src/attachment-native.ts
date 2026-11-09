@@ -11,12 +11,29 @@ export const isNativeAttachmentRequest = (
   request: Request,
 ): request is typeof NativeAttachmentRequest.Type =>
   Schema.is(NativeAttachmentRequest)(request);
-export async function nativeAttachmentRequest(
-  request: typeof NativeAttachmentRequest.Type,
-): Promise<Reply> {
+export async function nativeAttachmentRequest(input: unknown): Promise<Reply> {
   try {
+    const request = Schema.decodeUnknownSync(NativeAttachmentRequest)(input);
     switch (request._tag) {
       case "copyTaskId":
+        if (
+          request.task.length > 128 ||
+          /\p{Cf}/u.test(request.task) ||
+          [...request.task].some((character) => {
+            const unit = character.charCodeAt(0);
+            return (
+              unit <= 0x1f ||
+              (unit >= 0x7f && unit <= 0x9f) ||
+              unit === 0x2028 ||
+              unit === 0x2029
+            );
+          })
+        )
+          return {
+            _tag: "error",
+            message:
+              "Task id must be at most 128 UTF-16 units and contain no control characters or format characters.",
+          };
         await clipboard.writeText(request.task);
         return { _tag: "ok" };
       case "attachmentClipboard":

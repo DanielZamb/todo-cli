@@ -6,6 +6,7 @@ import { Reply } from "../src/protocol.ts";
 import {
   DescriptionMatch,
   descriptionMatch,
+  SearchErrorMessage,
   SearchHighlight,
 } from "../src/task-search-presentation.tsx";
 import { searchGroups } from "../src/task-search-results.ts";
@@ -32,6 +33,48 @@ const task = Schema.decodeUnknownSync(TaskRead)({
   completed_at: null,
   deleted_at: null,
   search_matches: [{ field: "title", start: 0, end: 7 }],
+});
+
+it("shows the refusal first and names the retained search snapshot", () => {
+  expect(
+    renderToStaticMarkup(
+      <SearchErrorMessage
+        kind="search_too_broad"
+        message="Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase."
+        appliedText="rent"
+      />,
+    ),
+  ).toBe(
+    '<span>Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.</span><small class="search-error-context">Showing results for &quot;rent&quot;.</small>',
+  );
+});
+
+it("shows the refusal first and identifies an unsearched snapshot", () => {
+  expect(
+    renderToStaticMarkup(
+      <SearchErrorMessage
+        kind="search_too_broad"
+        message="Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase."
+        appliedText={undefined}
+      />,
+    ),
+  ).toBe(
+    '<span>Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.</span><small class="search-error-context">Showing tasks without search.</small>',
+  );
+});
+
+it("preserves a deterministic search refusal through IPC", () => {
+  expect(
+    Schema.decodeUnknownSync(Reply)({
+      _tag: "error",
+      code: "search_too_broad",
+      message: "Narrow the search with a Project, Tag or Status filter.",
+    }),
+  ).toEqual({
+    _tag: "error",
+    code: "search_too_broad",
+    message: "Narrow the search with a Project, Tag or Status filter.",
+  });
 });
 
 it("starts a trimmed description at a whole word and marks the original match", () => {

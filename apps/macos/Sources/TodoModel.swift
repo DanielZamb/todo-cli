@@ -53,7 +53,7 @@ final class TodoModel {
     var appliedSearchSnapshot: TaskSearchSnapshot?
     private var catalogReady = false
     private var catalogStale = true
-    var searchError: String?
+    var searchError: TaskSearchFailure?
     @ObservationIgnored private var searchDebounce: Task<Void, Never>?
     var requestedIdentity: TaskSearchIdentity {
         .init(profile: profile, view: selectedView, filters: requestedTaskFilters, text: searchText, project: selectedProject, tag: selectedTag)
@@ -414,12 +414,15 @@ final class TodoModel {
             return .applied
         } catch {
             guard canPublishSearch(run: run, request: request, identity: identity) else { return .superseded }
-            if taskFilters != identity.filters {
+            if let refusal = failure(error), refusal.code == "search_too_broad" {
+                requestedTaskFilters = taskFilters
+                taskLoadError = nil
+                searchError = .tooBroad(refusal.message, context: TaskSearchPresentation.appliedContext(appliedSearchSnapshot?.appliedIdentity.text))
+            } else if taskFilters != identity.filters {
                 requestedTaskFilters = taskFilters
                 taskLoadError = "Could not apply filters. Your previous filters are still active."
             } else if !identity.text.isEmpty || appliedSearchSnapshot?.appliedIdentity.text.isEmpty == false {
-                let applied = appliedSearchSnapshot?.appliedIdentity.text ?? ""
-                searchError = applied.isEmpty ? "Couldn't search. Showing tasks without search." : "Couldn't search. Showing results for \"\(applied)\"."
+                searchError = .transient("Couldn't search. \(TaskSearchPresentation.appliedContext(appliedSearchSnapshot?.appliedIdentity.text))")
             } else {
                 taskLoadError = describe(error)
             }

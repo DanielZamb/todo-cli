@@ -23,6 +23,19 @@ struct TaskSearchCatalog {
 enum TaskSearchPhase { case idle, showing, debouncing, requesting, error }
 enum TaskSearchRefreshOutcome: Equatable { case applied, superseded, failed }
 
+enum TaskSearchFailure: Equatable {
+    case transient(String), tooBroad(String, context: String)
+    var message: String {
+        switch self { case .transient(let message), .tooBroad(let message, _): message }
+    }
+    var context: String? {
+        switch self { case .transient: nil; case .tooBroad(_, let context): context }
+    }
+    var canRetry: Bool {
+        switch self { case .transient: true; case .tooBroad: false }
+    }
+}
+
 struct TaskSearchSnapshot {
     let appliedIdentity: TaskSearchIdentity
     let rows: [TaskSnapshot]
@@ -30,6 +43,11 @@ struct TaskSearchSnapshot {
 }
 
 enum TaskSearchPresentation {
+    static func appliedContext(_ text: String?) -> String {
+        guard let text, !text.isEmpty else { return "Showing tasks without search." }
+        return "Showing results for \"\(text)\"."
+    }
+
     static func highlighted(_ text: String, spans: [TaskSearchMatch], field: TaskSearchMatch.Field) -> AttributedString {
         var result = AttributedString(text)
         for span in spans where span.field == field && span.start >= 0 && span.end > span.start && span.end <= text.utf16.count {
