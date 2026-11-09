@@ -81,7 +81,10 @@ try {
     readFileSync(join(skill, "production-pin.json"), "utf8"),
   );
   assert.equal(currentPin.commit, productionPin.commit, "Product pins differ");
-  assert.equal(currentPin.awaitMergedIntegration, productionPin.awaitMergedIntegration);
+  assert.equal(
+    currentPin.awaitMergedIntegration,
+    productionPin.awaitMergedIntegration,
+  );
   if (
     !process.argv.includes("--model-only") &&
     currentPin.awaitMergedIntegration
@@ -240,6 +243,15 @@ try {
   let production = null;
   let publicConformance = null;
   if (!modelOnly) {
+    const artifactCheck = await execute("compiler-artifacts-check", "bun", [
+      join(skill, "compiler-artifacts-check.mjs"),
+      evidence,
+    ]);
+    assert.equal(
+      artifactCheck.exitCode,
+      0,
+      "Compiler artifact cleanup check failed",
+    );
     const result = await execute(
       "production-conformance",
       "bun",

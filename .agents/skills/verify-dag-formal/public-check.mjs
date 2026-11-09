@@ -1,3 +1,4 @@
+import { guardedCompiler } from "./compile-artifacts.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import {
@@ -12,7 +13,12 @@ import {
 } from "node:fs";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { digest, materialize, object, workspaceTypePaths } from "./candidate-inputs.mjs";
+import {
+  digest,
+  materialize,
+  object,
+  workspaceTypePaths,
+} from "./candidate-inputs.mjs";
 import mutants from "./public-mutants.mjs";
 import retainedMutants from "./production-mutants.mjs";
 import boundaryMutants from "./boundary-mutants.mjs";
@@ -114,8 +120,10 @@ async function build(
     return binary;
   }
   const imports = [];
-  beforeCompile({ evidence, label });
-  const result = await Bun.build({
+  const result = await guardedCompiler(Bun.build.bind(Bun), {
+    evidence,
+    label,
+  })({
     entrypoints: [join(candidate, entry)],
     target: "bun",
     compile: { outfile: binary },
@@ -297,6 +305,7 @@ try {
       "public-mutants.mjs",
       "boundary-mutants.mjs",
       "compile-safety.mjs",
+      "compile-artifacts.mjs",
       "compile-preload.mjs",
       "contract-properties.mjs",
       "response-mutants.mjs",
@@ -393,7 +402,9 @@ try {
     JSON.stringify({
       extends: "../tsconfig.base.json",
       compilerOptions: {
-        types: ["bun"], noEmit: true, allowJs: true,
+        types: ["bun"],
+        noEmit: true,
+        allowJs: true,
         paths: workspaceTypePaths(candidate, ["domain", "api"]),
       },
       include: ["*.ts"],
@@ -600,7 +611,8 @@ try {
     commands: records,
     sensitivity,
     baseline: JSON.parse(baseline.stdout),
-    scope: "merged public/read conformance; final E/S runtime mapping and F review pending",
+    scope:
+      "merged public/read conformance; final E/S runtime mapping and F review pending",
   });
   console.log(
     (mode === "all"

@@ -1,7 +1,8 @@
+import { guardedCompiler } from "./compile-artifacts.mjs";
 import assert from "node:assert/strict";
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { beforeCompile, DiskStop } from "./compile-safety.mjs";
+import { DiskStop } from "./compile-safety.mjs";
 import { digest } from "./candidate-inputs.mjs";
 const build = Bun.build.bind(Bun),
   candidate = process.cwd();
@@ -36,8 +37,12 @@ Bun.build = async (options) => {
       });
     },
   };
+  let result;
   try {
-    beforeCompile({ evidence, label });
+    result = await guardedCompiler(build, { evidence, label })({
+      ...options,
+      plugins: [plugin, ...(options.plugins ?? [])],
+    });
   } catch (error) {
     if (error instanceof DiskStop) {
       console.error(error.message);
@@ -45,10 +50,6 @@ Bun.build = async (options) => {
     }
     throw error;
   }
-  const result = await build({
-    ...options,
-    plugins: [plugin, ...(options.plugins ?? [])],
-  });
   writeFileSync(
     join(evidence, label + "-build.json"),
     JSON.stringify(

@@ -1,3 +1,4 @@
+import { guardedCompiler } from "./compile-artifacts.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import {
@@ -13,7 +14,11 @@ import {
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import mutants from "./production-mutants.mjs";
-import { digest, materialize, workspaceTypePaths } from "./candidate-inputs.mjs";
+import {
+  digest,
+  materialize,
+  workspaceTypePaths,
+} from "./candidate-inputs.mjs";
 import {
   beforeCompile,
   DiskStop,
@@ -107,8 +112,10 @@ async function build(label, filename) {
     ? join(root, ".scratch/bin", `dag-f-${label}-${sourceHash}`)
     : join(evidence, label);
   mkdirSync(dirname(output), { recursive: true });
-  beforeCompile({ evidence, label });
-  const result = await Bun.build({
+  const result = await guardedCompiler(Bun.build.bind(Bun), {
+    evidence,
+    label,
+  })({
     entrypoints: [join(candidate, "verify", filename)],
     target: "bun",
     compile: { outfile: output },
@@ -196,6 +203,7 @@ try {
       "production-pin.json",
       "production-mutants.mjs",
       "compile-safety.mjs",
+      "compile-artifacts.mjs",
       "compile-preload.mjs",
       "guarded-runtime.mjs",
       "graph-properties.ts",
@@ -249,7 +257,8 @@ try {
     JSON.stringify({
       extends: "../tsconfig.base.json",
       compilerOptions: {
-        types: ["bun"], noEmit: true,
+        types: ["bun"],
+        noEmit: true,
         paths: workspaceTypePaths(candidate, ["domain"]),
       },
       include: ["*.ts"],

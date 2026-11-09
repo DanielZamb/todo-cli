@@ -1,6 +1,6 @@
 {
   "confirmedCommit": "0f7a19488f15ec1f8d4c4dad14749de7720f17d0",
-  "status": "merged-source proof in progress",
+  "status": "reviewed merged mapping; actual execution receipts in unit-f-report.md",
   "gateCommit": "ca142014",
   "scope": "Reviewed immutable merged product functions; full committed conformance execution required.",
   "modelSha256": "54254524caf9a30e95bc1e12b01018eafc28ea88c4a211a46228eb137a802c48",

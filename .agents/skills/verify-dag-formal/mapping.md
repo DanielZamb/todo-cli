@@ -2,7 +2,7 @@ Current active pin: 0f7a19488f15ec1f8d4c4dad14749de7720f17d0. Functions and whol
 
 # Mapping to committed production code
 
-The confirmed product candidate is
+The first historical product checkpoint was
 `f140c7b09bcb1db48ce4ccaee797ecfe60019ce4`. coverage.json pins the reviewed
 whole-file SHA-256 values and named functions. Both checkers read Git objects,
 never another worker's working tree. Each production run materializes unchanged

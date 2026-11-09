@@ -64,6 +64,17 @@ presence is observed through a real HTTP forwarding endpoint.
 
 ## Compile, disk and cleanup discipline
 
+The owner's resume lifts the prior disk stop. The stopped exit 3 remains in
+its original receipt. compile-artifacts.mjs snapshots only owned directories
+before each compiler call and retires only new regular .bun-build files after
+that compiler settles. A retained copy must match the output or the actual Bun
+runtime hash before removal; UID, inode stability and ps/lsof checks must also
+pass. Preexisting, symlink, unmatched and open files remain. A full-command
+self-check proves removal and preservation cases. No physical low-disk test is
+used. The archive index at /Users/zambamon/Documents/worktree-cleanup-2026-11-09/todo-cli/ARCHIVE.md
+resolves removed worktrees' historical evidence. Never recreate them.
+
+
 compile-safety.mjs runs the canonical disk guard immediately before each actual
 Bun.build or TypeScript compiler spawn. It records the actual exit immediately.
 Exit 3 latches DISK STOP across the run. Isolated source restores byte-for-byte
@@ -74,8 +85,7 @@ compile-preload.mjs guards nested Bun.build calls while running the unchanged
 AtomicCAS skill and enforces immutable import resolution. B owns AtomicCAS
 maintenance. The synthetic stop-sentinel check proves a prior stop prevents
 compiler entry and permits exact isolated restoration; it is not a physical
-low-disk observation or a product sensitivity control. Nested AtomicCAS wrapping
-still needs its full merged-source run.
+low-disk observation or a product sensitivity control. The default path executes nested AtomicCAS through the guarded wrapper.
 
 Retire completed isolated mutant binaries only from this worktree's .scratch/bin
 and only after ownership, hash and in-use checks. Preserve all provenance
@@ -86,7 +96,7 @@ prevent equating logical unlinks with reclaimed capacity. Never follow a symlink
 into another owned tree. The earlier housekeeping receipt lists 40 retired
 mutation binaries and every protected evidence directory.
 
-## Immutable inputs and planned full command
+## Immutable inputs and full command
 
 The checker materializes exact Git blobs under ignored owned evidence inputs,
 without another Git checkout. Production aliases resolve only to those inputs;
@@ -113,7 +123,7 @@ At 3cce, the F boundary diagnostic passed 17 malformed-input cases, four genuine
 missing/I/O classifications and valid stale no-ops. Seven new real-source
 boundary controls compiled, failed at intended AssertionError assertions and
 passed after exact restoration. Their superseded binaries were retired.
-The 31-case B matrix was inspected; its new F rerun path is prepared, not run.
+The historical preparation only inspected B's matrix. The merged default path executes all 31 cases.
 Independent replay passed 93 cases and 186 rebuilds, seed 260911, all DAGs through
 three nodes plus 64 seeded DAGs through twelve nodes. Nineteen concrete
 integration checks passed. These are candidate-specific calibration receipts,
