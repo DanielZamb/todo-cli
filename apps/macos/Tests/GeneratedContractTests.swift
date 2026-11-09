@@ -13,8 +13,9 @@ final class GeneratedContractTests: XCTestCase {
         try roundTrip(Failure.self, json)
         let refusal = try JSONDecoder().decode(Failure.self, from: Data(json.utf8))
         XCTAssertNil(refusal.value1)
-        XCTAssertEqual(refusal.value2?.code.rawValue, "search_too_broad")
-        XCTAssertEqual(refusal.value2?.message, "Narrow the search with a Project, Tag or Status filter.")
+        XCTAssertNil(refusal.value2)
+        XCTAssertEqual(refusal.value3?.code.rawValue, "search_too_broad")
+        XCTAssertEqual(refusal.value3?.message, "Narrow the search with a Project, Tag or Status filter.")
         XCTAssertThrowsError(try JSONDecoder().decode(Failure.self, from: Data(json.replacingOccurrences(of: "search_too_broad", with: "different_code").utf8)))
     }
 
