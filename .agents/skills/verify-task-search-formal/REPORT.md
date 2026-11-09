@@ -1,3 +1,51 @@
+# Current PERF-refresh proof
+
+The full/query refresh amendment passes at product source
+`30376a1b419dc8bb08b385182aa663f7a73d98c8`. The final command was
+`bun .agents/skills/verify-task-search-formal/check.ts 30376a1b419dc8bb08b385182aa663f7a73d98c8`
+and exited 0. Its ignored evidence is
+`docs/evidence/task-search-formal/check-TBbGlz`, with the immutable matcher run
+at `docs/evidence/task-search-formal/matcher-jrQXhY`. The prior proof below is
+historical and its state counts do not describe this amendment.
+
+`catalogReady` and the latest pending request's `issuedFull` represent the
+full/query distinction. Initial load, reset and SSE request full reads.
+Debounce, Apply and Retry request query reads only after a full catalog has
+published. Obsolete requests retain no scope because their generation guard
+rejects publication. Query success retains the catalog. Full success publishes
+catalog and search together under the same complete identity and generation
+check. `QueryHasCatalog` checks the bootstrap fallback beside `OneSnapshot`,
+`LatestPublication`, `ShowingIsCurrent` and `ExactStale`.
+
+| Stage | Distinct states | Generated successors | Queue | Exit |
+| --- | --- | --- | --- | --- |
+| Full identities, two pending requests | 1,969,704 | 18,772,705 | 0 | 0 |
+| Six identities, three pending requests | 1,280,994 | 13,277,277 | 0 | 0 |
+| Conditional liveness | 29,946 | 247,435 | 0 | 0 |
+| Restored model | 29,946 | 247,435 | 0 | 0 |
+
+The existing bounds, tool pin and generation-color construction stay as
+described below. No symmetry or state constraints remove reachable states.
+The broken snapshot, latest, semantic Showing, stale and bootstrap fallback
+controls each reach a behavioral counterexample and exit 12. Broken progress
+and missing recovery fairness each exit 13 with a liveness counterexample.
+Their nonempty queues are expected early counterexample stops. The restored
+model exhausts its queue and exits 0. Real matcher generated properties and
+production mutation controls also pass on the recorded immutable source.
+
+Convergence assumes settled input, eventual debounce and recovery, and later
+successful responses. It does not assert that an unchanged deterministic
+`search_too_broad` refusal eventually succeeds. SEC owns that policy and its
+client parity. Recheck this mapping and proof after L1 integrates SEC.
+
+Compiled Swift and unsigned Electron drives cover the production publication
+boundaries, retained catalog and unfiltered data, delayed full success/error,
+complete identities, rows, spans, filter rollback, initial failure/Retry and
+SSE recovery. The worker report records exact receipt paths and binary source
+SHAs. This remains a bounded design proof with manually reviewed source
+mapping, not a TypeScript or Swift refinement theorem. PERF-refresh correctness
+and coordinator UI review seats are pending L1's final handoff.
+
 # C1 design model proof
 
 The approved response-order model, including SSE recovery, semantic ShowingIsCurrent and text-retaining reset, passes the R1 amendment run within the bounds below. The original SSE model was reviewed at code commit f42fc7f5. Generated

@@ -1,5 +1,5 @@
 {
-  "sourceCommit": "0d5b2198e5728565a57ff3170b84182ff776a148",
+  "sourceCommit": "30376a1b419dc8bb08b385182aa663f7a73d98c8",
   "status": "mapped-production-clients-and-real-matcher",
   "files": [
     {
@@ -11,9 +11,11 @@
         "activateProfile",
         "activateView",
         "clearFilters",
-        "changed/connection notice handlers"
+        "changed/connection notice handlers",
+        "catalogRef",
+        "invalidate"
       ],
-      "sha256": "91c45ab023ecb0d7a720982a3494f4d904322aab56717b4c46e5a10c4d3f2a84"
+      "sha256": "e3dd1ddfbaffa2e8ca03eadcee57ff931ce34b87fc1e2b6328d1fdfb268010d9"
     },
     {
       "path": "apps/electron/src/task-search-results.ts",
@@ -28,16 +30,18 @@
     {
       "path": "apps/electron/src/task-client.ts",
       "functions": [
-        "taskRequest list branch"
+        "taskRequest list branch",
+        "taskRequest search branch"
       ],
-      "sha256": "571097dd0ddf9e9d0327260f81a948d0ab60ef6f1c60270a0f02fdff57fc2ebd"
+      "sha256": "8abb9d47601f62f78efb4ceed4168b044e712fb523448998768c2568718b0fdf"
     },
     {
       "path": "apps/electron/src/protocol.ts",
       "functions": [
-        "Reply tasks TaskRead decoder"
+        "Request search decoder",
+        "Reply tasks/search TaskRead decoders"
       ],
-      "sha256": "8ed36ad2c29d493e595f4c05ee742b5237fce3ad26331945e53ce0d79df3d4ff"
+      "sha256": "1ab22c605b466bb39edde417994021b7c9a998c8800a4ce5898bfacde9c2909b"
     },
     {
       "path": "apps/macos/Sources/TodoModel.swift",
@@ -51,9 +55,13 @@
         "activateProfile",
         "selectView",
         "followChanges",
-        "applyTaskFilters"
+        "applyTaskFilters",
+        "catalogReady",
+        "readSearchRows",
+        "readSearchPlanning",
+        "readSearchCatalog"
       ],
-      "sha256": "9e3750b02515438ef433ffe70e87791e8f4f7e9e7c2b49f16c916e22389ee520"
+      "sha256": "47176e8d8939f429e28639a297526cd26197bc1cabde5dcb143b1102096c3401"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -63,7 +71,7 @@
         "TaskSearchRefreshOutcome",
         "TaskSearchPresentation"
       ],
-      "sha256": "52cdca8acf5335822cc8f9c81fdd61fb0e7cf0935d4e1059054e39edae567b73"
+      "sha256": "7364c82e9f684a8f146f1dba0e7b673e057cf54e38d36c028dad0d29ec0f0add"
     },
     {
       "path": "apps/macos/Sources/AppViews.swift",
@@ -144,9 +152,10 @@
     "domain": "unit1 a1987fd4 integrated8272b610; both seats complete",
     "formal": "4c8c6932; both seats complete; R1/reset amendment228e3485",
     "swift": "code76035210 + visual8fd49f25; integratedc19fd669; approved presentation alignment0d5b2198",
-    "electron": "codedf13e2a8 + visuale8178e24; integratedbc288b30"
+    "electron": "codedf13e2a8 + visuale8178e24; integratedbc288b30",
+    "refresh": "PERF-refresh product 30376a1b: local compiled client conformance, guarded discovery names, full/query sensitivity. L1 correctness and coordinator UI seats pending."
   },
   "productionMatcher": "Immutable real source with generated properties, behavioral mutations and byte restoration; final-tip command uses its explicit full SHA.",
   "recovery": "Manual Retry or current-Profile SSE reconnect/op, no search retry timer. Conditional liveness assumptions are in CLIENT-MAPPING.md and REPORT.md.",
-  "clientRefinement": "Mapped and regression-checked; no mechanical TypeScript/Swift refinement theorem."
+  "clientRefinement": "Mapped full/query publication, catalog retention and bootstrap fallback with compiled regressions; no mechanical TypeScript/Swift refinement theorem."
 }
