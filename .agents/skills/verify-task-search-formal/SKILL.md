@@ -13,8 +13,7 @@ bun .agents/skills/verify-task-search-formal/check.ts
 
 The command exits 0 only after the design model, real candidate matcher,
 deliberate broken variants, restored checks, typechecks, and reviewed baseline
-source hashes pass. The final line marks integration recheck and final client
-mapping PENDING.
+source hashes pass. The default matcher commit is reviewed unit-1 integration. The final line marks final client mapping PENDING.
 This command does not certify the implemented feature.
 
 Prerequisites are Java 11 or newer, Bun, curl, and dependencies from the existing

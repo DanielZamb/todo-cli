@@ -2,8 +2,7 @@
 
 All five generated-input properties pass against real candidate
 `be876581ea9d4c024fab3b0bc2c8358051c6d2b4`. Each also fails on a scratch
-production-code break and passes after byte-for-byte restoration. The candidate
-awaits its reviews. Integration recheck and final client mapping remain PENDING.
+production-code break and passes after byte-for-byte restoration. L1 subsequently repeated the checks at reviewed integration 8272b610, documented below. Final client mapping remains PENDING.
 
 The standalone command exits 0:
 

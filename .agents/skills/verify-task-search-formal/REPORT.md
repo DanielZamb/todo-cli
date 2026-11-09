@@ -1,6 +1,6 @@
 # C1 design model proof
 
-The approved response-order model is proven within the bounds below. Generated
+The approved response-order model, including SSE recovery, is proven within the bounds below at model code commit f42fc7f5. Generated
 checks against the real unit 1 candidate also pass, with production-code
 sensitivity. Integration recheck and final client mapping are PENDING. This is
 not a complete Task search feature proof.
@@ -24,7 +24,7 @@ bun .agents/skills/verify-task-search-formal/check.ts
 The completed model run is under this ignored absolute evidence directory:
 
 ```text
-/Users/zambamon/.t3/worktrees/todo-cli/t3-9a98d7a3/docs/evidence/task-search-formal/check-CEam2h
+/Users/zambamon/.t3/worktrees/todo-cli/t3-9a98d7a3/docs/evidence/task-search-formal/check-XKctmq
 ```
 
 Each stage records its command, PID, actual exit, model, config, stdout, stderr,
@@ -42,10 +42,10 @@ deductive proof at arbitrary sizes or a verification of TypeScript or Swift.
 
 | Stage | Profiles, views, texts, filters | Concurrent requests | Distinct states | Generated successors | Queue | TLC exit |
 | --- | --- | --- | --- | --- | --- | --- |
-| Safety, full identities | 2, 2, 3, 2 | 2 | 1,710,504 | 16,932,457 | 0 | 0 |
-| Safety, three requests | 1, 1, 3, 2 | 3 | 1,026,978 | 10,137,561 | 0 | 0 |
-| Liveness | 1, 1, 2, 2 | 2 | 24,186 | 188,056 | 0 | 0 |
-| Restored clean model | 1, 1, 2, 2 | 2 | 24,186 | 188,056 | 0 | 0 |
+| Safety, full identities | 2, 2, 3, 2 | 2 | 1,710,504 | 17,495,569 | 0 | 0 |
+| Safety, three requests | 1, 1, 3, 2 | 3 | 1,026,978 | 10,791,549 | 0 | 0 |
+| Liveness | 1, 1, 2, 2 | 2 | 24,186 | 202,987 | 0 | 0 |
+| Restored clean model | 1, 1, 2, 2 | 2 | 24,186 | 202,987 | 0 | 0 |
 
 Generated successors include duplicate transitions and visible stutters. The
 table does not claim a count of distinct edges. Both safety graphs exhaust their
@@ -104,9 +104,7 @@ reset, not a claim that those baseline assignments already implement C1.
 
 The following work requires the implementation commits arranged by L1:
 
-- Repeat the completed matcher checks at the approved integration tip. The
-  current checks capture candidate `be876581ea9d4c024fab3b0bc2c8358051c6d2b4`,
-  which awaits review. No fake matcher or invented export is present.
+- Repeat the matcher checks at the final integration tip. The original candidate checks used be876581; L1 repeated every property and sensitivity at reviewed integration 8272b610 with exit 0. The amended model command also uses that reviewed integration. No fake matcher or invented export is present.
 - Final mapping of both clients' request, refresh, debounce, error, rollback,
   and reset functions. Delayed-response tests must drive production state
   through the existing compiled scratch verification recipes.
