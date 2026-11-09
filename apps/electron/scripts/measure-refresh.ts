@@ -23,6 +23,33 @@ assert(artifact && output);
 const root = resolve(import.meta.dirname, "../../..");
 const evidence = resolve(output);
 mkdirSync(evidence, { recursive: true });
+const resolvedPaths = spawnSync(
+  "git",
+  ["ls-files", "-z", "--", ":(glob)**/Package.resolved", "Package.resolved"],
+  { cwd: root, encoding: "utf8" },
+);
+assert.equal(resolvedPaths.status, 0);
+const packageFiles = resolvedPaths.stdout.split("\0").filter(Boolean);
+const checkResolved = (phase: "before" | "after") => {
+  const command = ["diff", "--exit-code", "HEAD", "--", ...packageFiles];
+  const result = spawnSync("git", command, { cwd: root, encoding: "utf8" });
+  writeFileSync(
+    join(evidence, `package-resolved-${phase}.json`),
+    JSON.stringify(
+      {
+        command: ["git", ...command],
+        files: packageFiles,
+        exit: result.status,
+        stdout: result.stdout,
+        stderr: result.stderr,
+      },
+      null,
+      2,
+    ),
+  );
+  return result.status;
+};
+if (surface === "swift") assert.equal(checkResolved("before"), 0);
 const scratch = mkdtempSync(join(tmpdir(), "todo-s01-verify-refresh-"));
 const home = join(scratch, "home");
 mkdirSync(home);
@@ -245,6 +272,7 @@ try {
       "swift",
       [
         "test",
+        "--disable-automatic-resolution",
         "--skip-build",
         "--no-parallel",
         "--package-path",
@@ -272,6 +300,8 @@ try {
       child.on("close", (code) => done(code ?? 1)),
     );
     writeFileSync(join(evidence, "client.log"), text);
+    const resolvedExit = checkResolved("after");
+    if (resolvedExit !== 0) exit = resolvedExit ?? 1;
     assert.equal(exit, 0, text);
   } else {
     desktop = await _electron.launch({

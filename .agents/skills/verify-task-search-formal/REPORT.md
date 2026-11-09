@@ -1,4 +1,15 @@
-# Integrated PERF-refresh proof
+# Current F1 integration gate
+
+The incoming SEC base is `75614cfff568085e09336b755e9ad436f76e21b9`.
+Its selected Project/Tag name forwarding is combined with both refresh scopes,
+and the recovery drives build their own seed. Resolver guards and per-command
+Package.resolved diff receipts cover every future Swift package invocation.
+Compiled F1 recovery, new request-count inputs and formal reproof are held by
+standing order 29 because disk is below 30 GB. The source merge has only static
+review at this checkpoint. Earlier proof and measurement receipts below remain
+historical and do not approve this F1 integration.
+
+# Historical integrated PERF-refresh proof at 51711cf4
 
 The SEC and R1 merge at `51711cf41e19b9fcd654c19ae24b957e13591940` passes
 `bun .agents/skills/verify-task-search-formal/check.ts 51711cf41e19b9fcd654c19ae24b957e13591940`

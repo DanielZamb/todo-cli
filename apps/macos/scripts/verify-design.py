@@ -21,20 +21,38 @@ build_path = Path(os.environ.get("TODO_SWIFT_BUILD_PATH", str(root / "apps/macos
 if not build_path.is_relative_to(root / "apps/macos"):
     raise SystemExit("TODO_SWIFT_BUILD_PATH must stay under apps/macos")
 commands = []
+resolved_paths = subprocess.check_output(['git', 'ls-files', '--', ':(glob)**/Package.resolved', 'Package.resolved'], cwd=root, text=True).splitlines()
+
+def package_state(name, phase):
+    command = ['git', 'diff', '--exit-code', 'HEAD', '--', *resolved_paths]
+    result = subprocess.run(command, cwd=root, capture_output=True, text=True)
+    (evidence / f'{name}.packages-{phase}.json').write_text(json.dumps(dict(command=command, exit=result.returncode, stdout=result.stdout, stderr=result.stderr, hashes={path: hashlib.sha256((root / path).read_bytes()).hexdigest() for path in resolved_paths}), indent=2) + '\n')
+    return result.returncode
 
 def run(command, log, env=None):
+    swift = command[:2] in [['swift', 'build'], ['swift', 'run'], ['swift', 'test']]
+    if swift:
+        if '--disable-automatic-resolution' not in command:
+            command = [*command[:2], '--disable-automatic-resolution', *command[2:]]
+        if package_state(log, 'before'):
+            raise SystemExit('Package.resolved changed before Swift invocation')
     with (evidence / log).open('w') as output:
         result = subprocess.run(command, cwd=root, env=env, stdout=output, stderr=subprocess.STDOUT)
-    commands.append({'argv': command, 'exit': result.returncode, 'log': log})
+    packages = package_state(log, 'after') if swift else None
+    commands.append({'argv': command, 'exit': result.returncode, 'log': log, 'packageResolvedDiffExit': packages})
     (evidence / 'commands.json').write_text(json.dumps(commands, indent=2) + '\n')
-    if result.returncode:
-        raise SystemExit(result.returncode)
+    if result.returncode or packages:
+        raise SystemExit(result.returncode or packages)
 
 run(['sh', 'scripts/disk-guard.sh'], 'disk-guard.log')
 run(['python3', 'apps/macos/scripts/check-design-identifiers.py', str(evidence / 'accessibility.json')], 'accessibility.log')
 run(['swift', 'build', '--package-path', 'apps/macos', '--scratch-path', str(build_path), '--disable-automatic-resolution', '--build-tests', '--jobs', '2'], 'build.log')
 run(['swift', 'test', '--package-path', 'apps/macos', '--scratch-path', str(build_path), '--skip-build', '--filter', 'PresentationTests|CompactFormattingTests|WindowLayoutTests|TaskFilterTests'], 'presentation.log')
-binary = subprocess.check_output(['swift', 'build', '--package-path', 'apps/macos', '--scratch-path', str(build_path), '--show-bin-path'], cwd=root, text=True).strip()
+if package_state('bin-path', 'before'):
+    raise SystemExit('Package.resolved changed before Swift invocation')
+binary = subprocess.check_output(['swift', 'build', '--disable-automatic-resolution', '--package-path', 'apps/macos', '--scratch-path', str(build_path), '--show-bin-path'], cwd=root, text=True).strip()
+if package_state('bin-path', 'after'):
+    raise SystemExit('Package.resolved changed after Swift invocation')
 run([
     'xcrun', 'swiftc', '-typecheck', '-parse-as-library', '-swift-version', '6',
     '-target', f'{platform.machine()}-apple-macosx26.0', '-I', str(Path(binary) / 'Modules'),

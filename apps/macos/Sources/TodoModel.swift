@@ -435,7 +435,11 @@ final class TodoModel {
 
     private func readSearchRows(_ identity: TaskSearchIdentity, filtered: Bool = true) async throws -> [TaskSnapshot] {
         var query = filtered ? identity.filters.query : .init()
-        if filtered { query.text = identity.text.isEmpty ? nil : identity.text }
+        if filtered {
+            query.text = identity.text.isEmpty ? nil : identity.text
+            if query.project == nil { query.project = projects.first { $0.id == identity.project }?.name }
+            if query.tag == nil { query.tag = tags.first { $0.id == identity.tag }?.name }
+        }
         return try await client.tasks_period_list(path: .init(profile: identity.profile), query: query).ok.body.json.map(TaskSnapshot.decode)
     }
 

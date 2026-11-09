@@ -1,6 +1,6 @@
 {
   "sourceCommit": "51711cf41e19b9fcd654c19ae24b957e13591940",
-  "status": "mapped-production-clients-and-real-matcher",
+  "status": "F1-and-refresh-integration; compiled-reproof-pending",
   "files": [
     {
       "path": "apps/electron/src/renderer.tsx",
@@ -16,7 +16,7 @@
         "catalogOwedRef",
         "invalidate"
       ],
-      "sha256": "c21a6b905a2b1717a3ea4058a2f22cd0d7d49510ae3c9596f527aca5ef8b5793"
+      "sha256": "2811622e9a15bea2f12269e0016a617f0fcfac6c99ba3eafedb6d69dfbb739a4"
     },
     {
       "path": "apps/electron/src/task-search-results.ts",
@@ -24,9 +24,10 @@
         "SearchIdentity",
         "AppliedSearch",
         "identityKey",
-        "searchGroups"
+        "searchGroups",
+        "taskSearchQuery"
       ],
-      "sha256": "32fcb14d4790e2a67af432419c26d8e25bae63d6950993afe906813892f89ae6"
+      "sha256": "bbb664ff484bfb8782f8b2422bf31fccb71b4a67eecea68c989eba8e354dcf05"
     },
     {
       "path": "apps/electron/src/task-client.ts",
@@ -65,7 +66,7 @@
         "readSearchPlanning",
         "readSearchCatalog"
       ],
-      "sha256": "b89e4eaeb61ecedba445ce72b66cb0994126387bba8e2c86866bbb840e518553"
+      "sha256": "b0c415fb84aaec9b31a072e16388f2a7f5891ed31ab600136d3e3c4ef83deecf"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -171,10 +172,11 @@
     "electron": "codedf13e2a8 + visuale8178e24; integratedbc288b30",
     "refresh": "Integrated SEC492d9453 plus refresh/R1 at51711cf4: catalog debt survives superseded and failed full reads. Full model, controls, immutable matcher, compiled Swift104 and unsigned Electron regressions pass. Fresh correctness seats pending; UI seat2 passed prior presentation at2041ed44, with integrated60 renders available.",
     "security": "SEC-W1 local source review, literal client/core proofs, immutable real matcher properties and all five behavioral mutations passed at0a2eef1c in matcher-zwScvg. Covered source bytes unchanged at this product commit. Seat1 held for SEC-L1 to launch; seat2 coordinator.",
-    "v1": "Reviewed display-only diff against CLIENT-MAPPING.md: shared applied-context helpers, unchanged refusal sentence, secondary context, no state transition/publication guard/generation/identity changes. Immutable matcher properties and all five behavioral mutations passed at064b2667 in matcher-1eyrdt before these four hashes were renewed. Seat1/visual review pending."
+    "v1": "Reviewed display-only diff against CLIENT-MAPPING.md: shared applied-context helpers, unchanged refusal sentence, secondary context, no state transition/publication guard/generation/identity changes. Immutable matcher properties and all five behavioral mutations passed at064b2667 in matcher-1eyrdt before these four hashes were renewed. Seat1/visual review pending.",
+    "f1": "Reviewed F1 against CLIENT-MAPPING.md: catalog-name request narrowing only; explicit dialog names win, unresolved ids add no name, same-response id joins remain. No state transition, publication guard, generation, identity, snapshot or SSE recovery change. Immutable real matcher properties and all five behavioral mutations passed at5d42f32b in matcher-uo9W7V before renewing only the three changed source hashes. Compiled Electron/Swift recovery, ordinary JSON, real raw-append case-fold Tags and synthetic same-name Projects passed."
   },
   "productionMatcher": "Immutable real source with generated properties, behavioral mutations and byte restoration; final-tip command uses its explicit full SHA.",
   "recovery": "Transient errors offer Retry; search_too_broad hides Retry and retains text/snapshot. Current-Profile SSE op/reconnect remains available. Liveness requires a later affordable successful response and a fair available recovery source.",
   "clientRefinement": "Mapped full/query publication, catalog retention and bootstrap fallback with compiled regressions; no mechanical TypeScript/Swift refinement theorem.",
-  "securityBase": "492d94537f8762b94e6114881bf149b85d6cb4b6"
+  "securityBase": "75614cfff568085e09336b755e9ad436f76e21b9"
 }

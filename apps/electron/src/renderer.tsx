@@ -128,6 +128,7 @@ import {
   type SearchIdentity,
   searchGroups,
   type TaskCatalog,
+  taskSearchQuery,
 } from "./task-search-results.ts";
 import { TaskTags } from "./task-tags.tsx";
 import "./index.css";
@@ -587,10 +588,10 @@ function App() {
             : "list",
         profile,
         view,
-        filters: {
-          ...identity.filters,
-          text: identity.text,
-        },
+        filters: taskSearchQuery(
+          identity,
+          retained ?? { projects: [], tags: [] },
+        ),
       });
       if (
         active.current !== profile ||

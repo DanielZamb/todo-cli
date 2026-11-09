@@ -219,3 +219,40 @@ Pixels and status wording remain outside the model's state transitions. The
 four existing changed source hashes were renewed after this diff review and
 successful immutable matcher sensitivity at V1 product commit `064b2667`.
 TLA+ remains unchanged.
+
+## F1 request narrowing review (2026-11-09)
+
+The PERF integration uses its existing `catalogRef` for F1 name lookup.
+`taskSearchQuery` builds the filtered request before the shared full/query IPC
+branch, so both scopes forward selected names. Explicit TaskFilters names keep
+precedence and the existing response-id joins still select the exact Project
+and Tag. Swift fills the same fields in `readSearchRows` when `filtered` is true;
+that helper serves matching reads in both scopes. The full catalog's unfiltered
+read builds an empty query. No extra request resolves a selected name.
+
+The combined source is inspected and mapped, with compiled F1 recovery,
+request-count and formal reproof pending the disk gate. Earlier 492/51711
+receipts keep their historical scope and are not current F1 proof.
+
+F1 resolves selected Project and Tag ids to catalog names for the existing
+server TaskFilters. Explicit dialog names take precedence; an unresolved id
+adds no name filter. Electron uses a pure query builder and a metadata-only
+current catalog ref without adding refresh dependencies. Swift adds two guarded
+nil-name assignments in its existing query construction. The client id joins
+still intersect the same-response rows with the selected ids.
+
+This changes request narrowing only: no state transition, publication guard,
+generation, requested/applied identity, snapshot, unfiltered snapshot or SSE
+recovery source changes. Project/Tag ids stay in the complete identity. The
+same current-response guard still precedes success and error publication.
+Real Projects retain their per-Profile unique-name invariant, so the id join is
+defense in depth there. Labeled synthetic Project transport over scratch HTTP
+checks a name superset; real raw-append keep/KEEP Tags check the server's
+case-folded name superset. Both clients keep only the selected id and its spans.
+
+Literal compiled-client checks cover refusal with three expanding descriptions,
+recovery by either filter, and byte-identical ordinary rows/spans after the id
+join. Immutable matcher properties and all five behavioral sensitivity mutations
+passed at `5d42f32b0b3b5b84ca82df0a07af2d4fe0ae9887` in
+`docs/evidence/task-search-formal/matcher-uo9W7V` before renewing the three changed
+source hashes. TLA+ is unchanged because the publication design is unchanged.
