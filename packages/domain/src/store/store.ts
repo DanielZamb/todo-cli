@@ -44,6 +44,7 @@ import { Diagnostics } from "./diagnostics.ts";
 import { StoreError } from "./error.ts";
 import { redactTaskHistory } from "./purge.ts";
 import { ScheduledWork } from "./scheduled-work.ts";
+import { searchCacheEvents } from "./search-cache-events.ts";
 import { Snapshots } from "./snapshots.ts";
 
 export { StoreError } from "./error.ts";
@@ -167,8 +168,11 @@ export class OperationStore {
         "PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL;",
       );
       restrictPermissions(path);
-      this.snapshots = new Snapshots(this.db, path, (run) =>
-        this.transaction(run),
+      this.snapshots = new Snapshots(
+        this.db,
+        path,
+        (run) => this.transaction(run),
+        () => this.searchWords.clearAll(),
       );
       this.transaction(() => {
         const version =
@@ -299,18 +303,6 @@ export class OperationStore {
       this.searchWords.close();
       this.db.close();
     });
-
-  private evictSearchTask(id: TaskId, profile: ProfileId) {
-    for (const entry of this.historySync(0)) {
-      if (!Schema.is(Event)(entry.event)) continue;
-      for (const { before, after } of changes(entry.event).tasks)
-        for (const task of [before, after])
-          if (task?.id === id && task.profile_id === profile) {
-            this.searchWords.evict(profile, task.title);
-            this.searchWords.evict(profile, task.description ?? "");
-          }
-    }
-  }
 
   private cleanupAttachmentsSync() {
     for (const row of this.db
@@ -574,6 +566,23 @@ export class OperationStore {
     });
 
   readonly history = (after = 0) => attempt(() => this.historySync(after));
+
+  readonly searchCacheEvents = (cursor?: {
+    readonly seq: number;
+    readonly generation: string;
+  }) =>
+    attempt(() =>
+      this.db.transaction(() => {
+        const state = this.snapshots.generationSync();
+        return {
+          ...state,
+          events:
+            cursor && cursor.generation === state.generation
+              ? searchCacheEvents(this.db, cursor.seq)
+              : [],
+        };
+      })(),
+    );
 
   private record(
     input: Pick<Append, "actor" | "profile">,
@@ -1032,8 +1041,7 @@ export class OperationStore {
         });
         applyEvent(this.db, event);
         if (event.kind === "TaskPurged") {
-          this.searchWords.revoke(input.profile);
-          this.evictSearchTask(event.task_id, input.profile);
+          this.searchWords.clearAll();
           this.queueAttachmentCleanup(event.task_id);
           redactTaskHistory(this.db, this.historySync(0), event.task_id);
           return this.historySync(entry.seq - 1)[0] ?? entry;

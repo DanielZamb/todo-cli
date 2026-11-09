@@ -119,10 +119,8 @@ it("revokes suspended and late-field admission on Purge, Profile delete and clos
     );
     await pause.arrived;
     expect([cache.usage.pending, cache.usage.pendingBytes]).toEqual([1, 2148]);
-    if (action === "purge") {
-      cache.revoke(profile);
-      cache.evict(profile, text);
-    } else if (action === "profile") cache.evictProfile(profile);
+    if (action === "purge") cache.clearAll();
+    else if (action === "profile") cache.evictProfile(profile);
     else cache.close();
     pause.release();
     const values = await running;
@@ -144,6 +142,35 @@ it("revokes suspended and late-field admission on Purge, Profile delete and clos
   }
 });
 
+it("fences pending and slotless old reads across a cache-wide clear", async () => {
+  const cache = new TaskSearchCache();
+  const oldRead = cache.read(profile);
+  const text = "Café ".repeat(200);
+  const pause = gate();
+  const pending = Effect.runPromise(
+    prepare(cache, oldRead, [text, "Late field"], pause.checkpoint),
+  );
+  await pause.arrived;
+  cache.clearAll();
+  expect([
+    cache.usage.entries,
+    cache.usage.pending,
+    cache.usage.chargedBytes,
+  ]).toEqual([0, 0, 0]);
+  pause.release();
+  await pending;
+  await Effect.runPromise(prepare(cache, oldRead, ["No slot before clear"]));
+  expect([
+    cache.usage.entries,
+    cache.usage.pending,
+    cache.usage.chargedBytes,
+  ]).toEqual([0, 0, 0]);
+  expect(cache.read(profile).epoch).toBe(oldRead.epoch + 1);
+  await Effect.runPromise(prepare(cache, cache.read(profile), ["Fresh read"]));
+  expect(cache.usage.entries).toBe(1);
+  cache.close();
+});
+
 it("cleans pending charges through the real runner on interruption", async () => {
   const cache = new TaskSearchCache();
   const pause = gate();
@@ -154,7 +181,7 @@ it("cleans pending charges through the real runner on interruption", async () =>
       cache.read(profile),
       ["Café ".repeat(200)],
       pause.checkpoint,
-    ),
+    ).pipe(Effect.catchDefect((error) => Effect.fail(String(error)))),
     { signal: controller.signal },
   );
   await pause.arrived;

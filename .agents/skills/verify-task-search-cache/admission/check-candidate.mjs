@@ -120,7 +120,7 @@ const controls = [
     name: "pending-after-eviction",
     from: "if (token) this.dropPending(key, token);",
     to: "",
-    witness: "Purge removes pending slot and charge",
+    witness: "Evict removes pending slot and charge",
   },
   {
     name: "interrupt-leak",
@@ -141,6 +141,21 @@ const controls = [
     witness: "OwnSlotCleanup",
   },
 ];
+controls.push(
+  {
+    name: "no-epoch",
+    from: "read.epoch === this.epoch",
+    to: "true",
+    witness: "NoStaleReadRetention ClearAll pending and slotless reads",
+  },
+  {
+    name: "clear-pending-leak",
+    mode: "clear-only",
+    from: "this.pending.clear();",
+    to: "",
+    witness: "ClearAll removes pending slot and charge",
+  },
+);
 for (const c of controls) {
   const count = original.split(c.from).length - 1;
   assert.ok(count >= 1, c.name);

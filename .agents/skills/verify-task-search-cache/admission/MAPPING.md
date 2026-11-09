@@ -1,113 +1,79 @@
 # Admission model mapping
 
-The integrated production cache at `41926044` is byte-identical to the prepared
-candidate, SHA-256 ef36b5bd4a18be466930234cbf984f5618cc288dfb13b493faed8fd37b67cb86.
-SEC's task-search.ts and task-filters.ts remain byte-identical to `2077c802`.
-The integrated model, real-Effect controls, generated meter and SQLite lifecycle
-checks passed. Exact whole-file hashes are in ../coverage.json. The model is not
-a mechanical refinement proof. Earlier synchronous/development receipts are
-preliminary and do not replace this integrated proof.
+The reviewed fix replaces per-text Purge hygiene with a whole-cache epoch fence.
+The measured cc5777 product is historical. Exact current file hashes are in
+../coverage.json; candidate and immutable committed proofs name their inputs in
+receipts. SEC's matcher, budget, evaluator and runner remain byte-identical to
+2077c802. This bounded model is not a mechanical source-refinement theorem.
 
-## Property and harm
+An old or interrupted preparation must not insert after revocation, erase a
+newer token or leave charged pending state. Any Purge or Snapshot restore clears
+all Profiles, including a moved Task's old Profile and reads without slots yet.
 
-An old or interrupted preparation must not insert after its admission is
-revoked, erase a newer pending token, or leave pending storage behind. Otherwise
-Purge or Profile deletion could be followed by retention of erased text, or a
-canceled HTTP search could consume retained cache capacity indefinitely.
-
-| Action/property | Candidate or SEC code | Boundary |
+| Action/property | Real code | Meaning |
 | --- | --- | --- |
-| ReadStart | task-search-cache.ts:23; commands.ts:287; CLI main.ts:698 | Copy the current Profile generation before auth.read/readTasks. Each later field uses that captured value. |
-| Miss | prepare/register | Register a unique token in pending before the first yielding preparation step. Replacing a token refunds its current pending charge. Failed registration prepares without retention. |
-| PrepareStep | yield* fieldWords | Partial checkpoints are abstract stutters. Ready represents the final prepared result immediately before admission. |
-| Complete/Admit | prepare guard, retain, finally/dropPending | Token ownership and captured generation must still match. No runtime yield separates the final preparation return, admission and cleanup. HasReady forces the model to finish this stack before any other actor runs. |
-| Interrupt/failure | runTaskRecordSteps ensuring -> delegated generator return -> cache finally | SEC closes a suspended iterator exactly once. Cache removes only its own still-current slot. Both the SEC runner and cache finalizer are required. |
-| Evict | evict | Drop retained entry and current pending token for one exact Profile/text key. |
-| Purge | store/store.ts:1035 revoke then evictSearchTask | After applyEvent, before historical eviction/redaction, synchronously inside the transaction. A later rollback can lose retention only. |
-| DeleteProfile | evictProfile | Revoke the Profile generation and remove retained and pending keys for that Profile. |
-| LruEvict | reserve/dropEntry | Retained entries are evicted before storage reservation. Pending slots do not become shared in-flight results. |
-| Hit | prepare's entry branch | Return a complete PreparedField without preparation yields or refolding. A stale read may use a legitimately newer complete entry but cannot refresh its LRU position. |
-| Close | close | Empty maps and zero charges; closed permanently fences later admissions, including fields that have not started yet. |
-| NoInsertAfterEvict | insertionAllowed provenance observation | Inspect actual insertions, not mere key presence. A newer legitimate B result may remain after A finishes. |
-| NoStaleReadRetention | insertionFresh observation | The captured read generation equals the current Profile generation at every insertion. |
-| NoPendingLeak | pending -> active, nonrevoked preparation | Eviction/interrupt cannot leave a current dead slot. |
-| CacheBound | retained plus pending unit slots | Abstract unit capacity is two. Actual entry counts, key/container/Word charges and 16 MiB bounds are checked against code separately. |
-| HitIsComplete | cache complete bit | Incomplete preparation is never a usable entry. |
-| OwnSlotCleanup | ownCleanupOK observation | Old completion/interruption preserves a newer slot. This protects B's ability to finish; no eventual-progress theorem is claimed. |
+| ReadStart | task-search-cache.ts:28; commands.ts:287; CLI main.ts:698 | Capture epoch and Profile generation before auth/SQLite Task read. Every later field uses the same Read. |
+| Miss | task-search-cache.ts:73 prepare, :96 register | Later token wins. Failed slot/byte registration computes without retention. |
+| PrepareStep | yield* fieldWords through SEC runTaskRecordSteps | Yielding partial preparation is not a hit. Ready is the complete result before synchronous admission. |
+| Complete/Admit | task-search-cache.ts:88 guard, :112 retain | Current token ownership, epoch, Profile generation and open cache are all required. No runtime yield separates final preparation, admission and finally. |
+| Interrupt/failure | SEC task-filters.ts:183 ensuring, cache :92 finally/:143 dropPending | Iterator closure reaches the delegated generator. Only the invocation's still-current slot is removed. |
+| Evict | task-search-cache.ts:155 | Exact-key eviction remains a cache operation; it is no longer the Purge path. |
+| ClearAll | task-search-cache.ts:170 | Increment global epoch; drop all retained/pending maps and zero their charges. All old Reads lose admission even with no registered slot. |
+| Purge | store/store.ts:1044 calls clearAll | After applyEvent and before redaction, inside the transaction. No cache History scan remains. Rollback can only lose retention. |
+| Snapshot restore | store/snapshots.ts:538 afterRestore; store/store.ts:175 callback | Successful actual restore clears before returning. Dry-run does not clear. |
+| DeleteProfile | task-search-cache.ts:162 evictProfile; store deleteProfileSync | Local deletion can revoke only its Profile. The external observer deliberately clears all Profiles. |
+| External erasure | server task-search-cache-hygiene.ts:4; server.ts:229 | Capture max seq before serving, poll every 250 ms, clearAll on committed redacted TaskPurged/ProfileDeleted, clear and reset max on generation change. |
+| Narrow query | store/search-cache-events.ts; store.ts:570 | Only new committed seq/kind/original_kind fields. SQL stays in the domain. No event payload decoding in the server. |
+| Restore metadata | store/snapshots.ts:281 | Canonical NULL Profile/snapshot-restore actor/committed headers use op_log_profile_seq before the unchanged JSON kind/generation check. |
+| LruEvict | reserve/dropEntry | Retained entries make room for cocharged pending/retained bounds; no shared in-flight results. |
+| Hit | prepare entry branch | Complete PreparedField, no preparation yield/refold. A stale Read may use a newer legitimate result but cannot refresh LRU. |
+| Close | task-search-cache.ts:178 | Permanent closed fence, clearAll, then drop generation metadata. |
+| NoInsertAfterEvict | independent insertionAllowed provenance | An old A may not overwrite a newer legitimate B result. |
+| NoStaleReadRetention | independent insertionFresh observation | Both epoch equality and Profile-generation equality hold at insertion. |
+| NoPendingLeak / OwnSlotCleanup | pending/admitted and ownCleanupOK observations | Cleared/interrupted work leaves no dead current slot; A cleanup cannot erase B. |
+| CacheBound / HitIsComplete | abstract slots / complete bit | Capacity two and no incomplete cache publication. Real charged bytes/counts are separate literal code checks. |
 
-## Bounds and assumptions
+The model bounds two keys, two preparations, two active Reads and capacity two,
+with one and two Profiles. Profile generation has four colors, never reused
+while an active Read refers to one. readEpoch is an equality bit for each Read,
+not a wrapping integer counter: ReadStart sets it true and every ClearAll sets
+all bits false. Repeated clears remain false until a new ReadStart. This is a
+relational abstraction of Read.epoch === cache.epoch and covers late slotless
+reads without a request registry. Real counters are assumed to remain exact
+JavaScript integers during a store lifetime. No fairness, arbitrary concurrency,
+SQLite, Unicode, query/budget or RSS theorem is claimed.
 
-Two exact content keys, two preparation identities, two active read identities,
-and capacity two are checked with one Profile and with two Profiles. Four
-Profile-generation colors preserve equality: a color is not reused while an
-active read refers to it. Preparations keep their read active until completion
-or interruption. This avoids counter wrap and a lifetime-request cutoff in the
-finite abstraction. Real code uses a per-Profile numeric counter; the mapping
-assumes increments remain exact JavaScript integers during a store lifetime.
+Purge is the ClearAll action; local Profile deletion retains its generation
+transition. HasReady makes final admission/finally indivisible just as the real
+code's synchronous stack is. Seven model controls include BrokenEpoch ignoring
+epoch equality. Each fails its named invariant at TLC exit 12, then restored
+safety passes with queue zero. Eleven real-Effect controls include ignored epoch
+and retained pending slots across ClearAll. Controls mutate isolated source,
+reach literal assertions, restore bytes, and pass clean plus strict TypeScript.
 
-ReadEnd models the point where a request no longer has preparations or future
-fields. Profile restore, query matching, budgets, HTTP authorization, Unicode,
-SQLite, native clients, arbitrary concurrency and actual RSS are outside this
-model. Generated properties and compiled lifecycle recipes cover those contracts
-separately. No fairness or unbounded safety theorem is claimed.
+Run the parent skill's one command. check-hygiene.mjs adds three isolated real
+observer/query controls: missing clear hook, ignored generation and rejected-row
+admission. Compiled erase-lifecycle.mjs warms work, Moves to personal, warms,
+Purges from a separate CLI and requires literal zero retention within 1000 ms,
+including CLI startup. It also proves external Profile deletion. A native Map
+preload in that isolated scratch process observes counts; no public hook or
+cache diagnostics endpoint is shipped. The real-code restore witness is restore,
+external Purge at or below the old cursor, then poll. A generation change must
+clear before resetting max, not try to infer which old seq was missed.
 
-The scalar insertion observations are computed independently of the insertion
-guard, so removing the guard fails them. The pending-revocation observation is
-independent of whether a broken eviction actually removes the slot. Earlier
-failed draft runs remain evidence. One draft missed parentheses around a TLA+
-Boolean assignment; the resulting unconstrained observation was corrected,
-without changing the intended property.
+Current control receipts include admission-s2Ahb9, admission-code-upMphO,
+hygiene-NqPs1w and generated-3Ue4aS. They do not replace the final committed-input
+one-command receipt. Earlier cc and synchronous findings remain historical.
+The CLI selective Segmenter defect reproduction now requires runtime_error JSON
+and exit 1; typed refusal remains exit 2. Effect.catchDefect is only at that list
+boundary and leaves interruption/finalization semantics intact.
 
-## Reproduce
-
-Run `bun .agents/skills/verify-task-search-cache/admission/check.mjs` for the
-pinned model and six isolated fault configurations. Each control must reach its
-named invariant and TLC exit 12; baseline/restored runs require exit 0 and queue
-zero. The tool is tla2tools 1.7.4, pinned by SHA-256 in tool.json.
-
-The real-code command is
-`bun .agents/skills/verify-task-search-cache/admission/check-candidate.mjs <full-product-SHA>`.
-It archives that immutable product, including the memo and SEC runner, and runs
-real Effect checkpoints through SEC runTaskRecordSteps. No memo generator is
-manually drained. It checks late B after Purge, stale Profile reads, close,
-concurrent misses, interruption, checkpoint failure, and the exact
-A -> Evict -> B -> CompleteB -> CompleteA reference-provenance witness.
-
-The real-code controls omit admission, pending eviction, interrupt cleanup,
-generation, ownership cleanup, completion, text key, Profile key, or LRU
-reservation. Each must fail a literal assertion, not compilation or hashes.
-Every source restoration is byte-checked, followed by a clean run and strict
-TypeScript checking.
-
-Complete PreparedField equality uses the existing matcher atom corpus and seed
-0x5ea2c001, 2,048 random inputs, and adversarial Unicode. Literal storage cases
-include 4,096 entries at 1,388,200 bytes, 4,096 pending slots at 4,831,060 bytes,
-and pending-byte saturation at 83 slots and 16,610,936 bytes. Failed slot/byte
-registration stays uncached even after space becomes free. The V3 fixture has
-1,800,000 preparation units, 300,001 Words and a 32,000,308-byte accounted entry,
-so it bypasses the 4 MiB retention limit.
-
-Pending keys/tokens and retained entries share the charged 16 MiB budget.
-PreparedField's container is charged 64 bytes in addition to the 128-byte entry
-or token estimate and the existing key/Word formula. Profile generation metadata
-is reported separately. Active preparation buffers, superseded invocation-local
-tokens, string backing stores, allocator capacity and GC can increase actual RSS.
-Known key oversize bypasses admission before hashing; actual Word-array oversize
-is known after preparation and never retained. No negative/oversize memo exists.
-
-The exact real-code mapping is prepare/register at 62/85, admission at 77,
-finally at 80, retain at 101, own-slot cleanup at 132, revoke at 139, evict at 144,
-Profile delete at 151 and close at 159 in task-search-cache.ts. Store close calls
-the fence at 299; deleteProfileSync calls evictProfile at 500. SEC's
-runTaskRecordSteps ensuring delegates return through the matcher to cache finally.
-No runtime yield separates final preparation, admission and cleanup.
-
-Integrated receipts are admission-g16wXV, admission-code-tkF5X4 and
-generated-DnwTQA under docs/evidence/perf-cache. The last includes same-source
-ordered JSON/lifecycle controls and exact meter equality across cold, both partial
-warm states, warm and uncached inputs. The compiled integrated-fixed-search,
-CLI, op-log, Profiles, Snapshots and HTTP drives passed. The first compiled search
-attempt exposed a CLI refusal adapter regression; the narrow CommandError mapping
-fixed it and the complete compiled drive passed. This does not change admission
-actions or protected SEC bodies. The final locked check and measurement receipts
-are reported separately at the worker's delivery head.
+Pending plus retained state shares 16 MiB, with separate 4,096 caps and a 4 MiB
+completed-entry bypass. Active buffers, superseded local tokens, generation
+metadata, backing stores, allocator capacity and GC remain outside that charge.
+V3 prepares 1.8M units and accounts for 32,000,308 bytes, so it stays uncached.
+A rare owner Purge deliberately costs one uncached refill of the whole memo.
+Own server writes may be observed and cleared again harmlessly. Content keys
+preserve output correctness; these erasure rules are memory hygiene, not database
+coherence. No new timing window is authorized. Frozen measurements remain
+cc5777/source 2eb2, separate from the later fixed review SHA.

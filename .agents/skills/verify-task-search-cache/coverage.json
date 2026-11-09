@@ -1,11 +1,11 @@
 {
-  "productCommit": "41926044ff53b94c7ac0c1bb779c75143aa3c281",
-  "scope": "Real generated memo properties and store hygiene, finite corpus; no unbounded theorem or RSS bound",
+  "productCommit": "cc5777acbebbebbffd8679022f8165bb7b6c38a5",
+  "scope": "Review-fix candidate from cc5777: whole-cache Purge/restore epoch fencing, incremental committed hygiene, exact same-source matching and charged bounds; finite evidence, no RSS/unbounded theorem",
   "seed": "0x5ea2c001",
   "files": [
     {
       "path": "task-search-cache.ts",
-      "sha256": "ef36b5bd4a18be466930234cbf984f5618cc288dfb13b493faed8fd37b67cb86"
+      "sha256": "a7a24d8211ebf7aaf1cf559547f7339150d680db9ac3a81c4ccea283e2b76baf"
     },
     {
       "path": "task-search.ts",
@@ -21,8 +21,43 @@
     },
     {
       "path": "store/store.ts",
-      "sha256": "9f77bb842edc9ed08ba2fd23e43d4ea8b81172a4a44ee2f5ed67390722e00970"
+      "sha256": "bb3f0f0855c3bd5128b8d5f4c164734d13a04250ad7dfe32eacc18cf3ac69a60"
+    },
+    {
+      "path": "store/snapshots.ts",
+      "sha256": "14774139fc4c323eedd7d2b31f28182b0b447a4b776bad1e58b354b434b1adb8"
+    },
+    {
+      "path": "store/search-cache-events.ts",
+      "sha256": "4f0276e1953a56db0a31844c51faec02835eea134b04a06ed2ba6e9231d6d600"
     }
   ],
-  "review": "PreparedField payload, synchronous hit, yielding miss finally, own-slot admission plus pre-auth generation capture; SEC core/filter runner identical to2077; seven generated/lifecycle controls and nine admission code controls failed literally and restored before renewal."
+  "review": "Reviewed exact ClearAll/read-epoch/token guard, local Purge/restore callbacks, indexed canonical restore headers and narrow committed tail. Generated-8mUNAd behavior-result controls/restoration/strict0 and admission-code-upMphO eleven controls/restoration/strict0 passed; hygiene-NqPs1w three hook/query controls restored0, admission-s2Ahb9 seven model mutants TLC12/restored0. Compiled external moved-Purge/Profile delete and defect envelope passed using8fe636 source candidate. Protected SEC matcher/runner/evaluator unchanged. productCommit names the parent; actual covered bytes are the candidate hashes and later immutable proof head is recorded in receipts.",
+  "reviewedCandidate": true,
+  "hygieneFiles": [
+    {
+      "path": "apps/server/src/task-search-cache-hygiene.ts",
+      "sha256": "be77122a27f471e8d9804f6215bdd5c8622bfcdf952130cdb7e58ebd8b61883b"
+    },
+    {
+      "path": "apps/server/src/server.ts",
+      "sha256": "fba09e7f897593561059c4e074d3030156b1854794576144d5a26ece9560e02f"
+    },
+    {
+      "path": "packages/domain/src/store/search-cache-events.ts",
+      "sha256": "4f0276e1953a56db0a31844c51faec02835eea134b04a06ed2ba6e9231d6d600"
+    },
+    {
+      "path": "packages/domain/src/store/snapshots.ts",
+      "sha256": "14774139fc4c323eedd7d2b31f28182b0b447a4b776bad1e58b354b434b1adb8"
+    },
+    {
+      "path": "packages/domain/src/store/store.ts",
+      "sha256": "bb3f0f0855c3bd5128b8d5f4c164734d13a04250ad7dfe32eacc18cf3ac69a60"
+    },
+    {
+      "path": "apps/cli/src/main.ts",
+      "sha256": "2bd03f2abd052dcb284009652539808c47916db1dfea3aea29fac512006077f4"
+    }
+  ]
 }

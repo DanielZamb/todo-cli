@@ -1,7 +1,11 @@
 import type { ProfileId } from "./ids.ts";
 import { fieldWords, type PreparedField } from "./task-search.ts";
 
-type Read = { readonly profile: ProfileId; readonly generation: number };
+type Read = {
+  readonly profile: ProfileId;
+  readonly generation: number;
+  readonly epoch: number;
+};
 type Entry = {
   readonly profile: ProfileId;
   readonly prepared: PreparedField;
@@ -19,14 +23,21 @@ export class TaskSearchCache {
   private retainedBytes = 0;
   private pendingBytes = 0;
   private closed = false;
+  private epoch = 0;
 
   read(profile: ProfileId): Read {
-    return { profile, generation: this.purgeGen.get(profile) ?? 0 };
+    return {
+      profile,
+      generation: this.purgeGen.get(profile) ?? 0,
+      epoch: this.epoch,
+    };
   }
 
   private canAdmit(read: Read) {
     return (
-      !this.closed && read.generation === (this.purgeGen.get(read.profile) ?? 0)
+      !this.closed &&
+      read.epoch === this.epoch &&
+      read.generation === (this.purgeGen.get(read.profile) ?? 0)
     );
   }
 
@@ -156,12 +167,17 @@ export class TaskSearchCache {
       if (token.read.profile === profile) this.dropPending(key, token);
   }
 
-  close() {
-    this.closed = true;
+  clearAll() {
+    this.epoch++;
     this.entries.clear();
     this.pending.clear();
-    this.purgeGen.clear();
     this.retainedBytes = 0;
     this.pendingBytes = 0;
+  }
+
+  close() {
+    this.closed = true;
+    this.clearAll();
+    this.purgeGen.clear();
   }
 }

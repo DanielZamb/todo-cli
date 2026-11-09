@@ -3,8 +3,8 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Effect, Schema } from "effect";
-import { TaskCommands } from "./packages/domain/src/commands.ts";
-import { ProfileId } from "./packages/domain/src/ids.ts";
+import { TaskCommands, moveTask } from "./packages/domain/src/commands.ts";
+import { ProfileId, Version } from "./packages/domain/src/ids.ts";
 import {
   filterTaskRecordsEffect,
   runTaskRecordSteps,
@@ -221,6 +221,7 @@ await Effect.runPromise(
       assert.equal(reverted.outcome, "committed");
       yield* check("Revert returns old text", ["Write the store"]);
       yield* store.snapshots.restore(saved.id);
+      assert.equal(store.searchWords.usage.entries, 0, "restore-hygiene");
       yield* check("restore reuses Version 1", ["Write the store"]);
       yield* store.append({
         actor,
@@ -271,7 +272,7 @@ await Effect.runPromise(
         (text) => store.searchWords.words(other, text),
         [task.title],
       );
-      const generation = store.searchWords.read(profile).generation;
+      const epoch = store.searchWords.read(profile).epoch;
       yield* store.append({
         actor,
         profile,
@@ -285,16 +286,21 @@ await Effect.runPromise(
       });
       assert.equal(
         store.searchWords.usage.entries,
-        1,
-        "purge-hygiene evicts all prior text only in its Profile",
+        0,
+        "purge-hygiene clears all Profiles",
       );
       assert.equal(
-        store.searchWords.read(profile).generation,
-        generation + 1,
-        "Purge advances admission generation",
+        store.searchWords.read(profile).epoch,
+        epoch + 1,
+        "Purge advances cache epoch",
       );
       yield* check("Purge", []);
       const fresh = store.searchWords.read(profile);
+      yield* prepareValues(
+        (text) =>
+          store.searchWords.words(store.searchWords.read(personal), text),
+        ["Personal survives local Profile delete"],
+      );
       yield* prepareValues(
         (text) => store.searchWords.words(fresh, text),
         ["Other text"],
@@ -331,6 +337,103 @@ await Effect.runPromise(
     }
   }),
 ).finally(() => rmSync(directory, { recursive: true, force: true }));
+for (const suspended of [false, true]) {
+  const scratch = mkdtempSync(join(tmpdir(), "todo-cache-move-"));
+  try {
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const store = yield* openStore({
+          path: join(scratch, "scratch.db"),
+          attachmentRoot: join(scratch, "attachments"),
+        });
+        let running: Promise<TaskRead[]> | undefined;
+        try {
+          yield* store.putProfile(work);
+          yield* store.putProfile({ ...work, id: personal, name: "Personal" });
+          yield* store.auth.setupOwner("moved cache proof passphrase");
+          const { credential } = yield* store.auth.signIn(
+            "moved cache proof passphrase",
+          );
+          const commands = new TaskCommands(store);
+          const request = { credential, profile };
+          const title = "Classified rent " + "x".repeat(suspended ? 600 : 0);
+          const added = yield* commands.create(request, {
+            title,
+            description: "Late private description",
+          });
+          assert.equal(added.outcome, "committed");
+          if (added.outcome !== "committed" || !added.task)
+            throw new Error("Missing Task");
+          if (suspended) {
+            running = Effect.runPromise(
+              commands.list(request, { text: "rent" }),
+            );
+            assert.equal(
+              store.searchWords.usage.pending,
+              1,
+              "moved old read is suspended",
+            );
+          } else yield* commands.list(request, { text: "rent" });
+          yield* moveTask(
+            store,
+            { ...request, task_id: added.task.id },
+            {
+              from_version: Schema.decodeUnknownSync(Version)(1),
+              destination_profile: personal,
+            },
+          );
+          if (!suspended)
+            yield* commands.list(
+              { credential, profile: personal },
+              { text: "rent" },
+            );
+          const target = {
+            credential,
+            profile: personal,
+            task_id: added.task.id,
+          };
+          yield* commands.delete(target, {
+            from_version: Schema.decodeUnknownSync(Version)(2),
+          });
+          yield* commands.purge(target, {
+            from_version: Schema.decodeUnknownSync(Version)(3),
+          });
+          assert.deepEqual(
+            [
+              store.searchWords.usage.entries,
+              store.searchWords.usage.pending,
+              store.searchWords.usage.chargedBytes,
+            ],
+            [0, 0, 0],
+            "Move then Purge clears all historical Profiles and pending",
+          );
+          if (running) {
+            const pendingRead = running;
+            yield* Effect.promise(() => pendingRead);
+            running = undefined;
+          }
+          assert.deepEqual(
+            [
+              store.searchWords.usage.entries,
+              store.searchWords.usage.pending,
+              store.searchWords.usage.chargedBytes,
+            ],
+            [0, 0, 0],
+            "moved old read cannot admit late description",
+          );
+        } finally {
+          if (running) {
+            const pendingRead = running;
+            yield* Effect.promise(() => pendingRead);
+          }
+          yield* store.close();
+        }
+      }),
+    );
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+}
 writeFileSync(
   process.env.CACHE_WITNESS ?? join(tmpdir(), "cache-witness.json"),
   JSON.stringify({

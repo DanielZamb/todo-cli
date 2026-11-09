@@ -59,6 +59,11 @@ const mutants = [
     property: "OwnSlotCleanup",
   },
 ];
+mutants.push({
+  name: "without-epoch",
+  flag: "BrokenEpoch",
+  property: "NoStaleReadRetention",
+});
 const flags = mutants.map((x) => x.flag);
 const invariants = [
   "NoInsertAfterEvict",
@@ -155,6 +160,7 @@ writeFileSync(
         reads: 2,
         capacity: 2,
         generationColors: 4,
+        epochEqualityBits: 2,
       },
       scope:
         "finite safety model, not source refinement; generation colors are never reused while referenced by an active read; no unbounded/RSS/liveness theorem",

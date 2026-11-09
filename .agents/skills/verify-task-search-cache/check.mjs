@@ -99,6 +99,8 @@ const paths = [
   "task-filters.ts",
   "commands.ts",
   "store/store.ts",
+  "store/snapshots.ts",
+  "store/search-cache-events.ts",
 ];
 const hashes = Object.fromEntries(
   paths.map((p) => [p, hash(join(source, "packages/domain/src", p))]),
@@ -155,16 +157,16 @@ const mutations = [
   {
     name: "purge-without-eviction",
     path: "store/store.ts",
-    from: "this.evictSearchTask(event.task_id, input.profile);",
+    from: "this.searchWords.clearAll();",
     to: "",
     witness: "purge-hygiene",
   },
   {
-    name: "purge-without-generation",
-    path: "store/store.ts",
-    from: "this.searchWords.revoke(input.profile);",
+    name: "restore-without-clear",
+    path: "store/snapshots.ts",
+    from: "this.afterRestore();",
     to: "",
-    witness: "Purge advances admission generation",
+    witness: "restore-hygiene",
   },
   {
     name: "profile-without-eviction",

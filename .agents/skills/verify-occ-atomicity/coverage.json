@@ -1,9 +1,9 @@
 {
-  "confirmedCommit": "41926044ff53b94c7ac0c1bb779c75143aa3c281",
+  "confirmedCommit": "cc5777acbebbebbffd8679022f8165bb7b6c38a5",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "9f77bb842edc9ed08ba2fd23e43d4ea8b81172a4a44ee2f5ed67390722e00970",
+      "sha256": "bb3f0f0855c3bd5128b8d5f4c164734d13a04250ad7dfe32eacc18cf3ac69a60",
       "functions": [
         "OperationStore.constructor",
         "OperationStore.transaction",
@@ -69,5 +69,7 @@
         "validAttachmentLocation"
       ]
     }
-  ]
+  ],
+  "reviewedCandidate": true,
+  "review": "Review-fix candidate from parentcc5777: constructor restore callback clears cache; read-only narrow cache metadata query; TaskPurged clears epoch/maps instead of cache History scanning. Validate, record, applyEvent, Version, commit, rejection, replay and crash boundaries remain unchanged. Exact store diff reviewed; sensitivity/restoration and one-command checks recorded in ignored fixed-review receipts. Other covered hashes byte-identical. No model change."
 }

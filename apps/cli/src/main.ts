@@ -709,6 +709,9 @@ const list = Command.make(
             Effect.mapError(
               (error) => new CommandError(2, error.code, error.message),
             ),
+            Effect.catchDefect((error) =>
+              Effect.fail(new CommandError(1, "runtime_error", String(error))),
+            ),
           );
           yield* write(
             renderTasks(

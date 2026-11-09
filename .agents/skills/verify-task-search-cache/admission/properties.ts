@@ -67,6 +67,30 @@ function absent(cache: TaskSearchCache, label: string) {
     label,
   );
 }
+async function clearAllCase() {
+  const cache = new TaskSearchCache();
+  const old = cache.read(profile);
+  const slotless = cache.read(personal);
+  const pause = gate();
+  const running = Effect.runPromise(
+    prepareMany(cache, old, [text, "Late work description"], pause.checkpoint),
+  );
+  await pause.arrived;
+  cache.clearAll();
+  absent(cache, "ClearAll removes pending slot and charge");
+  pause.release();
+  await running;
+  await prepare(cache, slotless, "Late personal field without prior slot");
+  absent(cache, "NoStaleReadRetention ClearAll pending and slotless reads");
+  await prepare(cache, cache.read(personal), "New personal read");
+  assert.equal(cache.usage.entries, 1, "new epoch permits fresh reads");
+  cache.close();
+}
+if (process.argv[2] === "clear-only") {
+  await clearAllCase();
+  process.exit(0);
+}
+
 {
   const cache = new TaskSearchCache();
   const read = cache.read(profile);
@@ -108,11 +132,11 @@ function absent(cache: TaskSearchCache, label: string) {
   assert.equal(cache.usage.pendingBytes, 2148, "charged pending key/token");
   cache.revoke(profile);
   cache.evict(profile, text);
-  absent(cache, "Purge removes pending slot and charge");
+  absent(cache, "Evict removes pending slot and charge");
   a.release();
   const values = await running;
   assert.equal(values[0]?.preparedUnits, 1000);
-  absent(cache, "NoStaleReadRetention late B after Purge");
+  absent(cache, "NoStaleReadRetention late B after revocation");
   cache.close();
 }
 {
@@ -520,3 +544,5 @@ console.log(
       "immutable integrated cache/SEC runner; meter and SQLite lifecycle are checked separately",
   }),
 );
+
+await clearAllCase();

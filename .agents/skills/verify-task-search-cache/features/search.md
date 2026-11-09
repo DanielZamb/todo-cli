@@ -22,7 +22,10 @@ The generated driver also proves local eviction and mutates the real code.
 
 ## Gotchas
 
-Purge from another process cannot erase this process's heap immediately.
+A rare Purge clears every Profile's retained/pending cache and fences every old
+read. External Purge and Profile deletion must do so within 1000 ms through the
+compiled server observer. Snapshot generation changes clear before resetting max
+seq, so a restore followed by Purge before polling cannot hide behind an old cursor.
 Content addressing prevents stale words from matching changed Task strings.
 The current CLI does not expose Revert; the proof labels its HTTP step.
 Bounds are charged bytes and entry counts, not an RSS guarantee.

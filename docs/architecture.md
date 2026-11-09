@@ -142,18 +142,33 @@ bounds exclude transient preparation buffers, superseded invocation-local tokens
 allocator overhead and separately reported per-Profile generation metadata;
 they are not RSS limits. V3's expanding 100,000-character field is not retained.
 
-A read captures its Profile's cache-local purge generation before authorization
-and the SQLite Task read. A miss registers a fresh ownership token, yields during
-preparation and admits only while that token and generation remain current.
-Later misses supersede earlier tokens; interruption or failure removes only the
-invocation's own current token. Local Purge advances the generation after applying
-the event, before historical text eviction and redaction, within its transaction.
-Profile deletion advances its generation and evicts its entries and pending slots
-before returning from the transaction. Rollback can lose retention only. Old
-reads may finish but cannot retain later fields after revocation. Close empties
-all cache state and permanently fences admission. External Purge entries age out
-through LRU. Exact current text keys preserve matching after external edits and
-Snapshot restore without database coherence tracking.
+A read captures the cache-wide epoch and its Profile's cache-local purge
+generation before authorization and the SQLite Task read. A miss registers a
+fresh ownership token, yields during preparation and admits only while its token,
+epoch and generation remain current. Later misses supersede earlier tokens;
+interruption or failure removes only the invocation's own current token.
+
+Every Purge clears the whole memo and advances its epoch inside the transaction.
+This erases moved Tasks' earlier Profile keys and fences in-flight reads even
+before they register a pending slot. Snapshot restore also clears and fences the
+memo before returning. Local Profile deletion advances that Profile's generation
+and evicts its entries and pending slots. Rollback can lose retention only.
+Close empties all cache state and permanently fences admission.
+
+Before serving HTTP, the server captures the current operation sequence. Its
+250 ms hygiene observer reads only new committed seq/kind/original_kind fields.
+The domain owns that SQL query. Restore metadata uses the existing Profile/seq
+index with canonical NULL Profile and snapshot-restore actor headers before JSON
+extraction. Task payloads are not decoded by the observer. A committed
+TaskHistoryRedacted row with original_kind TaskPurged, a TaskPurged row or a
+ProfileDeleted row clears the whole memo. A Snapshot generation change clears it
+and resets the cursor to the current maximum, including a Purge at a reused
+sequence before the next poll. Compiled CLI/server proofs require eviction within
+1000 ms, including CLI startup. The observer can clear again after this server's
+own Purge; that harmless extra refill is deliberate. A Purge is rare owner work,
+and the next search pays one uncached refill. External Profile deletion also
+clears all Profiles. This is memory hygiene, not database coherence for matching.
+Exact current text keys preserve search results after other writers and restore.
 
 `PreparedField` carries words and the exact folded UTF-16 field length.
 Search charges that length after each field is ready, including supplied stored

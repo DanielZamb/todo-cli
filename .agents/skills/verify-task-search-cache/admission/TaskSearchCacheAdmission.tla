@@ -1,7 +1,7 @@
 -------------------- MODULE TaskSearchCacheAdmission --------------------
 EXTENDS Naturals, FiniteSets, TLC
 CONSTANTS Capacity, OneProfile, BrokenAdmission, BrokenEviction,
-          BrokenInterrupt, BrokenIncomplete, BrokenGeneration, BrokenOwnCleanup
+          BrokenInterrupt, BrokenIncomplete, BrokenGeneration, BrokenOwnCleanup, BrokenEpoch
 Keys == {"K1", "K2"}
 Preparations == {"A", "B"}
 Reads == {"R1", "R2"}
@@ -10,15 +10,17 @@ Generations == {"g0", "g1", "g2", "g3"}
 None == "none"
 ProfileOf(key) == IF OneProfile \/ key = "K1" THEN "work" ELSE "personal"
 VARIABLES phase, preparationKey, preparationRead, pending, admitted,
-          cache, readActive, readProfile, readGen, purgeGen, activeProfiles,
+          cache, readActive, readProfile, readGen, readEpoch, purgeGen, activeProfiles,
           closed, insertionAllowed, insertionFresh, ownCleanupOK
 vars == <<phase, preparationKey, preparationRead, pending, admitted,
-          cache, readActive, readProfile, readGen, purgeGen, activeProfiles,
+          cache, readActive, readProfile, readGen, readEpoch, purgeGen, activeProfiles,
           closed, insertionAllowed, insertionFresh, ownCleanupOK>>
 EmptyEntry == [present |-> FALSE, complete |-> TRUE, source |-> None]
 Retained == {k \in Keys : cache[k].present}
 PendingKeys == {k \in Keys : pending[k] # None}
-Fresh(r) == readGen[r] = purgeGen[readProfile[r]]
+FreshProfile(r) == readGen[r] = purgeGen[readProfile[r]]
+Fresh(r) == FreshProfile(r) /\ readEpoch[r]
+MayAdmit(r) == (FreshProfile(r) \/ BrokenGeneration) /\ (readEpoch[r] \/ BrokenEpoch)
 Owned(s) == pending[preparationKey[s]] = s
 ReferencedGenerations(p) == {readGen[r] : r \in {r \in Reads : readActive[r] /\ readProfile[r] = p}}
 FreshGenerations(p) == Generations \ (ReferencedGenerations(p) \cup {purgeGen[p]})
@@ -32,6 +34,7 @@ Init ==
   /\ readActive = [r \in Reads |-> FALSE]
   /\ readProfile = [r \in Reads |-> "work"]
   /\ readGen = [r \in Reads |-> "g0"]
+  /\ readEpoch = [r \in Reads |-> TRUE]
   /\ purgeGen = [p \in Profiles |-> "g0"]
   /\ activeProfiles = Profiles
   /\ closed = FALSE
@@ -43,6 +46,7 @@ ReadStart(r, p) ==
   /\ readActive' = [readActive EXCEPT ![r] = TRUE]
   /\ readProfile' = [readProfile EXCEPT ![r] = p]
   /\ readGen' = [readGen EXCEPT ![r] = purgeGen[p]]
+  /\ readEpoch' = [readEpoch EXCEPT ![r] = TRUE]
   /\ UNCHANGED <<phase, preparationKey, preparationRead, pending, admitted,
                  cache, purgeGen, activeProfiles, closed, insertionAllowed,
                  insertionFresh, ownCleanupOK>>
@@ -51,12 +55,12 @@ ReadEnd(r) ==
   /\ \A s \in Preparations : phase[s] = "idle" \/ preparationRead[s] # r
   /\ readActive' = [readActive EXCEPT ![r] = FALSE]
   /\ UNCHANGED <<phase, preparationKey, preparationRead, pending, admitted,
-                 cache, readProfile, readGen, purgeGen, activeProfiles, closed,
+                 cache, readProfile, readGen, readEpoch, purgeGen, activeProfiles, closed,
                  insertionAllowed, insertionFresh, ownCleanupOK>>
 Miss(s, r, k) ==
   /\ phase[s] = "idle" /\ readActive[r] /\ readProfile[r] = ProfileOf(k)
   /\ ~cache[k].present
-  /\ LET register == ~closed /\ (Fresh(r) \/ BrokenGeneration) /\
+  /\ LET register == ~closed /\ MayAdmit(r) /\
                      (pending[k] # None \/ Cardinality(Retained) + Cardinality(PendingKeys) < Capacity)
      IN /\ phase' = [phase EXCEPT ![s] = "preparing"]
         /\ preparationKey' = [preparationKey EXCEPT ![s] = k]
@@ -67,20 +71,20 @@ Miss(s, r, k) ==
         /\ cache' = IF register /\ BrokenIncomplete
                     THEN [cache EXCEPT ![k] = [present |-> TRUE, complete |-> FALSE, source |-> s]]
                     ELSE cache
-  /\ UNCHANGED <<readActive, readProfile, readGen, purgeGen, activeProfiles,
+  /\ UNCHANGED <<readActive, readProfile, readGen, readEpoch, purgeGen, activeProfiles,
                  closed, insertionAllowed, insertionFresh, ownCleanupOK>>
 PrepareStep(s) ==
   /\ phase[s] = "preparing"
   /\ phase' = [phase EXCEPT ![s] = "ready"]
   /\ UNCHANGED <<preparationKey, preparationRead, pending, admitted, cache,
-                 readActive, readProfile, readGen, purgeGen, activeProfiles,
+                 readActive, readProfile, readGen, readEpoch, purgeGen, activeProfiles,
                  closed, insertionAllowed, insertionFresh, ownCleanupOK>>
 Admit(s) ==
   /\ phase[s] = "ready"
   /\ LET k == preparationKey[s]
          r == preparationRead[s]
          insert == ~closed /\ (Owned(s) \/ BrokenAdmission) /\
-                   (Fresh(r) \/ BrokenGeneration)
+                   MayAdmit(r)
          nextPending == IF Owned(s) \/ BrokenOwnCleanup
                         THEN [pending EXCEPT ![k] = None] ELSE pending
      IN /\ cache' = IF insert THEN [cache EXCEPT ![k] = [present |-> TRUE, complete |-> TRUE, source |-> s]] ELSE cache
@@ -91,7 +95,7 @@ Admit(s) ==
   /\ phase' = [phase EXCEPT ![s] = "idle"]
   /\ admitted' = [admitted EXCEPT ![s] = FALSE]
   /\ UNCHANGED <<preparationKey, preparationRead, readActive, readProfile,
-                 readGen, purgeGen, activeProfiles, closed>>
+                 readGen, readEpoch, purgeGen, activeProfiles, closed>>
 Complete(s) == Admit(s)
 Interrupt(s) ==
   /\ phase[s] # "idle"
@@ -103,7 +107,7 @@ Interrupt(s) ==
   /\ phase' = [phase EXCEPT ![s] = "idle"]
   /\ admitted' = [admitted EXCEPT ![s] = FALSE]
   /\ UNCHANGED <<preparationKey, preparationRead, cache, readActive,
-                 readProfile, readGen, purgeGen, activeProfiles, closed,
+                 readProfile, readGen, readEpoch, purgeGen, activeProfiles, closed,
                  insertionAllowed, insertionFresh>>
 Evict(k) ==
   /\ cache[k].present \/ pending[k] # None
@@ -111,17 +115,17 @@ Evict(k) ==
   /\ pending' = IF BrokenEviction THEN pending ELSE [pending EXCEPT ![k] = None]
   /\ admitted' = [s \in Preparations |-> IF phase[s] # "idle" /\ preparationKey[s] = k THEN FALSE ELSE admitted[s]]
   /\ UNCHANGED <<phase, preparationKey, preparationRead, readActive,
+                 readProfile, readGen, readEpoch, purgeGen, activeProfiles, closed,
+                 insertionAllowed, insertionFresh, ownCleanupOK>>
+ClearAll ==
+  /\ cache' = [k \in Keys |-> EmptyEntry]
+  /\ pending' = IF BrokenEviction THEN pending ELSE [k \in Keys |-> None]
+  /\ admitted' = [s \in Preparations |-> FALSE]
+  /\ readEpoch' = [r \in Reads |-> FALSE]
+  /\ UNCHANGED <<phase, preparationKey, preparationRead, readActive,
                  readProfile, readGen, purgeGen, activeProfiles, closed,
                  insertionAllowed, insertionFresh, ownCleanupOK>>
-Purge(k, generation) ==
-  /\ generation \in FreshGenerations(ProfileOf(k))
-  /\ purgeGen' = [purgeGen EXCEPT ![ProfileOf(k)] = generation]
-  /\ cache' = [cache EXCEPT ![k] = EmptyEntry]
-  /\ pending' = IF BrokenEviction THEN pending ELSE [pending EXCEPT ![k] = None]
-  /\ admitted' = [s \in Preparations |-> IF phase[s] # "idle" /\ preparationKey[s] = k THEN FALSE ELSE admitted[s]]
-  /\ UNCHANGED <<phase, preparationKey, preparationRead, readActive,
-                 readProfile, readGen, activeProfiles, closed,
-                 insertionAllowed, insertionFresh, ownCleanupOK>>
+Purge == ClearAll
 DeleteProfile(p, generation) ==
   /\ p \in activeProfiles /\ generation \in FreshGenerations(p)
   /\ activeProfiles' = activeProfiles \ {p}
@@ -130,13 +134,13 @@ DeleteProfile(p, generation) ==
   /\ pending' = [k \in Keys |-> IF ProfileOf(k) = p /\ ~BrokenEviction THEN None ELSE pending[k]]
   /\ admitted' = [s \in Preparations |-> IF phase[s] # "idle" /\ ProfileOf(preparationKey[s]) = p THEN FALSE ELSE admitted[s]]
   /\ UNCHANGED <<phase, preparationKey, preparationRead, readActive,
-                 readProfile, readGen, closed, insertionAllowed,
+                 readProfile, readGen, readEpoch, closed, insertionAllowed,
                  insertionFresh, ownCleanupOK>>
 LruEvict(k) ==
   /\ cache[k].present
   /\ cache' = [cache EXCEPT ![k] = EmptyEntry]
   /\ UNCHANGED <<phase, preparationKey, preparationRead, pending, admitted,
-                 readActive, readProfile, readGen, purgeGen, activeProfiles,
+                 readActive, readProfile, readGen, readEpoch, purgeGen, activeProfiles,
                  closed, insertionAllowed, insertionFresh, ownCleanupOK>>
 Hit(k) == cache[k].present /\ UNCHANGED vars
 Close ==
@@ -146,7 +150,7 @@ Close ==
   /\ pending' = [k \in Keys |-> None]
   /\ admitted' = [s \in Preparations |-> FALSE]
   /\ UNCHANGED <<phase, preparationKey, preparationRead, readActive,
-                 readProfile, readGen, purgeGen, activeProfiles,
+                 readProfile, readGen, readEpoch, purgeGen, activeProfiles,
                  insertionAllowed, insertionFresh, ownCleanupOK>>
 HasReady == \E s \in Preparations : phase[s] = "ready"
 Next == IF HasReady
@@ -156,7 +160,7 @@ Next == IF HasReady
           \/ (\E s \in Preparations, r \in Reads, k \in Keys : Miss(s,r,k))
           \/ (\E s \in Preparations : PrepareStep(s) \/ Interrupt(s))
           \/ (\E k \in Keys : Evict(k) \/ LruEvict(k) \/ Hit(k))
-          \/ (\E k \in Keys, g \in Generations : Purge(k,g))
+          \/ Purge \/ ClearAll
           \/ (\E p \in Profiles, g \in Generations : DeleteProfile(p,g))
           \/ Close
 Spec == Init /\ [][Next]_vars

@@ -33,6 +33,10 @@ run("properties", "bun", [
   join(import.meta.dirname, "check.mjs"),
   ...process.argv.slice(2),
 ]);
+run("hygiene", "bun", [
+  join(import.meta.dirname, "check-hygiene.mjs"),
+  ...process.argv.slice(2),
+]);
 run("admission-model", "bun", [
   join(import.meta.dirname, "admission/check.mjs"),
 ]);
@@ -63,6 +67,16 @@ run("lifecycle", "bun", [
   manifest,
   join(evidence, "compiled"),
   oracle,
+]);
+run("erasure", "bun", [
+  join(import.meta.dirname, "erase-lifecycle.mjs"),
+  manifest,
+  join(evidence, "erasure"),
+]);
+run("cli-defect", "bun", [
+  join(import.meta.dirname, "cli-defect.mjs"),
+  manifest,
+  join(evidence, "cli-defect"),
 ]);
 writeFileSync(
   join(evidence, "result.json"),

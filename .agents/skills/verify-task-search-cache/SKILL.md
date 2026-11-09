@@ -50,18 +50,18 @@ The real SQLite drive calls production TaskCommands.list. It checks literal
 titles and same-source ordered results after edit, rejected edit, Delete, Revert,
 full/checkpoint rebuild, Snapshot restore with Version reuse, local Purge,
 Profile deletion and close. Seven isolated source controls remove text/Profile
-keys, LRU reservation, Purge eviction/generation, Profile eviction or close cleanup.
+keys, LRU reservation, Purge clear, restore clear, Profile eviction or close cleanup.
 Each must fail its named literal assertion before a strict typecheck or hash gate.
 Every source restoration is byte-checked, then the clean drive and strict check run.
 
-The admission driver captures the same immutable product source. Nine real-code
+The admission driver captures the same immutable product source. Eleven real-code
 controls test complete-hit publication, ownership, generation, cancellation,
 pending eviction and bounds. Deterministic checkpoints drive Purge during a miss,
 late field B after revocation, stale Profile reads, close, concurrent misses,
 interrupt and checkpoint failure. The named A/Evict/B/CompleteB/CompleteA witness
 retains B's object. No memo generator is manually drained. The small TLA+ model
 checks 2 keys, 2 preparations, 2 reads and capacity 2 with one and two Profiles,
-six failing mutants and restored safety. It is not a source-refinement theorem.
+seven failing mutants and restored safety. It is not a source-refinement theorem.
 
 The compiled lifecycle drive warms HTTP search, edits through the second-process
 CLI, Reverts over authenticated HTTP, restores Version 1, writes different text at
@@ -82,9 +82,14 @@ charging 32,000,308 bytes, so it bypasses retention. No oversize/negative memo e
 Temporary preparation buffers, superseded invocation-local tokens, allocator/GC
 overhead and separately reported per-Profile generation metadata are outside the
 charged bound. These are deterministic storage limits, not RSS guarantees.
-Local Purge and Profile deletion revoke admission and evict matching state for
-hygiene. External Purge entries age out through LRU. Exact current text preserves
-correctness after other writers and restore without database coherence tracking.
+Every local or external Purge and every Snapshot restore/generation change clears
+all retained and pending entries and advances the cache epoch. Read captures that
+epoch before auth/SQLite access, including reads with no pending slot yet. Local
+Profile delete may revoke only its Profile; the server observer clears all on an
+external ProfileDeleted. Purge no longer reads History for cache eviction. Own
+server writes can cause a second harmless clear. The next search pays one uncached
+refill after a rare owner Purge. Exact current text preserves output correctness;
+the event observer is memory hygiene, not database coherence.
 
 coverage.json records actual reviewed source hashes. Renew them only after
 reviewing changed bodies, observing behavioral controls and restoring clean runs.
@@ -124,3 +129,32 @@ directory. clean-runtime.mjs records closed own .*.bun-build removal and skips
 files lsof reports open. No installed app, real HOME/database, Keychain or native
 UI is used. The relative .claude/skills link supports filesystem discovery;
 fresh coordinator discovery remains a separate check.
+
+## Review-fix erasure proof
+
+check-hygiene.mjs runs the production observer and narrow store query against two
+stores on one scratch database. Its removed-hook, ignored-generation and rejected-
+row controls must fail literal assertions, restore bytes and pass. The observer
+captures max seq before HTTP starts and polls every 250 ms. It reads only new
+committed seq/kind/original_kind fields. Restore generation uses indexed canonical
+NULL Profile/snapshot-restore actor headers before JSON extraction. The observer
+recognizes TaskHistoryRedacted.original_kind TaskPurged and ProfileDeleted. On a
+generation change it clears first and resets to current max, covering restore,
+external Purge and poll with a reused seq below the previous cursor.
+
+erase-lifecycle.mjs uses the compiled CLI and server with a verification-only
+native Map preload in its isolated scratch process. Warm work, Move to personal,
+warm, then external CLI Purge must leave zero entries in both Profiles within
+literal 1000 ms, including CLI startup. External Profile deletion has the same
+bound. No public diagnostics or test hook is added. cli-defect.mjs reuses the
+selective Intl.Segmenter fault to require exactly runtime_error JSON and exit 1.
+Typed refusal remains exit 2; the narrow Effect.catchDefect preserves interruption.
+The production runner finalizer and real-Effect interrupted cache checks remain.
+
+ClearAll in TaskSearchCacheAdmission.tla invalidates read-epoch equality for every
+read, clears slots and prevents late admission. An epoch-ignoring guard must fail
+NoStaleReadRetention at TLC exit 12 and the analogous real Effect literal. The
+finite model tracks epoch equality bits rather than integer lifetime counters.
+It is not an unbounded source-refinement theorem. Frozen latency evidence remains
+measured cc5777/source2eb2, never relabeled as the later fixed source. No retiming
+is authorized for this review-fix round.

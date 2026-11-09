@@ -115,6 +115,7 @@ export class Snapshots {
     private readonly db: Database,
     path: string,
     private readonly transaction: <A>(run: () => A) => A,
+    private readonly afterRestore: () => void,
   ) {
     this.directory = join(dirname(path), "snapshots");
     this.persistent = path !== ":memory:";
@@ -277,7 +278,7 @@ export class Snapshots {
       return { generation: "initial", seq: 0, restore_seq: 0 };
     const row = this.db
       .query<{ generation: string; seq: number }, []>(
-        "SELECT seq,json_extract(event,'$.generation') AS generation FROM op_log WHERE json_extract(event,'$.kind')='DatabaseRestored' ORDER BY seq DESC LIMIT 1",
+        "SELECT seq,json_extract(event,'$.generation') AS generation FROM op_log WHERE profile IS NULL AND actor='snapshot-restore' AND outcome='committed' AND json_extract(event,'$.kind')='DatabaseRestored' ORDER BY seq DESC LIMIT 1",
       )
       .get();
     const current = seq(this.db);
@@ -534,6 +535,7 @@ export class Snapshots {
               "invalid_snapshot",
               "Restored Snapshot violates foreign keys",
             );
+          this.afterRestore();
           return {
             ...report,
             safety_snapshot: this.manifest(safety.id),
