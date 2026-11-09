@@ -1,9 +1,9 @@
 {
-  "confirmedCommit": "d83d61863b95d2482ca9281a34d5db4494abffbb",
+  "confirmedCommit": "41926044ff53b94c7ac0c1bb779c75143aa3c281",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "7121f6621af44a03846124ccbffc6b9841b903e1047eb6b2464ef842caf15353",
+      "sha256": "9f77bb842edc9ed08ba2fd23e43d4ea8b81172a4a44ee2f5ed67390722e00970",
       "functions": [
         "OperationStore.constructor",
         "OperationStore.transaction",

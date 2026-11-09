@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   mkdirSync,
   mkdtempSync,
@@ -32,20 +33,31 @@ run("properties", "bun", [
   join(import.meta.dirname, "check.mjs"),
   ...process.argv.slice(2),
 ]);
+run("admission-model", "bun", [
+  join(import.meta.dirname, "admission/check.mjs"),
+]);
+run("admission-code", "bun", [
+  join(import.meta.dirname, "admission/check-candidate.mjs"),
+  ...process.argv.slice(2),
+]);
 run("disk", "sh", ["/Users/zambamon/Work/todo-cli/scripts/disk-guard.sh"]);
 run("binaries", "bun", [".agents/skills/verify-cli/scripts/cache-binaries.ts"]);
 const manifest = join(root, ".scratch/bin/build.json");
 copyFileSync(manifest, join(evidence, "binary-provenance.json"));
 const beforeManifest = join(
   root,
-  "docs/evidence/perf-cache/before-binaries.json",
+  "docs/evidence/perf-cache/integrated-before-binaries.json",
 );
-let oracle;
-try {
-  oracle = JSON.parse(readFileSync(beforeManifest, "utf8")).cli;
-} catch {
-  oracle = JSON.parse(readFileSync(manifest, "utf8")).cli;
-}
+const baseline = JSON.parse(readFileSync(beforeManifest, "utf8"));
+for (const [path, expected] of Object.entries(baseline.protectedSourceHashes))
+  assert.equal(
+    createHash("sha256")
+      .update(readFileSync(join(root, path)))
+      .digest("hex"),
+    expected,
+    `Baseline SEC contract drift: ${path}`,
+  );
+const oracle = baseline.cli;
 run("lifecycle", "bun", [
   join(import.meta.dirname, "lifecycle.mjs"),
   manifest,
@@ -60,9 +72,7 @@ writeFileSync(
       receipts,
       oracle,
       oracleLimit:
-        oracle === JSON.parse(readFileSync(manifest, "utf8")).cli
-          ? "Direct uncached generated matcher path is the oracle; no prior binary supplied."
-          : "Unchanged baseline compiled CLI.",
+        "Immutable uncached integrated SEC+Tag CLI; protected matcher/runner/projection hashes match the candidate",
       cleanup:
         "compiled child server exited; scratch HOME/database removed; evidence retained",
     },

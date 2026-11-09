@@ -705,6 +705,10 @@ const list = Command.make(
               ...taskSearchExecution(),
               prepare: (text) => store.searchWords.words(read, text),
             },
+          ).pipe(
+            Effect.mapError(
+              (error) => new CommandError(2, error.code, error.message),
+            ),
           );
           yield* write(
             renderTasks(

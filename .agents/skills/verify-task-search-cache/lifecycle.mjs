@@ -30,6 +30,8 @@ mkdirSync(env.HOME);
 const actions = [];
 let server;
 let log = "";
+let result;
+let serverExit;
 const cli = (args, input, binary = binaries.cli) => {
   const r = spawnSync(
     binary,
@@ -43,7 +45,12 @@ const cli = (args, input, binary = binaries.cli) => {
 try {
   cli(["init", "--password-stdin"], "cache lifecycle passphrase\n");
   cli(["login", "--password-stdin"], "cache lifecycle passphrase\n");
-  const { task } = cli(["add", "Café rent"]);
+  const { task } = cli([
+    "add",
+    "Café rent",
+    "--desc",
+    "Straße pay rent — Café",
+  ]);
   const saved = cli([
     "snapshot",
     "create",
@@ -54,6 +61,14 @@ try {
     env,
     stdio: ["ignore", "pipe", "pipe"],
   });
+  writeFileSync(
+    join(evidence, "owned-process.json"),
+    JSON.stringify({
+      pid: server.pid,
+      binary: binaries.server,
+      database: env.TODO_DB,
+    }),
+  );
   for (const stream of [server.stdout, server.stderr])
     stream.on("data", (b) => {
       log += b;
@@ -139,28 +154,36 @@ try {
   await check(null);
   cli(["snapshot", "restore", saved.id]);
   await check(null);
-  writeFileSync(
-    join(evidence, "result.json"),
-    JSON.stringify(
-      {
-        status: "PASS",
-        binaries,
-        actions,
-        note: "The current CLI has no Revert command. Revert uses authenticated HTTP; every other competing mutation uses the separate compiled CLI process.",
-      },
-      null,
-      2,
-    ),
-  );
+  result = {
+    status: "PASS",
+    binaries,
+    actions,
+    note: "The current CLI has no Revert command. Revert uses authenticated HTTP; every other competing mutation uses the separate compiled CLI process.",
+  };
 } finally {
   writeFileSync(
     join(evidence, "actions.json"),
     JSON.stringify(actions, null, 2),
   );
   if (server) {
+    const exited = once(server, "exit");
     server.kill("SIGTERM");
-    await once(server, "exit");
+    const [code, signal] = await exited;
+    serverExit = { code, signal };
   }
   writeFileSync(join(evidence, "server.log"), log);
   rmSync(scratch, { recursive: true, force: true });
 }
+writeFileSync(
+  join(evidence, "result.json"),
+  JSON.stringify(
+    {
+      ...result,
+      serverExit,
+      cleanup: "Owned server exited; own scratch removed",
+      oracleBinary,
+    },
+    null,
+    2,
+  ),
+);

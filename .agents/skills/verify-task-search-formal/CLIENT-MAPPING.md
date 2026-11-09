@@ -85,13 +85,21 @@ refusal outcomes. The budget and weight are one shared domain policy.
 `fieldWords` yields from one generator core after bounded grapheme/word work,
 returning unchanged words, original offsets and exact folded `preparedUnits`.
 Evaluation also yields and meters each field once, each computed banded DP cell,
-and each visited occurrence/phrase start. The CLI drains that core synchronously.
+and each visited occurrence/phrase start. The CLI drains that core through the
+shared Effect runner.
 `TaskCommands.list` uses the Effect driver for supplied text **after**
 `store.auth.read` has returned its complete in-memory view. No SQLite read is open
 across those matcher yields. The already-captured rows and ADR-0015 client
 freshness rules are unchanged. No-text command reads stay synchronous for
 transactional import/Attachment callers. Eager whole-Profile read/serialization
 cost is a separate pre-existing residual, not a matcher-yield guarantee.
+
+The cache integration at `41926044` captures its cache-local Profile generation
+inside `Effect.suspend` before `auth.read`. The existing execution provider obtains
+complete PreparedFields from the store memo; SEC's matcher still charges their
+exact count after retrieval. SEC's matcher and filter/runner files are unchanged.
+This adds no response-publication transition. Cache admission and revocation have
+their separate TaskSearchCacheAdmission model and real-Effect controls.
 
 `runTaskRecordSteps` checks at checkpoints and before return. Refusal is an
 Effect failure; other thrown faults remain defects. Its completion flag makes

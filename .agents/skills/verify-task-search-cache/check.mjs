@@ -77,6 +77,10 @@ cpSync(
   join(import.meta.dirname, "properties.ts"),
   join(source, "properties.ts"),
 );
+cpSync(
+  join(import.meta.dirname, "meter-properties.ts"),
+  join(source, "meter-properties.ts"),
+);
 const matcherGenerators = readFileSync(
   join(root, ".agents/skills/verify-task-search-formal/matcher-properties.ts"),
   "utf8",
@@ -121,6 +125,11 @@ assert.equal(
   0,
   evidence,
 );
+assert.equal(
+  run("meter", "bun", ["meter-properties.ts"], env).status,
+  0,
+  evidence,
+);
 const mutations = [
   {
     name: "key-without-text",
@@ -139,7 +148,7 @@ const mutations = [
   {
     name: "no-eviction",
     path: "task-search-cache.ts",
-    from: "this.entries.size >= 4096 ||\n      this.chargedBytes + bytes > 16 * 1024 * 1024",
+    from: "!this.reserve(bytes, entryLimit - 1)",
     to: "false",
     witness: "entry-limit after eviction",
   },
@@ -149,6 +158,27 @@ const mutations = [
     from: "this.evictSearchTask(event.task_id, input.profile);",
     to: "",
     witness: "purge-hygiene",
+  },
+  {
+    name: "purge-without-generation",
+    path: "store/store.ts",
+    from: "this.searchWords.revoke(input.profile);",
+    to: "",
+    witness: "Purge advances admission generation",
+  },
+  {
+    name: "profile-without-eviction",
+    path: "store/store.ts",
+    from: "this.searchWords.evictProfile(profile.id);",
+    to: "",
+    witness: "profile-delete-hygiene",
+  },
+  {
+    name: "close-without-cleanup",
+    path: "store/store.ts",
+    from: "this.searchWords.close();",
+    to: "",
+    witness: "close-hygiene",
   },
 ];
 const controls = [];
@@ -189,6 +219,7 @@ writeFileSync(
     },
     include: [
       "properties.ts",
+      "meter-properties.ts",
       "packages/domain/src/**/*.ts",
       "packages/domain/test/store-fixtures.ts",
     ],
@@ -205,6 +236,29 @@ assert.equal(
   0,
   evidence,
 );
+const coverage = JSON.parse(
+  readFileSync(join(import.meta.dirname, "coverage.json"), "utf8"),
+);
+writeFileSync(
+  join(evidence, "behavior-result.json"),
+  JSON.stringify(
+    {
+      status: "PASS_BEFORE_MAPPING_GATE",
+      hashes,
+      controls,
+      restored: true,
+      strictTypecheck: 0,
+    },
+    null,
+    2,
+  ),
+);
+for (const file of coverage.files)
+  assert.equal(
+    hashes[file.path],
+    file.sha256,
+    `Source mapping changed: ${file.path}. Review conformance and sensitivity before renewal.`,
+  );
 writeFileSync(
   join(evidence, "result.json"),
   JSON.stringify(

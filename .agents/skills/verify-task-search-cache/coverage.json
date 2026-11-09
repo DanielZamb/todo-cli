@@ -1,0 +1,28 @@
+{
+  "productCommit": "41926044ff53b94c7ac0c1bb779c75143aa3c281",
+  "scope": "Real generated memo properties and store hygiene, finite corpus; no unbounded theorem or RSS bound",
+  "seed": "0x5ea2c001",
+  "files": [
+    {
+      "path": "task-search-cache.ts",
+      "sha256": "ef36b5bd4a18be466930234cbf984f5618cc288dfb13b493faed8fd37b67cb86"
+    },
+    {
+      "path": "task-search.ts",
+      "sha256": "1a82bab698508fe98c1d7de11fddbaf910454d69c3f6534e45e8b0ce9203c23c"
+    },
+    {
+      "path": "task-filters.ts",
+      "sha256": "59b835514b51dc7c301cefabce5954c77160857ace8b75a6d994f83b6925369d"
+    },
+    {
+      "path": "commands.ts",
+      "sha256": "ac3f0bd632b5f8e2d3f871ca3b2d403b1306d4149f5d2b8089ffe6b7e871121d"
+    },
+    {
+      "path": "store/store.ts",
+      "sha256": "9f77bb842edc9ed08ba2fd23e43d4ea8b81172a4a44ee2f5ed67390722e00970"
+    }
+  ],
+  "review": "PreparedField payload, synchronous hit, yielding miss finally, own-slot admission plus pre-auth generation capture; SEC core/filter runner identical to2077; seven generated/lifecycle controls and nine admission code controls failed literally and restored before renewal."
+}

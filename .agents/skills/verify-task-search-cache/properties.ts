@@ -3,14 +3,19 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Effect, Schema } from "effect";
+import { TaskCommands } from "./packages/domain/src/commands.ts";
 import { ProfileId } from "./packages/domain/src/ids.ts";
+import {
+  filterTaskRecordsEffect,
+  runTaskRecordSteps,
+} from "./packages/domain/src/task-filters.ts";
+import type { TaskRead } from "./packages/domain/src/task-read.ts";
 import { TaskSearchCache } from "./packages/domain/src/task-search-cache.ts";
 import {
   fieldWords,
-  matchTaskSearch,
-  parseTaskSearch,
+  type PreparedField,
+  taskSearchExecution,
 } from "./packages/domain/src/task-search.ts";
-import { filterTaskRecords } from "./packages/domain/src/task-filters.ts";
 import { openStore } from "./packages/domain/src/store/store.ts";
 import {
   actor,
@@ -22,60 +27,74 @@ import {
   edited,
 } from "./packages/domain/test/store-fixtures.ts";
 
+function prepareValues(
+  prepare: (text: string) => Generator<void, PreparedField>,
+  values: readonly string[],
+) {
+  return Effect.suspend(() => {
+    const captured: PreparedField[] = [];
+    function* steps(): Generator<void, TaskRead[]> {
+      for (const value of values) captured.push(yield* prepare(value));
+      return [];
+    }
+    return runTaskRecordSteps(steps(), Effect.void).pipe(
+      Effect.map(() => captured),
+    );
+  });
+}
+async function prepared(
+  cache: TaskSearchCache,
+  owner: ProfileId,
+  text: string,
+) {
+  const read = cache.read(owner);
+  const [value] = await Effect.runPromise(
+    prepareValues((value) => cache.words(read, value), [text]),
+  );
+  assert.ok(value);
+  return value;
+}
 const personal = Schema.decodeUnknownSync(ProfileId)("personal");
-const cache = new TaskSearchCache();
-const first = cache.words(profile, "Café");
-assert.deepEqual(first, [{ text: "cafe", start: 0, end: 4 }], "literal-fold");
-assert.equal(
-  cache.words(profile, "Café"),
+let cache = new TaskSearchCache();
+const first = await prepared(cache, profile, "Café");
+assert.deepEqual(
   first,
-  "hit reuses the actual Word array",
+  { words: [{ text: "cafe", start: 0, end: 4 }], preparedUnits: 4 },
+  "literal-fold",
+);
+assert.equal(
+  await prepared(cache, profile, "Café"),
+  first,
+  "hit reuses complete PreparedField",
 );
 assert.deepEqual(
-  cache.words(profile, "Ship"),
-  [{ text: "ship", start: 0, end: 4 }],
+  await prepared(cache, profile, "Ship"),
+  { words: [{ text: "ship", start: 0, end: 4 }], preparedUnits: 4 },
   "text-key edit witness",
 );
-cache.clear();
-cache.words(profile, "Same");
-cache.words(personal, "Same");
+cache.close();
+cache = new TaskSearchCache();
+await prepared(cache, profile, "Same");
+await prepared(cache, personal, "Same");
 assert.equal(cache.usage.entries, 2, "profile-isolation");
-cache.clear();
-let oldest = cache.words(profile, "word2");
-cache.clear();
-for (let i = 0; i < 4096; i++) {
-  const value = cache.words(profile, `word${i}`);
-  if (i === 2) oldest = value;
-}
+cache.close();
+cache = new TaskSearchCache();
+const retained: PreparedField[] = [];
+for (let i = 0; i < 4096; i++)
+  retained.push(await prepared(cache, profile, `word${i}`));
 assert.equal(cache.usage.entries, 4096, "entry-limit exact fill");
-const recent = cache.words(profile, "word0");
-cache.words(profile, "word1");
-cache.words(profile, "overflow");
+const recent = await prepared(cache, profile, "word0");
+await prepared(cache, profile, "word1");
+await prepared(cache, profile, "overflow");
 assert.equal(cache.usage.entries, 4096, "entry-limit after eviction");
-assert.equal(
-  cache.words(profile, "word0"),
-  recent,
-  "LRU refresh retains recently read entry",
+assert.equal(await prepared(cache, profile, "word0"), recent, "LRU recent hit");
+assert.notEqual(
+  await prepared(cache, profile, "word2"),
+  retained[2],
+  "LRU oldest",
 );
-assert.notEqual(cache.words(profile, "word2"), oldest, "LRU");
-cache.clear();
-const dense = "a ".repeat(50000);
-assert.deepEqual(
-  cache.words(profile, dense),
-  fieldWords(dense),
-  "oversize equality",
-);
-assert.deepEqual(
-  cache.usage,
-  { entries: 0, chargedBytes: 0 },
-  "oversize bypass",
-);
-for (let i = 0; i < 30; i++) {
-  cache.words(profile, `${i} ${"word ".repeat(10000)}`);
-  assert.ok(cache.usage.chargedBytes <= 16 * 1024 * 1024, "byte-limit");
-}
-assert.equal(cache.usage.entries, 14, "charged byte capacity");
-cache.clear();
+cache.close();
+cache = new TaskSearchCache();
 let state = 0x5ea2c001;
 const next = () => {
   state ^= state << 13;
@@ -83,7 +102,9 @@ const next = () => {
   state ^= state << 5;
   return state >>> 0;
 };
-const atoms = JSON.parse(process.env.CACHE_ATOMS ?? "[]");
+const atoms = Schema.decodeUnknownSync(Schema.Array(Schema.String))(
+  JSON.parse(process.env.CACHE_ATOMS ?? "[]"),
+);
 assert.ok(atoms.length > 20);
 const corpus = [
   "",
@@ -94,8 +115,9 @@ const corpus = [
   "👩🏽‍💻 𐐀 Straße ﬃ",
   "İı ςΣ ＡＢＣ",
   "a\u0345 ᾈ",
+  "ﷺ A!\n",
   "a".repeat(100000),
-  dense,
+  "a ".repeat(50000),
 ];
 for (let i = 0; i < 2048; i++)
   corpus.push(
@@ -105,10 +127,13 @@ for (let i = 0; i < 2048; i++)
     ).join(" / "),
   );
 for (const text of corpus) {
+  const [oracleField] = await Effect.runPromise(
+    prepareValues(fieldWords, [text]),
+  );
   assert.deepEqual(
-    cache.words(profile, text),
-    fieldWords(text),
-    `word-equality ${JSON.stringify(text.slice(0, 80))}`,
+    await prepared(cache, profile, text),
+    oracleField,
+    "same-source complete field and units",
   );
   for (const query of [
     "cafe",
@@ -119,47 +144,74 @@ for (const text of corpus) {
     "",
   ]) {
     const record = { ...task, title: text.slice(0, 1000), description: text };
-    const oracle = matchTaskSearch(record, parseTaskSearch(query));
-    assert.deepEqual(
-      matchTaskSearch(record, parseTaskSearch(query), (value) =>
-        cache.words(profile, value),
+    const read = cache.read(profile);
+    const oracle = await Effect.runPromise(
+      filterTaskRecordsEffect(
+        [record],
+        { text: query },
+        { projects: [], tags: [] },
       ),
-      oracle,
-      "full strings/spans",
+    );
+    const cached = await Effect.runPromise(
+      filterTaskRecordsEffect(
+        [record],
+        { text: query },
+        { projects: [], tags: [] },
+        {
+          ...taskSearchExecution(),
+          prepare: (value) => cache.words(read, value),
+        },
+      ),
+    );
+    assert.equal(
+      JSON.stringify(cached),
+      JSON.stringify(oracle),
+      "full ordered strings/spans",
     );
   }
 }
-const dir = mkdtempSync(join(tmpdir(), "todo-cache-properties-"));
+cache.close();
+const directory = mkdtempSync(join(tmpdir(), "todo-cache-properties-"));
 await Effect.runPromise(
   Effect.gen(function* () {
-    const store = yield* openStore({ path: join(dir, "scratch.db") });
+    const store = yield* openStore({ path: join(directory, "scratch.db") });
     try {
       yield* store.putProfile(work);
       yield* store.putProfile({ ...work, id: personal, name: "Personal" });
       yield* store.auth.setupOwner("cache proof passphrase");
       const session = yield* store.auth.signIn("cache proof passphrase");
       const request = { credential: session.credential, profile };
+      const commands = new TaskCommands(store);
       yield* store.append({ actor, profile, event: created });
-      const check = (label: string) =>
+      const check = (label: string, titles: readonly string[]) =>
         Effect.gen(function* () {
           const data = yield* store.auth.read(request);
           const visible = data.tasks.filter((t) => t.deleted_at === null);
+          assert.deepEqual(
+            visible.map((t) => t.title),
+            titles,
+            `${label} literal titles`,
+          );
           for (const text of ["write", "ship", "-draft", '"write the"', ""]) {
-            const cached = filterTaskRecords(
+            const cached = yield* commands.list(request, { text });
+            const oracle = yield* filterTaskRecordsEffect(
               visible,
               { text },
               data,
-              store.searchWords.words,
             );
-            const oracle = filterTaskRecords(visible, { text }, data);
             assert.equal(JSON.stringify(cached), JSON.stringify(oracle), label);
           }
         });
-      yield* check("create");
+      yield* check("create", ["Write the store"]);
+      assert.equal(
+        store.searchWords.usage.entries,
+        2,
+        "TaskCommands.list uses store memo",
+      );
       const saved = yield* store.snapshots.create("manual");
       const entry = yield* store.append({ actor, profile, event: edited });
       assert.equal(entry.outcome, "committed");
-      yield* check("edit");
+      yield* check("edit", ["Ship the store"]);
       const reverted = yield* store.revert({
         actor,
         profile,
@@ -167,9 +219,9 @@ await Effect.runPromise(
         occurred_at: time,
       });
       assert.equal(reverted.outcome, "committed");
-      yield* check("Revert returns old text");
+      yield* check("Revert returns old text", ["Write the store"]);
       yield* store.snapshots.restore(saved.id);
-      yield* check("restore reuses Version 1");
+      yield* check("restore reuses Version 1", ["Write the store"]);
       yield* store.append({
         actor,
         profile,
@@ -178,15 +230,15 @@ await Effect.runPromise(
           after: { ...edited.after, title: "Different Version 2" },
         },
       });
-      yield* check("different text reuses Version 2");
+      yield* check("different text reuses Version 2", ["Different Version 2"]);
       const rejected = yield* store.append({ actor, profile, event: edited });
       assert.equal(rejected.outcome, "rejected");
-      yield* check("rolled-back edit");
+      yield* check("rolled-back edit", ["Different Version 2"]);
       yield* store.takeSnapshot();
       yield* store.rebuild({ useSnapshot: true });
-      yield* check("checkpoint rebuild");
+      yield* check("checkpoint rebuild", ["Different Version 2"]);
       yield* store.rebuild();
-      yield* check("full rebuild");
+      yield* check("full rebuild", ["Different Version 2"]);
       const before = (yield* store.tasks())[0];
       assert.ok(before);
       const deleted = {
@@ -206,11 +258,20 @@ await Effect.runPromise(
           after: deleted,
         },
       });
-      yield* check("Delete");
-      store.searchWords.clear();
-      store.searchWords.words(profile, task.title);
-      store.searchWords.words(profile, before.title);
-      store.searchWords.words(personal, task.title);
+      yield* check("Delete", []);
+      store.searchWords.evictProfile(profile);
+      store.searchWords.evictProfile(personal);
+      const read = store.searchWords.read(profile);
+      yield* prepareValues(
+        (text) => store.searchWords.words(read, text),
+        [task.title, before.title],
+      );
+      const other = store.searchWords.read(personal);
+      yield* prepareValues(
+        (text) => store.searchWords.words(other, text),
+        [task.title],
+      );
+      const generation = store.searchWords.read(profile).generation;
       yield* store.append({
         actor,
         profile,
@@ -227,8 +288,17 @@ await Effect.runPromise(
         1,
         "purge-hygiene evicts all prior text only in its Profile",
       );
-      yield* check("Purge");
-      store.searchWords.words(profile, "Other text");
+      assert.equal(
+        store.searchWords.read(profile).generation,
+        generation + 1,
+        "Purge advances admission generation",
+      );
+      yield* check("Purge", []);
+      const fresh = store.searchWords.read(profile);
+      yield* prepareValues(
+        (text) => store.searchWords.words(fresh, text),
+        ["Other text"],
+      );
       const removed = yield* store.auth.deleteProfile({
         credential: session.credential,
         profile,
@@ -240,23 +310,35 @@ await Effect.runPromise(
         1,
         "profile-delete-hygiene",
       );
+      assert.equal(
+        store.searchWords.read(profile).generation,
+        fresh.generation + 1,
+        "Profile delete advances admission generation",
+      );
     } finally {
       yield* store.close();
       assert.deepEqual(
-        store.searchWords.usage,
-        { entries: 0, chargedBytes: 0 },
+        [
+          store.searchWords.usage.entries,
+          store.searchWords.usage.pending,
+          store.searchWords.usage.chargedBytes,
+          store.searchWords.usage.generationProfiles,
+          store.searchWords.usage.closed,
+        ],
+        [0, 0, 0, 0, true],
         "close-hygiene",
       );
     }
   }),
-).finally(() => rmSync(dir, { recursive: true, force: true }));
+).finally(() => rmSync(directory, { recursive: true, force: true }));
 writeFileSync(
   process.env.CACHE_WITNESS ?? join(tmpdir(), "cache-witness.json"),
   JSON.stringify({
     status: "PASS",
     seed: "0x5ea2c001",
     corpus: corpus.length,
+    queriesPerInput: 6,
     bounds: { entries: 4096, bytes: 16777216, generated: 2048 },
-    usage: cache.usage,
+    scope: "same-source yielding oracle and store lifecycle",
   }),
 );

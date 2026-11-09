@@ -30,25 +30,33 @@ instrumented = instrumented.replace(
   "if (entry) { counts.hits++;",
 );
 instrumented = instrumented.replace(
-  "const prepared = fieldWords(text);",
-  "counts.misses++; counts.folds++; const prepared = fieldWords(text);",
+  "const prepared = yield* fieldWords(text);",
+  "counts.misses++; counts.folds++; const prepared = yield* fieldWords(text);",
 );
 writeFileSync(path, instrumented);
 writeFileSync(
   join(evidence, "drive.ts"),
   `
 import assert from 'node:assert/strict';
-import { Schema } from 'effect';
+import { Effect, Schema } from 'effect';
 import { ProfileId } from './packages/domain/src/ids.ts';
 import { TaskSearchCache, counts } from './packages/domain/src/task-search-cache.ts';
-import { matchTaskSearch, parseTaskSearch } from './packages/domain/src/task-search.ts';
+import { matchTaskSearchSteps, parseTaskSearch, taskSearchExecution } from './packages/domain/src/task-search.ts';
+import { runTaskRecordSteps } from './packages/domain/src/task-filters.ts';
+import type { TaskRead } from './packages/domain/src/task-read.ts';
 const cache = new TaskSearchCache();
 const profile = Schema.decodeUnknownSync(ProfileId)('work');
+const read=cache.read(profile);
 for (const query of ['rent', 'cafe', '-absent']) {
  for(let i=0;i<1000;i++) {
   const task={title:'Rent café '+i,description:'Pay invoice tomorrow '+i};
   const clauses=parseTaskSearch(query);
-  assert.deepEqual(matchTaskSearch(task, clauses, text=>cache.words(profile,text)), matchTaskSearch(task,clauses));
+  const outcomes=[];
+  for(const memo of [true,false]){
+   function* steps():Generator<void,TaskRead[]>{outcomes.push(yield* matchTaskSearchSteps(task,clauses,memo?{...taskSearchExecution(),prepare:text=>cache.words(read,text)}:taskSearchExecution()));return [];}
+   await Effect.runPromise(runTaskRecordSteps(steps(),Effect.void));
+  }
+  assert.deepEqual(outcomes[0],outcomes[1]);
  }
 }
 assert.deepEqual(counts,{hits:4000,misses:2000,folds:2000});

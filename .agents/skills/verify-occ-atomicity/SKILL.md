@@ -248,3 +248,21 @@ No transition, invariant or fixture changed. The check exited 0 with 37,036 dist
 ## PERF and SEC base integration
 
 The merged covered source files are byte-identical to the reviewed Tag mapping at `d83d61863b95d2482ca9281a34d5db4494abffbb`. SEC changes search preparation, filtering and command reads outside these covered store files. The combined mapping retains the distinct-Tag fast path, duplicate rollback, transaction boundaries and both prior sensitivity receipts. The integration runs the unchanged atomicity command again; no source hash is advanced.
+
+## PERF-cache yielding memo mapping
+
+At product commit 41926044ff53b94c7ac0c1bb779c75143aa3c281 the only covered
+source change from d83d6186 is store-owned cache state and synchronous hygiene:
+close fences admission; Profile deletion revokes and drops its cache state;
+TaskPurged advances its cache generation and evicts matching historical text
+after applyEvent and before existing redaction. These steps neither await nor
+change SQLite values, before/next-Version validation, History insertion, projection
+application, writer lock, transaction commit or replay. Cache effects may survive
+a rollback as lost retention only. The atomicity model and crash boundaries are
+unchanged. The reviewed Tag projection and all other covered files are identical.
+
+The isolated exact-source sensitivity run at
+`.scratch/occ-integrated/docs/evidence/fv01/sensitivity-DfaqCl` rejected both
+real store defects at behavioral assertions (exit 1 each), restored byte-identical
+source and passed the same command (exit 0). Only then were the shared mapping
+hashes renewed. The final clean command runs on the actual worktree separately.
