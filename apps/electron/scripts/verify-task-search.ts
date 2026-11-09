@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { _electron, type ElectronApplication, expect } from "@playwright/test";
@@ -7,7 +7,7 @@ import { CONTRACT_ID } from "@todo/api";
 import { Task, TaskRead } from "@todo/domain";
 import { Schema } from "effect";
 import { setAppearance } from "./appearance.ts";
-import { selectProfile } from "./profile-menu.ts";
+import { openProfileDeletion, selectProfile } from "./profile-menu.ts";
 
 const scratch = process.argv[2];
 const evidence = process.argv[3];
@@ -950,41 +950,143 @@ try {
       title,
     });
   }
+  const catalogProfile = "catalog-r1";
+  const initialized = spawnSync(
+    join(scratch, "todo"),
+    ["--profile", catalogProfile, "--format", "json", "init"],
+    { env, encoding: "utf8" },
+  );
+  receipts.push({
+    cli: ["--profile", catalogProfile, "init"],
+    exit: initialized.status,
+    stdout: initialized.stdout,
+    stderr: initialized.stderr,
+  });
+  expect(initialized.status).toBe(0);
+  await api(`/profiles/${catalogProfile}/tasks`, "POST", {
+    title: "Renovar catalog",
+    project_name: "Catalog original",
+    tag_names: ["catalog-original"],
+  });
+  await navigate("Tasks", false);
+  await showing("reno");
+  await selectProfile(page, catalogProfile);
+  await field.fill("reno");
+  await showing("reno");
+  await expect
+    .poll(() => {
+      const path = join(scratch, "electron", "operations.json");
+      if (!existsSync(path)) return 0;
+      const operations = Schema.decodeUnknownSync(
+        Schema.Array(
+          Schema.Struct({ profile: Schema.String, kind: Schema.String }),
+        ),
+      )(JSON.parse(readFileSync(path, "utf8")));
+      return operations.filter(
+        (entry) =>
+          entry.profile === catalogProfile && entry.kind === "TaskCreated",
+      ).length;
+    })
+    .toBe(1);
+  await expect
+    .poll(
+      () =>
+        filteredReplies.filter(
+          (reply) =>
+            reply.text === "reno" &&
+            reply.tasks.some((task) => task.profile_id === catalogProfile),
+        ).length,
+    )
+    .toBeGreaterThanOrEqual(2);
+  await showing("reno");
+  const catalogCount = page
+    .getByRole("navigation", { name: "Planning views" })
+    .getByRole("button", { name: /^Tasks/ })
+    .locator(".nav-count");
+  await expect(catalogCount).toHaveText("1");
   for (const [index, failing] of [false, true].entries()) {
-    await field.fill("reno");
-    await showing("reno");
-    const oldFull = arm("reno", failing);
-    const counts = await page
-      .getByRole("navigation", { name: "Planning views" })
-      .allTextContents();
-    const projectName = `Discarded catalog ${index}`;
-    cli("add", `Catalog sentinel ${index}`, "--project", projectName);
+    const currentText = index === 0 ? "reno" : "renov";
+    const nextText = index === 0 ? "renov" : "reno";
+    const oldFull = arm(currentText, failing, catalogProfile);
+    const projectName = `Updated catalog ${index}`;
+    const tagName = `updated-catalog-${index}`;
+    await api(`/profiles/${catalogProfile}/tasks`, "POST", {
+      title: `Catalog sentinel ${index}`,
+      project_name: projectName,
+      tag_names: [tagName],
+    });
     await expect.poll(() => oldFull.reached).toBe(true);
-    await field.fill("cancion");
-    await showing("cancion");
-    expect((await titles()).toSorted()).toEqual(
-      ["😀 Canción de cuna", "Search receipt"].toSorted(),
-    );
-    oldFull.release.resolve();
-    await page.waitForTimeout(100);
-    await showing("cancion");
-    expect(
-      await page
-        .getByRole("navigation", { name: "Planning views" })
-        .allTextContents(),
-    ).toEqual(counts);
+    await field.fill(nextText);
+    await showing(nextText);
+    expect(await titles()).toEqual(["Renovar catalog"]);
+    await expect(catalogCount).toHaveText(index === 0 ? "2" : "3");
     await expect(
       page
         .getByLabel("Filter by Project")
         .locator("option")
         .filter({ hasText: projectName }),
-    ).toHaveCount(0);
+    ).toHaveCount(1);
+    await expect(
+      page
+        .getByLabel("Filter by Tag")
+        .locator("option")
+        .filter({ hasText: tagName }),
+    ).toHaveCount(1);
+    await openProfileDeletion(page, catalogProfile);
+    await expect(
+      page.getByRole("dialog", { name: 'Delete "catalog-r1"?' }),
+    ).toContainText(index === 0 ? /2 tasks/i : /3 tasks/i);
+    await page
+      .getByRole("dialog", { name: 'Delete "catalog-r1"?' })
+      .getByRole("button", { name: "Cancel", exact: true })
+      .click();
+    oldFull.release.resolve();
+    await page.waitForTimeout(100);
+    await showing(nextText);
+    await expect(catalogCount).toHaveText(index === 0 ? "2" : "3");
+    await expect(
+      page
+        .getByLabel("Filter by Project")
+        .locator("option")
+        .filter({ hasText: projectName }),
+    ).toHaveCount(1);
     await expect(page.getByLabel("Search failed")).toHaveCount(0);
     checks.push({
       fullSupersededByQuery: failing ? "obsolete error" : "obsolete success",
-      catalogRetained: true,
+      owedCatalogRefreshed: true,
+      taskCount: index === 0 ? 2 : 3,
+      projectName,
+      tagName,
     });
   }
+  const failedFull = arm("reno", true, catalogProfile);
+  await api(`/profiles/${catalogProfile}/tasks`, "POST", {
+    title: "Catalog sentinel 2",
+    project_name: "Updated catalog 2",
+    tag_names: ["updated-catalog-2"],
+  });
+  await expect.poll(() => failedFull.reached).toBe(true);
+  failedFull.release.resolve();
+  await expect(pane).toHaveAttribute("data-search-phase", "Error");
+  await expect(catalogCount).toHaveText("3");
+  await field.fill("renov");
+  await showing("renov");
+  await expect(catalogCount).toHaveText("4");
+  await expect(
+    page
+      .getByLabel("Filter by Project")
+      .locator("option")
+      .filter({ hasText: "Updated catalog 2" }),
+  ).toHaveCount(1);
+  await expect(
+    page
+      .getByLabel("Filter by Tag")
+      .locator("option")
+      .filter({ hasText: "updated-catalog-2" }),
+  ).toHaveCount(1);
+  expect(await titles()).toEqual(["Renovar catalog"]);
+  checks.push({ queryAfterFailedFullRefreshesCatalog: true, taskCount: 4 });
+  await selectProfile(page, "work");
   await field.fill("reno");
   await showing("reno");
   await page.getByRole("button", { name: "More filters", exact: true }).click();

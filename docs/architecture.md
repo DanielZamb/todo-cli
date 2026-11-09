@@ -122,6 +122,10 @@ or FTS index is needed. See [ADR-0014](adr/0014-task-search.md).
 Query changes read the filtered Task list and the current planning view concurrently.
 Full refreshes also load the unfiltered catalog, discovery and all view counts.
 Both clients guard all publication after every required read finishes.
+Full requests mark the catalog owed before reads. A query promotes to full while
+that obligation remains, including after a failed or superseded full refresh.
+Only a guarded full publication clears it. Startup, accepted writes, current-Profile
+SSE/reconnect, selection resets and Snapshot reload keep full catalog coverage.
 Each client retains one applied response snapshot while requesting a newer
 identity. Search text survives Profile and view switches. Failed reads offer
 Retry and recover on current-Profile SSE reconnection or operations, without

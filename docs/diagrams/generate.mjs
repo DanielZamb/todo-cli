@@ -1026,20 +1026,20 @@ frame("perf-refresh", "PERF: minimal client refresh", 6400, 16000, 3000, (x, y) 
   heading("pr", x + 50, y + 32, "TodoModel.refresh / renderer refresh: request scope", "Full/query split. Existing requestedIdentity, appliedSearchSnapshot, appliedSearch and canPublishSearch remain authoritative.");
   card("pr-input", x + 50, y + 220, 900, { title: "setSearchText / changeSearch / filter Apply", body: "invalidate refreshGeneration immediately\ncapture full requestedIdentity after debounce\nretain rows + highlights while Requesting", h: 150 });
   card("pr-query", x + 1950, y + 220, 900, { title: "Query-only refresh / search IPC", body: "taskRequest search / readSearchRows\ntasks.list with current text and filters\nreads.view only for current planning view\nasync let / Effect.all: await both", h: 150 });
-  card("pr-full", x + 50, y + 850, 1000, { title: "Full refresh / startup, SSE, write, reset", body: "tasks + matching_tasks; Profiles/Projects/Tags\nfour reads.view counts, concurrently\ncatalogReady / catalogRef absent: Retry uses full", h: 150 });
+  card("pr-full", x + 50, y + 850, 1000, { title: "Full refresh / catalog still owed", body: "catalogStale / catalogOwedRef set before reads\ntasks, matching_tasks, discovery, four views\ninput, failed or obsolete full keeps obligation\nonly guarded full publication clears it", h: 175 });
   card("pr-guard", x + 1950, y + 850, 900, { title: "canPublishSearch / activeQuery guards", body: "latest request + generation + full identity\naccept all awaited reads or guarded Error\nobsolete success/error changes no visible state", h: 150 });
-  card("pr-publish", x + 800, y + 1450, 1400, { title: "appliedSearchSnapshot / appliedSearch", body: "publish response strings + spans + planning membership together\nquery keeps catalog; full refresh updates discovery and counts\nError retains rows; Retry or current-Profile SSE recovers", fill: c.accent, h: 150 });
-  arrow("pr-request", "pr-input", "pr-query", { label: "query change / catalog ready", from: "right", to: "left", labelFont: SANS });
+  card("pr-publish", x + 800, y + 1450, 1400, { title: "appliedSearchSnapshot / appliedSearch", body: "publish response strings + spans + planning membership together\nquery-only keeps catalog; full publishes owed names and counts\nError retains rows; Retry or current-Profile SSE recovers", fill: c.accent, h: 150 });
+  arrow("pr-request", "pr-input", "pr-query", { label: "catalog ready; no full owed", from: "right", to: "left", labelFont: SANS });
   arrow("pr-queryready", "pr-query", "pr-guard", { label: "1 request for All tasks; 2 for planning", from: "bottom", to: "top", labelFont: SANS });
   arrow("pr-fullready", "pr-full", "pr-guard", { label: "all full-refresh reads settle", from: "right", to: "left", labelFont: SANS });
-  arrow("pr-fallback", "pr-input", "pr-full", { label: "catalog absent", from: "bottom", to: "top", labelFont: SANS });
+  arrow("pr-fallback", "pr-input", "pr-full", { label: "catalog absent or still owed", from: "bottom", to: "top", labelFont: SANS });
   arrow("pr-current", "pr-guard", "pr-publish", { label: "current response only", from: "bottom", to: "right", labelFont: SANS });
   marker("pr-m1", x + 1910, y + 200, 1);
   marker("pr-m2", x + 1910, y + 830, 2);
   marker("pr-m3", x + 760, y + 1430, 3);
   notes("pr-notes", x + 50, y + 1780, 2850, "Numbered notes", [
     "Electron already runs nine reads concurrently. Swift uses async let for full and query reads. Count real HTTP calls through both clients.",
-    "TaskSearch.tla guards every response, including full/query races, ABA and late errors. Only one applied snapshot owns rows and spans.",
+    "TaskSearch.tla guards full/query races and catalogOwed. A query superseding SSE or a write must still publish the owed full catalog.",
     "Keep offline unfiltered cache, drafts and dialog rollback. Compact-first headless drives and offscreen captures respect native HOLD.",
   ]);
 });

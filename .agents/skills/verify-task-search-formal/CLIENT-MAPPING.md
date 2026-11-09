@@ -30,22 +30,32 @@ and does not evaluate the query again.
 `catalogReady` records a successful full publication for the current selection.
 `issuedFull` records the scope of the latest pending request. `Launch` uses full
 scope for startup and SSE, and promotes query scope to full when no catalog has
-loaded. Retry, debounce and dialog Apply otherwise use query scope. Reset clears
-catalog readiness and invalidates the scope token. An input invalidation or
-completed current response releases that token.
+loaded or `catalogOwed` remains set. Full requests set that obligation before
+awaiting reads. Input, failed full responses and obsolete responses preserve it.
+Only a current full publication clears it. Retry, debounce and dialog Apply use
+query scope only when the catalog is ready and no full publication is owed.
+Reset clears readiness, sets the obligation and invalidates the scope token.
+An input invalidation or completed current response releases that token.
 
 The model keeps scope only for the latest token. An obsolete response's own
 scope is no longer observable because `Current` rejects it before any publication.
 Pending obsolete identities remain explicit, including ABA permutations. The
 model does not distinguish individual discovery fields or catalog row values.
-Compiled client tests assert that discarded full successes and errors change
-neither counts nor discovery, and that query responses retain unfiltered Tasks.
+Compiled client tests delay full successes and errors, then type a query. Its
+replacement request must fetch a full catalog and publish literal new Tasks,
+Project/Tag names and counts before the old response is released. Releasing the
+old response cannot overwrite that catalog. A current full failure followed by
+a query must also fetch the owed catalog. Unfiltered rows keep absent spans.
 
 Electron's `taskRequest` search branch fetches `tasks.list` and only the current
 `reads.view` through `Effect.all`. Its list branch still loads the whole catalog
 and all counts. `refresh` captures `catalogRef`, then installs the merged query
-snapshot only after the complete identity and generation guard. Only a full
-response updates `unfilteredSearch` or restores the initial draft.
+snapshot only after the complete identity and generation guard.
+`catalogOwedRef` starts true, is set on full requests and resets, and clears only
+inside guarded full publication. Connection-ready notices request a full
+refresh. The same synchronous publication updates `catalogRef` so an immediate
+query sees the published catalog. Only a full response updates
+`unfilteredSearch` or restores the initial draft.
 
 Swift's `readSearchCatalog` uses `async let` for the unfiltered Tasks, discovery
 and all four planning views. `refresh(generation:scope:)` concurrently awaits
@@ -53,12 +63,26 @@ that catalog and any filtered Task list, or just the filtered Task list and the
 current planning view. Every side effect follows `canPublishSearch`. Query
 publication replaces the applied snapshot and current planning membership while
 retaining `tasks`, discovery and `viewCounts`. Full publication sets catalog
-readiness in that same synchronous MainActor section.
+readiness and clears `catalogStale` in that same synchronous MainActor section.
+`catalogStale` starts true and is set synchronously on full requests, accepted
+writes, SSE/reconnect, reload and selection/session resets. It survives every
+superseded or failed full request.
 
 `QueryHasCatalog` rejects a query launch without a loaded catalog. The new
 `BrokenFallback` control must violate it after omitting bootstrap promotion.
 `OneSnapshot`, `LatestPublication`, `ShowingIsCurrent`, `ExactStale` and conditional
 `Convergence` retain their existing meanings and bounds.
+
+`NoOwedQueryPublication` observes the pre-publication obligation and request
+scope in `catalogPublicationOK`; a query-only publication while owed violates
+this invariant. `CatalogOwedUntilPublish` observes the request transition
+and legal full clear in `catalogOwedOK`. This separate check matters: a faulty
+early clear must not hide the obligation from a predicate that only reads the
+flag at publication. Neither observation forces the publication guard or flag
+to be correct. `BrokenCatalogOwed` clears the flag on request and must fail
+`CatalogOwedUntilPublish` with exit12. `BrokenCatalogPromotion` omits owed-scope
+promotion and must fail `NoOwedQueryPublication` with exit12. Concrete metadata
+values remain outside the model and are checked by both compiled drives.
 
 ## Production evidence
 

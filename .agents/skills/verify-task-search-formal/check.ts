@@ -96,6 +96,8 @@ const controls = [
   "BrokenStale",
   "BrokenProgress",
   "BrokenFallback",
+  "BrokenCatalogOwed",
+  "BrokenCatalogPromotion",
 ];
 function config(bounds: Bounds, live: boolean, broken = "", semanticOnly = false) {
   return [
@@ -116,8 +118,8 @@ function config(bounds: Bounds, live: boolean, broken = "", semanticOnly = false
     ),
     `SPECIFICATION ${live ? "FairSpec" : "Spec"}`,
     semanticOnly
-      ? "INVARIANTS TypeOK OneSnapshot ShowingIsCurrent ExactStale QueryHasCatalog"
-      : "INVARIANTS TypeOK OneSnapshot LatestPublication ShowingIsCurrent ExactStale QueryHasCatalog",
+      ? "INVARIANTS TypeOK OneSnapshot ShowingIsCurrent ExactStale QueryHasCatalog CatalogOwedUntilPublish NoOwedQueryPublication"
+      : "INVARIANTS TypeOK OneSnapshot LatestPublication ShowingIsCurrent ExactStale QueryHasCatalog CatalogOwedUntilPublish NoOwedQueryPublication",
     ...(live ? ["PROPERTY Convergence"] : []),
     "CHECK_DEADLOCK FALSE",
     "",
@@ -312,6 +314,20 @@ try {
     false,
     "BrokenFallback",
     "Invariant QueryHasCatalog is violated",
+  );
+  await tlc(
+    "broken-catalog-clear",
+    small,
+    false,
+    "BrokenCatalogOwed",
+    "Invariant CatalogOwedUntilPublish is violated",
+  );
+  await tlc(
+    "broken-catalog-promotion",
+    small,
+    false,
+    "BrokenCatalogPromotion",
+    "Invariant NoOwedQueryPublication is violated",
   );
   await tlc("restored", small, true, "", "");
   const typecheck = await execute("typecheck", "bun", [

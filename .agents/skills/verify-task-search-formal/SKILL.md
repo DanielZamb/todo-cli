@@ -60,6 +60,8 @@ The normal command checks these properties separately:
 | `ShowingIsCurrent` | Showing presents a response for an identity other than the current request. This invariant reads only phase and snapshot identity. |
 | `ExactStale` | The UI presents old rows as current, or keeps current rows dimmed. `stale` must equal the complete identity inequality. |
 | `Convergence` | Stable input remains stale forever despite fair debounce, recovery, and successful replies. |
+| `CatalogOwedUntilPublish` | Requesting a replacement loses the full refresh required after a write, SSE event or reconnect. |
+| `NoOwedQueryPublication` | Fresh matching rows publish with a catalog whose required update was discarded. |
 
 `LatestPublication` uses `publicationOK` as an observation of the pre-response
 guard. It does not make that guard true. Both response branches compute the
@@ -201,13 +203,24 @@ session skill discovery is not proven by that filesystem check.
 
 The model now includes `catalogReady` and the latest pending `issuedFull` token.
 Startup and current-Profile SSE request full scope. Query changes, dialog Apply
-and Retry promote to full until a catalog has successfully published. A current
-query success retains the catalog. Reset clears readiness. Obsolete success and
-error branches publish no catalog side effects. The source mapping describes
-why obsolete request scope can be forgotten after invalidation.
+and Retry promote to full until a catalog has successfully published and no
+catalog update is owed. `catalogOwed` is set on full requests, survives input,
+failures and obsolete responses, and clears only on guarded full publication.
+A current query-only success retains the catalog. Reset clears readiness and
+sets the obligation. Obsolete success and error branches publish no catalog
+side effects. The source mapping describes why obsolete request scope can be
+forgotten while the full-publication obligation must survive invalidation.
 
 The command also checks `QueryHasCatalog`. Its `BrokenFallback` control removes
 bootstrap promotion and must fail that invariant with TLC exit 12. The existing
 five search safety and convergence properties and their sensitivity controls
 remain required. Full/query metadata values, offline cache contents and literal
 Task strings still require the compiled client recipes.
+
+`CatalogOwedUntilPublish` checks that a request cannot erase an owed full
+publication. Its `BrokenCatalogOwed` control clears the flag at request time and
+must fail with TLC exit12. `NoOwedQueryPublication` checks that publication cannot
+reuse an owed catalog. `BrokenCatalogPromotion` disables owed-scope promotion
+and must fail it with exit12. Both use independent transition observations,
+described in `CLIENT-MAPPING.md`, so clearing the flag cannot conceal the fault.
+Both controls and the restored run are part of the one command.

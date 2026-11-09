@@ -109,8 +109,13 @@ pass every sample. The recorder keeps route lifetimes, failures, cancellation,
 per-interval one-minute load and artifact hashes. Candidate query counts are
 one for All tasks and two for planning when `TODO_REFRESH_EXPECT_MINIMAL=1`.
 Use `TODO_REFRESH_DELAY_MS=200` only as a separately labelled concurrency proof.
-The production state suite also rejects catalog publication from discarded full
-successes and errors, then confirms a current full reload updates it.
+The production state suite delays full successes and errors after a write, then
+types a query. With `catalogStale` set, that query must fetch and publish the full
+catalog's literal Task/Project/Tag names, discovery counts and unfiltered rows
+before the old reply is released. A failed current full followed by a query
+also retains that obligation. Only guarded full publication clears the flag.
+The separate full/reconnect/write request counts include these owed refreshes;
+steady-state query counts remain1/2.
 
 `verify-design.py` accepts the same `TODO_SWIFT_BUILD_PATH` override as the state
 helper. The directory must remain under this checkout's `apps/macos`.

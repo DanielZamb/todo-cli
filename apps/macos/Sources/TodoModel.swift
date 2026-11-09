@@ -52,6 +52,7 @@ final class TodoModel {
     var searchPhase = TaskSearchPhase.idle
     var appliedSearchSnapshot: TaskSearchSnapshot?
     private var catalogReady = false
+    private var catalogStale = true
     var searchError: String?
     @ObservationIgnored private var searchDebounce: Task<Void, Never>?
     var requestedIdentity: TaskSearchIdentity {
@@ -244,6 +245,7 @@ final class TodoModel {
             tasks = []
             appliedSearchSnapshot = nil
             catalogReady = false
+            catalogStale = true
             searchError = nil
             searchPhase = .idle
             editor = nil
@@ -320,6 +322,7 @@ final class TodoModel {
         tasks = []
         appliedSearchSnapshot = nil
         catalogReady = false
+        catalogStale = true
         searchError = nil
         searchPhase = .idle
         taskLoadError = nil
@@ -340,6 +343,7 @@ final class TodoModel {
     func connect() {
         disconnect()
         guard signedIn else { return }
+        catalogStale = true
         connection = .connecting
         loading = true
         lastSequence = UserDefaults.standard.string(forKey: cursorKey) ?? UserDefaults.standard.string(forKey: restoreCursorKey)
@@ -356,13 +360,14 @@ final class TodoModel {
 
     private func refresh(generation run: Int, scope: TaskSearchRefreshScope = .full) async -> TaskSearchRefreshOutcome {
         guard outdatedServerBuild == nil, generation == run, !Task.isCancelled else { return .superseded }
+        if scope == .full { catalogStale = true }
         searchDebounce?.cancel()
         refreshGeneration += 1
         let request = refreshGeneration
         let identity = requestedIdentity
         searchPhase = .requesting
         do {
-            let full = scope == .full || !catalogReady
+            let full = scope == .full || catalogStale || !catalogReady
             let catalog: TaskSearchCatalog?
             let filteredResponse: [TaskSnapshot]
             let currentPlanning: PlanningResult?
@@ -400,6 +405,7 @@ final class TodoModel {
                 viewCounts = catalog.views.mapValues { $0.groups.flatMap(\.tasks).filter { $0.status == "open" }.count }
                 viewCounts["all"] = catalog.tasks.filter { $0.status == "open" }.count
                 catalogReady = true
+                catalogStale = false
             }
             loading = false
             taskLoadError = nil
@@ -510,6 +516,7 @@ final class TodoModel {
                     for event in try parser.append(chunk) {
                         guard generation == run, !Task.isCancelled else { return }
                         if event.name == "ready" {
+                            catalogStale = true
                             _ = await refresh(generation: run)
                             guard generation == run, !Task.isCancelled else { return }
                             connection = .live
@@ -531,6 +538,7 @@ final class TodoModel {
                             selectedProject = nil; selectedTag = nil
                             appliedSearchSnapshot = nil
                             catalogReady = false
+                            catalogStale = true
                             searchError = nil
                             taskFilters = .init(); matchingTaskIDs = nil
                             requestedTaskFilters = .init()
@@ -561,6 +569,7 @@ final class TodoModel {
                                 try await leaveDeletedProfile(named: operation.event.profile?.name)
                                 return
                             }
+                            catalogStale = true
                             _ = await refresh(generation: run)
                             guard generation == run, !Task.isCancelled else { return }
                             if operation.event.kind == "ReminderFired" {
@@ -583,6 +592,7 @@ final class TodoModel {
                     do { try await leaveDeletedProfile(); if generation != run { return } } catch { message = describe(error) }
                 }
                 connection = .offline
+                catalogStale = true
                 loading = false
                 message = describe(error)
                 attempt += 1
@@ -1013,6 +1023,7 @@ final class TodoModel {
     }
 
     func refreshAfterWrite(_ accepted: String) async {
+        catalogStale = true
         switch await refresh(generation: generation) {
         case .applied:
             message = nil
@@ -1033,6 +1044,7 @@ final class TodoModel {
         planning = nil
         appliedSearchSnapshot = nil
         catalogReady = false
+        catalogStale = true
         searchError = nil
         taskLoadError = nil
         loading = true
@@ -1182,6 +1194,7 @@ final class TodoModel {
         tasks = []
         appliedSearchSnapshot = nil
         catalogReady = false
+        catalogStale = true
         searchError = nil
         searchPhase = .idle
         message = "Your Session ended. Sign in again."

@@ -318,6 +318,7 @@ function App() {
   );
   const catalog = appliedSearch?.catalog ?? null;
   const catalogRef = useRef(catalog);
+  const catalogOwedRef = useRef(true);
   catalogRef.current = catalog;
   const unfilteredSearch = useRef<AppliedSearch | null>(null);
   const tasks = catalog?.tasks ?? [];
@@ -441,6 +442,7 @@ function App() {
     setWriteIntent(null);
     setAppliedSearch(null);
     catalogRef.current = null;
+    catalogOwedRef.current = true;
     unfilteredSearch.current = null;
     setSearchPhase("Idle");
     clearTimeout(debounce.current);
@@ -473,6 +475,7 @@ function App() {
     setConnection("offline");
     setAppliedSearch(null);
     catalogRef.current = null;
+    catalogOwedRef.current = true;
     unfilteredSearch.current = null;
     setSearchPhase("Idle");
     clearTimeout(debounce.current);
@@ -554,6 +557,7 @@ function App() {
         activeQuery.current.tag !== tag
       )
         return;
+      if (scope === "full") catalogOwedRef.current = true;
       clearTimeout(debounce.current);
       const identity: SearchIdentity = {
         profile,
@@ -572,7 +576,10 @@ function App() {
       setPhase("Requesting");
       const retained = catalogRef.current;
       const result = await request({
-        _tag: scope === "query" && retained ? "search" : "list",
+        _tag:
+          scope === "query" && retained && !catalogOwedRef.current
+            ? "search"
+            : "list",
         profile,
         view,
         filters: {
@@ -594,6 +601,7 @@ function App() {
             : null;
       if (next) {
         setLoadError("");
+        catalogRef.current = next;
         setAppliedSearch({ catalog: next, appliedIdentity: identity });
         if (result._tag === "tasks") {
           for (const entry of result.profiles)
@@ -608,6 +616,7 @@ function App() {
               text: "",
             },
           };
+          catalogOwedRef.current = false;
         }
         appliedFiltersRef.current = identity.filters;
         setAdvancedFilters(identity.filters);
@@ -795,6 +804,7 @@ function App() {
         refreshGeneration.current++;
         setAppliedSearch(null);
         catalogRef.current = null;
+        catalogOwedRef.current = true;
         unfilteredSearch.current = null;
         setSearchPhase("Idle");
         clearTimeout(debounce.current);
@@ -836,8 +846,7 @@ function App() {
         active.current === profile
       ) {
         setConnection(notice.state);
-        if (notice.state === "connected" && searchPhaseRef.current === "Error")
-          void refreshRef.current();
+        if (notice.state === "connected") void refreshRef.current();
         if (notice.state === "offline")
           void request({ _tag: "profiles" }).then((result) => {
             if (
@@ -1270,6 +1279,7 @@ function App() {
     setAppliedSearch(null);
     setPhase("Idle");
     catalogRef.current = null;
+    catalogOwedRef.current = true;
     unfilteredSearch.current = null;
     setEditor(null);
     setHistory(null);

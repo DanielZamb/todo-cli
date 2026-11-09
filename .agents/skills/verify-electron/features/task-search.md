@@ -132,7 +132,12 @@ timing run. Compile before acquiring `/tmp/todo-perf-measure.lock`, alternate
 five frozen baseline/candidate inputs under that same slot, and record the real
 process exits. No build lock may be acquired inside the measurement slot.
 
-The full search drive additionally holds full-refresh successes and errors,
-issues a newer query, then releases the old response. Discovery and planning
-counts must retain their prior catalog values. Existing races, offline Clear,
-filter rollback, drafts and SSE recovery remain required.
+The full search drive drains initial SSE replay, then holds full-refresh
+successes and errors after a scratch write and issues a newer query. That query
+must promote to full while `catalogOwedRef` is set and publish literal new names
+and counts before the old response is released. Releasing the old response
+cannot overwrite them. A failed current full refresh followed by a query must
+also fetch the catalog. The flag clears only after guarded full publication.
+Steady-state query counts remain1/2; write, SSE and reconnect full reads are
+recorded separately. Existing races, offline Clear, filter rollback, drafts and
+SSE recovery remain required.
