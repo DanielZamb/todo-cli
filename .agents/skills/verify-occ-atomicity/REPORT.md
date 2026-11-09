@@ -113,3 +113,14 @@ A close next target is preserving the caller's expected Version through import
 adoption, especially when a Task gains an external id while another client
 edits it. The current skill protects the shared storage transaction; it does
 not prove that callers pass the Version the owner approved.
+
+## PERF-tags renewal
+
+Reviewed product `07550ecd35890094625711a5269b8d7c6eb476dc` and inherited source
+drift from the previous confirmed commit. The new link comparison is private
+within `Apply`; the Task and Version writes and commit order are unchanged.
+The model remains unchanged. See the PERF-tags mapping section in `SKILL.md`
+for the reviewed inherited guards and the separate concrete Tag coverage.
+Sensitivity caught both real-code mutations at assertions, exit 1 each, then
+the restored one command passed, exit 0. Local evidence:
+`docs/evidence/fv01/sensitivity-Km03fK/`.

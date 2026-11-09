@@ -191,3 +191,31 @@ unchanged source within these bounds. [REPORT.md](REPORT.md) records the run.
 At product commit `ed4e2423d696d0321bb0e19674bba1865bd2541d`, only `attachments.ts` changed among the covered files. Its URI validator accepts absolute URIs, including HTTP user information, and its new input and report schemas describe Attachment groups. The store transaction, before-value comparison, Version check, projection, event schemas and replay are byte-identical to the earlier mapping. The model already treats the whole resolved Task payload as content. URI locations therefore fit the same abstract content values without changing a transition or invariant.
 
 Batch groups and import adoption compose existing commands within the existing immediate transaction. The model still excludes command-input handoff and multiple operations in an outer transaction. The compiled CLI01 drive, import tests and Attachment verification cover those behaviors separately.
+
+## PERF-tags mapping review
+
+Product commit `07550ecd35890094625711a5269b8d7c6eb476dc` changes only
+`putTask` in the modeled production path. Its SELECT reads actual link rows
+inside the existing immediate transaction. Equal Tag sets skip only link
+DELETE and INSERT. The Task payload statement still precedes the separate
+Version statement, so `Apply`, `WriteVersion`, `Commit` and every crash boundary
+remain in the same order. The abstract no-Tag fixture still describes both
+writes; the concrete Tag proof in `verify-op-log` covers link branches, payload
+order, duplicate collapse, rebuild, rollback, Move, Delete and Revert.
+
+The inherited mapping had drifted before this unit. Inspection of the delta
+from `ed4e2423` through parent `8c7c7b10` found bounded rejection inputs and
+result-list limits in `store.ts`, auth-only event alternatives in `events.ts`,
+and Attachment input limits in `attachments.ts`. The existing small concrete
+fixtures remain valid, before-value comparison and next-Version validation
+remain mandatory, and the transaction and append order are unchanged. These
+new guards can reject other inputs before `Record`, without adding a durable
+state. Entities and ids are unchanged. The model still excludes input limits,
+auth and multi-Task composition as stated above.
+
+Both real-code sensitivity variants failed at behavioral assertions with
+exit 1; the restored checker passed with exit 0. The reviewed production source
+hashes and `confirmedCommit` were then renewed. Local evidence is
+`docs/evidence/fv01/sensitivity-Km03fK/` and
+`docs/evidence/perf-tags/sensitivity-reviewed.log`. The one-command clean
+recheck and the full worker report record the final evidence location.
