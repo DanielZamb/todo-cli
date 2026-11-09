@@ -146,6 +146,27 @@ export const taskRequest = (
             payload: request.payload,
           }),
         };
+      case "directory":
+        return {
+          _tag: "directory",
+          profiles: yield* http.reads.profiles({
+            query: { include_projects: "true" },
+          }),
+        };
+      case "lookup":
+        return {
+          _tag: "lookup",
+          matches: yield* http.reads.lookup({
+            query: { prefix: request.prefix },
+          }),
+        };
+      case "showTask":
+        return {
+          _tag: "task",
+          task: yield* http.tasks.show({
+            params: { profile: request.profile, task: request.task },
+          }),
+        };
       case "profiles":
         return {
           _tag: "signedIn",

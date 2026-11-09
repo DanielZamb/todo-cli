@@ -224,3 +224,70 @@
     scroll-behavior: auto;
   }
 }
+
+.discovery-dialog {
+  width: min(32rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100dvh - 2rem);
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+  gap: 0.75rem;
+}
+.discovery-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.discovery-form {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.discovery-form > [data-slot="field"] {
+  flex: 1;
+  min-width: 0;
+}
+.discovery-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.discovery-profile,
+.discovery-match {
+  display: grid;
+  min-width: 0;
+  gap: 0.5rem;
+  padding-bottom: 1rem;
+}
+.discovery-dialog code {
+  overflow-wrap: anywhere;
+  white-space: normal;
+  user-select: text;
+}
+.discovery-match .task-id-copy {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.discovery-match .task-id-value {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+.discovery-match > button {
+  justify-self: start;
+  max-width: 100%;
+  height: auto;
+  min-height: 2rem;
+  white-space: normal;
+}
+
+.discovery-form > button {
+  margin-top: 1.75rem;
+}
+.discovery-profile-id {
+  margin: 0;
+  font-size: 0.75rem;
+}
+.discovery-profile p,
+.discovery-match p {
+  margin: 0;
+}

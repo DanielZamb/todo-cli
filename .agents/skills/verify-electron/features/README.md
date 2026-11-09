@@ -27,3 +27,4 @@ Version guardrails are covered in [sessions](<sessions.md>).
 
 [Edit several Tasks](batch-edit.md) covers per-Task expected Versions, preview, independent apply results and Conflict reload.
 - [Task search and id prefix](task-search.md)
+- [Profiles, Projects and Find Task by id](discovery.md) covers authorized read-only discovery, Copy, explicit Show, request epochs and the full production-renderer proof during native HOLD.

@@ -1,0 +1,551 @@
+import assert from "node:assert/strict";
+import { type ChildProcess, spawn, spawnSync } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { chromium, expect } from "@playwright/test";
+import { TodoApi } from "@todo/api";
+import { Effect, Schema } from "effect";
+import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/http";
+import { HttpApiClient } from "effect/http-api";
+import { build } from "vite";
+import { errorReply } from "../src/error-reply.ts";
+import { Reply, Request } from "../src/protocol.ts";
+import { taskRequest } from "../src/task-client.ts";
+
+const root = resolve(import.meta.dirname, "../../..");
+const evidence = resolve(process.argv[2] ?? "");
+assert.ok(process.argv[2] && !existsSync(evidence));
+mkdirSync(evidence, { recursive: true });
+const scratch = mkdtempSync(join(tmpdir(), "todo-discovery-c-"));
+const home = join(scratch, "home");
+mkdirSync(home);
+const binaries = JSON.parse(
+  readFileSync(join(root, ".scratch/bin/build.json"), "utf8"),
+);
+const env = {
+  ...process.env,
+  HOME: home,
+  TODO_DB: join(scratch, "todo.db"),
+  TODO_PORT: "0",
+};
+const actions: unknown[] = [];
+const captures: string[] = [];
+let server: ChildProcess | undefined;
+let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
+let log = "";
+const cli = (profile: string, ...args: string[]) => {
+  const result = spawnSync(
+    binaries.cli,
+    ["--profile", profile, "--format", "json", ...args],
+    {
+      env,
+      input: "scratch verification passphrase\n",
+      encoding: "utf8",
+      timeout: 60000,
+    },
+  );
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  actions.push({ cli: args, profile, exit: result.status });
+  return JSON.parse(result.stdout);
+};
+try {
+  cli("work", "init", "--password-stdin");
+  cli("work", "login", "--password-stdin");
+  cli("personal", "login", "--password-stdin");
+  cli("empty", "login", "--password-stdin");
+  const draftTask = cli("work", "add", "Preserve this draft").task;
+  const done = cli(
+    "personal",
+    "add",
+    "Completed discovery Task",
+    "--project",
+    "Archive",
+  ).task;
+  cli(
+    "personal",
+    "done",
+    done.id,
+    "--expected-version",
+    String(done.row_version),
+  );
+  cli("work", "add", "Directory Project Task", "--project", "ARG");
+  server = spawn(binaries.server, [], {
+    env,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  writeFileSync(
+    join(evidence, "server.json"),
+    JSON.stringify({ pid: server.pid, scratch, binary: binaries.server }),
+  );
+  server.stdout?.on("data", (data) => {
+    log += data.toString();
+  });
+  server.stderr?.on("data", (data) => {
+    log += data.toString();
+  });
+  const deadline = Date.now() + 60000;
+  while (!/Listening on (http:\/\/127\.0\.0\.1:\d+)/.test(log)) {
+    assert.ok(Date.now() < deadline && server.exitCode === null, log);
+    await new Promise((done) => setTimeout(done, 40));
+  }
+  const base = /Listening on (http:\/\/127\.0\.0\.1:\d+)/.exec(log)?.[1];
+  assert.ok(base);
+  const run = <A, E>(effect: Effect.Effect<A, E, HttpClient.HttpClient>) =>
+    Effect.runPromise(effect.pipe(Effect.provide(FetchHttpClient.layer)));
+  let credential = "";
+  const client = await run(
+    HttpApiClient.make(TodoApi, {
+      baseUrl: base,
+      transformClient: (http) =>
+        HttpClient.mapRequest(http, (request) =>
+          HttpClientRequest.bearerToken(request, credential),
+        ),
+    }),
+  );
+  credential = (
+    await run(
+      client.signIn.signIn({
+        payload: { passphrase: "scratch verification passphrase" },
+      }),
+    )
+  ).credential;
+  const bundle = await build({
+    configFile: join(root, "apps/electron/vite.config.ts"),
+    root: join(root, "apps/electron"),
+    logLevel: "error",
+    define: { "process.env.NODE_ENV": JSON.stringify("production") },
+    build: {
+      write: false,
+      cssCodeSplit: false,
+      lib: {
+        entry: join(root, "apps/electron/src/renderer.tsx"),
+        name: "DiscoveryApp",
+        formats: ["iife"],
+      },
+    },
+  });
+  const output = Array.isArray(bundle) ? bundle[0] : bundle;
+  assert.ok(output && "output" in output);
+  const script = output.output.find((item) => item.type === "chunk");
+  assert.ok(script && script.type === "chunk");
+  const styles = output.output
+    .flatMap((item) =>
+      item.type === "asset" && item.fileName.endsWith(".css")
+        ? [
+            typeof item.source === "string"
+              ? item.source
+              : new TextDecoder().decode(item.source),
+          ]
+        : [],
+    )
+    .join("\n");
+  browser = await chromium.launch({
+    headless: true,
+    ...(process.env.TODO_HEADLESS_CHROMIUM
+      ? { executablePath: process.env.TODO_HEADLESS_CHROMIUM }
+      : {}),
+    env: { ...process.env, HOME: home },
+    args: ["--password-store=basic"],
+  });
+  const page = await browser.newPage({ viewport: { width: 393, height: 426 } });
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  let delayTag = "";
+  let release: (() => void) | undefined;
+  let failTag = "";
+  let emptyDirectory = false;
+  let clipboard = "";
+  await page.exposeFunction(
+    "discoveryRequest",
+    async (raw: unknown): Promise<Reply> => {
+      const request = Schema.decodeUnknownSync(Request)(raw);
+      actions.push({ request });
+      if (request._tag === delayTag) {
+        delayTag = "";
+        await new Promise<void>((done) => {
+          release = done;
+        });
+      }
+      if (request._tag === failTag) {
+        failTag = "";
+        return errorReply({
+          message: "Scratch discovery read failed.",
+          exit_code: 1,
+          exit_meaning: "runtime failure",
+        });
+      }
+      switch (request._tag) {
+        case "restore":
+          return {
+            _tag: "signedIn",
+            profiles: await run(client.reads.profiles({ query: {} })),
+          };
+        case "windowMode":
+          return { _tag: "windowMode", compact: true };
+        case "setWindowMode":
+          return { _tag: "windowMode", compact: request.compact };
+        case "watch":
+          await page.evaluate(
+            (profile) =>
+              window.dispatchEvent(
+                new CustomEvent("discovery-notice", {
+                  detail: { _tag: "connection", profile, state: "connected" },
+                }),
+              ),
+            request.profile,
+          );
+          return { _tag: "ok" };
+        case "draft":
+          return { _tag: "ok" };
+        case "copyTaskId":
+          clipboard = request.task;
+          return { _tag: "ok" };
+        case "directory":
+          if (emptyDirectory) return { _tag: "directory", profiles: [] };
+          break;
+        case "signIn":
+        case "signOut":
+        case "openDiagnostics":
+        case "snapshotReveal":
+        case "attachmentClipboard":
+        case "pickAttachment":
+        case "pasteAttachment":
+        case "attachmentStatus":
+        case "openAttachment":
+          return { _tag: "ok" };
+      }
+      try {
+        return Schema.decodeUnknownSync(Reply)(
+          await run(taskRequest(client, request)),
+        );
+      } catch (error) {
+        return errorReply(error);
+      }
+    },
+  );
+  await page.route("http://todo-discovery.test/", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: `<html><head><style>${styles}</style></head><body><div id="root"></div></body></html>`,
+    }),
+  );
+  await page.goto("http://todo-discovery.test/");
+  await page.evaluate(() => {
+    window.desktop = {
+      request: (request) => Reflect.get(window, "discoveryRequest")(request),
+      filePath: () => "",
+      subscribe: (listener) => {
+        const handler = (event: Event) => {
+          if (event instanceof CustomEvent) listener(event.detail);
+        };
+        window.addEventListener("discovery-notice", handler);
+        return () => window.removeEventListener("discovery-notice", handler);
+      },
+    };
+  });
+  await page.addScriptTag({ content: script.code });
+  const notify = async (detail: unknown) =>
+    page.evaluate(
+      (detail) =>
+        window.dispatchEvent(new CustomEvent("discovery-notice", { detail })),
+      detail,
+    );
+  await expect(
+    page.getByRole("button", { name: "Navigate tasks", exact: true }),
+  ).toBeVisible();
+  const capture = async (state: string, dialog = true) => {
+    for (const compact of [true, false])
+      for (const dark of [false, true]) {
+        await page.setViewportSize({
+          width: compact ? 393 : 1100,
+          height: compact ? 426 : 720,
+        });
+        await notify({ _tag: "windowMode", compact });
+        await page.evaluate(
+          (dark) => document.documentElement.classList.toggle("dark", dark),
+          dark,
+        );
+        await page.waitForTimeout(130);
+        if (dialog) {
+          const bounds = await page
+            .locator(".discovery-dialog")
+            .evaluate((dialog) => {
+              const box = dialog.getBoundingClientRect();
+              return {
+                left: box.left,
+                right: box.right,
+                top: box.top,
+                bottom: box.bottom,
+                width: innerWidth,
+                height: innerHeight,
+                overflow: dialog.scrollWidth > dialog.clientWidth,
+              };
+            });
+          assert.ok(
+            bounds.left >= 0 &&
+              bounds.right <= bounds.width &&
+              bounds.top >= 0 &&
+              bounds.bottom <= bounds.height &&
+              !bounds.overflow,
+            JSON.stringify(bounds),
+          );
+        }
+        const path = join(
+          evidence,
+          `${state}-${compact ? "compact" : "full"}-${dark ? "dark" : "light"}.png`,
+        );
+        await page.screenshot({ path });
+        captures.push(path);
+      }
+    await page.setViewportSize({ width: 393, height: 426 });
+    await notify({ _tag: "windowMode", compact: true });
+  };
+  const open = async (name: string) => {
+    await page
+      .getByRole("button", { name: "Navigate tasks", exact: true })
+      .click();
+    await page.getByRole("menuitem", { name, exact: true }).click();
+  };
+  const close = async () => {
+    await page.getByTestId("discovery-close").click();
+    await expect(page.locator(".discovery-dialog")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Navigate tasks", exact: true }),
+    ).toBeFocused();
+  };
+  delayTag = "directory";
+  await open("Profiles and Projects");
+  await expect(page.getByText("Loading Profiles and Projects…")).toBeVisible();
+  await capture("directory-loading");
+  release?.();
+  await expect(page.getByTestId("discovery-directory-list")).toContainText(
+    "ARG",
+  );
+  await expect(page.getByTestId("discovery-directory-list")).toContainText(
+    "No Projects",
+  );
+  await expect(page.getByTestId("discovery-directory-list")).toContainText(
+    "empty",
+  );
+  await expect(page.getByTestId("discovery-directory-list")).toContainText(
+    (
+      await run(client.reads.profiles({ query: { include_projects: "true" } }))
+    ).find((profile) => profile.id === "personal")?.projects?.[0]?.id ??
+      "missing Project",
+  );
+  await capture("directory-showing");
+  await close();
+  emptyDirectory = true;
+  await open("Profiles and Projects");
+  await expect(page.getByText("No Profiles", { exact: true })).toBeVisible();
+  await capture("directory-empty-controlled");
+  await close();
+  emptyDirectory = false;
+  failTag = "directory";
+  await open("Profiles and Projects");
+  await expect(page.getByTestId("discovery-error")).toContainText(
+    "error 1 - runtime failure",
+  );
+  await capture("directory-error");
+  await page.getByTestId("discovery-directory-retry").click();
+  await expect(page.getByTestId("discovery-directory-list")).toBeVisible();
+  await notify({ _tag: "connection", profile: "work", state: "offline" });
+  await expect(page.getByTestId("discovery-error")).toContainText("offline");
+  await capture("directory-offline");
+  await notify({ _tag: "connection", profile: "work", state: "connected" });
+  await close();
+  await open("Find Task by id");
+  await capture("lookup-editing");
+  const count = actions.length;
+  await page.getByTestId("discovery-prefix").fill("not hex");
+  await page.getByTestId("discovery-find").click();
+  await expect(
+    page.getByText(
+      "Use 1 to 36 hexadecimal digits or hyphens. Spaces are not allowed.",
+    ),
+  ).toBeVisible();
+  assert.equal(actions.length, count);
+  await capture("lookup-invalid");
+  await page
+    .getByTestId("discovery-prefix")
+    .fill("000000000000000000000000000000000000");
+  await page.getByTestId("discovery-prefix").press("Enter");
+  await expect(
+    page.getByText("No matching Tasks", { exact: true }),
+  ).toBeVisible();
+  await capture("lookup-empty");
+  await page.getByTestId("discovery-prefix").fill(done.id.slice(0, 8));
+  delayTag = "lookup";
+  await page.getByTestId("discovery-find").click();
+  await expect(page.getByText("Finding Tasks…")).toBeVisible();
+  await capture("lookup-requesting");
+  release?.();
+  await expect(page.getByTestId(`discovery-show-${done.id}`)).toBeVisible();
+  await capture("lookup-showing");
+  await page.getByTestId(`discovery-copy-${done.id}`).click();
+  await expect(page.getByText("Copied", { exact: true })).toBeVisible();
+  assert.equal(clipboard, done.id);
+  await capture("lookup-copied");
+  await page.getByTestId("discovery-prefix").fill("b");
+  failTag = "lookup";
+  await page.getByTestId("discovery-find").click();
+  await expect(page.getByTestId("discovery-error")).toBeVisible();
+  await capture("lookup-error");
+  await notify({ _tag: "connection", profile: "work", state: "offline" });
+  await capture("lookup-offline");
+  await notify({ _tag: "connection", profile: "work", state: "connected" });
+  await close();
+  await page
+    .getByRole("button", { name: "Navigate tasks", exact: true })
+    .click();
+  await page.getByRole("menuitemradio", { name: /^Inbox/ }).click();
+  await page.getByText(draftTask.title, { exact: true }).click();
+  await page
+    .getByLabel("Title", { exact: true })
+    .fill("Unsaved draft protected");
+  await page
+    .getByRole("button", { name: "Back to tasks", exact: true })
+    .click();
+  await open("Find Task by id");
+  await page.getByTestId("discovery-prefix").fill(done.id);
+  await page.getByTestId("discovery-find").click();
+  await page.getByTestId(`discovery-show-${done.id}`).click();
+  await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
+    "Completed discovery Task",
+  );
+  await expect(
+    page.locator('button[aria-label="Profile"]').last(),
+  ).toHaveAttribute("data-profile-id", "personal");
+  await expect(page.locator(".task-pane")).toHaveAttribute(
+    "data-search-stale",
+    "false",
+  );
+  const applied = JSON.parse(
+    (await page.locator(".task-pane").getAttribute("data-applied-identity")) ??
+      "null",
+  );
+  assert.ok(JSON.stringify(applied).includes(done.id));
+  assert.ok(JSON.stringify(applied).includes("tasks"));
+  assert.equal(cli("personal", "show", done.id).task.status, "done");
+  const drafts = await page.evaluate(() => Object.values(localStorage));
+  assert.ok(drafts.some((value) => value.includes("Unsaved draft protected")));
+  await page.screenshot({
+    path: join(evidence, "show-done-from-inbox-draft-preserved.png"),
+  });
+  await page
+    .getByRole("button", { name: "Back to tasks", exact: true })
+    .click();
+  await page.reload();
+  await page.evaluate(() => {
+    window.desktop = {
+      request: (request) => Reflect.get(window, "discoveryRequest")(request),
+      filePath: () => "",
+      subscribe: (listener) => {
+        const handler = (event: Event) => {
+          if (event instanceof CustomEvent) listener(event.detail);
+        };
+        window.addEventListener("discovery-notice", handler);
+        return () => window.removeEventListener("discovery-notice", handler);
+      },
+    };
+  });
+  await page.addScriptTag({ content: script.code });
+  await expect(
+    page.getByRole("button", { name: "Navigate tasks", exact: true }),
+  ).toBeVisible();
+  await open("Find Task by id");
+  await page.getByTestId("discovery-prefix").fill(done.id);
+  delayTag = "lookup";
+  await page.getByTestId("discovery-find").click();
+  await expect(page.getByText("Finding Tasks…")).toBeVisible();
+  await page.getByTestId("discovery-prefix").fill("b");
+  await page.getByTestId("discovery-prefix").fill(done.id);
+  release?.();
+  await expect(page.locator(".discovery-dialog")).toHaveAttribute(
+    "data-discovery-state",
+    "Editing",
+  );
+  await expect(page.getByTestId("discovery-results")).toHaveCount(0);
+  delayTag = "lookup";
+  await page.getByTestId("discovery-find").click();
+  await expect(page.getByText("Finding Tasks…")).toBeVisible();
+  await notify({ _tag: "signedIn" });
+  await expect(page.locator(".discovery-dialog")).toHaveCount(0);
+  release?.();
+  await open("Find Task by id");
+  await page.getByTestId("discovery-prefix").fill(done.id);
+  await page.getByTestId("discovery-find").click();
+  await expect(page.getByTestId(`discovery-show-${done.id}`)).toBeVisible();
+  cli("personal", "rm", done.id, "--expected-version", "2");
+  await page.getByTestId(`discovery-show-${done.id}`).click();
+  await expect(
+    page
+      .getByRole("alert")
+      .filter({ hasText: "error 3 - not found or auth missing" }),
+  ).toContainText("personal");
+  await expect(
+    page
+      .getByRole("alert")
+      .filter({ hasText: "error 3 - not found or auth missing" }),
+  ).toContainText("/tasks/lookup");
+  await capture("show-missing-context", false);
+  assert.deepEqual(errors, []);
+  writeFileSync(
+    join(evidence, "result.json"),
+    JSON.stringify(
+      {
+        status: "PASS",
+        realHTTP: true,
+        productionRenderer: true,
+        nativeAppLaunched: false,
+        keychain: false,
+        clipboard: "existing IPC action bridged in memory",
+        controlledStates: [
+          "directory-empty",
+          "network delays and runtime failure",
+        ],
+        cases: [
+          "Compact navigation",
+          "explicit submit and invalid no request",
+          "directory metadata",
+          "Copy feedback",
+          "Show done from Inbox",
+          "draft preserved",
+          "reload",
+          "production prefix ABA and credential notice invalidation",
+          "real missing Task contextual exit pair",
+        ],
+        captures,
+        binaries,
+      },
+      null,
+      2,
+    ),
+  );
+} finally {
+  await browser?.close();
+  if (server && server.exitCode === null && server.signalCode === null) {
+    const exited = new Promise<void>((done) =>
+      server?.once("exit", () => done()),
+    );
+    server.kill("SIGTERM");
+    await Promise.race([exited, new Promise((done) => setTimeout(done, 2000))]);
+    if (server.exitCode === null && server.signalCode === null)
+      server.kill("SIGKILL");
+    await exited;
+  }
+  writeFileSync(
+    join(evidence, "actions.json"),
+    JSON.stringify(actions, null, 2),
+  );
+  writeFileSync(join(evidence, "server.log"), log);
+  rmSync(scratch, { recursive: true, force: true });
+}

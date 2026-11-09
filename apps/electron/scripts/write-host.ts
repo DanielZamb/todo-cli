@@ -11,6 +11,7 @@ import {
   nativeAttachmentRequest,
 } from "../src/attachment-native.ts";
 import { createDiagnosticsWindow } from "../src/diagnostics-window.ts";
+import { errorReply, exitDetail } from "../src/error-reply.ts";
 import { Reply, Request } from "../src/protocol.ts";
 import { serverCompatibility } from "../src/server-compatibility.ts";
 import {
@@ -298,7 +299,10 @@ async function boot() {
                   stopStream();
                   credential = "";
                   authentication("signedOut");
-                  return Effect.succeed<Reply>({ _tag: "signedOut" });
+                  return Effect.succeed<Reply>({
+                    _tag: "signedOut",
+                    message: errorReply(error).message,
+                  });
                 }
                 if (
                   error &&
@@ -311,15 +315,10 @@ async function boot() {
                     Schema.decodeUnknownSync(Reply)({
                       _tag: "conflict",
                       latest: error.latest,
+                      exit_detail: exitDetail(error),
                     }),
                   );
-                return Effect.succeed<Reply>({
-                  _tag: "error",
-                  message:
-                    error && typeof error === "object" && "message" in error
-                      ? String(error.message)
-                      : "Could not reach the Todo server. Your draft is saved. Retry when connected.",
-                });
+                return Effect.succeed<Reply>(errorReply(error));
               }),
             ),
           ).then((reply) => {

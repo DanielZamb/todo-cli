@@ -270,3 +270,9 @@ feedback, and Error recovery through actual SSE reconnect/operations.
 `TODO_VERIFY_TASK_SEARCH=1` selects that drive. The host now reconnects its SSE
 stream for this proof; production cursor persistence and native HOLD remain
 separate limits.
+
+## Authorized discovery
+
+Read [Profiles, Projects and Find Task by id](features/discovery.md) for the
+Compact-first production-renderer scratch proof, explicit Show, draft retention,
+done Task reveal, response provenance, selectors and visual state matrix.

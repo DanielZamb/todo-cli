@@ -28,6 +28,7 @@ import {
   nativeAttachmentRequest,
 } from "./attachment-native.ts";
 import { createDiagnosticsWindow } from "./diagnostics-window.ts";
+import { errorReply, exitDetail } from "./error-reply.ts";
 import { type Notice, Reply, Request } from "./protocol.ts";
 import { serverCompatibility } from "./server-compatibility.ts";
 import {
@@ -384,6 +385,7 @@ async function boot() {
                   Schema.decodeUnknownSync(Reply)({
                     _tag: "conflict",
                     latest: error.latest,
+                    exit_detail: exitDetail(error),
                   }),
                 );
               if (
@@ -391,21 +393,21 @@ async function boot() {
                 parsed.value._tag === "signIn"
               )
                 return Effect.succeed<Reply>({
-                  _tag: "error",
-                  message: "Incorrect owner passphrase.",
+                  ...errorReply(error),
+                  message: `Incorrect owner passphrase.\n${exitDetail(error) ?? ""}`,
                 });
               if (error._tag === "Unauthorized") {
                 stopStream();
                 credential = undefined;
                 rmSync(sessionFile, { force: true });
                 send({ _tag: "signedOut" });
-                return Effect.succeed<Reply>({ _tag: "signedOut" });
+                return Effect.succeed<Reply>({
+                  _tag: "signedOut",
+                  message: errorReply(error).message,
+                });
               }
               if ("message" in error && typeof error.message === "string")
-                return Effect.succeed<Reply>({
-                  _tag: "error",
-                  message: error.message,
-                });
+                return Effect.succeed<Reply>(errorReply(error));
             }
             return Effect.succeed<Reply>({
               _tag: "error",
