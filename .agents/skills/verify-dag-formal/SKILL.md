@@ -1,9 +1,9 @@
 ---
 name: verify-dag-formal
-description: Check finite Task dependency safety and immutable production conformance. Use after graph, transaction, replay or public Dependency changes. The active immutable product pin is merged integration 0f7a1948; final client/runtime mapping remains pending.
+description: Check finite Task dependency safety and immutable production conformance. Use after graph, transaction, replay or public Dependency changes. Read the active immutable product from production-pin.json and public-pin.json; final client/runtime mapping remains pending.
 ---
 
-Current F1 implementation closure: full default and locked F-worktree check exited 0 at committed verifier 0d9145443dc46ec4c6b75decee8be0b133d530ee, product 0f7a19488f15ec1f8d4c4dad14749de7720f17d0. The nested compiler shim, post-parent stop-latch propagation, fake-child refusal traces and real AtomicCAS tsc guard0/child0 are proven in /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f1-default-8vDMKq/f1-completion.json. All 36 library and 53 public controls and final clean passed. Renewed independent reviews, final E/S runtime and fresh Claude discovery remain pending.
+Historical F1 implementation closure: full default and locked F-worktree check exited 0 at committed verifier 0d9145443dc46ec4c6b75decee8be0b133d530ee, product 0f7a19488f15ec1f8d4c4dad14749de7720f17d0. The nested compiler shim, post-parent stop-latch propagation, fake-child refusal traces and real AtomicCAS tsc guard0/child0 are proven in /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f1-default-8vDMKq/f1-completion.json. All 36 library and 53 public controls and final clean passed. Both F1 review seats passed exact delivery 2936e3c2 before merge. Final E/S runtime and fresh Claude discovery remain pending.
 
 Historical merged-B behavioral checkpoint (F1 nested compiler guard gap; closure below): default one command exited 0 at F proof source 71a29afc764e2db32ed109c9314b1a8290460d46, product 0f7a19488f15ec1f8d4c4dad14749de7720f17d0. All 36 library and 53 public/read source-control executions passed sensitivity and exact clean restore. Receipt: /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/resume-default-nTbjKr/completion.json. F-worktree VITEST_MAX_WORKERS=1 pnpm check exited 0 with unchanged per-test deadlines; default-worker timing failures are retained. Final E/S runtime mapping, fresh Claude discovery and independent F review seats remain pending.
 
@@ -18,15 +18,23 @@ Followed create-formal-verification-skill. Read mapping.md, coverage.json,
 public-coverage.json, features/README.md and docs/decisions/task-dag/unit-f-report.md.
 Historical f140/e717 receipts retain their original candidates and proof bounds.
 
-## Immutable merged source and command
+## Current main-rebase qualification
 
-The active product Git object is 0f7a19488f15ec1f8d4c4dad14749de7720f17d0,
-reviewed after both B seats passed the exact delivery and L1 merged it.
-Both pin files and coverage maps must agree. CLI/server builds embed 0f7a1948,
-with contract 58c0026725f2d846fd4f80bd7cabaff73994d6603d04ed501c82cfa1fa6f1fe9.
+The active product is 8ee1c08fb92201691dc3b0bcd5fe3cd03560eb3a, rebased onto
+main 9de893454cb6e3f5729407e9313c73e56bfd0481. Both pin files and coverage maps
+must agree. Its contract is
+bf54af931b6531866cbe23740582a5241999f5defcf98ad1d7f2da58774e1f3d.
+The 16 covered graph implementation files and all AtomicCAS covered files are
+byte-identical to the reviewed pre-rebase implementation. Search adapters,
+public schemas and generated client bytes have changed. The current mapping
+records the source review. Qualification must run actual generated algorithm,
+replay, public boundary and graph-response checks on this product, together with
+the nested guarded AtomicCAS command. A diagnostic subset is recorded as such;
+it does not replace the historical full source-sensitivity run or final E/S gates.
+The rebase seam requires a new independent correctness review before client merges.
+
 The binary cache key includes the product pin, source bytes, compiler, build
-defines and contract. Actual health and --version must agree. A leaf or F HEAD
-binary cannot substitute for that merged identity.
+defines and contract. Actual health and --version must agree with the pin.
 
 ```sh
 bun .agents/skills/verify-dag-formal/check.mjs

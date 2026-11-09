@@ -93,3 +93,13 @@ roundtrip test: `pnpm --filter @todo/electron test task-filter-draft.test.ts`.
 It preserves true/absent readiness, prefix/text and other exact string values;
 false fails initialization and Apply, and Clear returns an empty draft.
 No graph controls are added by this contract alignment.
+
+## Search and graph integration
+
+The main rebase keeps TaskSearchExecution in argument 4 and graph context in
+argument 5. Run packages/domain/test/dag-search-integration.test.ts for literal
+Ready-before-search-budget filtering and yielded graph-enriched Task reads.
+The compiled CLI contract test in apps/cli/test/contract.test.ts requires a
+SearchTooBroad effect to produce exit 2 and search_too_broad with recovery.
+Run the public filter recipe and unsigned Electron filter/auth paths after
+changing this seam; a typecheck alone does not prove the command error boundary.
