@@ -305,6 +305,15 @@ it("keeps HTTP error tags, adds matching pairs at decoding boundaries and hides 
         "error 3 - not found or auth missing\nERROR\tnot_found\ttarget Profile not found; run todo init --profile <name>\n",
     });
   }
+  const retained = run(["show", sourceId, "--format", "json"]);
+  expect(retained.status).toBe(0);
+  expect(JSON.parse(retained.stdout).task).toMatchObject({
+    title: "Transfer auth target",
+    row_version: 1,
+  });
+  expect(
+    run(["rm", sourceId, "--expected-version", "1", "--force"]).status,
+  ).toBe(0);
   const transfer = run([
     "copy",
     "45a312ac",
