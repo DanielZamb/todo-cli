@@ -91,12 +91,10 @@ fixture; real stream-close and operation recovery remain separate checks.
 
 ## Coverage and evidence
 
-Before this drive, compile the shared recovery fixture once for the current
-domain source into this worktree's ignored cache:
-
-```sh
-bun build .agents/skills/verify-task-search/seed-recovery.ts --compile --outfile .scratch/bin/search-recovery-seed
-```
+The drive compiles the shared recovery fixture
+`.agents/skills/verify-task-search/seed-recovery.ts` into its scratch directory
+before using it. Set `SEC_SEARCH_RECOVERY_SEED` to an absolute compiled path
+only to reuse an existing build.
 
 The drive seeds three Tasks with 100,000 U+FDFA descriptions. `probe` is refused;
 selecting Project Small or Tag keep sends its catalog name and returns only

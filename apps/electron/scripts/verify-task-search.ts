@@ -1253,11 +1253,32 @@ try {
       from_version: 2,
       changes: { description: "ordinary" },
     });
-  const seeded = spawnSync(
-    resolve(import.meta.dirname, "../../../.scratch/bin/search-recovery-seed"),
-    ["work"],
-    { env, encoding: "utf8" },
-  );
+  const recoverySeed =
+    process.env.SEC_SEARCH_RECOVERY_SEED ??
+    join(scratch, "search-recovery-seed");
+  if (process.env.SEC_SEARCH_RECOVERY_SEED === undefined) {
+    const compiled = spawnSync(
+      "bun",
+      [
+        "build",
+        "--compile",
+        resolve(
+          import.meta.dirname,
+          "../../../.agents/skills/verify-task-search/seed-recovery.ts",
+        ),
+        "--outfile",
+        recoverySeed,
+      ],
+      { cwd: scratch, encoding: "utf8" },
+    );
+    receipts.push({
+      compiledRecoverySeed: recoverySeed,
+      exit: compiled.status,
+      stderr: compiled.stderr,
+    });
+    expect(compiled.status).toBe(0);
+  }
+  const seeded = spawnSync(recoverySeed, ["work"], { env, encoding: "utf8" });
   receipts.push({
     compiledRawAppendSeed: "keep/KEEP from raw append or old data",
     exit: seeded.status,
