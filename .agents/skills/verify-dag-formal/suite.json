@@ -1,0 +1,342 @@
+[
+  {
+    "name": "statuses",
+    "scenario": "statuses",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass"
+  },
+  {
+    "name": "degree-two-race",
+    "scenario": "degree-two-race",
+    "n": 4,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass"
+  },
+  {
+    "name": "delete-fanin",
+    "scenario": "delete-fanin",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass"
+  },
+  {
+    "name": "opposite",
+    "scenario": "opposite",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass"
+  },
+  {
+    "name": "transitive",
+    "scenario": "transitive",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass"
+  },
+  {
+    "name": "pruned",
+    "scenario": "pruned",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass"
+  },
+  {
+    "name": "reopen",
+    "scenario": "reopen",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass"
+  },
+  {
+    "name": "reopen-cancelled",
+    "scenario": "reopen-cancelled",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass"
+  },
+  {
+    "name": "complete",
+    "scenario": "complete",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass"
+  },
+  {
+    "name": "remove",
+    "scenario": "remove",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass"
+  },
+  {
+    "name": "witness",
+    "scenario": "witness",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass"
+  },
+  {
+    "name": "delete",
+    "scenario": "delete",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass"
+  },
+  {
+    "name": "delete-dependent",
+    "scenario": "delete-dependent",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass"
+  },
+  {
+    "name": "degree",
+    "scenario": "degree",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass"
+  },
+  {
+    "name": "count-race",
+    "scenario": "count-race",
+    "n": 3,
+    "limit": 1,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass"
+  },
+  {
+    "name": "profiles",
+    "scenario": "profiles",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass"
+  },
+  {
+    "name": "noop",
+    "scenario": "noop",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass"
+  },
+  {
+    "name": "malformed",
+    "scenario": "malformed",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass"
+  },
+  {
+    "name": "unauthorized",
+    "scenario": "unauthorized",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass"
+  },
+  {
+    "name": "self",
+    "scenario": "self",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass"
+  },
+  {
+    "name": "boundary13",
+    "scenario": "boundary13",
+    "n": 15,
+    "limit": 13,
+    "mutation": "none",
+    "revert": false,
+    "expected": "pass"
+  },
+  {
+    "name": "boundary14",
+    "scenario": "boundary14",
+    "n": 15,
+    "limit": 13,
+    "mutation": "none",
+    "revert": false,
+    "expected": "pass"
+  },
+  {
+    "name": "noop-add",
+    "scenario": "noop-add",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass"
+  },
+  {
+    "name": "delete-blocker",
+    "scenario": "delete-blocker",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass"
+  },
+  {
+    "name": "cancel-complete",
+    "scenario": "cancel-complete",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass"
+  },
+  {
+    "name": "mutant-outside",
+    "scenario": "opposite",
+    "n": 3,
+    "limit": 2,
+    "mutation": "outside",
+    "revert": false,
+    "expected": "Acyclic"
+  },
+  {
+    "name": "mutant-no-lock",
+    "scenario": "opposite",
+    "n": 3,
+    "limit": 2,
+    "mutation": "no-lock",
+    "revert": false,
+    "expected": "Acyclic"
+  },
+  {
+    "name": "mutant-pruned",
+    "scenario": "pruned",
+    "n": 3,
+    "limit": 2,
+    "mutation": "pruned",
+    "revert": false,
+    "expected": "Acyclic"
+  },
+  {
+    "name": "mutant-reopen",
+    "scenario": "reopen-cancelled",
+    "n": 3,
+    "limit": 2,
+    "mutation": "reopen",
+    "revert": false,
+    "expected": "NoReopenUnderDone"
+  },
+  {
+    "name": "mutant-split-delete",
+    "scenario": "delete",
+    "n": 3,
+    "limit": 2,
+    "mutation": "split-delete",
+    "revert": false,
+    "expected": "AtomicGraphHistory"
+  },
+  {
+    "name": "reach-stale-noop",
+    "scenario": "noop-add",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "NeverStaleNoop",
+    "purpose": "reachability witness, not a mutant"
+  },
+  {
+    "name": "reach-revert",
+    "scenario": "delete",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "NeverRevertCommit",
+    "purpose": "reachability witness, not a mutant"
+  },
+  {
+    "name": "reach-witness-gap",
+    "scenario": "witness",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "NeverWitnessGap",
+    "purpose": "reachability witness, not a mutant"
+  },
+  {
+    "name": "reach-grouped-delete",
+    "scenario": "delete",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "NeverGroupedDelete",
+    "purpose": "reachability witness, not a mutant"
+  },
+  {
+    "name": "reach-accepted13",
+    "scenario": "boundary13",
+    "n": 15,
+    "limit": 13,
+    "mutation": "none",
+    "revert": false,
+    "expected": "NeverAccepted13",
+    "purpose": "reachability witness, not a mutant"
+  },
+  {
+    "name": "reach-refused14",
+    "scenario": "boundary14",
+    "n": 15,
+    "limit": 13,
+    "mutation": "none",
+    "revert": false,
+    "expected": "NeverRefused14",
+    "purpose": "reachability witness, not a mutant"
+  },
+  {
+    "name": "clean-recheck",
+    "scenario": "statuses",
+    "n": 3,
+    "limit": 2,
+    "mutation": "none",
+    "revert": true,
+    "expected": "pass",
+    "purpose": "clean original model after all controls"
+  }
+]

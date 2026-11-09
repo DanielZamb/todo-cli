@@ -1,0 +1,30 @@
+{
+  "confirmedCommit": "8745cdd0247fb8cc0ff74f95bff257fd95cfa4d3",
+  "scope": "Reviewed transaction substrate and approved design only; DAG production mapping pending A/B",
+  "files": [
+    {
+      "path": "packages/domain/src/store/store.ts",
+      "sha256": "7121f6621af44a03846124ccbffc6b9841b903e1047eb6b2464ef842caf15353"
+    },
+    {
+      "path": "packages/domain/src/store/projection.ts",
+      "sha256": "b148e244a30e955a969941018bcc737c24f301bc719fc47a1eb13ae41cbef316"
+    },
+    {
+      "path": "packages/domain/src/events.ts",
+      "sha256": "145376a77e9dfb7e451d73169159fc0af672b0fff767f176b7a70e710719439b"
+    },
+    {
+      "path": "docs/decisions/task-dag-phase-0.md",
+      "sha256": "a9c230fc4771b12490b1ffeea39716e3b62d6ec95ab25bb6e97c3578808190d7"
+    },
+    {
+      "path": "docs/adr/0016-task-dependencies-form-a-dag.md",
+      "sha256": "db598541892400c948a444eb664280172014b55a7d48b858f996aadff3b72cf9"
+    },
+    {
+      "path": "docs/adr/0018-dependencies-are-replayable-history.md",
+      "sha256": "5e24b9c5a733dc089d1f4a16dfef0af3a3385c32bda5150da3bfd1c3ecb67927"
+    }
+  ]
+}
