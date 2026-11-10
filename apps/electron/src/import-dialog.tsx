@@ -15,9 +15,21 @@ import {
   DialogTitle,
 } from "./components/ui/dialog.tsx";
 import { Input } from "./components/ui/input.tsx";
+import {
+  DependencyErrorStatus,
+  type DependencyNavigation,
+} from "./dependency-dialog.tsx";
+import {
+  type DependencyContext,
+  dependencyBatchFailure,
+  dependencyFailureText,
+  hasDependencyError,
+  isDependencyConflict,
+} from "./dependency-presentation.ts";
 import { errorReply, taskLookupDetails } from "./error-reply.ts";
 import { importChangesText } from "./import-presentation.ts";
 import { countTasks } from "./presentation.ts";
+import type { Reply } from "./protocol.ts";
 import { type FindTask, TaskLookupStatus } from "./task-lookup-status.tsx";
 
 type Preview = Omit<ImportReport, "items"> & {
@@ -34,6 +46,8 @@ export function ImportDialog({
   onClose,
   onFindTask,
   onApplied,
+  openTask,
+  followUp,
 }: {
   profile: ProfileId;
   profileName: string;
@@ -42,6 +56,8 @@ export function ImportDialog({
   onClose: () => void;
   onFindTask?: FindTask | undefined;
   onApplied: () => void;
+  openTask?: DependencyNavigation["openTask"];
+  followUp?: DependencyNavigation["followUp"];
 }) {
   const [items, setItems] = useState<ImportRequest["items"]>([]);
   const [fileName, setFileName] = useState("");
@@ -166,6 +182,16 @@ export function ImportDialog({
   };
   const rows = report?.items.map((row, index) => {
     const item = report.input[index];
+    const context: DependencyContext =
+      Schema.is(ImportItem)(item) && item.status === "done"
+        ? "complete"
+        : Schema.is(ImportItem)(item) && item.status === "open"
+          ? "reopen"
+          : "add";
+    const failure: Extract<Reply, { _tag: "error" }> | null =
+      hasDependencyError(row.error) || isDependencyConflict(row.error?.code)
+        ? { _tag: "error", ...dependencyBatchFailure(row.error) }
+        : null;
     const title =
       Schema.is(ImportItem)(item) && item.title
         ? item.title
@@ -174,19 +200,61 @@ export function ImportDialog({
           : "Untitled Task";
     return {
       row,
+      context,
+      failure,
       title,
-      outcome:
-        row.error?.code === "occ_conflict"
-          ? "Conflict"
-          : row.outcome.charAt(0).toUpperCase() + row.outcome.slice(1),
+      outcome: isDependencyConflict(row.error?.code)
+        ? "Conflict"
+        : row.outcome.charAt(0).toUpperCase() + row.outcome.slice(1),
       details: taskLookupDetails(row.error),
       changes: taskLookupDetails(row.error)
         ? ""
-        : row.error
-          ? errorReply(row.error).message
-          : importChangesText(row),
+        : hasDependencyError(row.error) || isDependencyConflict(row.error?.code)
+          ? dependencyFailureText(
+              row.error,
+              Schema.is(ImportItem)(item) && item.status === "done"
+                ? "complete"
+                : "add",
+            )
+          : row.error
+            ? errorReply(row.error).message
+            : importChangesText(row),
     };
   });
+  const dependencyStatus = (
+    failure: Extract<Reply, { _tag: "error" }>,
+    context: DependencyContext,
+  ) => (
+    <DependencyErrorStatus
+      failure={failure}
+      context={context}
+      tasks={[]}
+      openTask={
+        openTask
+          ? (id, captured) => {
+              onClose();
+              openTask(id, captured);
+            }
+          : undefined
+      }
+      followUp={
+        followUp
+          ? (id, captured) => {
+              onClose();
+              followUp(id, captured);
+            }
+          : undefined
+      }
+      onFindTask={
+        onFindTask
+          ? (details) => {
+              onClose();
+              onFindTask(details);
+            }
+          : undefined
+      }
+    />
+  );
   const count = (report?.totals.created ?? 0) + (report?.totals.updated ?? 0);
   return (
     <Dialog
@@ -284,51 +352,66 @@ export function ImportDialog({
             <div className="import-list-scroll">
               {compact ? (
                 <ul className="import-stack" aria-label="Import preview">
-                  {rows?.map(({ row, title, outcome, changes, details }) => (
-                    <li className="import-row" key={row.key}>
-                      <div className="import-row-heading">
-                        <span className="import-row-title" title={title}>
-                          {title}
-                        </span>
-                        <span
-                          className={
-                            row.outcome === "rejected" && !details
-                              ? "import-rejected"
-                              : ""
-                          }
+                  {rows?.map(
+                    ({
+                      row,
+                      title,
+                      outcome,
+                      changes,
+                      details,
+                      failure,
+                      context,
+                    }) => (
+                      <li className="import-row" key={row.key}>
+                        <div className="import-row-heading">
+                          <span className="import-row-title" title={title}>
+                            {title}
+                          </span>
+                          <span
+                            className={
+                              row.outcome === "rejected" && !details
+                                ? "import-rejected"
+                                : ""
+                            }
+                          >
+                            {outcome}
+                          </span>
+                        </div>
+                        <small
+                          className="import-row-id"
+                          title={row.external_id}
                         >
-                          {outcome}
-                        </span>
-                      </div>
-                      <small className="import-row-id" title={row.external_id}>
-                        {row.external_id || "Missing external id"}
-                      </small>
-                      {details ? (
-                        <TaskLookupStatus
-                          details={details}
-                          onFind={
-                            onFindTask
-                              ? () => {
-                                  onClose();
-                                  onFindTask(details);
-                                }
-                              : undefined
-                          }
-                        />
-                      ) : (
-                        <p
-                          title={changes}
-                          className={
-                            row.error
-                              ? "import-rejected import-row-changes"
-                              : "import-row-changes"
-                          }
-                        >
-                          {changes}
-                        </p>
-                      )}
-                    </li>
-                  ))}
+                          {row.external_id || "Missing external id"}
+                        </small>
+                        {details ? (
+                          <TaskLookupStatus
+                            details={details}
+                            onFind={
+                              onFindTask
+                                ? () => {
+                                    onClose();
+                                    onFindTask(details);
+                                  }
+                                : undefined
+                            }
+                          />
+                        ) : failure ? (
+                          dependencyStatus(failure, context)
+                        ) : (
+                          <p
+                            title={changes}
+                            className={
+                              row.error
+                                ? "import-rejected import-row-changes"
+                                : "import-row-changes"
+                            }
+                          >
+                            {changes}
+                          </p>
+                        )}
+                      </li>
+                    ),
+                  )}
                 </ul>
               ) : (
                 <table className="import-table" aria-label="Import preview">
@@ -340,48 +423,60 @@ export function ImportDialog({
                     </tr>
                   </thead>
                   <tbody>
-                    {rows?.map(({ row, title, outcome, changes, details }) => (
-                      <tr key={row.key}>
-                        <td>
-                          <span>{title}</span>
-                          <small title={row.external_id}>
-                            {row.external_id || "Missing external id"}
-                          </small>
-                        </td>
-                        <td
-                          className={
-                            row.outcome === "rejected" && !details
-                              ? "import-rejected"
-                              : ""
-                          }
-                        >
-                          {outcome}
-                        </td>
-                        <td
-                          className={
-                            row.error && !details
-                              ? "whitespace-pre-line"
-                              : undefined
-                          }
-                        >
-                          {details ? (
-                            <TaskLookupStatus
-                              details={details}
-                              onFind={
-                                onFindTask
-                                  ? () => {
-                                      onClose();
-                                      onFindTask(details);
-                                    }
-                                  : undefined
-                              }
-                            />
-                          ) : (
-                            changes
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                    {rows?.map(
+                      ({
+                        row,
+                        title,
+                        outcome,
+                        changes,
+                        details,
+                        failure,
+                        context,
+                      }) => (
+                        <tr key={row.key}>
+                          <td>
+                            <span>{title}</span>
+                            <small title={row.external_id}>
+                              {row.external_id || "Missing external id"}
+                            </small>
+                          </td>
+                          <td
+                            className={
+                              row.outcome === "rejected" && !details
+                                ? "import-rejected"
+                                : ""
+                            }
+                          >
+                            {outcome}
+                          </td>
+                          <td
+                            className={
+                              row.error && !details
+                                ? "whitespace-pre-line"
+                                : undefined
+                            }
+                          >
+                            {details ? (
+                              <TaskLookupStatus
+                                details={details}
+                                onFind={
+                                  onFindTask
+                                    ? () => {
+                                        onClose();
+                                        onFindTask(details);
+                                      }
+                                    : undefined
+                                }
+                              />
+                            ) : failure ? (
+                              dependencyStatus(failure, context)
+                            ) : (
+                              changes
+                            )}
+                          </td>
+                        </tr>
+                      ),
+                    )}
                   </tbody>
                 </table>
               )}
@@ -424,6 +519,18 @@ export function ImportDialog({
                   onClick={() => void run(true)}
                 >
                   {busy ? "Previewing…" : "Preview changes"}
+                </Button>
+              )}
+              {report?.items.some((row) =>
+                isDependencyConflict(row.error?.code),
+              ) && (
+                <Button
+                  variant="outline"
+                  disabled={busy || !canWrite}
+                  data-testid="dependency-reload"
+                  onClick={() => void run(true)}
+                >
+                  Reload
                 </Button>
               )}
               {report?.dry_run && (

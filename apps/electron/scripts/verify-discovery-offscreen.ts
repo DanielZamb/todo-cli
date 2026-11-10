@@ -227,6 +227,8 @@ try {
           return { _tag: "ok" };
         case "draft":
           return { _tag: "ok" };
+        case "copyMermaid":
+          return { _tag: "ok" };
         case "copyTaskId":
           clipboard = request.task;
           return { _tag: "ok" };

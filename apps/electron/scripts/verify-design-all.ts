@@ -61,7 +61,8 @@ const summary = () =>
           chromium: process.env.TODO_HEADLESS_CHROMIUM ?? null,
         },
         limits: [
-          "Unsigned hidden Electron host and Chromium only. Native storage, Session restoration, notifications and VoiceOver are unproven.",
+          "Unsigned Electron verification hosts and Chromium. Existing background modes stay hidden; Diagnostics follows its visible/front behavior.",
+          "Native credential storage, Session restoration, notifications and VoiceOver remain unproven.",
           "Missing new-client scripts on a retained counterpart base are missing coverage, never a pass.",
         ],
       },

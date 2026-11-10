@@ -4,6 +4,7 @@ import { Effect, Schema } from "effect";
 import {
   canRevertHistory,
   editedChanges,
+  historyDependencies,
   historyLabel,
   localHistoryTime,
   rejectionReason,
@@ -373,4 +374,56 @@ it("Attachment History offers Revert until its inverse is committed", () => {
   expect(canRevertHistory(added, new Set())).toBe(true);
   expect(canRevertHistory(removed, new Set())).toBe(true);
   expect(canRevertHistory(removed, new Set([removed.seq]))).toBe(false);
+});
+
+it("renders typed Dependency History and permits its public Revert once", () => {
+  const added = entry(30, {
+    kind: "DependencyAdded",
+    dependent_id: "task-1",
+    blocker_id: "task-2",
+    from_version: 1,
+    to_version: 2,
+  });
+  expect(historyDependencies(added)).toEqual({
+    added: [{ dependent_id: "task-1", blocker_id: "task-2" }],
+    removed: [],
+  });
+  expect(canRevertHistory(added, new Set())).toBe(true);
+  expect(canRevertHistory(added, new Set([added.seq]))).toBe(false);
+  const removed = entry(31, {
+    kind: "DependencyRemoved",
+    dependent_id: "task-1",
+    blocker_id: "task-2",
+    from_version: 2,
+    to_version: 3,
+  });
+  expect(historyDependencies(removed)).toEqual({
+    added: [],
+    removed: [{ dependent_id: "task-1", blocker_id: "task-2" }],
+  });
+});
+it("keeps lifecycle v1 and v2 Dependency deltas distinct", () => {
+  const created = {
+    kind: "TaskCreated",
+    task,
+    series: null,
+    project: null,
+    tags: [],
+  };
+  const added = [
+    { profile_id: "work", dependent_id: "task-1", blocker_id: "task-2" },
+  ];
+  expect(historyDependencies(entry(40, created))).toEqual({
+    added: [],
+    removed: [],
+  });
+  expect(
+    historyDependencies(
+      entry(41, {
+        ...created,
+        entity_version: 2,
+        dependencies: { added, removed: [], versions: [] },
+      }),
+    ),
+  ).toEqual({ added, removed: [], versions: [] });
 });

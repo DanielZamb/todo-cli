@@ -299,3 +299,29 @@ renderer. Native safeStorage/session.enc restoration remains held.
 Read [Profiles, Projects and Find Task by id](features/discovery.md) for the
 Compact-first production-renderer scratch proof, explicit Show, draft retention,
 done Task reveal, response provenance, selectors and visual state matrix.
+
+## Task Dependencies
+
+Read [Task Dependencies](features/dependencies.md) for the current production-renderer
+scratch command, state coverage, selectors, capture receipt validation and pending
+proof boundaries. This checkpoint does not replace the full end-of-unit suites.
+The drag fixture asserts that every row keeps identical bounds for allowed,
+already-linked, self and foreign targets. Its visible target metadata is short;
+its accessible value keeps the full relation. Long-loop refusal geometry requires
+three whole witness lines and at least two whole candidate rows. Batch and nested
+Import fixtures use visibly different agent messages to catch projector leaks.
+The complete aggregate and both final client suites remain required separately.
+Search-owned notices use `dependency-search-error`; mutation refusals retain
+`dependency-error`. The dependency search helper proves narrow/clear recovery
+through actual HttpApi decoding, retains Conflict/Reload and rejects older errors
+after SDK delivery. Read its typed-fixture versus compiled-server boundary in the
+Dependency feature map. The recurring form and initial-chip fixtures assert whole
+visible controls and the existing fixed-footer geometry.
+
+The Series Skip Retry drive awaits the completed HTTP response for the same
+Occurrence and reviewed `from_version` before its original authoritative status
+assertion. It does not sleep or resend. Its failure-only sampler remains.
+For compile-only Xcode verification, `apps/electron/scripts/xcode-compiler-guards.ts`
+creates local compiler shims and copies the installed Swift feature metadata
+unchanged beside them. See `apps/electron/scripts/verify-design-all.md` for its
+command. Mac Python helpers still run plainly through the Swift slot.

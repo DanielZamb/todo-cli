@@ -152,16 +152,39 @@ both exact predicates and values before calling its failure identical to main.
 One diagnostic-only scratch continuation was permitted past those two exact
 Import predicates. It exited 1 earlier at the immediate Series Skip Retry status
 assertion, so it recorded no Import continuation and proves nothing beyond it.
-That intermittent occurred once in the long driver and was not reproduced in ten
-isolated main observations, with 1,000 cancelled server-status samples. No product
-or completion-wait change follows. If the original immediate assertion fails
-again, the driver includes the Occurrence id, retained Retry HTTP status/body and
-timestamped 50 ms status samples for five seconds. The successful path adds no
-server reads, delay or changed assertion. The existing proxy passively retains
-Skip response metadata/body for that failure report.
+The first occurrence was not reproduced in ten isolated main observations, with
+1,000 cancelled server-status samples. That historical receipt remains unchanged.
+A later complete E run captured a second occurrence with failure-only diagnostics:
+the authoritative GET preceded the Retry POST by 1 ms and its successful response
+by 5 ms. All 100 subsequent samples were cancelled. The coordinator classified
+this as a verification completion race. The drive now awaits the completed
+response for the same Occurrence and `from_version`, then performs its original
+authoritative assertion. No sleep, resend or product change. The failure-only
+sampler remains. Ten corrected isolated scenarios pass, with matched request and
+response timestamps retained. This scoped result does not make the full driver
+or either complete suite green.
 
 The local classification index under
 `docs/evidence/task-dag/unit-e/baseline-classification/classification-index.json`
 records existing receipts, source/binary identities, exact old/new literals,
 PR #10 commits, original exits and capture limits. It is intermediate evidence,
 not the final whole-client result. The main archive retains original failures.
+
+## Guarded unsigned Xcode compilation
+
+Generate local shims from the installed SDK without changing packages:
+
+```sh
+sh apps/electron/scripts/guarded-run.sh bun apps/electron/scripts/xcode-compiler-guards.ts .scratch/xcode-guards-fresh
+```
+
+The output is JSON with three compiler settings. Pass each as one argument to
+`xcodebuild` through `scripts/swift-slot.sh`; do not evaluate JSON as shell text.
+Keep signing disabled, package resolution disabled and the resolved versions
+fixed. The shims preserve literal arguments, both streams and the delegate exit.
+Hard disk stop prevents delegation. The installed `usr/share/swift/features.json`
+is copied byte for byte beside the shims so Xcode discovers the same capabilities,
+including package access. No Swift flag is added or removed by a shim. A layout
+without that metadata failed with exit 65; the corrected guarded build exits 0.
+All emitted shims and SDK metadata stay ignored. Mac Python verification helpers
+still run plainly through the Swift slot, without the Electron wrapper.

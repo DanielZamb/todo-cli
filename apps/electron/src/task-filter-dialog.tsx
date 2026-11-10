@@ -2,6 +2,7 @@ import { CalendarDate, TaskFilters } from "@todo/domain";
 import { Schema } from "effect";
 import { useState } from "react";
 import { Button } from "./components/ui/button.tsx";
+import { Checkbox } from "./components/ui/checkbox.tsx";
 import {
   Dialog,
   DialogContent,
@@ -39,6 +40,8 @@ const dateValue = (draft: DateFilterDraft) =>
 export function taskFilterSummary(filters: TaskFilters) {
   return [
     filters.status,
+    filters.ready && "Ready",
+    filters.blocked && "Blocked",
     filters.priority,
     filters.due &&
       (filters.due === "none" ? "No due date" : `Due ${filters.due}`),
@@ -248,6 +251,32 @@ export function TaskFilterDialog({
                   Use 1 to 36 hex digits or hyphens.
                 </p>
               )}
+            </Field>
+            <Field>
+              <FieldLabel>Dependencies</FieldLabel>
+              {(["ready", "blocked"] as const).map((key) => (
+                <label
+                  key={key}
+                  htmlFor={`filter-${key}`}
+                  className="filter-checkbox"
+                >
+                  <Checkbox
+                    id={`filter-${key}`}
+                    data-testid={`filter-${key}`}
+                    checked={draft.readiness[key] === true}
+                    onCheckedChange={(checked) => {
+                      setDraft((current) => {
+                        const { [key]: _removed, ...rest } = current.readiness;
+                        return {
+                          ...current,
+                          readiness: checked ? { ...rest, [key]: true } : rest,
+                        };
+                      });
+                    }}
+                  />
+                  {key === "ready" ? "Ready" : "Blocked"}
+                </label>
+              ))}
             </Field>
             {select("status", "Status", [
               ["open", "Open"],

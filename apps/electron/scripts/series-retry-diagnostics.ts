@@ -1,3 +1,24 @@
+export function matchedSeriesSkipResponse(
+  attempts: readonly {
+    path: string;
+    request_body: string | undefined;
+    response?: {
+      status: number;
+      received_at: string;
+      body?: string;
+    };
+  }[],
+  occurrenceId: string,
+  fromVersion: number,
+) {
+  return attempts.find(
+    (attempt) =>
+      attempt.path === `/profiles/work/tasks/${occurrenceId}/skip` &&
+      attempt.request_body === JSON.stringify({ from_version: fromVersion }) &&
+      attempt.response?.body !== undefined,
+  )?.response;
+}
+
 export async function seriesRetryFailureMessage({
   occurrenceId,
   readStatus,

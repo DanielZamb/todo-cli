@@ -26,7 +26,7 @@ import {
   nativeAttachmentRequest,
 } from "./attachment-native.ts";
 import { createDiagnosticsWindow } from "./diagnostics-window.ts";
-import { errorReply, exitDetail } from "./error-reply.ts";
+import { errorReply, exitDetail, isDependencyRequest } from "./error-reply.ts";
 import { taskHttpClient } from "./http-client.ts";
 import { type Notice, Reply, Request } from "./protocol.ts";
 import { serverCompatibility } from "./server-compatibility.ts";
@@ -409,8 +409,10 @@ async function boot() {
                 });
               }
               if ("message" in error && typeof error.message === "string")
-                return Effect.succeed<Reply>(errorReply(error));
+                return Effect.succeed<Reply>(errorReply(error, parsed.value));
             }
+            if (isDependencyRequest(parsed.value))
+              return Effect.succeed<Reply>(errorReply(error, parsed.value));
             return Effect.succeed<Reply>({
               _tag: "error",
               message:
