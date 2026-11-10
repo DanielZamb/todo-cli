@@ -25,7 +25,18 @@ body,
 .pele-node {
   cursor: pointer;
 }
-.pele-node[data-selected="true"] > :first-child {
+.pele-node[data-state="blocked"] > :first-child {
+  stroke: var(--pele-critical);
+}
+.pele-node[data-state="done"] > :first-child,
+.pele-node[data-state="cancelled"] > :first-child {
+  stroke: var(--pele-muted);
+}
+.pele-node[data-state="done"] text,
+.pele-node[data-state="cancelled"] text {
+  fill: var(--pele-muted);
+}
+.pele-node[data-root="true"] > :first-child {
   stroke: var(--pele-accent);
   stroke-width: 3;
 }

@@ -23,28 +23,47 @@ export const GraphTheme = Schema.Struct({
     danger: Schema.optionalKey(Color),
   }),
 });
-export const GraphHostRender = Schema.Struct({
+export const GraphNodeState = Schema.Literals([
+  "ready",
+  "blocked",
+  "done",
+  "cancelled",
+]);
+const nodeFields = {
+  mermaid_id: Schema.String.check(Schema.isPattern(/^n[0-9]+$/u)),
+  task_id: TaskId,
+  title: Schema.optionalKey(Schema.String),
+};
+const renderFields = {
   v: Schema.Literal(1),
   type: Schema.Literal("render"),
   identity: GraphHostIdentity,
-  nodes: Schema.Array(
-    Schema.Struct({
-      mermaid_id: Schema.String.check(Schema.isPattern(/^n[0-9]+$/u)),
-      task_id: TaskId,
-    }),
-  ),
+  root_id: TaskId,
   mermaid: Schema.NonEmptyString,
   visible_ids: Schema.Array(TaskId),
-  viewport: GraphViewport,
+  viewport: Schema.optionalKey(GraphViewport),
   selected_id: Schema.NullOr(TaskId),
   focused_id: Schema.NullOr(TaskId),
   theme: GraphTheme,
   reduced_motion: Schema.Boolean,
+};
+export const GraphHostRender = Schema.Struct({
+  ...renderFields,
+  nodes: Schema.Array(
+    Schema.Struct({ ...nodeFields, state: Schema.optionalKey(GraphNodeState) }),
+  ),
+});
+const RenderInput = Schema.Struct({
+  ...renderFields,
+  nodes: Schema.Array(
+    Schema.Struct({ ...nodeFields, state: Schema.optionalKey(Schema.Unknown) }),
+  ),
 });
 export type GraphHostRender = typeof GraphHostRender.Type;
 export type GraphHostIdentity = typeof GraphHostIdentity.Type;
 export type GraphViewport = typeof GraphViewport.Type;
 export type GraphTheme = typeof GraphTheme.Type;
+export type GraphNodeState = typeof GraphNodeState.Type;
 const header = { v: Schema.Literal(1), identity: GraphHostIdentity };
 export const GraphHostReply = Schema.Union([
   Schema.Struct({ ...header, type: Schema.Literal("ready") }),
@@ -74,18 +93,31 @@ export const GraphHostReply = Schema.Union([
 ]);
 export type GraphHostReply = typeof GraphHostReply.Type;
 export function decodeGraphRender(input: unknown): GraphHostRender {
-  const message = Schema.decodeUnknownSync(GraphHostRender)(input);
+  const raw = Schema.decodeUnknownSync(RenderInput)(input);
+  const message: GraphHostRender = {
+    ...raw,
+    nodes: raw.nodes.map(({ state, ...node }) => ({
+      ...node,
+      ...(Schema.is(GraphNodeState)(state) ? { state } : {}),
+    })),
+  };
   const ids = new Set(message.nodes.map((node) => node.task_id));
   const mermaid = new Set(message.nodes.map((node) => node.mermaid_id));
   if (
     ids.size !== message.nodes.length ||
     mermaid.size !== message.nodes.length ||
+    !ids.has(message.root_id) ||
     message.visible_ids.some((id) => !ids.has(id)) ||
     (message.selected_id !== null && !ids.has(message.selected_id)) ||
     (message.focused_id !== null && !ids.has(message.focused_id))
   )
     throw new Error("Graph host received unknown or duplicate Task identity");
   return message;
+}
+export function graphNodeAccessibleName(
+  node: GraphHostRender["nodes"][number],
+) {
+  return `${node.title ?? node.task_id}${node.state ? `, ${node.state}` : ""}`;
 }
 export function decodeGraphReply(
   input: unknown,
