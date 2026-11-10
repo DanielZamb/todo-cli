@@ -30,6 +30,11 @@ import {
 import { errorReply, exitDetail } from "../src/error-reply.ts";
 import { taskHttpClient } from "../src/http-client.ts";
 import { Reply, Request } from "../src/protocol.ts";
+import {
+  restoreStreamState,
+  type StreamState,
+  streamHeaders,
+} from "../src/stream-cursor.ts";
 import { taskRequest } from "../src/task-client.ts";
 import {
   dependencyAgentMessage,
@@ -116,6 +121,14 @@ assert.equal(actualVersion.stdout.trim(), binaries.version);
 let server: ChildProcess | undefined;
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
 let stream: Fiber.Fiber<void, unknown> | undefined;
+let streamState: typeof StreamState.Type = { cursors: {} };
+const streamReads: {
+  profile: typeof ProfileId.Type;
+  headers: ReturnType<typeof streamHeaders>;
+  operations: number[];
+  reloads: number[];
+  ready: number;
+}[] = [];
 let searchProbe:
   | Awaited<ReturnType<typeof createDependencySearchProbe>>
   | undefined;
@@ -399,16 +412,47 @@ try {
         case "watch": {
           if (stream) await Effect.runPromise(Fiber.interrupt(stream));
           const profile = request.profile;
+          const headers = streamHeaders(streamState, profile);
+          const observation: (typeof streamReads)[number] = {
+            profile,
+            headers,
+            operations: [],
+            reloads: [],
+            ready: 0,
+          };
+          streamReads.push(observation);
+          actions.push({ watch: profile, headers });
           stream = Effect.runFork(
             Effect.gen(function* () {
               const response = yield* client.changes.stream({
                 params: { profile },
-                headers: { "x-todo-client": "electron" },
+                headers: { ...headers, "x-todo-client": "electron" },
               });
               yield* Stream.runForEach(response.body, (frame) =>
                 Effect.promise(async () => {
+                  if (frame.event === "ready") observation.ready++;
+                  if (frame.event === "reload")
+                    observation.reloads.push(frame.data.seq);
+                  if (frame.event === "operation")
+                    observation.operations.push(frame.data.seq);
+                  if (frame.event === "reload")
+                    streamState = restoreStreamState(profile, frame.data);
+                  if (frame.event === "operation") {
+                    if (
+                      Number(frame.id) <=
+                      Number(
+                        streamHeaders(streamState, profile)["last-event-id"],
+                      )
+                    )
+                      return;
+                    streamState = {
+                      ...streamState,
+                      cursors: { ...streamState.cursors, [profile]: frame.id },
+                    };
+                  }
                   actions.push({
                     sse: frame.event,
+                    profile,
                     ...(frame.event === "operation"
                       ? { kind: frame.data.event.kind, seq: frame.data.seq }
                       : {}),
@@ -2935,6 +2979,20 @@ try {
       );
     },
   });
+  assert.ok(
+    streamReads.some(
+      (read) =>
+        read.profile === "work" && Number(read.headers["last-event-id"]) > 0,
+    ),
+    "A reopened work stream must resume its production Profile cursor",
+  );
+  for (const read of streamReads)
+    assert.ok(
+      read.operations.every(
+        (seq) => seq > Number(read.headers["last-event-id"]),
+      ),
+      "A resumed stream must not replay an operation at or before its requested cursor",
+    );
   assertDagCaptureInventory(manifest);
   assert.deepEqual(errors, []);
   const proofHead = execFileSync("git", ["rev-parse", "HEAD"], {
@@ -2995,6 +3053,10 @@ try {
   writeFileSync(
     join(evidence, "actions.json"),
     JSON.stringify(actions, null, 2),
+  );
+  writeFileSync(
+    join(evidence, "stream-resumption.json"),
+    JSON.stringify({ streamReads, streamState }, null, 2),
   );
   writeFileSync(
     join(evidence, "dependency-responses.json"),

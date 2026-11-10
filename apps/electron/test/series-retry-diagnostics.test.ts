@@ -1,5 +1,48 @@
 import { expect, it } from "@effect/vitest";
-import { seriesRetryFailureMessage } from "../scripts/series-retry-diagnostics.ts";
+import {
+  matchedSeriesSkipResponse,
+  seriesRetryFailureMessage,
+} from "../scripts/series-retry-diagnostics.ts";
+
+it("awaits only the completed Retry response for the same Occurrence and Version", () => {
+  const response = {
+    status: 200,
+    received_at: "2026-11-10T11:14:54.777Z",
+    body: '{"status":"cancelled","row_version":5}',
+  };
+  const attempts = [
+    {
+      path: "/profiles/work/tasks/other/skip",
+      request_body: '{"from_version":4}',
+      response,
+    },
+    {
+      path: "/profiles/work/tasks/original/skip",
+      request_body: '{"from_version":3}',
+      response,
+    },
+    {
+      path: "/profiles/work/tasks/original/skip",
+      request_body: '{"from_version":4}',
+      response: { status: 200, received_at: response.received_at },
+    },
+  ];
+  expect(matchedSeriesSkipResponse(attempts, "original", 4)).toBeUndefined();
+  expect(
+    matchedSeriesSkipResponse(
+      [
+        ...attempts,
+        {
+          path: "/profiles/work/tasks/original/skip",
+          request_body: '{"from_version":4}',
+          response,
+        },
+      ],
+      "original",
+      4,
+    ),
+  ).toEqual(response);
+});
 
 it("retains the original Occurrence, actual HTTP response and timestamped failure samples", async () => {
   let reads = 0;

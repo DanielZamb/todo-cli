@@ -7,7 +7,10 @@ import { OpLogEntry, Task } from "@todo/domain";
 import { Schema } from "effect";
 import { hiddenHostOptions } from "./hidden-host.ts";
 import { openProfileDeletion, selectProfile } from "./profile-menu.ts";
-import { seriesRetryFailureMessage } from "./series-retry-diagnostics.ts";
+import {
+  matchedSeriesSkipResponse,
+  seriesRetryFailureMessage,
+} from "./series-retry-diagnostics.ts";
 import { verifyCompact } from "./verify-compact.ts";
 import { verifyCompactPresentation } from "./verify-compact-presentation.ts";
 import { type AuthRequest, verifyHostAuth } from "./verify-host-auth.ts";
@@ -871,7 +874,19 @@ try {
     page.getByRole("heading", { name: "Resolve task conflict" }),
   ).toBeVisible();
   const skipRetryStart = skipAttempts.length;
+  const skipRetryVersion = Schema.decodeUnknownSync(Task)(
+    await api(`/profiles/work/tasks/${series.id}`),
+  ).row_version;
   await page.getByRole("button", { name: "Retry action", exact: true }).click();
+  await expect
+    .poll(() =>
+      matchedSeriesSkipResponse(
+        skipAttempts.slice(skipRetryStart),
+        series.id,
+        skipRetryVersion,
+      ),
+    )
+    .toBeDefined();
   const afterSkip = await tasks();
   try {
     expect(afterSkip.find((task) => task.id === series.id)?.status).toBe(

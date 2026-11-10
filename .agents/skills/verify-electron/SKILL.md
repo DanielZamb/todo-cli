@@ -317,3 +317,11 @@ through actual HttpApi decoding, retains Conflict/Reload and rejects older error
 after SDK delivery. Read its typed-fixture versus compiled-server boundary in the
 Dependency feature map. The recurring form and initial-chip fixtures assert whole
 visible controls and the existing fixed-footer geometry.
+
+The Series Skip Retry drive awaits the completed HTTP response for the same
+Occurrence and reviewed `from_version` before its original authoritative status
+assertion. It does not sleep or resend. Its failure-only sampler remains.
+For compile-only Xcode verification, `apps/electron/scripts/xcode-compiler-guards.ts`
+creates local compiler shims and copies the installed Swift feature metadata
+unchanged beside them. See `apps/electron/scripts/verify-design-all.md` for its
+command. Mac Python helpers still run plainly through the Swift slot.

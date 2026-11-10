@@ -131,6 +131,14 @@ Await SDK delivery before asserting no old publication. Raw SDK tags are recorde
 separately from projected Reply fields; do not assume an optional public code.
 This does not prove native sign-out notices or secure-storage behavior.
 
+The unsigned renderer transport uses production `streamHeaders` and
+`restoreStreamState` helpers with Profile cursors and the main process's duplicate
+boundary. `stream-resumption.json` records every requested cursor and every raw
+operation sequence received. Reopened streams must request their surviving
+cursor and receive no operation at or before it. Preserve the picker's 5,000 ms
+row assertion; replaying the whole history in the verification host is not a
+substitute for production resume behavior.
+
 Keep initial graph loading visible. With an existing report, refresh loading must
 stay accessible without changing the diagram frame. Hold an actual SSE graph
 read and assert equal frame/camera before/during/after, with vanished focus falling

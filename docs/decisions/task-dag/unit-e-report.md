@@ -6,7 +6,7 @@ This report does not claim a complete matrix, full-suite success or final approv
 
 Branch: `feat/task-dag-e-electron`. Qualified base:
 `2c78a3263c196d870459b17bf647cfc23f421fdd`. The current committed product checkpoint is
-`20098c159aee8fcf56404db21c235b522cefc2c3`. Subsequent lifecycle and matrix verification
+`4cdc5d4744dde932bacd406faff327966a21437c`. Subsequent lifecycle and matrix verification
 is in progress, with exact working-source hashes in the proof receipts. Contract:
 `858612b6feba4e359ee28749b70119a36b3909ad20459ef15f82286f1b80b829`.
 No domain, CLI, server or Swift product files were added or changed by E. No
@@ -35,6 +35,11 @@ The first full end run at 4cdc5d47 is retained: Electron exits 1 with 11 PASS an
 three verification failures; Mac exits 1 with all 346 registered captures and
 the exact 12 main Import failures. Their classifications and the required new
 end run after verification maintenance are in `unit-e-end-proof-maintenance.md`.
+The b748 end run also remains failed: twelve Electron recipes pass, two fail,
+and the retained Mac suite has the same exact twelve failures. The subsequent
+transport/Series completion and compiler-discovery corrections, plus the closed
+production-backlog finding, are in `unit-e-verification-resume.md`. They are
+working verification proof pending a new committed end run.
 
 ## Product checkpoint
 
