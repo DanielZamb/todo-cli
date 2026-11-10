@@ -33,7 +33,7 @@ export function DependencyDeleteDialog({
 }) {
   const state = useSyncExternalStore(controller.subscribe, controller.snapshot);
   const cancel = useRef<HTMLButtonElement>(null);
-  const review = state.kind === "Review" && state.changed;
+  const review = state.kind === "Review" && state.change.kind === "Changed";
   useLayoutEffect(() => {
     if (review) cancel.current?.focus();
   }, [review]);
@@ -75,12 +75,21 @@ export function DependencyDeleteDialog({
         {state.kind === "Loading" && (
           <p role="status">Loading Delete preview…</p>
         )}
-        {state.changed ? (
-          <p role="status" data-testid="dependency-delete-changed">
-            {reviewed && edges.length === 0
-              ? "This Task has no Dependencies now. Confirm again to delete it."
-              : "Dependencies changed. Review the current list and confirm again."}
-          </p>
+        {state.change.kind === "Changed" ? (
+          <div
+            role="status"
+            data-testid="dependency-delete-changed"
+            className="space-y-2"
+          >
+            <p>
+              {reviewed && edges.length === 0
+                ? "This Task has no Dependencies now. Confirm again to delete it."
+                : "Dependencies changed. Review the current list and confirm again."}
+            </p>
+            {state.change.exitDetail && (
+              <p className="text-muted-foreground">{state.change.exitDetail}</p>
+            )}
+          </div>
         ) : (
           reviewed && (
             <p>
@@ -108,7 +117,9 @@ export function DependencyDeleteDialog({
             context="delete"
             tasks={reviewed?.graph?.nodes.map((node) => node.task) ?? []}
             reload={() =>
-              void controller.open(state.task, request, state.changed)
+              void controller.open(state.task, request, {
+                change: state.change,
+              })
             }
             onFindTask={
               onFindTask
@@ -126,7 +137,9 @@ export function DependencyDeleteDialog({
             data-testid="dependency-reload"
             disabled={!canWrite}
             onClick={() =>
-              void controller.open(state.task, request, state.changed)
+              void controller.open(state.task, request, {
+                change: state.change,
+              })
             }
           >
             Reload

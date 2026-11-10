@@ -51,6 +51,12 @@ Every Task Delete entry shares the server-preview controller and dialog. Confirm
 uses the reviewed preview request Version and fingerprint even with no edges.
 Changed or changed-to-empty previews require another explicit confirmation. Cancel
 has initial focus; long lists scroll while counted headers and actions stay visible.
+The changed-review notice retains the actual reply's exit pair, including a
+fingerprint refusal with exit 2 and a Version-only Conflict with exit 4. It does
+not infer the pair from a changed Version or add an extra Reload after the fresh
+preview. `verify-dependency-edge-cases.ts` records decoded replies, actual 9/13/14
+limits, retained redundant edges, unchanged add/remove with no Version/History
+write, offline picker/Delete and both row-menu/right-click confirmation paths.
 Batch preview has separate explicit per-item Apply and Conflict Reload, with no
 blind Version advancement after refused items. Immediate picker writes never
 advance an unsaved editor's expected Version.

@@ -6,7 +6,7 @@ This report does not claim a complete matrix, full-suite success or final approv
 
 Branch: `feat/task-dag-e-electron`. Qualified base:
 `2c78a3263c196d870459b17bf647cfc23f421fdd`. The previous product checkpoint is
-`777d24a5c57738bdb1f0f7512c48eedc75e7db6b`. Current readiness and camera work was
+`885541bc6b526133bd573e6992273af7b371e785`. Current edge and Delete-review work was
 developed from that source, with exact working-source hashes in the proof receipts. Contract:
 `858612b6feba4e359ee28749b70119a36b3909ad20459ef15f82286f1b80b829`.
 No domain, CLI, server or Swift product files were added or changed by E. No
@@ -15,12 +15,15 @@ the coordinator is the sole UI reviewer. No self-approval is claimed.
 
 The current checkpoint's Electron typecheck exits 0; its complete package unit
 suite exits 0 with 150 passing tests and the existing one skip. Owned-file Biome
-check and the permitted local no-comments audit exit 0. Their receipts and source
-hashes are in `feature-matrix-setup/checkpoint-*`. These are intermediate checks,
+check and the permitted local no-comments audit exit 0. Latest receipts are in
+`edge-cases-setup-03`, `graph-matrix-setup-08` and `edge-cases-checkpoint-01`.
+Earlier `feature-matrix-setup/checkpoint-*` receipts remain unchanged. These are intermediate checks,
 not the root check or either full offscreen design suite. Current recovery checks
 are in `search-recovery-setup/checkpoint-*`; earlier receipts remain unchanged.
 The later readiness and graph-camera evidence is described in
 `unit-e-readiness-graph.md`, including retained failures and partial-proof limits.
+The subsequent 9/13/14, no-op and changed-Delete review proof is in
+`unit-e-edge-cases.md`. Both actual refusal pairs now survive a fresh preview.
 
 ## Product checkpoint
 

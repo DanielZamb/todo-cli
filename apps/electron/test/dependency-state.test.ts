@@ -240,7 +240,7 @@ it("requires a second explicit confirmation after a changed-to-empty preview", a
   expect(applied.length).toBe(1);
   expect(controller.snapshot()).toMatchObject({
     kind: "Review",
-    changed: true,
+    change: { kind: "Changed", exitDetail: "error 2 - validation or usage" },
     fromVersion: 3,
     task: { removed_dependencies: [] },
   });

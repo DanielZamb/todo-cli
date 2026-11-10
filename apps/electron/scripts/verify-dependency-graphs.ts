@@ -189,7 +189,17 @@ export async function verifyDependencyGraphs({
     assert.equal(data.shape, "tree");
     assert.ok(data.shape === "tree");
     assert.equal(data.orientation, orientation);
-    fixtures.push({ root, data, label: `${orientation} tree` });
+    fixtures.push({
+      root,
+      data,
+      label: `${orientation} tree`,
+      details:
+        orientation === "diverging"
+          ? ["0", "0", "2"]
+          : orientation === "converging"
+            ? ["1", "2", "0"]
+            : ["1", "2", "2"],
+    });
   }
   const diamondA = add("DAG shared prerequisite", "--energy", "2");
   const diamondB = add("DAG branch B", "--depends-on", diamondA.id);
@@ -203,8 +213,13 @@ export async function verifyDependencyGraphs({
   );
   const diamond = await report(diamondRoot.id);
   assert.equal(diamond.shape, "dag");
-  fixtures.push({ root: diamondRoot, data: diamond, label: "DAG" });
-  for (const { root, data, label } of fixtures) {
+  fixtures.push({
+    root: diamondRoot,
+    data: diamond,
+    label: "DAG",
+    details: ["2", "2", "0"],
+  });
+  for (const { root, data, label, details: expectedDetails } of fixtures) {
     await open(root);
     await expect(page.getByTestId("dependency-graph-diagram")).toHaveCount(0);
     await capture(
@@ -217,6 +232,10 @@ export async function verifyDependencyGraphs({
     await expect(
       page.locator(".dependency-graph-section dd").first(),
     ).toHaveText(label);
+    await expect(page.locator(".dependency-graph-section dd")).toHaveText([
+      label,
+      ...expectedDetails,
+    ]);
     const details = page.locator(".dependency-graph-section dl");
     await capture(
       `graph-${label.replaceAll(" ", "-")}-details`,

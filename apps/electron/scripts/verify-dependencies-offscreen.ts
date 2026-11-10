@@ -39,6 +39,7 @@ import { openImport } from "./appearance.ts";
 import { buildGraphBrowser } from "./build-graph-browser.ts";
 import { writeDagCaptureManifest } from "./dag-capture-manifest.ts";
 import { settleRenderer } from "./settle-renderer.ts";
+import { verifyDependencyEdgeCases } from "./verify-dependency-edge-cases.ts";
 import { verifyDependencyGraphs } from "./verify-dependency-graphs.ts";
 import { verifyDependencyReadiness } from "./verify-dependency-readiness.ts";
 import {
@@ -112,6 +113,8 @@ let searchProbe:
   | undefined;
 let log = "";
 const actions: unknown[] = [];
+const requests: Request[] = [];
+const responses: { request: Request; reply: Reply }[] = [];
 const manifest: { png: string; receipt: string; [key: string]: unknown }[] = [];
 const cli = (...args: string[]) => {
   const result = spawnSync(
@@ -286,6 +289,7 @@ try {
   let clipboard = "";
   let delay = false;
   let delayDelete = false;
+  let delayPreview = false;
   let reportFixture: "batch" | "import" | null = null;
   const projectedError = (index: number) => {
     const error = dependencyRefusals[index]?.error;
@@ -327,12 +331,15 @@ try {
     async (raw: unknown): Promise<Reply> => {
       const request = Schema.decodeUnknownSync(Request)(raw);
       actions.push({ request });
+      requests.push(request);
       if (
-        (request._tag === "depend" && delay) ||
+        ((request._tag === "depend" || request._tag === "undepend") && delay) ||
+        (request._tag === "delete" && request.query.dry_run && delayPreview) ||
         (request._tag === "delete" && !request.query.dry_run && delayDelete)
       ) {
         delay = false;
         delayDelete = false;
+        delayPreview = false;
         await new Promise<void>((done) => {
           release = done;
         });
@@ -454,6 +461,12 @@ try {
             ),
           ),
         );
+        if (
+          request._tag === "delete" ||
+          request._tag === "depend" ||
+          request._tag === "undepend"
+        )
+          responses.push({ request, reply });
         if (request._tag === "dependencyCandidates" && searchProbe?.enabled)
           searchProbe.record(request.filters.text ?? "", reply);
         if (reply._tag === "graph" && failRender) {
@@ -471,13 +484,18 @@ try {
           "_tag" in error &&
           error._tag === "Conflict" &&
           "latest" in error
-        )
-          return Schema.decodeUnknownSync(Reply)({
+        ) {
+          const reply = Schema.decodeUnknownSync(Reply)({
             _tag: "conflict",
             latest: error.latest,
             exit_detail: exitDetail(error),
           });
-        return errorReply(error, request);
+          responses.push({ request, reply });
+          return reply;
+        }
+        const reply = errorReply(error, request);
+        responses.push({ request, reply });
+        return reply;
       }
     },
   );
@@ -553,6 +571,7 @@ try {
       }
       const png = `${state}-${layout}-${dark ? "dark" : "light"}.png`;
       const geometry = await page.evaluate(() => ({
+        viewport: { width: innerWidth, height: innerHeight },
         overflow: document.documentElement.scrollWidth > innerWidth,
         popups: [
           ...document.querySelectorAll(
@@ -2664,6 +2683,29 @@ try {
     join(evidence, "graph-matrix-results.json"),
     JSON.stringify(graphMatrix, null, 2),
   );
+  const edgeCases = await verifyDependencyEdgeCases({
+    page,
+    client,
+    cli,
+    capture,
+    notify,
+    requests,
+    responses,
+    holdUpdates: async (hold) => {
+      holdNotices = hold;
+      if (!hold) while (heldNotices.length) await notify(heldNotices.shift());
+    },
+    pause: (kind) => {
+      if (kind === "relation") delay = true;
+      else delayPreview = true;
+    },
+    pending: () => release !== undefined,
+    resume: releasePending,
+  });
+  writeFileSync(
+    join(evidence, "edge-cases-results.json"),
+    JSON.stringify(edgeCases, null, 2),
+  );
   assert.deepEqual(errors, []);
   writeFileSync(
     join(evidence, "result.json"),
@@ -2702,6 +2744,10 @@ try {
   writeFileSync(
     join(evidence, "actions.json"),
     JSON.stringify(actions, null, 2),
+  );
+  writeFileSync(
+    join(evidence, "dependency-responses.json"),
+    JSON.stringify(responses, null, 2),
   );
   writeDagCaptureManifest(root, evidence, manifest);
   writeFileSync(join(evidence, "server.log"), log);

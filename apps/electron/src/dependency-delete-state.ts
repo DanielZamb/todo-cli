@@ -1,24 +1,39 @@
 import type { GraphReport, Task } from "@todo/domain";
+import { exitDetail } from "./error-reply.ts";
 import type { Reply, Request } from "./protocol.ts";
 
 type Requester = (request: Request) => Promise<Reply>;
 type Preview = Extract<Reply, { _tag: "task" }>["task"];
 type Failure = Extract<Reply, { _tag: "error" | "conflict" }>;
+type PreviewChange =
+  | { readonly kind: "Initial" }
+  | { readonly kind: "Changed"; readonly exitDetail: string | null };
+const changedPreview = (failure: Failure): PreviewChange => ({
+  kind: "Changed",
+  exitDetail:
+    failure.exit_detail ??
+    (failure._tag === "error" ? exitDetail(failure.dependency) : null) ??
+    null,
+});
 export type DependencyDeleteState =
   | { readonly kind: "Closed" }
-  | { readonly kind: "Loading"; readonly task: Task; readonly changed: boolean }
+  | {
+      readonly kind: "Loading";
+      readonly task: Task;
+      readonly change: PreviewChange;
+    }
   | {
       readonly kind: "Review" | "Applying";
       readonly task: Preview;
       readonly graph: GraphReport | null;
       readonly fromVersion: Task["row_version"];
-      readonly changed: boolean;
+      readonly change: PreviewChange;
       readonly failure: Failure | null;
     }
   | {
       readonly kind: "Error";
       readonly task: Task;
-      readonly changed: boolean;
+      readonly change: PreviewChange;
       readonly failure: Failure;
     };
 export class DependencyDeleteController {
@@ -43,11 +58,11 @@ export class DependencyDeleteController {
   async open(
     task: Task,
     request: Requester,
-    changed = false,
-    reloadConflict = true,
+    options: { change?: PreviewChange; reloadConflict?: boolean } = {},
   ): Promise<void> {
+    const change: PreviewChange = options.change ?? { kind: "Initial" };
     const epoch = ++this.epoch;
-    this.publish({ kind: "Loading", task, changed });
+    this.publish({ kind: "Loading", task, change });
     const result = await this.call(request, {
       _tag: "delete",
       profile: task.profile_id,
@@ -60,9 +75,12 @@ export class DependencyDeleteController {
       result.latest &&
       result.latest.id === task.id &&
       result.latest.profile_id === task.profile_id &&
-      reloadConflict
+      options.reloadConflict !== false
     )
-      return this.open(result.latest, request, true, false);
+      return this.open(result.latest, request, {
+        change: changedPreview(result),
+        reloadConflict: false,
+      });
     if (
       result._tag !== "task" ||
       result.task.id !== task.id ||
@@ -74,7 +92,7 @@ export class DependencyDeleteController {
       this.publish({
         kind: "Error",
         task,
-        changed,
+        change,
         failure:
           result._tag === "error" || result._tag === "conflict"
             ? result
@@ -102,7 +120,7 @@ export class DependencyDeleteController {
         graph.report.task_id === task.id
           ? graph.report
           : null,
-      changed,
+      change,
       failure: null,
     });
   }
@@ -136,7 +154,7 @@ export class DependencyDeleteController {
       this.publish({
         kind: "Error",
         task: state.task,
-        changed: true,
+        change: { kind: "Changed", exitDetail: null },
         failure: {
           _tag: "error",
           message:
@@ -170,7 +188,7 @@ export class DependencyDeleteController {
         task.id === state.task.id &&
         task.profile_id === state.task.profile_id
       )
-        await this.open(task, request, true);
+        await this.open(task, request, { change: changedPreview(result) });
       else
         this.publish({
           ...state,
