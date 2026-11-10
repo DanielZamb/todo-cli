@@ -29,6 +29,8 @@ function control(
   nested: "direct" | "shell" | "env",
   failAt = 0,
   executable = "bun",
+  delegateExit = 7,
+  trace = false,
 ) {
   const fixture = mkdtempSync(join(tmpdir(), "todo-guard-control-"));
   try {
@@ -39,6 +41,9 @@ function control(
     mkdirSync(join(fixture, "scripts"));
     const copied = join(scripts, "guarded-run.sh");
     copyFileSync(wrapper, copied);
+    const quietGuard = join(root, "apps/electron/scripts/guarded-disk.sh");
+    if (existsSync(quietGuard))
+      copyFileSync(quietGuard, join(scripts, "guarded-disk.sh"));
     writeFileSync(
       join(fixture, "scripts/disk-guard.sh"),
       `#!/bin/sh
@@ -48,7 +53,11 @@ count=0
 count=$((count + 1))
 printf '%s' "$count" > "$CONTROL_COUNT"
 [ "$count" -le 8 ] || exit 77
-[ "$count" -ne "$CONTROL_FAIL_AT" ] || exit 3
+if [ "$count" -eq "$CONTROL_FAIL_AT" ]; then
+  printf 'DISK STOP fake floor\\n' >&2
+  exit 3
+fi
+printf 'disk-guard ok: fake success\\n'
 `,
     );
     for (const name of ["bun", "pnpm", "node", "xcrun"])
@@ -57,7 +66,7 @@ printf '%s' "$count" > "$CONTROL_COUNT"
         `#!/bin/sh
 printf '%s\\0' "$@" > "$CONTROL_ARGS"
 printf '%s' "$CONTROL_VALUE" > "$CONTROL_ENV"
-exit 7
+exit ${delegateExit}
 `,
         { mode: 0o755 },
       );
@@ -77,6 +86,8 @@ exit 7
       CONTROL_FAIL_AT: String(failAt),
       CONTROL_VALUE: "retained env café",
     };
+    delete env.TODO_DAG_GUARD_TRACE;
+    if (trace) env.TODO_DAG_GUARD_TRACE = join(fixture, "trace");
     for (const key of [
       "TODO_DAG_REAL_BUN",
       "TODO_DAG_REAL_PNPM",
@@ -121,6 +132,11 @@ exit 7
         ? readFileSync(env.CONTROL_ENV ?? "", "utf8")
         : null,
       stderr: result.stderr,
+      stdout: result.stdout,
+      trace:
+        env.TODO_DAG_GUARD_TRACE && existsSync(env.TODO_DAG_GUARD_TRACE)
+          ? readFileSync(env.TODO_DAG_GUARD_TRACE, "utf8")
+          : null,
     };
     if (process.env.TODO_VERIFICATION_CONTROLS_DIR) {
       const evidence = repositoryPath(
@@ -135,9 +151,16 @@ exit 7
       );
     }
     expect(receipt.signal).toBeNull();
-    expect(receipt.exit).toBe(failAt ? 3 : 7);
+    expect(receipt.exit).toBe(failAt ? 3 : delegateExit);
     expect(receipt.delegateEntered).toBe(!failAt);
+    expect(receipt.stdout).toBe("");
+    expect(receipt.stderr).toBe(failAt ? "DISK STOP fake floor\n" : "");
     expect(receipt.guardCalls).toBe(failAt || (nested === "direct" ? 2 : 3));
+    if (trace)
+      expect(receipt.trace).toBe(
+        "disk-guard ok: fake success\n".repeat(receipt.guardCalls),
+      );
+    else expect(receipt.trace).toBeNull();
     if (!failAt) {
       expect(receipt.args).toEqual(values);
       expect(receipt.value).toBe(
@@ -160,8 +183,12 @@ it("stops immediately on a failed initial or nested compiler guard", () => {
   control("initial-disk-stop", "direct", 1);
   control("nested-disk-stop", "shell", 3);
 });
+it("keeps a silent successful delegate silent and writes optional traces only to a file", () => {
+  control("silent-zero", "direct", 0, "bun", 0);
+  control("trace-file-only", "shell", 0, "bun", 0, true);
+});
 
-it("keeps nested JSON delegate stdout machine-readable and guard diagnostics on stderr", () => {
+it("preserves nested JSON stdout and delegate stderr without successful guard output", () => {
   const fixture = mkdtempSync(join(tmpdir(), "todo-guard-json-"));
   try {
     const scripts = join(fixture, "apps/electron/scripts");
@@ -171,6 +198,9 @@ it("keeps nested JSON delegate stdout machine-readable and guard diagnostics on 
     mkdirSync(bin);
     const copied = join(scripts, "guarded-run.sh");
     copyFileSync(wrapper, copied);
+    const quietGuard = join(root, "apps/electron/scripts/guarded-disk.sh");
+    if (existsSync(quietGuard))
+      copyFileSync(quietGuard, join(scripts, "guarded-disk.sh"));
     writeFileSync(
       join(fixture, "scripts/disk-guard.sh"),
       "#!/bin/sh\nprintf 'guard success\\n'\nprintf 'guard detail\\n' >&2\n",
@@ -185,6 +215,7 @@ it("keeps nested JSON delegate stdout machine-readable and guard diagnostics on 
       ...process.env,
       PATH: `${bin}:/usr/bin:/bin`,
     };
+    delete env.TODO_DAG_GUARD_TRACE;
     for (const key of [
       "TODO_DAG_REAL_BUN",
       "TODO_DAG_REAL_PNPM",
@@ -220,12 +251,7 @@ it("keeps nested JSON delegate stdout machine-readable and guard diagnostics on 
     expect(result.signal).toBeNull();
     expect(result.stdout).toBe('{"licenses":["MIT"]}\n');
     expect(JSON.parse(result.stdout)).toEqual({ licenses: ["MIT"] });
-    expect(result.stderr.match(/guard success/gu)?.length).toBe(3);
-    expect(result.stderr.match(/guard detail/gu)?.length).toBe(3);
-    expect(result.stderr).toContain("delegate diagnostic");
-    expect(result.stderr).toBe(
-      `${"guard success\nguard detail\n".repeat(3)}delegate diagnostic\n`,
-    );
+    expect(result.stderr).toBe("delegate diagnostic\n");
   } finally {
     rmSync(fixture, { recursive: true, force: true });
   }

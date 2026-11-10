@@ -4,9 +4,18 @@ const { resolve } = require("node:path");
 const guardPath = () =>
   resolve(process.env.TODO_DAG_GUARD_ROOT, "scripts/disk-guard.sh");
 function guardCompiler() {
-  const result = spawnSync("/bin/sh", [guardPath()], {
-    stdio: ["inherit", process.stderr.fd, process.stderr.fd],
-  });
+  const result = spawnSync(
+    "/bin/sh",
+    [
+      resolve(
+        process.env.TODO_DAG_GUARD_ROOT,
+        "apps/electron/scripts/guarded-disk.sh",
+      ),
+    ],
+    {
+      stdio: ["inherit", process.stderr.fd, process.stderr.fd],
+    },
+  );
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 function installBuildGuard(runtime) {
