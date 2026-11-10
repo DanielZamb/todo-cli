@@ -24,6 +24,9 @@ The later readiness and graph-camera evidence is described in
 `unit-e-readiness-graph.md`, including retained failures and partial-proof limits.
 The subsequent 9/13/14, no-op and changed-Delete review proof is in
 `unit-e-edge-cases.md`. Both actual refusal pairs now survive a fresh preview.
+The newer authorized-root context, Session/Profile recovery, N2 cause-specific
+Delete status and title-only drag geometry work is described in
+`unit-e-recovery-row-geometry.md`. It remains intermediate proof.
 
 ## Product checkpoint
 
@@ -52,7 +55,10 @@ Apply. Explicit Reload of a same-dependent batch does not assume that an earlier
 refused item advanced its Version.
 
 List drag uses the existing Task rows and writes TARGET depends on SOURCE. Hover
-and pending text replace only the target metadata line. Visible N1 copy is
+and pending text replace the target metadata line when present. Title-only rows
+use an absolute caption inside their own row without changing density. Compact
+places it under the title; full window uses the coordinator's inline placement
+with the bounded long-title fallback. Visible N1 copy is
 `Will depend on <source>` or `Already depends on <source>`; the accessible value
 retains both Task titles. Self, foreign and existing links cannot write. Keyboard
 and menu actions open the same picker. The whole-client accelerator inventory

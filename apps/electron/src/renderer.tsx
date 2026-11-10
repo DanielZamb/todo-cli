@@ -114,6 +114,7 @@ import {
   InitialDependencySection,
 } from "./dependency-selection-dialog.tsx";
 import { DependencyController } from "./dependency-state.ts";
+import { DependencyTitleStatus } from "./dependency-title-status.tsx";
 import { Diagnostics } from "./diagnostics.tsx";
 import { DiscoveryDialog } from "./discovery-dialog.tsx";
 import {
@@ -1405,6 +1406,7 @@ function App() {
     void dependencyGraph.open(
       { profile: task.profile_id, root: task.id },
       request,
+      task,
     );
   };
   const sourceForDrag = (event: DragEvent) => {
@@ -2695,7 +2697,7 @@ function App() {
                       </span>
                     </div>
                   )}
-                  <div className="task-list">
+                  <ul className="task-list">
                     {group.tasks.map((task) => {
                       const projectName = catalog?.projects.find(
                         (entry) => entry.id === task.project_id,
@@ -2724,8 +2726,19 @@ function App() {
                       const excerpt = appliedSearch?.appliedIdentity.text
                         ? descriptionMatch(task)
                         : null;
+                      const titleOnlyHint =
+                        dropHint &&
+                        !(
+                          badge ||
+                          projectName ||
+                          tags.length ||
+                          task.due_at ||
+                          task.scheduled_at ||
+                          task.external_id ||
+                          excerpt
+                        );
                       return (
-                        <div
+                        <li
                           className={cn(
                             "task-row",
                             excerpt && "has-search-excerpt",
@@ -2743,6 +2756,45 @@ function App() {
                                 : dragState.kind.toLowerCase()
                               : undefined
                           }
+                          onDragOver={(event) => {
+                            if (
+                              readOnly ||
+                              !(event.target instanceof Node) ||
+                              !event.currentTarget.contains(event.target)
+                            )
+                              return;
+                            event.preventDefault();
+                            dependencyDrag.hover(sourceForDrag(event), task);
+                            const current = dependencyDrag.snapshot();
+                            event.dataTransfer.dropEffect =
+                              current.kind === "Hover" &&
+                              current.guidance === "allowed"
+                                ? "link"
+                                : "none";
+                          }}
+                          onDragLeave={(event) => {
+                            if (
+                              !(event.relatedTarget instanceof Node) ||
+                              !event.currentTarget.contains(event.relatedTarget)
+                            )
+                              dependencyDrag.leave();
+                          }}
+                          onDrop={(event) => {
+                            if (
+                              readOnly ||
+                              !(event.target instanceof Node) ||
+                              !event.currentTarget.contains(event.target)
+                            )
+                              return;
+                            event.preventDefault();
+                            event.stopPropagation();
+                            dependencyDrag.hover(sourceForDrag(event), task);
+                            void dependencyDrag
+                              .drop(request)
+                              .then((changed) => {
+                                if (changed) void refresh();
+                              });
+                          }}
                         >
                           <button
                             type="button"
@@ -2765,37 +2817,6 @@ function App() {
                             draggable={
                               !readOnly && dragState.kind !== "Pending"
                             }
-                            onDragOver={(event) => {
-                              if (readOnly) return;
-                              event.preventDefault();
-                              dependencyDrag.hover(sourceForDrag(event), task);
-                              const current = dependencyDrag.snapshot();
-                              event.dataTransfer.dropEffect =
-                                current.kind === "Hover" &&
-                                current.guidance === "allowed"
-                                  ? "link"
-                                  : "none";
-                            }}
-                            onDragLeave={(event) => {
-                              if (
-                                !(event.relatedTarget instanceof Node) ||
-                                !event.currentTarget.contains(
-                                  event.relatedTarget,
-                                )
-                              )
-                                dependencyDrag.leave();
-                            }}
-                            onDrop={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              if (readOnly) return;
-                              dependencyDrag.hover(sourceForDrag(event), task);
-                              void dependencyDrag
-                                .drop(request)
-                                .then((changed) => {
-                                  if (changed) void refresh();
-                                });
-                            }}
                             onDragStart={(event) => {
                               dragging.current = {
                                 profile,
@@ -2863,7 +2884,7 @@ function App() {
                             )}
                             {compact ? (
                               <RowMetadata
-                                {...(dropHint
+                                {...(dropHint && !titleOnlyHint
                                   ? {
                                       status: dropHint.text,
                                       statusLabel: dropHint.accessibilityValue,
@@ -2920,10 +2941,12 @@ function App() {
                                 <span
                                   className="task-meta"
                                   title={
-                                    dropHint?.accessibilityValue ?? metadata
+                                    !titleOnlyHint && dropHint
+                                      ? dropHint.accessibilityValue
+                                      : metadata
                                   }
                                 >
-                                  {dropHint ? (
+                                  {dropHint && !titleOnlyHint ? (
                                     <span
                                       className="min-w-0 truncate"
                                       role="status"
@@ -2979,6 +3002,13 @@ function App() {
                               </>
                             )}
                           </button>
+                          {dropHint && titleOnlyHint && (
+                            <DependencyTitleStatus
+                              text={dropHint.text}
+                              accessibilityValue={dropHint.accessibilityValue}
+                              compact={compact}
+                            />
+                          )}
                           <DropdownMenu
                             open={contextTask?.id === task.id}
                             onOpenChange={(open) =>
@@ -3044,10 +3074,10 @@ function App() {
                               </DropdownMenuGroup>
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        </div>
+                        </li>
                       );
                     })}
-                  </div>
+                  </ul>
                 </section>
               ))}
           </TaskGroups>

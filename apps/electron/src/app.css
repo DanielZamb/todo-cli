@@ -196,6 +196,9 @@ nav {
   overflow-wrap: anywhere;
 }
 .task-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
   border-top: 1px solid var(--border);
 }
 .task-row {
@@ -1890,6 +1893,21 @@ nav {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.dependency-title-status {
+  position: absolute;
+  z-index: 1;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 400;
+  color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.dependency-title-status:not([data-ready="true"]) {
+  visibility: hidden;
 }
 .compact .row-metadata-empty {
   position: absolute;

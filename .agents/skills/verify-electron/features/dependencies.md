@@ -61,6 +61,13 @@ Batch preview has separate explicit per-item Apply and Conflict Reload, with no
 blind Version advancement after refused items. Immediate picker writes never
 advance an unsaved editor's expected Version.
 
+Choose changed-Delete copy from the retained refusal cause. Conflict says
+`This Task changed. Confirm again to delete it.` A has_dependencies refusal says
+`Dependencies changed. Review the current list and confirm again.` when the
+fresh set is non-empty, or `This Task has no Dependencies now. Confirm again to
+delete it.` when empty. Assert all three literals and the actual pair as the last
+muted line. Fresh edge count alone must not choose the Conflict message.
+
 Command/Control-Shift-K and the existing menu/editor entry open the same picker.
 Plain Command-K stays free. Search initially receives focus; Arrow keys move among
 choices, Space toggles and Close returns focus. A list SOURCE dropped on TARGET
@@ -68,6 +75,15 @@ means TARGET depends on SOURCE. Visible target metadata says `Will depend on
 <source>` or `Already depends on <source>`; the accessible value names both Tasks.
 No row may move during hover/pending, and the hint must not overlap the title.
 Self/foreign/already-linked drops send no write. Native key/drag dispatch is unproven.
+
+`verify-dependency-title-drag.ts` covers title-only adjacent and last rows without
+adding fixture metadata. Compact uses the target's bottom padding. Full-window
+short titles use a same-baseline overlay 12 px after the title text; below 160 px
+free before trailing controls, the caption uses the available under-title line
+box at the unchanged font size. Assert every row frame is identical before and
+during hover, visible caption bounds inside the target and viewport, no text or
+control intersections, both sides of the 160 px boundary, and a real row-padding
+drop through the shared command. Existing metadata rows keep their current hint.
 
 Graph mode reuses the canonical local browser resource; app state owns camera,
 selection, focus and expansion. Compact opens List; full window shows diagram and
@@ -90,6 +106,13 @@ The app distinguishes fitted and manual cameras. Frame resize coalesces through
 ResizeObserver and animation-frame layout, refits only an automatic camera, and
 preserves a person's pan/zoom until Reset. Assert new-frame centring, unchanged
 manual viewport on Compact/full/window resize, and centred Reset in Chromium.
+
+`verify-dependency-recovery.ts` drives graph loading/offline/public read failure,
+explicit Retry, awaited stale delivery after Close/new root, Profile reset and
+actual Session sign-out/re-sign-in through the retained HttpApi client. Captured
+root titles must match the authorized root/Profile and survive loading or first
+read failure. A controlled HTTP failure is labelled separately from real server
+successes. This does not prove native credential persistence or Session restoration.
 
 Repeated graph Tasks use fixed section tokens: shown, depends-on, blocks,
 lightest-next, starts-at, ends-at, ancestors, descendants. Tasks in diagram retain

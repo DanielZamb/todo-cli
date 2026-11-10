@@ -43,9 +43,14 @@ import { verifyDependencyEdgeCases } from "./verify-dependency-edge-cases.ts";
 import { verifyDependencyGraphs } from "./verify-dependency-graphs.ts";
 import { verifyDependencyReadiness } from "./verify-dependency-readiness.ts";
 import {
+  createDependencyReadProbe,
+  verifyDependencyRecovery,
+} from "./verify-dependency-recovery.ts";
+import {
   createDependencySearchProbe,
   verifyDependencySearchRecovery,
 } from "./verify-dependency-search-recovery.ts";
+import { verifyDependencyTitleDrag } from "./verify-dependency-title-drag.ts";
 
 const root = verificationRoot(import.meta.dirname);
 const evidence = repositoryPath(
@@ -111,15 +116,19 @@ let stream: Fiber.Fiber<void, unknown> | undefined;
 let searchProbe:
   | Awaited<ReturnType<typeof createDependencySearchProbe>>
   | undefined;
+let readProbe:
+  | Awaited<ReturnType<typeof createDependencyReadProbe>>
+  | undefined;
 let log = "";
 const actions: unknown[] = [];
 const requests: Request[] = [];
 const responses: { request: Request; reply: Reply }[] = [];
+const deliveries: { request: Request; reply: Reply["_tag"] }[] = [];
 const manifest: { png: string; receipt: string; [key: string]: unknown }[] = [];
-const cli = (...args: string[]) => {
+const cliInProfile = (profile: string, ...args: string[]) => {
   const result = spawnSync(
     binaries.cli,
-    ["--profile", "work", "--format", "json", ...args],
+    ["--profile", profile, "--format", "json", ...args],
     {
       env,
       encoding: "utf8",
@@ -127,10 +136,11 @@ const cli = (...args: string[]) => {
       timeout: 60000,
     },
   );
-  actions.push({ cli: args, exit: result.status });
+  actions.push({ cli: args, profile, exit: result.status });
   assert.equal(result.status, 0, result.stdout + result.stderr);
   return JSON.parse(result.stdout);
 };
+const cli = (...args: string[]) => cliInProfile("work", ...args);
 try {
   cli("init", "--password-stdin");
   cli("login", "--password-stdin");
@@ -240,6 +250,7 @@ try {
     }),
   );
   searchProbe = await createDependencySearchProbe(client, () => credential);
+  readProbe = await createDependencyReadProbe(() => credential);
   execFileSync("sh", [join(root, "scripts/disk-guard.sh")], {
     stdio: "inherit",
   });
@@ -290,6 +301,7 @@ try {
   let delay = false;
   let delayDelete = false;
   let delayPreview = false;
+  let delayGraph = false;
   let reportFixture: "batch" | "import" | null = null;
   const projectedError = (index: number) => {
     const error = dependencyRefusals[index]?.error;
@@ -335,11 +347,13 @@ try {
       if (
         ((request._tag === "depend" || request._tag === "undepend") && delay) ||
         (request._tag === "delete" && request.query.dry_run && delayPreview) ||
+        (request._tag === "graph" && delayGraph) ||
         (request._tag === "delete" && !request.query.dry_run && delayDelete)
       ) {
         delay = false;
         delayDelete = false;
         delayPreview = false;
+        delayGraph = false;
         await new Promise<void>((done) => {
           release = done;
         });
@@ -400,8 +414,21 @@ try {
         case "openAttachment":
           return { _tag: "ok" };
         case "signIn":
+          credential = (
+            await run(
+              client.signIn.signIn({
+                payload: { passphrase: request.passphrase },
+              }),
+            )
+          ).credential;
+          return {
+            _tag: "signedIn",
+            profiles: await run(client.reads.profiles({ query: {} })),
+          };
         case "signOut":
-          return { _tag: "ok" };
+          await run(client.credentials.signOut());
+          credential = undefined;
+          return { _tag: "signedOut" };
       }
       if (reportFixture === "batch" && request._tag === "batchDepend")
         return Schema.decodeUnknownSync(Reply)({
@@ -451,16 +478,19 @@ try {
           },
         });
       try {
+        const graphFailure =
+          request._tag === "graph" && readProbe?.enabled(request.task);
+        const http =
+          graphFailure && readProbe
+            ? readProbe.http
+            : request._tag === "dependencyCandidates" && searchProbe?.enabled
+              ? searchProbe.http
+              : client;
+        if (graphFailure) readProbe?.consume();
         const reply = Schema.decodeUnknownSync(Reply)(
-          await run(
-            taskRequest(
-              request._tag === "dependencyCandidates" && searchProbe?.enabled
-                ? searchProbe.http
-                : client,
-              request,
-            ),
-          ),
+          await run(taskRequest(http, request)),
         );
+        deliveries.push({ request, reply: reply._tag });
         if (
           request._tag === "delete" ||
           request._tag === "depend" ||
@@ -491,10 +521,12 @@ try {
             exit_detail: exitDetail(error),
           });
           responses.push({ request, reply });
+          deliveries.push({ request, reply: reply._tag });
           return reply;
         }
         const reply = errorReply(error, request);
         responses.push({ request, reply });
+        deliveries.push({ request, reply: reply._tag });
         return reply;
       }
     },
@@ -2706,6 +2738,55 @@ try {
     join(evidence, "edge-cases-results.json"),
     JSON.stringify(edgeCases, null, 2),
   );
+  const recovery = await verifyDependencyRecovery({
+    page,
+    client,
+    cli,
+    capture,
+    notify,
+    deliveries,
+    holdUpdates: async (hold) => {
+      holdNotices = hold;
+      if (!hold) while (heldNotices.length) await notify(heldNotices.shift());
+    },
+    probe: readProbe,
+    prepareOtherProfile: () => {
+      cliInProfile("recovery-other", "login", "--password-stdin");
+      cliInProfile("recovery-other", "add", "Other Profile recovery Task");
+    },
+    pauseGraph: () => {
+      delayGraph = true;
+    },
+    pending: () => release !== undefined,
+    resume: releasePending,
+    signOut: async () => {
+      await run(client.credentials.signOut());
+      credential = undefined;
+      if (stream) {
+        await Effect.runPromise(Fiber.interrupt(stream));
+        stream = undefined;
+      }
+      await notify({ _tag: "signedOut" });
+    },
+  });
+  writeFileSync(
+    join(evidence, "dependency-recovery-results.json"),
+    JSON.stringify(recovery, null, 2),
+  );
+  const titleDrag: unknown[] = [];
+  await verifyDependencyTitleDrag({
+    page,
+    cli,
+    capture: captureOne,
+    notify,
+    record: (receipt) => {
+      titleDrag.push(receipt);
+      writeFileSync(
+        join(evidence, "dependency-title-drag.json"),
+        JSON.stringify(titleDrag, null, 2),
+      );
+    },
+  });
   assert.deepEqual(errors, []);
   writeFileSync(
     join(evidence, "result.json"),
@@ -2731,6 +2812,7 @@ try {
   if (stream) await Effect.runPromise(Fiber.interrupt(stream));
   await browser?.close();
   searchProbe?.close();
+  readProbe?.close();
   if (server && server.exitCode === null && server.signalCode === null) {
     const exited = new Promise<void>((done) =>
       server?.once("exit", () => done()),
@@ -2748,6 +2830,10 @@ try {
   writeFileSync(
     join(evidence, "dependency-responses.json"),
     JSON.stringify(responses, null, 2),
+  );
+  writeFileSync(
+    join(evidence, "sdk-deliveries.json"),
+    JSON.stringify(deliveries, null, 2),
   );
   writeDagCaptureManifest(root, evidence, manifest);
   writeFileSync(join(evidence, "server.log"), log);

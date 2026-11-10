@@ -1,10 +1,44 @@
 import { expect, it } from "@effect/vitest";
+import { ProfileId } from "@todo/domain";
+import { Schema } from "effect";
 import { DependencyGraphController } from "../src/dependency-graph-state.ts";
 import type { Reply } from "../src/protocol.ts";
 import { dependencyGraph, dependencyTask } from "./fixtures/dependencies.ts";
 
 const graph = dependencyGraph();
 const scope = { profile: graph.profile_id, root: graph.task_id };
+it("retains the authorized captured root when its first graph read fails", async () => {
+  const controller = new DependencyGraphController();
+  await controller.open(
+    scope,
+    async () => ({
+      _tag: "error",
+      message: "Couldn't update Dependencies. Try again.",
+      exit_detail: "error 1 - runtime failure",
+    }),
+    dependencyTask("root"),
+  );
+  expect(controller.snapshot()).toMatchObject({
+    rootTask: dependencyTask("root"),
+  });
+});
+it("never takes a captured name from another root or Profile", async () => {
+  for (const task of [
+    dependencyTask("other"),
+    {
+      ...dependencyTask("root"),
+      profile_id: Schema.decodeUnknownSync(ProfileId)("personal"),
+    },
+  ]) {
+    const controller = new DependencyGraphController();
+    await controller.open(
+      scope,
+      async () => ({ _tag: "error", message: "Task not found." }),
+      task,
+    );
+    expect(controller.snapshot()).toMatchObject({ rootTask: null });
+  }
+});
 it("keeps a person's camera through a frame resize until Reset", async () => {
   const controller = new DependencyGraphController();
   await controller.open(scope, async () => ({ _tag: "graph", report: graph }));

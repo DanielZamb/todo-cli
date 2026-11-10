@@ -10,6 +10,7 @@ import {
 } from "./components/ui/dialog.tsx";
 import type { DependencyDeleteController } from "./dependency-delete-state.ts";
 import { DependencyErrorStatus } from "./dependency-dialog.tsx";
+import { dependencyDeleteReview } from "./dependency-presentation.ts";
 import { DependencyTaskLabel } from "./dependency-task-label.tsx";
 import type { Reply, Request } from "./protocol.ts";
 import type { FindTask } from "./task-lookup-status.tsx";
@@ -43,6 +44,13 @@ export function DependencyDeleteDialog({
   const edges = reviewed?.task.removed_dependencies ?? [];
   const blockers = edges.filter((edge) => edge.dependent_id === state.task.id);
   const dependents = edges.filter((edge) => edge.blocker_id === state.task.id);
+  const notice =
+    state.change.kind === "Changed"
+      ? dependencyDeleteReview(
+          state.change.refusal,
+          reviewed ? edges.length > 0 : true,
+        )
+      : null;
   const endpoint = (id: string) => {
     const task = reviewed?.graph?.nodes.find(
       (node) => node.task.id === id,
@@ -75,19 +83,15 @@ export function DependencyDeleteDialog({
         {state.kind === "Loading" && (
           <p role="status">Loading Delete preview…</p>
         )}
-        {state.change.kind === "Changed" ? (
+        {notice ? (
           <div
             role="status"
             data-testid="dependency-delete-changed"
             className="space-y-2"
           >
-            <p>
-              {reviewed && edges.length === 0
-                ? "This Task has no Dependencies now. Confirm again to delete it."
-                : "Dependencies changed. Review the current list and confirm again."}
-            </p>
-            {state.change.exitDetail && (
-              <p className="text-muted-foreground">{state.change.exitDetail}</p>
+            <p>{notice.message}</p>
+            {notice.detail && (
+              <p className="text-muted-foreground">{notice.detail}</p>
             )}
           </div>
         ) : (

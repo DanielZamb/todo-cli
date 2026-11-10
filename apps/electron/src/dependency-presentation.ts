@@ -6,6 +6,26 @@ import {
   type TaskId,
 } from "@todo/domain";
 import { Schema } from "effect";
+import type { Reply } from "./protocol.ts";
+
+export function dependencyDeleteReview(
+  refusal: Extract<Reply, { _tag: "error" | "conflict" }>,
+  hasDependencies: boolean,
+) {
+  const detail =
+    refusal._tag === "error" && refusal.dependency
+      ? dependencyRecovery(refusal.dependency, "delete").detail
+      : refusal.exit_detail;
+  return {
+    message:
+      refusal._tag === "conflict"
+        ? "This Task changed. Confirm again to delete it."
+        : hasDependencies
+          ? "Dependencies changed. Review the current list and confirm again."
+          : "This Task has no Dependencies now. Confirm again to delete it.",
+    ...(detail ? { detail } : {}),
+  };
+}
 
 export type DependencyContext =
   | "add"

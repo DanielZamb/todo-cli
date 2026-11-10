@@ -5,6 +5,7 @@ import { DependencyDeleteController } from "../src/dependency-delete-state.ts";
 import {
   dependencyAdvice,
   dependencyBadge,
+  dependencyDeleteReview,
   dependencyRecovery,
 } from "../src/dependency-presentation.ts";
 import { DependencyController } from "../src/dependency-state.ts";
@@ -14,6 +15,58 @@ import { dependencyGraph, dependencyTask } from "./fixtures/dependencies.ts";
 
 const root = dependencyTask("root");
 const scope = { profile: root.profile_id, root: root.id };
+const deleteRefusal: Extract<Reply, { _tag: "error" }> = {
+  _tag: "error",
+  message: "AGENT delete refusal must not be shown",
+  dependency: Schema.decodeUnknownSync(DependencyError)({
+    generated_at: "2026-11-10T00:00:00Z",
+    code: "has_dependencies",
+    message: "AGENT delete refusal must not be shown",
+    exit_code: 2,
+    exit_meaning: "validation or usage",
+    details: {
+      task_id: root.id,
+      dependencies: [],
+      flag: "--with-dependencies",
+    },
+  }),
+};
+const deleteConflict: Extract<Reply, { _tag: "conflict" }> = {
+  _tag: "conflict",
+  latest: root,
+  exit_detail: "error 4 - Conflict",
+};
+it.each([
+  {
+    name: "Conflict with an unchanged empty fingerprint",
+    refusal: deleteConflict,
+    hasDependencies: false,
+    message: "This Task changed. Confirm again to delete it.",
+    detail: "error 4 - Conflict",
+  },
+  {
+    name: "has_dependencies with a current non-empty preview",
+    refusal: deleteRefusal,
+    hasDependencies: true,
+    message: "Dependencies changed. Review the current list and confirm again.",
+    detail: "error 2 - validation or usage",
+  },
+  {
+    name: "has_dependencies with a current empty preview",
+    refusal: deleteRefusal,
+    hasDependencies: false,
+    message: "This Task has no Dependencies now. Confirm again to delete it.",
+    detail: "error 2 - validation or usage",
+  },
+])(
+  "chooses Delete status from $name",
+  ({ refusal, hasDependencies, message, detail }) => {
+    expect(dependencyDeleteReview(refusal, hasDependencies)).toEqual({
+      message,
+      detail,
+    });
+  },
+);
 const edge = Schema.decodeUnknownSync(Reply)({
   _tag: "edge",
   report: {
@@ -240,7 +293,10 @@ it("requires a second explicit confirmation after a changed-to-empty preview", a
   expect(applied.length).toBe(1);
   expect(controller.snapshot()).toMatchObject({
     kind: "Review",
-    change: { kind: "Changed", exitDetail: "error 2 - validation or usage" },
+    change: {
+      kind: "Changed",
+      refusal: { _tag: "error", dependency: changed },
+    },
     fromVersion: 3,
     task: { removed_dependencies: [] },
   });

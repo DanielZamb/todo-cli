@@ -1,4 +1,4 @@
-import type { GraphReport, TaskId } from "@todo/domain";
+import type { GraphReport, Task, TaskId } from "@todo/domain";
 import type { GraphViewport } from "../graph-browser/protocol.ts";
 import type { DependencyScope } from "./dependency-state.ts";
 import type { Reply, Request } from "./protocol.ts";
@@ -12,6 +12,7 @@ type OpenState = {
   readonly generation: number;
   readonly request: number;
   readonly report: GraphReport | null;
+  readonly rootTask: Task | null;
   readonly loading: boolean;
   readonly failure: Extract<Reply, { _tag: "error" }> | null;
   readonly selected: TaskId;
@@ -52,6 +53,7 @@ export class DependencyGraphController {
   async open(
     scope: DependencyScope,
     request: (request: Request) => Promise<Reply>,
+    rootTask: Task | null = null,
   ) {
     this.close();
     this.publish({
@@ -60,6 +62,10 @@ export class DependencyGraphController {
       generation: this.epoch,
       request: 0,
       report: null,
+      rootTask:
+        rootTask?.id === scope.root && rootTask.profile_id === scope.profile
+          ? rootTask
+          : null,
       loading: true,
       failure: null,
       selected: scope.root,
@@ -197,6 +203,9 @@ export class DependencyGraphController {
       renderFailure: null,
       request: read,
       report: result.report,
+      rootTask:
+        result.report.nodes.find((node) => node.task.id === state.scope.root)
+          ?.task ?? current.rootTask,
       selected: known.has(current.selected)
         ? current.selected
         : state.scope.root,

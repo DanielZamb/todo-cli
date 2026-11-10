@@ -429,6 +429,7 @@ export function DependencyGraphDialog({
                             void controller.open(
                               { ...state.scope, root: id },
                               request,
+                              value,
                             )
                           }
                         >
@@ -505,9 +506,9 @@ export function DependencyGraphDialog({
         <DialogTitle>Dependencies</DialogTitle>
         <DialogDescription
           className="truncate"
-          title={root?.task.title ?? state.scope.root}
+          title={root?.task.title ?? state.rootTask?.title ?? state.scope.root}
         >
-          {root?.task.title ?? state.scope.root}
+          {root?.task.title ?? state.rootTask?.title ?? state.scope.root}
         </DialogDescription>
         {compact && (
           <ToggleGroup

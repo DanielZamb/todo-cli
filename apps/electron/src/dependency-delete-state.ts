@@ -1,5 +1,4 @@
 import type { GraphReport, Task } from "@todo/domain";
-import { exitDetail } from "./error-reply.ts";
 import type { Reply, Request } from "./protocol.ts";
 
 type Requester = (request: Request) => Promise<Reply>;
@@ -7,13 +6,10 @@ type Preview = Extract<Reply, { _tag: "task" }>["task"];
 type Failure = Extract<Reply, { _tag: "error" | "conflict" }>;
 type PreviewChange =
   | { readonly kind: "Initial" }
-  | { readonly kind: "Changed"; readonly exitDetail: string | null };
+  | { readonly kind: "Changed"; readonly refusal: Failure };
 const changedPreview = (failure: Failure): PreviewChange => ({
   kind: "Changed",
-  exitDetail:
-    failure.exit_detail ??
-    (failure._tag === "error" ? exitDetail(failure.dependency) : null) ??
-    null,
+  refusal: failure,
 });
 export type DependencyDeleteState =
   | { readonly kind: "Closed" }
@@ -154,7 +150,7 @@ export class DependencyDeleteController {
       this.publish({
         kind: "Error",
         task: state.task,
-        change: { kind: "Changed", exitDetail: null },
+        change: state.change,
         failure: {
           _tag: "error",
           message:

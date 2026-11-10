@@ -368,6 +368,52 @@ export async function verifyDependencyEdgeCases({
     writesBefore + 2,
   );
   await holdUpdates(false);
+  const nonemptyRoot = add(
+    "delete changed nonempty",
+    "--depends-on",
+    quietCandidate.id,
+  );
+  await select(nonemptyRoot);
+  await page
+    .getByRole("button", {
+      name: `Task actions for ${nonemptyRoot.title}`,
+      exact: true,
+    })
+    .click();
+  await page
+    .getByRole("menuitem", { name: "Delete task", exact: true })
+    .click();
+  await expect(page.getByTestId("dependency-delete-confirm")).toBeEnabled();
+  await holdUpdates(true);
+  await run(
+    client.tasks.depend({
+      params: { profile, task: nonemptyRoot.id },
+      payload: {
+        blocker_id: quietRoot.id,
+        from_version: (await show(nonemptyRoot.id)).row_version,
+      },
+    }),
+  );
+  await page.getByTestId("dependency-delete-confirm").click();
+  await expect(
+    page.getByTestId("dependency-delete-changed").locator("p").first(),
+  ).toHaveText(
+    "Dependencies changed. Review the current list and confirm again.",
+  );
+  await expect(
+    page.getByTestId("dependency-delete-changed").locator("p").last(),
+  ).toHaveText("error 2 - validation or usage");
+  await expect(
+    page.getByTestId("dependency-delete-depends-on").locator("h3"),
+  ).toHaveText("Depends on · 2");
+  await expect(page.getByTestId("dependency-delete-cancel")).toBeFocused();
+  assert.equal((await show(nonemptyRoot.id)).depends_on?.length, 2);
+  await capture(
+    "delete-changed-nonempty",
+    "A has_dependencies refusal with a current non-empty preview keeps the Dependency-change status and actual pair; Cancel remains the initial action",
+  );
+  await page.getByTestId("dependency-delete-cancel").click();
+  await holdUpdates(false);
   const versionConflict = add("delete Version Conflict");
   await select(versionConflict);
   await page
@@ -393,6 +439,9 @@ export async function verifyDependencyEdgeCases({
   await expect(page.getByTestId("dependency-delete-changed")).toContainText(
     "error 4 - Conflict",
   );
+  await expect(
+    page.getByTestId("dependency-delete-changed").locator("p").first(),
+  ).toHaveText("This Task changed. Confirm again to delete it.");
   const conflictResponse = responses
     .filter(
       ({ request }) =>
