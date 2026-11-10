@@ -139,7 +139,9 @@ import TodoAPI
         if name.hasPrefix("transfer") { model.transferResult = .init(kind: name == "transfer-move" ? .move : .copy, task: root, profileName: "Personal", removedDependencies: name == "transfer-move" ? [.init(profile_id: "work", dependent_id: root.id, blocker_id: blocker.id)] : []) }
         if name.hasPrefix("drag") {
             model.dependencies.dragSource = .init(profile: "work", task: blocker.id); model.dependencies.dropTarget = root.id
-            model.dependencies.dropStatus = name == "drag-pending" ? "Updating Dependencies…" : name == "drag-already" ? "Already depends on" : name == "drag-self" ? "A Task can't depend on itself." : name == "drag-foreign" ? "Tasks must be in the same Profile." : name == "drag-refused" ? "This Dependency would create a loop." : "\(root.title) will depend on \(blocker.title)"
+            let text = name == "drag-pending" ? "Updating Dependencies…" : name == "drag-already" ? "Already depends on \(blocker.title)" : name == "drag-self" ? "A Task can't depend on itself." : name == "drag-foreign" ? "Tasks must be in the same Profile." : name == "drag-refused" ? "This Dependency would create a loop." : "Will depend on \(blocker.title)"
+            let accessibilityValue = name == "drag-allowed" ? "\(root.title) will depend on \(blocker.title)" : name == "drag-already" ? "\(root.title) already depends on \(blocker.title)" : text
+            model.dependencies.dropStatus = .init(text, accessibilityValue: accessibilityValue)
         }
     }
     static func content(_ name: String, model: TodoModel, compact: Bool) -> AnyView? {

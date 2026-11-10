@@ -274,9 +274,11 @@ extension DependencyStateTests {
         let source = task("source")
         let target = task("target")
         value.tasks = [source, target]
-        #expect(value.dependencyDropText(source: .init(profile: "work", task: source.id), target: target) == "target will depend on source")
-        #expect(value.dependencyDropText(source: .init(profile: "work", task: target.id), target: target) == "A Task can't depend on itself.")
-        #expect(value.dependencyDropText(source: .init(profile: "foreign", task: source.id), target: target) == "Tasks must be in the same Profile.")
+        let hover = value.dependencyDropStatus(source: .init(profile: "work", task: source.id), target: target)
+        #expect(hover.text == "Will depend on source")
+        #expect(hover.accessibilityValue == "target will depend on source")
+        #expect(value.dependencyDropStatus(source: .init(profile: "work", task: target.id), target: target).text == "A Task can't depend on itself.")
+        #expect(value.dependencyDropStatus(source: .init(profile: "foreign", task: source.id), target: target).text == "Tasks must be in the same Profile.")
         await value.commitDependencyDrop(.init(profile: "work", task: target.id), target: target)
         #expect(value.dependencies.picker == nil)
         await value.commitDependencyDrop(.init(profile: "foreign", task: source.id), target: target)
@@ -284,7 +286,8 @@ extension DependencyStateTests {
         var linked = target
         linked.depends_on = [source.id]
         await value.commitDependencyDrop(.init(profile: "work", task: source.id), target: linked)
-        #expect(value.dependencies.dropStatus == "Already depends on")
+        #expect(value.dependencies.dropStatus?.text == "Already depends on source")
+        #expect(value.dependencies.dropStatus?.accessibilityValue == "target already depends on source")
         #expect(value.dependencies.picker == nil)
     }
 }

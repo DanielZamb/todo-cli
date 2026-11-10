@@ -17,7 +17,7 @@ extension TodoModel {
         dependencies.deletion?.fingerprint = nil
         dependencies.deletion?.acceptedFromVersion = nil
         dependencies.deletion?.changed = changed || deletion.changed
-        if changed, let failure = deletion.failure { dependencies.deletion?.reviewExitDetail = failure.detail }
+        if changed, let failure = deletion.failure?.failure { dependencies.deletion?.reviewFailure = failure }
         do {
             let current = try await TaskSnapshot.decode(client.tasks_period_show(path: .init(profile: deletion.profile, task: deletion.task.id)).ok.body.json)
             guard currentDependencyDelete(deletion, epoch: epoch, request: request) else { return }

@@ -75,10 +75,14 @@ struct DependencyDelete: Identifiable {
     var pending = false
     var changed = false
     var failure: DependencyNotice?
-    var reviewExitDetail: String?
+    var reviewFailure: ServerFailure?
+    var reviewExitDetail: String? { reviewFailure?.exitDetail }
     var action: String { edges.isEmpty ? "Delete Task" : "Delete Task and remove Dependencies" }
     var reviewMessage: String {
-        if changed { return edges.isEmpty ? "This Task has no Dependencies now. Confirm again to delete it." : "Dependencies changed. Review the current list and confirm again." }
+        if changed {
+            if reviewFailure?.code == "occ_conflict" || reviewFailure?.code == "conflict" { return "This Task changed. Confirm again to delete it." }
+            return edges.isEmpty ? "This Task has no Dependencies now. Confirm again to delete it." : "Dependencies changed. Review the current list and confirm again."
+        }
         return edges.isEmpty ? "Delete this Task?" : "Review these Dependencies before deleting this Task."
     }
 }
@@ -86,7 +90,7 @@ struct DependencyDelete: Identifiable {
 @MainActor @Observable final class DependencyState {
     var dragSource: DependencyDragSource?
     var dropTarget: String?
-    var dropStatus: String?
+    var dropStatus: DependencyDropStatus?
     var graphSearchRequest = 0
     var graphRequest = 0
     var graph: DependencyGraphState?

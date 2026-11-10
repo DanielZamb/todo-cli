@@ -93,6 +93,8 @@ private actor ReviewDeleteTransport: ClientTransport {
             }
             let accepted = scenario == "changed-set" ? 4 : scenario == "changed-empty" ? 3 : 2
             let deletion = try #require(model.dependencies.deletion)
+            let expectedMessage = scenario == "unchanged-version" ? "This Task changed. Confirm again to delete it." : scenario == "changed-set" ? "Dependencies changed. Review the current list and confirm again." : "This Task has no Dependencies now. Confirm again to delete it."
+            #expect(deletion.reviewMessage == expectedMessage)
             #expect(deletion.changed)
             #expect(deletion.failure == nil)
             #expect(deletion.acceptedFromVersion == accepted)
@@ -111,7 +113,7 @@ private actor ReviewDeleteTransport: ClientTransport {
                     captures.append(["layout": compact ? "compact" : "full", "appearance": dark ? "dark" : "light", "visible_text": visible])
                 }
             }
-            receipts.append(["scenario": scenario, "actual_exit_code": refusal.exitCode as Any? ?? NSNull(), "actual_exit_meaning": refusal.exitMeaning as Any? ?? NSNull(), "captures": captures, "accepted_from_version": accepted, "fingerprint_changed": deletion.fingerprint != fingerprint, "requests": try JSONSerialization.jsonObject(with: JSONEncoder().encode(facts))])
+            receipts.append(["scenario": scenario, "review_message": deletion.reviewMessage, "actual_exit_code": refusal.exitCode as Any? ?? NSNull(), "actual_exit_meaning": refusal.exitMeaning as Any? ?? NSNull(), "captures": captures, "accepted_from_version": accepted, "fingerprint_changed": deletion.fingerprint != fingerprint, "requests": try JSONSerialization.jsonObject(with: JSONEncoder().encode(facts))])
             try JSONSerialization.data(withJSONObject: receipts, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("dependency-delete-refusal-review.json"))
             await model.confirmDependencyDelete()
             #expect(model.dependencies.deletion == nil)

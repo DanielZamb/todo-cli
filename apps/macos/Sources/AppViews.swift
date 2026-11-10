@@ -141,8 +141,8 @@ struct CompactLayoutKey: PreferenceKey {
     }
 }
 extension View {
-    func compactBounds(_ id: String) -> some View {
-        background(GeometryReader { geometry in Color.clear.preference(key: CompactLayoutKey.self, value: [id: geometry.frame(in: .global)]) })
+    func compactBounds(_ id: String, when active: Bool = true) -> some View {
+        background(GeometryReader { geometry in Color.clear.preference(key: CompactLayoutKey.self, value: active ? [id: geometry.frame(in: .global)] : [:]) })
     }
 }
 
@@ -752,7 +752,7 @@ struct TaskRow: View {
     var showsCompletion = true
     var relation = false
     var showsMetadata = true
-    var metadataOverride: String? = nil
+    var metadataOverride: DependencyDropStatus? = nil
     let complete: () -> Void
     private var presentation: TaskRowPresentation { TaskRowPresentation(task: task, tagNames: tagNames, now: now) }
     var body: some View {
@@ -764,7 +764,7 @@ struct TaskRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(TaskSearchPresentation.highlighted(task.title, spans: searchActive ? task.search_matches ?? [] : [], field: .title)).lineLimit(1).strikethrough(presentation.isDone).foregroundStyle(
-                        presentation.isDone ? .secondary : .primary).help(task.title)
+                        presentation.isDone ? .secondary : .primary).help(task.title).compactBounds("title-\(task.id)")
                     Spacer(minLength: 8)
                     if compact && !relation && ["cancelled", "snoozed"].contains(task.status) {
                         Text(task.status).font(.caption).foregroundStyle(.secondary).fixedSize()
@@ -805,15 +805,20 @@ struct TaskRow: View {
                         Label(scheduled, systemImage: "calendar").help("Scheduled \(scheduled)")
                     }
                 }.font(.caption).foregroundStyle(.secondary).lineLimit(1) }
-                }.opacity(metadataOverride == nil ? 1 : 0).accessibilityHidden(metadataOverride != nil)
+                }.compactBounds("metadata-\(task.id)")
+                    .compactBounds("metadata-text-\(task.id)", when: hasMetadataText && metadataOverride == nil)
+                    .opacity(metadataOverride == nil ? 1 : 0).accessibilityHidden(metadataOverride != nil)
                     .overlay(alignment: .leading) {
-                        if let metadataOverride {
-                            Text(metadataOverride).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
-                                .frame(maxWidth: .infinity, alignment: .leading).accessibilityValue(metadataOverride).help(metadataOverride)
-                                .accessibilityIdentifier("dependency-drop-status").compactBounds("dependency-drop-status")
-                        }
+                        if hasMetadataLine, let metadataOverride { dropStatus(metadataOverride) }
                     }
             }.fixedSize(horizontal: false, vertical: true)
+                .overlay(alignment: .topLeading) {
+                    if !hasMetadataLine, let metadataOverride {
+                        GeometryReader { geometry in
+                            dropStatus(metadataOverride).fixedSize(horizontal: false, vertical: true).offset(y: geometry.size.height)
+                        }
+                    }
+                }
         }.padding(.vertical, relation ? 4 : 8).frame(height: compact ? (relation ? (showsMetadata ? 48 : 24) : searchActive && TaskSearchPresentation.descriptionExcerpt(task) != nil ? 76 : 56) : nil)
             .overlay(alignment: .bottom) {
                 if compact && showsMetadata { Divider().frame(height: 1).compactBounds("separator-\(task.id)").padding(.leading, 36) }
@@ -822,6 +827,20 @@ struct TaskRow: View {
     }
     @ViewBuilder private var dependencyState: some View {
         if let dependencyBadge { Text(dependencyBadge).font(.caption).foregroundStyle(task.blocked == true ? TodoColors.color("warning") : .secondary).fixedSize().accessibilityIdentifier("dependency-state-\(task.id)") }
+    }
+    private func dropStatus(_ status: DependencyDropStatus) -> some View {
+        Text(status.text).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+            .frame(maxWidth: .infinity, alignment: .leading).accessibilityValue(status.accessibilityValue).help(status.accessibilityValue)
+            .accessibilityIdentifier("dependency-drop-status").compactBounds("dependency-drop-status")
+    }
+    private var hasMetadataLine: Bool {
+        showsMetadata && (compact || relation || hasMetadataText)
+    }
+    private var hasMetadataText: Bool {
+        guard showsMetadata else { return false }
+        if dependencyBadge != nil { return true }
+        if compact || relation { return !compactMetadata.isEmpty }
+        return projectName != nil || !tagNames.isEmpty || presentation.due != nil || task.external_id != nil || presentation.scheduled != nil
     }
     private var compactMetadata: [CompactRowMetadata.Item] {
         if relation { return [.init(text: task.status.capitalized)] + (projectName.map { [.init(text: $0)] } ?? []) }

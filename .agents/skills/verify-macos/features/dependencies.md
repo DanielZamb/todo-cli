@@ -153,3 +153,21 @@ a stale Version returns HTTP 409 with exit 4. The test records decoded raw repli
 and checks their actual pair in offscreen text, the refreshed Version/fingerprint,
 no extra Reload, and deletion only after a second explicit confirmation. The
 muted pair belongs to the review status and survives successful preview reload.
+The message names the original cause: a Version Conflict says "This Task changed.
+Confirm again to delete it." A Dependency-set refusal says "Dependencies changed.
+Review the current list and confirm again." or, for the current empty set, "This
+Task has no Dependencies now. Confirm again to delete it." The three live cases
+assert these literal messages independently of the refreshed Task Version.
+
+Drag metadata says "Will depend on ‹source title›" or "Already depends on
+‹source title›". Its accessibility value keeps the full target/source sentence.
+The state suite checks both values and offscreen production rows in Compact/full
+and light/dark. It does not prove native drag dispatch or VoiceOver.
+Rows with a metadata line replace that line during hover. Title-only rows overlay
+the caption below the title in their existing bottom padding, adding no layout
+space. The proof targets each of three adjacent title-only rows, including the
+last row, for allowed and already-linked states. A separate metadata control row
+makes the visible-text collision check non-vacuous. Every row frame must remain
+unchanged, and the rendered status must fit its row and viewport without touching
+any visible title or metadata text frame. Invisible empty containers do not count
+as metadata text; their bounds are retained separately in the receipt.
