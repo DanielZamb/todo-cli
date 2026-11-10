@@ -48,6 +48,17 @@ and its scratch directory is removed. This uses the named 6fbb compiled backend
 and is intermediate. The final check also confines fitted nodes to the drawing
 area and limits the new accessible label to loop witnesses, preserving other
 status-list semantics.
-The next frozen checkpoint still requires final-source binaries, affected
-proof, both complete end suites, changed-image reading and coordinator review.
-No UI pass or correctness-seat acceptance is claimed by this document.
+The subsequent frozen checkpoint is
+`94dcbdc8e7e6262ff85d81277b21e8c317986c08`. Its final-source DAG drive exits 0
+with all 636 captures; all sixteen new geometry receipts pass. Root check,
+unsigned Electron package and unsigned Xcode build exit 0. Both complete suites
+preserve exit 1: Electron 13 PASS / 1 known main Import FAIL / 0 MISSING plus
+native HOLD; retained Mac 346 captures and the exact twelve main Import failures.
+Every DAG PNG was read or SHA-matched to the same previously read fixture.
+The changed-only packet is
+`docs/evidence/task-dag/unit-e/final-94dcbdc8/changed-captures.json`.
+
+The coordinator issued seat 2 UI PASS at 94dc after reading E-F1/F2/F3, accepting
+the packet's explicit limits. No further UI gate remains. Correctness acceptance
+and integration are L1-owned. `unit-e-report.md` supersedes earlier pending-status
+text; historical receipts and intermediate provenance stay unchanged.
