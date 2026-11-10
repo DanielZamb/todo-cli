@@ -15,6 +15,10 @@ export type DependencyScope = {
 };
 type Requester = (request: Request) => Promise<Reply>;
 type Failure = Extract<Reply, { _tag: "error" | "conflict" }>;
+type DependencyConflict = {
+  readonly failure: Extract<Failure, { _tag: "conflict" }>;
+  readonly attempted: Task | null;
+};
 export type DependencyState =
   | { readonly kind: "Closed" }
   | {
@@ -28,7 +32,7 @@ export type DependencyState =
       readonly candidates: readonly TaskRead[];
       readonly loading: boolean;
       readonly pending: ReadonlyMap<TaskId, boolean>;
-      readonly conflicts: ReadonlySet<TaskId>;
+      readonly conflicts: ReadonlyMap<TaskId, DependencyConflict>;
       readonly failure: Failure | null;
       readonly attempted: Task | null;
       readonly warnings: readonly DependencyWarning[];
@@ -49,7 +53,19 @@ export class DependencyController {
     };
   };
   private publish(state: DependencyState) {
-    this.state = state;
+    if (state.kind === "Open") {
+      const conflict =
+        state.direction === "dependsOn"
+          ? state.conflicts.get(state.scope.root)
+          : [...state.conflicts].find(([id]) => id !== state.scope.root)?.[1];
+      this.state = {
+        ...state,
+        failure:
+          conflict?.failure ??
+          (state.failure?._tag === "conflict" ? null : state.failure),
+        attempted: conflict ? conflict.attempted : state.attempted,
+      };
+    } else this.state = state;
     for (const listener of this.listeners) listener();
   }
   readonly close = () => {
@@ -76,7 +92,7 @@ export class DependencyController {
       candidates: [],
       loading: true,
       pending: new Map(),
-      conflicts: new Set(),
+      conflicts: new Map(),
       failure: null,
       attempted: null,
       warnings: [],
@@ -85,7 +101,7 @@ export class DependencyController {
     await Promise.all([this.reload(request), this.find("", request)]);
   }
   dismissFailure() {
-    if (this.state.kind === "Open")
+    if (this.state.kind === "Open" && this.state.failure?._tag !== "conflict")
       this.publish({ ...this.state, failure: null });
   }
   direction(direction: DependencyDirection) {
@@ -108,6 +124,17 @@ export class DependencyController {
     const epoch = this.epoch;
     const read = ++this.read;
     this.publish({ ...this.state, loading: true });
+    if (
+      clearConflicts &&
+      this.state.conflicts.size > 0 &&
+      !(await this.find(this.state.query, request))
+    ) {
+      const current = this.current(epoch);
+      if (current && read === this.read)
+        this.publish({ ...current, loading: false });
+      return;
+    }
+    if (!this.current(epoch) || read !== this.read) return;
     const result = await this.call(request, {
       _tag: "graph",
       profile: scope.profile,
@@ -124,7 +151,7 @@ export class DependencyController {
         ...current,
         loading: false,
         graph: result.report,
-        conflicts: clearConflicts ? new Set() : current.conflicts,
+        conflicts: clearConflicts ? new Map() : current.conflicts,
         failure: clearConflicts ? null : current.failure,
       });
     else
@@ -135,7 +162,7 @@ export class DependencyController {
       });
   }
   async find(query: string, request: Requester) {
-    if (this.state.kind === "Closed") return;
+    if (this.state.kind === "Closed") return false;
     const { scope } = this.state;
     const epoch = this.epoch;
     const search = ++this.search;
@@ -146,15 +173,16 @@ export class DependencyController {
       filters: query ? { text: query } : {},
     });
     const current = this.current(epoch);
-    if (!current || search !== this.search) return;
-    if (result._tag === "dependencyCandidates")
+    if (!current || search !== this.search) return false;
+    if (result._tag === "dependencyCandidates") {
       this.publish({
         ...current,
         candidates: result.tasks,
         appliedQuery: query,
         searchFailure: null,
       });
-    else
+      return true;
+    } else {
       this.publish({
         ...current,
         searchFailure:
@@ -165,6 +193,8 @@ export class DependencyController {
                 message: "Todo returned an incompatible Task search.",
               },
       });
+      return false;
+    }
   }
   choices(): readonly { task: TaskRead; checked: boolean }[] {
     const state = this.state;
@@ -247,20 +277,25 @@ export class DependencyController {
                   ? "Dependency added"
                   : "Dependency removed",
           });
-        } else
+        } else {
+          const attempted =
+            state.candidates.find((task) => task.id === candidate) ??
+            state.graph?.nodes.find((node) => node.task.id === candidate)
+              ?.task ??
+            null;
           this.publish({
             ...received,
             failure: this.failure(result),
-            attempted:
-              state.candidates.find((task) => task.id === candidate) ??
-              state.graph?.nodes.find((node) => node.task.id === candidate)
-                ?.task ??
-              null,
+            attempted,
             conflicts:
               result._tag === "conflict"
-                ? new Set([...received.conflicts, dependent])
+                ? new Map([
+                    ...received.conflicts,
+                    [dependent, { failure: result, attempted }],
+                  ])
                 : received.conflicts,
           });
+        }
       })
       .finally(() => {
         const current = this.current(epoch);

@@ -676,7 +676,7 @@ function App() {
         if (
           reply._tag === "task" &&
           request._tag !== "showTask" &&
-          !(request._tag === "delete" && request.query.dry_run)
+          request._tag !== "delete"
         ) {
           setLookupError(null);
           localStorage.removeItem(
@@ -1945,8 +1945,17 @@ function App() {
             ? dependencyTrigger.current
             : document.querySelector<HTMLElement>('[aria-label="More filters"]')
         }
-        onDeleted={() => {
-          setEditor(null);
+        onDeleted={(task) => {
+          localStorage.removeItem(taskDraftKey(task.profile_id, task.id));
+          if (storedEditor(task.profile_id)?.base.id === task.id)
+            localStorage.removeItem(`editor:${task.profile_id}`);
+          setEditor((current) =>
+            current?.base.id === task.id &&
+            current.base.profile_id === task.profile_id
+              ? null
+              : current,
+          );
+          setLookupError(null);
           setAnnouncement("Task deleted");
           void refresh();
         }}

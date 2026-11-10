@@ -1,5 +1,10 @@
 # DAG-E Electron delivery report
 
+The whole-delta correctness seat at ffe683ea subsequently required E-C1/E-C2.
+Their authorized closure is in
+[unit-e-correctness-closure.md](unit-e-correctness-closure.md). The94dc readiness
+and proof below are historical; the new frozen proof and both suites are pending.
+
 Electron product and end proof are frozen at
 `94dcbdc8e7e6262ff85d81277b21e8c317986c08`. The coordinator's seat 2 UI review
 at that SHA is **PASS**, including E-F1/F2/F3 and the stated capture limits.

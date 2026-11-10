@@ -120,10 +120,10 @@ export class DependencyDeleteController {
       failure: null,
     });
   }
-  async confirm(request: Requester): Promise<boolean> {
+  async confirm(request: Requester): Promise<Task | null> {
     const state = this.state;
     if (state.kind !== "Review" || !state.task.dependency_fingerprint)
-      return false;
+      return null;
     const epoch = this.epoch;
     this.publish({ ...state, kind: "Applying", failure: null });
     const result = await this.call(request, {
@@ -136,7 +136,7 @@ export class DependencyDeleteController {
         dependency_fingerprint: state.task.dependency_fingerprint,
       },
     });
-    if (epoch !== this.epoch) return false;
+    if (epoch !== this.epoch) return null;
     if (
       result._tag === "task" &&
       result.task.id === state.task.id &&
@@ -144,7 +144,7 @@ export class DependencyDeleteController {
       result.task.dry_run === false
     ) {
       this.close();
-      return true;
+      return result.task;
     }
     if (result._tag === "task") {
       this.publish({
@@ -157,7 +157,7 @@ export class DependencyDeleteController {
             "Todo returned an incompatible Delete result. Reload its Dependencies before trying again.",
         },
       });
-      return false;
+      return null;
     }
     if (
       result._tag === "conflict" ||
@@ -172,7 +172,7 @@ export class DependencyDeleteController {
           profile: state.task.profile_id,
           task: state.task.id,
         }));
-      if (epoch !== this.epoch) return false;
+      if (epoch !== this.epoch) return null;
       const task =
         latest && "_tag" in latest
           ? latest._tag === "task"
@@ -199,7 +199,7 @@ export class DependencyDeleteController {
                   message: "Couldn't reload this Task. Close and try again.",
                 },
         });
-      return false;
+      return null;
     }
     this.publish({
       ...state,
@@ -213,7 +213,7 @@ export class DependencyDeleteController {
                 "Todo returned an incompatible Delete result. Reload its Dependencies before trying again.",
             },
     });
-    return false;
+    return null;
   }
   private async call(request: Requester, input: Request): Promise<Reply> {
     try {

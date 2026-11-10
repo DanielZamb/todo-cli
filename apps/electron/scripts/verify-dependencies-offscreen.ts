@@ -54,6 +54,7 @@ import {
   createDependencyReadProbe,
   verifyDependencyRecovery,
 } from "./verify-dependency-recovery.ts";
+import { verifyDependencyReviewRecovery } from "./verify-dependency-review-recovery.ts";
 import {
   createDependencySearchProbe,
   verifyDependencySearchRecovery,
@@ -370,6 +371,7 @@ try {
     return reply;
   };
   let holdNotices = false;
+  let reviewDeleteReply: "preview" | Reply | null = null;
   const heldNotices: unknown[] = [];
   const notify = (notice: unknown) =>
     page.evaluate(
@@ -398,6 +400,28 @@ try {
         await new Promise<void>((done) => {
           release = done;
         });
+      }
+      if (
+        reviewDeleteReply &&
+        request._tag === "delete" &&
+        !request.query.dry_run
+      ) {
+        const controlled = reviewDeleteReply;
+        reviewDeleteReply = null;
+        const reply: Reply =
+          controlled === "preview"
+            ? {
+                _tag: "task",
+                task: await run(
+                  client.tasks.delete({
+                    params: { profile: request.profile, task: request.task },
+                    query: { ...request.query, dry_run: true },
+                  }),
+                ),
+              }
+            : controlled;
+        responses.push({ request, reply });
+        return publishReply(request, reply);
       }
       switch (request._tag) {
         case "restore":
@@ -666,8 +690,9 @@ try {
     description: string,
     layout = "compact",
     target?: Locator,
+    appearances: readonly boolean[] = [false, true],
   ) => {
-    for (const dark of [false, true]) {
+    for (const dark of appearances) {
       await page.evaluate((dark) => {
         if (document.documentElement.classList.contains("dark") !== dark)
           window.dispatchEvent(
@@ -3156,6 +3181,36 @@ try {
       writeFileSync(
         join(evidence, "dependency-title-drag.json"),
         JSON.stringify(titleDrag, null, 2),
+      );
+    },
+  });
+  const reviewRecovery: unknown[] = [];
+  await verifyDependencyReviewRecovery({
+    page,
+    client,
+    cli,
+    capture: (state, description, target) =>
+      captureOne(state, description, "compact", target, [false]),
+    notify,
+    holdUpdates: async (hold) => {
+      holdNotices = hold;
+      if (!hold)
+        for (const notice of heldNotices.splice(0)) await notify(notice);
+    },
+    replaceDelete: (reply) => {
+      reviewDeleteReply = reply;
+    },
+    pauseDelete: () => {
+      delayDelete = true;
+    },
+    resume: releasePending,
+    requests,
+    deliveries,
+    record: (receipt) => {
+      reviewRecovery.push(receipt);
+      writeFileSync(
+        join(evidence, "review-recovery.json"),
+        JSON.stringify(reviewRecovery, null, 2),
       );
     },
   });

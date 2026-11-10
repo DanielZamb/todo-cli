@@ -1,3 +1,4 @@
+import type { Task } from "@todo/domain";
 import { cn } from "cn";
 import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 import { Button } from "./components/ui/button.tsx";
@@ -27,7 +28,7 @@ export function DependencyDeleteDialog({
   controller: DependencyDeleteController;
   request: (request: Request) => Promise<Reply>;
   canWrite: boolean;
-  onDeleted: () => void;
+  onDeleted: (task: Task) => void;
   returnFocus: () => HTMLElement | null;
   projects: readonly { id: string; name: string }[];
   onFindTask?: FindTask | undefined;
@@ -169,7 +170,7 @@ export function DependencyDeleteDialog({
             disabled={!canWrite || state.kind !== "Review"}
             onClick={() =>
               void controller.confirm(request).then((deleted) => {
-                if (deleted) onDeleted();
+                if (deleted) onDeleted(deleted);
               })
             }
           >

@@ -30,7 +30,7 @@ assertions and reloads establish behavior. Read every final image before deliver
 Until result.json and the unit report explicitly record complete coverage, the
 recipe remains `DAG_INTERMEDIATE_PARTIAL`. It cannot replace either full end suite.
 `dag-capture-inventory.ts` requires every registered state/layout/appearance
-exactly once, including the literal 636-capture count. `DAG_MATRIX_PASS` also
+exactly once, including the literal 638-capture count. `DAG_MATRIX_PASS` also
 requires clean committed source and a matching embedded binary head. A combined
 failure remains failed when later focused controls pass. Report full-suite exits
 and UI review separately.
@@ -176,3 +176,14 @@ unset. Preserve the known main Import assertions and compare exact fixtures/valu
 Native safeStorage, Session restoration, notifications, VoiceOver and signed app
 launch remain held and unproven. The unit report names actual source/proof SHAs,
 commands/exits, manifests, cleanup and every remaining boundary.
+
+E-C1/E-C2 recovery is in `verify-dependency-review-recovery.ts` and
+`dependency-review-recovery.test.ts`. Both picker directions take a real stale
+Version Conflict through a direction round trip, retain a dependent-scoped Reload,
+send nothing until explicit Reload/choice, and use the candidate's refreshed Version
+for Blocks. Dismiss cannot remove live Conflict recovery. Delete draft clearing
+belongs to the controller's accepted current matching non-preview result, not the
+generic request wrapper. Preview, rejected/foreign and awaited stale replies retain
+saved bytes and an unsaved title after reopening. Controlled reply substitution
+does not allege wrong server output. The two new registered Compact/light captures
+are the direction-roundtrip picker and reopened retained editor; no extra UI pattern.

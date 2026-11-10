@@ -208,9 +208,13 @@ export function assertDagCaptureInventory(
       ),
     ),
   );
+  expected.push(
+    "picker-direction-roundtrip/compact/light",
+    "delete-rejected-draft-reopened/compact/light",
+  );
   assert.equal(
     expected.length,
-    636,
+    638,
     "Register every DAG fixture and update its literal capture count together",
   );
   const actual = entries.map(

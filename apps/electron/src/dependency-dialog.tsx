@@ -353,10 +353,14 @@ export function DependencyPicker({
                     : undefined
                 }
                 reload={() => void controller.reload(request)}
-                dismiss={() => {
-                  controller.dismissFailure();
-                  search.current?.focus();
-                }}
+                {...(state.failure._tag !== "conflict"
+                  ? {
+                      dismiss: () => {
+                        controller.dismissFailure();
+                        search.current?.focus();
+                      },
+                    }
+                  : {})}
               />
             )}
             {state.searchFailure && (

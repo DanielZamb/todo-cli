@@ -247,7 +247,7 @@ it("refuses a preview or foreign Task as a confirmed Delete result", async () =>
     );
     expect(
       await controller.confirm(async () => ({ _tag: "task", task: applied })),
-    ).toBe(false);
+    ).toBeNull();
     expect(controller.snapshot().kind).toBe("Error");
   }
 });
@@ -289,7 +289,7 @@ it("requires a second explicit confirmation after a changed-to-empty preview", a
         };
   };
   await controller.open(root, request);
-  expect(await controller.confirm(request)).toBe(false);
+  expect(await controller.confirm(request)).toBeNull();
   expect(applied.length).toBe(1);
   expect(controller.snapshot()).toMatchObject({
     kind: "Review",
@@ -300,7 +300,10 @@ it("requires a second explicit confirmation after a changed-to-empty preview", a
     fromVersion: 3,
     task: { removed_dependencies: [] },
   });
-  expect(await controller.confirm(request)).toBe(true);
+  expect(await controller.confirm(request)).toEqual({
+    ...dependencyTask("root", 4),
+    dry_run: false,
+  });
   expect(applied[1]).toEqual({
     _tag: "delete",
     profile: "work",
