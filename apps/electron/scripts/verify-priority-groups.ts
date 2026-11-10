@@ -1,12 +1,12 @@
 import { execFileSync, spawn } from "node:child_process";
 import { writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { _electron, type ElectronApplication, expect } from "@playwright/test";
 import { CONTRACT_ID } from "@todo/api";
 import { Task } from "@todo/domain";
 import { Schema } from "effect";
 import { setAppearance } from "./appearance.ts";
+import { hiddenHostOptions } from "./hidden-host.ts";
 import { selectProfile } from "./profile-menu.ts";
 
 const [scratch, evidence] = process.argv.slice(2);
@@ -83,16 +83,16 @@ try {
     expect(response.status).toBe(200);
     return response.json();
   };
-  desktop = await _electron.launch({
-    executablePath: createRequire(import.meta.url)("electron"),
-    args: [resolve(import.meta.dirname, "../dist/verification/write-host.mjs")],
-    env: {
-      ...env,
-      TODO_SERVER_URL: url,
-      TODO_ELECTRON_DATA: join(scratch, "electron"),
-    },
-    timeout: 60000,
-  });
+  desktop = await _electron.launch(
+    hiddenHostOptions({
+      env: {
+        ...env,
+        TODO_SERVER_URL: url,
+        TODO_ELECTRON_DATA: join(scratch, "electron"),
+      },
+      timeout: 60000,
+    }),
+  );
   const page = await desktop.firstWindow();
   page.setDefaultTimeout(15000);
   await expect(

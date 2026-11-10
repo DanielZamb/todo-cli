@@ -1,11 +1,11 @@
 import { execFileSync, spawn } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import { join } from "node:path";
 import { _electron, type ElectronApplication, expect } from "@playwright/test";
 import { OpLogEntry, SnapshotGeneration, SnapshotManifest } from "@todo/domain";
 import { Schema } from "effect";
 import { openImport } from "./appearance.ts";
+import { hiddenHostOptions } from "./hidden-host.ts";
 import { selectProfile } from "./profile-menu.ts";
 
 const [scratch, evidence] = Schema.decodeUnknownSync(
@@ -63,18 +63,18 @@ try {
   const url =
     shared?.url ?? /Listening on (http:\/\/127\.0\.0\.1:\d+)/.exec(log)?.[1];
   if (!url) throw new Error("Server missing");
-  const require = createRequire(import.meta.url);
-  app = await _electron.launch({
-    executablePath: require("electron"),
-    args: [join(import.meta.dirname, "../dist/verification/write-host.mjs")],
-    env: {
-      ...env,
-      TODO_ELECTRON_DATA: join(scratch, "electron"),
-      TODO_SERVER_URL: url,
-      TODO_ELECTRON_VERIFY_HOST: "1",
-    },
-    timeout: 60000,
-  });
+
+  app = await _electron.launch(
+    hiddenHostOptions({
+      env: {
+        ...env,
+        TODO_ELECTRON_DATA: join(scratch, "electron"),
+        TODO_SERVER_URL: url,
+        TODO_ELECTRON_VERIFY_HOST: "1",
+      },
+      timeout: 60000,
+    }),
+  );
   const page = await app.firstWindow();
   page.setDefaultTimeout(60000);
   await expect(

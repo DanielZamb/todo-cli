@@ -8,11 +8,11 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron, type ElectronApplication } from "@playwright/test";
 import type {} from "../src/protocol.ts";
+import { hiddenHostOptions } from "./hidden-host.ts";
 
 const root = process.cwd();
 const evidence = resolve(process.argv[2] ?? "");
@@ -147,14 +147,12 @@ try {
   );
   await wait(() => /Listening on (http:\/\/127\.0\.0\.1:\d+)/.test(log), log);
   upstream = /Listening on (http:\/\/127\.0\.0\.1:\d+)/.exec(log)?.[1] ?? "";
-  desktop = await _electron.launch({
-    executablePath: createRequire(join(root, "apps/electron/package.json"))(
-      "electron",
-    ),
-    args: [join(root, "apps/electron/dist/verification/write-host.mjs")],
-    env: { ...env, TODO_SERVER_URL: `http://127.0.0.1:${proxy.port}` },
-    timeout: 60000,
-  });
+  desktop = await _electron.launch(
+    hiddenHostOptions({
+      env: { ...env, TODO_SERVER_URL: `http://127.0.0.1:${proxy.port}` },
+      timeout: 60000,
+    }),
+  );
   writeFileSync(
     join(evidence, "host.json"),
     JSON.stringify({

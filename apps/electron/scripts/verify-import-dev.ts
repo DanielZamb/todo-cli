@@ -1,9 +1,9 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { _electron, expect } from "@playwright/test";
 import { Schema } from "effect";
+import { hiddenHostOptions } from "./hidden-host.ts";
 import { verifyImport } from "./verify-import.ts";
 import { verifyImportRaces } from "./verify-import-races.ts";
 
@@ -43,13 +43,13 @@ const cli = (...args: string[]) =>
     ["--profile", "work", "--format", "json", ...args],
     { env, encoding: "utf8" },
   );
-const executablePath: string = createRequire(import.meta.url)("electron");
-const desktop = await _electron.launch({
-  executablePath,
-  args: [join(root, "apps/electron/dist/verification/write-host.mjs")],
-  env,
-  timeout: 60000,
-});
+
+const desktop = await _electron.launch(
+  hiddenHostOptions({
+    env,
+    timeout: 60000,
+  }),
+);
 try {
   const page = await desktop.firstWindow({ timeout: 60000 });
   page.setDefaultTimeout(30000);

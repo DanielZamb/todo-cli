@@ -1,12 +1,12 @@
 import { execFileSync, spawn } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { _electron, type ElectronApplication, expect } from "@playwright/test";
 import { CONTRACT_ID } from "@todo/api";
 import { ProfileId, Task } from "@todo/domain";
 import { Schema } from "effect";
 import { setAppearance } from "./appearance.ts";
+import { hiddenHostOptions } from "./hidden-host.ts";
 import { selectProfile } from "./profile-menu.ts";
 
 const [scratch, evidence] = process.argv.slice(2);
@@ -124,16 +124,16 @@ try {
         action,
       });
   }
-  desktop = await _electron.launch({
-    executablePath: createRequire(import.meta.url)("electron"),
-    args: [resolve(import.meta.dirname, "../dist/verification/write-host.mjs")],
-    env: {
-      ...env,
-      TODO_ELECTRON_DATA: join(scratch, "electron"),
-      TODO_SERVER_URL: `http://127.0.0.1:${proxy.port}`,
-    },
-    timeout: 60000,
-  });
+  desktop = await _electron.launch(
+    hiddenHostOptions({
+      env: {
+        ...env,
+        TODO_ELECTRON_DATA: join(scratch, "electron"),
+        TODO_SERVER_URL: `http://127.0.0.1:${proxy.port}`,
+      },
+      timeout: 60000,
+    }),
+  );
   const page = await desktop.firstWindow();
   page.setDefaultTimeout(30000);
   const heading = page.getByRole("heading", {

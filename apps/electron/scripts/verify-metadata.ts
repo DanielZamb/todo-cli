@@ -1,5 +1,5 @@
 import { writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import {
   _electron,
   type ElectronApplication,
@@ -9,10 +9,10 @@ import {
 import { QuickAddDraft, Task } from "@todo/domain";
 import { Schema } from "effect";
 import { setAppearance } from "./appearance.ts";
+import { hiddenHostOptions } from "./hidden-host.ts";
 
 export async function verifyMetadata({
   page,
-  desktop,
   evidence,
   api,
   scratch,
@@ -153,11 +153,11 @@ export async function verifyMetadata({
     TODO_ELECTRON_DATA: join(scratch, "metadata-observer"),
   };
   delete env.ELECTRON_RUN_AS_NODE;
-  const observer = await _electron.launch({
-    executablePath: desktop.process().spawnfile,
-    args: [resolve(import.meta.dirname, "../dist/verification/write-host.mjs")],
-    env,
-  });
+  const observer = await _electron.launch(
+    hiddenHostOptions({
+      env,
+    }),
+  );
   const matrix: unknown[] = [];
   const createdIDs: string[] = [];
   const definitions = Schema.Array(

@@ -1,11 +1,11 @@
 import { execFileSync, spawn } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { _electron, type ElectronApplication, expect } from "@playwright/test";
 import { CONTRACT_ID } from "@todo/api";
 import { OpLogEntry, Task } from "@todo/domain";
 import { Schema } from "effect";
+import { hiddenHostOptions } from "./hidden-host.ts";
 import { openProfileDeletion, selectProfile } from "./profile-menu.ts";
 import { verifyCompact } from "./verify-compact.ts";
 import { verifyCompactPresentation } from "./verify-compact-presentation.ts";
@@ -225,17 +225,17 @@ try {
   cli("add", "Series draft");
   cli("add", "Revert race A");
   cli("add", "Revert race B");
-  const electronHost: string = createRequire(import.meta.url)("electron");
-  desktop = await _electron.launch({
-    executablePath: electronHost,
-    args: [resolve(import.meta.dirname, "../dist/verification/write-host.mjs")],
-    env: {
-      ...env,
-      TODO_SERVER_URL: `http://127.0.0.1:${proxy.port}`,
-      TODO_ELECTRON_DATA: join(scratch, "electron"),
-    },
-    timeout: 60000,
-  });
+
+  desktop = await _electron.launch(
+    hiddenHostOptions({
+      env: {
+        ...env,
+        TODO_SERVER_URL: `http://127.0.0.1:${proxy.port}`,
+        TODO_ELECTRON_DATA: join(scratch, "electron"),
+      },
+      timeout: 60000,
+    }),
+  );
   desktop.process().stderr?.on("data", (chunk) =>
     writeFileSync(join(evidence, "electron.log"), String(chunk), {
       flag: "a",
