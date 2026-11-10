@@ -48,9 +48,9 @@ PresentationTests expectations. The offscreen manifest now has 358 PNGs.
 
 The checkout is on `fix/compact-import-rows`, based on
 `cabf4866835a49f23dc0fe44694740f122855e33`. Commands run from its root. Evidence is
-under this absolute directory, which is ignored by Git:
+under this directory of the checkout, which is ignored by Git:
 
-`/Users/zambamon/.t3/worktrees/todo-cli/fix-compact-import-rows-083ffebb589fbe3f/docs/evidence/import-rows`
+`docs/evidence/import-rows`
 
 Every outer command captured `rc=$?` immediately and wrote its `.exit` receipt.
 The Swift helpers also preserve individual command exits and pin checks.
@@ -60,7 +60,7 @@ Use these definitions for the exact commands below:
 ```sh
 E="$PWD/docs/evidence/import-rows"
 B="$PWD/.scratch/bin/cabf4866"
-SWIFT=/Users/zambamon/Work/todo-cli/scripts/swift-slot.sh
+SWIFT=scripts/swift-slot.sh
 ```
 
 The same full design command ran before and after the fix, changing only the fresh
@@ -84,7 +84,7 @@ TODO_ELECTRON_VERIFY_HOST=1 /usr/bin/lockf -k /tmp/todo-search-electron.lock pnp
 TODO_ELECTRON_VERIFY_HOST=1 pnpm --filter @todo/electron exec bun scripts/verify-import-focused.ts "$B" "$E/electron-before"
 TODO_ELECTRON_VERIFY_HOST=1 pnpm --filter @todo/electron exec bun scripts/verify-import-focused.ts "$B" "$E/electron-reviewed"
 TODO_VERIFY_REPORT_ERRORS=1 TODO_HEADLESS_CHROMIUM='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' /usr/bin/lockf -k /tmp/todo-search-electron.lock pnpm --filter @todo/electron exec bun scripts/verify-discovery-offscreen.ts "$E/electron-recovery-final-4"
-sh /Users/zambamon/Work/todo-cli/scripts/disk-guard.sh
+sh scripts/disk-guard.sh
 /usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check
 ```
 
@@ -140,31 +140,31 @@ the refreshed rejected-last light, two-rejected dark and full-window preview.
 
 Before captures:
 
-- `/Users/zambamon/.t3/worktrees/todo-cli/fix-compact-import-rows-083ffebb589fbe3f/docs/evidence/import-rows/mac-before/compact-import-preview-light.png`
-- `/Users/zambamon/.t3/worktrees/todo-cli/fix-compact-import-rows-083ffebb589fbe3f/docs/evidence/import-rows/electron-before/failure.png`
+- `docs/evidence/import-rows/mac-before/compact-import-preview-light.png`
+- `docs/evidence/import-rows/electron-before/failure.png`
 
 The approved capture matrix is listed below. I inspected every image before
 sending its absolute path to the coordinator. The refreshed Mac fixture captures
 are in `mac-fixture-final` with the same filenames.
 
-- `/Users/zambamon/.t3/worktrees/todo-cli/fix-compact-import-rows-083ffebb589fbe3f/docs/evidence/import-rows/mac-final/compact-import-preview-rejected-first-light.png`
-- `/Users/zambamon/.t3/worktrees/todo-cli/fix-compact-import-rows-083ffebb589fbe3f/docs/evidence/import-rows/mac-final/compact-import-preview-rejected-first-dark.png`
-- `/Users/zambamon/.t3/worktrees/todo-cli/fix-compact-import-rows-083ffebb589fbe3f/docs/evidence/import-rows/mac-final/compact-import-preview-rejected-last-light.png`
-- `/Users/zambamon/.t3/worktrees/todo-cli/fix-compact-import-rows-083ffebb589fbe3f/docs/evidence/import-rows/mac-final/compact-import-preview-rejected-last-dark.png`
-- `/Users/zambamon/.t3/worktrees/todo-cli/fix-compact-import-rows-083ffebb589fbe3f/docs/evidence/import-rows/mac-final/compact-import-preview-two-rejected-light.png`
-- `/Users/zambamon/.t3/worktrees/todo-cli/fix-compact-import-rows-083ffebb589fbe3f/docs/evidence/import-rows/mac-final/compact-import-preview-two-rejected-dark.png`
-- `/Users/zambamon/.t3/worktrees/todo-cli/fix-compact-import-rows-083ffebb589fbe3f/docs/evidence/import-rows/mac-final/compact-import-result-light.png`
-- `/Users/zambamon/.t3/worktrees/todo-cli/fix-compact-import-rows-083ffebb589fbe3f/docs/evidence/import-rows/mac-final/compact-import-result-dark.png`
-- `/Users/zambamon/.t3/worktrees/todo-cli/fix-compact-import-rows-083ffebb589fbe3f/docs/evidence/import-rows/mac-final/import-preview-light.png`
-- `/Users/zambamon/.t3/worktrees/todo-cli/fix-compact-import-rows-083ffebb589fbe3f/docs/evidence/import-rows/electron-final-4/compact-import-light-preview-rejected-first.png`
-- `/Users/zambamon/.t3/worktrees/todo-cli/fix-compact-import-rows-083ffebb589fbe3f/docs/evidence/import-rows/electron-final-4/compact-import-dark-preview-rejected-first.png`
-- `/Users/zambamon/.t3/worktrees/todo-cli/fix-compact-import-rows-083ffebb589fbe3f/docs/evidence/import-rows/electron-final-4/compact-import-light-preview-rejected-last.png`
-- `/Users/zambamon/.t3/worktrees/todo-cli/fix-compact-import-rows-083ffebb589fbe3f/docs/evidence/import-rows/electron-final-4/compact-import-dark-preview-rejected-last.png`
-- `/Users/zambamon/.t3/worktrees/todo-cli/fix-compact-import-rows-083ffebb589fbe3f/docs/evidence/import-rows/electron-final-4/compact-import-light-preview-two-rejected.png`
-- `/Users/zambamon/.t3/worktrees/todo-cli/fix-compact-import-rows-083ffebb589fbe3f/docs/evidence/import-rows/electron-final-4/compact-import-dark-preview-two-rejected.png`
-- `/Users/zambamon/.t3/worktrees/todo-cli/fix-compact-import-rows-083ffebb589fbe3f/docs/evidence/import-rows/electron-final-4/compact-import-light-result.png`
-- `/Users/zambamon/.t3/worktrees/todo-cli/fix-compact-import-rows-083ffebb589fbe3f/docs/evidence/import-rows/electron-final-4/compact-import-dark-result.png`
-- `/Users/zambamon/.t3/worktrees/todo-cli/fix-compact-import-rows-083ffebb589fbe3f/docs/evidence/import-rows/electron-reviewed/import-light-preview.png`
+- `docs/evidence/import-rows/mac-final/compact-import-preview-rejected-first-light.png`
+- `docs/evidence/import-rows/mac-final/compact-import-preview-rejected-first-dark.png`
+- `docs/evidence/import-rows/mac-final/compact-import-preview-rejected-last-light.png`
+- `docs/evidence/import-rows/mac-final/compact-import-preview-rejected-last-dark.png`
+- `docs/evidence/import-rows/mac-final/compact-import-preview-two-rejected-light.png`
+- `docs/evidence/import-rows/mac-final/compact-import-preview-two-rejected-dark.png`
+- `docs/evidence/import-rows/mac-final/compact-import-result-light.png`
+- `docs/evidence/import-rows/mac-final/compact-import-result-dark.png`
+- `docs/evidence/import-rows/mac-final/import-preview-light.png`
+- `docs/evidence/import-rows/electron-final-4/compact-import-light-preview-rejected-first.png`
+- `docs/evidence/import-rows/electron-final-4/compact-import-dark-preview-rejected-first.png`
+- `docs/evidence/import-rows/electron-final-4/compact-import-light-preview-rejected-last.png`
+- `docs/evidence/import-rows/electron-final-4/compact-import-dark-preview-rejected-last.png`
+- `docs/evidence/import-rows/electron-final-4/compact-import-light-preview-two-rejected.png`
+- `docs/evidence/import-rows/electron-final-4/compact-import-dark-preview-two-rejected.png`
+- `docs/evidence/import-rows/electron-final-4/compact-import-light-result.png`
+- `docs/evidence/import-rows/electron-final-4/compact-import-dark-result.png`
+- `docs/evidence/import-rows/electron-reviewed/import-light-preview.png`
 
 ## Limits and ownership
 
