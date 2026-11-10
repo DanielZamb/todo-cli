@@ -3,11 +3,13 @@ import {
   decodeGraphRender,
   decodeGraphReply,
   type GraphHostRender,
+  graphNodeAccessibleName,
 } from "../graph-browser/protocol.ts";
 
 const graphHostFixture: GraphHostRender = {
   v: 1,
   type: "render",
+  root_id: "task-a",
   identity: {
     profile: "work",
     root: "task-a",
@@ -73,6 +75,57 @@ it("retains opaque identity and validates every host reply against the current k
       command,
     ),
   ).toThrow();
+});
+it("distinguishes an omitted viewport from a supplied stored viewport", () => {
+  const { viewport: _viewport, ...initial } = graphHostFixture;
+  expect(decodeGraphRender(initial).viewport).toBeUndefined();
+  expect(decodeGraphRender(graphHostFixture).viewport).toEqual({
+    x: 30,
+    y: 30,
+    scale: 1,
+  });
+});
+it("requires a known explicit root without inspecting the opaque identity", () => {
+  const { root_id: _root, ...missing } = graphHostFixture;
+  expect(() => decodeGraphRender(missing)).toThrow();
+  expect(() =>
+    decodeGraphRender({ ...graphHostFixture, root_id: "foreign" }),
+  ).toThrow();
+  expect(
+    decodeGraphRender({ ...graphHostFixture, identity: { root: "foreign" } })
+      .root_id,
+  ).toBe("task-a");
+});
+it("keeps known node states, ignores unknown states and uses titles only in accessible names", () => {
+  for (const state of ["ready", "blocked", "done", "cancelled"] as const) {
+    const message = decodeGraphRender({
+      ...graphHostFixture,
+      nodes: [
+        {
+          mermaid_id: "n0",
+          task_id: "task-a",
+          title: "Ship the client",
+          state,
+        },
+        graphHostFixture.nodes[1],
+      ],
+    });
+    const node = message.nodes[0];
+    if (!node) throw new Error("Missing decoded node");
+    expect(node.state).toBe(state);
+    expect(graphNodeAccessibleName(node)).toBe(`Ship the client, ${state}`);
+  }
+  const unknown = decodeGraphRender({
+    ...graphHostFixture,
+    nodes: [
+      { mermaid_id: "n0", task_id: "task-a", state: "future-state" },
+      graphHostFixture.nodes[1],
+    ],
+  });
+  expect(unknown.nodes[0]).toEqual({ mermaid_id: "n0", task_id: "task-a" });
+  const node = unknown.nodes[0];
+  if (!node) throw new Error("Missing decoded node");
+  expect(graphNodeAccessibleName(node)).toBe("task-a");
 });
 it("refuses malformed viewport, unknown visible ids and duplicate node mappings", () => {
   expect(() =>

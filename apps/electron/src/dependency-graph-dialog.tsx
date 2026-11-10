@@ -152,6 +152,7 @@ export function DependencyGraphDialog({
         ? {
             v: 1,
             type: "render",
+            root_id: state.scope.root,
             identity: {
               profile: state.scope.profile,
               root: state.scope.root,
@@ -161,10 +162,19 @@ export function DependencyGraphDialog({
             nodes: state.report.nodes.map((node) => ({
               mermaid_id: node.mermaid_id,
               task_id: node.task.id,
+              title: node.task.title,
+              ...(node.task.status === "done" ||
+              node.task.status === "cancelled"
+                ? { state: node.task.status }
+                : node.blocked
+                  ? { state: "blocked" as const }
+                  : node.ready && node.in_degree > 0
+                    ? { state: "ready" as const }
+                    : {}),
             })),
             mermaid: state.report.mermaid,
             visible_ids: visible,
-            viewport: state.viewport,
+            ...(state.viewport ? { viewport: state.viewport } : {}),
             selected_id: state.selected,
             focused_id: state.focused,
             theme: graphTheme(dark),
@@ -373,8 +383,8 @@ export function DependencyGraphDialog({
                   variant="outline"
                   onClick={() =>
                     controller.setViewport({
-                      ...state.viewport,
-                      scale: Math.min(4, state.viewport.scale * 1.2),
+                      ...(state.viewport ?? { x: 0, y: 0, scale: 1 }),
+                      scale: Math.min(4, (state.viewport?.scale ?? 1) * 1.2),
                     })
                   }
                 >
@@ -384,8 +394,8 @@ export function DependencyGraphDialog({
                   variant="outline"
                   onClick={() =>
                     controller.setViewport({
-                      ...state.viewport,
-                      scale: Math.max(0.1, state.viewport.scale / 1.2),
+                      ...(state.viewport ?? { x: 0, y: 0, scale: 1 }),
+                      scale: Math.max(0.1, (state.viewport?.scale ?? 1) / 1.2),
                     })
                   }
                 >
@@ -395,11 +405,7 @@ export function DependencyGraphDialog({
                   ref={reset}
                   variant="outline"
                   data-testid="dependency-graph-reset"
-                  disabled={
-                    state.viewport.x === 0 &&
-                    state.viewport.y === 0 &&
-                    state.viewport.scale === 1
-                  }
+                  disabled={state.viewport === null}
                   onClick={() => controller.reset()}
                 >
                   Reset

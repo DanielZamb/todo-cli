@@ -5,6 +5,7 @@ import type {
   GraphHostReply,
   GraphViewport,
 } from "./protocol.ts";
+import { graphNodeAccessibleName } from "./protocol.ts";
 
 register(flowchart);
 const fallbacks = {
@@ -31,6 +32,24 @@ const variables = {
   warning: "--pele-critical",
   danger: "--pele-error",
 };
+export function fitGraphViewport(
+  bounds: { x: number; y: number; width: number; height: number },
+  frame: { width: number; height: number },
+): GraphViewport {
+  const scale = Math.max(
+    0.01,
+    Math.min(
+      1,
+      Math.max(1, frame.width - 32) / Math.max(1, bounds.width),
+      Math.max(1, frame.height - 32) / Math.max(1, bounds.height),
+    ),
+  );
+  return {
+    x: (frame.width - bounds.width * scale) / 2 - bounds.x * scale,
+    y: (frame.height - bounds.height * scale) / 2 - bounds.y * scale,
+    scale,
+  };
+}
 export class GraphBrowserAdapter {
   private message: GraphHostRender | null = null;
   private viewport: GraphViewport = { x: 0, y: 0, scale: 1 };
@@ -126,7 +145,6 @@ export class GraphBrowserAdapter {
   draw(message: GraphHostRender) {
     const hadFocus = this.root.contains(document.activeElement);
     this.message = message;
-    this.viewport = message.viewport;
     this.send({ v: 1, type: "ready", identity: message.identity });
     try {
       for (const key of Object.keys(variables)) {
@@ -154,9 +172,7 @@ export class GraphBrowserAdapter {
         links: false,
       });
       this.content.innerHTML = result.svg;
-      const map = new Map(
-        message.nodes.map((node) => [node.mermaid_id, node.task_id]),
-      );
+      const map = new Map(message.nodes.map((node) => [node.mermaid_id, node]));
       const visible = new Set(message.visible_ids);
       const visibleMermaid = new Set(
         message.nodes
@@ -167,16 +183,19 @@ export class GraphBrowserAdapter {
       for (const node of this.content.querySelectorAll<SVGElement>(
         ".pele-node",
       )) {
-        const id = map.get(node.dataset.id ?? "");
-        if (!id) throw new Error("Pele returned an unknown Task identity");
+        const mapped = map.get(node.dataset.id ?? "");
+        if (!mapped) throw new Error("Pele returned an unknown Task identity");
+        const id = mapped.task_id;
         node.classList.toggle("graph-hidden", !visible.has(id));
         if (!visible.has(id)) continue;
         nodeCount++;
         node.tabIndex = 0;
         node.dataset.taskId = id;
         node.dataset.selected = String(message.selected_id === id);
+        node.dataset.root = String(message.root_id === id);
+        if (mapped.state) node.dataset.state = mapped.state;
         node.setAttribute("role", "button");
-        node.setAttribute("aria-label", `Task ${id}`);
+        node.setAttribute("aria-label", graphNodeAccessibleName(mapped));
         node.addEventListener("pointerdown", (event) =>
           event.stopPropagation(),
         );
@@ -220,7 +239,9 @@ export class GraphBrowserAdapter {
             !visibleMermaid.has(endpoints[2] ?? ""),
         );
       }
+      this.viewport = message.viewport ?? this.fittedViewport();
       this.applyViewport();
+      if (!message.viewport) this.changedViewport();
       if (hadFocus) this.focus(message.focused_id);
       this.send({
         v: 1,
@@ -260,15 +281,22 @@ export class GraphBrowserAdapter {
     this.focus(this.message?.focused_id ?? null);
   }
   zoom(factor: number) {
+    const scale = Math.min(4, Math.max(0.1, this.viewport.scale * factor));
+    const ratio = scale / this.viewport.scale;
     this.viewport = {
-      ...this.viewport,
-      scale: Math.min(4, Math.max(0.1, this.viewport.scale * factor)),
+      x:
+        this.root.clientWidth / 2 -
+        (this.root.clientWidth / 2 - this.viewport.x) * ratio,
+      y:
+        this.root.clientHeight / 2 -
+        (this.root.clientHeight / 2 - this.viewport.y) * ratio,
+      scale,
     };
     this.applyViewport();
     this.changedViewport();
   }
   reset() {
-    this.viewport = { x: 0, y: 0, scale: 1 };
+    this.viewport = this.fittedViewport();
     this.applyViewport();
     this.changedViewport();
     this.returnFocus();
@@ -285,6 +313,27 @@ export class GraphBrowserAdapter {
   ) {
     if (this.message)
       this.send({ v: 1, type, identity: this.message.identity, task_id });
+  }
+  private fittedViewport(): GraphViewport {
+    this.content.style.transform = "none";
+    const frame = this.root.getBoundingClientRect();
+    const boxes = [
+      ...this.content.querySelectorAll<SVGElement>(
+        ".pele-node:not(.graph-hidden), .pele-edge:not(.graph-hidden)",
+      ),
+    ].map((element) => element.getBoundingClientRect());
+    if (boxes.length === 0) return { x: 0, y: 0, scale: 1 };
+    const left = Math.min(...boxes.map((box) => box.left));
+    const top = Math.min(...boxes.map((box) => box.top));
+    return fitGraphViewport(
+      {
+        x: left - frame.left,
+        y: top - frame.top,
+        width: Math.max(...boxes.map((box) => box.right)) - left,
+        height: Math.max(...boxes.map((box) => box.bottom)) - top,
+      },
+      frame,
+    );
   }
   private applyViewport() {
     this.content.style.transform = `translate(${this.viewport.x}px, ${this.viewport.y}px) scale(${this.viewport.scale})`;

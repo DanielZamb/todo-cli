@@ -117,3 +117,29 @@ intermediate results, not the required final full offscreen suites.
 Root-check compilation left one additional owned hidden Bun runtime. It was
 checked with lsof and retired; its path/count/bytes are recorded separately in
 `setup/check-temporary-cleanup.json`. No unowned process or file was touched.
+
+The coordinator approved checkpoint2's structure and prescribed V1-V11 plus the
+remaining E3/E4 corrections. No further pattern gate precedes the final matrix.
+Historical checkpoint2-06 receipts are preserved unchanged, including their
+stale limits wording; they establish only the explicit partial assertions.
+
+The canonical protocol now implements the coordinator's amendments 1-3: optional
+node state/title, a required mapped root independent of selection, and an
+optional stored viewport. Omitting the viewport fits and centres the visible
+region at scale at most 1 and emits exactly one resolved reply. Supplied values
+remain unchanged. Unknown states are ignored. No labels or identity fields are
+read. `graph-browser-amendments-02/result.json` records Chromium exit 0 for the
+computed borders, accessible names/title fallback, centred bounds, one initial
+viewport reply, no extra reply for supplied values, and two invalid-root error
+replies. The existing offline/workaround/lock controls also pass. Electron unit
+tests exit 0 with 88 passing and one package skip; typecheck exits 0. This remains
+intermediate proof. The full client suites and complete matrix are pending.
+
+The renewed output lock SHA-256 is
+`a5cbe706b2cd37ace4752427d4aa9e06e5dfa7736f1ec6a717559135807cdaca`.
+The notice remains 1,934 bytes with SHA-256
+`311bccc30de6f7b9cbfb64232bb0c911ccb2191abe316550813ae25b2c7925b9`.
+Only six of the canonical eleven paths change: protocol, adapter, host, CSS,
+README and lock. Build command and copy recipe remain unchanged. No generated
+output is tracked. The permitted local no-comments audit found no new comments
+or suppressions before this checkpoint commit.

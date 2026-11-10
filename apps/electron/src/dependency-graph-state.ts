@@ -15,7 +15,7 @@ type OpenState = {
   readonly focused: TaskId | null;
   readonly expanded: ReadonlySet<TaskId>;
   readonly overview: boolean;
-  readonly viewport: GraphViewport;
+  readonly viewport: GraphViewport | null;
   readonly renderFailure: string | null;
 };
 export type DependencyGraphState = { readonly kind: "Closed" } | OpenState;
@@ -57,7 +57,7 @@ export class DependencyGraphController {
       focused: scope.root,
       expanded: new Set(),
       overview: false,
-      viewport: { x: 0, y: 0, scale: 1 },
+      viewport: null,
       renderFailure: null,
     });
     await this.refresh(request);
@@ -123,7 +123,8 @@ export class DependencyGraphController {
   setViewport(viewport: GraphViewport) {
     if (
       this.state.kind === "Open" &&
-      (this.state.viewport.x !== viewport.x ||
+      (!this.state.viewport ||
+        this.state.viewport.x !== viewport.x ||
         this.state.viewport.y !== viewport.y ||
         this.state.viewport.scale !== viewport.scale)
     )
@@ -163,7 +164,7 @@ export class DependencyGraphController {
     if (this.state.kind === "Open")
       this.publish({
         ...this.state,
-        viewport: { x: 0, y: 0, scale: 1 },
+        viewport: null,
         focused: this.state.selected,
       });
   }

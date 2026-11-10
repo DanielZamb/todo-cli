@@ -39,7 +39,7 @@ const browser = await chromium.launch({
     : {}),
   args: ["--password-store=basic"],
 });
-const messages: unknown[] = [];
+const messages: (typeof GraphHostReply.Type)[] = [];
 const remote: string[] = [];
 try {
   const page = await browser.newPage({
@@ -68,6 +68,7 @@ try {
   const command: GraphHostRender = {
     v: 1,
     type: "render",
+    root_id: "task-a",
     identity: {
       root: "task-a",
       credentialEpoch: 21,
@@ -80,7 +81,6 @@ try {
     ],
     mermaid: 'flowchart TD\nn0["A"]-->n1["B"]',
     visible_ids: ["task-a", "task-b"],
-    viewport: { x: 30, y: 30, scale: 1 },
     selected_id: "task-a",
     focused_id: "task-a",
     theme: { mode: "light", tokens: {} },
@@ -96,6 +96,54 @@ try {
         ).length,
     )
     .toBe(1);
+  const fitted = await page.evaluate(() => {
+    const boxes = [...document.querySelectorAll(".pele-node, .pele-edge")].map(
+      (node) => node.getBoundingClientRect(),
+    );
+    const left = Math.min(...boxes.map((box) => box.left));
+    const top = Math.min(...boxes.map((box) => box.top));
+    const right = Math.max(...boxes.map((box) => box.right));
+    const bottom = Math.max(...boxes.map((box) => box.bottom));
+    return {
+      left,
+      top,
+      right,
+      bottom,
+      centerX: (left + right) / 2,
+      centerY: (top + bottom) / 2,
+    };
+  });
+  assert.ok(Math.abs(fitted.centerX - 393 / 2) < 1);
+  assert.ok(Math.abs(fitted.centerY - 426 / 2) < 1);
+  assert.ok(
+    fitted.left >= 15 &&
+      fitted.top >= 15 &&
+      fitted.right <= 378 &&
+      fitted.bottom <= 411,
+  );
+  const initialViewports = messages.filter(
+    (reply) => reply.type === "viewport",
+  );
+  assert.equal(initialViewports.length, 1);
+  assert.ok(
+    initialViewports[0]?.type === "viewport" && initialViewports[0].scale <= 1,
+  );
+  await page.evaluate(
+    (command) =>
+      window.todoGraph.receive({
+        ...command,
+        viewport: { x: 30, y: 31, scale: 0.75 },
+      }),
+    command,
+  );
+  await expect
+    .poll(() => messages.filter((reply) => reply.type === "rendered").length)
+    .toBe(2);
+  assert.equal(messages.filter((reply) => reply.type === "viewport").length, 1);
+  await expect(page.locator(".graph-content")).toHaveCSS(
+    "transform",
+    "matrix(0.75, 0, 0, 0.75, 30, 31)",
+  );
   await page.locator('[data-task-id="task-a"]').click();
   await page.mouse.move(300, 300);
   await page.mouse.wheel(0, -100);
@@ -153,6 +201,104 @@ try {
     "stroke",
     "rgb(175, 189, 177)",
   );
+  const stateCommand = {
+    ...command,
+    root_id: "task-root",
+    nodes: [
+      {
+        mermaid_id: "n0",
+        task_id: "task-root",
+        title: "Root",
+        state: "blocked",
+      },
+      {
+        mermaid_id: "n1",
+        task_id: "task-ready",
+        title: "Ready Task",
+        state: "ready",
+      },
+      {
+        mermaid_id: "n2",
+        task_id: "task-blocked",
+        title: "Blocked Task",
+        state: "blocked",
+      },
+      {
+        mermaid_id: "n3",
+        task_id: "task-done",
+        title: "Done Task",
+        state: "done",
+      },
+      { mermaid_id: "n4", task_id: "task-cancelled", state: "cancelled" },
+      { mermaid_id: "n5", task_id: "task-unknown", state: "unknown-state" },
+    ],
+    mermaid:
+      'flowchart TD\nn0["Label intentionally different"]-->n1["One"]-->n2["Two"]-->n3["Three"]-->n4["Four"]-->n5["Five"]',
+    visible_ids: [
+      "task-root",
+      "task-ready",
+      "task-blocked",
+      "task-done",
+      "task-cancelled",
+      "task-unknown",
+    ],
+    selected_id: "task-ready",
+    focused_id: "task-root",
+    theme: {
+      mode: "light",
+      tokens: {
+        primary: "#285D46",
+        border: "#7B897E",
+        warning: "#76550B",
+        "muted-text": "#546359",
+      },
+    },
+  };
+  await page.evaluate(
+    (command) => window.todoGraph.receive(command),
+    stateCommand,
+  );
+  for (const [id, color, name] of [
+    ["task-root", "rgb(40, 93, 70)", "Root, blocked"],
+    ["task-ready", "rgb(123, 137, 126)", "Ready Task, ready"],
+    ["task-blocked", "rgb(118, 85, 11)", "Blocked Task, blocked"],
+    ["task-done", "rgb(84, 99, 89)", "Done Task, done"],
+    ["task-cancelled", "rgb(84, 99, 89)", "task-cancelled, cancelled"],
+    ["task-unknown", "rgb(123, 137, 126)", "task-unknown"],
+  ]) {
+    const node = page.locator(`[data-task-id="${id}"]`);
+    await expect(node).toHaveAccessibleName(name ?? "");
+    await expect(node.locator(":scope > :first-child")).toHaveCSS(
+      "stroke",
+      color ?? "",
+    );
+  }
+  await expect(page.locator('[data-task-id="task-done"] text')).toHaveCSS(
+    "fill",
+    "rgb(84, 99, 89)",
+  );
+  const stateBorders = await page.locator(".pele-node").evaluateAll((nodes) =>
+    nodes.map((node) => ({
+      id: node.getAttribute("data-task-id"),
+      name: node.getAttribute("aria-label"),
+      border: getComputedStyle(node.firstElementChild ?? node).stroke,
+    })),
+  );
+  const errors = messages.filter(
+    (reply) => reply.type === "renderError",
+  ).length;
+  const { root_id: _root, ...missingRoot } = command;
+  await page.evaluate(
+    (command) => window.todoGraph.receive(command),
+    missingRoot,
+  );
+  await page.evaluate(
+    (command) => window.todoGraph.receive({ ...command, root_id: "foreign" }),
+    command,
+  );
+  await expect
+    .poll(() => messages.filter((reply) => reply.type === "renderError").length)
+    .toBe(errors + 2);
   assert.ok(
     messages.every(
       (reply) =>
@@ -173,6 +319,12 @@ try {
         identityEcho:
           "Every actual reply byte-equivalent to submitted identity JSON",
         remoteRequests: remote,
+        initialViewportReplies: initialViewports,
+        suppliedViewport: { x: 30, y: 31, scale: 0.75 },
+        suppliedViewportExtraReplies: 0,
+        fittedBounds: fitted,
+        stateBorders,
+        invalidRootRenderErrors: 2,
         nativeAccessibility: "unproven",
         replies: messages,
       },

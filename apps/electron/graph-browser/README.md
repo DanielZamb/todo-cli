@@ -24,9 +24,10 @@ No consumer imports another worktree. L1 supplies the canonical source commit.
 The Electron package build includes this directory; S owns the Mac build step.
 
 `protocol.ts` exports schemas and derived types `GraphHostIdentity`,
-`GraphViewport`, `GraphTheme`, `GraphHostRender`, `GraphHostReply`, plus
-`decodeGraphRender` and `decodeGraphReply`. `adapter.ts` exports
-`GraphBrowserAdapter`. Input theme token keys are `ink`, `paper`, `card`, `border`,
+`GraphViewport`, `GraphTheme`, `GraphNodeState`, `GraphHostRender`, `GraphHostReply`,
+plus `decodeGraphRender`, `decodeGraphReply` and `graphNodeAccessibleName`.
+`adapter.ts` exports `GraphBrowserAdapter` and `fitGraphViewport`.
+Input theme token keys are `ink`, `paper`, `card`, `border`,
 `muted-text`, `primary`, `on-primary`, `accent`, `warning`, and `danger`.
 Absent colors use the neutral fallback. No host epoch field is read by the module.
 
@@ -42,6 +43,17 @@ mappings and unknown Task ids. The app must also compare every reply to its
 current authorized Profile/root/auth/request identity before acting. The adapter
 never makes a server call. A render error is an app-owned accessible-list/Retry
 state, never another runtime renderer.
+
+`root_id` is required and must be in `nodes`. Its primary border is independent
+of `selected_id`. Optional node `title` supplies only the accessible name; the
+full Task id is the fallback. Optional `state` supplies the state suffix and
+semantic border/text styling. Unknown states are ignored. The module does not
+derive state, parse labels or read opaque identity fields.
+
+Omit `viewport` for the initial scope render. The module fits and centres the
+visible region at scale at most 1 and emits one resolved `viewport` reply.
+Supply a stored viewport to preserve its values unchanged without that initial
+reply. Reset fits the current visible region. The app owns stored scope state.
 
 `verify-graph-browser.ts` proves local offline loading, identity echo, real pointer
 activation before/after zoom, the adapter's focus-return observer when a test
