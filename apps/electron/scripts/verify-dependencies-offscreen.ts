@@ -189,14 +189,19 @@ try {
   let failRender = false;
   let clipboard = "";
   let delay = false;
+  let delayDelete = false;
   let release: (() => void) | undefined;
   await page.exposeFunction(
     "dagRequest",
     async (raw: unknown): Promise<Reply> => {
       const request = Schema.decodeUnknownSync(Request)(raw);
       actions.push({ request });
-      if (request._tag === "depend" && delay) {
+      if (
+        (request._tag === "depend" && delay) ||
+        (request._tag === "delete" && !request.query.dry_run && delayDelete)
+      ) {
         delay = false;
+        delayDelete = false;
         await new Promise<void>((done) => {
           release = done;
         });
@@ -342,7 +347,7 @@ try {
         overflow: document.documentElement.scrollWidth > innerWidth,
         actions: [
           ...document.querySelectorAll(
-            '[data-testid="dependency-delete-confirm"], [data-testid="dependency-delete-cancel"], [data-testid="dependency-picker-close"], [data-testid="dependency-graph-close"], [data-testid="dependency-graph-mode"], .dependency-diagram-tools',
+            '[data-testid="dependency-delete-confirm"], [data-testid="dependency-delete-cancel"], [data-testid="dependency-picker-close"], [data-testid="dependency-graph-close"], [data-testid="dependency-graph-mode"], [data-testid="dependency-initial-done"], [data-testid="dependency-initial-cancel"], .dependency-diagram-tools',
           ),
         ].map((element) => {
           const box = element.getBoundingClientRect();
@@ -646,6 +651,33 @@ try {
     .getByRole("button", { name: "Graph details", exact: true })
     .click();
   await page.getByTestId("dependency-graph-copy-mermaid").click();
+  for (const section of [
+    "depends-on",
+    "lightest-next",
+    "starts-at",
+    "ancestors",
+  ])
+    await expect(
+      page.getByTestId(`dependency-graph-related-${section}-${blocker.id}`),
+    ).toHaveCount(1);
+  await expect(
+    page.getByTestId(`dependency-graph-task-${blocker.id}`),
+  ).toHaveCount(1);
+  const graphIdentifiers = await page
+    .getByTestId("dependency-graph")
+    .locator("[data-testid]")
+    .evaluateAll((elements) =>
+      elements.map((element) => element.getAttribute("data-testid")),
+    );
+  assert.equal(new Set(graphIdentifiers).size, graphIdentifiers.length);
+  writeFileSync(
+    join(evidence, "graph-section-identifiers.json"),
+    JSON.stringify(graphIdentifiers),
+  );
+  await capture(
+    "graph-repeated-sections",
+    "The same Task has unique section-scoped row/menu identifiers with Graph details open",
+  );
   assert.equal(
     clipboard,
     (
@@ -662,6 +694,36 @@ try {
   await page
     .getByRole("button", { name: "Graph details", exact: true })
     .click();
+  await page
+    .getByTestId(`dependency-graph-actions-lightest-next-${blocker.id}`)
+    .click();
+  await page
+    .getByRole("menuitem", {
+      name: "Show this Task's Dependencies",
+      exact: true,
+    })
+    .click();
+  await expect(
+    page
+      .getByTestId("dependency-graph")
+      .locator('[data-slot="dialog-description"]'),
+  ).toHaveText("Confirm the API contract");
+  await expect
+    .poll(() =>
+      actions.some((entry) => {
+        const parsed = Schema.decodeUnknownExit(
+          Schema.Struct({ request: Request }),
+        )(entry);
+        return (
+          parsed._tag === "Success" &&
+          parsed.value.request._tag === "graph" &&
+          parsed.value.request.task === blocker.id
+        );
+      }),
+    )
+    .toBe(true);
+  await page.getByTestId("dependency-graph-close").click();
+  await openGraph();
   await page.getByRole("button", { name: "Diagram", exact: true }).click();
   await expect(
     page
@@ -773,6 +835,214 @@ try {
     "Profile-wide candidate list reaches its last long row while Close remains in the Compact viewport",
   );
   await page.getByTestId("dependency-picker-close").click();
+  await page.evaluate(() =>
+    window.dispatchEvent(
+      new CustomEvent("dag-notice", { detail: { _tag: "quickAdd" } }),
+    ),
+  );
+  await page
+    .getByLabel("Task title", { exact: true })
+    .fill("Created with a reviewed Dependency");
+  await page
+    .getByRole("button", { name: "Choose Dependencies", exact: true })
+    .click();
+  await page
+    .getByTestId("dependency-initial-picker")
+    .getByTestId(`dependency-choice-${blocker.id}`)
+    .check();
+  await page
+    .getByTestId("dependency-initial-picker")
+    .getByRole("textbox")
+    .fill("Independent Task");
+  await expect(
+    page
+      .getByTestId("dependency-initial-picker")
+      .getByTestId(`dependency-choice-${blocker.id}`),
+  ).toBeChecked();
+  await expect(page.getByText("Loading Tasks…", { exact: true })).toHaveCount(
+    0,
+  );
+  await expect(
+    page.getByTestId("dependency-initial-picker").locator(".dependency-choice"),
+  ).toHaveCount(2);
+  assert.equal(
+    await page.getByTestId("dependency-initial-picker").evaluate((dialog) => {
+      const box = dialog
+        .querySelector('[data-slot="dialog-title"]')
+        ?.getBoundingClientRect();
+      return (
+        !!box &&
+        dialog.contains(document.elementFromPoint(box.x + 10, box.y + 10))
+      );
+    }),
+    true,
+  );
+  await capture(
+    "initial-dependencies",
+    "Initial checked Dependency stays selected while Profile search narrows; no edge write has occurred",
+  );
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(page.getByLabel("Task title", { exact: true })).toHaveValue(
+    "Created with a reviewed Dependency",
+  );
+  await page.getByRole("button", { name: "Add task", exact: true }).click();
+  await expect(page.getByLabel("Task title", { exact: true })).toHaveCount(0);
+  const created = (
+    await run(
+      client.tasks.list({
+        params: { profile: Schema.decodeUnknownSync(ProfileId)("work") },
+        query: { text: "Created with a reviewed Dependency" },
+      }),
+    )
+  )[0];
+  assert.ok(created);
+  assert.equal(created.row_version, 1);
+  const initialGraph = await run(
+    client.tasks.graph({
+      params: { profile: created.profile_id, task: created.id },
+    }),
+  );
+  assert.deepEqual(
+    initialGraph.edges
+      .filter((edge) => edge.dependent_id === created.id)
+      .map((edge) => [edge.blocker_id, edge.dependent_id]),
+    [[blocker.id, created.id]],
+  );
+  const initialHistory = await run(
+    client.reads.history({
+      params: { profile: created.profile_id, task: created.id },
+    }),
+  );
+  assert.equal(initialHistory[0]?.event.kind, "TaskCreated");
+  assert.equal(initialHistory[0]?.event.entity_version, 2);
+  writeFileSync(
+    join(evidence, "initial-create-result.json"),
+    JSON.stringify({
+      task: created,
+      graph: initialGraph,
+      history: initialHistory,
+    }),
+  );
+  const donePrerequisite = cli(
+    "add",
+    "Resolved prerequisite for follow-up",
+    "--priority",
+    "P4",
+  ).task;
+  cli("done", donePrerequisite.id, "--expected-version", "1");
+  const doneDependent = cli(
+    "add",
+    "Done delivery that must remain resolved",
+    "--priority",
+    "P4",
+    "--depends-on",
+    donePrerequisite.id,
+  ).task;
+  cli("done", doneDependent.id, "--expected-version", "1");
+  await page
+    .getByRole("button", { name: "Back to tasks", exact: true })
+    .click();
+  await page.getByRole("button", { name: "More filters" }).click();
+  await page.locator("#filter-status").selectOption("closed");
+  await page
+    .getByRole("button", { name: "Apply filters", exact: true })
+    .click();
+  await page
+    .locator(`[data-task-id="${donePrerequisite.id}"] .task-content`)
+    .click();
+  await page
+    .getByLabel("Title", { exact: true })
+    .fill("Unsaved editor draft remains intact");
+  await page.getByRole("button", { name: "Task actions", exact: true }).click();
+  await page
+    .getByRole("menuitem", { name: "Reopen task", exact: true })
+    .click();
+  await expect(page.getByTestId("dependency-error")).toContainText(
+    "This Task blocks done Tasks and can't be reopened.",
+  );
+  await expect(page.getByTestId("dependency-error")).toContainText(
+    "error 2 - validation or usage",
+  );
+  await capture(
+    "reopen-refused",
+    "Actual blocks_done_task refusal keeps the Task resolved and the unsaved editor draft",
+  );
+  await page.getByTestId("dependency-follow-up").click();
+  await expect(
+    page.getByTestId(`dependency-initial-${doneDependent.id}`),
+  ).toBeVisible();
+  await expect(
+    page.getByTestId(`dependency-initial-${donePrerequisite.id}`),
+  ).toHaveCount(0);
+  await page
+    .getByLabel("Task title", { exact: true })
+    .fill("Follow-up from the done dependent");
+  await capture(
+    "follow-up-preselected",
+    "Create follow-up preselects the structured DONE dependent id, preserving the existing editor draft",
+  );
+  await page.getByRole("button", { name: "Add task", exact: true }).click();
+  await expect(page.getByLabel("Task title", { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
+    "Unsaved editor draft remains intact",
+  );
+  const followUp = (
+    await run(
+      client.tasks.list({
+        params: { profile: Schema.decodeUnknownSync(ProfileId)("work") },
+        query: { text: "Follow-up from the done dependent" },
+      }),
+    )
+  )[0];
+  assert.ok(followUp);
+  assert.equal(followUp.row_version, 1);
+  assert.deepEqual(followUp.depends_on, [doneDependent.id]);
+  assert.equal(cli("show", donePrerequisite.id).task.status, "done");
+  assert.equal(cli("show", doneDependent.id).task.status, "done");
+  writeFileSync(
+    join(evidence, "follow-up-result.json"),
+    JSON.stringify({
+      followUp,
+      donePrerequisite,
+      doneDependent,
+      editorDraft: "Unsaved editor draft remains intact",
+    }),
+  );
+  await page
+    .getByRole("button", { name: "Back to tasks", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Clear filters", exact: true })
+    .click();
+  await page.locator(`[data-task-id="${untouched.id}"] .task-content`).click();
+  await openDelete();
+  delayDelete = true;
+  await page.getByTestId("dependency-delete-confirm").click();
+  await expect(page.getByTestId("dependency-delete-confirm")).toHaveText(
+    "Deleting…",
+  );
+  await capture(
+    "delete-pending",
+    "Explicit no-edge confirmation sends a reviewed fingerprint and disables confirmation until the real server reply",
+  );
+  assert.ok(release);
+  release();
+  await expect(page.getByTestId("dependency-delete-dialog")).toHaveCount(0);
+  assert.equal(
+    (
+      await run(
+        client.tasks.list({
+          params: { profile: Schema.decodeUnknownSync(ProfileId)("work") },
+          query: { prefix: untouched.id },
+        }),
+      )
+    ).length,
+    0,
+  );
+  await capture(
+    "delete-success",
+    "The confirmed no-edge Task is absent from a fresh authorized server read",
+  );
   assert.equal(cli("show", plain.id).task.title, "Review tomorrow");
   assert.deepEqual(errors, []);
   writeFileSync(

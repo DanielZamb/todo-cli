@@ -274,13 +274,23 @@ export function DependencyGraphDialog({
       scale,
     });
   };
-  const idsInScope = new Set(visible);
   const matches = state.searchIds;
-  const identified = new Set<TaskId>();
-  const list = (name: string, ids: readonly TaskId[]) => {
+  const list = (
+    name: string,
+    ids: readonly TaskId[],
+    section:
+      | "shown"
+      | "depends-on"
+      | "blocks"
+      | "lightest-next"
+      | "starts-at"
+      | "ends-at"
+      | "ancestors"
+      | "descendants",
+  ) => {
     const shown = matches === null ? ids : ids.filter((id) => matches.has(id));
     return (
-      <section className="dependency-graph-section">
+      <section className="dependency-graph-section" data-section={section}>
         <h3>
           {name} · {ids.length}
         </h3>
@@ -292,14 +302,14 @@ export function DependencyGraphDialog({
           <ul>
             {shown.map((id) => {
               const value = task(id);
-              const first = !identified.has(id);
-              identified.add(id);
               return (
                 <li key={id}>
                   <Button
                     variant="ghost"
                     data-testid={
-                      first ? `dependency-graph-task-${id}` : undefined
+                      section === "shown"
+                        ? `dependency-graph-task-${id}`
+                        : `dependency-graph-related-${section}-${id}`
                     }
                     onClick={() => {
                       if (value) {
@@ -321,6 +331,7 @@ export function DependencyGraphDialog({
                           variant="ghost"
                           size="icon"
                           aria-label={`Actions for ${value?.title ?? id}`}
+                          data-testid={`dependency-graph-actions-${section}-${id}`}
                         />
                       }
                     >
@@ -352,9 +363,9 @@ export function DependencyGraphDialog({
                         {diagramVisible && (
                           <DropdownMenuItem
                             data-testid={
-                              first
+                              section === "shown"
                                 ? `dependency-graph-expand-${id}`
-                                : undefined
+                                : `dependency-graph-expand-related-${section}-${id}`
                             }
                             onClick={() => controller.expand(id)}
                           >
@@ -546,19 +557,16 @@ export function DependencyGraphDialog({
                 report.edges
                   .filter((edge) => edge.dependent_id === state.scope.root)
                   .map((edge) => edge.blocker_id),
+                "depends-on",
               )}
               {list(
                 "Blocks",
                 report.edges
                   .filter((edge) => edge.blocker_id === state.scope.root)
                   .map((edge) => edge.dependent_id),
+                "blocks",
               )}
-              {list("Lightest next", report.lightest_next)}
-              {state.overview &&
-                list(
-                  "All Tasks",
-                  report.topological_order.filter((id) => idsInScope.has(id)),
-                )}
+              {list("Lightest next", report.lightest_next, "lightest-next")}
               {root && (
                 <p>
                   Energy left: {root.remaining_energy.energy}
@@ -578,26 +586,16 @@ export function DependencyGraphDialog({
                       <dd>{shape}</dd>
                       <dt>Depth</dt>
                       <dd>{root?.depth ?? 0}</dd>
-                      <dt>Starts at</dt>
-                      <dd>
-                        {report.sources
-                          .map((id) => task(id)?.title ?? id)
-                          .join(", ") || "None"}
-                      </dd>
-                      <dt>Ends at</dt>
-                      <dd>
-                        {report.sinks
-                          .map((id) => task(id)?.title ?? id)
-                          .join(", ") || "None"}
-                      </dd>
                       <dt>Direct Dependencies</dt>
                       <dd>{root?.in_degree ?? 0}</dd>
                       <dt>Tasks blocked</dt>
                       <dd>{root?.out_degree ?? 0}</dd>
                     </dl>
                   </section>
-                  {list("Ancestors", report.ancestors)}
-                  {list("Descendants", report.descendants)}
+                  {list("Starts at", report.sources, "starts-at")}
+                  {list("Ends at", report.sinks, "ends-at")}
+                  {list("Ancestors", report.ancestors, "ancestors")}
+                  {list("Descendants", report.descendants, "descendants")}
                   <Button
                     variant="outline"
                     data-testid="dependency-graph-copy-mermaid"
@@ -612,6 +610,7 @@ export function DependencyGraphDialog({
                   </Button>
                 </CollapsibleContent>
               </Collapsible>
+              {list("Tasks shown", visible, "shown")}
             </div>
           )}
         </div>

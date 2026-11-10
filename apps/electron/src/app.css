@@ -1714,6 +1714,14 @@ nav {
   padding-left: 20px;
   overflow-wrap: anywhere;
 }
+.dependency-edge-report {
+  max-height: 144px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 .dependency-delete h3 {
   font-weight: 600;
 }

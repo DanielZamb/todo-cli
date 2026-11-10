@@ -1,6 +1,6 @@
 import { Recurrence, type Series, type TaskTime } from "@todo/domain";
 import { Schema } from "effect";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Button } from "./components/ui/button.tsx";
 import {
   Dialog,
@@ -32,6 +32,8 @@ export function RecurrenceDialog({
   onClose,
   onSave,
   onSkip,
+  initialDependencies,
+  recovery,
 }: {
   series: Series | null;
   start: TaskTime;
@@ -41,6 +43,8 @@ export function RecurrenceDialog({
   onClose: () => void;
   onSave: (recurrence: Recurrence) => void;
   onSkip: () => void;
+  initialDependencies?: ReactNode;
+  recovery?: ReactNode;
 }) {
   const [draft, setDraft] = useState(() =>
     series ? ruleDraft(series.recurrence.rrule) : defaultRule,
@@ -206,6 +210,8 @@ export function RecurrenceDialog({
             )}
           </div>
           {error && <p role="alert">{error}</p>}
+          {recovery}
+          {!series && initialDependencies}
         </FieldGroup>
         <div className="recurrence-footer">
           {series && (

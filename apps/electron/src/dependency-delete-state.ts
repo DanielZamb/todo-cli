@@ -10,6 +10,7 @@ export type DependencyDeleteState =
       readonly kind: "Review" | "Applying";
       readonly task: Preview;
       readonly graph: GraphReport | null;
+      readonly fromVersion: Task["row_version"];
       readonly changed: boolean;
       readonly error: string;
     }
@@ -38,7 +39,12 @@ export class DependencyDeleteController {
     this.epoch++;
     this.publish({ kind: "Closed" });
   };
-  async open(task: Task, request: Requester, changed = false): Promise<void> {
+  async open(
+    task: Task,
+    request: Requester,
+    changed = false,
+    reloadConflict = true,
+  ): Promise<void> {
     const epoch = ++this.epoch;
     this.publish({ kind: "Loading", task, changed });
     const result = await this.call(request, {
@@ -48,8 +54,14 @@ export class DependencyDeleteController {
       query: { from_version: task.row_version, dry_run: true },
     });
     if (epoch !== this.epoch) return;
-    if (result._tag === "conflict" && result.latest)
-      return this.open(result.latest, request, true);
+    if (
+      result._tag === "conflict" &&
+      result.latest &&
+      result.latest.id === task.id &&
+      result.latest.profile_id === task.profile_id &&
+      reloadConflict
+    )
+      return this.open(result.latest, request, true, false);
     if (
       result._tag !== "task" ||
       result.task.id !== task.id ||
@@ -78,6 +90,7 @@ export class DependencyDeleteController {
     this.publish({
       kind: "Review",
       task: result.task,
+      fromVersion: task.row_version,
       graph:
         graph._tag === "graph" &&
         graph.report.profile_id === task.profile_id &&
@@ -99,15 +112,30 @@ export class DependencyDeleteController {
       profile: state.task.profile_id,
       task: state.task.id,
       query: {
-        from_version: state.task.row_version,
+        from_version: state.fromVersion,
         with_dependencies: true,
         dependency_fingerprint: state.task.dependency_fingerprint,
       },
     });
     if (epoch !== this.epoch) return false;
-    if (result._tag === "task") {
+    if (
+      result._tag === "task" &&
+      result.task.id === state.task.id &&
+      result.task.profile_id === state.task.profile_id &&
+      result.task.dry_run === false
+    ) {
       this.close();
       return true;
+    }
+    if (result._tag === "task") {
+      this.publish({
+        kind: "Error",
+        task: state.task,
+        changed: true,
+        error:
+          "Todo returned an incompatible Delete result. Reload its Dependencies before trying again.",
+      });
+      return false;
     }
     if (
       result._tag === "conflict" ||
@@ -129,7 +157,12 @@ export class DependencyDeleteController {
             ? latest.task
             : null
           : latest;
-      if (task) await this.open(task, request, true);
+      if (
+        task &&
+        task.id === state.task.id &&
+        task.profile_id === state.task.profile_id
+      )
+        await this.open(task, request, true);
       else
         this.publish({
           ...state,
@@ -144,7 +177,7 @@ export class DependencyDeleteController {
       error:
         result._tag === "error"
           ? result.message
-          : "Couldn't delete this Task. Try again.",
+          : "Todo returned an incompatible Delete result. Reload its Dependencies before trying again.",
     });
     return false;
   }

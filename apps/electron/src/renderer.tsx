@@ -1,4 +1,5 @@
 import {
+  type Edge,
   LookupQuery,
   ProfileId,
   type QuickAddDraft,
@@ -9,6 +10,7 @@ import {
   Task,
   TaskFilters,
   type TaskLookupDetails,
+  type TaskRead,
   TaskTime,
 } from "@todo/domain";
 import { cn } from "cn";
@@ -87,10 +89,19 @@ import { Textarea } from "./components/ui/textarea.tsx";
 import { DatePicker } from "./date-picker.tsx";
 import { DependencyDeleteDialog } from "./dependency-delete-dialog.tsx";
 import { DependencyDeleteController } from "./dependency-delete-state.ts";
-import { DependencyPicker } from "./dependency-dialog.tsx";
+import {
+  DependencyErrorStatus,
+  DependencyPicker,
+} from "./dependency-dialog.tsx";
+import { DependencyEdgeReport } from "./dependency-edge-report.tsx";
 import { DependencyGraphDialog } from "./dependency-graph-dialog.tsx";
 import { DependencyGraphController } from "./dependency-graph-state.ts";
+import type { DependencyContext } from "./dependency-presentation.ts";
 import { dependencyBadge } from "./dependency-presentation.ts";
+import {
+  DependencySelectionDialog,
+  InitialDependencySection,
+} from "./dependency-selection-dialog.tsx";
 import { DependencyController } from "./dependency-state.ts";
 import { Diagnostics } from "./diagnostics.tsx";
 import { DiscoveryDialog } from "./discovery-dialog.tsx";
@@ -101,6 +112,7 @@ import {
 import {
   canRevertHistory,
   editedChanges,
+  historyDependencies,
   historyLabel,
   localHistoryTime,
   rejectionReason,
@@ -419,15 +431,32 @@ function App() {
   const loadError = loadFailure?.message ?? "";
   const [announcement, setAnnouncement] = useState("");
   const [transferResult, setTransferResult] = useState<
-    | ({ task: Task; profileName: string } & (
-        | { kind: "copy" }
-        | { kind: "move"; editor: Editor }
-      ))
+    | ({
+        task: Task;
+        profileName: string;
+        removed: readonly Edge[];
+        tasks: readonly Task[];
+      } & ({ kind: "copy" } | { kind: "move"; editor: Editor }))
     | null
   >(null);
   const [pending, setPending] = useState(false);
   const [quick, setQuick] = useState(false);
   const [draft, setDraft] = useState("");
+  const [initialDependencies, setInitialDependencies] = useState<
+    readonly TaskRead[]
+  >([]);
+  const [initialPicker, setInitialPicker] = useState<{
+    target: "quick" | "series";
+    tasks: readonly TaskRead[];
+  } | null>(null);
+  const [seriesDependencies, setSeriesDependencies] = useState<
+    readonly TaskRead[]
+  >([]);
+  const initialTrigger = useRef<HTMLElement | null>(null);
+  const [dependencyFailure, setDependencyFailure] = useState<{
+    failure: Extract<Reply, { _tag: "error" }>;
+    context: DependencyContext;
+  } | null>(null);
   const [editor, setEditor] = useState<Editor | null>(() => storedEditor());
   const editorRef = useRef(editor);
   editorRef.current = editor;
@@ -472,6 +501,10 @@ function App() {
       dependencies.close();
       taskDelete.close();
       dependencyGraph.close();
+      setInitialDependencies([]);
+      setSeriesDependencies([]);
+      setInitialPicker(null);
+      setDependencyFailure(null);
       const restored = storedEditor(next);
       active.current = next;
       profileGeneration.current++;
@@ -525,6 +558,10 @@ function App() {
     dependencies.close();
     taskDelete.close();
     dependencyGraph.close();
+    setInitialDependencies([]);
+    setSeriesDependencies([]);
+    setInitialPicker(null);
+    setDependencyFailure(null);
     setLookupError(null);
     refreshGeneration.current++;
     profileGeneration.current++;
@@ -550,6 +587,7 @@ function App() {
   }, [discovery.credentialChanged, dependencies, taskDelete, dependencyGraph]);
   const request = useCallback(
     async (request: Request): Promise<Reply> => {
+      const generation = profileGeneration.current;
       if (request._tag === "signIn" || request._tag === "signOut")
         discovery.credentialChanged();
       const scopedDiscovery = [
@@ -597,6 +635,7 @@ function App() {
         }
         if (
           reply._tag === "error" &&
+          generation === profileGeneration.current &&
           !scopedDiscovery &&
           request._tag !== "list" &&
           request._tag !== "search" &&
@@ -604,7 +643,20 @@ function App() {
           (!("profile" in request) || active.current === request.profile)
         ) {
           setLookupError(reply.details ?? null);
-          setError(reply.details ? "" : reply.message);
+          if (reply.dependency && generation === profileGeneration.current) {
+            setError("");
+            setDependencyFailure({
+              failure: reply,
+              context:
+                request._tag === "transition"
+                  ? request.payload.action === "complete"
+                    ? "complete"
+                    : "reopen"
+                  : request._tag === "revert"
+                    ? "revert"
+                    : "add",
+            });
+          } else setError(reply.details ? "" : reply.message);
         }
         if (
           reply._tag === "conflict" &&
@@ -903,6 +955,10 @@ function App() {
         dependencies.close();
         taskDelete.close();
         dependencyGraph.close();
+        setInitialDependencies([]);
+        setSeriesDependencies([]);
+        setInitialPicker(null);
+        setDependencyFailure(null);
         discovery.credentialChanged();
         refreshGeneration.current++;
         setAppliedSearch(null);
@@ -1040,6 +1096,7 @@ function App() {
     if (readOnly) return;
     setPending(true);
     setError("");
+    setDependencyFailure(null);
     const result = await request({
       _tag: "transition",
       profile,
@@ -1082,6 +1139,7 @@ function App() {
     setPending(true);
     setTransferResult(null);
     setError("");
+    setDependencyFailure(null);
     const command: Request =
       intent.kind === "move" || intent.kind === "copy"
         ? {
@@ -1138,6 +1196,8 @@ function App() {
           setEditor(null);
           setTransferResult({
             task: reply.task,
+            removed: reply.task.removed_dependencies ?? [],
+            tasks,
             kind: "move",
             profileName: name,
             editor: movedEditor,
@@ -1146,6 +1206,8 @@ function App() {
           setEditor(rebaseEditor(editor, base));
           setTransferResult({
             task: reply.task,
+            removed: [],
+            tasks,
             kind: "copy",
             profileName: name,
           });
@@ -1244,6 +1306,9 @@ function App() {
           ...taskPayload(editor.changes),
           description: editor.changes.description || null,
           source: "manual",
+          ...(seriesDependencies.length
+            ? { depends_on: seriesDependencies.map((task) => task.id) }
+            : {}),
         },
         recurrence,
       },
@@ -1255,6 +1320,7 @@ function App() {
     ) {
       setEditor(editorFor(reply.task));
       setSeriesDialog(null);
+      setSeriesDependencies([]);
       setAnnouncement("Series created");
       await refresh();
     }
@@ -1337,6 +1403,7 @@ function App() {
     if (!draft.trim() || readOnly) return;
     setPending(true);
     setError("");
+    setDependencyFailure(null);
     const resultDraft = await request({
       _tag: "parse",
       profile,
@@ -1361,6 +1428,9 @@ function App() {
       payload: {
         title: details.title,
         source: "manual",
+        ...(initialDependencies.length
+          ? { depends_on: initialDependencies.map((task) => task.id) }
+          : {}),
         priority: ignored.includes("priority") ? "P3" : details.priority,
         due_at: ignored.includes("due") ? null : details.due_at,
         scheduled_at: ignored.includes("scheduled")
@@ -1380,6 +1450,7 @@ function App() {
     }
     if (result._tag === "task") {
       setDraft("");
+      setInitialDependencies([]);
       setIgnored([]);
       setParsed(null);
       void request({ _tag: "draft", profile, text: "" });
@@ -1438,6 +1509,39 @@ function App() {
             : "",
         )
       }
+    />
+  );
+  const dependencyFailureStatus = dependencyFailure && (
+    <DependencyErrorStatus
+      failure={dependencyFailure.failure}
+      context={dependencyFailure.context}
+      tasks={tasks}
+      dismiss={() => setDependencyFailure(null)}
+      followUp={(id) => {
+        const failure = dependencyFailure.failure.dependency;
+        const captured =
+          failure?.code === "blocks_done_task"
+            ? failure.details.done_dependents.find((task) => task.id === id)
+            : undefined;
+        const accept = (task: TaskRead) => {
+          setInitialDependencies((current) => [
+            ...current.filter((value) => value.id !== task.id),
+            task,
+          ]);
+          setHistory(null);
+          setDependencyFailure(null);
+          setQuick(true);
+        };
+        const known = captured ?? tasks.find((task) => task.id === id);
+        if (known) accept(known);
+        else
+          void request({ _tag: "showTask", profile, task: id }).then(
+            (reply) => {
+              if (reply._tag === "task" && active.current === profile)
+                accept(reply.task);
+            },
+          );
+      }}
     />
   );
   const filterCount = Object.keys(advancedFilters).filter(
@@ -1648,9 +1752,32 @@ function App() {
         "shell",
         compact && "compact",
         compact && editor && "editing",
-        quick && "quick-search",
+        quick && initialPicker === null && "quick-search",
       )}
     >
+      {initialPicker !== null && (
+        <DependencySelectionDialog
+          profile={profile}
+          title={
+            initialPicker.target === "series"
+              ? editor?.changes.title || "New Series"
+              : parsed?.title || draft || "New Task"
+          }
+          selected={initialPicker.tasks}
+          request={request}
+          projects={catalog?.projects ?? []}
+          canWrite={!readOnly}
+          onSelect={(tasks) => setInitialPicker({ ...initialPicker, tasks })}
+          onClose={() => setInitialPicker(null)}
+          onDone={() => {
+            (initialPicker.target === "quick"
+              ? setInitialDependencies
+              : setSeriesDependencies)(initialPicker.tasks);
+            setInitialPicker(null);
+          }}
+          returnFocus={() => initialTrigger.current}
+        />
+      )}
       <DependencyGraphDialog
         controller={dependencyGraph}
         projects={catalog?.projects ?? []}
@@ -2304,6 +2431,13 @@ function App() {
                 Task {transferResult.kind === "copy" ? "copied" : "moved"} to{" "}
                 {transferResult.profileName}
               </span>
+              <DependencyEdgeReport
+                removed={transferResult.removed}
+                tasks={transferResult.tasks}
+              />
+              {transferResult.kind === "copy" && (
+                <p>The copy has no Dependencies.</p>
+              )}
               <Button
                 variant="link"
                 onClick={() => {
@@ -2380,6 +2514,7 @@ function App() {
           </Alert>
         )}
         {!editor && lookupStatus}
+        {!editor && !quick && !history && dependencyFailureStatus}
         {error && (
           <Alert variant="destructive">
             <CircleAlert />
@@ -2860,6 +2995,7 @@ function App() {
           </div>
           {compact && taskSearchField}
           {lookupStatus}
+          {!quick && !history && dependencyFailureStatus}
           <form
             id="task-editor-form"
             onSubmit={(e) => {
@@ -3236,8 +3372,27 @@ function App() {
             })
           }
           disabled={readOnly}
-          busy={pending}
+          busy={pending || initialPicker?.target === "series"}
           error={error}
+          recovery={dependencyFailureStatus}
+          initialDependencies={
+            <InitialDependencySection
+              tasks={seriesDependencies}
+              disabled={readOnly}
+              onRemove={(id) =>
+                setSeriesDependencies((current) =>
+                  current.filter((task) => task.id !== id),
+                )
+              }
+              onChoose={(button) => {
+                initialTrigger.current = button;
+                setInitialPicker({
+                  target: "series",
+                  tasks: seriesDependencies,
+                });
+              }}
+            />
+          }
           onClose={() => setSeriesDialog(null)}
           onSave={(recurrence) => {
             void saveSeries(recurrence);
@@ -3251,6 +3406,10 @@ function App() {
         open={quick}
         modal={false}
         onOpenChange={(open, details) => {
+          if (!open && initialPicker !== null) {
+            details.cancel();
+            return;
+          }
           const field = searchInput.current?.closest(".task-search-field");
           const target = details.event.target;
           if (
@@ -3385,6 +3544,23 @@ function App() {
                 </div>
               )}
               {error && <p role="alert">{error}</p>}
+              {dependencyFailureStatus}
+              <InitialDependencySection
+                tasks={initialDependencies}
+                disabled={readOnly}
+                onRemove={(id) =>
+                  setInitialDependencies((current) =>
+                    current.filter((task) => task.id !== id),
+                  )
+                }
+                onChoose={(button) => {
+                  initialTrigger.current = button;
+                  setInitialPicker({
+                    target: "quick",
+                    tasks: initialDependencies,
+                  });
+                }}
+              />
             </FieldGroup>
             <div className="quick-add-footer">
               <span className="quiet">
@@ -3564,6 +3740,7 @@ function App() {
           <DialogDescription>
             Every accepted change and rejected attempt for this Task.
           </DialogDescription>
+          {dependencyFailureStatus}
           {error && <p role="alert">{error}</p>}
           <ol>
             {history?.entries.toReversed().map((entry) => (
@@ -3603,6 +3780,30 @@ function App() {
                     ))}
                   </dl>
                 )}
+                <DependencyEdgeReport
+                  {...historyDependencies(entry)}
+                  tasks={tasks}
+                />
+                {entry.event.kind === "TaskAttemptRejected" &&
+                  entry.event.details?.witness && (
+                    <DependencyErrorStatus
+                      failure={{
+                        _tag: "error",
+                        message: "",
+                        dependency: entry.event.details.witness,
+                      }}
+                      context={
+                        entry.event.attempted_kind === "TaskReverted"
+                          ? "revert"
+                          : entry.event.attempted_kind === "TaskReopened"
+                            ? "reopen"
+                            : entry.event.attempted_kind === "TaskCompleted"
+                              ? "complete"
+                              : "add"
+                      }
+                      tasks={tasks}
+                    />
+                  )}
                 {canRevertHistory(entry, reverted) && (
                   <Button
                     variant="outline"

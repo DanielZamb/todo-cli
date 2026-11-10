@@ -164,3 +164,36 @@ The complete Electron unit suite exits 0 with 90 passing and one package skip.
 The nested malformed Dependency error regression first failed by exposing outer
 agent text, then passed after routing it through compatibility recovery.
 Full end suites and the remaining DAG flows/matrix are still pending.
+
+Initial Dependency selection now shares the existing add and new-Series flows,
+with Profile-wide server search, retained checks, removable chips and atomic
+Create payloads. The same structured recovery Alert handles complete/reopen/
+Revert contexts. Create follow-up uses the returned DONE dependent id and keeps
+the unsaved editor draft. Typed edge History/lifecycle v2 deltas and Move/Copy
+Dependency reporting use captured authorized Tasks or full known ids. Series,
+History, transfer and the full refusal matrix still need their final real-surface
+proofs; implementation alone is not evidence of them.
+
+Graph row identifiers now use explicit shared section tokens. Tasks shown keep
+the canonical Task/expand identifiers; other rows, expand actions and every menu
+are section-scoped. Host protocol ids remain full Task ids. The renderer driver
+opens Graph details, asserts a repeated Task is uniquely addressable in every
+section, and routes a section menu to that Task's fresh graph read. The owned
+verification recipe and generated manifest selectors changed together.
+
+`initial-and-sections-05/result.json` exits 0 with 50 intermediate captures and
+real HTTP/SSE. Literal receipts prove atomic TaskCreated v2 at Version 1 with the
+selected edge, follow-up selection of the returned DONE dependent, unchanged
+resolved originals and preserved editor title, plus pending and successful
+no-edge Delete. `initial-and-sections-04` retains the failing confirmation drive:
+the client sent the simulated post-delete Version 2 rather than the accepted
+preview request Version 1 and received Conflict. The client now stores a separate
+fromVersion from that accepted preview request; the projected preview Task remains
+unchanged. It sends that Version and the server fingerprint on confirmation.
+The failing-before/fixed unit receipts are `setup/delete-preview-version-red.log`
+and `setup/delete-preview-version-green.log`. Malformed/foreign confirmation
+replies require Reload, repeated preview Conflicts stop for explicit Reload, and
+a changed-to-empty state requires a second explicit confirmation. The complete
+product-only unit run recorded 95 passing tests and one package skip. No shared
+contract, domain or decision document changed for this client correction.
+Canonical source e7902582 and its output lock remain unchanged.

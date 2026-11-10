@@ -15,6 +15,10 @@ import {
   DialogTitle,
 } from "./components/ui/dialog.tsx";
 import { Input } from "./components/ui/input.tsx";
+import {
+  dependencyErrorText,
+  nestedDependencyError,
+} from "./dependency-presentation.ts";
 import { errorReply, taskLookupDetails } from "./error-reply.ts";
 import { importChangesText } from "./import-presentation.ts";
 import { countTasks } from "./presentation.ts";
@@ -172,6 +176,7 @@ export function ImportDialog({
         : index >= report.input.length
           ? "Cancel missing Task"
           : "Untitled Task";
+    const dependency = nestedDependencyError(row.error);
     return {
       row,
       title,
@@ -182,9 +187,16 @@ export function ImportDialog({
       details: taskLookupDetails(row.error),
       changes: taskLookupDetails(row.error)
         ? ""
-        : row.error
-          ? errorReply(row.error).message
-          : importChangesText(row),
+        : dependency
+          ? dependencyErrorText(
+              dependency,
+              Schema.is(ImportItem)(item) && item.status === "done"
+                ? "complete"
+                : "add",
+            )
+          : row.error
+            ? errorReply(row.error).message
+            : importChangesText(row),
     };
   });
   const count = (report?.totals.created ?? 0) + (report?.totals.updated ?? 0);

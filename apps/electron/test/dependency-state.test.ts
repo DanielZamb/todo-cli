@@ -134,8 +134,9 @@ it("always previews even an empty Delete and sends the reviewed fingerprint and 
       : {
           _tag: "task",
           task: {
-            ...root,
-            dry_run: true,
+            ...dependencyTask("root", 2),
+            dry_run:
+              request._tag === "delete" && request.query.dry_run === true,
             dependency_fingerprint: "a".repeat(64),
             removed_dependencies: [],
           },
@@ -160,6 +161,99 @@ it("always previews even an empty Delete and sends the reviewed fingerprint and 
       dependency_fingerprint: "a".repeat(64),
     },
   });
+});
+it("refuses a preview or foreign Task as a confirmed Delete result", async () => {
+  for (const applied of [
+    { ...root, dry_run: true },
+    { ...dependencyTask("foreign"), dry_run: false },
+  ]) {
+    const controller = new DependencyDeleteController();
+    await controller.open(root, async (request) =>
+      request._tag === "graph"
+        ? { _tag: "graph", report: dependencyGraph() }
+        : {
+            _tag: "task",
+            task: {
+              ...root,
+              dry_run: true,
+              removed_dependencies: [],
+              dependency_fingerprint: "a".repeat(64),
+            },
+          },
+    );
+    expect(
+      await controller.confirm(async () => ({ _tag: "task", task: applied })),
+    ).toBe(false);
+    expect(controller.snapshot().kind).toBe("Error");
+  }
+});
+it("requires a second explicit confirmation after a changed-to-empty preview", async () => {
+  const controller = new DependencyDeleteController();
+  let previews = 0;
+  const applied: Request[] = [];
+  const changed = Schema.decodeUnknownSync(DependencyError)({
+    generated_at: "2026-11-09T00:00:00Z",
+    code: "has_dependencies",
+    message: "changed",
+    exit_code: 2,
+    exit_meaning: "validation or usage",
+    details: { task_id: "root", dependencies: [], flag: "--with-dependencies" },
+  });
+  const request = async (input: Request): Promise<Reply> => {
+    if (input._tag === "graph")
+      return { _tag: "graph", report: dependencyGraph() };
+    if (input._tag === "showTask")
+      return { _tag: "task", task: dependencyTask("root", 3) };
+    if (input._tag === "delete" && input.query.dry_run) {
+      previews++;
+      return {
+        _tag: "task",
+        task: {
+          ...dependencyTask("root", previews === 1 ? 2 : 4),
+          dry_run: true,
+          removed_dependencies: [],
+          dependency_fingerprint: (previews === 1 ? "a" : "b").repeat(64),
+        },
+      };
+    }
+    applied.push(input);
+    return applied.length === 1
+      ? { _tag: "error", message: "changed", dependency: changed }
+      : {
+          _tag: "task",
+          task: { ...dependencyTask("root", 4), dry_run: false },
+        };
+  };
+  await controller.open(root, request);
+  expect(await controller.confirm(request)).toBe(false);
+  expect(applied.length).toBe(1);
+  expect(controller.snapshot()).toMatchObject({
+    kind: "Review",
+    changed: true,
+    fromVersion: 3,
+    task: { removed_dependencies: [] },
+  });
+  expect(await controller.confirm(request)).toBe(true);
+  expect(applied[1]).toEqual({
+    _tag: "delete",
+    profile: "work",
+    task: "root",
+    query: {
+      from_version: 3,
+      with_dependencies: true,
+      dependency_fingerprint: "b".repeat(64),
+    },
+  });
+});
+it("stops a repeatedly changing Delete preview for an explicit Reload", async () => {
+  const controller = new DependencyDeleteController();
+  let calls = 0;
+  await controller.open(root, async () => {
+    calls++;
+    return { _tag: "conflict", latest: dependencyTask("root", calls + 1) };
+  });
+  expect(calls).toBe(2);
+  expect(controller.snapshot().kind).toBe("Error");
 });
 it("projects structured recovery without agent copy and rejects missing exit pairs", () => {
   const error = Schema.decodeUnknownSync(DependencyError)({

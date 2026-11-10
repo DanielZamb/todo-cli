@@ -114,6 +114,24 @@ export function dependencyWarning(
         ),
       };
 }
+export function dependencyErrorText(
+  error: DependencyError,
+  context: DependencyContext,
+  tasks: readonly Task[] = [],
+) {
+  const projection = dependencyRecovery(error, context, tasks);
+  return [
+    projection.message,
+    projection.advice,
+    ...projection.witnesses.map(
+      (task, index) =>
+        `${error.code === "dependency_cycle" && index > 0 ? "→ " : ""}${task.title}${task.status ? ` · ${task.status === "cancelled" ? "Cancelled" : task.status}` : ""}`,
+    ),
+    projection.detail,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
 const Nested = Schema.Struct({
   details: Schema.Struct({ dependency_error: DependencyError }),
 });

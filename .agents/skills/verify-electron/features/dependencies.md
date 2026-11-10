@@ -56,3 +56,13 @@ the coordinator. Never silently consume an old emitted directory. Run the
 browser-only proof with `bun apps/electron/scripts/verify-graph-browser.ts <fresh-evidence>`.
 Its hiding-Reset fixture proves the adapter observer; production/native focus and
 VoiceOver remain separate limits. The final aggregate/full matrix are pending.
+
+Graph rows use explicit shared section tokens: shown, depends-on, blocks,
+lightest-next, starts-at, ends-at, ancestors and descendants. Tasks shown retain
+`dependency-graph-task-<id>` and `dependency-graph-expand-<id>`. Other sections use
+`dependency-graph-related-<section>-<id>` and
+`dependency-graph-expand-related-<section>-<id>`. Every row menu trigger uses
+`dependency-graph-actions-<section>-<id>`. Host ids remain full Task ids.
+The renderer driver opens Graph details with a Task repeated in several sections,
+checks unique/testable identifiers and routes a section menu to a fresh root.
+Its generated manifest records the actual DOM identifiers and existing receipts.
