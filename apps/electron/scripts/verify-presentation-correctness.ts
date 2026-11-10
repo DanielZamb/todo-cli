@@ -4,6 +4,7 @@ import { type ElectronApplication, expect, type Page } from "@playwright/test";
 import { Task } from "@todo/domain";
 import { Schema } from "effect";
 import { openImport, setAppearance } from "./appearance.ts";
+import { requestCompact } from "./verify-compact-presentation.ts";
 
 export async function verifyPresentationCorrectness({
   page,
@@ -22,14 +23,7 @@ export async function verifyPresentationCorrectness({
       title: "U02 recovery fixture",
     }),
   );
-  if (
-    await page
-      .getByRole("button", { name: "Compact mode", exact: true })
-      .isVisible()
-  )
-    await page
-      .getByRole("button", { name: "Compact mode", exact: true })
-      .click();
+  await requestCompact(page);
   await expect(page.locator(".shell")).toHaveClass(/compact/);
   const row = page.locator(`[data-task-id="${task.id}"]`);
   await expect(row).toBeVisible();
