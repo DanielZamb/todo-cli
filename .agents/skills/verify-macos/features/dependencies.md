@@ -187,3 +187,13 @@ makes the visible-text collision check non-vacuous. Every row frame must remain
 unchanged, and the rendered status must fit its row and viewport without touching
 any visible title or metadata text frame. Invisible empty containers do not count
 as metadata text; their bounds are retained separately in the receipt.
+
+`DependencyRecoveryParityTests` exercises actual scratch HTTP Conflicts in both
+picker directions. Live direction changes reload authoritative Versions and
+unlock the choices. An offline direction round trip retains the Conflict notice
+and Reload until a successful read clears both. Returning online and explicitly
+reloading allows one intended edge write at the current dependent Version.
+The same suite substitutes a real preview or a foreign Task/Profile body for
+Delete confirmation, preserving the native in-memory unsaved draft and navigation
+guard. Only a validated deletion closes the editor. It does not claim persistent
+native draft or Session restoration, or that the server emits incompatible bodies.

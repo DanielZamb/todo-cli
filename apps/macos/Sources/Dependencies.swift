@@ -147,7 +147,6 @@ extension TodoModel {
         guard dependencies.picker?.direction != direction else { return }
         dependencies.generation += 1
         dependencies.picker?.direction = direction
-        dependencies.picker?.failure = nil
         await reloadDependencyPicker()
     }
     func reloadDependencyPicker() async {
