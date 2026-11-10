@@ -9,7 +9,7 @@ refuses without prompting. Purge dry-run preserves source state.
 
 Actual typecheck exits are 0 for domain and CLI. Compiled public CLI/HTTP/PTYS
 exit 0; individual PTY exits are 0, 0, 0, 0 and 2 as required. Evidence:
-/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-b-commands/docs/evidence/task-dag/unit-b/tty/drive-1.
+docs/evidence/task-dag/unit-b/tty/drive-1.
 The driver compares source Tasks, edges, History, replay checkpoints and complete
 owner Snapshot file contents on previews and cancelled confirmations. tty.json
 retains each transcript and process exit. cleanup.json records the owned server

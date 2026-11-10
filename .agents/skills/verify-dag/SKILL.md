@@ -62,6 +62,36 @@ The .claude/skills/verify-dag link is relative to this checkout. Check it with
 Claude session and is not established by the symlink alone.
 Use /maintain-verification-skill when graph behavior changes.
 
+## Migration rehearsal
+
+`scripts/migration-rehearsal.ts` checks the earlier-schema fixtures, a 10,000-Task
+Profile, durable Purge handling, replay, rollback compatibility and a WAL-mode
+SQLite `.backup` copy. It never copies or opens the owner's database by default.
+The compatibility case requires an independently built pre-DAG main CLI and its
+provenance. `TODO_REHEARSAL_OLD_CLI` selects its repo-relative path; the default is
+`.scratch/bin/dag-migration-old-main-2c488fc7`.
+
+```sh
+proof_head=$(git rev-parse HEAD)
+mkdir -p .scratch/bin
+sh scripts/disk-guard.sh
+bun build --compile .agents/skills/verify-dag/scripts/migration-rehearsal.ts --outfile ".scratch/bin/dag-migration-rehearsal-$proof_head"
+TODO_REHEARSAL_REPO="$PWD" TODO_REHEARSAL_SOURCE="$proof_head" ".scratch/bin/dag-migration-rehearsal-$proof_head" docs/evidence/task-dag/migration-rehearsal-new
+```
+
+Standalone captures use an immutable read-only SQLite URI, require absent WAL
+sidecars and preserve the input hash. Captures after writes use a normal read-only
+connection so committed WAL pages remain visible. The eleventh case reproduces
+the actual `.backup`, mode-400 source and mode-600 working copy, proves that
+immutable capture cannot write or create sidecars, then runs the compiled
+`--private-open` entry on a second scratch copy.
+
+`--private-open` is only for an explicitly consented, isolated copy. It does not
+copy data or authorize itself. The operator supplies the copy and private result
+paths. Its progress lines distinguish pre-open capture, migration, replay and
+report creation. Real-database copy, live migration and native app use remain
+separate owner decisions.
+
 The compiled drive also invokes graph-proof.ts, which imports the production
 query/order/energy/format exports. See queries.md for its literal fixtures.
 The public drive below separately exercises the production command boundaries.

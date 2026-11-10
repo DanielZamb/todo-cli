@@ -15,7 +15,7 @@ upstream/downstream adjacency maps. No computed graph values are stored.
 
 L1 literal graph test exits 0. The compiled verify-dag exits 0 including this
 production-imported corpus. pnpm check exits 0. Absolute evidence directory:
-/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-b-commands/docs/evidence/task-dag/unit-b/algorithms.
+docs/evidence/task-dag/unit-b/algorithms.
 No command/API/client completion is claimed at this checkpoint. F's finite
 model and generated production corpus remain with L1/F; these fixtures do not
 replace F or implement independent copies of the algorithms.

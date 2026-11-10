@@ -15,13 +15,13 @@ actual CLI and HTTP health build is `0f7a1948`, contract
 This is implementation/proof delivery for renewed max seat 1 and coordinator
 review. It is not final F, client or whole-feature approval.
 
-Current machine receipt: [f1-completion.json](/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f1-default-8vDMKq/f1-completion.json).
+Current machine receipt: [f1-completion.json](../../evidence/dag-formal/f1-default-8vDMKq/f1-completion.json).
 Full counts, exact commands, cleanup paths and source-control results are in
-[completion.json](/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f1-default-8vDMKq/completion.json),
-[model-counts.tsv](/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f1-default-8vDMKq/model-counts.tsv) and
-[source-controls.tsv](/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f1-default-8vDMKq/source-controls.tsv).
+[completion.json](../../evidence/dag-formal/f1-default-8vDMKq/completion.json),
+[model-counts.tsv](../../evidence/dag-formal/f1-default-8vDMKq/model-counts.tsv) and
+[source-controls.tsv](../../evidence/dag-formal/f1-default-8vDMKq/source-controls.tsv).
 The documentation-only delivery SHA is written after commit to
-`/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f1-default-8vDMKq/f1-delivery.json` and both terminal notifications.
+`docs/evidence/dag-formal/f1-default-8vDMKq/f1-delivery.json` and both terminal notifications.
 
 The Prepared/unproven and DISK STOP sections below are superseded historical
 checkpoints. Their failed and stopped exits remain unchanged. The prior
@@ -49,10 +49,10 @@ module was added or edited. The existing relative Claude skill link is unchanged
 
 | Command | Actual exit | Scope and evidence |
 | --- | --- | --- |
-| bun .agents/skills/verify-dag-formal/public-check.mjs | 1 | Required Version-0 usage assertion fails at e717; /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/public-0lx9mw |
-| bun .agents/skills/verify-dag-formal/public-check.mjs unaffected | 0 | diagnostic-pass only; /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/public-krrGtO |
-| bun .agents/skills/verify-dag-formal/check.mjs --model-only | 0 | finite model, five controls, seven reachability receipts; /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/check-n6XlTn |
-| pnpm check | 0 | F worktree only; /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/pnpm-check-public.stdout and .stderr |
+| bun .agents/skills/verify-dag-formal/public-check.mjs | 1 | Required Version-0 usage assertion fails at e717; docs/evidence/dag-formal/public-0lx9mw |
+| bun .agents/skills/verify-dag-formal/public-check.mjs unaffected | 0 | diagnostic-pass only; docs/evidence/dag-formal/public-krrGtO |
+| bun .agents/skills/verify-dag-formal/check.mjs --model-only | 0 | finite model, five controls, seven reachability receipts; docs/evidence/dag-formal/check-n6XlTn |
+| pnpm check | 0 | F worktree only; docs/evidence/dag-formal/pnpm-check-public.stdout and .stderr |
 | git diff --check | 0 | owned source/document edits |
 
 The final public diagnostic baseline and clean recheck each drove
@@ -185,7 +185,7 @@ is empty. All five intended mutants exit 12 at their intended invariant and all
 seven reachability controls produce the required invariant-violation witness.
 The clean status run has 64 initial states, 32,816 generated, 19,784 distinct,
 depth 27 and queue 0. The complete per-config counts/depths/queues and traces are
-in /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/check-n6XlTn/result.json and the retained historical table below.
+in docs/evidence/dag-formal/check-n6XlTn/result.json and the retained historical table below.
 
 Most configurations use three Tasks, one Profile, two writers CLI/server,
 four statuses, Versions 1..4, one operation each and at most one grouped Revert.
@@ -277,7 +277,7 @@ because it runs beneath this worktree; candidate-inputs.json and file hashes
 bind the actual production source to f140. No checkout switch or merge occurred.
 
 Combined evidence: `docs/evidence/dag-formal/check-tE8Zr7`.
-Production evidence: `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/conformance-11Cw1a`.
+Production evidence: `docs/evidence/dag-formal/conformance-11Cw1a`.
 The directories preserve commands, actual exits/signals/PIDs, compiler results
 and loaded source hashes, model/config copies, counterexamples, corpus inputs,
 mutation source copies, restoration receipts and final results. Output is local
@@ -503,7 +503,7 @@ Candidate AtomicCAS's unchanged one command exited 0.
 Its model has 86,631 generated / 37,036 distinct / depth 15 / queue 0; both
 controls exit 12 at AtomicCAS; 216 concrete cases, 432 replay comparisons,
 seven process kills and the competing-writer/rollback checks pass. Evidence:
-`/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/conformance-11Cw1a/candidate/docs/evidence/fv01/fv01-check-QQRSDd`. B owns its maintenance and prior sensitivity. F did not edit
+`docs/evidence/dag-formal/conformance-11Cw1a/candidate/docs/evidence/fv01/fv01-check-QQRSDd`. B owns its maintenance and prior sensitivity. F did not edit
 that skill or renew its pins. It remains single-Task/no-edge proof.
 
 `pnpm check` on the F worktree exited 0.
@@ -546,9 +546,9 @@ conformance still waits for L1's explicit later task. The disk guard is required
 before every future compile under the new order; no compile was needed here.
 
 Cleanup plan and reference/in-use audit:
-`/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/cleanup-2026-11-09-Bs6ybF/plan.json`.
+`docs/evidence/dag-formal/cleanup-2026-11-09-Bs6ybF/plan.json`.
 Completed cleanup receipt:
-`/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/cleanup-2026-11-09-Bs6ybF/receipt.json`.
+`docs/evidence/dag-formal/cleanup-2026-11-09-Bs6ybF/receipt.json`.
 
 Disk guard exits were 0 before the inventory, immediately before unlinking and
 after cleanup. Observed available capacity was 26.69656883 GB before and
@@ -649,8 +649,8 @@ Current one-command check at that committed preparation source:
 awaiting-merged-source, before any compiler, model or child command started.
 This is the intended hold gate, not a proof pass. The standalone production
 and public entry points also refuse superseded source compilation while held.
-Gate receipt: `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/merged-hold-YEGKoo/default-gate.json`.
-Aggregate preparation receipt: `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/merged-hold-YEGKoo/preparation-summary.json`.
+Gate receipt: `docs/evidence/dag-formal/merged-hold-YEGKoo/default-gate.json`.
+Aggregate preparation receipt: `docs/evidence/dag-formal/merged-hold-YEGKoo/preparation-summary.json`.
 
 ### Completed unaffected calibration
 
@@ -660,9 +660,9 @@ verification-inputs.json. They do not prove the expanded committed preparation
 pipeline or any merged-source property.
 
 - public-check.mjs boundaries exited 0 at
-  `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/public-zfoCK2`.
+  `docs/evidence/dag-formal/public-zfoCK2`.
 - public-check.mjs boundary-controls exited 0, diagnostic-pass, at
-  `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/public-NjVzFG`. It passed 17 malformed-input cases across depend,
+  `docs/evidence/dag-formal/public-NjVzFG`. It passed 17 malformed-input cases across depend,
   undepend, add, graph, batch-depend, rm and Revert, four genuine missing/I/O
   classifications, and valid stale no-ops with unchanged History. The three
   Version-0 cases cover existing add, missing add and absent remove. Errors
@@ -678,13 +678,13 @@ pipeline or any merged-source property.
   checks exited 0. B's 31-case matrix was inspected; its new F rerun path is
   prepared but was not executed before the hold.
 - check.mjs --model-only exited 0 at
-  `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/check-x0dfU4`: 25 positive configurations plus the clean recheck,
+  `docs/evidence/dag-formal/check-x0dfU4`: 25 positive configurations plus the clean recheck,
   all positive queues 0, five intended mutant counterexamples at exit 12 and
   seven reachability witnesses at exit 12. Clean counts remain 64 initial,
   32,816 generated, 19,784 distinct, depth 27, queue 0. DagAcyclic and its configs
   are unchanged, with the previously stated finite bounds and tool pin.
 - The synthetic prior-stop sentinel check exited 0 at
-  `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/guard-check-op00WH`. It prevented compiler entry and restored
+  `docs/evidence/dag-formal/guard-check-op00WH`. It prevented compiler entry and restored
   an isolated scratch copy exactly. It is not an actual low-disk observation
   or a product sensitivity pass. pnpm check was not rerun in this continuation.
 
@@ -781,19 +781,19 @@ contract 58c0026725f2d846fd4f80bd7cabaff73994d6603d04ed501c82cfa1fa6f1fe9.
 Neither a leaf binary nor this F branch's HEAD was substituted. Cache identity
 includes the merged pin, source bytes, compiler, build define and contract.
 The observed health/version values are preserved in
-/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/public-AYSIyk/graph-response/build-identity.json.
+docs/evidence/dag-formal/public-AYSIyk/graph-response/build-identity.json.
 
 ### Actual commands and receipts
 
 - bun .agents/skills/verify-dag-formal/check.mjs at the committed proof source:
-  actual exit 3, /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/check-DkqQeo. Outer stdout/stderr are
+  actual exit 3, docs/evidence/dag-formal/check-DkqQeo. Outer stdout/stderr are
   merged-final.stdout and merged-final.stderr under the same evidence base.
 - The production-conformance stage exited 0 at
-  /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/conformance-AyHrt4. It includes all 36 intended source controls,
+  docs/evidence/dag-formal/conformance-AyHrt4. It includes all 36 intended source controls,
   exact restores, the clean corpus rerun, replay, migration and concrete DAG
   drive, strict candidate type checking and guarded AtomicCAS.
 - The public-conformance stage exited 3 at
-  /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/public-AYSIyk. Its baseline passed 147 actual CLI/HTTP/PTY
+  docs/evidence/dag-formal/public-AYSIyk. Its baseline passed 147 actual CLI/HTTP/PTY
   actions. All 31 committed B input-matrix cases passed. Direct/encoded/public
   root responses, the portable getter sequence, reachability-count observation
   and strict candidate type checking exited 0 before the resource stop.
@@ -880,7 +880,7 @@ The unchanged B-maintained AtomicCAS command ran through guarded-runtime.mjs
 and compile-preload.mjs. Its actual exit was 0, with 216 enumerations, 432 replay
 checks, seven process-kill boundaries and two writers. Its own two intended TLC
 controls return 12. Its evidence is
-/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/conformance-AyHrt4/candidate/docs/evidence/fv01/fv01-check-vcbOvD.
+docs/evidence/dag-formal/conformance-AyHrt4/candidate/docs/evidence/fv01/fv01-check-vcbOvD.
 This remains a separate finite single-Task/no-edge check. F did not edit it.
 
 ### G11, G4, Mermaid and portable-client execution
@@ -977,102 +977,102 @@ receipts, current/review binaries and cited evidence directories were kept.
 No directory was pruned. Protected e717 and 3cce CLI/server groups remain, along
 with current merged 0f7 CLI/server binaries. No symlink target or another
 worker's file was removed. Aggregate receipt:
-/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/merged-disk-stop-summary.json.
+docs/evidence/dag-formal/merged-disk-stop-summary.json.
 
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-authenticated-initial-26ee69592085d658341f56ce65fc2da5b21821cb2a3571fa6951b5782ae00ccb (90101090 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-beginning-edges-700fe6f21fed46eac0638587e7fc8db497ad3f3384959ffdc7ebe84eea43ee3e (90084578 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-bfs-depth-cap-a65dce9b292bc289f23a9312693c02f3f96f47f50d48c37bef372fa0e5cd7f19 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-bfs-lifo-3ab65c9af6a59460b1b7d95b2aa9ddffbb19f461f21cc3775e673442bda5c190 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-chain-precedence-0d781883d979da0f903332fb711ad8702013a4e7224a834c67f55d777486944a (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-checkpoint-edges-8273922ba0606f4e35ec0e8814f8305072d6331ec1548a9f590b85d4b4079243 (90084578 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-contains-membership-5912b1f1d6e2c6a63b7ec239f391234b67f28beaca0cb831cdc98336820ea5ef (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-counted-advice-ed8bce7bcf58ee9d15d16f1e5ea4951ba6e17e7b00d4d38ea37b4c97eab7bc26 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-created-tie-704884a72c329d8577d7dc1faabc4e9a8a77b3ec323d566f4cb7edafcf4d5b5d (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-cycle-arrow-533c55a4cba848f39b777eb1cdda98cf7290561b956bf6cf14b71dbcf4394752 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-cycle-self-9128bb4b6192962136214fbed46f51c66abb83a5a06fe79f67e1c975272ee783 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-degree-14-fdc78581a43d1171f4421d038edeea529f4c3e5d0cb417cd5591f7e70882f70d (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-delete-cleanup-cc58a02331cf934e4f8cd1e63e3a4ddb19041203682a07a02fc9c7c34e29711f (90101090 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-dependent-versions-240da3eb476c72af61bfcea18abb6c18c3c780b4c8543f55365220ba3cec0c3f (90084578 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-distinct-union-d47fd6901740862472ce2b11c79393636d58fd5b228244a9c94d614fe9871899 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-due-tie-48d90c03bcd2a5813328c612d658f2282338ba660825a164060a384f83f08259 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-id-tie-9a3ea33d30e6b8d82ca176a0c33532ba4af7bbf1b3b5833e724e62d4b2751961 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-inclusive-next-80e36ee59e500608bada137a4d057687370421d020dfcc9743f7ed1f26d2bcf7 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-kahn-degrees-065d8fedb958c3f5991be520fc518b1181df3496215c1a01faa72df54bede9d7 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-lightest-key-a789ae5c6829bd6091de8bd91b1b78f548dd04aef5b053366ecd1e87c6e0775f (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-move-cleanup-7d4485954895836c04f461436e05472d8fc961d03fb957b08a886541abb8b587 (90101090 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-next-own-energy-d38fc22265dee1303bcb75a03722e94f3f825e733e7cdcf0d8f609d0ad1936d7 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-priority-tie-943f7dc902f0ec3c9e26e9a02d371b6db9d911d472d1eff9527bf1c90bd328da (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-projection-migration-version-a4954ce6c4289c09c9f19a2a08a461d26cfcec9ced2f06f54721585d3c7a603a (90101090 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-purge-witness-redaction-faf5a0cd9581ce3f2ae631fc6daa215f63f799449013d7763f64c25263de22e4 (90101090 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-query-component-5a48a34d1a75518c6a69c6ab9cc9c0842afbabc5cfa9fed96e4b84e49d22ed6f (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-revert-recorded-version-50ad01343c7cbfa69426c4bf87ab01fe34664205de35eae1938a92e748f5a361 (90101090 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-single-precedence-25b3241d4b4e8d5c429ca5af1b497048e1bb629a96fa60d0385c1a865d8e08bc (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-status-pruned-index-b907d01bbeff486e0b9dc7eeb240e69fd9d1b4280548391a2e38f01fd070ec33 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-terminal-blocked-bab5cd45d772e7093d0923798f256afc7cf728dd1cd401756f607053ba2c75ce (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-terminal-pruning-053abd2ec42230415f1fcb2a7ed652ea3bc9de8f7c93adbf6c6c168031a15755 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-terminal-ready-8245b9a86a753a17c875539f8c16b5ae696607656d0e18026cd97e7e87f2e3f5 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-tree-count-fac47aca52a26cbb69e52c6939ad67f16215cc05a3bf67afd80879c6275d1943 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-tree-orientation-137fdc0446b1561aacc19de2427a306b32cfb11467ed0302c54c94fcd6f7a7a7 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-unknown-traversal-1132369d34a28596c51b18b0dac2f0bb5135adcfb92d77759af801aff9833791 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-unweighted-mask-279b173173297b544968b4de4d1e34c4b4b7a257a5041b7619fa1beb299aa52d (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-isolated-client-freezes-signed-out-value-driver-14cb162a56fca7af88922a3ed71f2ec7fbea8d018912fa50a8c07f2105b689fd (90315746 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-isolated-client-retains-revoked-bearer-driver-14cb162a56fca7af88922a3ed71f2ec7fbea8d018912fa50a8c07f2105b689fd (90315746 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-isolated-discarded-per-node-closure-work-driver-ab3f2a5db6e978388afc18ad511bfeb8b49a0fb91014b03362c273f3417c62a2 (90315746 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-isolated-graph-schema-hidden-node-field-driver-b059032ae00737a671e920960d58ab4c77b8d1c6dc586df8f4e6e8981a9ba6a4 (90315746 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-isolated-graph-schema-strips-root-set-driver-6b93e8dcdf60c501463b9d5bcd235d90d4fb39763daae76ea40e1cbef62c5940 (90315746 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-isolated-hidden-direct-node-closures-driver-cd7af940b4ecfcc8b5606c436d8b9a73de98135faa73401cdb41f5dd983bf29c (90315746 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-isolated-mermaid-identity-collision-driver-176121b444d88b0e61b798668acbed793ccf17bca2068f6f01a7d280f27afe03 (90315746 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-isolated-mermaid-reverses-arrows-driver-4d7a7a30cfd762215e240bbedec94e1683b2e34e33372bef4c703debb8c75416 (90315746 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-isolated-root-ancestors-reversed-driver-fc4379f7818789996a1a5354b421f48d9a3494da5bb841e494d191a8f29f4492 (90315746 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-isolated-root-descendants-reversed-driver-a143a3aed1a84d0016575c45a0acee31cebf5d56b9e3ab53019e63332772343e (90315746 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-isolated-root-next-excludes-ready-root-driver-43136134c171db762207ff4fdbd33369ec64d6247a13f1d93459b5931bdfb3ff (90315746 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-isolated-root-next-id-tie-driver-c74254fcbd29d735797dff7de2128400e557723dde92ba0d6701ce2bc74e3a8b (90315746 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-isolated-root-next-includes-terminal-driver-76dfef72c0c5083edf8873a6b74c960e74c9e1d096f44c127f74d10deff0216d (90315746 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-isolated-root-next-topo-regression-driver-3e7f2ef90e836032074a6337f55b85e58ee7f76d7be3df4a0deacfe29113a547 (90315746 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-isolated-root-next-unknown-first-driver-0b9365445edf89cf027bb96717a7d7e293af1e6a87482f0488c1ce4f03617cb1 (90315746 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-authenticated-initial-26ee69592085d658341f56ce65fc2da5b21821cb2a3571fa6951b5782ae00ccb (90101090 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-beginning-edges-700fe6f21fed46eac0638587e7fc8db497ad3f3384959ffdc7ebe84eea43ee3e (90084578 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-bfs-depth-cap-a65dce9b292bc289f23a9312693c02f3f96f47f50d48c37bef372fa0e5cd7f19 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-bfs-lifo-3ab65c9af6a59460b1b7d95b2aa9ddffbb19f461f21cc3775e673442bda5c190 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-chain-precedence-0d781883d979da0f903332fb711ad8702013a4e7224a834c67f55d777486944a (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-checkpoint-edges-8273922ba0606f4e35ec0e8814f8305072d6331ec1548a9f590b85d4b4079243 (90084578 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-contains-membership-5912b1f1d6e2c6a63b7ec239f391234b67f28beaca0cb831cdc98336820ea5ef (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-counted-advice-ed8bce7bcf58ee9d15d16f1e5ea4951ba6e17e7b00d4d38ea37b4c97eab7bc26 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-created-tie-704884a72c329d8577d7dc1faabc4e9a8a77b3ec323d566f4cb7edafcf4d5b5d (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-cycle-arrow-533c55a4cba848f39b777eb1cdda98cf7290561b956bf6cf14b71dbcf4394752 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-cycle-self-9128bb4b6192962136214fbed46f51c66abb83a5a06fe79f67e1c975272ee783 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-degree-14-fdc78581a43d1171f4421d038edeea529f4c3e5d0cb417cd5591f7e70882f70d (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-delete-cleanup-cc58a02331cf934e4f8cd1e63e3a4ddb19041203682a07a02fc9c7c34e29711f (90101090 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-dependent-versions-240da3eb476c72af61bfcea18abb6c18c3c780b4c8543f55365220ba3cec0c3f (90084578 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-distinct-union-d47fd6901740862472ce2b11c79393636d58fd5b228244a9c94d614fe9871899 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-due-tie-48d90c03bcd2a5813328c612d658f2282338ba660825a164060a384f83f08259 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-id-tie-9a3ea33d30e6b8d82ca176a0c33532ba4af7bbf1b3b5833e724e62d4b2751961 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-inclusive-next-80e36ee59e500608bada137a4d057687370421d020dfcc9743f7ed1f26d2bcf7 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-kahn-degrees-065d8fedb958c3f5991be520fc518b1181df3496215c1a01faa72df54bede9d7 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-lightest-key-a789ae5c6829bd6091de8bd91b1b78f548dd04aef5b053366ecd1e87c6e0775f (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-move-cleanup-7d4485954895836c04f461436e05472d8fc961d03fb957b08a886541abb8b587 (90101090 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-next-own-energy-d38fc22265dee1303bcb75a03722e94f3f825e733e7cdcf0d8f609d0ad1936d7 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-priority-tie-943f7dc902f0ec3c9e26e9a02d371b6db9d911d472d1eff9527bf1c90bd328da (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-projection-migration-version-a4954ce6c4289c09c9f19a2a08a461d26cfcec9ced2f06f54721585d3c7a603a (90101090 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-purge-witness-redaction-faf5a0cd9581ce3f2ae631fc6daa215f63f799449013d7763f64c25263de22e4 (90101090 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-query-component-5a48a34d1a75518c6a69c6ab9cc9c0842afbabc5cfa9fed96e4b84e49d22ed6f (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-revert-recorded-version-50ad01343c7cbfa69426c4bf87ab01fe34664205de35eae1938a92e748f5a361 (90101090 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-single-precedence-25b3241d4b4e8d5c429ca5af1b497048e1bb629a96fa60d0385c1a865d8e08bc (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-status-pruned-index-b907d01bbeff486e0b9dc7eeb240e69fd9d1b4280548391a2e38f01fd070ec33 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-terminal-blocked-bab5cd45d772e7093d0923798f256afc7cf728dd1cd401756f607053ba2c75ce (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-terminal-pruning-053abd2ec42230415f1fcb2a7ed652ea3bc9de8f7c93adbf6c6c168031a15755 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-terminal-ready-8245b9a86a753a17c875539f8c16b5ae696607656d0e18026cd97e7e87f2e3f5 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-tree-count-fac47aca52a26cbb69e52c6939ad67f16215cc05a3bf67afd80879c6275d1943 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-tree-orientation-137fdc0446b1561aacc19de2427a306b32cfb11467ed0302c54c94fcd6f7a7a7 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-unknown-traversal-1132369d34a28596c51b18b0dac2f0bb5135adcfb92d77759af801aff9833791 (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-mutant-unweighted-mask-279b173173297b544968b4de4d1e34c4b4b7a257a5041b7619fa1beb299aa52d (89374562 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-todo-0bb7fc58d6c47c1487668259998131f0585084cc8e5e953359055e787e957575 (90695522 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-todo-771a642b6e1c4258902f6da23bd15555a0347dfbe9a78f46bcb69849bf3dac21 (90695522 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-todo-server-771a642b6e1c4258902f6da23bd15555a0347dfbe9a78f46bcb69849bf3dac21 (90662498 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-todo-server-61e328b7b1e310305781c132492fbc5d0722bbfef7da646fb7c134b50080589c (90662498 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-todo-d893393ad7cf770afc26462d4af21389fb903464975bb9f53bd79a2e5c88e374 (90695522 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-todo-0ad87507dd0aa8f7fa6c0a743f2c4335ffe134b4b7fc8ac0a709102fe4357e8b (90695522 logical bytes)
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/.scratch/bin/dag-f-todo-server-0ad87507dd0aa8f7fa6c0a743f2c4335ffe134b4b7fc8ac0a709102fe4357e8b (90662498 logical bytes)
+- .scratch/bin/dag-f-mutant-authenticated-initial-26ee69592085d658341f56ce65fc2da5b21821cb2a3571fa6951b5782ae00ccb (90101090 logical bytes)
+- .scratch/bin/dag-f-mutant-beginning-edges-700fe6f21fed46eac0638587e7fc8db497ad3f3384959ffdc7ebe84eea43ee3e (90084578 logical bytes)
+- .scratch/bin/dag-f-mutant-bfs-depth-cap-a65dce9b292bc289f23a9312693c02f3f96f47f50d48c37bef372fa0e5cd7f19 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-bfs-lifo-3ab65c9af6a59460b1b7d95b2aa9ddffbb19f461f21cc3775e673442bda5c190 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-chain-precedence-0d781883d979da0f903332fb711ad8702013a4e7224a834c67f55d777486944a (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-checkpoint-edges-8273922ba0606f4e35ec0e8814f8305072d6331ec1548a9f590b85d4b4079243 (90084578 logical bytes)
+- .scratch/bin/dag-f-mutant-contains-membership-5912b1f1d6e2c6a63b7ec239f391234b67f28beaca0cb831cdc98336820ea5ef (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-counted-advice-ed8bce7bcf58ee9d15d16f1e5ea4951ba6e17e7b00d4d38ea37b4c97eab7bc26 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-created-tie-704884a72c329d8577d7dc1faabc4e9a8a77b3ec323d566f4cb7edafcf4d5b5d (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-cycle-arrow-533c55a4cba848f39b777eb1cdda98cf7290561b956bf6cf14b71dbcf4394752 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-cycle-self-9128bb4b6192962136214fbed46f51c66abb83a5a06fe79f67e1c975272ee783 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-degree-14-fdc78581a43d1171f4421d038edeea529f4c3e5d0cb417cd5591f7e70882f70d (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-delete-cleanup-cc58a02331cf934e4f8cd1e63e3a4ddb19041203682a07a02fc9c7c34e29711f (90101090 logical bytes)
+- .scratch/bin/dag-f-mutant-dependent-versions-240da3eb476c72af61bfcea18abb6c18c3c780b4c8543f55365220ba3cec0c3f (90084578 logical bytes)
+- .scratch/bin/dag-f-mutant-distinct-union-d47fd6901740862472ce2b11c79393636d58fd5b228244a9c94d614fe9871899 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-due-tie-48d90c03bcd2a5813328c612d658f2282338ba660825a164060a384f83f08259 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-id-tie-9a3ea33d30e6b8d82ca176a0c33532ba4af7bbf1b3b5833e724e62d4b2751961 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-inclusive-next-80e36ee59e500608bada137a4d057687370421d020dfcc9743f7ed1f26d2bcf7 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-kahn-degrees-065d8fedb958c3f5991be520fc518b1181df3496215c1a01faa72df54bede9d7 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-lightest-key-a789ae5c6829bd6091de8bd91b1b78f548dd04aef5b053366ecd1e87c6e0775f (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-move-cleanup-7d4485954895836c04f461436e05472d8fc961d03fb957b08a886541abb8b587 (90101090 logical bytes)
+- .scratch/bin/dag-f-mutant-next-own-energy-d38fc22265dee1303bcb75a03722e94f3f825e733e7cdcf0d8f609d0ad1936d7 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-priority-tie-943f7dc902f0ec3c9e26e9a02d371b6db9d911d472d1eff9527bf1c90bd328da (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-projection-migration-version-a4954ce6c4289c09c9f19a2a08a461d26cfcec9ced2f06f54721585d3c7a603a (90101090 logical bytes)
+- .scratch/bin/dag-f-mutant-purge-witness-redaction-faf5a0cd9581ce3f2ae631fc6daa215f63f799449013d7763f64c25263de22e4 (90101090 logical bytes)
+- .scratch/bin/dag-f-mutant-query-component-5a48a34d1a75518c6a69c6ab9cc9c0842afbabc5cfa9fed96e4b84e49d22ed6f (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-revert-recorded-version-50ad01343c7cbfa69426c4bf87ab01fe34664205de35eae1938a92e748f5a361 (90101090 logical bytes)
+- .scratch/bin/dag-f-mutant-single-precedence-25b3241d4b4e8d5c429ca5af1b497048e1bb629a96fa60d0385c1a865d8e08bc (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-status-pruned-index-b907d01bbeff486e0b9dc7eeb240e69fd9d1b4280548391a2e38f01fd070ec33 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-terminal-blocked-bab5cd45d772e7093d0923798f256afc7cf728dd1cd401756f607053ba2c75ce (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-terminal-pruning-053abd2ec42230415f1fcb2a7ed652ea3bc9de8f7c93adbf6c6c168031a15755 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-terminal-ready-8245b9a86a753a17c875539f8c16b5ae696607656d0e18026cd97e7e87f2e3f5 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-tree-count-fac47aca52a26cbb69e52c6939ad67f16215cc05a3bf67afd80879c6275d1943 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-tree-orientation-137fdc0446b1561aacc19de2427a306b32cfb11467ed0302c54c94fcd6f7a7a7 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-unknown-traversal-1132369d34a28596c51b18b0dac2f0bb5135adcfb92d77759af801aff9833791 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-unweighted-mask-279b173173297b544968b4de4d1e34c4b4b7a257a5041b7619fa1beb299aa52d (89374562 logical bytes)
+- .scratch/bin/dag-f-isolated-client-freezes-signed-out-value-driver-14cb162a56fca7af88922a3ed71f2ec7fbea8d018912fa50a8c07f2105b689fd (90315746 logical bytes)
+- .scratch/bin/dag-f-isolated-client-retains-revoked-bearer-driver-14cb162a56fca7af88922a3ed71f2ec7fbea8d018912fa50a8c07f2105b689fd (90315746 logical bytes)
+- .scratch/bin/dag-f-isolated-discarded-per-node-closure-work-driver-ab3f2a5db6e978388afc18ad511bfeb8b49a0fb91014b03362c273f3417c62a2 (90315746 logical bytes)
+- .scratch/bin/dag-f-isolated-graph-schema-hidden-node-field-driver-b059032ae00737a671e920960d58ab4c77b8d1c6dc586df8f4e6e8981a9ba6a4 (90315746 logical bytes)
+- .scratch/bin/dag-f-isolated-graph-schema-strips-root-set-driver-6b93e8dcdf60c501463b9d5bcd235d90d4fb39763daae76ea40e1cbef62c5940 (90315746 logical bytes)
+- .scratch/bin/dag-f-isolated-hidden-direct-node-closures-driver-cd7af940b4ecfcc8b5606c436d8b9a73de98135faa73401cdb41f5dd983bf29c (90315746 logical bytes)
+- .scratch/bin/dag-f-isolated-mermaid-identity-collision-driver-176121b444d88b0e61b798668acbed793ccf17bca2068f6f01a7d280f27afe03 (90315746 logical bytes)
+- .scratch/bin/dag-f-isolated-mermaid-reverses-arrows-driver-4d7a7a30cfd762215e240bbedec94e1683b2e34e33372bef4c703debb8c75416 (90315746 logical bytes)
+- .scratch/bin/dag-f-isolated-root-ancestors-reversed-driver-fc4379f7818789996a1a5354b421f48d9a3494da5bb841e494d191a8f29f4492 (90315746 logical bytes)
+- .scratch/bin/dag-f-isolated-root-descendants-reversed-driver-a143a3aed1a84d0016575c45a0acee31cebf5d56b9e3ab53019e63332772343e (90315746 logical bytes)
+- .scratch/bin/dag-f-isolated-root-next-excludes-ready-root-driver-43136134c171db762207ff4fdbd33369ec64d6247a13f1d93459b5931bdfb3ff (90315746 logical bytes)
+- .scratch/bin/dag-f-isolated-root-next-id-tie-driver-c74254fcbd29d735797dff7de2128400e557723dde92ba0d6701ce2bc74e3a8b (90315746 logical bytes)
+- .scratch/bin/dag-f-isolated-root-next-includes-terminal-driver-76dfef72c0c5083edf8873a6b74c960e74c9e1d096f44c127f74d10deff0216d (90315746 logical bytes)
+- .scratch/bin/dag-f-isolated-root-next-topo-regression-driver-3e7f2ef90e836032074a6337f55b85e58ee7f76d7be3df4a0deacfe29113a547 (90315746 logical bytes)
+- .scratch/bin/dag-f-isolated-root-next-unknown-first-driver-0b9365445edf89cf027bb96717a7d7e293af1e6a87482f0488c1ce4f03617cb1 (90315746 logical bytes)
+- .scratch/bin/dag-f-mutant-authenticated-initial-26ee69592085d658341f56ce65fc2da5b21821cb2a3571fa6951b5782ae00ccb (90101090 logical bytes)
+- .scratch/bin/dag-f-mutant-beginning-edges-700fe6f21fed46eac0638587e7fc8db497ad3f3384959ffdc7ebe84eea43ee3e (90084578 logical bytes)
+- .scratch/bin/dag-f-mutant-bfs-depth-cap-a65dce9b292bc289f23a9312693c02f3f96f47f50d48c37bef372fa0e5cd7f19 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-bfs-lifo-3ab65c9af6a59460b1b7d95b2aa9ddffbb19f461f21cc3775e673442bda5c190 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-chain-precedence-0d781883d979da0f903332fb711ad8702013a4e7224a834c67f55d777486944a (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-checkpoint-edges-8273922ba0606f4e35ec0e8814f8305072d6331ec1548a9f590b85d4b4079243 (90084578 logical bytes)
+- .scratch/bin/dag-f-mutant-contains-membership-5912b1f1d6e2c6a63b7ec239f391234b67f28beaca0cb831cdc98336820ea5ef (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-counted-advice-ed8bce7bcf58ee9d15d16f1e5ea4951ba6e17e7b00d4d38ea37b4c97eab7bc26 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-created-tie-704884a72c329d8577d7dc1faabc4e9a8a77b3ec323d566f4cb7edafcf4d5b5d (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-cycle-arrow-533c55a4cba848f39b777eb1cdda98cf7290561b956bf6cf14b71dbcf4394752 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-cycle-self-9128bb4b6192962136214fbed46f51c66abb83a5a06fe79f67e1c975272ee783 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-degree-14-fdc78581a43d1171f4421d038edeea529f4c3e5d0cb417cd5591f7e70882f70d (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-delete-cleanup-cc58a02331cf934e4f8cd1e63e3a4ddb19041203682a07a02fc9c7c34e29711f (90101090 logical bytes)
+- .scratch/bin/dag-f-mutant-dependent-versions-240da3eb476c72af61bfcea18abb6c18c3c780b4c8543f55365220ba3cec0c3f (90084578 logical bytes)
+- .scratch/bin/dag-f-mutant-distinct-union-d47fd6901740862472ce2b11c79393636d58fd5b228244a9c94d614fe9871899 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-due-tie-48d90c03bcd2a5813328c612d658f2282338ba660825a164060a384f83f08259 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-id-tie-9a3ea33d30e6b8d82ca176a0c33532ba4af7bbf1b3b5833e724e62d4b2751961 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-inclusive-next-80e36ee59e500608bada137a4d057687370421d020dfcc9743f7ed1f26d2bcf7 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-kahn-degrees-065d8fedb958c3f5991be520fc518b1181df3496215c1a01faa72df54bede9d7 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-lightest-key-a789ae5c6829bd6091de8bd91b1b78f548dd04aef5b053366ecd1e87c6e0775f (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-move-cleanup-7d4485954895836c04f461436e05472d8fc961d03fb957b08a886541abb8b587 (90101090 logical bytes)
+- .scratch/bin/dag-f-mutant-next-own-energy-d38fc22265dee1303bcb75a03722e94f3f825e733e7cdcf0d8f609d0ad1936d7 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-priority-tie-943f7dc902f0ec3c9e26e9a02d371b6db9d911d472d1eff9527bf1c90bd328da (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-projection-migration-version-a4954ce6c4289c09c9f19a2a08a461d26cfcec9ced2f06f54721585d3c7a603a (90101090 logical bytes)
+- .scratch/bin/dag-f-mutant-purge-witness-redaction-faf5a0cd9581ce3f2ae631fc6daa215f63f799449013d7763f64c25263de22e4 (90101090 logical bytes)
+- .scratch/bin/dag-f-mutant-query-component-5a48a34d1a75518c6a69c6ab9cc9c0842afbabc5cfa9fed96e4b84e49d22ed6f (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-revert-recorded-version-50ad01343c7cbfa69426c4bf87ab01fe34664205de35eae1938a92e748f5a361 (90101090 logical bytes)
+- .scratch/bin/dag-f-mutant-single-precedence-25b3241d4b4e8d5c429ca5af1b497048e1bb629a96fa60d0385c1a865d8e08bc (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-status-pruned-index-b907d01bbeff486e0b9dc7eeb240e69fd9d1b4280548391a2e38f01fd070ec33 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-terminal-blocked-bab5cd45d772e7093d0923798f256afc7cf728dd1cd401756f607053ba2c75ce (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-terminal-pruning-053abd2ec42230415f1fcb2a7ed652ea3bc9de8f7c93adbf6c6c168031a15755 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-terminal-ready-8245b9a86a753a17c875539f8c16b5ae696607656d0e18026cd97e7e87f2e3f5 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-tree-count-fac47aca52a26cbb69e52c6939ad67f16215cc05a3bf67afd80879c6275d1943 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-tree-orientation-137fdc0446b1561aacc19de2427a306b32cfb11467ed0302c54c94fcd6f7a7a7 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-unknown-traversal-1132369d34a28596c51b18b0dac2f0bb5135adcfb92d77759af801aff9833791 (89374562 logical bytes)
+- .scratch/bin/dag-f-mutant-unweighted-mask-279b173173297b544968b4de4d1e34c4b4b7a257a5041b7619fa1beb299aa52d (89374562 logical bytes)
+- .scratch/bin/dag-f-todo-0bb7fc58d6c47c1487668259998131f0585084cc8e5e953359055e787e957575 (90695522 logical bytes)
+- .scratch/bin/dag-f-todo-771a642b6e1c4258902f6da23bd15555a0347dfbe9a78f46bcb69849bf3dac21 (90695522 logical bytes)
+- .scratch/bin/dag-f-todo-server-771a642b6e1c4258902f6da23bd15555a0347dfbe9a78f46bcb69849bf3dac21 (90662498 logical bytes)
+- .scratch/bin/dag-f-todo-server-61e328b7b1e310305781c132492fbc5d0722bbfef7da646fb7c134b50080589c (90662498 logical bytes)
+- .scratch/bin/dag-f-todo-d893393ad7cf770afc26462d4af21389fb903464975bb9f53bd79a2e5c88e374 (90695522 logical bytes)
+- .scratch/bin/dag-f-todo-0ad87507dd0aa8f7fa6c0a743f2c4335ffe134b4b7fc8ac0a709102fe4357e8b (90695522 logical bytes)
+- .scratch/bin/dag-f-todo-server-0ad87507dd0aa8f7fa6c0a743f2c4335ffe134b4b7fc8ac0a709102fe4357e8b (90662498 logical bytes)
 
 All checked immutable candidate manifests were byte-exact after the stop. The
 stopped stale-valid-noop mutation has a restoration receipt but no successful
@@ -1122,13 +1122,13 @@ used. L1 arranges the reviews and integration.
 
 | Command or stage | Actual result | Evidence |
 | --- | --- | --- |
-| bun .agents/skills/verify-dag-formal/check.mjs, no subset flags | Exit 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/resume-default-nTbjKr/default.exit |
-| Finite model, 25 safety configs plus clean | All 26 exit 0, all queues empty | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/check-bvUuqU |
+| bun .agents/skills/verify-dag-formal/check.mjs, no subset flags | Exit 0 | docs/evidence/dag-formal/resume-default-nTbjKr/default.exit |
+| Finite model, 25 safety configs plus clean | All 26 exit 0, all queues empty | docs/evidence/dag-formal/check-bvUuqU |
 | Five intended model controls | All intended invariant failures, exit 12 | Same model directory |
 | Seven reachability controls | All intended witness violations, exit 12 | Same model directory |
-| Full real-import production stage | Exit 0; all 36 controls and final clean | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/conformance-KBb0RR |
-| Full public/read stage | Exit 0; all 53 controls and final clean | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/public-VYqasx |
-| VITEST_MAX_WORKERS=1 pnpm check, guarded F-worktree scope | Exit 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f-worktree-check-YZwM7n |
+| Full real-import production stage | Exit 0; all 36 controls and final clean | docs/evidence/dag-formal/conformance-KBb0RR |
+| Full public/read stage | Exit 0; all 53 controls and final clean | docs/evidence/dag-formal/public-VYqasx |
+| VITEST_MAX_WORKERS=1 pnpm check, guarded F-worktree scope | Exit 0 | docs/evidence/dag-formal/f-worktree-check-YZwM7n |
 
 The successful default command is one coherent committed execution. It does
 not assemble a pass from the old stopped run or uncommitted calibrations. All
@@ -1294,19 +1294,19 @@ exit 3 and every f140/e717/3cce result remain unchanged. The coordinator's remov
 of 460 earlier F temporaries is its archive record, not this worker's cleanup.
 
 Historical removed-worktree paths resolve through
-/Users/zambamon/Documents/worktree-cleanup-2026-11-09/todo-cli/ARCHIVE.md.
+~/Documents/worktree-cleanup-2026-11-09/todo-cli/ARCHIVE.md.
 The archived independent B closure proof-exits file is byte-identical to F's
 previously inspected copy. No archived worktree was recreated or verified as a
 moving checkout. No direct SEC/PERF/AGENT coordination occurred.
 
 Current receipts:
 
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/resume-default-nTbjKr/completion.json, actual exits, identities, bounds and hashes;
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/resume-default-nTbjKr/model-counts.tsv, every finite config's counts/depth/queue;
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/resume-default-nTbjKr/source-controls.tsv, all 89 intended behavioral/restore pairs;
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/resume-default-nTbjKr/cleanup.tsv, exact retirement paths and per-action evidence;
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/public-VYqasx/graph-response/build-identity.json and client-auth-sequence.json;
-- /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f-worktree-check-YZwM7n/pnpm-check.exit and scheduling.txt, F scope and one-worker setting.
+- docs/evidence/dag-formal/resume-default-nTbjKr/completion.json, actual exits, identities, bounds and hashes;
+- docs/evidence/dag-formal/resume-default-nTbjKr/model-counts.tsv, every finite config's counts/depth/queue;
+- docs/evidence/dag-formal/resume-default-nTbjKr/source-controls.tsv, all 89 intended behavioral/restore pairs;
+- docs/evidence/dag-formal/resume-default-nTbjKr/cleanup.tsv, exact retirement paths and per-action evidence;
+- docs/evidence/dag-formal/public-VYqasx/graph-response/build-identity.json and client-auth-sequence.json;
+- docs/evidence/dag-formal/f-worktree-check-YZwM7n/pnpm-check.exit and scheduling.txt, F scope and one-worker setting.
 
 Coverage SHA-256: coverage.json 3f590f78a831490fc3e98e72d1931872b766cbc4a8a93b52bf6ceacefea38e48;
 public-coverage.json 5f9e3138453c51b2d371d236c3b01fcf061f0212b8afa01764a3b9872dd08986.
@@ -1326,10 +1326,10 @@ review's full default 0 therefore did not prove every compiler was guarded.
 The old claim in Cleanup, failed attempts and review handoff is corrected above.
 
 The original review report is now at
-`/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/seat1-initial-F1-20261109-b16e5cac/review.md`, SHA-256
+`docs/evidence/dag-formal/seat1-initial-F1-20261109-b16e5cac/review.md`, SHA-256
 `08e0c6aaea02d6b21ea47395b549f84affbc1720d26e33edb625cf2cc6dd737e`.
 Its direct results/reproduction and the existing complete archive remain protected
-under `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/seat1-initial-F1-20261109-b16e5cac`.
+under `docs/evidence/dag-formal/seat1-initial-F1-20261109-b16e5cac`.
 The coordinator verified the archive's 3,002 entries and archive SHA-256
 `76ea042e65856d869419cd54a1263928ffa81c4ab907de61b84a77ac0bf3219d`; F verified the direct report hash.
 No new execution depends on the removed original review worktree.
@@ -1361,7 +1361,7 @@ that same raw parent 1. The outer wrapper rereads the shared stop latch after
 the parent exits. F's default then handles exit 3 as DISK STOP and starts no
 later stage. The regression result is 0, with all four expected refusal traces.
 It does not fill disk or count a compiler failure as product sensitivity.
-Receipt: `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/check-bTuPZy/nested-guard-cntoWH/summary.json`.
+Receipt: `docs/evidence/dag-formal/check-bTuPZy/nested-guard-cntoWH/summary.json`.
 
 A separate positive regression ran the real installed TypeScript compiler
 through the shim, with immediate canonical guard 0 and compiler 0. The real
@@ -1371,14 +1371,14 @@ followed by the materialized AtomicCAS tsconfig path. The canonical guard time
 was `2026-11-09T16:14:27.136Z`; compiler entry was
 `2026-11-09T16:14:27.137Z`.
 The executable, full argv, immediate guard path and actual child exit are in
-`/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/conformance-OBzB92/runtime-command-17143-1794240868020.json`.
+`docs/evidence/dag-formal/conformance-OBzB92/runtime-command-17143-1794240868020.json`.
 
 ### Complete committed-source rerun
 
 | Command | Actual exit | Evidence |
 | --- | --- | --- |
-| bun .agents/skills/verify-dag-formal/check.mjs | 0 | `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f1-default-8vDMKq/default.exit`, stdout and stderr |
-| VITEST_MAX_WORKERS=1 /usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check | 0 | `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f1-worktree-check-1KKiai/pnpm-check.exit`, stdout and stderr |
+| bun .agents/skills/verify-dag-formal/check.mjs | 0 | `docs/evidence/dag-formal/f1-default-8vDMKq/default.exit`, stdout and stderr |
+| VITEST_MAX_WORKERS=1 /usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check | 0 | `docs/evidence/dag-formal/f1-worktree-check-1KKiai/pnpm-check.exit`, stdout and stderr |
 | Original copied F1 probe before edits | 1, expected failing assertion | `f1-closure-5PIxSP/before.exit` |
 | Same probe at committed fix | 0 | `f1-closure-5PIxSP/after-committed.exit` |
 
@@ -1403,7 +1403,7 @@ GraphNodes, strict root500 ancestors/descendants in a 1,000-Task chain, G4
 energy/unknown-last/topo ties, Ready-root inclusion and terminal exclusion,
 Mermaid typed identity and whole-Profile ordering before membership. Both
 1,000-chain fixtures were independently driven, with exact before/after bytes
-in `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/public-2WT9xJ/graph-response/result.json`. These are response-size
+in `docs/evidence/dag-formal/public-2WT9xJ/graph-response/result.json`. These are response-size
 observations, not latency, HTTP-before or total-query-time claims.
 The one-client HTTP credential-getter sequence observed sign-in/Profiles200,
 sign-out/Profiles401 with no bearer header, then re-sign-in/Profiles200.
@@ -1449,7 +1449,7 @@ During the completed default and locked check, owned cleanup retired 136 new
 actual compiler/runtime copies, 12,057,877,504 logical bytes; one synthetic
 owned-copy fixture, 89,159,906 bytes; and 107 superseded own mutant binaries,
 9,651,631,990 bytes. Exact paths, hashes, ownership/open-file checks and actions
-are in `/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f1-default-8vDMKq/cleanup.tsv` and linked per-artifact receipts.
+are in `docs/evidence/dag-formal/f1-default-8vDMKq/cleanup.tsv` and linked per-artifact receipts.
 No cited evidence/source/provenance or protected e717/3cce/0f7 baseline was deleted.
 Observed free capacity was about 74.7 GB before the run, about 61.5 GB at the
 16:20 inventory and 59.536 GB after completion.
@@ -1508,7 +1508,7 @@ protected existing L1 review archive. Per-file logical sizes count hard-linked
 names separately. Observed filesystem Available was 57,086,968 KiB,
 58,457,055,232 bytes. No file was removed by the inventory. Complete paths,
 category reasons, inode/device fields and df output are in
-`/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f1-closure-5PIxSP/inventory-order29.json`.
+`docs/evidence/dag-formal/f1-closure-5PIxSP/inventory-order29.json`.
 
 Standing order 30 also requires a no-symlink find for owned hidden .*.bun-build
 files after each compile batch and while no compiler is running. Skip open

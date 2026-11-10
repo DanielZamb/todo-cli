@@ -25,16 +25,16 @@ it does not establish CLI/HTTP graph commands or client feature parity.
 
 | Check and proof level | Actual exit | Evidence |
 | --- | --- | --- |
-| `pnpm check`, L1 repository behavior/type/lint/contract checks | 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/pnpm-check-final.log |
-| Focused @effect/vitest, 18 literal DAG cases, L1 | 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/dag-tests.log |
-| `verify-dag/scripts/verify.sh`, compiled library, scratch SQLite and opposite-edge processes | 0; race children 0, 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/final-dag |
-| Extended `verify-op-log/scripts/verify.sh`, compiled library including exact edge replay and grouped Delete | 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/final-op-log |
-| `verify-recurrence/scripts/verify.sh`, compiled library regression | 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/final-recurrence |
-| `verify-occ-atomicity/check.ts`, bounded model and compiled production driver | 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/fv01/fv01-check-RnA0vB |
-| `verify-occ-atomicity/prove-sensitivity.ts`, real-code mutations | 0 overall; broken variants 1, 1; restored 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/fv01/sensitivity-Srqe4N |
-| OpenAPI/Swift regeneration through `swift-slot.sh` | 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/generate-api-final.log |
-| Electron production SSE/IPC decoder literals, L1 | 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/electron-protocol.log |
-| `verify-history-unions.sh` through Swift slot, bounded L2 HTTP/SSE compatibility observation | 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/final-history-unions |
+| `pnpm check`, L1 repository behavior/type/lint/contract checks | 0 | docs/evidence/task-dag/unit-a/pnpm-check-final.log |
+| Focused @effect/vitest, 18 literal DAG cases, L1 | 0 | docs/evidence/task-dag/unit-a/dag-tests.log |
+| `verify-dag/scripts/verify.sh`, compiled library, scratch SQLite and opposite-edge processes | 0; race children 0, 0 | docs/evidence/task-dag/unit-a/final-dag |
+| Extended `verify-op-log/scripts/verify.sh`, compiled library including exact edge replay and grouped Delete | 0 | docs/evidence/task-dag/unit-a/final-op-log |
+| `verify-recurrence/scripts/verify.sh`, compiled library regression | 0 | docs/evidence/task-dag/unit-a/final-recurrence |
+| `verify-occ-atomicity/check.ts`, bounded model and compiled production driver | 0 | docs/evidence/fv01/fv01-check-RnA0vB |
+| `verify-occ-atomicity/prove-sensitivity.ts`, real-code mutations | 0 overall; broken variants 1, 1; restored 0 | docs/evidence/fv01/sensitivity-Srqe4N |
+| OpenAPI/Swift regeneration through `swift-slot.sh` | 0 | docs/evidence/task-dag/unit-a/generate-api-final.log |
+| Electron production SSE/IPC decoder literals, L1 | 0 | docs/evidence/task-dag/unit-a/electron-protocol.log |
+| `verify-history-unions.sh` through Swift slot, bounded L2 HTTP/SSE compatibility observation | 0 | docs/evidence/task-dag/unit-a/final-history-unions |
 
 The last drive observes AuthChanged and DependencyAdded/Removed on real scratch
 SSE, decodes observed frames with Electron's production ChangeEvent schema and
@@ -125,11 +125,11 @@ invalid creation is rejected, and all four Swift v2 cases select case2.
 
 | Supplied reproduction | Before build/assert exit | After build/assert exit | Absolute evidence |
 | --- | --- | --- | --- |
-| auth-series.ts | 0 / 1 | 0 / 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/seat1-closure/auth-series-after.json |
-| swift-boundary.swift | 0 / 1 | 0 / 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/seat1-closure/swift-repro-after.json |
+| auth-series.ts | 0 / 1 | 0 / 0 | docs/evidence/task-dag/unit-a/seat1-closure/auth-series-after.json |
+| swift-boundary.swift | 0 / 1 | 0 / 0 | docs/evidence/task-dag/unit-a/seat1-closure/swift-repro-after.json |
 
 The before sources, observations and real exits are under
-/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/seat1-closure/before.
+docs/evidence/task-dag/unit-a/seat1-closure/before.
 reproduction-provenance.json in the parent directory binds both source heads
 and every build/assertion exit. The supplied auth source retains its original
 candidate label; that provenance receipt identifies the actual build source.
@@ -185,14 +185,14 @@ manual generated-file edit, dependency upgrade, native app, Keychain or signing.
 
 | Check | Actual exit | Absolute evidence |
 | --- | --- | --- |
-| pnpm check, including 317 domain / 46 CLI / 30 server / 34 Electron passes | 0; one existing Electron skip | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/seat1-closure/final-check.log |
-| Compiled verify-dag, including authenticatedInitial and opposite-edge processes | 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/seat1-closure/final-dag |
-| Compiled verify-auth | 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/seat1-closure/final-auth |
-| Compiled verify-op-log | 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/seat1-closure/final-op-log |
-| Generated Swift / real scratch HTTP-SSE / all 19 GeneratedContractTests, no skips | 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/seat1-closure/final-history-unions |
-| Electron production ChangeEvent/IPC typed and negative cases | 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/seat1-closure/final-check.log |
-| AtomicCAS mapping/check | 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/task-dag/unit-a/seat1-closure/atomic-check.log |
-| AtomicCAS behavioral sensitivity | 0 overall; broken 1/1, restored 0 | /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-a-storage/docs/evidence/fv01/sensitivity-mxTI1h |
+| pnpm check, including 317 domain / 46 CLI / 30 server / 34 Electron passes | 0; one existing Electron skip | docs/evidence/task-dag/unit-a/seat1-closure/final-check.log |
+| Compiled verify-dag, including authenticatedInitial and opposite-edge processes | 0 | docs/evidence/task-dag/unit-a/seat1-closure/final-dag |
+| Compiled verify-auth | 0 | docs/evidence/task-dag/unit-a/seat1-closure/final-auth |
+| Compiled verify-op-log | 0 | docs/evidence/task-dag/unit-a/seat1-closure/final-op-log |
+| Generated Swift / real scratch HTTP-SSE / all 19 GeneratedContractTests, no skips | 0 | docs/evidence/task-dag/unit-a/seat1-closure/final-history-unions |
+| Electron production ChangeEvent/IPC typed and negative cases | 0 | docs/evidence/task-dag/unit-a/seat1-closure/final-check.log |
+| AtomicCAS mapping/check | 0 | docs/evidence/task-dag/unit-a/seat1-closure/atomic-check.log |
+| AtomicCAS behavioral sensitivity | 0 overall; broken 1/1, restored 0 | docs/evidence/fv01/sensitivity-mxTI1h |
 
 DAG-A-MAPPING.md reviews the four changed v1 schemas. Valid no-edge legacy model
 fixtures are unchanged; transaction and projection code did not change. Source

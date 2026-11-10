@@ -33,7 +33,7 @@ limit. It preserves the field shapes and A's version/forbidden-key guards.
 ## Proof receipts
 
 Absolute root for this checkpoint's local evidence:
-/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-b-commands/docs/evidence/task-dag/unit-b/public.
+docs/evidence/task-dag/unit-b/public.
 
 | Proof | Actual exit | Evidence relative to that root |
 | --- | --- | --- |
@@ -46,7 +46,7 @@ Absolute root for this checkpoint's local evidence:
 | AtomicCAS real-code sensitivity and restored clean command | 0 overall; mutants 1, 1; restored 0 | atomic-sensitivity.log |
 
 AtomicCAS evidence:
-/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-b-commands/docs/evidence/fv01/sensitivity-4C9W6N.
+docs/evidence/fv01/sensitivity-4C9W6N.
 DAG-A-MAPPING.md reviews captured-witness forwarding without changing the bounded
 single-Task/no-edge claim. This is not graph-model conformance or unbounded proof.
 

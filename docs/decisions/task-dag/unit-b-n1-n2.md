@@ -20,7 +20,7 @@ Snapshot redaction still pass.
 ## Verification
 
 All evidence is under
-/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-b-commands/docs/evidence/task-dag/unit-b/n1-n2.
+docs/evidence/task-dag/unit-b/n1-n2.
 
 | Proof | Actual exit | Evidence relative to that directory |
 | --- | --- | --- |
@@ -32,7 +32,7 @@ All evidence is under
 | AtomicCAS real-code sensitivity | 0 overall; mutants 1, 1; restored 0 | sensitivity.log |
 
 AtomicCAS evidence is
-/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-b-commands/docs/evidence/fv01/sensitivity-9hc8Tj.
+docs/evidence/fv01/sensitivity-9hc8Tj.
 DAG-A-MAPPING.md reviews the projection change and preserves the bounded
 single-Task/no-edge claim. The sensitivity proof restores product bytes before
 the clean command. No graph proof is inferred from AtomicCAS.

@@ -49,7 +49,7 @@ covers initial inputs, edge inputs and the full nested import witness.
 ## Checkpoint receipts
 
 Evidence root:
-/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-b-commands/docs/evidence/task-dag/unit-b/import.
+docs/evidence/task-dag/unit-b/import.
 
 | Proof | Actual exit | Evidence under that root |
 | --- | --- | --- |
@@ -65,7 +65,7 @@ Evidence root:
 | AtomicCAS sensitivity | 0 overall; mutants 1/1, restored 0 | atomic-sensitivity.log |
 
 AtomicCAS sensitivity evidence is
-/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-b-commands/docs/evidence/fv01/sensitivity-jf9I1W.
+docs/evidence/fv01/sensitivity-jf9I1W.
 The mapping review names the schema-only change and retains the finite single-
 Task/no-edge bounds. It does not claim grouped graph or client proof.
 

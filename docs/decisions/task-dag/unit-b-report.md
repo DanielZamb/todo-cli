@@ -37,7 +37,7 @@ Contract identity is 3981d0f313389f41400069714ac721ab7eb85d02788fbd5c777135f6a4e
 The build cache includes source hash and commit, preventing a WIP binary from
 masquerading as a later committed build. CLI version, live server health,
 binary SHA-256s, clean worktree, full source SHA and cache paths are retained in:
-/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-b-commands/docs/evidence/task-dag/unit-b/final-source/build/provenance.json.
+docs/evidence/task-dag/unit-b/final-source/build/provenance.json.
 
 ## Delivered behavior
 
@@ -99,7 +99,7 @@ versus DAG-kind decoder assertions remain intact.
 
 All commands below used fresh scratch data and read real process exits/statuses.
 The absolute evidence root is:
-/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-b-commands/docs/evidence/task-dag/unit-b/final-source.
+docs/evidence/task-dag/unit-b/final-source.
 Each row names files/directories under that root. proof-exits.json retains every
 actual exit, including the initial read-helper failure and its successful retry.
 
@@ -128,9 +128,9 @@ Electron skip; it is not a UI proof. All Swift invocations ran through swift-slo
 No native app or Keychain access occurred.
 
 AtomicCAS final evidence:
-/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-b-commands/docs/evidence/fv01/fv01-check-nJSuwF.
+docs/evidence/fv01/fv01-check-nJSuwF.
 Reviewed real-code sensitivity evidence:
-/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-b-commands/docs/evidence/fv01/sensitivity-jf9I1W.
+docs/evidence/fv01/sensitivity-jf9I1W.
 Both real mutations failed with exit 1; restored production exited 0. The mapping
 reviews schema/error forwarding and migration effects, rather than just hashes.
 AtomicCAS remains finite single-Task/no-edge safety, not grouped graph proof.
@@ -316,7 +316,7 @@ Controls preserve valid missing Task/reference classification, real missing-file
 runtime_error/1, and valid stale existing-add/absent-remove no-ops. Authenticated
 HTTP still returns 400 for Version 0 on an existing linked edge and changes no
 Task/edge projection. F's independent e717 baseline remains untouched at
-/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/public-xOPnjF.
+docs/evidence/dag-formal/public-xOPnjF.
 
 ### Client decode alignment and delta
 
@@ -346,7 +346,7 @@ the previously recorded L1 search rebase checklist remains unchanged.
 ### Final corrected-source proof
 
 Absolute closure evidence root:
-/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-b-commands/docs/evidence/task-dag/unit-b/closure.
+docs/evidence/task-dag/unit-b/closure.
 The before receipts are graph-before-2 and input-before-expanded, both compiled
 property exit 1; input-before-fullmatrix retains the explicit-empty fingerprint
 projection failure. Early graph seed setup failure is retained in graph-before.
@@ -377,8 +377,8 @@ are in final/build/provenance.json. Each table path is under the absolute root.
 
 The live Swift run has all 20 tests passing with no skip. pnpm check retains one
 existing Electron skip and does not claim UI parity. The final AtomicCAS evidence
-is /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-b-commands/docs/evidence/fv01/fv01-check-lhKZOj.
-Fresh sensitivity evidence is /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-b-commands/docs/evidence/fv01/sensitivity-pkZuib:
+is docs/evidence/fv01/fv01-check-lhKZOj.
+Fresh sensitivity evidence is docs/evidence/fv01/sensitivity-pkZuib:
 both real mutations exit 1 and restored source exits 0. Every covered production
 file is byte-identical to e717; the mapping review names the unchanged functions
 and retains the finite single-Task/no-edge limits. No source hashes were advanced
@@ -395,7 +395,7 @@ APFS sharing and concurrent filesystem activity mean this is not a claim that
 
 The complete 83 removed paths, sizes/inodes, ownership checks, kept-file reasons,
 reference audit and lsof in-use check are explicitly retained in
-[cleanup-receipt.json](/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-b-commands/docs/evidence/task-dag/unit-b/closure/final/cleanup-receipt.json).
+[cleanup-receipt.json](../../evidence/task-dag/unit-b/closure/final/cleanup-receipt.json).
 The exact 3cceb41e and e717 CLI/server binaries, current proof drivers, immutable
 baseline drivers and ambiguous cited N1/N2 binaries remain. No evidence directory
 was removed: cited, current and ambiguous receipts were protected. No symlink was
@@ -502,7 +502,7 @@ Keychain and native notifications remain held. No new UI controls were added.
 ### Final committed-source proof
 
 Evidence root:
-/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-b-commands/docs/evidence/task-dag/unit-b/follow-up.
+docs/evidence/task-dag/unit-b/follow-up.
 Table paths are under its final directory unless stated otherwise. Each final
 public/protocol/host drive uses the CLI/server pair compiled once from clean
 6486b347 source. build/provenance.json records source content hash
@@ -541,7 +541,7 @@ coverage hashes were not renewed. An initial optional checker run passed but did
 not capture a separate guard at each internal Bun.build. The final rerun used a
 worker-local preload solely to run the canonical guard before both builds;
 check.ts and the production code were unmodified. Its final evidence is
-/Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-b-commands/docs/evidence/fv01/fv01-check-sQUrgI.
+docs/evidence/fv01/fv01-check-sQUrgI.
 The prior real-code sensitivity evidence sensitivity-pkZuib remains unchanged
 and candidate-specific; it is not claimed as a new sensitivity run or final F.
 The finite single-Task/no-edge model bounds remain.
