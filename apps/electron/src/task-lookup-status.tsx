@@ -7,14 +7,18 @@ export type FindTask = (details: typeof TaskLookupDetails.Type) => void;
 export function TaskLookupStatus({
   details,
   onFind,
+  reasonClassName,
 }: {
   details: typeof TaskLookupDetails.Type;
+  reasonClassName?: string | undefined;
   onFind?: (() => void) | undefined;
 }) {
   return (
     <Alert role="status" data-testid="task-lookup-status">
       <AlertDescription className="space-y-2 break-words">
-        <p>Task not found in {details.profile.name}.</p>
+        <p className={reasonClassName}>
+          Task not found in {details.profile.name}.
+        </p>
         <p className="text-muted-foreground">
           error 3 - not found or auth missing
         </p>

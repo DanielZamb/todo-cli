@@ -67,6 +67,10 @@ struct ImportSummary: Codable, Sendable {
             let fields = changed_fields.filter { outcome != "created" || $0 != "external_id" }.map { names[$0] ?? $0.replacingOccurrences(of: "_", with: " ").capitalized }.joined(separator: ", ")
             return outcome == "created" ? "New Task" + (fields.isEmpty ? "" : " · \(fields)") : (fields.isEmpty ? "No changes" : fields)
         }
+        var rejectionDetail: String {
+            [error?.primaryMessage, error?.exitDetail, external_id].compactMap { $0 }.joined(separator: "\n")
+        }
+        func accessibilityText(title: String) -> String { [title, rejectionDetail, outcomeText].joined(separator: "\n") }
         var outcomeText: String { error?.code == "occ_conflict" ? "Conflict" : outcome.capitalized }
     }
     struct Totals: Codable, Equatable, Sendable {
@@ -84,7 +88,7 @@ struct ImportSummary: Codable, Sendable {
     let totals: Totals
 }
 
-enum ImportLayoutRegion: Hashable { case viewport, footer, summary, fileChange, fileChoose, primary, cancel, row(Int) }
+enum ImportLayoutRegion: Hashable { case viewport, footer, summary, fileChange, fileChoose, primary, cancel, row(Int), reason(Int), exitPair(Int), rowTitle(Int), externalID(Int), changes(Int), outcome(Int) }
 struct ImportLayoutFrames: PreferenceKey {
     static let defaultValue: [ImportLayoutRegion: CGRect] = [:]
     static func reduce(value: inout [ImportLayoutRegion: CGRect], nextValue: () -> [ImportLayoutRegion: CGRect]) { value.merge(nextValue(), uniquingKeysWith: { _, next in next }) }
@@ -145,22 +149,7 @@ struct ImportView: View {
                             if !compact { HStack { Text("Task"); Spacer(); Text("Outcome") }.font(.caption).foregroundStyle(.secondary).padding(.bottom, 8) }
                             ForEach(Array(report.items.enumerated()), id: \.offset) { index, row in
                                 let title = model.importDocument?.title(at: index) ?? (index >= (model.importDocument?.items.count ?? 0) ? "Cancel missing Task" : "Untitled Task")
-                                HStack(alignment: .top, spacing: 8) {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(title).fontWeight(.medium).lineLimit(compact ? 1 : nil).help(title)
-                                        Text(row.external_id.isEmpty ? "Missing external id" : row.external_id)
-                                            .font(.caption).foregroundStyle(.secondary).textSelection(.enabled).lineLimit(1).help(row.external_id)
-                                        if let error = row.error {
-                                            ServerErrorNotice(model: model, failure: error)
-                                        } else {
-                                            Text(row.changesText).font(.caption).foregroundStyle(.secondary).lineLimit(compact ? 1 : nil).help(row.changesText)
-                                        }
-                                    }.frame(maxWidth: .infinity, alignment: .leading)
-                                    Text(row.outcomeText).font(.callout).foregroundStyle(row.outcome == "rejected" && row.error?.isTaskLookup != true ? TodoColors.color("destructive") : .primary).fixedSize()
-                                }.padding(.top, compact ? 0 : 12).padding(.bottom, compact ? 8 : 12)
-                                    .frame(minHeight: compact ? 56 : nil, alignment: .top).importFrame(.row(index))
-                                    .reportErrorBounds("row-" + (row.task_id ?? row.external_id))
-                                    .overlay(alignment: .bottom) { if compact { Divider() } }
+                                importRow(row, title: title, index: index)
                                 if !compact { Divider() }
                             }
                         }.padding(.trailing, 8)
@@ -223,6 +212,47 @@ struct ImportView: View {
                     model.loadImport(data: try Data(contentsOf: url), name: url.lastPathComponent)
                 } catch { model.importError = "Cannot read this file. Choose a JSON array or NDJSON file." }
             }
+    }
+    @ViewBuilder private func importRow(_ row: ImportSummary.Row, title: String, index: Int) -> some View {
+        let content = HStack(alignment: .top, spacing: 8) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).fontWeight(.medium).lineLimit(compact ? 1 : nil).help(compact && row.error != nil ? row.rejectionDetail : title).importFrame(.rowTitle(index))
+                if !compact || row.error == nil {
+                    Text(row.external_id.isEmpty ? "Missing external id" : row.external_id)
+                        .font(.caption).foregroundStyle(.secondary).textSelection(.enabled).lineLimit(1).help(row.external_id).importFrame(.externalID(index))
+                }
+                if let error = row.error {
+                    if compact {
+                        Text(error.primaryMessage).font(.caption)
+                            .foregroundStyle(error.isTaskLookup ? Color.primary : TodoColors.color("destructive"))
+                            .lineLimit(1).truncationMode(.tail).importFrame(.reason(index))
+                        if let detail = error.exitDetail {
+                            Text(detail).font(.caption).foregroundStyle(.secondary).lineLimit(1).importFrame(.exitPair(index))
+                        }
+                    } else {
+                        ServerErrorNotice(model: model, failure: error, reasonFont: .caption)
+                    }
+                } else {
+                    Text(row.changesText).font(.caption).foregroundStyle(.secondary).lineLimit(compact ? 1 : nil).help(row.changesText).importFrame(.changes(index))
+                }
+            }.frame(maxWidth: .infinity, alignment: .leading)
+            Text(row.outcomeText).font(.callout).foregroundStyle(row.outcome == "rejected" && row.error?.isTaskLookup != true ? TodoColors.color("destructive") : .primary).fixedSize().importFrame(.outcome(index))
+        }.padding(.top, compact ? 0 : 12).padding(.bottom, compact ? 8 : 12)
+            .frame(height: compact ? 56 : nil, alignment: .top).importFrame(.row(index))
+            .reportErrorBounds("row-" + (row.task_id ?? row.external_id))
+            .overlay(alignment: .bottom) { if compact { Divider() } }
+        if compact, let error = row.error {
+            if error.isTaskLookup {
+                content.help(row.rejectionDetail).accessibilityElement(children: .ignore)
+                    .accessibilityLabel(row.accessibilityText(title: title))
+                    .accessibilityHint("Actions available. Find Task by id.").focusable()
+                    .contextMenu { Button("Find Task by id") { Task { await model.findTaskAfterLookupError(error) } } }
+                    .accessibilityAction(named: Text("Find Task by id")) { Task { await model.findTaskAfterLookupError(error) } }
+            } else {
+                content.help(row.rejectionDetail).accessibilityElement(children: .ignore)
+                    .accessibilityLabel(row.accessibilityText(title: title))
+            }
+        } else { content }
     }
     private func count(_ value: Int, _ name: String) -> some View {
         VStack(alignment: .leading, spacing: 2) { Text("\(value)").font(.headline); Text(name).font(.caption).foregroundStyle(.secondary) }

@@ -303,7 +303,7 @@ order 22. The native and Keychain HOLD remains in force.
 Read [Import Tasks](features/import.md). The write-state helper now runs
 ImportStateTests and the unhosted GeneratedContractTests. Its import receipt
 checks literal create/update/unchanged counts, reload and a competing write.
-The design helper produces 246 PNGs, including 36 import captures across both
+The design helper produces 358 PNGs, including 48 import captures across both
 appearances and layouts. It reuses DerivedData/StateProof to avoid recompiling
 the same generated contract for the design drive.
 U01's [Project and Tag matrix](features/metadata.md) proves quoted names through

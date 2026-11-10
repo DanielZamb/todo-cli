@@ -1,10 +1,21 @@
 import Foundation
 import Testing
+import TodoAPI
 import UserNotifications
 
 @testable import TodoState
 
 struct PresentationTests {
+    @Test func compactImportRejectionDetails() {
+        let failure = ServerFailure(message: "New Tasks need a title. Add a title and import again.", code: "title_required", exitCode: 2, exitMeaning: "validation or usage")
+        let row = ImportSummary.Row(external_id: "repository:review", outcome: "rejected", task_id: nil, from_version: nil, changed_fields: [], error: failure)
+        #expect(row.rejectionDetail == "New Tasks need a title. Add a title and import again.\nerror 2 - validation or usage\nrepository:review")
+        #expect(row.accessibilityText(title: "Untitled Task") == "Untitled Task\nNew Tasks need a title. Add a title and import again.\nerror 2 - validation or usage\nrepository:review\nRejected")
+        let lookup = ServerFailure(message: "Agent recovery text stays hidden.", code: "not_found", exitCode: 3, exitMeaning: "not found or auth missing", details: .init(profile: .init(id: "work", name: "Work"), taskID: "aa"))
+        let missing = ImportSummary.Row(external_id: "repository:missing", outcome: "rejected", task_id: "aa", from_version: 1, changed_fields: [], error: lookup)
+        #expect(missing.rejectionDetail == "Task not found in Work.\nerror 3 - not found or auth missing\nrepository:missing")
+        #expect(missing.accessibilityText(title: "Missing Task") == "Missing Task\nTask not found in Work.\nerror 3 - not found or auth missing\nrepository:missing\nRejected")
+    }
     private func task(priority: String = "P3", status: String = "open", due: TaskTime? = TaskTime(kind: "date", date: "2026-10-28")) -> TaskSnapshot {
         TaskSnapshot(
             id: "row", profile_id: "work", row_version: 4, title: "Design review", description: nil,

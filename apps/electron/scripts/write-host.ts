@@ -22,17 +22,17 @@ import {
 import { taskRequest } from "../src/task-client.ts";
 import { createWindowLayout } from "../src/window-layout.ts";
 
-if (
-  process.env.TODO_ELECTRON_VERIFY_HOST !== "1" ||
-  !process.env.TODO_ELECTRON_DATA?.includes("todo-s01-verify-")
-)
-  throw new Error("Scratch host verification only");
-const url = new URL(process.env.TODO_SERVER_URL ?? "");
-if (url.protocol !== "http:" || url.hostname !== "127.0.0.1")
-  throw new Error("Loopback server required");
-const compatibility = serverCompatibility(url.origin);
-app.setPath("userData", process.env.TODO_ELECTRON_DATA);
 async function boot() {
+  if (
+    process.env.TODO_ELECTRON_VERIFY_HOST !== "1" ||
+    !process.env.TODO_ELECTRON_DATA?.includes("todo-s01-verify-")
+  )
+    throw new Error("Scratch host verification only");
+  const url = new URL(process.env.TODO_SERVER_URL ?? "");
+  if (url.protocol !== "http:" || url.hostname !== "127.0.0.1")
+    throw new Error("Loopback server required");
+  const compatibility = serverCompatibility(url.origin);
+  app.setPath("userData", process.env.TODO_ELECTRON_DATA);
   await app.whenReady();
   let credential = "";
   let credentialGeneration = 0;
@@ -347,4 +347,7 @@ async function boot() {
   await window.loadFile(page);
   app.on("window-all-closed", () => app.quit());
 }
-void boot();
+void boot().catch((error: unknown) => {
+  process.stderr.write(`VERIFY_HOST_BOOT_FAILED: ${String(error)}\n`);
+  app.exit(1);
+});

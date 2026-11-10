@@ -253,7 +253,10 @@ private actor DiscoveryWithoutSSE: ClientTransport {
                     }
                 }
                 #expect(pairs.sorted() == [0, 1, 2])
-                #expect(cards.sorted() == ["aa", "bb"])
+                if surface == "import" && compact {
+                    #expect(cards.sorted() == [])
+                    for id in ids { #expect(try #require(frames.frames["row-" + id]).height == 56) }
+                } else { #expect(cards.sorted() == ["aa", "bb"]) }
                 let last = try #require(frames.frames["row-ordinary-after"])
                 let viewport = try #require(frames.frames["viewport"])
                 #expect(last.minY >= viewport.minY - 0.5 && last.maxY <= viewport.maxY + 0.5)
