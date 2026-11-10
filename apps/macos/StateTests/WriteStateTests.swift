@@ -183,6 +183,7 @@ func liveGeneratedWritesAgainstScratchServer() async throws {
     let created = try await client.tasks_period_create(path: .init(profile: "work"), body: .json(.init(title: "W06 original"))).ok.body.json
     let base = try TaskSnapshot.decode(created)
     let model = TodoModel(configuration: .init(server: server, initialProfile: "work", vaultService: "never-used"), clientFactory: { _, _ in todoClient(server: server, credential: session.credential) })
+    defer { model.signedIn = false; model.connect() }
     model.signedIn = true
     model.connection = .live
     model.beginEditing(base)
@@ -503,6 +504,7 @@ func liveNavigationSaveDiscardAndDelete() async throws {
     let source = try await TaskSnapshot.decode(client.tasks_period_create(path: .init(profile: "work"), body: .json(.init(title: "W07 source"))).ok.body.json)
     let destination = try await TaskSnapshot.decode(client.tasks_period_create(path: .init(profile: "work"), body: .json(.init(title: "W07 destination task"))).ok.body.json)
     let model = TodoModel(configuration: .init(server: server, initialProfile: "work", vaultService: "never-used"), clientFactory: { _, _ in todoClient(server: server, credential: session.credential) })
+    defer { model.signedIn = false; model.connect() }
     model.signedIn = true
     model.connection = .live
     model.beginEditing(source)
@@ -694,6 +696,7 @@ func liveCopyKeepsSourceAndOtherTasks() async throws {
     let source = try TaskSnapshot.decode(sourceWire)
     let completed = try await TaskSnapshot.decode(client.tasks_period_transition(path: .init(profile: "work", task: source.id), body: .json(.init(from_version: 1, action: .complete))).ok.body.json)
     let model = TodoModel(configuration: .init(server: server, initialProfile: "work", vaultService: "never-used"), clientFactory: { _, _ in todoClient(server: server, credential: session.credential) })
+    defer { model.signedIn = false; model.connect() }
     model.signedIn = true; model.connection = .live
     model.beginEditing(completed)
     await model.write(.copy("personal"))

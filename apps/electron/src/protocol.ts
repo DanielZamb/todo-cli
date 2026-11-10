@@ -130,6 +130,11 @@ export const Request = Schema.Union([
     view: ViewName,
     filters: Schema.optionalKey(TaskFilters),
   }),
+  Schema.TaggedStruct("search", {
+    profile: ProfileId,
+    view: ViewName,
+    filters: TaskFilters,
+  }),
   Schema.TaggedStruct("parse", { profile: ProfileId, payload: QuickAddInput }),
   Schema.TaggedStruct("history", { profile: ProfileId, task: TaskId }),
   Schema.TaggedStruct("watch", { profile: ProfileId }),
@@ -220,6 +225,10 @@ export const Reply = Schema.Union([
     planning: Schema.NullOr(PlanningView),
     counts: Schema.Record(ViewName, Schema.Int),
     draft: Schema.String,
+  }),
+  Schema.TaggedStruct("search", {
+    matching_tasks: Schema.Array(TaskRead),
+    planning: Schema.NullOr(PlanningView),
   }),
   Schema.TaggedStruct("profileDeleted", { report: ProfileDeletionReport }),
   Schema.TaggedStruct("task", { task: Task }),

@@ -980,6 +980,69 @@ frame("search-copy", "Task search: copy full id", 4000, 8000, 1840, (X, Y) => {
   ]);
 });
 
+frame("perf-tags", "PERF: putTask Tag links", 0, 16000, 2800, (x, y) => {
+  heading("pt", x + 50, y + 32, "putTask: unchanged task_tags", "Set comparison inside the existing OperationStore.transaction. Task payload and Version writes remain mandatory.");
+  card("pt-begin", x + 50, y + 200, 650, { title: "OperationStore.appendSync", body: "transaction / BEGIN IMMEDIATE\nvalidate; record committed op_log\napplyEvent -> applyChanges -> putTask", h: 150 });
+  card("pt-compare", x + 1800, y + 200, 850, { title: "putTask / compare Tag ids", body: "tasks LEFT JOIN task_tags WHERE tasks.id=?\nexisting Task + equal sets + no duplicates\nINSERT / UPDATE tasks payload", h: 150 });
+  card("pt-keep", x + 1800, y + 700, 850, { title: "Equal distinct sets / keep task_tags", body: "skip task_tags DELETE and INSERT\npreserve task.tags order in payload", fill: c.accent, h: 130 });
+  card("pt-relink", x + 50, y + 700, 850, { title: "Different, duplicate or new / relink", body: "DELETE FROM task_tags WHERE task_id=?\nINSERT each task.tags array value; duplicates fail\nnew/rebuild projections use actual rows", h: 150 });
+  card("pt-commit", x + 950, y + 1180, 850, { title: "putTask / task_versions -> COMMIT", body: "upsert row_version; publish History + projection\nSQL error rolls the whole transaction back", h: 140 });
+  arrow("pt-enter", "pt-begin", "pt-compare", { label: "validated Event", from: "right", to: "left", labelFont: SANS });
+  arrow("pt-equal", "pt-compare", "pt-keep", { label: "equal sets, no duplicates", from: "bottom", to: "top", labelFont: SANS });
+  arrow("pt-different", "pt-compare", "pt-relink", { label: "different, duplicate or new", from: "left", to: "top", labelFont: SANS, labelAt: [x + 1200, y + 540] });
+  arrow("pt-kept", "pt-keep", "pt-commit", { label: "unchanged links", from: "bottom", to: "right", labelFont: SANS });
+  arrow("pt-relinked", "pt-relink", "pt-commit", { label: "replaced links", from: "bottom", to: "left", labelFont: SANS });
+  marker("pt-m1", x + 1760, y + 180, 1);
+  marker("pt-m2", x + 910, y + 1160, 2);
+  notes("pt-notes", x + 50, y + 1450, 2650, "Numbered notes", [
+    "Equal distinct Tag sets skip relinking. Duplicate arrays take the original INSERT path and fail. Payload order and domain guards stay unchanged.",
+    "Measure WAL frames per real Task edit. verify-op-log compares exact task_tags; verify-occ-atomicity rechecks crash stages.",
+  ]);
+});
+
+frame("perf-cache", "PERF: folded-word cache", 3000, 16000, 3000, (x, y) => {
+  heading("pc", x + 50, y + 32, "TaskSearchCache: PreparedField per Profile + exact text", "The content key preserves output correctness; epoch, ownership tokens and purgeGen fence cache-local retention.\nNo Version key, DB coherence protocol or stored query results.");
+  card("pc-read", x + 50, y + 200, 1050, { title: "TaskCommands.list / CLI list: capture read", body: "read = searchWords.read(request.profile)\nbefore auth.read / SQLite Task read\ncarry captured epoch + generation to EVERY lookup\ncurrent Task title + description + profile_id\nblank clauses skip field preparation", bodySize: 16, h: 230 });
+  card("pc-lookup", x + 1850, y + 200, 1050, { title: "TaskSearchCache.words(read, text)", body: "key = length-prefixed Profile + exact text\nPreparedField { words, preparedUnits }\nhit: entries.get(key).prepared; no prep yield\nmiss: register(read, key, bytes) -> fresh token\nyield* fieldWords(text) prepares words + offsets\nfailed registration computes without retention", bodySize: 16, h: 240 });
+  card("pc-serve", x + 1850, y + 900, 1050, { title: "matchTaskSearchSteps / TaskSearchWork", body: "filterTaskRecordsEffect -> runTaskRecordSteps\nexecution.prepare returns complete PreparedField\ncharge preparedUnits ONCE per field, hit or miss\nsame original strings + ordered UTF-16 spans\nshared search_too_broad; no partial rows", bodySize: 16, fill: c.accent, h: 230 });
+  card("pc-purge", x + 50, y + 900, 1050, { title: "TaskPurged / Snapshots.restore / hygiene observer", body: "clearAll(): epoch++; entries.clear(); pending.clear()\nANY Purge / restore fences EVERY old Read\nlocal Profile delete: evictProfile(profile)\nserver: taskSearchCacheHygiene.run, 250 ms polls\nnew committed seq/kind/original_kind only\nclose(): permanent closed fence + clearAll()", bodySize: 16, fill: c.warningFill, h: 230 });
+  card("pc-admit", x + 1150, y + 1510, 1750, { title: "TaskSearchCache.prepare / retain / dropPending", body: "pending.get(key) === token && canAdmit(read)\ncanAdmit: !closed && read.epoch == epoch\nAND captured generation == current purgeGen\nretain only completed PreparedField; later token wins\nfinally: dropPending(key, token), OWN current slot only\nretained + pending cocharged <= 16 MiB; LRU reserve()\nentries <= 4096 AND pending <= 4096\nentry > 4 MiB / no slot -> compute without retention\ntransient buffers + purgeGen metadata outside charge", bodySize: 16, h: 270 });
+  arrow("pc-start", "pc-read", "pc-lookup", { label: "read + exact current text", from: "right", to: "left", labelFont: SANS });
+  arrow("pc-use", "pc-lookup", "pc-serve", { label: "synchronous hit / complete payload", from: "bottom", to: "top", labelFont: SANS });
+  arrow("pc-hygiene", "pc-purge", "pc-admit", { label: "clearAll / Profile revocation", from: "bottom", to: "left", labelFont: SANS });
+  arrow("pc-bound", "pc-lookup", "pc-admit", { label: "miss / yield* fieldWords(text)", from: "left", fromT: 0.8, to: "top", via: [[x + 1450, y + 392], [x + 1450, y + 1420]], labelFont: SANS });
+  arrow("pc-prepared", "pc-admit", "pc-serve", { label: "PreparedField / retained or uncached", from: "top", fromT: 0.78, to: "bottom", toT: 0.7, labelFont: SANS });
+  marker("pc-m1", x + 1810, y + 180, 1);
+  marker("pc-m2", x + 20, y + 880, 2);
+  marker("pc-m3", x + 1110, y + 1490, 3);
+  notes("pc-notes", x + 50, y + 1900, 2850, "Numbered notes", [
+    "The exact Profile/text key preserves words, original UTF-16 offsets and preparedUnits after edits, Revert, Snapshot restore and rebuild.\nThe matcher charges the same preparation count on both paths. This memo does not mitigate the first fold of expanding text.",
+    "ANY Purge or Snapshot restore clears ALL Profiles and fences old reads. Observer: committed redacted TaskPurged / ProfileDeleted, <= 1000 ms; generation change clears then resets max seq.\nOwn writes can clear again harmlessly. One uncached refill after rare owner Purge is deliberate. Local Profile delete can evict its Profile. Memory hygiene is not DB coherence.",
+    "TaskSearchCacheAdmission.tla checks ClearAll epoch fencing, admission provenance, pending cleanup, complete hits and bounds at 2 keys / 2 preparations / capacity 2.\nReal-Effect controls and same-source cold/partial/warm/uncached work, full JSON/spans and literal bounds complement the finite model; charged bytes are not RSS.",
+  ]);
+});
+
+frame("perf-refresh", "PERF: minimal client refresh", 6400, 16000, 3000, (x, y) => {
+  heading("pr", x + 50, y + 32, "TodoModel.refresh / renderer refresh: request scope", "Full/query split. Existing requestedIdentity, appliedSearchSnapshot, appliedSearch and canPublishSearch remain authoritative.");
+  card("pr-input", x + 50, y + 220, 900, { title: "setSearchText / changeSearch / filter Apply", body: "invalidate refreshGeneration immediately\ncapture full requestedIdentity after debounce\nretain rows + highlights while Requesting", h: 150 });
+  card("pr-query", x + 1950, y + 220, 900, { title: "Query-only refresh / search IPC", body: "taskRequest search / readSearchRows\ntasks.list with current text and filters\nreads.view only for current planning view\nasync let / Effect.all: await both", h: 150 });
+  card("pr-full", x + 50, y + 850, 1000, { title: "Full refresh / catalog still owed", body: "catalogStale / catalogOwedRef set before reads\ntasks, matching_tasks, discovery, four views\ninput, failed or obsolete full keeps obligation\nonly guarded full publication clears it", h: 175 });
+  card("pr-guard", x + 1950, y + 850, 900, { title: "canPublishSearch / activeQuery guards", body: "latest request + generation + full identity\naccept all awaited reads or guarded Error\nobsolete success/error changes no visible state", h: 150 });
+  card("pr-publish", x + 800, y + 1450, 1400, { title: "appliedSearchSnapshot / appliedSearch", body: "publish response strings + spans + planning membership together\nquery-only keeps catalog; full publishes owed names and counts\nError retains rows; Retry or current-Profile SSE recovers", fill: c.accent, h: 150 });
+  arrow("pr-request", "pr-input", "pr-query", { label: "catalog ready; no full owed", from: "right", to: "left", labelFont: SANS });
+  arrow("pr-queryready", "pr-query", "pr-guard", { label: "1 request for All tasks; 2 for planning", from: "bottom", to: "top", labelFont: SANS });
+  arrow("pr-fullready", "pr-full", "pr-guard", { label: "all full-refresh reads settle", from: "right", to: "left", labelFont: SANS });
+  arrow("pr-fallback", "pr-input", "pr-full", { label: "catalog absent or still owed", from: "bottom", to: "top", labelFont: SANS });
+  arrow("pr-current", "pr-guard", "pr-publish", { label: "current response only", from: "bottom", to: "right", labelFont: SANS });
+  marker("pr-m1", x + 1910, y + 200, 1);
+  marker("pr-m2", x + 1910, y + 830, 2);
+  marker("pr-m3", x + 760, y + 1430, 3);
+  notes("pr-notes", x + 50, y + 1780, 2850, "Numbered notes", [
+    "Electron already runs nine reads concurrently. Swift uses async let for full and query reads. Count real HTTP calls through both clients.",
+    "TaskSearch.tla guards full/query races and catalogOwed. A query superseding SSE or a write must still publish the owed full catalog.",
+    "Keep offline unfiltered cache, drafts and dialog rollback. Compact-first headless drives and offscreen captures respect native HOLD.",
+  ]);
+});
 const discoveryFrames = [
   {
     id: "agent-errors", name: "Exit-code meanings", x: 0, y: 16000,

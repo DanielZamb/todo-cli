@@ -1,3 +1,46 @@
+# Main4c merged verification
+
+Product source is `26367043`, which adds only a discovery fixture to merged `dc43db3f`.
+This is verification maintenance shipped with the Performance PR. Required
+formal paths are repo-relative, historical receipts are provenance only, and
+preparation builds or locates current source-hash binaries. Canonical artifacts
+retain their actual producer `dc43db3f`; the complete producer and candidate input
+inventories must agree. No old C/D receipt is reopened or relabeled.
+
+The original final-clean retry failure and real HTTP/SSE probe are preserved.
+A ready full refresh legitimately supersedes the held manual retry. The original
+.applied assertion now follows observed ready completion; a named regression
+requires .superseded, newer revealed rows, cleared error and preserved draft,
+then one data read proving cleared catalog debt. Twenty consecutive fresh
+eight-test runs passed, 160 tests total. The full 113 state suite also passed.
+No product generation guard, UI, geometry assertion, delay or retry changed.
+
+Current TaskSearch formal checks, matcher controls, cache one-command, AtomicCAS,
+compiled discovery/search/API/SSE, both clients' full/query/count drives, generated
+contracts and unsigned build passed. Required-path controls reject absolute,
+outside-repo and escaping-symlink inputs. All dependency pins stayed unchanged.
+The final committed verifier command and locked-check exits are recorded in the
+local integration ledger. Earlier interrupted, temporary-census and concurrent
+verifier-edit typecheck failures remain evidence and are not counted as passes.
+
+The full design suite fails identically on clean main `4c904d96`: 12 Compact Import
+geometry assertions across 6 screens. It is pre-existing and tracked as an owner
+Task. All 347 candidate PNGs and raw baseline receipts remain. Search, 60 images, and
+discovery, 116 images, offscreen subsets pass; full design-suite success is not claimed.
+No new paired performance window or latency claim is made. Native activation,
+Keychain, signed persistence and mechanical/unbounded refinement stay unproved.
+
+## Earlier checkpoints and original receipts
+
+# Performance/main integration verification maintenance
+
+The former carried receipts below are historical provenance only. Current commands
+never open those paths. Fresh merged-source proofs are pending at this checkpoint;
+no old C/D execution is relabeled. See the current skill prerequisites and the
+integration report for fresh command exits and the explicitly unproved limits.
+
+## Historical record
+
 # Final integrated formal mapping
 
 Both formal mappings name immutable merged candidate
@@ -124,7 +167,7 @@ reports. Both formal mappings name the same f85 candidate.
 
 ## Merged provenance and historical receipts
 
-carried-inputs.json binds current root results and fixed backend hashes. The
+HISTORICAL-INPUTS.json binds current root results and fixed backend hashes. The
 input gate compares immutable trees, hashes every text receipt and fixed B9
 binary, and never reads a mutable build manifest. Root full-check-sec36f9 and
 all CLI/HTTP discovery/search, Electron discovery/report/stale401, Swift 110+21

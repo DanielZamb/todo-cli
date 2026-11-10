@@ -13,6 +13,8 @@
     "./check.ts",
     "./check-electron.ts",
     "./check-swift.ts",
-    "./check-inputs.ts"
+    "./check-inputs.ts",
+    "./prepare-inputs.ts",
+    "../../../scripts/check-verification-paths.ts"
   ]
 }

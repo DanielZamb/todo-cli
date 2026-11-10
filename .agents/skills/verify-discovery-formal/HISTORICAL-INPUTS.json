@@ -300,5 +300,8 @@
     "scope": "historical c488 checkpoint only; no final source-equivalence claim"
   },
   "productCommit": "36f9c56e200048aa2ca16186aaf713bea8d5454e",
-  "integrationCommit": "81cdef8ec257a8ca7e1cbfb1ab2b3ff3afcbbf14"
+  "integrationCommit": "81cdef8ec257a8ca7e1cbfb1ab2b3ff3afcbbf14",
+  "historicalOnly": true,
+  "runtimeInput": false,
+  "note": "Original provenance retained without reopening old paths. Current checks use fresh prepare-inputs receipts at the reviewed merged-source candidate."
 }

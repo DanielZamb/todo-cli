@@ -89,7 +89,7 @@ Do not relax `AtomicCAS`, change a pin, or update hashes to obtain a pass.
 ## Check the model against the code
 
 The mapping was confirmed at commit
-`f709549c30d7f76543b103f6d31b7c78d2840664`.
+`ed4e2423d696d0321bb0e19674bba1865bd2541d`.
 [coverage.json](coverage.json) records exact source hashes and covered functions.
 The gate covers whole files conservatively, even when only one function matters.
 
@@ -192,7 +192,48 @@ At product commit `ed4e2423d696d0321bb0e19674bba1865bd2541d`, only `attachments.
 
 Batch groups and import adoption compose existing commands within the existing immediate transaction. The model still excludes command-input handoff and multiple operations in an outer transaction. The compiled CLI01 drive, import tests and Attachment verification cover those behaviors separately.
 
-## Limits mapping review
+## PERF-tags mapping review
+
+Product commit `d83d61863b95d2482ca9281a34d5db4494abffbb` changes only
+`putTask` in the modeled production path. Its SELECT reads actual link rows
+inside the existing immediate transaction. Equal Tag sets with distinct payload
+ids skip only link DELETE and INSERT. Other inputs use the original array INSERT
+loop, so duplicate ids fail the link primary key and roll back the transaction.
+This D1 correction supersedes the duplicate-collapse behavior in `07550ecd`.
+The Task payload statement still precedes the separate
+Version statement, so `Apply`, `WriteVersion`, `Commit` and every crash boundary
+remain in the same order. The abstract no-Tag fixture still describes both
+writes; the concrete Tag proof in `verify-op-log` covers link branches, payload
+order, duplicate constraint failures, rebuild, rollback, Move, Delete and Revert.
+
+The inherited mapping had drifted before this unit. Inspection of the delta
+from `ed4e2423` through parent `8c7c7b10` found bounded rejection inputs and
+result-list limits in `store.ts`, auth-only event alternatives in `events.ts`,
+and Attachment input limits in `attachments.ts`. The existing small concrete
+fixtures remain valid, before-value comparison and next-Version validation
+remain mandatory, and the transaction and append order are unchanged. These
+new guards can reject other inputs before `Record`, without adding a durable
+state. Entities and ids are unchanged. The model still excludes input limits,
+auth and multi-Task composition as stated above.
+
+Both real-code sensitivity variants failed at behavioral assertions with
+exit 1; the restored checker passed with exit 0. The reviewed production source
+hashes and `confirmedCommit` were then renewed. Local evidence is
+`docs/evidence/fv01/sensitivity-Km03fK/` and
+`docs/evidence/perf-tags/sensitivity-reviewed.log`. The one-command clean
+recheck and the full worker report record the final evidence location.
+
+For the D1 correction, the pre-renewal checker completed the model and production
+stages before failing only the changed projection hash. The mapping review above
+keeps every atomicity boundary unchanged. Fresh sensitivity again rejected both
+real-code defects with exit 1 and passed the restored command with exit 0.
+Evidence is `docs/evidence/perf-tags/d1/sensitivity.log` and
+`docs/evidence/fv01/sensitivity-d7gc1J/`. The source hashes now identify `d83d6186`.
+
+## SEC limits mapping review at its pre-Tag base
+
+This section records SEC's review of its pre-Tag base. Its projection comparison does not describe the integrated Tag optimization above.
+
 
 The source gate failed against `ed4e2423`, which is not an ancestor of `main`. The drift in `store.ts`, `events.ts` and `attachments.ts` came from the input-limits and sign-in-lockout work already on `main`. `projection.ts`, `entities.ts` and `ids.ts` are byte-identical. The reviewed product commit is `main` at `f709549c30d7f76543b103f6d31b7c78d2840664`. Its covered files are byte-identical to `feat/task-search` at `c11f7ec9`.
 
@@ -203,6 +244,28 @@ The source gate failed against `ed4e2423`, which is not an ancestor of `main`. T
 - The external reason passed to rejection recording is now capped at 64 units. The driver's reasons are short codes.
 
 No transition, invariant or fixture changed. The check exited 0 with 37,036 distinct states. `prove-sensitivity.ts` exited 0: both store breaks failed the enumeration, and the restored source passed. One earlier candidate run exited 1 when `kill-validated` exceeded its 15-second readiness timer at host load 41. A rerun on the same source exited 0.
+
+## PERF and SEC base integration
+
+The merged covered source files are byte-identical to the reviewed Tag mapping at `d83d61863b95d2482ca9281a34d5db4494abffbb`. SEC changes search preparation, filtering and command reads outside these covered store files. The combined mapping retains the distinct-Tag fast path, duplicate rollback, transaction boundaries and both prior sensitivity receipts. The integration runs the unchanged atomicity command again; no source hash is advanced.
+
+## PERF-cache yielding memo mapping
+
+At product commit 41926044ff53b94c7ac0c1bb779c75143aa3c281 the only covered
+source change from d83d6186 is store-owned cache state and synchronous hygiene:
+close fences admission; Profile deletion revokes and drops its cache state;
+TaskPurged advances its cache generation and evicts matching historical text
+after applyEvent and before existing redaction. These steps neither await nor
+change SQLite values, before/next-Version validation, History insertion, projection
+application, writer lock, transaction commit or replay. Cache effects may survive
+a rollback as lost retention only. The atomicity model and crash boundaries are
+unchanged. The reviewed Tag projection and all other covered files are identical.
+
+The isolated exact-source sensitivity run at
+`.scratch/occ-integrated/docs/evidence/fv01/sensitivity-DfaqCl` rejected both
+real store defects at behavioral assertions (exit 1 each), restored byte-identical
+source and passed the same command (exit 0). Only then were the shared mapping
+hashes renewed. The final clean command runs on the actual worktree separately.
 
 ## Agent discovery mapping review
 

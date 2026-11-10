@@ -15,6 +15,7 @@ import time
 import urllib.request
 
 root = Path(__file__).resolve().parents[3]
+resolved_paths = subprocess.check_output(['git', 'ls-files', '--', ':(glob)**/Package.resolved', 'Package.resolved'], cwd=root, text=True).splitlines()
 evidence = Path(sys.argv[1])
 snapshots_only = '--snapshots-only' in sys.argv[2:]
 shared_receipt = os.environ.get('TODO_F13_SERVER_RECEIPT')
@@ -79,7 +80,19 @@ with scratch_directory() as temporary:
     env = {key: value for key, value in os.environ.items() if not key.startswith('TODO_')}
     env.update(HOME=shared['home'] if shared else str(home))
 
+    def package_state(name, phase):
+        command = ['git', 'diff', '--exit-code', 'HEAD', '--', *resolved_paths]
+        result = subprocess.run(command, cwd=root, capture_output=True, text=True)
+        (evidence / f'{name}.packages-{phase}.json').write_text(json.dumps(dict(command=command, exit=result.returncode, stdout=result.stdout, stderr=result.stderr, hashes={path: hashlib.sha256((root / path).read_bytes()).hexdigest() for path in resolved_paths}), indent=2) + '\n')
+        return result.returncode
+
     def run(command, name, environment=env, timeout=600):
+        swift = command[:2] in [['swift', 'build'], ['swift', 'run'], ['swift', 'test']]
+        if swift:
+            if '--disable-automatic-resolution' not in command:
+                command = [*command[:2], '--disable-automatic-resolution', *command[2:]]
+            if package_state(name, 'before'):
+                raise RuntimeError('Package.resolved changed before Swift invocation')
         with (evidence / name).open('w') as log:
             working = scratch if command[:2] == ['bun', 'build'] else root
             process = None
@@ -90,10 +103,11 @@ with scratch_directory() as temporary:
             finally:
                 if process is not None:
                     stop(process)
-        actions.append(dict(command=[str(value) for value in command], exit=code))
+        packages = package_state(name, 'after') if swift else None
+        actions.append(dict(command=[str(value) for value in command], exit=code, packageResolvedDiffExit=packages))
         (evidence / 'commands.json').write_text(json.dumps(actions, indent=2) + '\n')
-        if code:
-            raise RuntimeError(f'{name} failed with exit {code}')
+        if code or packages:
+            raise RuntimeError(f'{name} failed: command exit {code}, Package.resolved diff exit {packages}')
 
     try:
         if shared:

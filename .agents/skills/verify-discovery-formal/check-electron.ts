@@ -9,10 +9,11 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
+import { verificationRoot } from "../../../scripts/verification-inputs";
 
 const skill = import.meta.dirname;
-const root = resolve(skill, "../../..");
+const root = verificationRoot(skill);
 const commit = process.argv[2];
 assert.match(
   commit ?? "",

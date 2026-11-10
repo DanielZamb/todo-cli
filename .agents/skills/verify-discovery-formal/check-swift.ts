@@ -12,25 +12,29 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { tmpdir } from "node:os";
-import inputs from "./carried-inputs.json";
+import coverage from "./coverage.json";
+import { discoveryInputs } from "./inputs";
+import {
+  repositoryInput,
+  verificationRoot,
+} from "../../../scripts/verification-inputs";
 
 const skill = import.meta.dirname;
-const root = resolve(skill, "../../..");
-const commit = process.argv[2] ?? inputs.candidateCommit;
-assert.equal(
-  commit,
-  inputs.candidateCommit,
-  "Review the new candidate before changing this checkpoint",
-);
+const root = verificationRoot(skill);
+const commit = process.argv[2] ?? coverage.candidateCommit;
+assert.match(commit, /^[a-f0-9]{40}$/, "Pass the full reviewed candidate SHA");
+const inputs = discoveryInputs(root, commit);
 const base = join(root, "docs/evidence/discovery-formal");
 mkdirSync(base, { recursive: true });
 const evidence = mkdtempSync(join(base, "swift-"));
 const captured = join(evidence, "source");
 mkdirSync(captured);
 const reuse =
-  process.argv[3] === undefined ? undefined : resolve(process.argv[3]);
+  process.argv[3] === undefined
+    ? undefined
+    : repositoryInput(root, process.argv[3], "TODO_DISCOVERY_SWIFT_REUSE");
 if (reuse)
   assert.ok(
     reuse.startsWith(`${base}/swift-`),
@@ -112,7 +116,7 @@ async function success(
   assert.equal(result.exit, 0, `${label}: inspect ${evidence}`);
   return result.out;
 }
-const slot = "/Users/zambamon/Work/todo-cli/scripts/swift-slot.sh";
+const slot = repositoryInput(root, "scripts/swift-slot.sh", "Swift build slot");
 const wrapper = join(skill, "swift-command.sh");
 const clientFile = "apps/macos/Sources/Discovery.swift";
 const modelFile = "apps/macos/Sources/TodoModel.swift";
@@ -248,8 +252,11 @@ try {
     writeFileSync(packagePath, proofPackage);
   const build = join(reuse ?? evidence, "swift-build");
   if (!reuse) mkdirSync(build);
-  const installed =
-    "/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/apps/macos/API/.build";
+  const installed = repositoryInput(
+    root,
+    process.env.TODO_DISCOVERY_SWIFT_SEED ?? "apps/macos/API/.build",
+    "TODO_DISCOVERY_SWIFT_SEED (run make generate-api first)",
+  );
   if (!reuse)
     for (const path of ["checkouts", "repositories", "workspace-state.json"])
       await success(`dependencies-${path.replace(".json", "")}`, "cp", [

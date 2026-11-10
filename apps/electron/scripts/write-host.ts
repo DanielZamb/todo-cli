@@ -225,7 +225,10 @@ async function boot() {
           return outdated;
         }
       }
-      if (request._tag === "list" && failNextList) {
+      if (
+        (request._tag === "list" || request._tag === "search") &&
+        failNextList
+      ) {
         failNextList = false;
         return { _tag: "error", message: "Scratch list read failed." };
       }
@@ -334,7 +337,7 @@ async function boot() {
               }),
             ),
           ).then((reply) => {
-            if (request._tag === "list")
+            if (request._tag === "list" || request._tag === "search")
               process.emit("todo:verify-list-result", reply._tag);
             return reply;
           });

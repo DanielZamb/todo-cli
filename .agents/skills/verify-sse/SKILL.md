@@ -125,6 +125,17 @@ binary. Executable `scripts/drive.py <scratch> <evidence>` starts the compiled
 server and drives curl and the CLI. Invoke the shell helper for cleanup.
 Use `/maintain-verification-skill` when stream behavior changes.
 
+The server also starts Task-search cache hygiene before serving HTTP. Its independent
+250 ms poll uses a domain narrow committed-event query and Snapshot generation.
+Purge, external Profile deletion and restore clear the entire memo and fence old
+reads; this does not change SSE delivery or scheduler writes. The cache skill's
+check-hygiene.mjs and compiled erase-lifecycle.mjs cover these paths, including
+restore then external Purge before the next poll and literal 1000 ms eviction.
+The generation metadata query filters canonical NULL Profile/snapshot-restore
+headers using the existing Profile/seq index before JSON extraction. No historical
+Task payloads are decoded per tick. No launchd or installed server is needed for
+this cache proof; use only recorded scratch processes.
+
 ## Authorized discovery
 
 [verify-discovery](../verify-discovery/SKILL.md) owns the compiled Profile directory

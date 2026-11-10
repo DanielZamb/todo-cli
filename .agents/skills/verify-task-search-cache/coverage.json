@@ -1,0 +1,63 @@
+{
+  "productCommit": "dc43db3f16e3e1591793bf13b18127acd2be939d",
+  "scope": "Confirmed main4c composition: exact-text memo and global erasure fences, current generated/meter/admission/model controls, compiled lifecycle and structured CLI errors",
+  "seed": "0x5ea2c001",
+  "files": [
+    {
+      "path": "task-search-cache.ts",
+      "sha256": "a7a24d8211ebf7aaf1cf559547f7339150d680db9ac3a81c4ccea283e2b76baf"
+    },
+    {
+      "path": "task-search.ts",
+      "sha256": "1a82bab698508fe98c1d7de11fddbaf910454d69c3f6534e45e8b0ce9203c23c"
+    },
+    {
+      "path": "task-filters.ts",
+      "sha256": "8cd2744d66656987286a0d179b37ec41f1424f9d4dce13418d8d6f3c5bdec890"
+    },
+    {
+      "path": "commands.ts",
+      "sha256": "6d4c1e4b478d4fc62e9c1c115ddb693cf28f09558cc0260610b1682be9e47e12"
+    },
+    {
+      "path": "store/store.ts",
+      "sha256": "bb3f0f0855c3bd5128b8d5f4c164734d13a04250ad7dfe32eacc18cf3ac69a60"
+    },
+    {
+      "path": "store/snapshots.ts",
+      "sha256": "14774139fc4c323eedd7d2b31f28182b0b447a4b776bad1e58b354b434b1adb8"
+    },
+    {
+      "path": "store/search-cache-events.ts",
+      "sha256": "4f0276e1953a56db0a31844c51faec02835eea134b04a06ed2ba6e9231d6d600"
+    }
+  ],
+  "review": "Reviewed CLI boundary preserves typed2 and catchDefect1 through shared Agent rendering. TaskCommands Read capture remains before auth; TaskIdPrefix schema extraction is unchanged predicate. Server cache fork captures cursor before handlers alongside discovery routes; observer/store epochs unchanged. Fresh generated and observer controls reached strict restoration then intentionally failed the old source-hash gate. Immutable compiled erasure and Agent-shaped defect witnesses passed. No retiming. Full one-command verify-sK6L84 passed after the reviewed renewal; fixed source is not retimed.",
+  "reviewedCandidate": false,
+  "hygieneFiles": [
+    {
+      "path": "apps/server/src/task-search-cache-hygiene.ts",
+      "sha256": "be77122a27f471e8d9804f6215bdd5c8622bfcdf952130cdb7e58ebd8b61883b"
+    },
+    {
+      "path": "apps/server/src/server.ts",
+      "sha256": "676c49611faad9688938b4992cc855c26b888fb647fc3850f8ed63c841f14006"
+    },
+    {
+      "path": "packages/domain/src/store/search-cache-events.ts",
+      "sha256": "4f0276e1953a56db0a31844c51faec02835eea134b04a06ed2ba6e9231d6d600"
+    },
+    {
+      "path": "packages/domain/src/store/snapshots.ts",
+      "sha256": "14774139fc4c323eedd7d2b31f28182b0b447a4b776bad1e58b354b434b1adb8"
+    },
+    {
+      "path": "packages/domain/src/store/store.ts",
+      "sha256": "bb3f0f0855c3bd5128b8d5f4c164734d13a04250ad7dfe32eacc18cf3ac69a60"
+    },
+    {
+      "path": "apps/cli/src/main.ts",
+      "sha256": "31a42e05fb2ae90829b2b9981cfb2ffcc4ba10e2738d47a058a3dc426f1d2b29"
+    }
+  ]
+}

@@ -1,89 +1,71 @@
 # Verification prerequisites
 
-This skill verifies the current Todo workspace and its reviewed local evidence.
-It is not a standalone source-only proof bundle. Run from the bound worktree
-root. `coverage.json` names the immutable candidate; the corresponding Git
-objects must exist locally. The default command makes fresh independent source
-copies and fresh scratch databases. It does not require a previous E test run.
+Run from a Git checkout with the reviewed candidate object and installed pnpm
+dependencies. The helpers resolve the repo root with `git rev-parse --show-toplevel`.
+Java 11+, Bun, curl and the existing Swift toolchain are required. Do not upgrade
+dependencies or install Bun. Source copies are independent files; only installed
+node_modules may be shared. No native app, hosted XCTest, signing, Keychain or
+real Todo data is used.
 
-## Required inputs
+## Prepare current inputs
 
-- Java 11+, existing Bun/pnpm/TypeScript dependencies, curl for an absent pinned
-  TLC jar, and the selected Swift toolchain/SDK that can build this repository's
-  macOS target. Never install Bun or upgrade dependencies for this check. If
-  pnpm dependencies are absent, use the authorized disk guard followed only by
-  frozen-lockfile/offline installation.
-- Installed node_modules at this worktree root and at packages/domain,
-  packages/api and apps/electron. The copy helpers may link only those installed
-  dependencies. Captured application/domain source must be independent regular
-  files, never live-source symlinks or hardlinks.
-- EVERY absolute text/JSON path in `carried-inputs.json:receipts`, including the
-  run-store C/D text archives and root full-check/sec-base metadata. These are
-  ignored local evidence prerequisites. The checker hashes the files; it does
-  not fetch or reconstruct them. Historical path strings inside their JSON do
-  not require the old binaries or screenshots to exist.
-- The THREE current binaries in `carried-inputs.json:backend.binaries`: root
-  `.scratch/bin/b9ec2d8ebf6e-36f9c56e2000/{todo,todo-server,seed}`, with the exact
-  recorded hashes and builtHead 36f9. They are external ignored cache inputs,
-  not binaries built by this skill. The previousCheckpoint object is historical
-  metadata; its retired 7f846/fad binary paths are not read.
-- For a default fresh Swift build, the installed dependency seed at the exact
-  root integration location
-  `/Users/zambamon/.t3/worktrees/todo-cli/feat-agent-discovery/apps/macos/API/.build/`.
-  Its checkouts, repositories and workspace-state.json are copied into E-owned
-  scratch build storage. This is distinct from the retired root apps/macos/.build
-  and DerivedData. The default helper currently needs this seed even when Bun
-  dependencies are installed. It does not resolve/install/upgrade Swift pins.
-
-Inventory the carried metadata and fixed binaries before the expensive stages:
+After committing and reviewing the source, run:
 
 ```sh
-bun .agents/skills/verify-discovery-formal/check-inputs.ts
+candidate=$(git rev-parse HEAD)
+bun .agents/skills/verify-discovery-formal/prepare-inputs.ts "$candidate"
+bun .agents/skills/verify-discovery-formal/check-inputs.ts "$candidate"
 ```
 
-A missing path/hash or immutable source mismatch is a failed prerequisite, not
-sensitivity and not a model counterexample. Retain its result/command receipts
-and report the exact missing prerequisite. Restore reviewed text/artifacts or
-review a replacement provenance mapping; do not read a newer mutable build
-manifest, silently advance hashes or rebuild an unchanged producer to hide it.
+The preparation command runs current domain and scope-removal checks, builds or
+locates CLI/server/seed binaries by the complete backend source hash, and runs
+compiled discovery, authorization-boundary and enrichment-history drives. It
+retains their actual exits and logs. The immutable candidate, source inventory,
+relative binary paths and hashes are frozen in
+`docs/evidence/discovery-formal/current-inputs.json`. A different manifest may
+be selected with the repo-relative TODO_DISCOVERY_INPUTS variable. Paths must
+stay inside this checkout, including after symlink resolution. The checker
+rejects missing inputs, failed stages, source drift and altered artifacts.
 
-The one-command default is:
+No command reads HISTORICAL-INPUTS.json. Its former absolute paths are provenance
+text only. Earlier C/D visuals, native interaction, session persistence and
+clipboard are not re-proven by the current formal command. Current compiled
+client workflows remain separate requirements in the integration report.
+
+## Swift dependencies and cache reuse
+
+The default installed seed is `apps/macos/API/.build`. Populate it first with:
 
 ```sh
-bun .agents/skills/verify-discovery-formal/check.ts
+scripts/swift-slot.sh make generate-api
 ```
 
-TaskSearch has its separate command and candidate in its own skill. The final
-handoff binds both commands to the same immutable source candidate.
+API generation and every SwiftPM invocation disable automatic resolution.
+TODO_DISCOVERY_SWIFT_SEED may name another repo-relative installed seed with
+checkouts, repositories and workspace-state.json. If absent, the error names
+the variable and the missing default. No dependency download or pin change is
+hidden in this step. All three Package.resolved files must remain unchanged.
 
-## Optional E-owned Swift cache reuse
+The formal command normally makes a fresh Swift build. Optional
+TODO_DISCOVERY_SWIFT_REUSE names a repo-relative restored attempt under
+`docs/evidence/discovery-formal/swift-*`; check-swift.ts accepts the same path
+as its third argument after the candidate. Reuse validates all copied source
+against a new immutable archive and uses a fresh database for every test.
 
-Reuse is an optimization, not a hidden default prerequisite. A caller without
-a previous E build uses the default fresh-build path above. For this final run,
-the retained current f85 attempt is `docs/evidence/discovery-formal/swift-Zvw6WF`
-under E's bound worktree. That ignored directory must actually contain its
-restored source and swift-build if it is selected. Old c488 caches were retired.
+Both workflows run controls rejecting absolute, outside-repo and escaping-symlink
+inputs, then rerun valid inputs. Discovery additionally mutates a required
+receipt path inside its manifest. Invalid paths must produce exit 1 with the
+named path error, not a model or compiler failure.
 
-For the combined command, set TODO_DISCOVERY_SWIFT_REUSE to the absolute attempt
-directory. For a Swift-only command, pass that directory as check-swift.ts's
-third argument after the full candidate SHA. Reuse accepts only this E
-worktree's source/build directories, checks every reused source against a new
-immutable archive, and still makes a fresh database per test. It needs no
-removed C/D worktree, old root producer cache or retired root Swift cache.
-Do not run concurrent actors against the same reused source/build directory.
+## Resource limits
 
-## Resource gate and scope
+Every Swift command uses the checkout's scripts/swift-slot.sh and the formal
+Swift wrapper. The default soft floor is 30 GiB and the hard disk guard remains.
+An owned SOFT-DISK-HOLD latch prevents work until explicit release. Before and
+after receipts retain each command, actual exit and all pin comparisons. Do not
+apply an old worktree-specific floor exception to a new candidate.
 
-Every Swift command uses the shared slot and disabled automatic resolution and
-retains actual argv/stdout/exit plus before/after pin comparisons. The normal
-soft floor is 30 GiB; the hard disk guard is unchanged. The explicit E-final-only
-exception in SKILL.md permits 25 GiB only for the remaining authorized f85/frozen
-proof steps. The exact candidate flag is opt-in and worktree-bound. It is not
-a default for another caller, thread or future run. SOFT-DISK-HOLD stops the
-wrapper regardless of current space until the authorized resume/preflight.
-Native Todo, hosted XCTest, signing, Keychain, installed binaries and real Todo
-data remain outside this workflow.
-
-The relative Claude skill links and frontmatter establish only filesystem
-registration prerequisites. Fresh-session skill discovery/caller usability is
-a separate read-only parent review and is not inferred from those links.
+Cached aliases preserve the original producer identity. Preparation resolves each
+canonical source-hash/commit cache directory and verifies that producer's full
+input inventory against the reviewed candidate before recording builtHead.
+Changing only a metadata head never claims a new binary build.

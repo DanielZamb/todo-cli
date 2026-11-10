@@ -6,6 +6,7 @@ import { afterAll, beforeAll, expect, it } from "@effect/vitest";
 import { JsonSchema, Schema, SchemaRepresentation } from "effect";
 
 const scratch = mkdtempSync(join(tmpdir(), "todo-c12-contract-"));
+const fileLoadedAt = process.hrtime.bigint();
 const binary = process.env.TODO_CLI_BINARY || join(scratch, "todo");
 const serverBinary =
   process.env.TODO_SERVER_BINARY || join(scratch, "todo-server");
@@ -19,13 +20,35 @@ const actions: {
 }[] = [];
 function run(args: readonly string[], input = "", home = scratch) {
   mkdirSync(home, { recursive: true });
+  const timeout = 20000;
+  const wallStartedAt = Date.now();
+  const startedAt = process.hrtime.bigint();
   const result = spawnSync(binary, args, {
     input,
     encoding: "utf8",
     env: { ...process.env, HOME: home, TODO_DB: "" },
-    timeout: 20000,
+    timeout,
   });
-  if (result.error) throw result.error;
+  if (result.error) {
+    const diagnostics = {
+      code: "code" in result.error ? result.error.code : null,
+      signal: result.signal,
+      status: result.status,
+      pid: result.pid,
+      timeout,
+      wallTimeMs: Date.now() - wallStartedAt,
+      monotonicTimeMs: Number(process.hrtime.bigint() - startedAt) / 1e6,
+      cumulativeSinceFileLoadMs:
+        Number(process.hrtime.bigint() - fileLoadedAt) / 1e6,
+      args,
+    };
+    throw Object.assign(
+      new Error(`CLI spawn failed: ${JSON.stringify(diagnostics)}`, {
+        cause: result.error,
+      }),
+      { diagnostics },
+    );
+  }
   const action = {
     code: result.status,
     out: result.stdout,

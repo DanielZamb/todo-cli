@@ -10,12 +10,13 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { Schema } from "effect";
 import candidate from "./matcher-candidate.json";
+import { verificationRoot } from "../../../scripts/verification-inputs";
 
 const skill = import.meta.dirname;
-const root = resolve(skill, "../../..");
+const root = verificationRoot(skill);
 const base = join(root, "docs/evidence/task-search-formal");
 mkdirSync(base, { recursive: true });
 const evidence = mkdtempSync(join(base, "matcher-"));

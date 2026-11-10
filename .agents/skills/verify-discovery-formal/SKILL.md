@@ -5,23 +5,30 @@ description: Check bounded discovery publication and Show provenance with TLA+, 
 
 # Verify discovery publication
 
-Read [the explicit prerequisites](PREREQUISITES.md) first. Carried metadata,
-fixed root B9 binaries and the exact installed Swift dependency seed are external
-local inputs. A previous E build is optional; cache reuse has separate prerequisites.
-
-From the checkout root, run:
+Read [the prerequisites](PREREQUISITES.md). Resolve the checkout with
+`git rev-parse --show-toplevel`. No retired worktree or historical receipt is
+required. After reviewing and committing the merged source, run:
 
 ```sh
-bun .agents/skills/verify-discovery-formal/check.ts
+candidate=$(git rev-parse HEAD)
+bun .agents/skills/verify-discovery-formal/prepare-inputs.ts "$candidate"
+bun .agents/skills/verify-discovery-formal/check.ts "$candidate"
 ```
 
-A pass checks bounded model safety, immutable reviewed source mapping, carried
-root regressions and independent real-source sensitivity/restoration. Both
-formal mappings now name f85aef6faf7d93be80feef930554206e09d61be3, product exact
-36f9c56e200048aa2ca16186aaf713bea8d5454e, root proof integration 81c. The final
-SEC handoff released the TaskSearch hold before its single semantic renewal.
-SOURCE-MAPPING.md names actual awaits, guards, publication and UI dispatch.
-REPORT.md records current and historical receipts without relabeling them.
+Preparation runs fresh domain, scope-removal, compiled CLI/HTTP, authorization
+boundary and enrichment-history checks. It builds or locates this checkout's
+source-hash cache and freezes relative paths, whole-input hashes, binary hashes
+and actual exit receipts in ignored `current-inputs.json`. The formal command
+rechecks those inputs, the bounded model, source mapping and real client controls.
+The candidate must name the reviewed immutable source; the final source hashes
+are renewed only after inspecting covered functions and observing the controls.
+SOURCE-MAPPING.md names the awaits, guards and publication boundaries.
+
+HISTORICAL-INPUTS.json retains the old C/D and root provenance. No command opens
+its paths. Those receipts are historical, not new merged-source executions.
+Old offscreen UI, installed-session persistence, clipboard and native interaction
+claims are not re-proven by this command. The fresh client tests below cover
+only their stated behavior, and the final report names additional current drives.
 
 Created using the create-formal-verification-skill workflow. TLA+ fits this
 question because late replies can publish under a different credential or dialog.
@@ -34,7 +41,7 @@ The command requires Java 11+, Bun, curl and the existing pnpm dependencies.
 It downloads the pinned jar only when absent, after the run's disk guard, and
 verifies its SHA-256 every time. tool.json pins TLA+ tools v1.7.4, TLC 2.19.
 It installs no dependency and launches no native app. Client controls use copied
-source, existing installed dependencies, fixed reviewed backend binaries and
+source, existing installed dependencies, fresh source-hash-verified backend binaries and
 fresh scratch databases. Swift controls substitute only the existing in-memory
 SessionVault fixture. Keychain, signed apps, installed Todo and real data remain
 under HOLD.
@@ -154,7 +161,7 @@ and a fresh-database clean rerun. A final combined clean run follows. This is
 headless execution, not native alert activation or hosted XCTest.
 
 Before every Swift series and command, swift-command.sh checks its default
-30GiB floor or the scoped E-final exception below
+30 GiB floor
 and runs disk-guard inside the shared swift-slot. Exit3 means stop and report;
 never delete foreign files or override the floor. Every SwiftPM argv contains
 --disable-automatic-resolution and is recorded with stdout/stderr/actual exit.
@@ -162,17 +169,17 @@ All three copied Package.resolved files have before/after hashes and actual
 git diff --no-index exit receipts around each invocation. No resolution or pin
 upgrade is authorized. Swift installed dependencies are copied from the root
 integration cache; no C/D worktree path is used. An optional third argument to
-check-swift.ts reuses only this E worktree's already restored independent source
+check-swift.ts reuses only this checkout's already restored independent source
 and build cache. It validates every source against a new immutable archive first.
 
-carried-inputs.json pins final merged root36f9/81c receipts and fixed B9
-binary paths/hashes/build provenance. Original C/D/c488 text remains historical. check-inputs.ts
-checks source equivalence and receipt hashes; it never reads a mutable cache
-manifest. Historical canonical B and legacy Attachment cache labels use different
-algorithms; the current merged source hash is separately named. Carried proofs keep their
-original SHA and exit, including old red/setup/notification failures. They do
-not become new c488 executions. Archives contain text and artifact hash metadata;
-this skill does not require the removed C/D binaries or screenshots.
+The input gate accepts only repo-relative paths whose real targets stay within
+the checkout. Both formal commands run path controls: an absolute input, a path
+above the checkout and an escaping symlink fail; the restored input passes.
+Discovery also rejects an absolute receipt path inside an otherwise valid manifest.
+A missing prerequisite is a failed check, never a sensitivity counterexample.
+Use `TODO_DISCOVERY_INPUTS` for a different repo-relative fresh manifest.
+`TODO_DISCOVERY_SWIFT_SEED` defaults to `apps/macos/API/.build`; populate it
+with the existing API-generation step, without changing dependency pins.
 
 Before advancing covered source hashes, inspect every mapped await/publication
 boundary, prove controls/restoration and retain production regression receipts.
@@ -187,22 +194,12 @@ skill discovery. Fresh-session discovery is not established by that link alone.
 The unit forbids children, so no-comments is audited locally. Independent audit
 belongs to the permitted seat-1 review. No extra child is launched.
 
-## E-final resource authorization
+## Resource and reuse limits
 
-The default Swift soft floor remains 30 GiB. An explicit coordinator exception
-for this E-final run permits 25 GiB (26,214,400KiB) only for remaining f85 controls,
-the final discovery command and frozen proof/check steps. The wrapper accepts
-TODO_E_FINAL_ORDER29_EXCEPTION=f85aef6faf7d93be80feef930554206e09d61be3 only in
-this bound E worktree; unset it for unrelated/future work. The hard disk-guard
-floor is unchanged. Authorization and preflight receipts are local under
-final-order29-exception. Do not generalize this exception.
-
-An explicit SOFT-DISK-HOLD file under docs/evidence/discovery-formal blocks the
-wrapper regardless of free space. Clear that owned latch only after explicit
-resume plus a fresh authorized preflight. Every command records its applicable
-floor and disabled-resolution/pin receipts. Reuse the current E f85 cache with
-TODO_DISCOVERY_SWIFT_REUSE pointing to its attempt directory; do not rebuild
-unchanged producer/API dependencies. Adapter/manifest writes are content-checked
-to avoid invalidating unchanged cached inputs. After each test/control the
-helper records an order-30 Bun-temporary census and fails on unexpected files
-requiring ownership/lsof review. It never deletes foreign temporaries.
+The default Swift soft floor is 30 GiB. There is no inherited worktree-specific
+exception. An owned SOFT-DISK-HOLD latch blocks Swift until the coordinator
+releases it. Reuse is optional: set TODO_DISCOVERY_SWIFT_REUSE to a repo-relative
+`docs/evidence/discovery-formal/swift-*` attempt containing restored source and
+its build directory. Every source is checked against a fresh immutable archive;
+every test still uses a fresh scratch database. Do not share a mutable build
+cache between concurrent actors. Order-30 temporary inventories remain required.

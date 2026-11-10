@@ -10,12 +10,27 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import coverage from "./coverage.json";
 import pin from "./tool.json";
+import {
+  repositoryInput,
+  repositoryPath,
+  verificationRoot,
+} from "../../../scripts/verification-inputs";
+import { discoveryInputs } from "./inputs";
 
 const skill = import.meta.dirname;
-const root = resolve(skill, "../../..");
+const root = verificationRoot(skill);
+const candidate =
+  process.argv.find(
+    (value, index) => index >= 2 && value !== "--inputs-only",
+  ) ?? coverage.candidateCommit;
+assert.match(
+  candidate,
+  /^[a-f0-9]{40}$/,
+  "Pass the full reviewed candidate SHA",
+);
 const base = join(root, "docs/evidence/discovery-formal");
 mkdirSync(base, { recursive: true });
 const evidence = mkdtempSync(join(base, "check-"));
@@ -120,13 +135,37 @@ const stages: unknown[] = [];
 
 try {
   console.log(`Evidence: ${evidence}`);
-  const jar = join(base, "tool-cache/tla2tools.jar");
+  discoveryInputs(root, candidate);
+  repositoryInput(root, coverage.contract.path, "Discovery contract");
+  for (const file of coverage.productionFiles)
+    repositoryInput(root, file.path, "Discovery source mapping");
+  const toolCache = repositoryPath(
+    root,
+    process.env.TODO_DISCOVERY_TOOL_CACHE ??
+      "docs/evidence/discovery-formal/tool-cache",
+    "TODO_DISCOVERY_TOOL_CACHE",
+  );
+  if (process.argv.includes("--inputs-only")) {
+    record("result", {
+      passed: true,
+      candidate,
+      scope: "input validation only",
+    });
+    process.exit(0);
+  }
+  const jar = join(toolCache, "tla2tools.jar");
+  const paths = await execute("input-path-controls", "bun", [
+    join(root, "scripts/check-verification-paths.ts"),
+    "discovery",
+    candidate,
+  ]);
+  assert.equal(paths.exit, 0, "Required-input path controls failed");
   if (!existsSync(jar)) {
     const disk = await execute("disk-guard", "sh", [
-      "/Users/zambamon/Work/todo-cli/scripts/disk-guard.sh",
+      join(root, "scripts/disk-guard.sh"),
     ]);
     assert.equal(disk.exit, 0, "Disk guard refused tool download");
-    mkdirSync(join(base, "tool-cache"), { recursive: true });
+    mkdirSync(toolCache, { recursive: true });
     const download = await execute("download", "curl", [
       "--fail",
       "--location",
@@ -168,13 +207,14 @@ try {
     runtime: process.versions,
     coverage,
   });
-  const inputs = await execute("carried-inputs", "bun", [
+  const inputs = await execute("fresh-inputs", "bun", [
     join(skill, "check-inputs.ts"),
+    candidate,
   ]);
   assert.equal(
     inputs.exit,
     0,
-    "Reviewed input equivalence/receipt checks failed",
+    "Fresh merged-source prerequisite checks failed",
   );
   const mapped = coverage.productionFiles.map((file) => ({
     ...file,
@@ -283,12 +323,12 @@ try {
   );
   const clients = await execute("electron-real-code", "bun", [
     join(skill, "check-electron.ts"),
-    coverage.candidateCommit,
+    candidate,
   ]);
   assert.equal(clients.exit, 0, "Real Electron controller sensitivity failed");
   const swift = await execute("swift-real-code", "bun", [
     join(skill, "check-swift.ts"),
-    coverage.candidateCommit,
+    candidate,
     ...(process.env.TODO_DISCOVERY_SWIFT_REUSE === undefined
       ? []
       : [process.env.TODO_DISCOVERY_SWIFT_REUSE]),
@@ -300,7 +340,7 @@ try {
       "bounded discovery safety, reviewed final merged source mapping and real C/D controls",
     productionConformance:
       "manually mapped and regression/sensitivity checked at the named immutable merged candidate; no mechanical refinement",
-    candidateCommit: coverage.candidateCommit,
+    candidateCommit: candidate,
     taskSearch:
       "separate final merged model/matcher/source-mapping command; same candidate",
     head: head.out.trim(),

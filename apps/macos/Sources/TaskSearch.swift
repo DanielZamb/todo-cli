@@ -10,6 +10,16 @@ struct TaskSearchIdentity: Equatable {
     let tag: String?
 }
 
+enum TaskSearchRefreshScope { case full, query }
+
+struct TaskSearchCatalog {
+    let tasks: [TaskSnapshot]
+    let profiles: [DiscoveryEntry]
+    let projects: [DiscoveryEntry]
+    let tags: [DiscoveryEntry]
+    let views: [String: PlanningResult]
+}
+
 enum TaskSearchPhase { case idle, showing, debouncing, requesting, error }
 enum TaskSearchRefreshOutcome: Equatable { case applied, superseded, failed }
 

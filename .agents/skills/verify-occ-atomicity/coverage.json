@@ -1,9 +1,9 @@
 {
-  "confirmedCommit": "36f9c56e200048aa2ca16186aaf713bea8d5454e",
+  "confirmedCommit": "dc43db3f16e3e1591793bf13b18127acd2be939d",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "7121f6621af44a03846124ccbffc6b9841b903e1047eb6b2464ef842caf15353",
+      "sha256": "bb3f0f0855c3bd5128b8d5f4c164734d13a04250ad7dfe32eacc18cf3ac69a60",
       "functions": [
         "OperationStore.constructor",
         "OperationStore.transaction",
@@ -19,7 +19,7 @@
     },
     {
       "path": "packages/domain/src/store/projection.ts",
-      "sha256": "b148e244a30e955a969941018bcc737c24f301bc719fc47a1eb13ae41cbef316",
+      "sha256": "944adc71cfe493c8631119daeba165e16c688426de7e3694112cb3f8b84d465a",
       "functions": [
         "changes",
         "applyEvent",
@@ -69,5 +69,12 @@
         "validAttachmentLocation"
       ]
     }
-  ]
+  ],
+  "reviewedCandidate": false,
+  "review": "Current merged-source AtomicCAS one-command passed at fv01-check-H5HU7k. Every covered body is byte-identical to the previously reviewed PERF source; Authentication discovery snapshot and CLI recovery changes do not alter Validate/Record/Apply/WriteVersion/Commit, rejection or replay. No model change or hash-only renewal of changed bodies.",
+  "integrationReview": {
+    "base": "7c1326bd5ecd1d84cdd9a6426b18e8c380e5d336",
+    "main": "4c904d96277853c60692c685c6d4ea3b3e655bc4",
+    "status": "Reviewed identical covered bodies; fresh actual-worktree model, production and sensitivity stages passed"
+  }
 }

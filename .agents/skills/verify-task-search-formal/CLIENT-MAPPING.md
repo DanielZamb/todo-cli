@@ -1,3 +1,38 @@
+# Performance/main integration verification maintenance
+
+The former carried receipts below are historical provenance only. Current commands
+never open those paths. Fresh merged-source controls and client drives are recorded below;
+no old C/D execution is relabeled. See the current skill prerequisites and the
+integration report for fresh command exits and the explicitly unproved limits.
+
+## Current main4c composition review
+
+The reviewed product source is dc43db3f16e3e1591793bf13b18127acd2be939d.
+Electron retains catalogOwedRef across failed and superseded full requests,
+promotes query scope while owed, and clears it only on guarded full publication.
+Discovery request errors remain scoped to their controller. List/search replies
+use the same generation and complete-identity guard. Sign-out, reload, Profile
+selection and Show navigation invalidate that generation before old publication.
+The Profile-keyed name definitions feed both full and query requests.
+
+Swift captures discovery.credentialEpoch for authorization error handling.
+replaceCredential calls disconnect, which increments the lifecycle generation
+and invalidates search. Successful full and query publications still require
+canPublishSearch's lifecycle, request generation, identity and cancellation
+guards. catalogStale clears only inside that publication. Both read paths use
+readSearchRows for inferred Project and trim-invariant Tag names. Show's explicit
+same-navigation refresh remains full and participates in the catalog debt.
+
+Fresh matcher-Lyo5Sz properties and real-code controls passed. The production
+Electron search drive passed with 170 receipts and no page errors, including
+obsolete full success/error and failed-full recovery. The Swift state drive
+passed 112 tests, generated contracts and diagnostics against scratch HTTP,
+including R1 and both F1 paths. Every Swift pin comparison exited zero.
+The finite TaskSearch model is unchanged. Its separate current command and
+limits remain required; these drives are not a mechanical source refinement.
+
+## Historical record
+
 # Final merged-source review
 
 The final candidate is `f85aef6faf7d93be80feef930554206e09d61be3`, with product
@@ -32,7 +67,7 @@ recovery source. It proves no CPU/heap/output bound, matcher completeness,
 unbounded concurrency, native event delivery or mechanical refinement.
 
 Root's final compiled client and domain regressions are pinned in the discovery
-skill's carried-inputs.json and checked by its one-command input gate. The root
+skill's HISTORICAL-INPUTS.json and checked by its one-command input gate. The root
 full check and all discovery/search/state/unsigned/design drives retain their
 actual product SHA 36f9. The corrected Electron TaskSearch drive retains its
 actual proof SHA 81c, equal production input and fresh scratch database. Its
@@ -57,7 +92,7 @@ machine-checked refinement theorem for React, Swift or HTTP.
 | --- | --- | --- |
 | `requestedIdentity` | `App` builds Profile, view, `advancedFiltersRef`, Project, Tag and toolbar text; `identityKey` sorts filter keys. | `TodoModel.requestedIdentity` builds Profile, view, `requestedTaskFilters`, Project, Tag and toolbar text. |
 | `Input`, `Esc` | `changeSearch` increments `refreshGeneration` and updates `activeQuery` and `searchTextRef` before setting the 250 ms timer. Escape calls it with empty text. | `setSearchText` calls `scheduleSearch`; `invalidateSearch` increments `refreshGeneration` and cancels the previous timer before the replacement task sleeps. |
-| `DebounceFired`, `Launch` | The timer calls `refreshRef.current`; `refresh` captures the complete identity and increments the request generation. | The debounce task checks generation, identity and cancellation, clears its own task handle, then calls `retrySearch` / `refresh(generation:)`. |
+| `DebounceFired`, `Launch` | The timer calls `refreshRef.current("query")`; `refresh` captures the complete identity and increments the request generation. | The debounce task checks generation, identity and cancellation, clears its own task handle, then calls `retrySearch` / `refresh(generation:scope: .query)`. |
 | `Current(n)` | After awaited IPC, `refresh` requires current Profile, `identityKey(activeQuery.current)` and request generation. The same check precedes success and error. | `canPublishSearch` requires Profile lifecycle generation, request generation, complete requested identity and cancellation. Success and error both call it. |
 | `ResponseOK`, `OneSnapshot` | One `setAppliedSearch` installs `{catalog, appliedIdentity}`. `TaskRead` crosses the HTTP and IPC decoders with original strings and spans together. `searchGroups` joins planning ids to matching-response Tasks, never to planning strings. | One `appliedSearchSnapshot` assignment installs identity, rows and groups. Planning contributes ids/order; rows come from `filteredResponse`. The remaining publication assignments have no await and run on MainActor. |
 | `ResponseError` | A current error restores only dialog filter refs, retains text and applied snapshot, and enters Error. | A current error restores only dialog filters when needed, retains text and snapshot, and returns `.failed`. An obsolete result returns `.superseded` without publishing or rolling back. |
@@ -68,11 +103,69 @@ machine-checked refinement theorem for React, Swift or HTTP.
 | Dialog draft | `TaskFilterDialog` owns its draft; Cancel leaves requested criteria alone, and Apply issues through the existing filter path. | `TaskFilterView` owns its draft; Cancel leaves requested criteria alone, and `applyTaskFilters` issues the requested criteria. |
 | `CmdF` | Focus changes only. One search field remains in the active shell surface, including detail and Quick add. | Focus changes only. Compact search is above the list/editor/Quick add branches. Native keyboard delivery remains under HOLD. |
 
-The publication object is the atomic boundary. HTTP reads can be concurrent
-(Electron) or sequential (SwiftUI); no intermediate response replaces its
+The publication object is the atomic boundary. Both clients await concurrent HTTP reads; no intermediate response replaces its
 strings or spans. Presentation derives highlights and excerpts from that
 object. Cropping an excerpt shifts those supplied spans for the displayed slice
 and does not evaluate the query again.
+
+## Full and query refreshes
+
+`catalogReady` records a successful full publication for the current selection.
+`issuedFull` records the scope of the latest pending request. `Launch` uses full
+scope for startup and SSE, and promotes query scope to full when no catalog has
+loaded or `catalogOwed` remains set. Full requests set that obligation before
+awaiting reads. Input, failed full responses and obsolete responses preserve it.
+Only a current full publication clears it. Retry, debounce and dialog Apply use
+query scope only when the catalog is ready and no full publication is owed.
+Reset clears readiness, sets the obligation and invalidates the scope token.
+An input invalidation or completed current response releases that token.
+
+The model keeps scope only for the latest token. An obsolete response's own
+scope is no longer observable because `Current` rejects it before any publication.
+Pending obsolete identities remain explicit, including ABA permutations. The
+model does not distinguish individual discovery fields or catalog row values.
+Compiled client tests delay full successes and errors, then type a query. Its
+replacement request must fetch a full catalog and publish literal new Tasks,
+Project/Tag names and counts before the old response is released. Releasing the
+old response cannot overwrite that catalog. A current full failure followed by
+a query must also fetch the owed catalog. Unfiltered rows keep absent spans.
+
+Electron's `taskRequest` search branch fetches `tasks.list` and only the current
+`reads.view` through `Effect.all`. Its list branch still loads the whole catalog
+and all counts. `refresh` captures `catalogRef`, then installs the merged query
+snapshot only after the complete identity and generation guard.
+`catalogOwedRef` starts true, is set on full requests and resets, and clears only
+inside guarded full publication. Connection-ready notices request a full
+refresh. The same synchronous publication updates `catalogRef` so an immediate
+query sees the published catalog. Only a full response updates
+`unfilteredSearch` or restores the initial draft.
+
+Swift's `readSearchCatalog` uses `async let` for the unfiltered Tasks, discovery
+and all four planning views. `refresh(generation:scope:)` concurrently awaits
+that catalog and any filtered Task list, or just the filtered Task list and the
+current planning view. Every side effect follows `canPublishSearch`. Query
+publication replaces the applied snapshot and current planning membership while
+retaining `tasks`, discovery and `viewCounts`. Full publication sets catalog
+readiness and clears `catalogStale` in that same synchronous MainActor section.
+`catalogStale` starts true and is set synchronously on full requests, accepted
+writes, SSE/reconnect, reload and selection/session resets. It survives every
+superseded or failed full request.
+
+`QueryHasCatalog` rejects a query launch without a loaded catalog. The new
+`BrokenFallback` control must violate it after omitting bootstrap promotion.
+`OneSnapshot`, `LatestPublication`, `ShowingIsCurrent`, `ExactStale` and conditional
+`Convergence` retain their existing meanings and bounds.
+
+`NoOwedQueryPublication` observes the pre-publication obligation and request
+scope in `catalogPublicationOK`; a query-only publication while owed violates
+this invariant. `CatalogOwedUntilPublish` observes the request transition
+and legal full clear in `catalogOwedOK`. This separate check matters: a faulty
+early clear must not hide the obligation from a predicate that only reads the
+flag at publication. Neither observation forces the publication guard or flag
+to be correct. `BrokenCatalogOwed` clears the flag on request and must fail
+`CatalogOwedUntilPublish` with exit12. `BrokenCatalogPromotion` omits owed-scope
+promotion and must fail `NoOwedQueryPublication` with exit12. Concrete metadata
+values remain outside the model and are checked by both compiled drives.
 
 ## Production evidence
 
@@ -120,6 +213,22 @@ actions, long-description trimming, both appearances and Compact first.
   They do not prove unbounded concurrency or counter overflow. No native app,
   signing, Keychain, VoiceOver or operating-system focus proof is claimed.
 
+## SEC integration boundary
+
+SEC owns the deterministic `search_too_broad` response and its recovery controls.
+The integrated SEC base is `492d9453`. The merged source preserves its warning,
+recovery text, applied context line, existing Clear action, retained text and
+focus, SSE rerun and hidden search Retry. Both typed refusal paths run after the
+same current-identity and generation guard. A refusal leaves catalog debt set;
+a later affordable full publication clears it. The five combined client files
+were inspected before renewing their hashes. Compiled integration checks remain
+required on the merge commit.
+
+Conditional convergence assumes later successful responses. It does not claim
+that a deterministic broad-query refusal eventually succeeds with unchanged
+input and data. Such a query needs an input or data change before that success
+assumption applies.
+
 ## Search work refusal and cooperative execution (2026-11-09)
 
 The SEC source review maps `search_too_broad` to the existing `ResponseError`
@@ -133,13 +242,21 @@ refusal outcomes. The budget and weight are one shared domain policy.
 `fieldWords` yields from one generator core after bounded grapheme/word work,
 returning unchanged words, original offsets and exact folded `preparedUnits`.
 Evaluation also yields and meters each field once, each computed banded DP cell,
-and each visited occurrence/phrase start. The CLI drains that core synchronously.
+and each visited occurrence/phrase start. The CLI drains that core through the
+shared Effect runner.
 `TaskCommands.list` uses the Effect driver for supplied text **after**
 `store.auth.read` has returned its complete in-memory view. No SQLite read is open
 across those matcher yields. The already-captured rows and ADR-0015 client
 freshness rules are unchanged. No-text command reads stay synchronous for
 transactional import/Attachment callers. Eager whole-Profile read/serialization
 cost is a separate pre-existing residual, not a matcher-yield guarantee.
+
+The cache integration at `41926044` captures its cache-local Profile generation
+inside `Effect.suspend` before `auth.read`. The existing execution provider obtains
+complete PreparedFields from the store memo; SEC's matcher still charges their
+exact count after retrieval. SEC's matcher and filter/runner files are unchanged.
+This adds no response-publication transition. Cache admission and revocation have
+their separate TaskSearchCacheAdmission model and real-Effect controls.
 
 `runTaskRecordSteps` checks at checkpoints and before return. Refusal is an
 Effect failure; other thrown faults remain defects. Its completion flag makes
@@ -196,6 +313,18 @@ TLA+ remains unchanged.
 
 ## F1 request narrowing review (2026-11-09)
 
+The PERF integration uses its existing `catalogRef` for F1 name lookup.
+`taskSearchQuery` builds the filtered request before the shared full/query IPC
+branch, so both scopes forward selected names. Explicit TaskFilters names keep
+precedence and the existing response-id joins still select the exact Project
+and Tag. Swift fills the same fields in `readSearchRows` when `filtered` is true;
+that helper serves matching reads in both scopes. The full catalog's unfiltered
+read builds an empty query. No extra request resolves a selected name.
+
+The combined source is inspected and mapped, with compiled F1 recovery,
+request-count and formal reproof pending the disk gate. Earlier 492/51711
+receipts keep their historical scope and are not current F1 proof.
+
 F1 resolves selected Project and Tag ids to catalog names for the existing
 server TaskFilters. Explicit dialog names take precedence; an unresolved id
 adds no name filter. Electron uses a pure query builder and a metadata-only
@@ -249,3 +378,16 @@ properties and all five behavioral sensitivity mutations passed at
 `c14371075593a4a163f15797c495ac821510a449` in
 `docs/evidence/task-search-formal/matcher-qRXiUP` before the three changed source
 hashes were renewed. TLA+ is unchanged.
+
+## Main9de refresh integration
+
+The refresh unit keeps SEC's Profile-keyed `searchDefinitions` separately from
+`catalogRef`. View reset clears the retained Task catalog and keeps only the
+matching Profile's Project and Tag names. Profile switch, authentication end
+and reload clear both. `taskSearchQuery` uses that same metadata before selecting
+`list` or `search`, so full and query scopes preserve F1a/F1b. Swift applies the
+reviewed Tag-edge check inside `readSearchRows`, shared by both filtered paths.
+Unfiltered catalog reads remain unfiltered. Explicit dialog filters still win.
+Catalog obligation, generation, complete identity and publication are unchanged.
+The source review does not replace the compiled sidebar, padded Tag, full/query
+and catalog-debt regressions, or the final finite model and real matcher checks.

@@ -64,6 +64,7 @@ import {
 import { translate } from "./errors.ts";
 import { scheduler } from "./scheduler.ts";
 import { changesLayer } from "./sse.ts";
+import { taskSearchCacheHygiene } from "./task-search-cache-hygiene.ts";
 
 const taskResult = (
   result: TaskCommandResult,
@@ -244,6 +245,8 @@ export const serverLayer = (options: {
         openStore({ path: options.path }),
         (store) => Effect.orDie(store.close()),
       );
+      const cacheHygiene = yield* taskSearchCacheHygiene(store);
+      yield* cacheHygiene.run.pipe(Effect.forkScoped);
       yield* scheduler(store).pipe(Effect.forkScoped);
       const commands = new TaskCommands(store);
       const missingTask = (
