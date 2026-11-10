@@ -1,6 +1,6 @@
 {
-  "commit": "26367043daf92787fc128ac23544afcb5709a791",
-  "status": "Fresh merged-source matcher properties, five real-code mutants and byte restoration passed at matcher-Lyo5Sz; full client mapping/model remains separate",
+  "commit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
+  "status": "Immutable integrated source passed generated matcher properties, five intended real-code failures and byte restoration at matcher-AFRja2. Separate model/client results retain their own scopes.",
   "normalization": "normalizeTaskSearch",
   "parsing": "parseTaskSearch",
   "matching": "matchTaskSearch",
@@ -16,5 +16,6 @@
     "productDiffFromMerge": "git diff dc43db3f..26367043 -- apps/**/src packages = empty; only Swift fixture changes among app source trees",
     "newNamedRegression": "readyFullRefreshSupersedesRetryAndKeepsRevealDraftAndCatalog",
     "proof": "Frozen fixture matches26367043;20consecutive8-test runs0 and full113-state suite0; final immutable command results recorded separately"
-  }
+  },
+  "previousCommit": "26367043daf92787fc128ac23544afcb5709a791"
 }

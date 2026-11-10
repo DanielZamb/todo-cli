@@ -1,6 +1,6 @@
 {
-  "productCommit": "97eb40021812cba9fdae76471328b890db239349",
-  "scope": "Confirmed main4c composition: exact-text memo and global erasure fences, current generated/meter/admission/model controls, compiled lifecycle and structured CLI errors",
+  "productCommit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
+  "scope": "Reviewed integrated exact-text memo and erasure mapping; current generated controls and restoration precede renewal. Complete model/admission/compiled lifecycle command follows; no performance retiming.",
   "seed": "0x5ea2c001",
   "files": [
     {
@@ -17,7 +17,7 @@
     },
     {
       "path": "commands.ts",
-      "sha256": "bc3d80d8d775800b541cc86afbb9e5f8e6e306fa6659bef7e4700ea711829664"
+      "sha256": "69f21856b32d60483a9e22fa83144e950e4dbe47524a3680bb0744225f365617"
     },
     {
       "path": "store/store.ts",
@@ -32,8 +32,8 @@
       "sha256": "4f0276e1953a56db0a31844c51faec02835eea134b04a06ed2ba6e9231d6d600"
     }
   ],
-  "review": "Reviewed CLI boundary preserves typed2 and catchDefect1 through shared Agent rendering. TaskCommands Read capture remains before auth; TaskIdPrefix schema extraction is unchanged predicate. Server cache fork captures cursor before handlers alongside discovery routes; observer/store epochs unchanged. Fresh generated and observer controls reached strict restoration then intentionally failed the old source-hash gate. Immutable compiled erasure and Agent-shaped defect witnesses passed. No retiming. Full one-command verify-sK6L84 passed after the reviewed renewal; fixed source is not retimed.",
-  "reviewedCandidate": false,
+  "review": "Only commands.ts changes among covered cache files, adding confirm_from_version after a successful Delete simulation. Read capture/prepare, epochs, keys, finalizers, hygiene and Tag projection remain unchanged. Seven fresh real-source cache controls failed intended assertions, restored byte-exactly and passed clean/strict checks before the old commands.ts hash stopped the initial run. No timings or memory measurements are renewed.",
+  "reviewedCandidate": true,
   "hygieneFiles": [
     {
       "path": "apps/server/src/task-search-cache-hygiene.ts",
@@ -57,7 +57,7 @@
     },
     {
       "path": "apps/cli/src/main.ts",
-      "sha256": "1f2d4eea85ff3ce9c995d2ae018f7bda2b4be3b74b950004870b481016794432"
+      "sha256": "f7e46eefdeb3b10a8679681662e3c4d7141bba7b015182e0a4805b92196ad72a"
     }
   ],
   "integrationReview": {
@@ -81,5 +81,23 @@
       "cliDefect": "docs/evidence/task-dag/merge-main-cabf-f7r4k8/cache-cli-defect/result.json",
       "result": "Three intended observer controls1, restored0, strictTypecheck0; real compiled CLI defect1/runtime_error and typed refusal2 proved before renewal"
     }
+  },
+  "previousProductCommit": "97eb40021812cba9fdae76471328b890db239349",
+  "clientIntegrationReview": {
+    "product": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
+    "main": "2c488fc72fe264741d5d8db8f90b441bf426af32",
+    "contract": "78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289",
+    "controls": [
+      "docs/evidence/dag-formal/amendment-controls-y3IVaZ/result.json",
+      "docs/evidence/dag-formal/error-contract-U2kg7W/result.json",
+      "docs/evidence/discovery-formal/electron-AcJPVT/result.json",
+      "docs/evidence/discovery-formal/swift-lzXNKY/result.json",
+      "docs/evidence/task-search-formal/matcher-AFRja2/result.json",
+      "docs/evidence/perf-cache/generated-jAQHPo/behavior-result.json"
+    ],
+    "sourceReview": "docs/evidence/task-dag/integration-7d947f91/source-body-audit.json",
+    "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
+    "changes": "Delete preview adds accepted request Version; batch item code/schema becomes occ_conflict only. Store, graph algorithms, events, transaction and matcher bodies unchanged. New clients retain request-time getters, source identities and catalog debt. PR12 exact56pt/px Import layout composes with the same structured Dependency projector.",
+    "limits": "Finite models and manual function mapping; native signing, storage, Keychain, Session persistence, real OS dispatch and VoiceOver remain held."
   }
 }

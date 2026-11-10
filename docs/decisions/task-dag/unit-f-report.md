@@ -1,6 +1,10 @@
 # Unit F verification report
 
-## Current status
+## Current integrated mapping
+
+The active product pins now name `7d947f917d1895df45c78f9f9df31638a9f3f2b8`, including both clients, the two-part public contract amendment and main PR #12. Current mutation/restoration controls precede the mapping renewal. Full integrated conformance and grouped seats follow; no historical proof is relabelled. Native and fresh-discovery gates remain separate.
+
+## Historical F1 implementation status
 
 F1 implementation closure is complete at committed verifier source
 `0d9145443dc46ec4c6b75decee8be0b133d530ee`, branch `feat/task-dag-f-formal`.

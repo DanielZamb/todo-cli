@@ -1,6 +1,6 @@
 {
-  "sourceCommit": "ecee73d77b2d58e185d098fa3d836c78825f8325",
-  "status": "Merged DAG/cache/discovery mapping reviewed after actual matcher/cache/controller controls and restored checks; complete bounded command follows.",
+  "sourceCommit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
+  "status": "Reviewed integrated DAG clients and contract metadata, with current matcher controls and preserved full/query catalog debt. Complete bounded command and client drives follow.",
   "files": [
     {
       "path": "apps/electron/src/renderer.tsx",
@@ -19,7 +19,7 @@
         "endAuthentication",
         "changed/connection/reload notice handlers"
       ],
-      "sha256": "6aff737ee78fc37dda9127449a504ef984ba2228a1b2e0ef26d22ec190583eb4"
+      "sha256": "8dbb97b37d928f6e0544bfe806f958c4a0736cdb321af1f7c834f62441dd77c1"
     },
     {
       "path": "apps/electron/src/task-search-results.ts",
@@ -30,7 +30,7 @@
         "searchGroups",
         "taskSearchQuery"
       ],
-      "sha256": "764b89fbeaca10894d7346a916719453416d8aff1c89608e3411ec674265c0ae"
+      "sha256": "fc80b01efa9710fec3a02133545d1fe52fa904c47020a156732487afa80cec8a"
     },
     {
       "path": "apps/electron/src/task-client.ts",
@@ -38,7 +38,7 @@
         "taskRequest list branch",
         "taskRequest search branch"
       ],
-      "sha256": "199f5bda547c6af30ff7b37171b46a75a3dea0d55433956651fc839184f28ff5"
+      "sha256": "35e31f0a344103fd5402659244f68cbf1f74bd659fdf8081bf3eebefdf55d5e6"
     },
     {
       "path": "apps/electron/src/protocol.ts",
@@ -48,7 +48,7 @@
         "Reply tasks TaskRead decoder",
         "Reply error code decoder"
       ],
-      "sha256": "b5a43619a9e5c668df820cc9941e7b7d48fe8f3209416cbeafe1881fad4dba9a"
+      "sha256": "70876d227da2a0f638bad7f1a8572582a22153d8d3c10b2ea7c300b6ed4c8aa8"
     },
     {
       "path": "apps/macos/Sources/TodoModel.swift",
@@ -69,7 +69,7 @@
         "readSearchPlanning",
         "readSearchCatalog"
       ],
-      "sha256": "8307d4d8305aa31b9d8ed0cb1d11107b7a1aee9fa01c5fcca8c27c450425ef52"
+      "sha256": "e32b6f0ca0d53408aeb7624eabc52f55fc38f203c15fb7c18c6c0a2b82c33203"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -91,7 +91,7 @@
         "taskContent",
         "searchField"
       ],
-      "sha256": "0d2dd9d5eee717df7ace67df5546cd2ba5f79ea42cff29f1340694ca9c13fad6"
+      "sha256": "1abf621b6a576f217ea92d74353650c956a7bd255ea06f5b61e539066130bc43"
     },
     {
       "path": "apps/macos/Sources/TaskSnapshot.swift",
@@ -99,7 +99,7 @@
         "TaskSnapshot",
         "TaskSearchMatch"
       ],
-      "sha256": "3aeaf11c97f30c7788b36b8f0bb6ac4deecaae237eecd6cb7f3538fbde7a9a31"
+      "sha256": "8502de3358af711ba47c20790d32214caaacd3ed6c6ad1655367a93149feb9e6"
     },
     {
       "path": "packages/domain/src/task-search.ts",
@@ -140,7 +140,7 @@
       "functions": [
         "TaskRead"
       ],
-      "sha256": "a0080438e465903052b5f9c1f6ebbb67a47441a82fc847754538948cf45f508f"
+      "sha256": "0b932af28259dab19ff0145aa07ae166a2a796dec667a616272ce7ca10cc26d5"
     },
     {
       "path": "packages/domain/src/limits.ts",
@@ -163,7 +163,7 @@
         "readTasks",
         "TaskCommands.list"
       ],
-      "sha256": "bc3d80d8d775800b541cc86afbb9e5f8e6e306fa6659bef7e4700ea711829664"
+      "sha256": "69f21856b32d60483a9e22fa83144e950e4dbe47524a3680bb0744225f365617"
     },
     {
       "path": "apps/electron/src/task-search-presentation.tsx",
@@ -198,9 +198,9 @@
   "productionMatcher": "Immutable real source with generated properties, behavioral mutations and byte restoration; final-tip command uses its explicit full SHA.",
   "recovery": "Transient errors offer Retry; search_too_broad hides Retry and retains text/snapshot. Current-Profile SSE op/reconnect remains available. Liveness requires a later affordable successful response and a fair available recovery source.",
   "clientRefinement": "Mapped full/query publication, catalog retention and bootstrap fallback with compiled regressions; no mechanical TypeScript/Swift refinement theorem.",
-  "previousSourceCommit": "c14371075593a4a163f15797c495ac821510a449",
-  "productCommit": "36f9c56e200048aa2ca16186aaf713bea8d5454e",
-  "integrationCommit": "81cdef8ec257a8ca7e1cbfb1ab2b3ff3afcbbf14",
+  "previousSourceCommit": "ecee73d77b2d58e185d098fa3d836c78825f8325",
+  "productCommit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
+  "integrationCommit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
   "securityBase": "9de893454cb6e3f5729407e9313c73e56bfd0481",
   "integrationComponents": {
     "refresh": "f1c5f22115c361ff0dda48c2e277b9547a2208a5",
@@ -243,5 +243,24 @@
     "state": "docs/evidence/task-dag/merge-main-cabf-f7r4k8/swift-state-maintenance/result.json",
     "controls": "docs/evidence/discovery-formal/swift-Fc98a6/result.json",
     "proof": "20 consecutive7-test discovery suites0 with both named Show cases; full113-state suite0; all4 Swift controls compile/assert1/restore0 and final clean0. No new sleep, retry, deadline or product change."
-  }
+  },
+  "clientIntegrationReview": {
+    "product": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
+    "main": "2c488fc72fe264741d5d8db8f90b441bf426af32",
+    "contract": "78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289",
+    "controls": [
+      "docs/evidence/dag-formal/amendment-controls-y3IVaZ/result.json",
+      "docs/evidence/dag-formal/error-contract-U2kg7W/result.json",
+      "docs/evidence/discovery-formal/electron-AcJPVT/result.json",
+      "docs/evidence/discovery-formal/swift-lzXNKY/result.json",
+      "docs/evidence/task-search-formal/matcher-AFRja2/result.json",
+      "docs/evidence/perf-cache/generated-jAQHPo/behavior-result.json"
+    ],
+    "sourceReview": "docs/evidence/task-dag/integration-7d947f91/source-body-audit.json",
+    "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
+    "changes": "Delete preview adds accepted request Version; batch item code/schema becomes occ_conflict only. Store, graph algorithms, events, transaction and matcher bodies unchanged. New clients retain request-time getters, source identities and catalog debt. PR12 exact56pt/px Import layout composes with the same structured Dependency projector.",
+    "limits": "Finite models and manual function mapping; native signing, storage, Keychain, Session persistence, real OS dispatch and VoiceOver remain held."
+  },
+  "previousProductCommit": "36f9c56e200048aa2ca16186aaf713bea8d5454e",
+  "previousIntegrationCommit": "81cdef8ec257a8ca7e1cbfb1ab2b3ff3afcbbf14"
 }

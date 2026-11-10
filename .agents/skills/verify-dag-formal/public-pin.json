@@ -1,6 +1,6 @@
 {
-  "commit": "ecee73d77b2d58e185d098fa3d836c78825f8325",
-  "scope": "Merged main cabf4866 with graph-aware cache execution, authorized discovery and exit/status contract. Current qualification, final client UI mapping pending.",
+  "commit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
+  "scope": "Integrated clients, two-part public contract amendment and PR12 main. Finite graph bounds and native holds unchanged.",
   "scopes": [
     "packages/domain",
     "packages/api",
@@ -19,7 +19,21 @@
     "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Operations.swift",
     "apps/macos/Tests/GeneratedContractTests.swift",
     "apps/electron/scripts/verify-auth-sequence.ts",
-    "apps/electron/scripts/write-host.ts"
+    "apps/electron/scripts/write-host.ts",
+    "apps/electron/src/dependency-state.ts",
+    "apps/electron/src/dependency-delete-state.ts",
+    "apps/electron/src/dependency-graph-state.ts",
+    "apps/electron/src/dependency-presentation.ts",
+    "apps/electron/src/renderer.tsx",
+    "apps/electron/src/protocol.ts",
+    "apps/macos/Sources/Dependencies.swift",
+    "apps/macos/Sources/DependencyDelete.swift",
+    "apps/macos/Sources/DependencyGraphState.swift",
+    "apps/macos/Sources/DependencyWebView.swift",
+    "apps/macos/Sources/DependencyGraphView.swift",
+    "apps/macos/Sources/DependencyErrors.swift",
+    "apps/macos/Sources/DependencyViews.swift",
+    "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Components+Schemas.swift"
   ],
   "manifests": [
     "package.json",
@@ -31,6 +45,6 @@
     "apps/electron/package.json"
   ],
   "pendingCorrections": [],
-  "contract": "858612b6feba4e359ee28749b70119a36b3909ad20459ef15f82286f1b80b829",
+  "contract": "78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289",
   "awaitMergedIntegration": false
 }

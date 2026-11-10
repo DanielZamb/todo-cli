@@ -1,11 +1,11 @@
 {
-  "status": "Reviewed main cabf4866 graph/cache/discovery composition and current R1 fixture maintenance; bounded-model and real-source results are recorded separately.",
+  "status": "Reviewed integrated clients and PR12 structured row recovery after current Electron7 and Swift4 real-code controls, exact restores and clean reruns. Complete bounded command follows.",
   "contractCommit": "f85aef6faf7d93be80feef930554206e09d61be3",
   "contract": {
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "ecee73d77b2d58e185d098fa3d836c78825f8325",
+  "productionSyncCommit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -40,7 +40,7 @@
         "draftForTask",
         "same-key refresh and changed-navigation effect"
       ],
-      "sha256": "6aff737ee78fc37dda9127449a504ef984ba2228a1b2e0ef26d22ec190583eb4",
+      "sha256": "8dbb97b37d928f6e0544bfe806f958c4a0736cdb321af1f7c834f62441dd77c1",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -48,7 +48,7 @@
       "functions": [
         "IPC captured credential/generation and Unauthorized side effects"
       ],
-      "sha256": "6041c8c910a4b0312fef8f01354af1db9faff95efb5e0985659f58eaea85c6eb",
+      "sha256": "1407ddd56dba0cd9bb1599a8d1dd8e3590d42b56271bd19e9a0878e276079a90",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -56,7 +56,7 @@
       "functions": [
         "unsigned IPC captured credential/generation and Unauthorized side effects"
       ],
-      "sha256": "aee5836bcd8c840bcba721bf69d7973bec9ba9533a7465c15a3f1676edda4454",
+      "sha256": "d4e02bf6bc69016782749bf4d7b8cb299c5491b2805945e500a64393dbbb9ef3",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -66,7 +66,7 @@
         "lookup",
         "showTask"
       ],
-      "sha256": "199f5bda547c6af30ff7b37171b46a75a3dea0d55433956651fc839184f28ff5",
+      "sha256": "35e31f0a344103fd5402659244f68cbf1f74bd659fdf8081bf3eebefdf55d5e6",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -74,7 +74,7 @@
       "functions": [
         "discovery Request/Reply decoders"
       ],
-      "sha256": "b5a43619a9e5c668df820cc9941e7b7d48fe8f3209416cbeafe1881fad4dba9a",
+      "sha256": "70876d227da2a0f638bad7f1a8572582a22153d8d3c10b2ea7c300b6ed4c8aa8",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -83,7 +83,7 @@
         "errorReply",
         "exitDetail"
       ],
-      "sha256": "9ca2afa2579d3516830038b304e4b77dd1b0892d00d1d6273d4d42f7afab3032",
+      "sha256": "81d3f0c6f92a94ea2e7c918bdb11ee2374138668d0fca9edfb206f53f61d2574",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -91,7 +91,7 @@
       "functions": [
         "TaskLookupStatus"
       ],
-      "sha256": "e08b8ab874d22e5d04919780a38d51c82e4530e0cb16be3e2700b461aa432007",
+      "sha256": "9ec40461865edc82d155fb20f56633c3db2b41e37f764d60a69f9cfd1cfa82f6",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -99,7 +99,7 @@
       "functions": [
         "structured recovery, generic exit pair and origin dismissal"
       ],
-      "sha256": "997fd7cfa8c22db6a3b86957fd5cddd543c22100b8be8808e90fac96595bd0fa",
+      "sha256": "9f45b2a543f73bb74bd4cb09b41170259dddf89c9d13da997c2eebede0255aa0",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -155,7 +155,7 @@
         "followChanges Unauthorized",
         "metadata/parse/History/Series/import invalidation"
       ],
-      "sha256": "8307d4d8305aa31b9d8ed0cb1d11107b7a1aee9fa01c5fcca8c27c450425ef52",
+      "sha256": "e32b6f0ca0d53408aeb7624eabc52f55fc38f203c15fb7c18c6c0a2b82c33203",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -165,7 +165,7 @@
         "TaskListView sheet/alert binding",
         "DraftNavigationActions target capture and explicit Cancel"
       ],
-      "sha256": "0d2dd9d5eee717df7ace67df5546cd2ba5f79ea42cff29f1340694ca9c13fad6",
+      "sha256": "1abf621b6a576f217ea92d74353650c956a7bd255ea06f5b61e539066130bc43",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -183,7 +183,7 @@
         "TaskLookupErrorNotice",
         "ServerErrorNotice"
       ],
-      "sha256": "daa783cbaef15590f408665c79c7db986720aaf255ecfdd03be11f6247c5b712",
+      "sha256": "ff0b5d47a7a733442bad3917de2fe36a9613aebf921146f19fc3ab58d9da4402",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -214,16 +214,16 @@
     }
   ],
   "mapping": "SOURCE-MAPPING.md",
-  "candidateCommit": "ecee73d77b2d58e185d098fa3d836c78825f8325",
+  "candidateCommit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
   "classification": {
     "model": "bounded safety only; Discovery.tla bytes unchanged from500cdc38",
     "domain": "separate verify-discovery generated projection/snapshot properties, not model conclusions",
-    "regressions": "Fresh immutable prepare-eUMm4G and current-inputs.json bind current source/binaries, domain and compiled public discovery/authorization/enrichment drives.",
-    "sensitivity": "Electron7 and Swift4 intended source failures with byte restoration; current R1 fixture has20 consecutive clean suites and full113-state proof. The final complete command remains a separate receipt.",
+    "regressions": "Fresh prepare-ueS8p7 and current-inputs.json bind the current backend, compiled directory/lookup/auth/enrichment actions and source inventory at7d947f91.",
+    "sensitivity": "Fresh Electron7 controls at electron-AcJPVT and Swift4 at swift-lzXNKY reached intended assertions, restored source bytes and passed clean reruns. Initial Swift order30 setup1 is retained separately.",
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "26367043daf92787fc128ac23544afcb5709a791",
+  "previousProductionSyncCommit": "ecee73d77b2d58e185d098fa3d836c78825f8325",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -256,5 +256,22 @@
     "state": "docs/evidence/task-dag/merge-main-cabf-f7r4k8/swift-state-maintenance/result.json",
     "controls": "docs/evidence/discovery-formal/swift-Fc98a6/result.json",
     "proof": "20 consecutive7-test discovery suites0 with both named Show cases; full113-state suite0; all4 Swift controls compile/assert1/restore0 and final clean0. No new sleep, retry, deadline or product change."
+  },
+  "clientIntegrationReview": {
+    "product": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
+    "main": "2c488fc72fe264741d5d8db8f90b441bf426af32",
+    "contract": "78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289",
+    "controls": [
+      "docs/evidence/dag-formal/amendment-controls-y3IVaZ/result.json",
+      "docs/evidence/dag-formal/error-contract-U2kg7W/result.json",
+      "docs/evidence/discovery-formal/electron-AcJPVT/result.json",
+      "docs/evidence/discovery-formal/swift-lzXNKY/result.json",
+      "docs/evidence/task-search-formal/matcher-AFRja2/result.json",
+      "docs/evidence/perf-cache/generated-jAQHPo/behavior-result.json"
+    ],
+    "sourceReview": "docs/evidence/task-dag/integration-7d947f91/source-body-audit.json",
+    "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
+    "changes": "Delete preview adds accepted request Version; batch item code/schema becomes occ_conflict only. Store, graph algorithms, events, transaction and matcher bodies unchanged. New clients retain request-time getters, source identities and catalog debt. PR12 exact56pt/px Import layout composes with the same structured Dependency projector.",
+    "limits": "Finite models and manual function mapping; native signing, storage, Keychain, Session persistence, real OS dispatch and VoiceOver remain held."
   }
 }

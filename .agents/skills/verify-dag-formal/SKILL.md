@@ -3,6 +3,11 @@ name: verify-dag-formal
 description: Check finite Task dependency safety and immutable production conformance. Use after graph, transaction, replay or public Dependency changes. Read the active immutable product from production-pin.json and public-pin.json; final client/runtime mapping remains pending.
 ---
 
+## Current integrated mapping
+
+Immutable product `7d947f917d1895df45c78f9f9df31638a9f3f2b8` includes both DAG clients, the two-part Delete/batch contract amendment and main PR #12 at `2c488fc72fe264741d5d8db8f90b441bf426af32`. The contract is `78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289`. Core graph and AtomicCAS source is unchanged. Pre-renewal compiled mutation, matcher, cache and Discovery controls passed with exact restores. The complete integrated qualification is still pending at this mapping commit. Model bounds and native holds are unchanged.
+
+
 Historical F1 implementation closure: full default and locked F-worktree check exited 0 at committed verifier 0d9145443dc46ec4c6b75decee8be0b133d530ee, product 0f7a19488f15ec1f8d4c4dad14749de7720f17d0. The nested compiler shim, post-parent stop-latch propagation, fake-child refusal traces and real AtomicCAS tsc guard0/child0 are proven in /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/f1-default-8vDMKq/f1-completion.json. All 36 library and 53 public controls and final clean passed. Both F1 review seats passed exact delivery 2936e3c2 before merge. Final E/S runtime and fresh Claude discovery remain pending.
 
 Historical merged-B behavioral checkpoint (F1 nested compiler guard gap; closure below): default one command exited 0 at F proof source 71a29afc764e2db32ed109c9314b1a8290460d46, product 0f7a19488f15ec1f8d4c4dad14749de7720f17d0. All 36 library and 53 public/read source-control executions passed sensitivity and exact clean restore. Receipt: /Users/zambamon/.t3/worktrees/todo-cli/feat-task-dag-f-formal/docs/evidence/dag-formal/resume-default-nTbjKr/completion.json. F-worktree VITEST_MAX_WORKERS=1 pnpm check exited 0 with unchanged per-test deadlines; default-worker timing failures are retained. Final E/S runtime mapping, fresh Claude discovery and independent F review seats remain pending.
@@ -18,7 +23,7 @@ Followed create-formal-verification-skill. Read mapping.md, coverage.json,
 public-coverage.json, features/README.md and docs/decisions/task-dag/unit-f-report.md.
 Historical f140/e717 receipts retain their original candidates and proof bounds.
 
-## Current main-rebase qualification
+## Historical main-rebase qualification
 
 The active product is 42ae3fa90ddd9d7cfa19f384099aabbb1c2fb4da, rebased onto
 main 9de893454cb6e3f5729407e9313c73e56bfd0481. Both pin files and coverage maps
