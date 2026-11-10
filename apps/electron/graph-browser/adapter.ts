@@ -140,6 +140,10 @@ export class GraphBrowserAdapter {
         )
           this.root.style.setProperty(variable, value);
       }
+      this.root.style.setProperty(
+        "--pele-line",
+        this.root.style.getPropertyValue("--pele-muted"),
+      );
       this.root.dataset.mode = message.theme.mode;
       this.root.dataset.reducedMotion = String(message.reduced_motion);
       const result = render(message.mermaid, {

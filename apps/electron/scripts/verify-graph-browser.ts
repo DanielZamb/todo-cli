@@ -131,6 +131,28 @@ try {
         ).length,
     )
     .toBe(1);
+  await page.evaluate(
+    (command) =>
+      window.todoGraph.receive({
+        ...command,
+        theme: {
+          mode: "dark",
+          tokens: {
+            "muted-text": "#AFBDB1",
+            paper: "#171D19",
+            ink: "#F0F3EF",
+            card: "#1D2620",
+            border: "#82978A",
+            primary: "#A6D7B8",
+          },
+        },
+      }),
+    command,
+  );
+  await expect(page.locator(".pele-edge path").first()).toHaveCSS(
+    "stroke",
+    "rgb(175, 189, 177)",
+  );
   assert.ok(
     messages.every(
       (reply) =>
