@@ -1,7 +1,7 @@
 {
-  "confirmedCommit": "42ae3fa90ddd9d7cfa19f384099aabbb1c2fb4da",
+  "confirmedCommit": "ecee73d77b2d58e185d098fa3d836c78825f8325",
   "source": "immutable git objects; current worktree product files are not candidates",
-  "scope": "Reviewed immutable merged product functions; full committed conformance execution required.",
+  "scope": "Reviewed immutable merged product functions. Current relevant-stage receipts and prior full source-control campaigns are recorded separately; no current full89-control rerun claim.",
   "modelBaselineCommit": "a91dcf8917e242bce6c0f3521a1b2727114d0ef7",
   "modelRefinement": "Revert expected Versions come from the original resolved event, not a fresh observation",
   "modelSha256": "54254524caf9a30e95bc1e12b01018eafc28ea88c4a211a46228eb137a802c48",
@@ -43,7 +43,7 @@
     },
     {
       "path": "packages/domain/src/dependency-rules.ts",
-      "sha256": "74369b1acd741009d752f61b4986f190519421170c90d1d2cff33a36183fa26a",
+      "sha256": "38fbc8c86349775e6eced7404e924ba5a5ab8e5e08616169e378086fe4e5fb11",
       "functions": [
         "dependencyCycle",
         "shortestUpstreamPath",
@@ -55,7 +55,7 @@
     },
     {
       "path": "packages/domain/src/dependencies.ts",
-      "sha256": "ca418428c4d3a7dffff822b8c2e0ae4b84e0b86ca911630d619a75f76a87c8d3",
+      "sha256": "18b75d53f24ed5a86e6c645d4d2b99766ae8a0786ec32c1c5a33254804a06caa",
       "functions": [
         "Edge",
         "VersionChange",
@@ -86,7 +86,7 @@
     },
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "d9c9e4c5c09e1616c1b46ff0e8077a8d58ef3f7d2b7ea67db82dcccce2fef443",
+      "sha256": "9cbc8b8a2920b91f8cfc0e2137ade7d4ba11a28f7ad6c16fd29b4450d54cbc71",
       "functions": [
         "OperationStore.transaction",
         "OperationStore.validate",
@@ -103,7 +103,7 @@
     },
     {
       "path": "packages/domain/src/store/projection.ts",
-      "sha256": "7c82ea08bacbb1358a809dd7b3acac0092d78ad6e137b9645971fce486604544",
+      "sha256": "dd0d3823bd6b9ecd8868ee0eaacdb8e3438aca1bf944f897cd2092eb137364b9",
       "functions": [
         "createProjection",
         "changes",
@@ -155,7 +155,7 @@
     },
     {
       "path": "packages/domain/src/auth/auth.ts",
-      "sha256": "619020f5555ac7a8714abf3d61719a6de541a75eccbe57703ffb46654b50c61d",
+      "sha256": "887890d05908da4ea007a716b9ebc311ab0c58f9253506e17fcb38c7ea4a85ca",
       "functions": [
         "Authentication.startSeries",
         "Authentication.append"
@@ -169,5 +169,35 @@
     "scope": "Core16 unchanged. Public changes are approved SEC/search base plus reviewed-by-L1 integration of typed yielding search, graph slot5, search-dialog draft and getter preservation. Fresh independent rebase review pending.",
     "previousSensitivity": "Historical89executions on0f7; not relabelled as current-source sensitivity",
     "handwrittenSwiftAdaptation": "Search refusal typed branch3 after DAG union regeneration; nil branches1 and2. No generated source edit."
+  },
+  "integrationReview": {
+    "main": "cabf4866835a49f23dc0fe44694740f122855e33",
+    "product": "97eb40021812cba9fdae76471328b890db239349",
+    "changed": [
+      "packages/domain/src/dependency-rules.ts",
+      "packages/domain/src/dependencies.ts",
+      "packages/domain/src/store/store.ts",
+      "packages/domain/src/store/projection.ts",
+      "packages/domain/src/auth/auth.ts"
+    ],
+    "bodyReview": "Graph algorithms unchanged; refusals add exit pairs and stored History decoding defaults. Cache/read ordering and Tag-set projection reviewed against both parents. Client renderer and TodoModel equal main; getter retained.",
+    "controls": [
+      "docs/evidence/fv01/sensitivity-WnZxRk/result.json",
+      "docs/evidence/dag-formal/error-contract-ZeCDoN/result.json",
+      "docs/evidence/perf-cache/generated-tKwtxm/behavior-result.json",
+      "docs/evidence/perf-cache/hygiene-oj9OBZ/commands.json"
+    ],
+    "limits": "Actual intended controls and restores precede renewed hashes. Historical89 executions are not relabelled. Current F stages follow."
+  },
+  "fixtureMaintenance": {
+    "commit": "ecee73d77b2d58e185d098fa3d836c78825f8325",
+    "productSource": "3e530071721413535ef357664fb33b386bb7479e",
+    "newNamedRegression": "readyFullRefreshSupersedesRetryAfterDirectOrConfirmedShowAndKeepsDraftAndCatalog",
+    "productDiff": "Application sources unchanged from3e530071; only the discovery fixture and its verification mode changed.",
+    "trace": "docs/evidence/discovery-formal/swift-8RiUYl/trace-result.json",
+    "consecutive": "docs/evidence/discovery-formal/swift-FMsyV6/result.json",
+    "state": "docs/evidence/task-dag/merge-main-cabf-f7r4k8/swift-state-maintenance/result.json",
+    "controls": "docs/evidence/discovery-formal/swift-Fc98a6/result.json",
+    "proof": "20 consecutive7-test discovery suites0 with both named Show cases; full113-state suite0; all4 Swift controls compile/assert1/restore0 and final clean0. No new sleep, retry, deadline or product change."
   }
 }

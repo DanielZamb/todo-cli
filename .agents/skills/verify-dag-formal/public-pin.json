@@ -1,6 +1,6 @@
 {
-  "commit": "42ae3fa90ddd9d7cfa19f384099aabbb1c2fb4da",
-  "scope": "Main9de89345 rebase qualification candidate. Core source hashes unchanged; selected generated/replay/public stages run separately from historical full sensitivity.",
+  "commit": "ecee73d77b2d58e185d098fa3d836c78825f8325",
+  "scope": "Merged main cabf4866 with graph-aware cache execution, authorized discovery and exit/status contract. Current qualification, final client UI mapping pending.",
   "scopes": [
     "packages/domain",
     "packages/api",
@@ -31,6 +31,6 @@
     "apps/electron/package.json"
   ],
   "pendingCorrections": [],
-  "contract": "bf54af931b6531866cbe23740582a5241999f5defcf98ad1d7f2da58774e1f3d",
+  "contract": "858612b6feba4e359ee28749b70119a36b3909ad20459ef15f82286f1b80b829",
   "awaitMergedIntegration": false
 }

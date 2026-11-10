@@ -1,8 +1,8 @@
 {
-  "commit": "42ae3fa90ddd9d7cfa19f384099aabbb1c2fb4da",
+  "commit": "ecee73d77b2d58e185d098fa3d836c78825f8325",
   "seed": 260911,
   "randomDags": 256,
   "maxRandomNodes": 40,
-  "scope": "Main9de89345 rebase qualification candidate. Core source hashes unchanged; selected generated/replay/public stages run separately from historical full sensitivity.",
+  "scope": "Merged main cabf4866 with graph-aware cache execution, authorized discovery and exit/status contract. Current qualification, final client UI mapping pending.",
   "awaitMergedIntegration": false
 }

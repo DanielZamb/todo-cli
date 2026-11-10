@@ -1,6 +1,6 @@
 {
-  "sourceCommit": "26367043daf92787fc128ac23544afcb5709a791",
-  "status": "Current main4c composition: bounded safety/liveness, intended controls/restoration, fresh matcher properties and compiled full/query client drives passed",
+  "sourceCommit": "ecee73d77b2d58e185d098fa3d836c78825f8325",
+  "status": "Merged DAG/cache/discovery mapping reviewed after actual matcher/cache/controller controls and restored checks; complete bounded command follows.",
   "files": [
     {
       "path": "apps/electron/src/renderer.tsx",
@@ -38,7 +38,7 @@
         "taskRequest list branch",
         "taskRequest search branch"
       ],
-      "sha256": "028faf302f5ca8c6ab9bc87e6e4825f02c59d328abed06ec1de0d85f6a66ab04"
+      "sha256": "199f5bda547c6af30ff7b37171b46a75a3dea0d55433956651fc839184f28ff5"
     },
     {
       "path": "apps/electron/src/protocol.ts",
@@ -133,14 +133,14 @@
         "runTaskRecordSteps",
         "filterTaskRecordsEffect"
       ],
-      "sha256": "8cd2744d66656987286a0d179b37ec41f1424f9d4dce13418d8d6f3c5bdec890"
+      "sha256": "aff1e83b4486135946a007018ec2551b145aaefb5d7a51f5bcf213db991e6f55"
     },
     {
       "path": "packages/domain/src/task-read.ts",
       "functions": [
         "TaskRead"
       ],
-      "sha256": "615f8ff950f34bbd0c8ffc34caf21f8879b2036adc7bcf4c748e0750df8cf89f"
+      "sha256": "a0080438e465903052b5f9c1f6ebbb67a47441a82fc847754538948cf45f508f"
     },
     {
       "path": "packages/domain/src/limits.ts",
@@ -155,7 +155,7 @@
         "TaskViewSchema",
         "taskView"
       ],
-      "sha256": "7639e50a4a0213173c0b2f297eec637879bb1fd4325b534d0aa7cd9eb7fb3e2d"
+      "sha256": "2ed2ba8eb25f9c5a83b81ec5af265b8214d6c812646df228e3634fa1ee711ded"
     },
     {
       "path": "packages/domain/src/commands.ts",
@@ -163,7 +163,7 @@
         "readTasks",
         "TaskCommands.list"
       ],
-      "sha256": "6d4c1e4b478d4fc62e9c1c115ddb693cf28f09558cc0260610b1682be9e47e12"
+      "sha256": "bc3d80d8d775800b541cc86afbb9e5f8e6e306fa6659bef7e4700ea711829664"
     },
     {
       "path": "apps/electron/src/task-search-presentation.tsx",
@@ -211,14 +211,37 @@
     "agentDiscoveryMain": "4c904d96277853c60692c685c6d4ea3b3e655bc4"
   },
   "integrationReview": {
-    "base": "7c1326bd5ecd1d84cdd9a6426b18e8c380e5d336",
-    "main": "4c904d96277853c60692c685c6d4ea3b3e655bc4",
-    "status": "Covered bodies reviewed; current matcher controls and both compiled client drives passed before hash renewal"
+    "main": "cabf4866835a49f23dc0fe44694740f122855e33",
+    "changed": [
+      "apps/electron/src/task-client.ts",
+      "packages/domain/src/task-filters.ts",
+      "packages/domain/src/task-read.ts",
+      "packages/domain/src/presentation.ts",
+      "packages/domain/src/commands.ts"
+    ],
+    "review": "Renderer and TodoModel R1/catalog debt, credential epoch and Profile-keyed names equal main. task-client runtime functions unchanged; Client type derives the getter factory. Domain graph/read fields and exit formatting do not alter matcher spans or publication identity; shared generator keeps preparation in slot4, graph slot5 and finally cleanup.",
+    "controls": [
+      "docs/evidence/task-search-formal/matcher-fysWyG/result.json",
+      "docs/evidence/perf-cache/verify-H6N3Re/result.json",
+      "docs/evidence/discovery-formal/electron-iSJeVr/result.json"
+    ],
+    "scope": "Real matcher5 and cache7/observer3 intended failures restored; separate model and current client proofs not conflated."
   },
   "fixtureIntegration": {
     "commit": "26367043daf92787fc128ac23544afcb5709a791",
     "productDiffFromMerge": "git diff dc43db3f..26367043 -- apps/**/src packages = empty; only Swift fixture changes among app source trees",
     "newNamedRegression": "readyFullRefreshSupersedesRetryAndKeepsRevealDraftAndCatalog",
     "proof": "Frozen fixture matches26367043;20consecutive8-test runs0 and full113-state suite0; final immutable command results recorded separately"
+  },
+  "fixtureMaintenance": {
+    "commit": "ecee73d77b2d58e185d098fa3d836c78825f8325",
+    "productSource": "3e530071721413535ef357664fb33b386bb7479e",
+    "newNamedRegression": "readyFullRefreshSupersedesRetryAfterDirectOrConfirmedShowAndKeepsDraftAndCatalog",
+    "productDiff": "Application sources unchanged from3e530071; only the discovery fixture and its verification mode changed.",
+    "trace": "docs/evidence/discovery-formal/swift-8RiUYl/trace-result.json",
+    "consecutive": "docs/evidence/discovery-formal/swift-FMsyV6/result.json",
+    "state": "docs/evidence/task-dag/merge-main-cabf-f7r4k8/swift-state-maintenance/result.json",
+    "controls": "docs/evidence/discovery-formal/swift-Fc98a6/result.json",
+    "proof": "20 consecutive7-test discovery suites0 with both named Show cases; full113-state suite0; all4 Swift controls compile/assert1/restore0 and final clean0. No new sleep, retry, deadline or product change."
   }
 }

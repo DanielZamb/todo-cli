@@ -1,8 +1,8 @@
 {
-  "confirmedCommit": "42ae3fa90ddd9d7cfa19f384099aabbb1c2fb4da",
-  "status": "reviewed merged mapping; actual execution receipts in unit-f-report.md",
+  "confirmedCommit": "ecee73d77b2d58e185d098fa3d836c78825f8325",
+  "status": "Reviewed merged public and portable-client mapping. Current public baseline/boundaries, G11/protocol and separate error-contract controls are integration receipts; historical full campaigns remain historical.",
   "gateCommit": "ca142014",
-  "scope": "Reviewed immutable merged product functions; full committed conformance execution required.",
+  "scope": "Reviewed immutable merged product functions. Current relevant-stage receipts and prior full source-control campaigns are recorded separately; no current full89-control rerun claim.",
   "modelSha256": "54254524caf9a30e95bc1e12b01018eafc28ea88c4a211a46228eb137a802c48",
   "unchangedCore": [
     {
@@ -19,11 +19,6 @@
       "path": "packages/domain/src/graph-energy.ts",
       "sha256": "163f46423f38c733c4cf0a250231c0ee64a441177a2636e32c47a88e15656a68",
       "previousCommit": "f140c7b09bcb1db48ce4ccaee797ecfe60019ce4"
-    },
-    {
-      "path": "packages/domain/src/dependency-rules.ts",
-      "sha256": "74369b1acd741009d752f61b4986f190519421170c90d1d2cff33a36183fa26a",
-      "previousCommit": "f140c7b09bcb1db48ce4ccaee797ecfe60019ce4"
     }
   ],
   "files": [
@@ -36,7 +31,7 @@
         "executeBatch",
         "batchDepend"
       ],
-      "sha256": "1aa95169d08fd729d3fe098e94fb158d6bb5886ffdfe75c3d81978cfb27f04b1"
+      "sha256": "989bbc12493a75c310f6a18007ee5d90e6dc2194e43f94e0df3bb2c2dadc28c8"
     },
     {
       "path": "packages/domain/src/dependency-contract.ts",
@@ -45,7 +40,7 @@
         "EdgeReport",
         "BatchEdgeReport"
       ],
-      "sha256": "6df25125f0da176569f97ca2e5974386bb7d09235b37995a046b279efe100026"
+      "sha256": "b37a79874798f51cd951912a9f0624270b66640cae448ba3a97a71ca903f2b36"
     },
     {
       "path": "packages/domain/src/task-filters.ts",
@@ -53,7 +48,7 @@
         "TaskFilters",
         "filterTaskRecords"
       ],
-      "sha256": "5224bac2d9f82305e807d99ab959b495bc1be7347e0ee2964a7024a6fccc2f36"
+      "sha256": "aff1e83b4486135946a007018ec2551b145aaefb5d7a51f5bcf213db991e6f55"
     },
     {
       "path": "packages/domain/src/dependency-delete.ts",
@@ -70,7 +65,7 @@
         "cliResult",
         "mutateTask"
       ],
-      "sha256": "1d912b557332d25806da32e22848eeb17974a8ed08e11cb2ae91f80bfa788dad"
+      "sha256": "bc3d80d8d775800b541cc86afbb9e5f8e6e306fa6659bef7e4700ea711829664"
     },
     {
       "path": "packages/domain/src/auth/auth.ts",
@@ -78,7 +73,7 @@
         "requireCredential",
         "mutate"
       ],
-      "sha256": "619020f5555ac7a8714abf3d61719a6de541a75eccbe57703ffb46654b50c61d"
+      "sha256": "887890d05908da4ea007a716b9ebc311ab0c58f9253506e17fcb38c7ea4a85ca"
     },
     {
       "path": "packages/domain/src/import-dependencies.ts",
@@ -92,7 +87,7 @@
       "functions": [
         "executeImport"
       ],
-      "sha256": "400a90406957e3afc6a88c7fdfdf3add2e8d7ac1e2aa0c814e7b01792e886b19"
+      "sha256": "e8fe1880544b588a9eaec413e3bd7d39579f8f2bb1de344d741aa91a39f17020"
     },
     {
       "path": "packages/domain/src/import.ts",
@@ -101,7 +96,7 @@
         "ImportReport",
         "parseImportText"
       ],
-      "sha256": "4101cc74fe6d3692222ac8b6ce9bfad52c519259a9e7f3303ab82673423e5e0b"
+      "sha256": "6bfae374334bad4a8f065f3a67924a95b2c54f3c1cedd57cabd2557e74cd8780"
     },
     {
       "path": "packages/domain/src/presentation.ts",
@@ -109,7 +104,7 @@
         "encodeResponse",
         "renderError"
       ],
-      "sha256": "2199d100f3a5f3882cca4e230715b30831a24532505cecdbe3bbf0416631b42e"
+      "sha256": "2ed2ba8eb25f9c5a83b81ec5af265b8214d6c812646df228e3634fa1ee711ded"
     },
     {
       "path": "packages/domain/src/store/store.ts",
@@ -121,7 +116,7 @@
         "takeSnapshot",
         "graph"
       ],
-      "sha256": "d9c9e4c5c09e1616c1b46ff0e8077a8d58ef3f7d2b7ea67db82dcccce2fef443"
+      "sha256": "9cbc8b8a2920b91f8cfc0e2137ade7d4ba11a28f7ad6c16fd29b4450d54cbc71"
     },
     {
       "path": "packages/domain/src/store/purge.ts",
@@ -137,7 +132,7 @@
         "applyChanges",
         "Snapshot"
       ],
-      "sha256": "7c82ea08bacbb1358a809dd7b3acac0092d78ad6e137b9645971fce486604544"
+      "sha256": "dd0d3823bd6b9ecd8868ee0eaacdb8e3438aca1bf944f897cd2092eb137364b9"
     },
     {
       "path": "packages/domain/src/store/dependencies.ts",
@@ -175,7 +170,7 @@
         "checkDependencyAddition",
         "checkDependencyStatuses"
       ],
-      "sha256": "74369b1acd741009d752f61b4986f190519421170c90d1d2cff33a36183fa26a"
+      "sha256": "38fbc8c86349775e6eced7404e924ba5a5ab8e5e08616169e378086fe4e5fb11"
     },
     {
       "path": "packages/api/src/index.ts",
@@ -185,7 +180,7 @@
         "BatchEdgeRequest",
         "TaskFilters"
       ],
-      "sha256": "1810c0a4e8999648e8e692980fbe10df3d79a8f6c7622740b3562d5d8402d926"
+      "sha256": "0d613c8eba17b5366e0644f24394aa9266a7dcf9ebe11c1b549677241653ab2c"
     },
     {
       "path": "apps/server/src/server.ts",
@@ -193,7 +188,7 @@
         "rejectUnknownQuery",
         "TasksApi handlers: depend, undepend, batchDepend, importTasks"
       ],
-      "sha256": "79c4fcfc314fba21cd605b9700e0aee6f9971ce9e30aa0e8bc0886d8f7602ec0"
+      "sha256": "45a392a51249de8330df1a2a95ef11f2ae223c2dc7718c98c65308ded34e7120"
     },
     {
       "path": "apps/cli/src/main.ts",
@@ -204,14 +199,14 @@
         "false filter guard",
         "malformed Version boundary finding"
       ],
-      "sha256": "8e5a4c8df5a969959517fdc557faef4857a63687ad03657735bf3d7316ac1bc6"
+      "sha256": "1f2d4eea85ff3ce9c995d2ae018f7bda2b4be3b74b950004870b481016794432"
     },
     {
       "path": "apps/cli/src/schema.ts",
       "functions": [
         "registerCommandSchema"
       ],
-      "sha256": "e625c5d00fabacecf59b3a3f3c954391df16f5b3852131c80e175d83ad55b638"
+      "sha256": "a7ea482cbeb91a23261b5ca6605b7b69ac56db5742c3164c7926e3ea18d0ce19"
     },
     {
       "path": "apps/cli/src/input.ts",
@@ -256,67 +251,67 @@
       "functions": [
         "taskHttpClient caller"
       ],
-      "sha256": "771fe4555d82d3cb02d9244b099a089c1565194a42f9ff530dec2c0a0193aca0"
+      "sha256": "6041c8c910a4b0312fef8f01354af1db9faff95efb5e0985659f58eaea85c6eb"
     },
     {
       "path": "apps/electron/src/task-client.ts",
       "functions": [
         "taskHttpClient caller"
       ],
-      "sha256": "5fa3aa1fce54c97716363a573551d4c1e38b0159bfc85a01c696b8f8cd6df2bc"
+      "sha256": "199f5bda547c6af30ff7b37171b46a75a3dea0d55433956651fc839184f28ff5"
     },
     {
       "path": "packages/api/openapi.json",
       "functions": [
         "graph response schema"
       ],
-      "sha256": "8ecc9f0a45230cfb0edb17c6e60af1365142ad11f81ecb393a6d409501473313"
+      "sha256": "b953845b230189238cabd649482e062b9e00b4aa440fba4f8a28d71b975bb6e7"
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/openapi.json",
       "functions": [
         "graph response schema"
       ],
-      "sha256": "31ccdc4b78637a2229aa6c2060f07f34c34e1c29eae0bb2e0be41a47d418dc1d"
+      "sha256": "69464f97d37dec83f00992d21f965062da1535aeaa2831fdbac9452135730e26"
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Operations.swift",
       "functions": [
         "graph response decoder"
       ],
-      "sha256": "fc574d8d22b6323c48ec99edbf776203e1ed98c8c7c983a1e9b7247b4557d7a8"
+      "sha256": "6a1dfe269981103727c4aacac707d5ab35ee8e560a1b96b26d7a5262545acf99"
     },
     {
       "path": "apps/macos/Tests/GeneratedContractTests.swift",
       "functions": [
         "root-only graph contract decode"
       ],
-      "sha256": "6ca7eac64405ae2e333c217210afb5ea4c440dad819368bab625acbe9c826857"
+      "sha256": "544b587518b797fe97b1dbf6f3cbbfabe38848ce629a043f47a6b1f3bc4da858"
     },
     {
       "path": "apps/electron/scripts/verify-auth-sequence.ts",
-      "sha256": "83310d92eb38da311f03ffc745b9e10ee26865775e4e4dfa0009f2d4e2dfe320",
+      "sha256": "a72a3e042437923b6ea023244e754ff85ef3d5aa62d119bb8ef08208b65e47fd",
       "functions": [
         "credential getter caller"
       ]
     },
     {
       "path": "apps/electron/scripts/write-host.ts",
-      "sha256": "7818670c2e95b57b69de21c1dfb6b13047069b9351225ed05f3ee8478c060cce",
+      "sha256": "aee5836bcd8c840bcba721bf69d7973bec9ba9533a7465c15a3f1676edda4454",
       "functions": [
         "credential getter caller"
       ]
     },
     {
       "path": "packages/api/src/contract.ts",
-      "sha256": "cc1c1fe696544af2f417f0c2945d9124cad2d6e73a76bbf2ee89408e30595e36",
+      "sha256": "71866fb8f4d0cf4da3e27d9108c82a6ff217635c97ed385023dc2e8690fd9ba0",
       "functions": [
         "contract identity"
       ]
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift",
-      "sha256": "9e3f12cbeea05a6eaf29a420954e54bbfa72b73c98ca81c46e53b5801fb2bdd6",
+      "sha256": "9d14acd1dae91364978cb841b0dc38d9e8b395ece307ff828556bd9772750520",
       "functions": [
         "contract identity"
       ]
@@ -352,5 +347,55 @@
     "scope": "Core16 unchanged. Public changes are approved SEC/search base plus reviewed-by-L1 integration of typed yielding search, graph slot5, search-dialog draft and getter preservation. Fresh independent rebase review pending.",
     "previousSensitivity": "Historical89executions on0f7; not relabelled as current-source sensitivity",
     "handwrittenSwiftAdaptation": "Search refusal typed branch3 after DAG union regeneration; nil branches1 and2. No generated source edit."
+  },
+  "integrationReview": {
+    "main": "cabf4866835a49f23dc0fe44694740f122855e33",
+    "product": "97eb40021812cba9fdae76471328b890db239349",
+    "changed": [
+      "packages/domain/src/dependency-commands.ts",
+      "packages/domain/src/dependency-contract.ts",
+      "packages/domain/src/task-filters.ts",
+      "packages/domain/src/commands.ts",
+      "packages/domain/src/auth/auth.ts",
+      "packages/domain/src/import-tasks.ts",
+      "packages/domain/src/import.ts",
+      "packages/domain/src/presentation.ts",
+      "packages/domain/src/store/store.ts",
+      "packages/domain/src/store/projection.ts",
+      "packages/domain/src/dependency-rules.ts",
+      "packages/api/src/index.ts",
+      "apps/server/src/server.ts",
+      "apps/cli/src/main.ts",
+      "apps/cli/src/schema.ts",
+      "apps/electron/src/main.ts",
+      "apps/electron/src/task-client.ts",
+      "packages/api/openapi.json",
+      "apps/macos/API/Sources/TodoAPI/openapi.json",
+      "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Operations.swift",
+      "apps/macos/Tests/GeneratedContractTests.swift",
+      "apps/electron/scripts/verify-auth-sequence.ts",
+      "apps/electron/scripts/write-host.ts",
+      "packages/api/src/contract.ts",
+      "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift"
+    ],
+    "bodyReview": "Graph algorithms unchanged; refusals add exit pairs and stored History decoding defaults. Cache/read ordering and Tag-set projection reviewed against both parents. Client renderer and TodoModel equal main; getter retained.",
+    "controls": [
+      "docs/evidence/fv01/sensitivity-WnZxRk/result.json",
+      "docs/evidence/dag-formal/error-contract-ZeCDoN/result.json",
+      "docs/evidence/perf-cache/generated-tKwtxm/behavior-result.json",
+      "docs/evidence/perf-cache/hygiene-oj9OBZ/commands.json"
+    ],
+    "limits": "Actual intended controls and restores precede renewed hashes. Historical89 executions are not relabelled. Current F stages follow."
+  },
+  "fixtureMaintenance": {
+    "commit": "ecee73d77b2d58e185d098fa3d836c78825f8325",
+    "productSource": "3e530071721413535ef357664fb33b386bb7479e",
+    "newNamedRegression": "readyFullRefreshSupersedesRetryAfterDirectOrConfirmedShowAndKeepsDraftAndCatalog",
+    "productDiff": "Application sources unchanged from3e530071; only the discovery fixture and its verification mode changed.",
+    "trace": "docs/evidence/discovery-formal/swift-8RiUYl/trace-result.json",
+    "consecutive": "docs/evidence/discovery-formal/swift-FMsyV6/result.json",
+    "state": "docs/evidence/task-dag/merge-main-cabf-f7r4k8/swift-state-maintenance/result.json",
+    "controls": "docs/evidence/discovery-formal/swift-Fc98a6/result.json",
+    "proof": "20 consecutive7-test discovery suites0 with both named Show cases; full113-state suite0; all4 Swift controls compile/assert1/restore0 and final clean0. No new sleep, retry, deadline or product change."
   }
 }
