@@ -10,7 +10,10 @@ import {
 } from "./components/ui/dialog.tsx";
 import { ToggleGroup, ToggleGroupItem } from "./components/ui/toggle-group.tsx";
 import type { DependencyBatchController } from "./dependency-batch-state.ts";
-import { DependencyErrorStatus } from "./dependency-dialog.tsx";
+import {
+  DependencyErrorStatus,
+  type DependencyNavigation,
+} from "./dependency-dialog.tsx";
 import {
   dependencyBatchFailure,
   dependencyWarning,
@@ -26,6 +29,9 @@ export function DependencyBatchDialog({
   projects,
   returnFocus,
   onChanged,
+  onFindTask,
+  followUp,
+  openTask,
 }: {
   controller: DependencyBatchController;
   request: (request: Request) => Promise<Reply>;
@@ -33,7 +39,7 @@ export function DependencyBatchDialog({
   projects: readonly { id: string; name: string }[];
   returnFocus: () => HTMLElement | null;
   onChanged: () => void;
-}) {
+} & DependencyNavigation) {
   const state = useSyncExternalStore(controller.subscribe, controller.snapshot);
   if (state.kind === "Closed") return null;
   if (state.phase === "select")
@@ -115,6 +121,14 @@ export function DependencyBatchDialog({
             failure={state.failure}
             context="add"
             tasks={tasks}
+            onFindTask={
+              onFindTask
+                ? (details) => {
+                    controller.close();
+                    onFindTask(details);
+                  }
+                : undefined
+            }
           />
         )}
         {!canWrite && (
@@ -172,6 +186,30 @@ export function DependencyBatchDialog({
                     }}
                     context="add"
                     tasks={tasks}
+                    followUp={
+                      followUp
+                        ? (id, captured) => {
+                            controller.close();
+                            followUp(id, captured);
+                          }
+                        : undefined
+                    }
+                    openTask={
+                      openTask
+                        ? (id, captured) => {
+                            controller.close();
+                            openTask(id, captured);
+                          }
+                        : undefined
+                    }
+                    onFindTask={
+                      onFindTask
+                        ? (details) => {
+                            controller.close();
+                            onFindTask(details);
+                          }
+                        : undefined
+                    }
                     attempted={task ?? null}
                     attemptedAction={
                       state.action === "depend" ? "add" : "remove"

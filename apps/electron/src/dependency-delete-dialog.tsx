@@ -9,8 +9,10 @@ import {
   DialogTitle,
 } from "./components/ui/dialog.tsx";
 import type { DependencyDeleteController } from "./dependency-delete-state.ts";
+import { DependencyErrorStatus } from "./dependency-dialog.tsx";
 import { DependencyTaskLabel } from "./dependency-task-label.tsx";
 import type { Reply, Request } from "./protocol.ts";
+import type { FindTask } from "./task-lookup-status.tsx";
 
 export function DependencyDeleteDialog({
   controller,
@@ -19,6 +21,7 @@ export function DependencyDeleteDialog({
   onDeleted,
   returnFocus,
   projects,
+  onFindTask,
 }: {
   controller: DependencyDeleteController;
   request: (request: Request) => Promise<Reply>;
@@ -26,6 +29,7 @@ export function DependencyDeleteDialog({
   onDeleted: () => void;
   returnFocus: () => HTMLElement | null;
   projects: readonly { id: string; name: string }[];
+  onFindTask?: FindTask | undefined;
 }) {
   const state = useSyncExternalStore(controller.subscribe, controller.snapshot);
   const cancel = useRef<HTMLButtonElement>(null);
@@ -98,10 +102,25 @@ export function DependencyDeleteDialog({
             </section>
           </div>
         )}
-        {state.kind !== "Loading" && state.error && (
-          <p role="alert">{state.error}</p>
+        {state.kind !== "Loading" && state.failure && (
+          <DependencyErrorStatus
+            failure={state.failure}
+            context="delete"
+            tasks={reviewed?.graph?.nodes.map((node) => node.task) ?? []}
+            reload={() =>
+              void controller.open(state.task, request, state.changed)
+            }
+            onFindTask={
+              onFindTask
+                ? (details) => {
+                    controller.close();
+                    onFindTask(details);
+                  }
+                : undefined
+            }
+          />
         )}
-        {state.kind === "Error" && (
+        {state.kind === "Error" && state.failure._tag !== "conflict" && (
           <Button
             variant="outline"
             data-testid="dependency-reload"

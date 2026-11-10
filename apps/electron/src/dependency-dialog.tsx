@@ -27,6 +27,39 @@ import type {
 } from "./dependency-state.ts";
 import { DependencyTaskLabel } from "./dependency-task-label.tsx";
 import type { Reply, Request } from "./protocol.ts";
+import type { FindTask } from "./task-lookup-status.tsx";
+import { SearchErrorMessage } from "./task-search-presentation.tsx";
+
+export function DependencySearchStatus({
+  failure,
+  appliedQuery,
+}: {
+  failure: Extract<Reply, { _tag: "error" }>;
+  appliedQuery: string;
+}) {
+  return (
+    <Alert
+      role="status"
+      aria-label="Dependency search failed"
+      data-testid="dependency-search-error"
+    >
+      <AlertDescription className="flex flex-col gap-1">
+        <SearchErrorMessage
+          kind={
+            failure.code === "search_too_broad"
+              ? "search_too_broad"
+              : "transient"
+          }
+          message={failure.message}
+          appliedText={appliedQuery}
+        />
+        {failure.exit_detail && (
+          <p className="text-muted-foreground">{failure.exit_detail}</p>
+        )}
+      </AlertDescription>
+    </Alert>
+  );
+}
 
 export function DependencyErrorStatus({
   failure,
@@ -38,6 +71,7 @@ export function DependencyErrorStatus({
   attemptedAction = "add",
   dismiss,
   openTask,
+  onFindTask,
 }: {
   failure: Extract<Reply, { _tag: "error" | "conflict" }>;
   context: DependencyContext;
@@ -45,14 +79,24 @@ export function DependencyErrorStatus({
   attempted?: Task | null;
   attemptedAction?: "add" | "remove";
   dismiss?: () => void;
-  openTask?: (id: Task["id"]) => void;
+  openTask?: ((id: Task["id"], captured?: Task) => void) | undefined;
+  onFindTask?: FindTask | undefined;
   reload?: () => void;
-  followUp?: ((id: Task["id"]) => void) | undefined;
+  followUp?: ((id: Task["id"], captured?: Task) => void) | undefined;
 }) {
   const projection =
     failure._tag === "error" && failure.dependency
       ? dependencyRecovery(failure.dependency, context, tasks)
       : null;
+  const capturedTask = (id: Task["id"]) => {
+    if (failure._tag !== "error") return undefined;
+    const error = failure.dependency;
+    return error?.code === "blocked"
+      ? error.details.blockers.find((task) => task.id === id)
+      : error?.code === "blocks_done_task"
+        ? error.details.done_dependents.find((task) => task.id === id)
+        : undefined;
+  };
   return (
     <Alert
       role="status"
@@ -112,7 +156,10 @@ export function DependencyErrorStatus({
                       <span aria-hidden="true">→ </span>
                     )}
                   {projection.action === "openBlocker" && openTask ? (
-                    <Button variant="link" onClick={() => openTask(task.id)}>
+                    <Button
+                      variant="link"
+                      onClick={() => openTask(task.id, capturedTask(task.id))}
+                    >
                       {task.title}
                     </Button>
                   ) : (
@@ -133,12 +180,27 @@ export function DependencyErrorStatus({
               Reload
             </Button>
           )}
+          {failure._tag === "error" && failure.details && (
+            <Button
+              variant="outline"
+              disabled={!onFindTask}
+              onClick={() => {
+                if (failure.details) onFindTask?.(failure.details);
+              }}
+            >
+              Find Task by id
+            </Button>
+          )}
           {projection?.action === "followUp" && projection.followUp && (
             <Button
               variant="outline"
               data-testid="dependency-follow-up"
               onClick={() =>
-                projection.followUp && followUp?.(projection.followUp)
+                projection.followUp &&
+                followUp?.(
+                  projection.followUp,
+                  capturedTask(projection.followUp),
+                )
               }
               disabled={!followUp}
             >
@@ -155,6 +217,10 @@ export function DependencyErrorStatus({
     </Alert>
   );
 }
+export type DependencyNavigation = Pick<
+  Parameters<typeof DependencyErrorStatus>[0],
+  "openTask" | "followUp" | "onFindTask"
+>;
 export function DependencyPicker({
   controller,
   request,
@@ -163,6 +229,7 @@ export function DependencyPicker({
   onChanged,
   projects,
   onBatch,
+  onFindTask,
 }: {
   controller: DependencyController;
   request: (request: Request) => Promise<Reply>;
@@ -171,15 +238,22 @@ export function DependencyPicker({
   onChanged: () => void;
   projects: readonly { id: string; name: string }[];
   onBatch: (task: Task, direction: DependencyDirection) => void;
+  onFindTask?: FindTask | undefined;
 }) {
   const state = useSyncExternalStore(controller.subscribe, controller.snapshot);
   const search = useRef<HTMLInputElement>(null);
   const debounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const scroll = useRef<HTMLDivElement>(null);
+  const notices = useRef<HTMLDivElement>(null);
   const failure = state.kind === "Open" ? state.failure : null;
+  const searchFailure = state.kind === "Open" ? state.searchFailure : null;
   useLayoutEffect(() => {
     if (failure && scroll.current) scroll.current.scrollTop = 0;
-  }, [failure]);
+    if (notices.current)
+      notices.current.scrollTop = searchFailure
+        ? notices.current.scrollHeight
+        : 0;
+  }, [failure, searchFailure]);
   if (state.kind === "Closed") return null;
   const tasks = state.graph?.nodes.map((node) => node.task) ?? [];
   const root = tasks.find((task) => task.id === state.scope.root);
@@ -253,18 +327,36 @@ export function DependencyPicker({
             }}
           />
         </Field>
-        {state.failure && (
-          <DependencyErrorStatus
-            failure={state.failure}
-            attempted={state.attempted}
-            context="add"
-            tasks={tasks}
-            reload={() => void controller.reload(request)}
-            dismiss={() => {
-              controller.dismissFailure();
-              search.current?.focus();
-            }}
-          />
+        {(state.failure || state.searchFailure) && (
+          <div ref={notices} className="dependency-notices">
+            {state.failure && (
+              <DependencyErrorStatus
+                failure={state.failure}
+                attempted={state.attempted}
+                context="add"
+                tasks={tasks}
+                onFindTask={
+                  onFindTask
+                    ? (details) => {
+                        close();
+                        onFindTask(details);
+                      }
+                    : undefined
+                }
+                reload={() => void controller.reload(request)}
+                dismiss={() => {
+                  controller.dismissFailure();
+                  search.current?.focus();
+                }}
+              />
+            )}
+            {state.searchFailure && (
+              <DependencySearchStatus
+                failure={state.searchFailure}
+                appliedQuery={state.appliedQuery}
+              />
+            )}
+          </div>
         )}
         <div ref={scroll} className="dependency-scroll">
           {!canWrite && (

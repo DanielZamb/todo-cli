@@ -124,6 +124,7 @@ for (const [_tag, exit_code, exit_meaning, human] of [
     ).toEqual({
       _tag: "error",
       message: human,
+      ...(_tag === "NotFound" ? { code: "not_found" } : {}),
       exit_detail: `error ${exit_code} - ${exit_meaning}`,
     });
   });

@@ -16,7 +16,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium, expect, type Locator } from "@playwright/test";
-import { ProfileId } from "@todo/domain";
+import { DependencyError, ProfileId } from "@todo/domain";
 import { Effect, Fiber, Schema, Stream } from "effect";
 import { FetchHttpClient, type HttpClient } from "effect/http";
 import { build } from "vite";
@@ -36,6 +36,10 @@ import { openImport } from "./appearance.ts";
 import { buildGraphBrowser } from "./build-graph-browser.ts";
 import { writeDagCaptureManifest } from "./dag-capture-manifest.ts";
 import { settleRenderer } from "./settle-renderer.ts";
+import {
+  createDependencySearchProbe,
+  verifyDependencySearchRecovery,
+} from "./verify-dependency-search-recovery.ts";
 
 const root = verificationRoot(import.meta.dirname);
 const evidence = repositoryPath(
@@ -63,6 +67,9 @@ const env = {
 let server: ChildProcess | undefined;
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
 let stream: Fiber.Fiber<void, unknown> | undefined;
+let searchProbe:
+  | Awaited<ReturnType<typeof createDependencySearchProbe>>
+  | undefined;
 let log = "";
 const actions: unknown[] = [];
 const manifest: { png: string; receipt: string; [key: string]: unknown }[] = [];
@@ -154,6 +161,23 @@ try {
       }),
     )
   ).credential;
+  const capturedBlocker = await run(
+    client.tasks.show({
+      params: {
+        profile: Schema.decodeUnknownSync(ProfileId)("work"),
+        task: blocker.id,
+      },
+    }),
+  );
+  const capturedCompleted = await run(
+    client.tasks.show({
+      params: {
+        profile: Schema.decodeUnknownSync(ProfileId)("work"),
+        task: done.id,
+      },
+    }),
+  );
+  searchProbe = await createDependencySearchProbe(client, () => credential);
   execFileSync("sh", [join(root, "scripts/disk-guard.sh")], {
     stdio: "inherit",
   });
@@ -204,6 +228,27 @@ try {
   let delay = false;
   let delayDelete = false;
   let reportFixture: "batch" | "import" | null = null;
+  const projectedError = (index: number) => {
+    const error = dependencyRefusals[index]?.error;
+    assert.ok(error);
+    return Schema.decodeUnknownSync(DependencyError)(
+      error.code === "blocked"
+        ? {
+            ...error,
+            details: { ...error.details, blockers: [capturedBlocker] },
+          }
+        : error.code === "blocks_done_task"
+          ? {
+              ...error,
+              details: {
+                ...error.details,
+                done_dependents: [capturedCompleted],
+                follow_up_depends_on: capturedCompleted.id,
+              },
+            }
+          : error,
+    );
+  };
   let release: (() => void) | undefined;
   const releasePending = () => {
     const done = release;
@@ -300,7 +345,7 @@ try {
             dry_run: request.payload.dry_run === true,
             results: request.payload.items.map((_, index) => ({
               index,
-              error: dependencyRefusals[index]?.error,
+              error: projectedError(index),
               exit_code: 2,
             })),
           },
@@ -327,7 +372,7 @@ try {
                       message: dependencyAgentMessage,
                       details: {
                         current_version: null,
-                        dependency_error: dependencyRefusals[index]?.error,
+                        dependency_error: projectedError(index),
                       },
                     }
                   : {
@@ -341,8 +386,17 @@ try {
         });
       try {
         const reply = Schema.decodeUnknownSync(Reply)(
-          await run(taskRequest(client, request)),
+          await run(
+            taskRequest(
+              request._tag === "dependencyCandidates" && searchProbe?.enabled
+                ? searchProbe.http
+                : client,
+              request,
+            ),
+          ),
         );
+        if (request._tag === "dependencyCandidates" && searchProbe?.enabled)
+          searchProbe.record(request.filters.text ?? "", reply);
         if (reply._tag === "graph" && failRender) {
           failRender = false;
           return {
@@ -401,7 +455,7 @@ try {
     };
   });
   await page.addScriptTag({ content: script.code });
-  const capture = async (
+  const captureOne = async (
     state: string,
     description: string,
     layout = "compact",
@@ -536,6 +590,63 @@ try {
             elements.map((element) => element.getAttribute("data-testid")),
           ),
       });
+    }
+  };
+  const capture = async (
+    state: string,
+    description: string,
+    layout = "compact",
+    target?: Locator,
+  ) => {
+    await captureOne(state, description, layout, target);
+    if (layout !== "compact" || state.startsWith("graph-")) return;
+    const scrolls = await page.evaluateHandle(() =>
+      [...document.querySelectorAll("*")]
+        .filter((element) => element.scrollHeight > element.clientHeight)
+        .map((element) => ({
+          element,
+          top: element.scrollTop,
+          left: element.scrollLeft,
+        })),
+    );
+    const focus = await page.evaluateHandle(() => document.activeElement);
+    const importIndex = target
+      ? await target.evaluate((element) => {
+          const row = element.closest(".import-row");
+          return row
+            ? [...document.querySelectorAll(".import-row")].indexOf(row)
+            : -1;
+        })
+      : -1;
+    try {
+      await page.setViewportSize({ width: 1100, height: 720 });
+      await notify({ _tag: "windowMode", compact: false });
+      await settleRenderer(page);
+      await captureOne(
+        state,
+        description,
+        "full",
+        importIndex >= 0
+          ? page.locator(".import-table tbody tr").nth(importIndex)
+          : target,
+      );
+    } finally {
+      await page.setViewportSize({ width: 393, height: 426 });
+      await notify({ _tag: "windowMode", compact: true });
+      await settleRenderer(page);
+      await focus.evaluate((element) => {
+        if (element instanceof HTMLElement && element.isConnected)
+          element.focus({ preventScroll: true });
+      });
+      await scrolls.evaluate((values) => {
+        for (const { element, top, left } of values)
+          if (element.isConnected) {
+            element.scrollTop = top;
+            element.scrollLeft = left;
+          }
+      });
+      await scrolls.dispose();
+      await focus.dispose();
     }
   };
   await expect(
@@ -1076,6 +1187,9 @@ try {
     return geometry;
   };
   await expect(page.locator(".parsed-draft")).toBeVisible();
+  await expect(page.locator(".parsed-draft")).toContainText(
+    "Task title: Created with a reviewed Dependency",
+  );
   const quickNone = await quickGeometry("quick-dependencies-none");
   assert.equal(quickNone.rowHeight, 32);
   await capture(
@@ -1156,6 +1270,39 @@ try {
   for (const task of wrapTasks)
     await page.getByTestId(`dependency-choice-${task.id}`).check();
   await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.locator(".parsed-draft").evaluate((element) => {
+    element.scrollTop = 0;
+  });
+  const initialChipBounds = await page
+    .locator(".dependency-initial-row")
+    .evaluate((row) => {
+      const region = row.closest(".parsed-draft")?.getBoundingClientRect();
+      return {
+        region: region?.toJSON(),
+        chips: [
+          ...row.querySelectorAll('[data-testid^="dependency-initial-"]'),
+        ].map((chip) => ({
+          id: chip.getAttribute("data-testid"),
+          ...chip.getBoundingClientRect().toJSON(),
+        })),
+      };
+    });
+  assert.ok(initialChipBounds.region);
+  for (const chip of initialChipBounds.chips.slice(0, 2)) {
+    assert.ok(
+      chip.top >= initialChipBounds.region.top &&
+        chip.bottom <= initialChipBounds.region.bottom,
+      JSON.stringify(initialChipBounds),
+    );
+  }
+  writeFileSync(
+    join(evidence, "quick-many-initial-chips.json"),
+    JSON.stringify(initialChipBounds),
+  );
+  await capture(
+    "quick-dependencies-many-initial",
+    "The initial metadata scroll position shows whole chosen chips; remaining wrapped chips stay inside the scroll region with fixed footer",
+  );
   const lastChip = wrapTasks.at(-1);
   assert.ok(lastChip);
   await page
@@ -1265,6 +1412,9 @@ try {
   await page
     .getByLabel("Task title", { exact: true })
     .fill("Follow-up from the done dependent");
+  await expect(page.locator(".parsed-draft")).toContainText(
+    "Task title: Follow-up from the done dependent",
+  );
   await capture(
     "follow-up-preselected",
     "Create follow-up preselects the structured DONE dependent id, preserving the existing editor draft",
@@ -1627,8 +1777,28 @@ try {
     if (phase === "preview")
       await page.getByTestId("dependency-batch-apply").click();
   }
+  const batchFollowUp = page
+    .getByTestId("dependency-batch-row-3")
+    .getByTestId("dependency-follow-up");
+  await expect(batchFollowUp).toBeEnabled();
+  await batchFollowUp.click();
   reportFixture = null;
-  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(page.getByTestId(`dependency-initial-${done.id}`)).toBeVisible();
+  await page
+    .getByLabel("Task title", { exact: true })
+    .fill("Follow-up from a captured batch refusal");
+  await expect(page.locator(".parsed-draft")).toContainText(
+    "Task title: Follow-up from a captured batch refusal",
+  );
+  await capture(
+    "batch-follow-up-preselected",
+    "A typed report's Create follow-up opens the existing add flow with the captured DONE Task, without an automatic write",
+  );
+  await page.getByTestId(`dependency-initial-${done.id}`).click();
+  await page
+    .locator(".quick-dialog")
+    .getByRole("button", { name: "Close", exact: true })
+    .click();
   await page
     .getByRole("button", { name: "Back to tasks", exact: true })
     .click();
@@ -1640,6 +1810,7 @@ try {
       Array.from({ length: 8 }, (_, index) => ({
         external_id: `projection:${index}`,
         title: `Import candidate ${index + 1}`,
+        ...(index === 2 ? { status: "done" } : {}),
       })),
     ),
   );
@@ -1651,8 +1822,10 @@ try {
   for (let index = 0; index < 8; index++) {
     const row = page.locator(".import-row").nth(index);
     const expected =
-      dependencyRefusals[index]?.human ??
-      "This Task changed. Reload its Dependencies before trying again.";
+      index === 2
+        ? "Finish or cancel these Dependencies before marking this Task done."
+        : (dependencyRefusals[index]?.human ??
+          "This Task changed. Reload its Dependencies before trying again.");
     await expect(row).toContainText(expected);
     await expect(row).not.toContainText("AGENT ONLY");
     await expect(row).toContainText(
@@ -1666,8 +1839,50 @@ try {
       row,
     );
   }
+  const importBlocker = page
+    .locator(".import-row")
+    .nth(2)
+    .getByRole("button", { name: blocker.title, exact: true });
+  await expect(importBlocker).toBeEnabled();
+  await importBlocker.click();
+  await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
+    blocker.title,
+  );
+  await capture(
+    "import-open-blocker",
+    "The complete-context nested refusal opens the captured authorized blocker only after the user chooses it",
+  );
+  await page
+    .getByRole("button", { name: "Back to tasks", exact: true })
+    .click();
+  await openImport(page);
+  await page.locator('input[type="file"]').setInputFiles(importFile);
+  await page
+    .getByRole("button", { name: "Preview changes", exact: true })
+    .click();
+  const importFollowUp = page
+    .locator(".import-row")
+    .nth(3)
+    .getByTestId("dependency-follow-up");
+  await expect(importFollowUp).toBeEnabled();
+  await importFollowUp.click();
   reportFixture = null;
-  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.getByTestId(`dependency-initial-${done.id}`)).toBeVisible();
+  await page
+    .getByLabel("Task title", { exact: true })
+    .fill("Follow-up from a captured nested Import refusal");
+  await expect(page.locator(".parsed-draft")).toContainText(
+    "Task title: Follow-up from a captured nested Import refusal",
+  );
+  await capture(
+    "import-follow-up-preselected",
+    "Nested Import recovery reuses the existing follow-up flow with the captured DONE Task and no automatic write",
+  );
+  await page.getByTestId(`dependency-initial-${done.id}`).click();
+  await page
+    .locator(".quick-dialog")
+    .getByRole("button", { name: "Close", exact: true })
+    .click();
   const sameDependent = cli("add", "Same-dependent batch Version fixture").task;
   cli("done", sameDependent.id, "--expected-version", "1");
   await page
@@ -2063,6 +2278,308 @@ try {
     .getByRole("button", { name: "Close", exact: true })
     .click();
   assert.equal(cli("show", plain.id).task.title, "Review tomorrow");
+  const removedRoot = cli("add", "A root removed while its graph is open").task;
+  await page
+    .getByRole("button", { name: "Back to tasks", exact: true })
+    .click();
+  await page
+    .locator(`[data-task-id="${removedRoot.id}"] .task-content`)
+    .click();
+  await openGraph();
+  await expect(page.getByTestId("dependency-graph-overview")).toHaveCount(0);
+  await expect(page.locator(".dependency-graph-controls small")).toHaveText(
+    "1 of 1 Task shown",
+  );
+  await capture(
+    "graph-singleton",
+    "A singleton graph shows its root details, no direct Dependencies and a Ready root in Lightest next",
+  );
+  await page.getByRole("button", { name: "Diagram", exact: true }).click();
+  await expect(
+    page
+      .frameLocator('[data-testid="dependency-graph-diagram"]')
+      .locator(".pele-node:not(.graph-hidden)"),
+  ).toHaveCount(1);
+  const singletonNode = page
+    .frameLocator('[data-testid="dependency-graph-diagram"]')
+    .locator(`[data-task-id="${removedRoot.id}"]`);
+  await expect(singletonNode).toHaveAttribute(
+    "aria-label",
+    `${removedRoot.title}, ready`,
+  );
+  await expect(singletonNode).toHaveAttribute("data-state", "ready");
+  await expect(singletonNode).toHaveAttribute("data-root", "true");
+  const removedParams = {
+    profile: Schema.decodeUnknownSync(ProfileId)("work"),
+    task: removedRoot.id,
+  };
+  const removedPreview = await run(
+    client.tasks.delete({
+      params: removedParams,
+      query: { dry_run: true, from_version: removedRoot.row_version },
+    }),
+  );
+  assert.ok(removedPreview.dependency_fingerprint);
+  await run(
+    client.tasks.delete({
+      params: removedParams,
+      query: {
+        from_version: removedRoot.row_version,
+        with_dependencies: true,
+        dependency_fingerprint: removedPreview.dependency_fingerprint,
+      },
+    }),
+  );
+  await expect(page.getByTestId("dependency-graph")).toContainText(
+    "Task not found",
+  );
+  await expect(page.getByTestId("dependency-graph-diagram")).toHaveCount(0);
+  await expect(page.getByTestId("dependency-graph")).toContainText(
+    "error 3 - not found or auth missing",
+  );
+  await capture(
+    "graph-deleted-root",
+    "A real root deletion clears stale diagram data, keeps the actual exit pair and offers explicit Find Task by id",
+  );
+  const lookupReads = () =>
+    actions.filter((entry) =>
+      Schema.is(
+        Schema.Struct({
+          request: Schema.Struct({ _tag: Schema.Literal("lookup") }),
+        }),
+      )(entry),
+    ).length;
+  const priorLookupReads = lookupReads();
+  await page
+    .getByRole("button", { name: "Find Task by id", exact: true })
+    .click();
+  await expect(page.getByTestId("dependency-graph")).toHaveCount(0);
+  await expect(page.getByTestId("discovery-prefix")).toHaveValue(
+    removedRoot.id,
+  );
+  assert.equal(lookupReads(), priorLookupReads);
+  await capture(
+    "graph-deleted-lookup",
+    "Find Task by id preselects only the known id and waits for an explicit Find; no automatic cross-Profile lookup",
+  );
+  await page.getByTestId("discovery-close").click();
+  await page.getByRole("button", { name: "Task actions", exact: true }).click();
+  await page
+    .getByRole("menuitem", { name: "Delete task", exact: true })
+    .click();
+  await expect(page.getByTestId("dependency-delete-dialog")).toContainText(
+    "error 3 - not found or auth missing",
+  );
+  await expect(page.getByTestId("dependency-delete-confirm")).toBeDisabled();
+  await capture(
+    "delete-missing-pair",
+    "A missing Task Delete preview retains its typed failure and actual exit pair; confirmation remains disabled",
+  );
+  await page.getByTestId("dependency-delete-cancel").click();
+  await page
+    .getByRole("button", { name: "Back to tasks", exact: true })
+    .click();
+  const seriesBase = cli("add", "Recurring initial Dependency fixture").task;
+  await page.locator(`[data-task-id="${seriesBase.id}"] .task-content`).click();
+  await page.getByRole("button", { name: "Recurrence", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Create Series", exact: true }),
+  ).toBeVisible();
+  await page
+    .locator(".recurrence-dialog")
+    .getByRole("button", { name: "Add Dependencies", exact: true })
+    .click();
+  await page
+    .getByTestId("dependency-initial-picker")
+    .getByRole("textbox")
+    .fill(blocker.title);
+  await page.getByTestId(`dependency-choice-${blocker.id}`).check();
+  await page.getByTestId("dependency-initial-done").click();
+  await expect(
+    page.getByTestId(`dependency-initial-${blocker.id}`),
+  ).toBeVisible();
+  const initialSeriesChip = await page
+    .getByTestId(`dependency-initial-${blocker.id}`)
+    .evaluate((chip) => {
+      const body = chip
+        .closest('[data-slot="field-group"]')
+        ?.getBoundingClientRect();
+      return {
+        chip: chip.getBoundingClientRect().toJSON(),
+        body: body?.toJSON(),
+      };
+    });
+  assert.ok(
+    initialSeriesChip.body &&
+      initialSeriesChip.chip.top >= initialSeriesChip.body.top &&
+      initialSeriesChip.chip.bottom <= initialSeriesChip.body.bottom,
+    JSON.stringify(initialSeriesChip),
+  );
+  await page
+    .locator('.recurrence-dialog > [data-slot="field-group"]')
+    .evaluate((body) => {
+      body.scrollTop = 0;
+    });
+  await capture(
+    "new-recurring-dependencies",
+    "The real Create Series form includes a removable initial Dependency in its scrolling form",
+  );
+  const recurrenceGeometry = await page
+    .locator(".recurrence-dialog")
+    .evaluate((dialog) => {
+      const footer = dialog
+        .querySelector(".recurrence-footer")
+        ?.getBoundingClientRect();
+      const title = dialog
+        .querySelector('[data-slot="dialog-title"]')
+        ?.getBoundingClientRect();
+      const body = dialog
+        .querySelector('[data-slot="field-group"]')
+        ?.getBoundingClientRect();
+      const firstField = dialog
+        .querySelector('[data-slot="field-group"] > [data-slot="field"]')
+        ?.getBoundingClientRect();
+      const chip = dialog
+        .querySelector('[data-testid^="dependency-initial-"]')
+        ?.getBoundingClientRect();
+      return {
+        dialog: dialog.getBoundingClientRect().toJSON(),
+        body: body?.toJSON(),
+        firstField: firstField?.toJSON(),
+        chip: chip?.toJSON(),
+        footer: footer?.toJSON(),
+        title: title?.toJSON(),
+        viewport: innerHeight,
+      };
+    });
+  writeFileSync(
+    join(evidence, "recurrence-initial-geometry.json"),
+    JSON.stringify(recurrenceGeometry),
+  );
+  assert.ok(
+    recurrenceGeometry.dialog.top >= 8 &&
+      recurrenceGeometry.dialog.bottom <= 418 &&
+      recurrenceGeometry.footer &&
+      recurrenceGeometry.title &&
+      recurrenceGeometry.footer.bottom <= 426 &&
+      recurrenceGeometry.title.top >= 0,
+    JSON.stringify(recurrenceGeometry),
+  );
+  assert.ok(
+    recurrenceGeometry.body &&
+      recurrenceGeometry.firstField &&
+      recurrenceGeometry.chip,
+  );
+  for (const row of [recurrenceGeometry.firstField, recurrenceGeometry.chip])
+    assert.ok(
+      row.top >= recurrenceGeometry.body.top &&
+        row.bottom <= recurrenceGeometry.body.bottom,
+      JSON.stringify(recurrenceGeometry),
+    );
+  await page
+    .getByRole("button", { name: "Create Series", exact: true })
+    .click();
+  await expect(page.locator(".recurrence-dialog")).toHaveCount(0);
+  const occurrences = await run(
+    client.tasks.list({
+      params: { profile: Schema.decodeUnknownSync(ProfileId)("work") },
+      query: { text: seriesBase.title },
+    }),
+  );
+  const firstOccurrence = occurrences.find((task) => task.occurrence !== null);
+  assert.ok(firstOccurrence);
+  assert.equal(firstOccurrence.row_version, 1);
+  assert.deepEqual(firstOccurrence.depends_on, [blocker.id]);
+  await page
+    .getByRole("button", { name: "Back to tasks", exact: true })
+    .click();
+  await page
+    .locator(`[data-task-id="${firstOccurrence.id}"]`)
+    .getByRole("button", {
+      name: `Complete ${firstOccurrence.title}`,
+      exact: true,
+    })
+    .click();
+  await expect(page.getByTestId("dependency-error")).toContainText(
+    "Finish or cancel these Dependencies before marking this Task done.",
+  );
+  await expect(page.getByTestId("dependency-error")).toContainText(
+    "error 2 - validation or usage",
+  );
+  assert.equal(cli("show", firstOccurrence.id).task.status, "open");
+  await capture(
+    "blocked-completion",
+    "The real initial Occurrence cannot complete while its blocker is open; the Task stays open with deliberate blocker recovery",
+  );
+  await page
+    .getByTestId("dependency-error")
+    .getByRole("button", { name: blocker.title, exact: true })
+    .click();
+  await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
+    blocker.title,
+  );
+  await capture(
+    "blocked-open-blocker",
+    "Choosing a captured blocker opens the existing editor without automatically completing or cancelling either Task",
+  );
+  await page
+    .getByRole("button", { name: "Back to tasks", exact: true })
+    .click();
+  await page
+    .locator(`[data-task-id="${firstOccurrence.id}"] .task-content`)
+    .click();
+  await page.getByRole("button", { name: "Recurrence", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Skip Occurrence", exact: true })
+    .click();
+  await expect(page.locator(".recurrence-dialog")).toHaveCount(0);
+  const afterSkip = await run(
+    client.tasks.list({
+      params: { profile: firstOccurrence.profile_id },
+      query: { text: seriesBase.title },
+    }),
+  );
+  const successor = afterSkip.find(
+    (task) => task.occurrence !== null && task.id !== firstOccurrence.id,
+  );
+  assert.ok(successor);
+  assert.equal(successor.status, "open");
+  assert.equal(successor.row_version, 1);
+  assert.deepEqual(successor.depends_on, []);
+  assert.equal(cli("show", firstOccurrence.id).task.status, "cancelled");
+  writeFileSync(
+    join(evidence, "initial-occurrence-result.json"),
+    JSON.stringify({ seriesBase, firstOccurrence, successor }),
+  );
+  await page
+    .getByRole("button", { name: "Back to tasks", exact: true })
+    .click();
+  const successorRow = page.locator(`[data-task-id="${successor.id}"]`);
+  await successorRow.scrollIntoViewIfNeeded();
+  await expect(successorRow).toContainText(successor.title);
+  await expect(
+    page.getByTestId(`dependency-state-${successor.id}`),
+  ).toHaveCount(0);
+  await capture(
+    "initial-occurrence-successor",
+    "Fresh public reads prove that initial Dependencies applied only to the first Occurrence and the open successor inherited none",
+  );
+  const searchRecovery = await verifyDependencySearchRecovery({
+    page,
+    root: blocked,
+    blocker,
+    cli,
+    capture,
+    probe: searchProbe,
+    holdUpdates: async (hold) => {
+      holdNotices = hold;
+      if (!hold) while (heldNotices.length) await notify(heldNotices.shift());
+    },
+  });
+  writeFileSync(
+    join(evidence, "search-recovery.json"),
+    JSON.stringify(searchRecovery, null, 2),
+  );
   assert.deepEqual(errors, []);
   writeFileSync(
     join(evidence, "result.json"),
@@ -2087,6 +2604,7 @@ try {
 } finally {
   if (stream) await Effect.runPromise(Fiber.interrupt(stream));
   await browser?.close();
+  searchProbe?.close();
   if (server && server.exitCode === null && server.signalCode === null) {
     const exited = new Promise<void>((done) =>
       server?.once("exit", () => done()),

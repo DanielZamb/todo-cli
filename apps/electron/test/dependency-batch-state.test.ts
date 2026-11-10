@@ -6,6 +6,31 @@ import { dependencyGraph, dependencyTask } from "./fixtures/dependencies.ts";
 import { dependencyRefusals } from "./fixtures/dependency-errors.ts";
 
 const root = dependencyTask("root");
+it("treats a missing root inside a graph response as compatibility failure and sends no batch", async () => {
+  const controller = new DependencyBatchController();
+  controller.open(root, "dependsOn");
+  controller.select([dependencyTask("other")]);
+  const graph = dependencyGraph();
+  const calls: Request[] = [];
+  await controller.preview(async (request) => {
+    calls.push(request);
+    return {
+      _tag: "graph",
+      report: {
+        ...graph,
+        nodes: graph.nodes.filter((node) => node.task.id !== root.id),
+      },
+    };
+  });
+  expect(calls.map((request) => request._tag)).toEqual(["graph"]);
+  expect(controller.snapshot()).toMatchObject({
+    failure: {
+      _tag: "error",
+      message: "Todo returned an incompatible Dependency graph.",
+    },
+    report: null,
+  });
+});
 const edge = (
   index: number,
   dependent: string,

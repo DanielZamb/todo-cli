@@ -283,7 +283,9 @@ export const Reply = Schema.Union([
     dependency: Schema.optionalKey(DependencyError),
     exit_detail: Schema.optionalKey(Schema.String),
     details: Schema.optionalKey(TaskLookupDetails),
-    code: Schema.optionalKey(Schema.Literal("search_too_broad")),
+    code: Schema.optionalKey(
+      Schema.Literals(["search_too_broad", "not_found"]),
+    ),
   }),
 ]);
 export type Reply = typeof Reply.Type;

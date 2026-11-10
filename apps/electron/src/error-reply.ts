@@ -85,6 +85,7 @@ export function errorReply(
       _tag: "error",
       message: `Task not found in ${details.profile.name}.`,
       details,
+      ...(isDependencyRequest(request) ? { code: "not_found" as const } : {}),
       ...(isDependencyRequest(request) && detail
         ? { exit_detail: detail }
         : {}),
@@ -123,6 +124,7 @@ export function errorReply(
       };
     return {
       _tag: "error",
+      ...(code === "not_found" ? { code } : {}),
       ...dependencyBatchFailure({ code: code ?? "runtime", ...status.value }),
     };
   }

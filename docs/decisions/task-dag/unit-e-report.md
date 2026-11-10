@@ -5,19 +5,20 @@ are approved. V1-V11, E3/E4 and the latest parity corrections are being verified
 This report does not claim a complete matrix, full-suite success or final approval.
 
 Branch: `feat/task-dag-e-electron`. Qualified base:
-`2c78a3263c196d870459b17bf647cfc23f421fdd`. Current committed parent is
-`5a94cffbe4068a93e36278624f7d9cdbee65e9ce`; the next product checkpoint includes
-the current handwritten Electron changes and reusable renderer driver. Contract:
+`2c78a3263c196d870459b17bf647cfc23f421fdd`. The previous product checkpoint is
+`f8236b515efcb6651707e5eaf6d98a655f5a9024`. Current recovery work was developed
+from that source, with exact working-source hashes in the proof receipts. Contract:
 `858612b6feba4e359ee28749b70119a36b3909ad20459ef15f82286f1b80b829`.
 No domain, CLI, server or Swift product files were added or changed by E. No
 children were launched. L1 controls integration and the correctness review seat;
 the coordinator is the sole UI reviewer. No self-approval is claimed.
 
 The current checkpoint's Electron typecheck exits 0; its complete package unit
-suite exits 0 with 136 passing tests and the existing one skip. Owned-file Biome
+suite exits 0 with 149 passing tests and the existing one skip. Owned-file Biome
 check and the permitted local no-comments audit exit 0. Their receipts and source
 hashes are in `feature-matrix-setup/checkpoint-*`. These are intermediate checks,
-not the root check or either full offscreen design suite.
+not the root check or either full offscreen design suite. Current recovery checks
+are in `search-recovery-setup/checkpoint-*`; earlier receipts remain unchanged.
 
 ## Product checkpoint
 
@@ -121,6 +122,63 @@ from the final committed source before the end suites. Native key dispatch,
 VoiceOver, clipboard, safeStorage and Session restoration are unproven.
 
 ## Verification maintenance and baseline
+
+`feature-matrix-07/result.json` exits 0 with 334 existing PNG/receipt pairs. Its
+source snapshot is `feature-matrix-setup/source-07/index.json`. Every assertion
+in the current partial drive passes, including both search-recovery sequences,
+initial-chip visibility and fixed footer, recurring form geometry, actual initial
+Occurrence/no-successor-inheritance, typed Delete failures and report recovery.
+This remains `DAG_INTERMEDIATE_PARTIAL`, uses the named cached 868 backend and
+does not substitute for the missing states or either full end suite. The preceding
+combined run 06 retains its nonzero assertion on the already-scrolled first form
+field; the top-of-form capture now explicitly scrolls to the start while separately
+asserting that the selected chip was whole on return.
+
+The app's graph-node mapping also incorrectly applied the calm-row exception to
+Ready nodes with no blockers. `graph-ready-node-before-01` exits 1 on the real SVG
+accessible name, and its fixed counterpart exits 0. The app now sends server
+`ready` independently of blocker count; row badges remain unchanged. No canonical
+source or protocol change is included. A batch graph missing its requested root
+now produces a compatibility notice and no batch request, rather than inventing a
+Task-not-found result; the literal failing-before test is retained and passes after
+the fix in the 149-test package run.
+
+The later recovery wave retains a real HTTP deleted-root red/green pair at
+`deleted-graph-before-01` and `deleted-graph-after-01`, exits 1 and 0. A missing
+root clears its old report, camera and focus. A graph without its requested root
+is rejected. Graph and Delete failures retain actual exit pairs and explicit
+Find Task by id recovery without automatically submitting lookup. The Delete
+pair regression is retained at `delete-pair-before-01` and
+`delete-pair-after-01`, exits 1 and 0. Only owned Electron IPC adds a `not_found`
+reason; no shared public schema changes.
+
+`report-recovery-after-02` exits 0 for all six preview/apply projections, nested
+Import projections and both controlled Conflict spellings. Actual authorized
+Task witnesses come from compiled-server HttpApi reads. Deliberate blocker open
+and Create follow-up use the existing editor/add flows, with the captured DONE
+Task preselected and no automatic write. Its first setup attempt failed because
+the fixture used CLI display records as Task witnesses; that harness failure
+remains at `report-recovery-after-01`. Malformed input was rejected.
+
+`recurrence-before-01` exits 0 for real initial Occurrence creation, blocked
+completion recovery, Skip and a successor with no inherited edges. A stronger
+dialog-boundary assertion exposed a clipped Compact form, retained at
+`recurrence-geometry-before-01` exit 1. Its fixed counterpart exits 0 with dialog
+bounds y8 to418 and a visible fixed footer. Initial Dependencies now belong to
+the scrolling form above the rule preview. The combined drive retains
+`feature-matrix-05` exit 1: the second initial chip was clipped by 1.42 px. Using
+the existing 4 px chip row-gap token fixes it; `initial-chips-after-01` exits 0
+with both first chips whole and the 16 px preview/footer relationship unchanged.
+Corrected Compact light/dark images were read. Combined source proof continues.
+
+The priority S-C1 parity result is in `unit-e-search-recovery.md`. Electron's graph
+already passed at its exact f823 controller preimage. The picker separately
+conflated search and mutation notices; its renderer red/green proof preserves
+cycle witnesses and real Conflict/Reload while clearing only the search notice.
+The current combined search drive exits 0 after all 16 actual SDK deliveries,
+including both delayed older errors. Its valid public 422 threshold is controlled;
+ordinary 200 data comes from compiled scratch-server reads. Eight recovery tests
+also preserve an independent batch report. Canonical e790/a5 is unchanged.
 
 Scoped verification maintenance is committed at
 `0ee8a15883de139a7ff23a8cf2810c8c2e28ede7`; silent-success compiler guards at

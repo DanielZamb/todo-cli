@@ -22,6 +22,8 @@ export type DependencyState =
       readonly scope: DependencyScope;
       readonly direction: DependencyDirection;
       readonly query: string;
+      readonly appliedQuery: string;
+      readonly searchFailure: Extract<Reply, { _tag: "error" }> | null;
       readonly graph: GraphReport | null;
       readonly candidates: readonly TaskRead[];
       readonly loading: boolean;
@@ -68,6 +70,8 @@ export class DependencyController {
       scope,
       direction,
       query: "",
+      appliedQuery: "",
+      searchFailure: null,
       graph: null,
       candidates: [],
       loading: true,
@@ -135,7 +139,7 @@ export class DependencyController {
     const { scope } = this.state;
     const epoch = this.epoch;
     const search = ++this.search;
-    this.publish({ ...this.state, query });
+    this.publish({ ...this.state, query, searchFailure: null });
     const result = await this.call(request, {
       _tag: "dependencyCandidates",
       profile: scope.profile,
@@ -147,9 +151,20 @@ export class DependencyController {
       this.publish({
         ...current,
         candidates: result.tasks,
-        failure: current.failure?._tag === "conflict" ? current.failure : null,
+        appliedQuery: query,
+        searchFailure: null,
       });
-    else this.publish({ ...current, failure: this.failure(result) });
+    else
+      this.publish({
+        ...current,
+        searchFailure:
+          result._tag === "error"
+            ? result
+            : {
+                _tag: "error",
+                message: "Todo returned an incompatible Task search.",
+              },
+      });
   }
   choices(): readonly { task: TaskRead; checked: boolean }[] {
     const state = this.state;

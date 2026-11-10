@@ -311,3 +311,9 @@ its accessible value keeps the full relation. Long-loop refusal geometry require
 three whole witness lines and at least two whole candidate rows. Batch and nested
 Import fixtures use visibly different agent messages to catch projector leaks.
 The complete aggregate and both final client suites remain required separately.
+Search-owned notices use `dependency-search-error`; mutation refusals retain
+`dependency-error`. The dependency search helper proves narrow/clear recovery
+through actual HttpApi decoding, retains Conflict/Reload and rejects older errors
+after SDK delivery. Read its typed-fixture versus compiled-server boundary in the
+Dependency feature map. The recurring form and initial-chip fixtures assert whole
+visible controls and the existing fixed-footer geometry.

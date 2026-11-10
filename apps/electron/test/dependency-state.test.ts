@@ -124,6 +124,17 @@ for (const result of [
     await opening;
     expect(controller.snapshot()).toEqual({ kind: "Closed" });
   });
+it("retains the typed Delete refusal and its actual exit pair", async () => {
+  const controller = new DependencyDeleteController();
+  const failure: Extract<Reply, { _tag: "error" }> = {
+    _tag: "error",
+    message: "Task not found.",
+    code: "not_found",
+    exit_detail: "error 3 - not found or auth missing",
+  };
+  await controller.open(root, async () => failure);
+  expect(controller.snapshot()).toMatchObject({ kind: "Error", failure });
+});
 it("always previews even an empty Delete and sends the reviewed fingerprint and Version", async () => {
   const controller = new DependencyDeleteController();
   const calls: Request[] = [];

@@ -154,7 +154,10 @@ export class DependencyBatchController {
         ...state,
         phase: "review",
         busy: false,
-        failure: { _tag: "error", message: "Task not found." },
+        failure: {
+          _tag: "error",
+          message: "Todo returned an incompatible Dependency graph.",
+        },
       });
       return;
     }

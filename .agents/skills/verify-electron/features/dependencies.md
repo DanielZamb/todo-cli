@@ -30,6 +30,23 @@ assertions and reloads establish behavior. Read every final image before deliver
 Until result.json and the unit report explicitly record complete coverage, the
 recipe remains `DAG_INTERMEDIATE_PARTIAL`. It cannot replace either full end suite.
 
+Search recovery uses `dependency-search-error` separately from the preserved
+mutation `dependency-error`. `verify-dependency-search-recovery.ts` drives valid
+controlled public 422 replies through the actual HttpApi client, with ordinary
+200 Task data read from the compiled scratch server. Narrower success and clear
+remove only the search notice; mutation witnesses, Conflict/Reload and a reviewed
+batch report survive. Delayed older errors are awaited through SDK delivery before
+asserting that they cannot republish. The fixture does not exhaust a live search
+budget. Run `dependency-search-recovery.test.ts` for the literal controller controls.
+
+Missing graph roots clear stale diagram/search display data. Graph and Delete
+errors preserve their actual exit pair and offer deliberate Find Task by id.
+Batch and nested Import recovery can open captured blockers or preselect the
+specified DONE Task in the existing follow-up flow. Quick-add captures wait for
+the real parsed preview, show whole initial chips and reach the last wrapped chip
+without moving the fixed footer. Initial Series selection affects only the first
+Occurrence; a public reload must prove the successor inherited no edge.
+
 Every Task Delete entry shares the server-preview controller and dialog. Confirm
 uses the reviewed preview request Version and fingerprint even with no edges.
 Changed or changed-to-empty previews require another explicit confirmation. Cancel

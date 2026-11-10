@@ -18,6 +18,7 @@ type OpenState = {
   readonly viewport: GraphViewport | null;
   readonly renderFailure: string | null;
   readonly query: string;
+  readonly appliedQuery: string;
   readonly searchIds: ReadonlySet<TaskId> | null;
   readonly searchFailure: Extract<Reply, { _tag: "error" }> | null;
 };
@@ -65,6 +66,7 @@ export class DependencyGraphController {
       viewport: null,
       renderFailure: null,
       query: "",
+      appliedQuery: "",
       searchIds: null,
       searchFailure: null,
     });
@@ -77,7 +79,13 @@ export class DependencyGraphController {
     const search = ++this.search;
     this.publish({ ...state, query, searchFailure: null });
     if (!query.trim()) {
-      this.publish({ ...state, query, searchIds: null, searchFailure: null });
+      this.publish({
+        ...state,
+        query,
+        appliedQuery: "",
+        searchIds: null,
+        searchFailure: null,
+      });
       return;
     }
     let result: Reply;
@@ -101,6 +109,10 @@ export class DependencyGraphController {
       return;
     this.publish({
       ...this.state,
+      appliedQuery:
+        result._tag === "dependencyCandidates"
+          ? query
+          : this.state.appliedQuery,
       searchIds:
         result._tag === "dependencyCandidates"
           ? new Set(result.tasks.map((task) => task.id))
@@ -141,11 +153,29 @@ export class DependencyGraphController {
     if (
       result._tag !== "graph" ||
       result.report.profile_id !== state.scope.profile ||
-      result.report.task_id !== state.scope.root
+      result.report.task_id !== state.scope.root ||
+      !result.report.nodes.some((node) => node.task.id === state.scope.root)
     ) {
+      const missing =
+        result._tag === "error" &&
+        (result.code === "not_found" ||
+          (result.details?.task_id === state.scope.root &&
+            result.details.profile.id === state.scope.profile));
       this.publish({
         ...current,
         loading: false,
+        ...(missing
+          ? {
+              report: null,
+              viewport: null,
+              focused: null,
+              selected: state.scope.root,
+              expanded: new Set<TaskId>(),
+              searchIds: null,
+              searchFailure: null,
+              renderFailure: null,
+            }
+          : {}),
         failure:
           result._tag === "error"
             ? result

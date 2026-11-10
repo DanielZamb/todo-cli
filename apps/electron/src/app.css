@@ -690,6 +690,18 @@ nav {
 .move-dialog {
   max-width: 440px;
 }
+.recurrence-dialog {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 16px);
+}
+.recurrence-dialog > [data-slot="field-group"] {
+  min-height: 0;
+  overflow: auto;
+}
+.recurrence-dialog > :not([data-slot="field-group"]) {
+  flex-shrink: 0;
+}
 .weekdays {
   display: flex;
   flex-wrap: wrap;
@@ -1545,7 +1557,7 @@ nav {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: calc(var(--spacing) * 2);
+  gap: var(--spacing) calc(var(--spacing) * 2);
   min-height: 32px;
 }
 .dependency-initial-row button {
@@ -2083,6 +2095,18 @@ nav {
   flex-direction: column;
   gap: 4px;
   min-width: 0;
+}
+.dependency-notices {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 166px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dependency-notices > * {
+  flex-shrink: 0;
 }
 [data-testid="dependency-picker"] .dependency-error-content {
   max-height: 124px;

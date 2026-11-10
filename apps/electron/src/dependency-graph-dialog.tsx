@@ -46,10 +46,15 @@ import {
 import { Field } from "./components/ui/field.tsx";
 import { Input } from "./components/ui/input.tsx";
 import { ToggleGroup, ToggleGroupItem } from "./components/ui/toggle-group.tsx";
+import {
+  DependencyErrorStatus,
+  DependencySearchStatus,
+} from "./dependency-dialog.tsx";
 import type { DependencyGraphController } from "./dependency-graph-state.ts";
 import { DependencyTaskLabel } from "./dependency-task-label.tsx";
 import { countTasks } from "./presentation.ts";
 import type { Reply, Request } from "./protocol.ts";
+import type { FindTask } from "./task-lookup-status.tsx";
 
 function graphTheme(dark: boolean): GraphTheme {
   const style = getComputedStyle(document.documentElement);
@@ -145,6 +150,7 @@ export function DependencyGraphDialog({
   openTask,
   addDependency,
   projects,
+  onFindTask,
 }: {
   controller: DependencyGraphController;
   request: (request: Request) => Promise<Reply>;
@@ -155,6 +161,7 @@ export function DependencyGraphDialog({
   openTask: (task: Task) => void;
   addDependency: (task: Task) => void;
   projects: readonly { id: string; name: string }[];
+  onFindTask?: FindTask | undefined;
 }) {
   const state = useSyncExternalStore(controller.subscribe, controller.snapshot);
   const [diagram, setDiagram] = useState(!compact);
@@ -204,7 +211,7 @@ export function DependencyGraphDialog({
                 ? { state: node.task.status }
                 : node.blocked
                   ? { state: "blocked" as const }
-                  : node.ready && node.in_degree > 0
+                  : node.ready
                     ? { state: "ready" as const }
                     : {}),
             })),
@@ -229,7 +236,8 @@ export function DependencyGraphDialog({
     clearTimeout(debounce.current);
     controller.close();
   };
-  const diagramVisible = (!compact || diagram) && !state.renderFailure;
+  const diagramVisible =
+    report !== null && (!compact || diagram) && !state.renderFailure;
   const receive = (reply: GraphHostReply) => {
     switch (reply.type) {
       case "activate": {
@@ -402,6 +410,19 @@ export function DependencyGraphDialog({
         : report?.shape === "chain"
           ? "Chain"
           : "DAG";
+  const retry = (
+    <Button
+      variant="outline"
+      disabled={!connected}
+      data-testid="dependency-graph-retry"
+      onClick={() => {
+        void controller.refresh(request);
+        setDiagram(true);
+      }}
+    >
+      Retry
+    </Button>
+  );
   return (
     <Dialog
       open
@@ -471,26 +492,31 @@ export function DependencyGraphDialog({
           data-compact={compact}
         >
           {(state.failure || state.renderFailure) && (
-            <Alert role="status">
-              <AlertDescription>
-                <p>
-                  {state.renderFailure
-                    ? "Couldn't draw the diagram. The list below is complete."
-                    : state.failure?.message}
-                </p>
-                <Button
-                  variant="outline"
-                  disabled={!connected}
-                  data-testid="dependency-graph-retry"
-                  onClick={() => {
-                    void controller.refresh(request);
-                    setDiagram(true);
-                  }}
-                >
-                  Retry
-                </Button>
-              </AlertDescription>
-            </Alert>
+            <div className="space-y-2">
+              {state.renderFailure ? (
+                <Alert role="status">
+                  <AlertDescription>
+                    Couldn't draw the diagram. The list below is complete.
+                    {retry}
+                  </AlertDescription>
+                </Alert>
+              ) : state.failure ? (
+                <DependencyErrorStatus
+                  failure={state.failure}
+                  context="add"
+                  tasks={report?.nodes.map((node) => node.task) ?? []}
+                  onFindTask={
+                    onFindTask
+                      ? (details) => {
+                          close();
+                          onFindTask(details);
+                        }
+                      : undefined
+                  }
+                />
+              ) : null}
+              {!state.renderFailure && retry}
+            </div>
           )}
           {diagramVisible && command && (
             <section ref={frame} className="dependency-diagram-region">
@@ -562,11 +588,10 @@ export function DependencyGraphDialog({
                 </p>
               )}
               {state.searchFailure && (
-                <Alert role="status">
-                  <AlertDescription>
-                    {state.searchFailure.message}
-                  </AlertDescription>
-                </Alert>
+                <DependencySearchStatus
+                  failure={state.searchFailure}
+                  appliedQuery={state.appliedQuery}
+                />
               )}
               {list(
                 "Depends on",

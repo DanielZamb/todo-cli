@@ -1587,53 +1587,61 @@ function App() {
       }
     />
   );
+  const resolveDependencyTask = (
+    id: Task["id"],
+    captured: Task | undefined,
+    use: (task: TaskRead) => void,
+  ) => {
+    const generation = profileGeneration.current;
+    const accept = (task: TaskRead) => {
+      if (
+        generation === profileGeneration.current &&
+        active.current === profile &&
+        task.profile_id === profile &&
+        task.id === id
+      )
+        use(task);
+    };
+    const known = captured ?? tasks.find((task) => task.id === id);
+    if (known) accept(known);
+    else
+      void request({ _tag: "showTask", profile, task: id }).then((reply) => {
+        if (reply._tag === "task") accept(reply.task);
+        else if (
+          reply._tag === "error" &&
+          generation === profileGeneration.current &&
+          active.current === profile
+        ) {
+          setLookupError(reply.details ?? null);
+          setError(reply.details ? "" : reply.message);
+        }
+      });
+  };
+  const openDependencyTask = (id: Task["id"], captured?: Task) =>
+    resolveDependencyTask(id, captured, (task) => {
+      setDependencyFailure(null);
+      setHistory(null);
+      activateEditor(draftForTask(task, editorRef.current));
+    });
+  const followUpDependency = (id: Task["id"], captured?: Task) =>
+    resolveDependencyTask(id, captured, (task) => {
+      setInitialDependencies((current) => [
+        ...current.filter((value) => value.id !== task.id),
+        task,
+      ]);
+      setHistory(null);
+      setDependencyFailure(null);
+      setQuick(true);
+    });
   const dependencyFailureStatus = dependencyFailure && (
     <DependencyErrorStatus
       failure={dependencyFailure.failure}
       context={dependencyFailure.context}
       tasks={tasks}
       dismiss={() => setDependencyFailure(null)}
-      openTask={(id) => {
-        const failure = dependencyFailure.failure.dependency;
-        const blocker =
-          failure?.code === "blocked"
-            ? failure.details.blockers.find((task) => task.id === id)
-            : undefined;
-        if (
-          blocker &&
-          blocker.profile_id === profile &&
-          active.current === profile
-        ) {
-          setDependencyFailure(null);
-          setHistory(null);
-          activateEditor(draftForTask(blocker, editorRef.current));
-        }
-      }}
-      followUp={(id) => {
-        const failure = dependencyFailure.failure.dependency;
-        const captured =
-          failure?.code === "blocks_done_task"
-            ? failure.details.done_dependents.find((task) => task.id === id)
-            : undefined;
-        const accept = (task: TaskRead) => {
-          setInitialDependencies((current) => [
-            ...current.filter((value) => value.id !== task.id),
-            task,
-          ]);
-          setHistory(null);
-          setDependencyFailure(null);
-          setQuick(true);
-        };
-        const known = captured ?? tasks.find((task) => task.id === id);
-        if (known) accept(known);
-        else
-          void request({ _tag: "showTask", profile, task: id }).then(
-            (reply) => {
-              if (reply._tag === "task" && active.current === profile)
-                accept(reply.task);
-            },
-          );
-      }}
+      openTask={openDependencyTask}
+      followUp={followUpDependency}
+      onFindTask={findLookupTask}
     />
   );
   const filterCount = Object.keys(advancedFilters).filter(
@@ -1886,6 +1894,7 @@ function App() {
           activateEditor(draftForTask(task, editorRef.current))
         }
         addDependency={openDependencies}
+        onFindTask={findLookupTask}
       />
       <DependencyPicker
         controller={dependencies}
@@ -1893,6 +1902,7 @@ function App() {
         request={request}
         canWrite={!readOnly}
         onBatch={(root, direction) => dependencyBatch.open(root, direction)}
+        onFindTask={findLookupTask}
         returnFocus={() =>
           dependencyTrigger.current?.isConnected
             ? dependencyTrigger.current
@@ -1907,6 +1917,9 @@ function App() {
         request={request}
         projects={catalog?.projects ?? []}
         canWrite={!readOnly}
+        openTask={openDependencyTask}
+        followUp={followUpDependency}
+        onFindTask={findLookupTask}
         returnFocus={() =>
           dependencyTrigger.current?.isConnected
             ? dependencyTrigger.current
@@ -1916,6 +1929,7 @@ function App() {
       />
       <DependencyDeleteDialog
         controller={taskDelete}
+        onFindTask={findLookupTask}
         projects={catalog?.projects ?? []}
         request={request}
         canWrite={!readOnly}
@@ -2012,6 +2026,8 @@ function App() {
       )}
       {importOpen && (
         <ImportDialog
+          openTask={openDependencyTask}
+          followUp={followUpDependency}
           key={profile}
           profile={profile}
           profileName={profileName(

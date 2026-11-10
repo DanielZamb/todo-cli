@@ -190,6 +190,7 @@ export function RecurrenceDialog({
               onChange={setStart}
             />
           </Field>
+          {!series && initialDependencies}
           <div className="rule-preview">
             <span className="quiet">
               RFC 5545{custom ? " · Read only" : ""}
@@ -211,7 +212,6 @@ export function RecurrenceDialog({
           </div>
           {error && <p role="alert">{error}</p>}
           {recovery}
-          {!series && initialDependencies}
         </FieldGroup>
         <div className="recurrence-footer">
           {series && (

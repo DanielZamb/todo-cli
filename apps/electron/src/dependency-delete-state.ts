@@ -3,6 +3,7 @@ import type { Reply, Request } from "./protocol.ts";
 
 type Requester = (request: Request) => Promise<Reply>;
 type Preview = Extract<Reply, { _tag: "task" }>["task"];
+type Failure = Extract<Reply, { _tag: "error" | "conflict" }>;
 export type DependencyDeleteState =
   | { readonly kind: "Closed" }
   | { readonly kind: "Loading"; readonly task: Task; readonly changed: boolean }
@@ -12,13 +13,13 @@ export type DependencyDeleteState =
       readonly graph: GraphReport | null;
       readonly fromVersion: Task["row_version"];
       readonly changed: boolean;
-      readonly error: string;
+      readonly failure: Failure | null;
     }
   | {
       readonly kind: "Error";
       readonly task: Task;
       readonly changed: boolean;
-      readonly error: string;
+      readonly failure: Failure;
     };
 export class DependencyDeleteController {
   private state: DependencyDeleteState = { kind: "Closed" };
@@ -74,10 +75,14 @@ export class DependencyDeleteController {
         kind: "Error",
         task,
         changed,
-        error:
-          result._tag === "error"
-            ? result.message
-            : "Couldn't load the Delete preview. Reload and try again.",
+        failure:
+          result._tag === "error" || result._tag === "conflict"
+            ? result
+            : {
+                _tag: "error",
+                message:
+                  "Couldn't load the Delete preview. Reload and try again.",
+              },
       });
       return;
     }
@@ -98,7 +103,7 @@ export class DependencyDeleteController {
           ? graph.report
           : null,
       changed,
-      error: "",
+      failure: null,
     });
   }
   async confirm(request: Requester): Promise<boolean> {
@@ -106,7 +111,7 @@ export class DependencyDeleteController {
     if (state.kind !== "Review" || !state.task.dependency_fingerprint)
       return false;
     const epoch = this.epoch;
-    this.publish({ ...state, kind: "Applying" });
+    this.publish({ ...state, kind: "Applying", failure: null });
     const result = await this.call(request, {
       _tag: "delete",
       profile: state.task.profile_id,
@@ -132,8 +137,11 @@ export class DependencyDeleteController {
         kind: "Error",
         task: state.task,
         changed: true,
-        error:
-          "Todo returned an incompatible Delete result. Reload its Dependencies before trying again.",
+        failure: {
+          _tag: "error",
+          message:
+            "Todo returned an incompatible Delete result. Reload its Dependencies before trying again.",
+        },
       });
       return false;
     }
@@ -167,17 +175,29 @@ export class DependencyDeleteController {
         this.publish({
           ...state,
           kind: "Review",
-          error: "Couldn't reload this Task. Close and try again.",
+          failure:
+            latest &&
+            "_tag" in latest &&
+            (latest._tag === "error" || latest._tag === "conflict")
+              ? latest
+              : {
+                  _tag: "error",
+                  message: "Couldn't reload this Task. Close and try again.",
+                },
         });
       return false;
     }
     this.publish({
       ...state,
       kind: "Review",
-      error:
+      failure:
         result._tag === "error"
-          ? result.message
-          : "Todo returned an incompatible Delete result. Reload its Dependencies before trying again.",
+          ? result
+          : {
+              _tag: "error",
+              message:
+                "Todo returned an incompatible Delete result. Reload its Dependencies before trying again.",
+            },
     });
     return false;
   }

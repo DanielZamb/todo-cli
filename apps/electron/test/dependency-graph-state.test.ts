@@ -5,6 +5,58 @@ import { dependencyGraph, dependencyTask } from "./fixtures/dependencies.ts";
 
 const graph = dependencyGraph();
 const scope = { profile: graph.profile_id, root: graph.task_id };
+for (const failure of [
+  {
+    _tag: "error",
+    code: "not_found",
+    message: "Task not found.",
+    exit_detail: "error 3 - not found or auth missing",
+  },
+  {
+    _tag: "error",
+    message: "Task not found in Work.",
+    exit_detail: "error 3 - not found or auth missing",
+    details: {
+      profile: { id: scope.profile, name: "Work" },
+      task_id: scope.root,
+      recovery: "agent recovery must not be shown",
+    },
+  },
+] satisfies Reply[])
+  it("clears a removed root's stale diagram and scoped display state", async () => {
+    const controller = new DependencyGraphController();
+    await controller.open(scope, async () => ({
+      _tag: "graph",
+      report: graph,
+    }));
+    controller.setViewport({ x: 37, y: -19, scale: 1.5 });
+    controller.select(dependencyTask("linked").id);
+    controller.focus(dependencyTask("linked").id);
+    controller.expand(dependencyTask("linked").id);
+    await controller.refresh(async () => failure);
+    expect(controller.snapshot()).toMatchObject({
+      report: null,
+      viewport: null,
+      focused: null,
+      selected: "root",
+      failure,
+    });
+    expect(controller.visibleIds()).toEqual([]);
+  });
+it("rejects a graph report without its root", async () => {
+  const controller = new DependencyGraphController();
+  await controller.open(scope, async () => ({
+    _tag: "graph",
+    report: {
+      ...graph,
+      nodes: graph.nodes.filter((node) => node.task.id !== scope.root),
+    },
+  }));
+  expect(controller.snapshot()).toMatchObject({
+    report: null,
+    failure: { message: "Todo returned an incompatible Dependency graph." },
+  });
+});
 it("omits the initial camera, stores a resolved camera and refits a new layout without losing focus", async () => {
   const controller = new DependencyGraphController();
   await controller.open(scope, async () => ({ _tag: "graph", report: graph }));
