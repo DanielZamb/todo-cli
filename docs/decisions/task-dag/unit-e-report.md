@@ -1,42 +1,44 @@
 # DAG-E Electron delivery report
 
-The whole-delta correctness seat at ffe683ea subsequently required E-C1/E-C2.
-Their authorized closure is in
-[unit-e-correctness-closure.md](unit-e-correctness-closure.md). The94dc readiness
-and proof below are historical; the new frozen proof and both suites are pending.
-
 Electron product and end proof are frozen at
-`94dcbdc8e7e6262ff85d81277b21e8c317986c08`. The coordinator's seat 2 UI review
-at that SHA is **PASS**, including E-F1/F2/F3 and the stated capture limits.
-This delivery is ready for L1's fresh correctness seat. Correctness acceptance,
-integration and proof with both new clients remain L1-owned.
+`c0ea5e36b3c1ef8b2e58e59d60e13fc490f73de7`. The coordinator's whole-unit
+UI seat 2 is **PASS** at that SHA after the two requested E-C1/E-C2 captures.
+The accepted capture and native-HOLD limits remain. E-C1/E-C2 are ready for
+L1's fresh short correctness closure. Correctness acceptance, integration and
+proof with both new clients remain L1-owned.
+
+The whole-delta correctness review of delivery ffe683ea, product 94dcbdc8,
+required those two P2 fixes. The red reproductions, isolated import setup and
+final-source closure are in
+[unit-e-correctness-closure.md](unit-e-correctness-closure.md). All earlier
+receipts remain historical and unchanged.
 
 Branch: `feat/task-dag-e-electron`. Qualified base:
 `2c78a3263c196d870459b17bf647cfc23f421fdd`. Product/proof SHA:
-`94dcbdc8e7e6262ff85d81277b21e8c317986c08`. The report delivery changes only
+`c0ea5e36b3c1ef8b2e58e59d60e13fc490f73de7`. The report delivery changes only
 Markdown; its full SHA is recorded after commit in ignored
-`final-94dcbdc8/delivery.json` and the terminal handoff. Tested source stays 94dc.
+`final-c0ea5e36-c1c2/delivery.json` and the terminal handoff. Tested source stays c0ea5e36.
 Contract: `858612b6feba4e359ee28749b70119a36b3909ad20459ef15f82286f1b80b829`.
 No domain, CLI, server, Swift product or generated contract file was changed by E.
 Added domain files: **none**. No children, merge, rebase, push or PR.
 
 ## End proof and actual exits
 
-Evidence root: `docs/evidence/task-dag/unit-e/final-94dcbdc8/` (ignored).
-`source-suite-start.json` records clean 94dc before both complete suites.
+Evidence root: `docs/evidence/task-dag/unit-e/final-c0ea5e36-c1c2/` (ignored).
+`source-suite-start.json` records clean c0ea5e36 before both complete suites.
 Invocation JSON, build commands, logs and exit files retain argv, environment,
 times and real exits. Every compiler uses the immediate disk guard. Root check
 uses the plain order-27 lock without the Electron wrapper.
 
 | Proof | Actual command or invocation | Exit and result |
 | --- | --- | --- |
-| Root | Prior disk guard, then `/usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check` | **0**: 385 domain, 69 CLI, 32 server, 157 Electron tests; existing Electron skip retained |
-| Cache | Guarded `bun apps/electron/scripts/prepare-dag-proof.ts` | **0**: CLI/server/seed compiled once for 94dc |
+| Root | Prior disk guard, then `/usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check` | **0**: 385 domain, 69 CLI, 32 server, 167 Electron tests; existing Electron skip retained |
+| Cache | Guarded `bun apps/electron/scripts/prepare-dag-proof.ts` | **0**: CLI/server/seed compiled once for c0ea5e36 |
 | Electron package | Guarded Electron lock, `pnpm --filter @todo/electron exec bun scripts/build.ts --output <owned scratch app>` | **0**: unsigned; identity, offline resources and notices verified |
 | Xcode | Canonical Swift slot, guarded `xcodebuild -jobs 2`, pinned resolution only, signing disabled | **0**: unsigned, no CodeSign action, native launch or hosted XCTest |
-| Complete Electron | Existing `TODO_HEADLESS_CHROMIUM`, `sh apps/electron/scripts/guarded-run.sh bun apps/electron/scripts/verify-design-all.ts docs/evidence/task-dag/unit-e/final-94dcbdc8/electron-all` | **1**: **13 PASS, 1 FAIL, 0 MISSING**, plus named signed-native HOLD |
-| Complete Mac | Canonical Swift slot, plain `python3 apps/macos/scripts/verify-design.py docs/evidence/task-dag/unit-e/final-94dcbdc8/macos-design` | **1**: all 346 registered captures; exact 12 main Import failures |
-| New DAG matrix | Aggregate's `verify-dependencies-offscreen.ts` constituent | **0**: **636 captures, 178 state families**, all literal assertions pass |
+| Complete Electron | Existing `TODO_HEADLESS_CHROMIUM`, `sh apps/electron/scripts/guarded-run.sh bun apps/electron/scripts/verify-design-all.ts docs/evidence/task-dag/unit-e/final-c0ea5e36-c1c2/electron-all` | **1**: **13 PASS, 1 FAIL, 0 MISSING**, plus named signed-native HOLD |
+| Complete Mac | Canonical Swift slot, plain `python3 apps/macos/scripts/verify-design.py docs/evidence/task-dag/unit-e/final-c0ea5e36-c1c2/macos-design` | **1**: all 346 registered captures; exact 12 main Import failures |
+| New DAG matrix | Aggregate's `verify-dependencies-offscreen.ts` constituent | **0**: **638 captures, 180 state families**, all literal assertions pass |
 | Canonical browser | Aggregate's `verify-graph-browser.ts` constituent | **0**: offline resources, CSP, codec, borders, fit, identity and host fixes |
 
 Electron passes Attachment batch, batch edit, discovery, discovery report errors,
@@ -77,7 +79,7 @@ rows **4**. Unchanged predicates are `wholeRows >= min(4, report.items.count)`
 (3 versus 4) and `intersecting == wholeRows` (4 versus 3), originally
 Snapshots.swift:889/890. All **12 raw failure lines**, exact fixture identities
 and **36 Import layout dictionaries** equal the supplied main reference.
-`macos-baseline-comparison.json` records empty 4c904d96..94dc diffs for Import.swift,
+`macos-baseline-comparison.json` records empty 4c904d96..c0ea5e36 diffs for Import.swift,
 Snapshots.swift and ClientErrors.swift; all Mac source is unchanged from 2c78.
 The six baseline PNGs exactly match previously read originals. Result:
 **identical to main**, actual full-suite exit **1**, owner Task `5cdbdbd6`.
@@ -106,7 +108,12 @@ highlights, narrow-query recovery, discovery Show and draft protection remain.
 
 The immediate Depends on/Blocks picker keeps checked links first under search,
 serializes writes by dependent and uses the candidate's Version in Blocks.
-Conflict requires explicit Reload. Current successful/empty searches clear only
+Conflict and attempted candidate are stored by dependent Task id. Both direction
+round trips retain the applicable notice and lock together. Dismiss cannot hide a
+live Conflict. Explicit Reload refreshes candidates and graph before unlocking;
+a failed refresh keeps usable recovery. Another dependent's success cannot clear
+that Conflict, and no operation is automatically resent. Current successful or
+empty searches clear only
 the search-owned notice; mutation refusal, Conflict and batch reports survive.
 Delayed old success/error cannot publish into a new scope. Six Dependency errors,
 warnings, no-ops, nested Import and batch rows share one human projector and
@@ -121,7 +128,12 @@ confirmation, including no-edge Tasks. Cancel initially has focus. Every Delete
 sends reviewed fingerprint and the Version sent by its preview request. Refusal
 reloads a fresh preview and requires a second confirmation. Conflict and changed
 nonempty/empty Dependencies retain their distinct N2 copy and actual pair. No
-automatic confirmation or undepend/delete loop. The separate postmerge
+automatic confirmation or undepend/delete loop. Generic request cleanup excludes
+all Delete replies. Only the controller's accepted current, matching, non-preview
+actual deletion clears that Task's saved draft and matching editor. Rejected,
+preview, foreign and stale replies retain the literal unsaved title; unrelated
+saved drafts survive. Controlled incompatible replies are verification fixtures,
+not a claim about current server output. The separate postmerge
 `confirm_from_version` amendment remains L1-owned.
 
 Initial Dependencies reuse quick-add metadata, editor and recurrence forms.
@@ -153,8 +165,8 @@ the fit. No second renderer, label parsing or diagram drag-to-connect.
 
 `electron-all/dependencies/manifest.json` maps client/layout/appearance, PNG,
 receipt and accessibility ids. Generation checks references exist inside the repo
-and cannot escape through symlinks. `fixture-outcomes.json` indexes all **178**
-state families and literal descriptions: **636** captures, driver exit **0**.
+and cannot escape through symlinks. `fixture-outcomes.json` indexes all **180**
+state families and literal descriptions: **638** captures, driver exit **0**.
 Coverage includes rows/filter/order, both relation modes, 9/13/14, warnings/no-ops,
 refusals/recovery, initial/follow-up/Series, menu/keyboard/drag, changed Delete,
 batch/History/transfer, graph lifecycle/camera and search/auth/Profile invalidation.
@@ -162,14 +174,15 @@ Only literal assertions establish behavior; images do not invent receipts.
 
 Compact originals were audited first, then full originals. Each new PNG was
 viewed, or reused only when SHA-256 exactly matches the same previously viewed
-fixture. `image-read-audit.json` records all 636 entries/origins.
-`changed-captures.json` contains **130** semantically affected byte-changed images
-with before hashes and explicit limits. `seat2-geometry-index.json` contains all
-**16** final-source geometry receipts: mixed-tree/DAG nodes intersect no tools in
-both layouts/appearances; initial refusal is wholly visible above fixed footer;
-loop lines ellipsize with full title and accessible label, three whole lines and
-two whole candidates. Full initial-refusal PNGs equal their previous originals
-and are not resent. Drag targets, successor and named report subjects are scrolled
+fixture. `image-read-audit.json` records all 638 entries/origins.
+The current audit has 389 directly read originals and 249 exact same-fixture
+SHA-256 reuses. `ui-delta.json` references only the two new Compact/light captures
+and their existing behavior/geometry receipts; `ui-delta-answer.json` records the
+coordinator's PASS at c0ea5e36. `seat2-geometry-index.json` contains all 16 current
+geometry receipts. Mixed-tree/DAG nodes intersect no tools in either layout;
+initial refusal is visible above the fixed footer; loop lines ellipsize with full
+accessible titles, three whole lines and two whole candidates.
+Drag targets, successor and named report subjects are scrolled
 into view, or explicitly partial when larger than the region. Twelve Compact
 report cards retain oversized-subject limits. Compact batch Conflict shows top
 recovery/Reload while its item pair is below that captured scroll; full counterparts
@@ -180,8 +193,9 @@ All manifest limits stand.
 The E-F3 controlled preimage stops red at the missing full-title attribute.
 Original compiled E-F1/F2 failure images remain at 6fbb. Working proof with older
 backend stays intermediate. The new final-source end run does not rewrite old
-receipts. The coordinator read the changed fixes and issued **UI PASS at 94dc**,
-accepting exactly these evidence limits. No correctness seat was launched by E.
+receipts. The coordinator passed E-F1/F2/F3 at 94dc, then passed the E-C1/E-C2 delta
+at c0ea5e36 for the whole Electron unit, with the same accepted limits.
+No correctness seat was launched by E.
 
 ## Canonical browser resources
 
@@ -216,20 +230,19 @@ return pass. WebKit proof belongs to S, not an Electron claim.
 
 Cache source hash:
 `394f036ab4d79f6cf28a77cb45ace49aab169b1939c1a7ab52f342bafd6068fa`.
-Actual CLI version: `todo 0.1.0 build=94dcbdc8e7e6262ff85d81277b21e8c317986c08`
+Actual CLI version: `todo 0.1.0 build=c0ea5e36b3c1ef8b2e58e59d60e13fc490f73de7`
 with the contract above. Actual health reports todo-server with that build/contract.
 
 | Artifact | SHA-256 |
 | --- | --- |
-| CLI | `c87ac68e151955d69456e7564ca778a994f52ec4625f71b4456ff69a06ff1433` |
-| Server | `d45bc944db8c245ae63b72bee1f85ef9735bfcbfb3eb9efaf62e4394fa71f8bd` |
-| Seed | `660f556f1996389f219d5cb1117cf51426096082ec5a40f952701350bb6dacf9` |
+| CLI | `9f13ff22431af374169fed6e0f2265731772d32de7fae0fb0521593f65b58b7e` |
+| Server | `372a0586b692bc905ff7ce4294ea2a35ba92e988350be0acb8edc0a750afcd8a` |
+| Seed | `1d49669ae77b154c046640a1245b64520234c6d9ff28373d07853db02d7cdc4d` |
 
-Unsigned Xcode contains that exact server hash and identity. Separate
-`build-wrapper-result.json` retains post-build metadata wrapper exit **1**:
-it expected Resources/todo-server, but the build emits Resources/Server/todo-server.
-All six real build/check stages exited **0**. Corrected read-only artifact validation
-exits **0** without another build; the wrapper failure is not relabelled.
+Unsigned Xcode contains that exact server hash and identity under
+Resources/Server/todo-server. All final build/check stages exit 0. The historical
+94dc metadata wrapper failure remains in its original evidence directory; this
+run uses the correct path and does not repeat that setup error.
 
 ## Retained findings and maintenance
 
@@ -266,7 +279,7 @@ plus one click passes 30/30 with original 5 s bounds predicate; absent control f
 by name with zero IPC/resize. Silent-success guards preserve both streams; fake
 nested/JSON/trace/hard3 controls pass. No product visibility/deadline change.
 
-Final documentation links pass (36 documents, 72 local links, no broken links).
+Final documentation link results are in `doc-links.log` and `metadata-checks.json`.
 The additional Task-search input-path checker exits 0. The Discovery input-path
 checker exits 1 before its controls because this worktree has no ignored
 `docs/evidence/discovery-formal/current-inputs.json`; its receipt remains at
@@ -278,21 +291,23 @@ existing-file/repo-containment checks; no formal source/input was changed.
 ## Cleanup and remaining limits
 
 `cleanup-final.json` queries all **9 recorded owned final-suite PIDs**: absent;
-recorded scratch directories removed. Some hosts record no PID, so completed
+all eight recorded scratch directories are absent. The ninth PID has no
+recorded scratch path, so none is inferred. Some hosts record no PID, so completed
 exits are not a full OS process census. No manual signal in this cleanup; historical
 incidents retain their own receipts. No unowned/shared process was signalled.
-The current 94dc cache/unsigned package remain for review; shared Electron 44.9.3
+The two final unchanged-assertion reproducer servers are also absent and their
+scratch directories removed, separately in `reproducer-cleanup.json`.
+The current c0ea5e36 cache/unsigned package remain for review; shared Electron 44.9.3
 is untouched.
 
-Hash/lsof-checked retirement: three superseded 6fbb binaries,
-**271,558,182 logical bytes**; owned superseded unsigned runtime/package copy,
-**326,528,316 logical bytes**. Final hidden Bun scan: **0** files. Earlier this
-final build batch: four unopened Bun temporaries retired, **354,643,456 bytes**.
-Previous cleanup separately retired six older binaries, **543,116,364 bytes**;
-older temporary retirements retain their original receipts. Two cheap cleanup
-receipt path/shape errors occurred before deletion; their exit 1/source receipts
-are retained. df observations, separately: **98,281,496 KiB available** before
-cleanup, **98,286,136 KiB** after. No physical-recovery attribution.
+Hash/lsof-checked retirement in this final cleanup: three superseded 94dc
+binaries, **271,558,182 logical bytes**, and the owned superseded unsigned
+package/runtime copy, **326,528,836 logical bytes**. The final hidden Bun scan
+finds 0 files. This build batch also retired four unopened Bun temporaries,
+**354,643,456 bytes**, in `compile-temp-retirement.json`. Older retirements and
+setup errors retain their original receipts; they are not counted again here.
+The separate df observations are **84,568,788 KiB available** before cleanup and
+**84,561,924 KiB** after. No physical-recovery attribution.
 Archives contain text/source/config/receipts and selected images, no binaries,
 databases or scratch HOMEs. Owned main export remains for referenced evidence.
 
@@ -307,4 +322,4 @@ user data, Keychain, signing, installation, native Todo, installed binaries or
 canonical main checkout was touched.
 
 L1 receives frozen source, UI PASS, real nonzero baseline receipts and this report
-for its fresh correctness seat. E does not self-approve or integrate.
+for its fresh E-C1/E-C2-only correctness closure seat. E does not self-approve or integrate.
