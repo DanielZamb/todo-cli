@@ -68,7 +68,7 @@ it("preflights every unsigned hidden-host launch", () => {
       "_electron.launch(",
     );
   });
-  expect(launchers).toHaveLength(11);
+  expect(launchers).toHaveLength(12);
   for (const name of launchers) {
     const source = readFileSync(join(directory, name), "utf8");
     expect(source).toMatch(/_electron\.launch\(\s*hiddenHostOptions\(\{/u);

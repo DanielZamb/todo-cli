@@ -303,7 +303,7 @@ order 22. The native and Keychain HOLD remains in force.
 Read [Import Tasks](features/import.md). The write-state helper now runs
 ImportStateTests and the unhosted GeneratedContractTests. Its import receipt
 checks literal create/update/unchanged counts, reload and a competing write.
-The design helper produces 246 PNGs, including 36 import captures across both
+The design helper produces 358 PNGs, including 48 import captures across both
 appearances and layouts. It reuses DerivedData/StateProof to avoid recompiling
 the same generated contract for the design drive.
 U01's [Project and Tag matrix](features/metadata.md) proves quoted names through
@@ -352,7 +352,9 @@ same reference to the selected Tasks. Reload Tasks refreshes Versions after a
 Conflict. `liveAttachmentBatchSelectPreviewApplyConflictAndReload` drives this
 production state, including file and URI references. The design helper adds
 24 full and Compact light/dark captures for ready, preview, Conflict, loading,
-empty and error states. The complete run now has 346 captures including batch edit.
+empty and error states. That historical attachment/batch checkpoint had 346
+captures. The current integrated inventory is recorded in
+[Dependencies](features/dependencies.md).
 
 ## Batch edit
 

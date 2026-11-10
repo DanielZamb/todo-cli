@@ -56,8 +56,28 @@ the filename in both layouts, leaving Cancel and Apply in the preview footer.
 `import-layout.json` records complete/partial row counts, summary height and
 button targets; renders assert at least four whole rows and 28 pt targets.
 
+Nested Dependency and Conflict refusals keep their structured human reason on
+the caption line and their actual exit pair on the last line. The mixed-refusal
+preview captures an ordinary rejection beside a nested Dependency rejection.
+Its literal projection test excludes agent copy. Blocker and follow-up recovery
+remain available through the row's context menu in Compact.
+
 External ids survive Move and are cleared by Copy into another Profile. A live
 TodoModel test attempts a Move into an existing external id, requires the server's
 named Profile and id message in the focused transfer feedback, preserves the
 unsaved draft, and reloads both unchanged Tasks. Both appearances and layouts
 render this rejection with Choose Another Profile and Cancel directly below the message. The primary action reopens the destination picker without losing the draft. `transfer-layout.json` asserts button targets and message-to-action spacing in Compact.
+
+Compact rejected rows use the same 56 pt frame as accepted rows. They show title,
+one caption line for the reason, and the muted exit pair. The external id remains
+in the row help and accessibility label, after the full reason and exit pair.
+Structured Task lookup failures stay neutral and expose Find Task by id through
+the native context menu and a named accessibility action. The row announces that
+it has actions and participates in keyboard focus. Full-window recovery stays
+inline. Native keyboard and VoiceOver operation remain supervised checks.
+
+The full offscreen recipe includes rejected-first, rejected-last and two-rejected
+fixtures in both appearances. It asserts literal equal row heights, one-line
+reason and exit bounds, and the existing four-whole-rows/no-partial-row rule.
+PresentationTests checks the literal help and accessibility text. The full
+manifest contains 358 PNGs.

@@ -30,10 +30,17 @@ assertions and reloads establish behavior. Read every final image before deliver
 Until result.json and the unit report explicitly record complete coverage, the
 recipe remains `DAG_INTERMEDIATE_PARTIAL`. It cannot replace either full end suite.
 `dag-capture-inventory.ts` requires every registered state/layout/appearance
-exactly once, including the literal 638-capture count. `DAG_MATRIX_PASS` also
+exactly once, including the literal 642-capture count. `DAG_MATRIX_PASS` also
 requires clean committed source and a matching embedded binary head. A combined
 failure remains failed when later focused controls pass. Report full-suite exits
 and UI review separately.
+
+After PR #12, Compact Import refusals use one 56px row with a caption reason
+and the actual muted exit pair. Nested Dependency and Conflict errors retain
+their human projection; the complete witness and external id remain in the
+tooltip and accessible label. Existing blocker and follow-up navigation uses
+the row's action menu. `import-mixed-rejections` captures an ordinary refusal
+beside a nested Dependency refusal and asserts all text lines fit the row.
 
 Search recovery uses `dependency-search-error` separately from the preserved
 mutation `dependency-error`. `verify-dependency-search-recovery.ts` drives valid

@@ -51,10 +51,14 @@ export async function verifyDiscoveryReportErrors({
       });
       await notify({ _tag: "windowMode", compact });
       const status = page.getByTestId("task-lookup-status").first();
-      if (!name.includes("MIXED") && (await status.count()))
-        await status
-          .getByRole("button", { name: "Find Task by id", exact: true })
-          .scrollIntoViewIfNeeded();
+      if (!name.includes("MIXED") && (await status.count())) {
+        if (compact && name.startsWith("import-"))
+          await status.scrollIntoViewIfNeeded();
+        else
+          await status
+            .getByRole("button", { name: "Find Task by id", exact: true })
+            .scrollIntoViewIfNeeded();
+      }
       for (const dark of [false, true]) {
         if (name.includes("MIXED"))
           await page.locator(".import-list-scroll").evaluate((node) => {
@@ -66,12 +70,15 @@ export async function verifyDiscoveryReportErrors({
         );
         await settleRenderer(page);
         if (expectedPair) {
-          const row = page
-            .locator('[data-slot="dialog-content"][data-open]')
-            .locator(
-              ".batch-edit-row small[role=alert], .attachment-batch-row small[role=alert], .import-row-changes.import-rejected, .import-row .dependency-error-region, .import-table tbody tr td:last-child",
-            )
-            .first();
+          const compactImport = compact && name.startsWith("import-");
+          const row = compactImport
+            ? page.locator(".import-row:has([data-testid=import-exit])").first()
+            : page
+                .locator('[data-slot="dialog-content"][data-open]')
+                .locator(
+                  ".batch-edit-row small[role=alert], .attachment-batch-row small[role=alert], .import-row-changes.import-rejected, .import-row .dependency-error-region, .import-table tbody tr td:last-child",
+                )
+                .first();
           await expect(row).toContainText(expectedPair);
           const text = await row.innerText();
           const whiteSpace = await row.evaluate(
@@ -82,7 +89,15 @@ export async function verifyDiscoveryReportErrors({
           const dependencyStatus = await row.evaluate((node) =>
             node.classList.contains("dependency-error-region"),
           );
-          if (dependencyStatus) {
+          if (compactImport) {
+            await expect(row.getByTestId("import-reason")).toHaveCSS(
+              "white-space",
+              "nowrap",
+            );
+            await expect(row.getByTestId("import-exit")).toHaveText(
+              expectedPair,
+            );
+          } else if (dependencyStatus) {
             const pair = row.locator("p").last();
             await expect(pair).toHaveText(expectedPair);
             await expect(pair).toHaveClass(/text-muted-foreground/u);
@@ -151,7 +166,9 @@ export async function verifyDiscoveryReportErrors({
               };
             }),
             cards: [
-              ...popup.querySelectorAll('[data-testid="task-lookup-status"]'),
+              ...popup.querySelectorAll(
+                '[data-slot="alert"][data-testid="task-lookup-status"]',
+              ),
             ].map((card) => ({
               background: getComputedStyle(card).backgroundColor,
               color: getComputedStyle(card).color,
@@ -235,9 +252,29 @@ export async function verifyDiscoveryReportErrors({
     await expect(status).not.toContainText("GET /");
     await expect(status).not.toContainText("todo ");
     const count = lookupRequestCount();
-    await status
-      .getByRole("button", { name: "Find Task by id", exact: true })
-      .click();
+    if (await status.locator(".import-row-actions").count()) {
+      const action = status.getByRole("button", {
+        name: /Find Task by id available/,
+      });
+      await action.focus();
+      await action.press("Shift+F10");
+      await expect(
+        page.getByRole("menuitem", { name: "Find Task by id", exact: true }),
+      ).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(action).toBeFocused();
+      await status.click({ button: "right" });
+      await expect(
+        page.getByRole("menuitem", { name: "Find Task by id", exact: true }),
+      ).toBeVisible();
+      await page
+        .getByRole("menuitem", { name: "Find Task by id", exact: true })
+        .click();
+    } else {
+      await status
+        .getByRole("button", { name: "Find Task by id", exact: true })
+        .click();
+    }
     await expect(page.getByTestId("discovery-prefix")).toHaveValue(task);
     await page.waitForTimeout(300);
     assert.equal(lookupRequestCount(), count);

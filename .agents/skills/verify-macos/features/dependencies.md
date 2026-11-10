@@ -42,13 +42,15 @@ remain held. NSHostingView/WKWebView evidence does not establish native access.
 The diagram consumes only L1's exact canonical graph-browser source/lock handoff;
 there is no second renderer or tracked copy of emitted browser resources.
 
-The final native inventory adds 394 DAG captures to the 346 existing default
+The final native inventory adds 394 DAG captures to the 362 existing default
 captures and 116 discovery captures. The complete default manifest therefore
-contains 856 PNGs. The original 346-count assertion and Compact import assertions
+contains 872 PNGs. The default-count assertion and Compact import assertions
 remain active before the additional fixtures render. The helper retains a
 nonzero Swift Testing exit, validates the completed manifest even on failure,
-and writes a failing result with the actual exit. It never converts the known
-twelve failures to success.
+and writes a failing result with the actual exit. PR #12 fixes the twelve former
+Compact Import failures; they must now pass. The default inventory adds a mixed
+ordinary/nested Dependency refusal preview in both appearances and layouts,
+with the same exact 56pt row and per-line containment assertions.
 
 `env TODO_SNAPSHOT_DAG_ONLY=1 apps/macos/scripts/verify-design.py <fresh-evidence>`
 is a focused 394-image check, not final proof. At final proof every focused

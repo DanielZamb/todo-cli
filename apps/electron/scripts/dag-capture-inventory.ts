@@ -90,6 +90,7 @@ const groups = [
       "history-revert-follow-up-created",
       "history-revert-follow-up-preselected",
       "import-dependency-error-0",
+      "import-mixed-rejections",
       "import-dependency-error-1",
       "import-dependency-error-2",
       "import-dependency-error-3",
@@ -214,7 +215,7 @@ export function assertDagCaptureInventory(
   );
   assert.equal(
     expected.length,
-    638,
+    642,
     "Register every DAG fixture and update its literal capture count together",
   );
   const actual = entries.map(

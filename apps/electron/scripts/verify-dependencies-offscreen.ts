@@ -330,7 +330,8 @@ try {
   let delayCandidates = false;
   let delayCandidateReply = false;
   let heldCandidateReply: Reply | null = null;
-  let reportFixture: "batch" | "batchSelf" | "import" | null = null;
+  let reportFixture: "batch" | "batchSelf" | "import" | "importMixed" | null =
+    null;
   const projectedError = (index: number) => {
     const error = dependencyRefusals[index]?.error;
     assert.ok(error);
@@ -553,6 +554,38 @@ try {
                     })
                   : projectedError(index),
               exit_code: 2,
+            })),
+          },
+        });
+      if (reportFixture === "importMixed" && request._tag === "importTasks")
+        return Schema.decodeUnknownSync(Reply)({
+          _tag: "importReport",
+          report: {
+            generated_at: "2026-11-10T00:00:00Z",
+            dry_run: true,
+            totals: { created: 0, updated: 0, unchanged: 0, rejected: 4 },
+            items: request.payload.items.slice(0, 4).map((_, index) => ({
+              external_id: `mixed:${index}`,
+              outcome: "rejected",
+              task_id: null,
+              from_version: null,
+              changed_fields: [],
+              error:
+                index === 1
+                  ? {
+                      code: "invalid_args",
+                      message: dependencyAgentMessage,
+                      exit_code: 2,
+                      exit_meaning: "validation or usage",
+                      details: { dependency_error: projectedError(0) },
+                    }
+                  : {
+                      code: "title_required",
+                      message:
+                        "New Tasks need a title. Add a title and import again.",
+                      exit_code: 2,
+                      exit_meaning: "validation or usage",
+                    },
             })),
           },
         });
@@ -2246,6 +2279,62 @@ try {
     ),
   );
   await page.locator('input[type="file"]').setInputFiles(importFile);
+  reportFixture = "importMixed";
+  await page
+    .getByRole("button", { name: "Preview changes", exact: true })
+    .click();
+  const mixedRows = page.locator(".import-row");
+  await expect(mixedRows).toHaveCount(4);
+  await expect(mixedRows.nth(0).getByTestId("import-reason")).toHaveText(
+    "New Tasks need a title. Add a title and import again.",
+  );
+  await expect(mixedRows.nth(1).getByTestId("import-reason")).toHaveText(
+    "This Dependency would create a loop.",
+  );
+  for (const row of await mixedRows.all()) {
+    await expect(row.getByTestId("import-exit")).toHaveText(
+      "error 2 - validation or usage",
+    );
+    await expect(row).not.toContainText("AGENT ONLY");
+    const geometry = await row.evaluate((node) => {
+      const bounds = node.getBoundingClientRect();
+      const viewport = node
+        .closest(".import-list-scroll")
+        ?.getBoundingClientRect();
+      return {
+        row: bounds.toJSON(),
+        viewport: viewport?.toJSON(),
+        lines: [
+          ...node.querySelectorAll(
+            ".import-row-title, [data-testid=import-reason], [data-testid=import-exit]",
+          ),
+        ].map((line) => line.getBoundingClientRect().toJSON()),
+        tooltip: node.getAttribute("title"),
+        accessible: node.getAttribute("aria-label"),
+      };
+    });
+    assert.equal(geometry.row.height, 56);
+    assert.ok(
+      geometry.viewport &&
+        geometry.row.top >= geometry.viewport.top &&
+        geometry.row.bottom <= geometry.viewport.bottom,
+    );
+    assert.ok(
+      geometry.lines.every(
+        (line) =>
+          line.top >= geometry.row.top && line.bottom <= geometry.row.bottom,
+      ),
+    );
+    assert.ok(
+      geometry.tooltip?.includes("mixed:") &&
+        geometry.accessible?.includes("mixed:"),
+    );
+  }
+  await capture(
+    "import-mixed-rejections",
+    "One ordinary refusal and one nested Dependency refusal share PR12's exact 56px Compact row, caption reason and actual muted pair. The errors are controlled valid report fixtures.",
+  );
+  await page.locator('input[type="file"]').setInputFiles(importFile);
   reportFixture = "import";
   await page
     .getByRole("button", { name: "Preview changes", exact: true })
@@ -2273,9 +2362,12 @@ try {
   const importBlocker = page
     .locator(".import-row")
     .nth(2)
-    .getByRole("button", { name: blocker.title, exact: true });
+    .getByRole("button", { name: /^Actions for /u });
   await expect(importBlocker).toBeEnabled();
   await importBlocker.click();
+  await page
+    .getByRole("menuitem", { name: blocker.title, exact: true })
+    .click();
   await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
     blocker.title,
   );
@@ -2294,9 +2386,12 @@ try {
   const importFollowUp = page
     .locator(".import-row")
     .nth(3)
-    .getByTestId("dependency-follow-up");
+    .getByRole("button", { name: /^Actions for /u });
   await expect(importFollowUp).toBeEnabled();
   await importFollowUp.click();
+  await page
+    .getByRole("menuitem", { name: "Create follow-up", exact: true })
+    .click();
   reportFixture = null;
   await expect(page.getByTestId(`dependency-initial-${done.id}`)).toBeVisible();
   await page
