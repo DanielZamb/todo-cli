@@ -5,6 +5,31 @@ import { dependencyGraph, dependencyTask } from "./fixtures/dependencies.ts";
 
 const graph = dependencyGraph();
 const scope = { profile: graph.profile_id, root: graph.task_id };
+it("keeps a person's camera through a frame resize until Reset", async () => {
+  const controller = new DependencyGraphController();
+  await controller.open(scope, async () => ({ _tag: "graph", report: graph }));
+  controller.setViewport({ x: 37, y: -19, scale: 1.5 });
+  controller.refit();
+  expect(controller.snapshot()).toMatchObject({
+    camera: { kind: "Manual", viewport: { x: 37, y: -19, scale: 1.5 } },
+  });
+  controller.setViewport({ x: 10, y: 20, scale: 0.5 }, true);
+  expect(controller.snapshot()).toMatchObject({
+    camera: { kind: "Manual", viewport: { x: 37, y: -19, scale: 1.5 } },
+  });
+  controller.reset();
+  expect(controller.snapshot()).toMatchObject({
+    camera: { kind: "FitPending", viewport: null },
+  });
+  controller.setViewport({ x: 10, y: 20, scale: 0.5 }, true);
+  expect(controller.snapshot()).toMatchObject({
+    camera: { kind: "Fitted", viewport: { x: 10, y: 20, scale: 0.5 } },
+  });
+  expect(controller.refit()).toBe(true);
+  expect(controller.snapshot()).toMatchObject({
+    camera: { kind: "FitPending", viewport: null },
+  });
+});
 for (const failure of [
   {
     _tag: "error",
@@ -36,7 +61,7 @@ for (const failure of [
     await controller.refresh(async () => failure);
     expect(controller.snapshot()).toMatchObject({
       report: null,
-      viewport: null,
+      camera: { kind: "FitPending", viewport: null },
       focused: null,
       selected: "root",
       failure,
@@ -60,12 +85,14 @@ it("rejects a graph report without its root", async () => {
 it("omits the initial camera, stores a resolved camera and refits a new layout without losing focus", async () => {
   const controller = new DependencyGraphController();
   await controller.open(scope, async () => ({ _tag: "graph", report: graph }));
-  expect(controller.snapshot()).toMatchObject({ viewport: null });
-  controller.setViewport({ x: 12, y: 13, scale: 0.5 });
+  expect(controller.snapshot()).toMatchObject({
+    camera: { kind: "FitPending", viewport: null },
+  });
+  controller.setViewport({ x: 12, y: 13, scale: 0.5 }, true);
   controller.focus(dependencyTask("linked").id);
   controller.refit();
   expect(controller.snapshot()).toMatchObject({
-    viewport: null,
+    camera: { kind: "FitPending", viewport: null },
     focused: "linked",
   });
 });
@@ -126,7 +153,7 @@ it("preserves surviving viewport, selection, focus and expansion through SSE rep
   expect(controller.snapshot()).toMatchObject({
     selected: "linked",
     focused: "linked",
-    viewport: { x: 37, y: -19, scale: 1.5 },
+    camera: { kind: "Manual", viewport: { x: 37, y: -19, scale: 1.5 } },
   });
   const state = controller.snapshot();
   expect(state.kind === "Open" && [...state.expanded]).toEqual(["linked"]);
@@ -140,7 +167,7 @@ it("preserves surviving viewport, selection, focus and expansion through SSE rep
   expect(controller.snapshot()).toMatchObject({
     selected: "root",
     focused: "root",
-    viewport: { x: 37, y: -19, scale: 1.5 },
+    camera: { kind: "Manual", viewport: { x: 37, y: -19, scale: 1.5 } },
   });
 });
 for (const late of [

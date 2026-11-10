@@ -3,6 +3,9 @@ import type { GraphViewport } from "../graph-browser/protocol.ts";
 import type { DependencyScope } from "./dependency-state.ts";
 import type { Reply, Request } from "./protocol.ts";
 
+type GraphCamera =
+  | { readonly kind: "FitPending"; readonly viewport: null }
+  | { readonly kind: "Fitted" | "Manual"; readonly viewport: GraphViewport };
 type OpenState = {
   readonly kind: "Open";
   readonly scope: DependencyScope;
@@ -15,7 +18,7 @@ type OpenState = {
   readonly focused: TaskId | null;
   readonly expanded: ReadonlySet<TaskId>;
   readonly overview: boolean;
-  readonly viewport: GraphViewport | null;
+  readonly camera: GraphCamera;
   readonly renderFailure: string | null;
   readonly query: string;
   readonly appliedQuery: string;
@@ -63,7 +66,7 @@ export class DependencyGraphController {
       focused: scope.root,
       expanded: new Set(),
       overview: false,
-      viewport: null,
+      camera: { kind: "FitPending", viewport: null },
       renderFailure: null,
       query: "",
       appliedQuery: "",
@@ -167,7 +170,7 @@ export class DependencyGraphController {
         ...(missing
           ? {
               report: null,
-              viewport: null,
+              camera: { kind: "FitPending", viewport: null },
               focused: null,
               selected: state.scope.root,
               expanded: new Set<TaskId>(),
@@ -204,15 +207,18 @@ export class DependencyGraphController {
       expanded: new Set([...current.expanded].filter((id) => known.has(id))),
     });
   }
-  setViewport(viewport: GraphViewport) {
+  setViewport(viewport: GraphViewport, automaticFit = false) {
+    if (this.state.kind === "Closed") return;
+    if (automaticFit && this.state.camera.kind === "Manual") return;
+    const kind = automaticFit ? "Fitted" : "Manual";
     if (
-      this.state.kind === "Open" &&
-      (!this.state.viewport ||
-        this.state.viewport.x !== viewport.x ||
-        this.state.viewport.y !== viewport.y ||
-        this.state.viewport.scale !== viewport.scale)
+      this.state.camera.kind !== kind ||
+      !this.state.camera.viewport ||
+      this.state.camera.viewport.x !== viewport.x ||
+      this.state.camera.viewport.y !== viewport.y ||
+      this.state.camera.viewport.scale !== viewport.scale
     )
-      this.publish({ ...this.state, viewport });
+      this.publish({ ...this.state, camera: { kind, viewport } });
   }
   select(id: TaskId) {
     if (
@@ -248,13 +254,19 @@ export class DependencyGraphController {
     if (this.state.kind === "Open")
       this.publish({
         ...this.state,
-        viewport: null,
+        camera: { kind: "FitPending", viewport: null },
         focused: this.state.selected,
       });
   }
   refit() {
-    if (this.state.kind === "Open" && this.state.viewport !== null)
-      this.publish({ ...this.state, viewport: null });
+    if (this.state.kind === "Closed" || this.state.camera.kind === "Manual")
+      return false;
+    if (this.state.camera.kind !== "FitPending")
+      this.publish({
+        ...this.state,
+        camera: { kind: "FitPending", viewport: null },
+      });
+    return true;
   }
   visibleIds(state: DependencyGraphState = this.state): readonly TaskId[] {
     if (state.kind === "Closed" || !state.report) return [];

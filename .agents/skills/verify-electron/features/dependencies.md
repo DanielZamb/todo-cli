@@ -70,6 +70,21 @@ must send exact server export text through the validated host request; this alon
 does not prove the native clipboard. Canonical protocol/resource/lock changes
 require a fresh committed L1/coordinator handoff before S consumes any bytes.
 
+`verify-dependency-readiness.ts` adds open/snoozed Ready and Blocked, linked
+terminal Tasks without badges, combined filters and whole-Profile server ordering.
+Snoozed setup uses the existing authenticated TaskCreated v1 fixture boundary on
+the fresh scratch database; no public Snooze command is invented. The driver
+checks cached binary hashes, the CLI's embedded version and the compiled server's
+health identity before renderer proof.
+
+`verify-dependency-graphs.ts` asserts server-reported converging/diverging/mixed
+trees and a DAG, shared-ancestor Energy pruning, unknown Energy last, terminal
+Lightest next, a 52-Task group, expansion and real SSE camera/focus preservation.
+The app distinguishes fitted and manual cameras. Frame resize coalesces through
+ResizeObserver and animation-frame layout, refits only an automatic camera, and
+preserves a person's pan/zoom until Reset. Assert new-frame centring, unchanged
+manual viewport on Compact/full/window resize, and centred Reset in Chromium.
+
 Repeated graph Tasks use fixed section tokens: shown, depends-on, blocks,
 lightest-next, starts-at, ends-at, ancestors, descendants. Tasks in diagram retain
 `dependency-graph-task-<id>` and `dependency-graph-expand-<id>`. Other rows use

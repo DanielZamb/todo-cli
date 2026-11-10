@@ -5,6 +5,7 @@ import {
   spawn,
   spawnSync,
 } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   existsSync,
   mkdirSync,
@@ -14,13 +15,15 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { chromium, expect, type Locator } from "@playwright/test";
+import { CONTRACT_ID } from "@todo/api";
 import { DependencyError, ProfileId } from "@todo/domain";
 import { Effect, Fiber, Schema, Stream } from "effect";
 import { FetchHttpClient, type HttpClient } from "effect/http";
 import { build } from "vite";
 import {
+  repositoryInput,
   repositoryPath,
   verificationRoot,
 } from "../../../scripts/verification-inputs.ts";
@@ -36,6 +39,8 @@ import { openImport } from "./appearance.ts";
 import { buildGraphBrowser } from "./build-graph-browser.ts";
 import { writeDagCaptureManifest } from "./dag-capture-manifest.ts";
 import { settleRenderer } from "./settle-renderer.ts";
+import { verifyDependencyGraphs } from "./verify-dependency-graphs.ts";
+import { verifyDependencyReadiness } from "./verify-dependency-readiness.ts";
 import {
   createDependencySearchProbe,
   verifyDependencySearchRecovery,
@@ -55,15 +60,50 @@ mkdirSync(evidence, { recursive: true });
 const scratch = mkdtempSync(join(tmpdir(), "todo-dag-e-"));
 const home = join(scratch, "home");
 mkdirSync(home);
-const binaries = JSON.parse(
-  readFileSync(join(root, ".scratch/bin/build.json"), "utf8"),
+const binaries = Schema.decodeUnknownSync(
+  Schema.Struct({
+    source_hash: Schema.String,
+    head: Schema.String,
+    cli: Schema.String,
+    server: Schema.String,
+    seed: Schema.String,
+    cli_sha256: Schema.String,
+    server_sha256: Schema.String,
+    seed_sha256: Schema.String,
+    version: Schema.String,
+  }),
+)(
+  JSON.parse(
+    readFileSync(
+      repositoryInput(root, ".scratch/bin/build.json", "compiled DAG cache"),
+      "utf8",
+    ),
+  ),
 );
+for (const key of ["cli", "server", "seed"] as const) {
+  const input = repositoryInput(
+    root,
+    relative(root, binaries[key]),
+    `compiled ${key}`,
+  );
+  assert.equal(
+    createHash("sha256").update(readFileSync(input)).digest("hex"),
+    binaries[`${key}_sha256`],
+    `Compiled ${key} hash changed`,
+  );
+}
 const env = {
   ...process.env,
   HOME: home,
   TODO_DB: join(scratch, "todo.db"),
   TODO_PORT: "0",
 };
+const actualVersion = spawnSync(binaries.cli, ["--version"], {
+  env,
+  encoding: "utf8",
+});
+assert.equal(actualVersion.status, 0, actualVersion.stderr);
+assert.equal(actualVersion.stdout.trim(), binaries.version);
 let server: ChildProcess | undefined;
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
 let stream: Fiber.Fiber<void, unknown> | undefined;
@@ -154,6 +194,25 @@ try {
     Effect.runPromise(effect.pipe(Effect.provide(FetchHttpClient.layer)));
   let credential: string | undefined;
   const client = await run(taskHttpClient(base, () => credential));
+  const actualHealth = await run(client.system.health());
+  assert.equal(actualHealth.service, "todo-server");
+  assert.equal(actualHealth.contract, CONTRACT_ID);
+  assert.equal(actualHealth.build, binaries.head);
+  writeFileSync(
+    join(evidence, "binary-identity.json"),
+    JSON.stringify(
+      {
+        binaries,
+        version: {
+          exit: actualVersion.status,
+          stdout: actualVersion.stdout.trim(),
+        },
+        health: actualHealth,
+      },
+      null,
+      2,
+    ),
+  );
   credential = (
     await run(
       client.signIn.signIn({
@@ -2579,6 +2638,31 @@ try {
   writeFileSync(
     join(evidence, "search-recovery.json"),
     JSON.stringify(searchRecovery, null, 2),
+  );
+  await page
+    .getByRole("button", { name: "Back to tasks", exact: true })
+    .click();
+  const readiness = await verifyDependencyReadiness({
+    page,
+    client,
+    cli,
+    capture,
+    database: env.TODO_DB,
+  });
+  writeFileSync(
+    join(evidence, "readiness-results.json"),
+    JSON.stringify(readiness, null, 2),
+  );
+  const graphMatrix = await verifyDependencyGraphs({
+    page,
+    client,
+    cli,
+    capture,
+    notify,
+  });
+  writeFileSync(
+    join(evidence, "graph-matrix-results.json"),
+    JSON.stringify(graphMatrix, null, 2),
   );
   assert.deepEqual(errors, []);
   writeFileSync(

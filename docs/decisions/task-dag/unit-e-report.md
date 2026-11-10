@@ -6,19 +6,21 @@ This report does not claim a complete matrix, full-suite success or final approv
 
 Branch: `feat/task-dag-e-electron`. Qualified base:
 `2c78a3263c196d870459b17bf647cfc23f421fdd`. The previous product checkpoint is
-`f8236b515efcb6651707e5eaf6d98a655f5a9024`. Current recovery work was developed
-from that source, with exact working-source hashes in the proof receipts. Contract:
+`777d24a5c57738bdb1f0f7512c48eedc75e7db6b`. Current readiness and camera work was
+developed from that source, with exact working-source hashes in the proof receipts. Contract:
 `858612b6feba4e359ee28749b70119a36b3909ad20459ef15f82286f1b80b829`.
 No domain, CLI, server or Swift product files were added or changed by E. No
 children were launched. L1 controls integration and the correctness review seat;
 the coordinator is the sole UI reviewer. No self-approval is claimed.
 
 The current checkpoint's Electron typecheck exits 0; its complete package unit
-suite exits 0 with 149 passing tests and the existing one skip. Owned-file Biome
+suite exits 0 with 150 passing tests and the existing one skip. Owned-file Biome
 check and the permitted local no-comments audit exit 0. Their receipts and source
 hashes are in `feature-matrix-setup/checkpoint-*`. These are intermediate checks,
 not the root check or either full offscreen design suite. Current recovery checks
 are in `search-recovery-setup/checkpoint-*`; earlier receipts remain unchanged.
+The later readiness and graph-camera evidence is described in
+`unit-e-readiness-graph.md`, including retained failures and partial-proof limits.
 
 ## Product checkpoint
 
@@ -60,6 +62,10 @@ segmented mode, collapsed Graph details, in-frame tools and Close-only footer
 follow V1-V11. Repeated Task rows use stable section-scoped identifiers; only
 Tasks in diagram retain the canonical Task/expand identifiers. No label parsing,
 second renderer or diagram drag-to-connect is introduced.
+Automatic and manual cameras are distinct. Settled frame-size changes refit only
+an automatic camera; pan/zoom survives resize until Reset. The observer coalesces
+actual layout measurements without a timer, and the compiled-renderer proof
+asserts exactly one resolved viewport reply for the settled resize.
 
 ## Canonical shared adapter
 

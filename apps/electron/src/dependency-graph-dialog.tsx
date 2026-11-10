@@ -78,27 +78,79 @@ function graphTheme(dark: boolean): GraphTheme {
 function GraphDiagram({
   command,
   receive,
+  refit,
+  automaticFit,
 }: {
   command: GraphHostRender;
-  receive: (reply: GraphHostReply) => void;
+  receive: (reply: GraphHostReply, automaticFit: boolean) => void;
+  refit: () => boolean;
+  automaticFit: boolean;
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const current = useRef(command);
   current.current = command;
   const handle = useRef(receive);
   handle.current = receive;
-  const send = useCallback(() => {
-    requestAnimationFrame(() =>
+  const resize = useRef(refit);
+  resize.current = refit;
+  const automatic = useRef(automaticFit);
+  automatic.current = automaticFit;
+  const pendingSend = useRef(0);
+  const fitSend = useRef(false);
+  const send = useCallback((fit = false) => {
+    fitSend.current ||= fit;
+    if (pendingSend.current) return;
+    pendingSend.current = requestAnimationFrame(() => {
+      pendingSend.current = 0;
+      const { viewport: _viewport, ...fitted } = current.current;
       frame.current?.contentWindow?.postMessage(
         {
-          ...current.current,
+          ...(fitSend.current && automatic.current ? fitted : current.current),
           theme: graphTheme(current.current.theme.mode === "dark"),
         },
         "*",
-      ),
-    );
+      );
+      fitSend.current = false;
+    });
   }, []);
+  useEffect(() => () => cancelAnimationFrame(pendingSend.current), []);
   useEffect(() => {
+    const element = frame.current;
+    if (!element) return;
+    let width = element.clientWidth;
+    let height = element.clientHeight;
+    let pending = 0;
+    let candidateWidth = Number.NaN;
+    let candidateHeight = Number.NaN;
+    const settledSize = () => {
+      const nextWidth = element.clientWidth;
+      const nextHeight = element.clientHeight;
+      if (nextWidth !== candidateWidth || nextHeight !== candidateHeight) {
+        candidateWidth = nextWidth;
+        candidateHeight = nextHeight;
+        pending = requestAnimationFrame(settledSize);
+        return;
+      }
+      pending = 0;
+      if (nextWidth === width && nextHeight === height) return;
+      width = nextWidth;
+      height = nextHeight;
+      if (resize.current()) send(true);
+    };
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(pending);
+      candidateWidth = Number.NaN;
+      candidateHeight = Number.NaN;
+      pending = requestAnimationFrame(settledSize);
+    });
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(pending);
+    };
+  }, [send]);
+  useEffect(() => {
+    let rendering = false;
     const listener = (event: MessageEvent<unknown>) => {
       if (event.source !== frame.current?.contentWindow) return;
       const envelope = Schema.decodeUnknownExit(
@@ -111,20 +163,29 @@ function GraphDiagram({
       )
         return;
       try {
-        handle.current(decodeGraphReply(event.data, current.current));
+        const reply = decodeGraphReply(event.data, current.current);
+        if (reply.type === "ready") rendering = true;
+        handle.current(reply, rendering);
+        if (reply.type === "viewport" && rendering && !automatic.current)
+          send();
+        if (reply.type === "rendered" || reply.type === "renderError")
+          rendering = false;
       } catch {
-        handle.current({
-          v: 1,
-          type: "renderError",
-          identity: current.current.identity,
-          message:
-            "Todo received an incompatible graph response. Use the Task list or Retry.",
-        });
+        handle.current(
+          {
+            v: 1,
+            type: "renderError",
+            identity: current.current.identity,
+            message:
+              "Todo received an incompatible graph response. Use the Task list or Retry.",
+          },
+          false,
+        );
       }
     };
     window.addEventListener("message", listener);
     return () => window.removeEventListener("message", listener);
-  }, []);
+  }, [send]);
   useEffect(() => {
     current.current = command;
     send();
@@ -135,7 +196,7 @@ function GraphDiagram({
       title="Task Dependency diagram"
       data-testid="dependency-graph-diagram"
       src={new URL("../graph-browser/index.html", location.href).href}
-      onLoad={send}
+      onLoad={() => send()}
       sandbox="allow-scripts allow-same-origin"
     />
   );
@@ -217,7 +278,9 @@ export function DependencyGraphDialog({
             })),
             mermaid: state.report.mermaid,
             visible_ids: visible,
-            ...(state.viewport ? { viewport: state.viewport } : {}),
+            ...(state.camera.viewport
+              ? { viewport: state.camera.viewport }
+              : {}),
             selected_id: state.selected,
             focused_id: state.focused,
             theme: graphTheme(dark),
@@ -238,7 +301,7 @@ export function DependencyGraphDialog({
   };
   const diagramVisible =
     report !== null && (!compact || diagram) && !state.renderFailure;
-  const receive = (reply: GraphHostReply) => {
+  const receive = (reply: GraphHostReply, automaticFit: boolean) => {
     switch (reply.type) {
       case "activate": {
         const value = task(reply.task_id);
@@ -268,7 +331,7 @@ export function DependencyGraphDialog({
         break;
       }
       case "viewport":
-        controller.setViewport(reply);
+        controller.setViewport(reply, automaticFit);
         break;
       case "renderError":
         controller.renderFailed(reply.message);
@@ -281,13 +344,16 @@ export function DependencyGraphDialog({
     }
   };
   const zoom = (factor: number) => {
-    if (!state.viewport || !frame.current) return;
-    const scale = Math.min(4, Math.max(0.1, state.viewport.scale * factor));
-    const ratio = scale / state.viewport.scale;
+    if (!state.camera.viewport || !frame.current) return;
+    const scale = Math.min(
+      4,
+      Math.max(0.1, state.camera.viewport.scale * factor),
+    );
+    const ratio = scale / state.camera.viewport.scale;
     const { clientWidth: width, clientHeight: height } = frame.current;
     controller.setViewport({
-      x: width / 2 - (width / 2 - state.viewport.x) * ratio,
-      y: height / 2 - (height / 2 - state.viewport.y) * ratio,
+      x: width / 2 - (width / 2 - state.camera.viewport.x) * ratio,
+      y: height / 2 - (height / 2 - state.camera.viewport.y) * ratio,
       scale,
     });
   };
@@ -520,7 +586,12 @@ export function DependencyGraphDialog({
           )}
           {diagramVisible && command && (
             <section ref={frame} className="dependency-diagram-region">
-              <GraphDiagram command={command} receive={receive} />
+              <GraphDiagram
+                command={command}
+                receive={receive}
+                refit={() => controller.refit()}
+                automaticFit={state.camera.kind !== "Manual"}
+              />
               <fieldset
                 className="dependency-diagram-tools"
                 aria-label="Diagram controls"
@@ -529,7 +600,7 @@ export function DependencyGraphDialog({
                   variant="outline"
                   size="icon"
                   aria-label="Zoom in"
-                  disabled={!state.viewport}
+                  disabled={!state.camera.viewport}
                   onClick={() => zoom(1.2)}
                 >
                   <ZoomIn />
@@ -538,7 +609,7 @@ export function DependencyGraphDialog({
                   variant="outline"
                   size="icon"
                   aria-label="Zoom out"
-                  disabled={!state.viewport}
+                  disabled={!state.camera.viewport}
                   onClick={() => zoom(1 / 1.2)}
                 >
                   <ZoomOut />
