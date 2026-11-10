@@ -2,7 +2,7 @@
 
 ## Current integrated mapping
 
-The active product pins now name `7d947f917d1895df45c78f9f9df31638a9f3f2b8`, including both clients, the two-part public contract amendment and main PR #12. Current mutation/restoration controls precede the mapping renewal. Full integrated conformance and grouped seats follow; no historical proof is relabelled. Native and fresh-discovery gates remain separate.
+The active product pins now name `7d947f917d1895df45c78f9f9df31638a9f3f2b8`, including both clients, the two-part public contract amendment and main PR #12. Current mutation/restoration controls precede the mapping renewal. Full integrated conformance now passes, with actual proof sources retained. See [the integration report](integration-report.md). Grouped seats and native/fresh-discovery gates remain separate.
 
 ## Historical F1 implementation status
 
