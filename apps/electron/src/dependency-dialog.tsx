@@ -3,6 +3,7 @@ import { LoaderCircle } from "lucide-react";
 import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 import { Alert, AlertDescription } from "./components/ui/alert.tsx";
 import { Button } from "./components/ui/button.tsx";
+import { Checkbox } from "./components/ui/checkbox.tsx";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +12,7 @@ import {
   DialogTitle,
 } from "./components/ui/dialog.tsx";
 import { Empty, EmptyHeader, EmptyTitle } from "./components/ui/empty.tsx";
-import { Field, FieldLabel } from "./components/ui/field.tsx";
+import { Field } from "./components/ui/field.tsx";
 import { Input } from "./components/ui/input.tsx";
 import { ToggleGroup, ToggleGroupItem } from "./components/ui/toggle-group.tsx";
 import {
@@ -20,6 +21,7 @@ import {
   dependencyWarning,
 } from "./dependency-presentation.ts";
 import type { DependencyController } from "./dependency-state.ts";
+import { DependencyTaskLabel } from "./dependency-task-label.tsx";
 import type { Reply, Request } from "./protocol.ts";
 
 export function DependencyErrorStatus({
@@ -119,12 +121,14 @@ export function DependencyPicker({
   canWrite,
   returnFocus,
   onChanged,
+  projects,
 }: {
   controller: DependencyController;
   request: (request: Request) => Promise<Reply>;
   canWrite: boolean;
   returnFocus: () => HTMLElement | null;
   onChanged: () => void;
+  projects: readonly { id: string; name: string }[];
 }) {
   const state = useSyncExternalStore(controller.subscribe, controller.snapshot);
   const search = useRef<HTMLInputElement>(null);
@@ -160,8 +164,8 @@ export function DependencyPicker({
           {root?.title ?? state.scope.root}{" "}
           {state.direction === "dependsOn" ? "depends on…" : "blocks…"}
         </DialogTitle>
-        <DialogDescription>
-          Changes save as you check or uncheck a Task.
+        <DialogDescription className="sr-only">
+          Choose Tasks in this Profile. Changes save immediately.
         </DialogDescription>
         <ToggleGroup
           aria-label="Dependency direction"
@@ -184,13 +188,12 @@ export function DependencyPicker({
           </ToggleGroupItem>
         </ToggleGroup>
         <Field>
-          <FieldLabel htmlFor="dependency-search">
-            Search this Profile
-          </FieldLabel>
           <Input
             ref={search}
             id="dependency-search"
             data-testid="dependency-search"
+            aria-label="Search Tasks in this Profile"
+            placeholder="Search Tasks in this Profile"
             maxLength={200}
             defaultValue={state.query}
             onChange={(event) => {
@@ -261,6 +264,7 @@ export function DependencyPicker({
                 state.direction === "dependsOn" ? state.scope.root : task.id;
               return (
                 <label
+                  htmlFor={`dependency-choice-${task.id}`}
                   aria-busy={pending}
                   aria-label={pending ? `Updating ${task.title}` : undefined}
                   className={
@@ -271,7 +275,7 @@ export function DependencyPicker({
                   key={task.id}
                 >
                   <span className="dependency-checkbox">
-                    <input
+                    <Checkbox
                       onKeyDown={(event) => {
                         if (
                           event.key !== "ArrowDown" &&
@@ -279,8 +283,8 @@ export function DependencyPicker({
                         )
                           return;
                         const inputs = [
-                          ...(scroll.current?.querySelectorAll<HTMLInputElement>(
-                            'input[type="checkbox"]:not(:disabled)',
+                          ...(scroll.current?.querySelectorAll<HTMLElement>(
+                            '[role="checkbox"]:not(:disabled)',
                           ) ?? []),
                         ];
                         const index = inputs.indexOf(event.currentTarget);
@@ -291,7 +295,7 @@ export function DependencyPicker({
                           next.focus();
                         }
                       }}
-                      type="checkbox"
+                      id={`dependency-choice-${task.id}`}
                       data-testid={`dependency-choice-${task.id}`}
                       checked={state.pending.get(task.id) ?? checked}
                       disabled={
@@ -301,9 +305,9 @@ export function DependencyPicker({
                         state.conflicts.has(dependent)
                       }
                       aria-busy={pending}
-                      onChange={(event) => {
+                      onCheckedChange={(checked) => {
                         void controller
-                          .toggle(task.id, event.target.checked, request)
+                          .toggle(task.id, checked, request)
                           .then(onChanged);
                       }}
                     />
@@ -314,19 +318,29 @@ export function DependencyPicker({
                       />
                     )}
                   </span>
-                  <span>
-                    <span>{task.title}</span>
-                    <small className="text-muted-foreground">
-                      {task.status === "cancelled" ? "Cancelled" : task.status}{" "}
-                      · Version {task.row_version}
-                    </small>
-                  </span>
+                  <DependencyTaskLabel task={task} projects={projects} />
                 </label>
               );
             })}
           </div>
         </div>
         <DialogFooter>
+          <p className="dependency-save-hint text-muted-foreground">
+            Changes save immediately.
+          </p>
+          {state.failure && (
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="Dismiss error"
+              onClick={() => {
+                controller.dismissFailure();
+                search.current?.focus();
+              }}
+            >
+              Dismiss
+            </Button>
+          )}
           <Button
             variant="outline"
             data-testid="dependency-picker-close"

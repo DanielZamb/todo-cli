@@ -80,6 +80,10 @@ export class DependencyController {
     });
     await Promise.all([this.reload(request), this.find("", request)]);
   }
+  dismissFailure() {
+    if (this.state.kind === "Open")
+      this.publish({ ...this.state, failure: null });
+  }
   direction(direction: DependencyDirection) {
     if (this.state.kind === "Open")
       this.publish({
@@ -117,7 +121,7 @@ export class DependencyController {
         loading: false,
         graph: result.report,
         conflicts: clearConflicts ? new Set() : current.conflicts,
-        failure: null,
+        failure: clearConflicts ? null : current.failure,
       });
     else
       this.publish({
@@ -140,10 +144,14 @@ export class DependencyController {
     const current = this.current(epoch);
     if (!current || search !== this.search) return;
     if (result._tag === "dependencyCandidates")
-      this.publish({ ...current, candidates: result.tasks, failure: null });
+      this.publish({
+        ...current,
+        candidates: result.tasks,
+        failure: current.failure?._tag === "conflict" ? current.failure : null,
+      });
     else this.publish({ ...current, failure: this.failure(result) });
   }
-  choices(): readonly { task: Task; checked: boolean }[] {
+  choices(): readonly { task: TaskRead; checked: boolean }[] {
     const state = this.state;
     if (state.kind === "Closed" || !state.graph) return [];
     const linked = state.graph.edges.flatMap((edge) =>

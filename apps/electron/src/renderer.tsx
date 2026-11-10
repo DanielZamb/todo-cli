@@ -50,7 +50,6 @@ import { acceptAttachmentTask } from "./attachment-model.ts";
 import { AttachmentsSection, JiraMarker } from "./attachments.tsx";
 import { BatchEditDialog } from "./batch-edit.tsx";
 import { Alert, AlertDescription } from "./components/ui/alert.tsx";
-import { Badge } from "./components/ui/badge.tsx";
 import { Button } from "./components/ui/button.tsx";
 import {
   Dialog,
@@ -89,6 +88,8 @@ import { DatePicker } from "./date-picker.tsx";
 import { DependencyDeleteDialog } from "./dependency-delete-dialog.tsx";
 import { DependencyDeleteController } from "./dependency-delete-state.ts";
 import { DependencyPicker } from "./dependency-dialog.tsx";
+import { DependencyGraphDialog } from "./dependency-graph-dialog.tsx";
+import { DependencyGraphController } from "./dependency-graph-state.ts";
 import { dependencyBadge } from "./dependency-presentation.ts";
 import { DependencyController } from "./dependency-state.ts";
 import { Diagnostics } from "./diagnostics.tsx";
@@ -318,6 +319,7 @@ type WriteIntent =
   | { kind: "editSeries"; recurrence: Recurrence }
   | { kind: "skipOccurrence" };
 function App() {
+  const [dependencyGraph] = useState(() => new DependencyGraphController());
   const [dependencies] = useState(() => new DependencyController());
   const [taskDelete] = useState(() => new DependencyDeleteController());
   const dependencyTrigger = useRef<HTMLElement | null>(null);
@@ -469,6 +471,7 @@ function App() {
       if (active.current === next) return;
       dependencies.close();
       taskDelete.close();
+      dependencyGraph.close();
       const restored = storedEditor(next);
       active.current = next;
       profileGeneration.current++;
@@ -507,7 +510,7 @@ function App() {
       setLoadFailure(null);
       setTransferResult(null);
     },
-    [dependencies, taskDelete],
+    [dependencies, taskDelete, dependencyGraph],
   );
   const activateEditor = (next: Editor) => {
     const current = editorRef.current;
@@ -521,6 +524,7 @@ function App() {
     discovery.credentialChanged();
     dependencies.close();
     taskDelete.close();
+    dependencyGraph.close();
     setLookupError(null);
     refreshGeneration.current++;
     profileGeneration.current++;
@@ -543,7 +547,7 @@ function App() {
     appliedFiltersRef.current = {};
     setApplyingFilters(false);
     setFiltersOpen(false);
-  }, [discovery.credentialChanged, dependencies, taskDelete]);
+  }, [discovery.credentialChanged, dependencies, taskDelete, dependencyGraph]);
   const request = useCallback(
     async (request: Request): Promise<Reply> => {
       if (request._tag === "signIn" || request._tag === "signOut")
@@ -890,11 +894,15 @@ function App() {
         notice._tag === "changed" &&
         notice.profile === profile &&
         active.current === profile
-      )
+      ) {
         void refreshRef.current();
+        void dependencyGraph.refresh(request);
+        void dependencies.reload(request, false);
+      }
       if (notice._tag === "reload") {
         dependencies.close();
         taskDelete.close();
+        dependencyGraph.close();
         discovery.credentialChanged();
         refreshGeneration.current++;
         setAppliedSearch(null);
@@ -966,6 +974,9 @@ function App() {
     discovery.offline,
     dependencies.close,
     taskDelete.close,
+    dependencyGraph.close,
+    dependencyGraph.refresh,
+    dependencies.reload,
   ]);
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
@@ -1256,6 +1267,16 @@ function App() {
         ? document.activeElement
         : null;
     void dependencies.open(
+      { profile: task.profile_id, root: task.id },
+      request,
+    );
+  };
+  const openGraph = (task: Task) => {
+    dependencyTrigger.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    void dependencyGraph.open(
       { profile: task.profile_id, root: task.id },
       request,
     );
@@ -1630,8 +1651,25 @@ function App() {
         quick && "quick-search",
       )}
     >
+      <DependencyGraphDialog
+        controller={dependencyGraph}
+        request={request}
+        compact={compact}
+        dark={dark}
+        connected={connection === "connected"}
+        returnFocus={() =>
+          dependencyTrigger.current?.isConnected
+            ? dependencyTrigger.current
+            : document.querySelector<HTMLElement>('[aria-label="Task actions"]')
+        }
+        openTask={(task) =>
+          activateEditor(draftForTask(task, editorRef.current))
+        }
+        addDependency={openDependencies}
+      />
       <DependencyPicker
         controller={dependencies}
+        projects={catalog?.projects ?? []}
         request={request}
         canWrite={!readOnly}
         returnFocus={() =>
@@ -1645,6 +1683,7 @@ function App() {
       />
       <DependencyDeleteDialog
         controller={taskDelete}
+        projects={catalog?.projects ?? []}
         request={request}
         canWrite={!readOnly}
         returnFocus={() =>
@@ -2359,7 +2398,10 @@ function App() {
           </Alert>
         )}
         <div className="search-results" data-stale={stale}>
-          <TaskGroups compact={compact && !catalog?.planning}>
+          <TaskGroups
+            key={appliedSearch?.appliedIdentity.filters.order ?? "priority"}
+            compact={compact && !catalog?.planning}
+          >
             {!(compact && connection === "offline" && !catalog) &&
               groups.map((group) => (
                 <section
@@ -2529,12 +2571,13 @@ function App() {
                               <>
                                 <span className="task-meta" title={metadata}>
                                   {badge && (
-                                    <Badge
-                                      variant="secondary"
+                                    <span
+                                      className="dependency-row-state"
+                                      data-blocked={task.blocked}
                                       data-testid={`dependency-state-${task.id}`}
                                     >
                                       {badge}
-                                    </Badge>
+                                    </span>
                                   )}
                                   {projectName && (
                                     <span className="task-project">
@@ -2587,6 +2630,11 @@ function App() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent>
                               <DropdownMenuGroup>
+                                <DropdownMenuItem
+                                  onClick={() => openGraph(task)}
+                                >
+                                  View Dependencies
+                                </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => openDependencies(task)}
                                 >
@@ -2757,6 +2805,9 @@ function App() {
                         Reopen task
                       </DropdownMenuItem>
                     )}
+                    <DropdownMenuItem onClick={() => openGraph(editor.base)}>
+                      View Dependencies
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       data-testid="dependency-add"
                       onClick={() => openDependencies(editor.base)}
@@ -3057,17 +3108,30 @@ function App() {
                 }
               }}
             />
+            <section className="editor-dependencies">
+              <h3>Dependencies</h3>
+              <div className="actions">
+                <Button
+                  type="button"
+                  variant="outline"
+                  data-testid="dependency-add"
+                  disabled={readOnly}
+                  onClick={() => openDependencies(editor.base)}
+                >
+                  Add dependency
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => openGraph(editor.base)}
+                >
+                  View Dependencies
+                </Button>
+              </div>
+            </section>
           </form>
           <div className="editor-foot">
             <div className="actions">
-              <Button
-                variant="ghost"
-                data-testid="dependency-add"
-                disabled={readOnly}
-                onClick={() => openDependencies(editor.base)}
-              >
-                Dependencies
-              </Button>
               <Button
                 type="button"
                 variant="ghost"

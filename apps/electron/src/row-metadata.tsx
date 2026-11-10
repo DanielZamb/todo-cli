@@ -1,5 +1,4 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { Badge } from "./components/ui/badge.tsx";
 import { wholeTagCount } from "./whole-tags.ts";
 
 export function RowMetadata({
@@ -53,7 +52,12 @@ export function RowMetadata({
         {items.map((item) => (
           <span key={item.id} data-item-measure>
             {item.dependency ? (
-              <Badge variant="secondary">{item.label}</Badge>
+              <span
+                className="dependency-row-state"
+                data-blocked={item.label.startsWith("Blocked")}
+              >
+                {item.label}
+              </span>
             ) : (
               item.label
             )}
@@ -73,9 +77,13 @@ export function RowMetadata({
           className={item.overdue ? "overdue" : undefined}
         >
           {item.dependency ? (
-            <Badge variant="secondary" data-testid={item.testId}>
+            <span
+              className="dependency-row-state"
+              data-blocked={item.label.startsWith("Blocked")}
+              data-testid={item.testId}
+            >
               {item.label}
-            </Badge>
+            </span>
           ) : (
             item.label
           )}

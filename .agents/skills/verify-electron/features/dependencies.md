@@ -39,3 +39,20 @@ Identifiers follow the client brief. Existing editor/filter/search identifiers s
 Command/Control-Shift-K. The shortcut inventory found no Shift-K collision; Shift-L
 appearance, Shift-D Diagnostics, Shift-N quick add, Shift-M Compact and Command-F
 search remain in use.
+
+Checkpoint2 adds the canonical local browser resource, Compact list-first and
+explicit Diagram, full diagram/details and accessible-list fallback on a real
+Pele parse failure. The drive uses a controlled malformed export and then a fresh
+successful graph read for Retry. Graph state tests cover scoped obsolete reads,
+direct-neighbour/overview state and surviving viewport/selection/focus across
+replacement. E1-E6 use plain metadata text, the existing order header, shadcn
+Checkbox, a fixed footer hint, a dismissible Alert with a whole-line witness,
+hidden picker Versions and single-line relation titles with status/Project.
+The driver asserts two whole candidate rows remain visible under a refusal.
+
+The graph host's exact canonical source and output lock are named in the unit
+report. Any resource or lock change needs a fresh committed handoff to L1, S and
+the coordinator. Never silently consume an old emitted directory. Run the
+browser-only proof with `bun apps/electron/scripts/verify-graph-browser.ts <fresh-evidence>`.
+Its hiding-Reset fixture proves the adapter observer; production/native focus and
+VoiceOver remain separate limits. The final aggregate/full matrix are pending.

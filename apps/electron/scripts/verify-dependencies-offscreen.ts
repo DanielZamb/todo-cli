@@ -16,6 +16,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { chromium, expect } from "@playwright/test";
+import { ProfileId } from "@todo/domain";
 import { Effect, Schema } from "effect";
 import { FetchHttpClient, type HttpClient } from "effect/http";
 import { build } from "vite";
@@ -23,6 +24,7 @@ import { errorReply, exitDetail } from "../src/error-reply.ts";
 import { taskHttpClient } from "../src/http-client.ts";
 import { Reply, Request } from "../src/protocol.ts";
 import { taskRequest } from "../src/task-client.ts";
+import { buildGraphBrowser } from "./build-graph-browser.ts";
 import { writeDagCaptureManifest } from "./dag-capture-manifest.ts";
 import { settleRenderer } from "./settle-renderer.ts";
 
@@ -182,6 +184,9 @@ try {
   const page = await browser.newPage({ viewport: { width: 393, height: 426 } });
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  const graphOutput = await buildGraphBrowser();
+  let failRender = false;
+  let clipboard = "";
   let delay = false;
   let release: (() => void) | undefined;
   await page.exposeFunction(
@@ -217,6 +222,9 @@ try {
           );
           return { _tag: "ok" };
         case "draft":
+        case "copyMermaid":
+          clipboard = request.text;
+          return { _tag: "ok" };
         case "copyTaskId":
         case "openDiagnostics":
         case "snapshotReveal":
@@ -231,9 +239,17 @@ try {
           return { _tag: "ok" };
       }
       try {
-        return Schema.decodeUnknownSync(Reply)(
+        const reply = Schema.decodeUnknownSync(Reply)(
           await run(taskRequest(client, request)),
         );
+        if (reply._tag === "graph" && failRender) {
+          failRender = false;
+          return {
+            ...reply,
+            report: { ...reply.report, mermaid: "flowchart TD\nn0[" },
+          };
+        }
+        return reply;
       } catch (error) {
         if (
           error &&
@@ -257,6 +273,18 @@ try {
       body: `<html><head><style>${styles}</style></head><body><div id="root"></div></body></html>`,
     }),
   );
+  await page.route("http://127.0.0.1/graph-browser/*", (route) => {
+    const name = new URL(route.request().url()).pathname.split("/").at(-1);
+    assert.ok(name && ["index.html", "graph.js", "graph.css"].includes(name));
+    return route.fulfill({
+      path: join(graphOutput, name),
+      contentType: name.endsWith(".html")
+        ? "text/html"
+        : name.endsWith(".js")
+          ? "text/javascript"
+          : "text/css",
+    });
+  });
   await page.goto("http://127.0.0.1/");
   await page.evaluate(() => {
     window.desktop = {
@@ -272,13 +300,20 @@ try {
     };
   });
   await page.addScriptTag({ content: script.code });
-  const capture = async (state: string, description: string) => {
+  const capture = async (
+    state: string,
+    description: string,
+    layout = "compact",
+  ) => {
     for (const dark of [false, true]) {
       await page.evaluate((dark) => {
-        document.documentElement.classList.toggle("dark", dark);
+        if (document.documentElement.classList.contains("dark") !== dark)
+          window.dispatchEvent(
+            new CustomEvent("dag-notice", { detail: { _tag: "toggleTheme" } }),
+          );
       }, dark);
       await settleRenderer(page);
-      const png = `${state}-compact-${dark ? "dark" : "light"}.png`;
+      const png = `${state}-${layout}-${dark ? "dark" : "light"}.png`;
       const geometry = await page.evaluate(() => ({
         overflow: document.documentElement.scrollWidth > innerWidth,
         actions: [
@@ -317,7 +352,7 @@ try {
             geometry,
             requestCount: actions.length,
             checkboxes: await page
-              .locator('input[type="checkbox"]')
+              .getByRole("checkbox")
               .evaluateAll((elements) =>
                 elements.map((element) =>
                   element instanceof HTMLInputElement
@@ -326,7 +361,14 @@ try {
                         checked: element.checked,
                         disabled: element.disabled,
                       }
-                    : null,
+                    : {
+                        id: element.getAttribute("data-testid"),
+                        checked:
+                          element.getAttribute("aria-checked") === "true",
+                        disabled:
+                          element.hasAttribute("disabled") ||
+                          element.getAttribute("aria-disabled") === "true",
+                      },
                 ),
               ),
             visibleText: await page.locator("body").innerText(),
@@ -340,7 +382,7 @@ try {
       manifest.push({
         client: "electron",
         state,
-        layout: "compact",
+        layout,
         appearance: dark ? "dark" : "light",
         png,
         receipt,
@@ -431,6 +473,62 @@ try {
   await expect(page.getByTestId("dependency-error")).toContainText(
     "error 2 - validation or usage",
   );
+  const visibleCandidates = await page
+    .locator(".dependency-choice")
+    .evaluateAll(
+      (elements) =>
+        elements.filter((element) => {
+          const box = element.getBoundingClientRect();
+          const parent = element
+            .closest(".dependency-scroll")
+            ?.getBoundingClientRect();
+          return parent && box.top >= parent.top && box.bottom <= parent.bottom;
+        }).length,
+    );
+  if (visibleCandidates < 2) {
+    await page.screenshot({
+      path: join(evidence, "refusal-geometry-incident.png"),
+    });
+    writeFileSync(
+      join(evidence, "refusal-geometry-incident.json"),
+      JSON.stringify(
+        await page
+          .locator('[data-testid="dependency-picker"]')
+          .evaluate((root) =>
+            [...root.querySelectorAll("*")]
+              .filter((element) =>
+                element.matches(
+                  '[data-slot="dialog-title"], [data-slot="dialog-footer"], [data-testid="dependency-direction"], [data-testid="dependency-search"], .dependency-scroll, .dependency-choice, .dependency-error-region, .dependency-witness',
+                ),
+              )
+              .map((element) => {
+                const box = element.getBoundingClientRect();
+                const style = getComputedStyle(element);
+                return {
+                  tag: element.tagName,
+                  classes: element.className,
+                  text: element.textContent,
+                  x: box.x,
+                  y: box.y,
+                  width: box.width,
+                  height: box.height,
+                  margin: style.margin,
+                  padding: style.padding,
+                  lineHeight: style.lineHeight,
+                  flexShrink: style.flexShrink,
+                  scrollTop: element.scrollTop,
+                };
+              }),
+          ),
+        null,
+        2,
+      ),
+    );
+  }
+  assert.ok(
+    visibleCandidates >= 2,
+    `Refusal must retain two whole candidate rows, got ${visibleCandidates}`,
+  );
 
   await capture(
     "picker-refusal",
@@ -501,6 +599,89 @@ try {
     "Dependents-only preview is reviewed before Delete",
   );
   await page.getByTestId("dependency-delete-cancel").click();
+  await page
+    .getByRole("button", { name: "Back to tasks", exact: true })
+    .click();
+  await page.locator(`[data-task-id="${blocked.id}"] .task-content`).click();
+  const openGraph = async () => {
+    await page
+      .getByRole("button", { name: "Task actions", exact: true })
+      .click();
+    await page
+      .getByRole("menuitem", { name: "View Dependencies", exact: true })
+      .click();
+    await expect(page.getByTestId("dependency-graph-details")).toBeVisible();
+  };
+  await openGraph();
+  await expect(page.getByTestId("dependency-graph-diagram")).toHaveCount(0);
+  await capture(
+    "graph-list",
+    "Compact opens on the accessible Depends on, Blocks, Lightest next and root details list",
+  );
+  await page.getByRole("button", { name: "Diagram", exact: true }).click();
+  await expect(
+    page
+      .frameLocator('[data-testid="dependency-graph-diagram"]')
+      .locator(".pele-node:not(.graph-hidden)"),
+  ).toHaveCount(2);
+  await capture(
+    "graph-diagram",
+    "Explicit Diagram toggle draws the canonical local Pele resource",
+  );
+  await page.getByTestId("dependency-graph-copy-mermaid").click();
+  assert.equal(
+    clipboard,
+    (
+      await run(
+        client.tasks.graph({
+          params: {
+            profile: Schema.decodeUnknownSync(ProfileId)("work"),
+            task: blocked.id,
+          },
+        }),
+      )
+    ).mermaid,
+  );
+  await page.setViewportSize({ width: 1100, height: 720 });
+  await page.evaluate(() =>
+    window.dispatchEvent(
+      new CustomEvent("dag-notice", {
+        detail: { _tag: "windowMode", compact: false },
+      }),
+    ),
+  );
+  await capture(
+    "graph-full",
+    "Full window diagram has native details beside it",
+    "full",
+  );
+  await page.getByTestId("dependency-graph-close").click();
+  await page.setViewportSize({ width: 393, height: 426 });
+  await page.evaluate(() =>
+    window.dispatchEvent(
+      new CustomEvent("dag-notice", {
+        detail: { _tag: "windowMode", compact: true },
+      }),
+    ),
+  );
+  failRender = true;
+  await openGraph();
+  await page.getByRole("button", { name: "Diagram", exact: true }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Couldn't draw Dependencies." }),
+  ).toBeVisible();
+  await expect(page.getByTestId("dependency-graph-details")).toBeVisible();
+  await capture(
+    "graph-pele-fallback",
+    "A controlled malformed export reaches real Pele; failure keeps accessible list and Retry",
+  );
+  await page.getByTestId("dependency-graph-retry").click();
+  await expect(
+    page
+      .frameLocator('[data-testid="dependency-graph-diagram"]')
+      .locator(".pele-node:not(.graph-hidden)"),
+  ).toHaveCount(2);
+  await page.getByTestId("dependency-graph-close").click();
   let lastDependent = "";
   for (let index = 0; index < 20; index++)
     lastDependent = cli(
@@ -544,7 +725,7 @@ try {
     join(evidence, "result.json"),
     JSON.stringify(
       {
-        status: "CHECKPOINT1_PARTIAL",
+        status: "CHECKPOINT2_PARTIAL",
         exit: 0,
         binaries,
         fixture: { blocker, blocked, resolved, ready, plain },

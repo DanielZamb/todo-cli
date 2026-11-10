@@ -1,5 +1,5 @@
 import { cn } from "cn";
-import { useRef, useSyncExternalStore } from "react";
+import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 import { Button } from "./components/ui/button.tsx";
 import {
   Dialog,
@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "./components/ui/dialog.tsx";
 import type { DependencyDeleteController } from "./dependency-delete-state.ts";
+import { DependencyTaskLabel } from "./dependency-task-label.tsx";
 import type { Reply, Request } from "./protocol.ts";
 
 export function DependencyDeleteDialog({
@@ -17,15 +18,21 @@ export function DependencyDeleteDialog({
   canWrite,
   onDeleted,
   returnFocus,
+  projects,
 }: {
   controller: DependencyDeleteController;
   request: (request: Request) => Promise<Reply>;
   canWrite: boolean;
   onDeleted: () => void;
   returnFocus: () => HTMLElement | null;
+  projects: readonly { id: string; name: string }[];
 }) {
   const state = useSyncExternalStore(controller.subscribe, controller.snapshot);
   const cancel = useRef<HTMLButtonElement>(null);
+  const review = state.kind === "Review" && state.changed;
+  useLayoutEffect(() => {
+    if (review) cancel.current?.focus();
+  }, [review]);
   if (state.kind === "Closed") return null;
   const reviewed =
     state.kind === "Review" || state.kind === "Applying" ? state : null;
@@ -38,13 +45,7 @@ export function DependencyDeleteDialog({
     )?.task;
     return (
       <li key={id}>
-        {task?.title ?? id}
-        {task && (
-          <small className="text-muted-foreground">
-            {" "}
-            · {task.status === "cancelled" ? "Cancelled" : task.status}
-          </small>
-        )}
+        <DependencyTaskLabel task={task} id={id} projects={projects} />
       </li>
     );
   };

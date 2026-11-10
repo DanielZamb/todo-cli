@@ -1789,7 +1789,7 @@ nav {
 .dependency-choice-pending input {
   opacity: 0;
 }
-.dependency-checkbox svg {
+.dependency-checkbox > svg {
   width: 20px;
   height: 20px;
   animation: spin 1s linear infinite;
@@ -1817,4 +1817,170 @@ nav {
 .dependency-error-region [data-slot="alert-description"] p {
   flex-shrink: 0;
   margin: 0;
+}
+.dependency-row-state {
+  color: var(--muted-foreground);
+}
+.dependency-row-state[data-blocked="true"] {
+  color: var(--warning);
+}
+.dependency-task-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  gap: 2px;
+}
+.dependency-task-label small {
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dependency-delete li {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+}
+.dependency-save-hint {
+  margin-right: auto;
+  font-size: 12px;
+}
+.dependency-choice-pending [data-slot="checkbox"] {
+  opacity: 0;
+}
+.dependency-error-region {
+  max-height: 128px;
+}
+.dependency-error-region [data-slot="alert-description"] {
+  max-height: 110px;
+  text-wrap: wrap;
+  gap: 4px;
+}
+.dependency-error-region .dependency-witness {
+  flex: 1 1 40px;
+  min-height: 20px;
+  max-height: 40px;
+  line-height: 20px;
+}
+.dependency-graph-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  width: min(1000px, calc(100vw - 24px));
+  max-width: none;
+  height: min(650px, calc(100dvh - 24px));
+}
+.dependency-graph-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.dependency-graph-body {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  gap: 16px;
+}
+.dependency-graph-native {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dependency-graph-section h3 {
+  font-weight: 600;
+}
+.dependency-graph-section ul {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dependency-graph-section li {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.dependency-graph-section li > button:first-child {
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-start;
+  height: 44px;
+  text-align: left;
+}
+.dependency-graph-section dl {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 12px;
+}
+.dependency-graph-section dd {
+  overflow-wrap: anywhere;
+}
+.dependency-diagram-region {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dependency-diagram-region iframe {
+  width: 100%;
+  height: 300px;
+  min-height: 180px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.dependency-graph-dialog [data-slot="dialog-footer"] {
+  flex-shrink: 0;
+  flex-direction: row;
+  justify-content: flex-end;
+}
+@media (max-width: 500px) {
+  .dependency-graph-dialog {
+    padding: 16px;
+    width: calc(100vw - 16px);
+    height: calc(100dvh - 16px);
+  }
+  .dependency-graph-body {
+    flex-direction: column;
+  }
+  .dependency-diagram-region iframe {
+    height: 180px;
+  }
+}
+.editor-dependencies {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.editor-dependencies h3 {
+  font-weight: 600;
+}
+
+.dependency-dialog [data-slot="dialog-footer"] {
+  padding-block: 8px;
+}
+.dependency-choices {
+  gap: 0;
+}
+.dependency-task-label {
+  gap: 0;
+}
+
+.dependency-save-hint {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.dependency-error-region .dependency-witness {
+  flex: 0 0 20px;
+  height: 20px;
+  scroll-snap-type: y mandatory;
+}
+.dependency-error-region .dependency-witness li {
+  scroll-snap-align: start;
 }

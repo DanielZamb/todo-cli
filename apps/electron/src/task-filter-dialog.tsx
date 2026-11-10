@@ -2,6 +2,7 @@ import { CalendarDate, TaskFilters } from "@todo/domain";
 import { Schema } from "effect";
 import { useState } from "react";
 import { Button } from "./components/ui/button.tsx";
+import { Checkbox } from "./components/ui/checkbox.tsx";
 import {
   Dialog,
   DialogContent,
@@ -254,14 +255,16 @@ export function TaskFilterDialog({
             <Field>
               <FieldLabel>Dependencies</FieldLabel>
               {(["ready", "blocked"] as const).map((key) => (
-                <label key={key} className="filter-checkbox">
-                  <input
+                <label
+                  key={key}
+                  htmlFor={`filter-${key}`}
+                  className="filter-checkbox"
+                >
+                  <Checkbox
                     id={`filter-${key}`}
                     data-testid={`filter-${key}`}
-                    type="checkbox"
                     checked={draft.readiness[key] === true}
-                    onChange={(event) => {
-                      const checked = event.target.checked;
+                    onCheckedChange={(checked) => {
                       setDraft((current) => {
                         const { [key]: _removed, ...rest } = current.readiness;
                         return {

@@ -62,6 +62,7 @@ export const ViewName = Schema.Union([
 ]);
 export type ViewName = typeof ViewName.Type;
 export const NativeAttachmentRequest = Schema.Union([
+  Schema.TaggedStruct("copyMermaid", { text: Schema.NonEmptyString }),
   Schema.TaggedStruct("copyTaskId", { task: TaskId }),
   Schema.TaggedStruct("attachmentClipboard", {}),
   Schema.TaggedStruct("pickAttachment", {}),
