@@ -52,14 +52,7 @@ struct SeriesView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("First Occurrence Dependencies").font(.subheadline.weight(.semibold))
                     Text("Later Occurrences start without Dependencies.").font(.caption).foregroundStyle(.secondary)
-                    ForEach(model.dependencies.firstOccurrenceInitial) { task in
-                        HStack {
-                            Text(task.title).lineLimit(1).help(task.title)
-                            Spacer()
-                            Button { model.dependencies.firstOccurrenceInitial.removeAll { $0.id == task.id } } label: { Label("Remove \(task.title)", systemImage: "xmark.circle") }.labelStyle(.iconOnly).disabled(model.busy)
-                        }.accessibilityIdentifier("dependency-initial-\(task.id)")
-                    }
-                    Button("Add dependency…") { Task { await model.openInitialDependencyPicker(firstOccurrence: true) } }.disabled(!model.canWrite).accessibilityIdentifier("dependency-add")
+                    InitialDependencySelection(tasks: Binding(get: { model.dependencies.firstOccurrenceInitial }, set: { model.dependencies.firstOccurrenceInitial = $0 }), enabled: model.canWrite) { Task { await model.openInitialDependencyPicker(firstOccurrence: true) } }
                 }.frame(maxWidth: .infinity, alignment: .leading)
             }
             Text(custom ? original?.recurrence.rrule ?? "" : draft.rule).font(.caption.monospaced())
@@ -68,7 +61,7 @@ struct SeriesView: View {
                 Text("Excluded: " + dates.map(\.display).joined(separator: ", ")).font(.caption)
             }
             if let error = model.editorError { Text(error).foregroundStyle(TodoColors.color("destructive")) }
-            }
+            }.compactBounds("series-scroll")
             HStack {
                 if original != nil {
                     Button("Skip Occurrence") { Task { await model.write(.skipOccurrence) } }.disabled(!model.canWrite)
@@ -78,7 +71,7 @@ struct SeriesView: View {
                 Button(original == nil ? "Create Series" : "Save Series") {
                     if let start { Task { await model.saveSeries(Recurrence(dtstart: start, rrule: draft.rule, exdate: model.recurrenceDraft?.exdate ?? original?.recurrence.exdate ?? [])) } }
                 }.buttonStyle(.glassProminent).disabled(!model.canWrite || custom || !draft.valid || start == nil)
-            }
+            }.compactBounds("series-actions")
         }.padding(compact ? 16 : 24).frame(width: compact ? 393 : 580, height: compact ? 426 : 600)
             .interactiveDismissDisabled(model.busy)
             .sheet(item: Binding(get: { model.dependencies.picker }, set: { if $0 == nil { model.closeDependencyPicker() } })) { _ in DependencyPickerView(model: model, compact: compact) }

@@ -958,7 +958,7 @@ struct Snapshots {
             let discovery = try await DiscoverySnapshots.render(directory: directory)
             let dependencies = try await DependencyMatrixSnapshots.render(directory: directory)
             files += discovery + dependencies
-            #expect(files.count == 836)
+            #expect(files.count == 844)
             #expect(Set(files).count == files.count)
             var manifest = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: directory.appendingPathComponent("manifest.json"))) as? [String: Any])
             manifest["files"] = files

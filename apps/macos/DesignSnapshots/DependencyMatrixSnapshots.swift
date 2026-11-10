@@ -3,7 +3,7 @@ import Testing
 @testable import TodoState
 
 @MainActor struct DependencyMatrixSnapshots {
-    static let expectedFiles = 374
+    static let expectedFiles = 382
     @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DAG_ONLY"] == "1"))
     func renderDependencyMatrix() async throws {
         let directory = URL(fileURLWithPath: try #require(ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DIR"]))

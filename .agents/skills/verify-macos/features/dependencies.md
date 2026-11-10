@@ -42,16 +42,16 @@ remain held. NSHostingView/WKWebView evidence does not establish native access.
 The diagram consumes only L1's exact canonical graph-browser source/lock handoff;
 there is no second renderer or tracked copy of emitted browser resources.
 
-The final native inventory adds 374 DAG captures to the 346 existing default
+The final native inventory adds 382 DAG captures to the 346 existing default
 captures and 116 discovery captures. The complete default manifest therefore
-contains 836 PNGs. The original 346-count assertion and Compact import assertions
+contains 844 PNGs. The original 346-count assertion and Compact import assertions
 remain active before the additional fixtures render. The helper retains a
 nonzero Swift Testing exit, validates the completed manifest even on failure,
 and writes a failing result with the actual exit. It never converts the known
 twelve failures to success.
 
 `env TODO_SNAPSHOT_DAG_ONLY=1 apps/macos/scripts/verify-design.py <fresh-evidence>`
-is a focused 374-image check, not final proof. At final proof every focused
+is a focused 382-image check, not final proof. At final proof every focused
 selector, including TODO_SNAPSHOT_DAG_ONLY and both checkpoint selectors, is unset.
 Graph geometry asserts tool bounds inside the diagram frame and viewport, a
 Close-only footer that does not overlap the scrolling list, an in-bounds Compact
@@ -68,6 +68,30 @@ host messages is unchanged. The expanded Graph details fixture emits a selector
 receipt for a repeated Task and checks unique simultaneous row/menu identities.
 These are production SwiftUI identity preferences and literal state tests;
 native VoiceOver and key dispatch are still held.
+
+The correction matrix includes initial Dependencies with zero, two and thirteen
+chosen Tasks. The existing main five-chip quick-add fixture supplies literal
+baseline geometry. Dependency chips wrap inside scrolling metadata; the actions
+frame and the existing metadata-to-actions gap stay unchanged. Native quick add
+has no separate Preview component. Series proof drives `openSeries` and the
+first-Occurrence picker through scratch HTTP before saving, then reads actual
+offscreen content. The blank mixed-host fixture is kept as a failed receipt.
+Filtered empty All Tasks uses the existing empty-state message and Clear filters;
+unfiltered All Tasks keeps priority groups. Batch rows reuse relation text and
+the structured Dependency projector. Both `conflict` and `occ_conflict` require
+Reload before Apply. Task/Dependency count copy uses the shared TaskCount helper,
+with literal zero, one and two cases.
+
+After an actual successful committed-source state command, its receipt may be
+passed as repo-relative `TODO_DAG_STATE_COMMAND` to the design helper. The receipt
+contains `command`, actual `exit: 0`, repo-relative `log` and `state_proof`, and
+the full source SHA. The capture validator checks the state result, every command
+exit, successful Dependency suites and identical source SHAs/bytes before linking
+the real state log. Without this input behavior stays pending. This link proves
+production state/HTTP behavior; fixture assertions remain in render.log and native
+dispatch/VoiceOver remain held. `test-capture-proof-link.py <fresh-repo-relative-dir>`
+under the Swift slot exercises nine synthetic metadata controls without compiling
+a binary or launching an app.
 
 Delete previews retain the accepted request Version independently of the returned
 simulated after-Task. `DependencyDeleteStateTests` records real scratch HTTP:

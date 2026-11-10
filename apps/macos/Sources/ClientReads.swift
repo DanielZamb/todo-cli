@@ -280,7 +280,10 @@ struct SnapshotRestorePreview: Decodable {
 enum TaskCount {
     static func text(_ count: Int, capitalized: Bool = false) -> String {
         let noun = capitalized ? "Task" : "task"
-        return "\(count) \(noun)\(count == 1 ? "" : "s")"
+        return text(count, singular: noun, plural: noun + "s")
+    }
+    static func text(_ count: Int, singular: String, plural: String) -> String {
+        "\(count) \(count == 1 ? singular : plural)"
     }
 }
 

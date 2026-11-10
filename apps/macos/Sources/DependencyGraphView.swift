@@ -32,9 +32,9 @@ struct DependencyGraphView: View {
                         }.pickerStyle(.segmented).compactBounds("dependency-graph-view-toggle")
                     }
                     HStack(spacing: 8) {
-                        Button(graph.overview ? "Show nearby Tasks" : "Show all \(report.nodes.count) Tasks") { model.dependencies.graph?.overview.toggle() }
+                        Button(graph.overview ? "Show nearby Tasks" : "Show all \(TaskCount.text(report.nodes.count, capitalized: true))") { model.dependencies.graph?.overview.toggle() }
                             .accessibilityIdentifier("dependency-graph-overview")
-                        Text("\(displayedIDs(graph).count) of \(report.nodes.count) Tasks shown").foregroundStyle(.secondary)
+                        Text("\(displayedIDs(graph).count) of \(TaskCount.text(report.nodes.count, capitalized: true)) shown").foregroundStyle(.secondary)
                     }.font(.caption)
                     if report.nodes.count > 10 {
                         TextField("Search these Tasks", text: Binding(get: { model.dependencies.graph?.search ?? "" }, set: { model.dependencies.graph?.search = $0 }))
@@ -63,7 +63,7 @@ struct DependencyGraphView: View {
                                     Text(energySummary(root.remaining_energy)).font(.callout)
                                     details(root, report: report)
                                 }
-                                Text("Tasks shown · \(displayedIDs(graph).count)").font(.subheadline.weight(.semibold))
+                                Text("\(TaskCount.text(displayedIDs(graph).count, capitalized: true)) shown").font(.subheadline.weight(.semibold))
                                 if report.nodes.count > 50 { Text("Use the list to explore a Task at a time.").font(.caption).foregroundStyle(.secondary) }
                                 ForEach(report.topological_order.filter(displayedIDs(graph).contains), id: \.self) { id in
                                     if let node = report.nodes.first(where: { $0.task.id == id }) { taskRow(node.task) }
@@ -129,7 +129,7 @@ struct DependencyGraphView: View {
                 Text("Shape: \(report.shape == "dag" ? "DAG" : report.shape.capitalized)")
                 if let orientation = report.orientation { Text("Direction: \(orientation.capitalized)") }
                 Text("Depth: \(node.depth)")
-                Text("\(node.in_degree) \(node.in_degree == 1 ? "Dependency" : "Dependencies") · Blocks \(node.out_degree) \(node.out_degree == 1 ? "Task" : "Tasks")")
+                Text("\(TaskCount.text(node.in_degree, singular: "Dependency", plural: "Dependencies")) · Blocks \(TaskCount.text(node.out_degree, capitalized: true))")
                 related("Starts at", section: .startsAt, ids: report.sources, report: report, counted: false)
                 related("Ends at", section: .endsAt, ids: report.sinks, report: report, counted: false)
                 related("Tasks before this one", section: .ancestors, ids: report.ancestors, report: report, counted: false)
@@ -139,7 +139,7 @@ struct DependencyGraphView: View {
         }.font(.caption).accessibilityIdentifier("dependency-graph-details")
     }
     private func energySummary(_ energy: RemainingEnergy) -> String {
-        "Energy left: \(energy.energy)" + (energy.unweighted == 0 ? "" : " · \(energy.unweighted) \(energy.unweighted == 1 ? "Task" : "Tasks") without Energy")
+        "Energy left: \(energy.energy)" + (energy.unweighted == 0 ? "" : " · \(TaskCount.text(energy.unweighted, capitalized: true)) without Energy")
     }
     private func related(_ title: String, section: DependencyGraphSection, ids: [String], report: DependencyGraphReport, counted: Bool = true) -> some View {
         VStack(alignment: .leading, spacing: 4) {

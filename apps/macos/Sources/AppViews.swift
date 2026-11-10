@@ -382,7 +382,7 @@ struct TaskListView: View {
                 Divider()
             }
             if model.quickAdd {
-                ScrollView { QuickAddView(model: model, floating: true, compact: true, referenceDate: referenceDate) }
+                QuickAddView(model: model, floating: true, compact: true, referenceDate: referenceDate)
             } else if model.editor != nil {
                 EditorView(model: model, compact: true)
             } else {
@@ -589,7 +589,7 @@ struct TaskListView: View {
                 ProgressView("Loading tasks…").frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if visibleTasks.isEmpty && model.searchActive {
                 compactState("No matching tasks.", action: "Clear search") { model.setSearchText("") }
-            } else if visibleTasks.isEmpty && model.selectedView != "all" {
+            } else if visibleTasks.isEmpty && (model.selectedView != "all" || hasFilters) {
                 if hasFilters {
                     if compactMode {
                         compactState("No matching tasks.", action: "Clear filters", perform: clearFilters)
@@ -750,6 +750,7 @@ struct TaskRow: View {
     var dependencyBadge: String? = nil
     var showsCompletion = true
     var relation = false
+    var showsMetadata = true
     let complete: () -> Void
     private var presentation: TaskRowPresentation { TaskRowPresentation(task: task, tagNames: tagNames, now: now) }
     var body: some View {
@@ -777,7 +778,8 @@ struct TaskRow: View {
                     Text(excerpt).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                         .accessibilityIdentifier("search-excerpt-\(task.id)")
                 }
-                if compact || relation {
+                if !showsMetadata { EmptyView() }
+                else if compact || relation {
                     HStack(spacing: 6) { dependencyState; CompactRowMetadata(items: compactMetadata) }.compactBounds("metadata-\(task.id)")
                 } else { HStack(spacing: 4) {
                     dependencyState
@@ -801,9 +803,9 @@ struct TaskRow: View {
                     }
                 }.font(.caption).foregroundStyle(.secondary).lineLimit(1) }
             }.fixedSize(horizontal: false, vertical: true)
-        }.padding(.vertical, relation ? 4 : 8).frame(height: compact ? (relation ? 48 : searchActive && TaskSearchPresentation.descriptionExcerpt(task) != nil ? 76 : 56) : nil)
+        }.padding(.vertical, relation ? 4 : 8).frame(height: compact ? (relation ? (showsMetadata ? 48 : 24) : searchActive && TaskSearchPresentation.descriptionExcerpt(task) != nil ? 76 : 56) : nil)
             .overlay(alignment: .bottom) {
-                if compact { Divider().frame(height: 1).compactBounds("separator-\(task.id)").padding(.leading, 36) }
+                if compact && showsMetadata { Divider().frame(height: 1).compactBounds("separator-\(task.id)").padding(.leading, 36) }
             }
             .contentShape(Rectangle()).opacity(presentation.isDone ? 0.7 : 1).compactBounds("row-\(task.id)")
     }
@@ -888,7 +890,8 @@ struct QuickAddView: View {
                 Text("Try: Pay rent tomorrow p1 #bills @\"Client Project\"")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            if let parsed = model.parsedTask?.displayingTokens(in: model.parsedInput).removing(model.removedQuickAddFields) {
+            QuickAddMetadataRegion(dependencies: InitialDependencySelection(tasks: Binding(get: { model.dependencies.initial }, set: { model.dependencies.initial = $0 }), enabled: model.canWrite, add: { Task { await model.openInitialDependencyPicker() } })) {
+                if let parsed = model.parsedTask?.displayingTokens(in: model.parsedInput).removing(model.removedQuickAddFields) {
                 VStack(alignment: .leading, spacing: 8) {
                     if compact {
                         QuickAddFlow {
@@ -900,13 +903,7 @@ struct QuickAddView: View {
                         dateChips(parsed)
                     }
                 }
-            }
-            Button("Dependencies…", systemImage: "link") { Task { await model.openInitialDependencyPicker() } }.disabled(!model.canWrite)
-            ForEach(model.dependencies.initial) { task in
-                HStack {
-                    Text("Depends on \(task.title)").lineLimit(1)
-                    Button("Remove", systemImage: "xmark") { model.dependencies.initial.removeAll { $0.id == task.id } }.labelStyle(.iconOnly)
-                }.font(.caption).accessibilityIdentifier("dependency-initial-\(task.id)")
+                }
             }
             if let error = model.parseError { Text(error).font(.caption).foregroundStyle(TodoColors.color("destructive")) }
             if !model.canWrite { Text("Reconnect to add. Your draft stays here.").foregroundStyle(.secondary) }
@@ -929,6 +926,7 @@ struct QuickAddView: View {
                 }.buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction).accessibilityIdentifier("add-task")
                     .background(measure("control:add"))
             }.disabled(!model.canWrite || model.newTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .compactBounds("quick-add-actions")
         }.padding(compact ? 16 : 24).frame(minWidth: compact ? nil : 540, maxWidth: compact ? .infinity : 540)
             .coordinateSpace(name: "quick-add-chips")
             .disabled(model.busy)
@@ -972,6 +970,30 @@ struct QuickAddView: View {
             }
         }
     }
+}
+
+struct QuickAddMetadataRegion<Content: View>: View {
+    let dependencies: InitialDependencySelection
+    let content: Content
+    @State private var parsedHeight: CGFloat = 0
+    init(dependencies: InitialDependencySelection, @ViewBuilder content: () -> Content) {
+        self.dependencies = dependencies
+        self.content = content()
+    }
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 8) {
+                dependencies
+                content.background(GeometryReader { geometry in Color.clear.preference(key: QuickAddParsedMetadataHeight.self, value: geometry.size.height) })
+            }.frame(maxWidth: .infinity, alignment: .leading)
+        }.frame(height: max(24, parsedHeight)).compactBounds("quick-add-metadata")
+            .onPreferenceChange(QuickAddParsedMetadataHeight.self) { parsedHeight = $0 }
+    }
+}
+
+struct QuickAddParsedMetadataHeight: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 
 struct QuickAddChipFrames: PreferenceKey {

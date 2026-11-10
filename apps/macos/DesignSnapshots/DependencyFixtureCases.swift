@@ -9,7 +9,7 @@ import TodoAPI
         "rows-snoozed", "filter-combined", "filter-empty", "order-lightest",
         "picker-loading", "picker-narrowed", "picker-no-matches", "picker-added", "picker-removed", "picker-already-linked", "picker-already-removed", "picker-many", "picker-redundant", "picker-self", "picker-limit", "picker-blocked-done", "picker-profile-mismatch", "picker-conflict", "picker-search-too-broad", "picker-offline", "picker-read-only", "picker-long-end", "picker-long-cycle",
         "delete-blockers", "delete-dependents", "delete-changed-empty", "delete-loading", "delete-pending", "delete-refused", "delete-conflict", "delete-offline",
-        "initial", "initial-invalid", "series-initial", "follow-up",
+        "initial", "initial-none", "initial-many", "initial-invalid", "series-initial", "follow-up",
         "batch-select-long", "batch-preview", "batch-mixed", "batch-conflict", "batch-cancelled",
         "history-added", "history-removed", "history-lifecycle", "history-revert-refused", "transfer-move", "transfer-copy",
         "error-blocked-complete", "error-reopen", "error-revert", "error-nested-import",
@@ -62,7 +62,15 @@ import TodoAPI
             model.dependencies.picker?.failure = .project(try failure("dependency_cycle", details: ["dependent_id": root.id, "blocker_id": blocker.id, "path": tasks.map(\.id) + [tasks[0].id]]), context: .link)
         default: break
         }
-        if name.hasPrefix("picker"), model.dependencies.picker?.failure != nil { model.dependencies.picker?.failure?.attemptTitle = blocker.title }
+        if name.hasPrefix("picker"), model.dependencies.picker?.failure != nil {
+            let candidate = name == "picker-self" ? root : blocker
+            model.dependencies.picker?.failure?.attemptTitle = candidate.title
+            model.dependencies.picker?.linked.removeAll { $0.id == candidate.id }
+            model.dependencies.picker?.candidates.removeAll { $0.id == candidate.id }
+            model.dependencies.picker?.candidates.insert(candidate, at: 0)
+            #expect(model.dependencies.picker?.checked(candidate.id) == false)
+            #expect(model.dependencies.picker?.failure?.attemptTitle == candidate.title)
+        }
         switch name {
         case "delete-blockers": model.dependencies.deletion?.edges = [.init(profile_id: "work", dependent_id: root.id, blocker_id: cancelled.id)]
         case "delete-dependents": model.dependencies.deletion?.edges = [.init(profile_id: "work", dependent_id: cancelled.id, blocker_id: root.id)]
@@ -74,8 +82,15 @@ import TodoAPI
         case "delete-offline": model.connection = .offline
         default: break
         }
-        if ["initial", "initial-invalid", "follow-up"].contains(name) {
+        if ["initial", "initial-none", "initial-many", "initial-invalid", "follow-up"].contains(name) {
             model.quickAdd = true; model.newTitle = "Prepare the next launch update"; model.dependencies.initial = [cancelled, blocker]
+            if ["initial", "initial-none", "initial-many"].contains(name) {
+                model.newTitle = #"Ship tomorrow p1 #focus #planning @Client"#
+                model.parsedInput = model.newTitle
+                model.parsedTask = .init(title: "Ship", due_at: .init(kind: "date", date: "2026-10-29"), priority: "P1", tags: ["focus", "planning"], project: "Client")
+                if name == "initial-none" { model.dependencies.initial = [] }
+                if name == "initial-many" { model.dependencies.initial = (0..<13).map { DependencySnapshots.task("initial-\($0)", title: "Launch review \($0)") } }
+            }
             if name == "initial-invalid" {
                 let failure = try failure("dependency_profile_mismatch", details: ["dependent_id": root.id, "blocker_id": blocker.id, "profile_id": "work"])
                 model.serverErrors[.quickAdd] = failure
@@ -83,7 +98,11 @@ import TodoAPI
             }
             if name == "follow-up" { model.dependencies.initial = model.tasks.filter { $0.status == "done" } }
         }
-        if name == "series-initial" { model.beginEditing(root); model.dependencies.firstOccurrenceInitial = [cancelled, blocker] }
+        if name == "series-initial" {
+            model.beginEditing(root); model.showingSeries = true
+            model.recurrenceDraft = .init(dtstart: .init(kind: "date", date: "2026-11-10"), rrule: "FREQ=DAILY", exdate: [])
+            model.dependencies.firstOccurrenceInitial = [cancelled, blocker]
+        }
         if name.hasPrefix("batch") {
             let targets = (0..<30).map { DependencySnapshots.task("batch-\($0)", title: "Review Dependency \($0) with a long Task title") }
             model.dependencies.batch = .init(profile: "work", root: root, direction: .dependsOn, targets: targets, selected: Set(targets.map(\.id)), loading: false)
@@ -126,11 +145,36 @@ import TodoAPI
     static func content(_ name: String, model: TodoModel, compact: Bool) -> AnyView? {
         if name == "batch-cancelled" { return AnyView(TaskListView(model: model, compactMode: compact).taskContent) }
         if name.hasPrefix("batch") { return AnyView(DependencyBatchView(model: model, compact: compact)) }
-        if ["initial", "initial-invalid", "follow-up"].contains(name) { return AnyView(QuickAddView(model: model, floating: false, compact: compact)) }
-        if name == "series-initial" { return AnyView(SeriesView(model: model, compact: compact)) }
+        if ["initial", "initial-none", "initial-many", "initial-invalid", "follow-up"].contains(name) { return AnyView(QuickAddView(model: model, floating: true, compact: compact, referenceDate: ISO8601DateFormatter().date(from: "2026-10-28T12:00:00Z")).content) }
         if name == "error-nested-import" { return AnyView(ImportView(model: model, compact: compact)) }
         if name.hasPrefix("error") || name.hasPrefix("history") { return AnyView(EditorView(model: model, compact: compact)) }
         if let result = model.transferResult, name.hasPrefix("transfer") { return AnyView(VStack { TaskTransferResultView(model: model, result: result); Spacer() }.padding(16)) }
         return nil
+    }
+    static func identifiers(_ name: String, model: TodoModel) -> [String] {
+        if name.hasPrefix("picker") {
+            var ids = ["dependency-picker", "dependency-direction", "dependency-search", "dependency-picker-close"]
+            if let picker = model.dependencies.picker {
+                ids += picker.rows.filter { !picker.pending.contains($0.id) }.map { "dependency-choice-" + $0.id }
+                ids += picker.pending.sorted().map { "dependency-pending-" + $0 }
+                if picker.failure != nil { ids.append("dependency-error") }
+            }
+            return ids
+        }
+        if name.hasPrefix("delete") { return ["dependency-delete-dialog", "dependency-delete-cancel", "dependency-delete-confirm"] }
+        if name.hasPrefix("filter") { return name == "filter-empty" ? ["more-task-filters", "clear-task-filters"] : ["filter-ready", "filter-blocked", "apply-task-filters"] }
+        if name.hasPrefix("order") { return ["task-order-topo", "task-order-lightest", "more-task-filters"] }
+        if name.hasPrefix("rows") {
+            let rows = name == "rows" ? model.tasks.filter { ["root", "ready", "plain", "resolved", "cancelled"].contains($0.id) } : model.tasks
+            return rows.map { "transition-" + $0.id } + rows.filter { $0.dependencyBadge(catalog: model.tasks) != nil }.map { "dependency-state-" + $0.id }
+        }
+        if name.hasPrefix("initial") || name == "follow-up" { return ["new-title", "dependency-add", "add-task"] + model.dependencies.initial.map { "dependency-initial-" + $0.id } }
+        if name == "series-initial" { return ["dependency-add"] + model.dependencies.firstOccurrenceInitial.map { "dependency-initial-" + $0.id } }
+        if name.hasPrefix("batch"), model.dependencies.batch != nil { return ["dependency-batch-preview", "dependency-reload"] + (model.dependencies.batch?.report?.results.map { "dependency-batch-row-\($0.index)" } ?? []) }
+        if name == "batch-cancelled" { return ["more-task-filters", "task-root"] }
+        if name.hasPrefix("transfer") { return ["task-transfer-result"] }
+        if name.hasPrefix("drag") { return ["task-root", "dependency-drag-source-root", "dependency-drop-target-root", "dependency-drop-status"] }
+        if name.hasPrefix("error") || name == "history-revert-refused" { return ["dependency-error"] }
+        return ["edit-title"]
     }
 }

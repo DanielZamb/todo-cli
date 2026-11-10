@@ -32,6 +32,7 @@ struct DependencyBatchReport: Decodable {
     }
     let dry_run: Bool
     let results: [Row]
+    var requiresReload: Bool { results.contains { ["conflict", "occ_conflict"].contains($0.error?.code ?? "") } }
 }
 
 extension TodoModel {
@@ -79,7 +80,7 @@ extension TodoModel {
         await runDependencyBatch(dryRun: true)
     }
     func applyDependencyBatch() async {
-        guard let report = dependencies.batch?.report, report.dry_run, !report.results.contains(where: { $0.error?.code == "occ_conflict" }) else { return }
+        guard let report = dependencies.batch?.report, report.dry_run, !report.requiresReload else { return }
         await runDependencyBatch(dryRun: false)
     }
     private func runDependencyBatch(dryRun: Bool) async {
@@ -133,12 +134,15 @@ struct DependencyBatchView: View {
                             ForEach(report.results, id: \.index) { row in
                                 VStack(alignment: .leading, spacing: 4) {
                                     let item = batch.items.indices.contains(row.index) ? batch.items[row.index] : nil
-                                    Text(item.map { title($0.blocker_id, batch: batch) + " blocks " + title($0.dependent_id, batch: batch) } ?? "Dependency \(row.index + 1)")
+                                    let candidateID = item.map { batch.direction == .dependsOn ? $0.blocker_id : $0.dependent_id }
+                                    if let task = batch.targets.first(where: { $0.id == candidateID }) {
+                                        TaskRow(task: task, canWrite: false, compact: compact, projectName: nil, tagNames: [], showsCompletion: false, relation: true, showsMetadata: false, complete: {})
+                                    } else if let candidateID { Text(candidateID).lineLimit(1).help(candidateID) }
                                     if let result = row.result {
-                                        Text(result.outcome == "unchanged" ? (batch.remove ? "Already removed" : "Already linked") : result.outcome.capitalized).foregroundStyle(.secondary)
+                                        Text(result.outcome == "unchanged" ? (batch.remove ? "Already removed" : "Already linked") : result.outcome.capitalized).font(.caption).foregroundStyle(.secondary)
                                         ForEach(result.warnings.indices, id: \.self) { DependencyNoticeView(model: model, notice: result.warnings[$0].notice, warning: true) }
                                     }
-                                    if let failure = row.error { ServerErrorNotice(model: model, failure: failure, dependencyContext: .linkDone) }
+                                    if let failure = row.error { DependencyNoticeContent(model: model, notice: .project(failure, context: .linkDone), font: .caption) }
                                 }.padding(8).frame(maxWidth: .infinity, alignment: .leading)
                                     .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 6))
                                     .accessibilityIdentifier("dependency-batch-row-\(row.index)")
@@ -148,7 +152,7 @@ struct DependencyBatchView: View {
                                 Toggle(isOn: Binding(get: { batch.selected.contains(task.id) }, set: { checked in
                                     if checked { model.dependencies.batch?.selected.insert(task.id) } else { model.dependencies.batch?.selected.remove(task.id) }
                                 })) {
-                                    TaskRow(task: task, canWrite: false, compact: compact, projectName: nil, tagNames: task.tagNames(from: model.tags), showsCompletion: false, complete: {})
+                                    TaskRow(task: task, canWrite: false, compact: compact, projectName: model.projects.first { $0.id == task.project_id }?.name, tagNames: [], showsCompletion: false, relation: true, complete: {})
                                 }.toggleStyle(.checkbox)
                             }
                         }
@@ -159,16 +163,12 @@ struct DependencyBatchView: View {
                     Button("Reload") { Task { await model.reloadDependencyBatch() } }.disabled(batch.pending || model.connection != .live).accessibilityIdentifier("dependency-reload")
                     Spacer(minLength: 0)
                     if batch.report?.dry_run == true {
-                        Button("Apply") { Task { await model.applyDependencyBatch() } }.disabled(!model.canWrite || batch.pending || batch.report?.results.contains { $0.error?.code == "occ_conflict" } == true).accessibilityIdentifier("dependency-batch-apply")
+                        Button("Apply") { Task { await model.applyDependencyBatch() } }.disabled(!model.canWrite || batch.pending || batch.report?.requiresReload == true).accessibilityIdentifier("dependency-batch-apply")
                     } else if batch.report == nil {
                         Button("Preview") { Task { await model.previewDependencyBatch() } }.disabled(!model.canWrite || batch.pending || batch.loading || batch.selected.isEmpty)
                     }
                 }.compactBounds("dependency-actions")
             }.padding(16).frame(width: compact ? 393 : 600, height: compact ? 426 : 640).accessibilityIdentifier("dependency-batch-preview")
         }
-    }
-    private func title(_ id: String, batch: DependencyBatchDraft) -> String {
-        if id == batch.root.id { return batch.root.title }
-        return batch.targets.first { $0.id == id }?.title ?? id
     }
 }

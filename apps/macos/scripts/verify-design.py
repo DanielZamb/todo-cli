@@ -84,9 +84,12 @@ for dag_manifest_path in evidence.glob('dag*-capture-manifest.json'):
         log_path = (evidence / receipt['log']).resolve(strict=True)
         assert log_path.is_relative_to(evidence.resolve()) and log_path.is_file()
 if any(evidence.glob('dag*-capture-manifest.json')):
-    run(['bun', 'apps/macos/scripts/validate-dependency-captures.ts', str(evidence.relative_to(root))], 'capture-inputs.log')
+    validation = ['bun', 'apps/macos/scripts/validate-dependency-captures.ts', str(evidence.relative_to(root))]
+    if state_command := os.environ.get('TODO_DAG_STATE_COMMAND'):
+        validation.append(state_command)
+    run(validation, 'capture-inputs.log')
 manifest = json.loads((evidence / 'manifest.json').read_text())
-assert len(manifest['files']) == (32 if os.environ.get('TODO_SNAPSHOT_DAG_CHECKPOINT2') == '1' else 24 if os.environ.get('TODO_SNAPSHOT_DAG_CHECKPOINT1') == '1' else 374 if os.environ.get('TODO_SNAPSHOT_DAG_ONLY') == '1' else 116 if os.environ.get('TODO_SNAPSHOT_DISCOVERY_ONLY') == '1' else 60 if os.environ.get('TODO_SNAPSHOT_SEARCH_ONLY') == '1' else 2 if os.environ.get('TODO_SNAPSHOT_QUICK_ONLY') == '1' else 18 if os.environ.get('TODO_SNAPSHOT_PRIORITY_ONLY') == '1' else 28 if os.environ.get('TODO_SNAPSHOT_BATCH_EDIT_ONLY') == '1' else 836)
+assert len(manifest['files']) == (32 if os.environ.get('TODO_SNAPSHOT_DAG_CHECKPOINT2') == '1' else 24 if os.environ.get('TODO_SNAPSHOT_DAG_CHECKPOINT1') == '1' else 382 if os.environ.get('TODO_SNAPSHOT_DAG_ONLY') == '1' else 116 if os.environ.get('TODO_SNAPSHOT_DISCOVERY_ONLY') == '1' else 60 if os.environ.get('TODO_SNAPSHOT_SEARCH_ONLY') == '1' else 2 if os.environ.get('TODO_SNAPSHOT_QUICK_ONLY') == '1' else 18 if os.environ.get('TODO_SNAPSHOT_PRIORITY_ONLY') == '1' else 28 if os.environ.get('TODO_SNAPSHOT_BATCH_EDIT_ONLY') == '1' else 844)
 assert all((evidence / name).is_file() for name in manifest['files'])
 (evidence / 'result.json').write_text(json.dumps({'status': 'PASS' if render_exit == 0 else 'FAIL', 'exit': render_exit, 'pngs': len(manifest['files']), 'appLaunched': False, 'signed': False, 'keychainAccess': False, 'nativeGlassVerified': False}, indent=2) + '\n')
 print(f"{'PASS' if render_exit == 0 else 'FAIL'}: {len(manifest['files'])} offscreen PNGs; actual render exit {render_exit}; {evidence}")

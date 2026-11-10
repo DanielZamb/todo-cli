@@ -1,5 +1,30 @@
 import SwiftUI
 
+struct InitialDependencySelection: View {
+    @Binding var tasks: [TaskSnapshot]
+    let enabled: Bool
+    let add: () -> Void
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Depends on")
+                Button("Add…", action: add).disabled(!enabled).accessibilityIdentifier("dependency-add")
+            }.font(.caption).controlSize(.small).frame(minHeight: 24)
+            if !tasks.isEmpty {
+                QuickAddFlow {
+                    ForEach(tasks) { task in
+                        Button { tasks.removeAll { $0.id == task.id } } label: {
+                            HStack(spacing: 6) { Text(task.title).lineLimit(1); Image(systemName: "xmark").font(.caption2) }
+                        }.font(.caption).buttonStyle(.bordered).controlSize(.small).help(task.title)
+                            .disabled(!enabled).accessibilityLabel("Remove Dependency \(task.title)")
+                            .accessibilityIdentifier("dependency-initial-\(task.id)").compactBounds("dependency-initial-\(task.id)")
+                    }
+                }
+            }
+        }.frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 struct DependencyNoticeView: View {
     let model: TodoModel
     let notice: DependencyNotice
@@ -13,6 +38,7 @@ struct DependencyNoticeContent: View {
     let model: TodoModel
     let notice: DependencyNotice
     var warning = false
+    var font: Font = .callout
     private var titles: [String] { notice.path.map { id in model.tasks.first { $0.id == id }?.title ?? id } }
     private var headline: String {
         let prefix = notice.attemptTitle.map { "Can't \(notice.attemptVerb) \($0). " } ?? ""
@@ -42,7 +68,7 @@ struct DependencyNoticeContent: View {
                 Button("Find Task by id") { Task { await model.findTaskAfterLookupError(failure) } }
             }
             if let detail = notice.detail { Text(detail).font(.caption).foregroundStyle(.secondary) }
-        }.font(.callout).foregroundStyle(warning ? TodoColors.color("warning") : .primary)
+        }.font(font).foregroundStyle(warning ? TodoColors.color("warning") : .primary)
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier(warning ? "dependency-warning" : "dependency-error")
     }

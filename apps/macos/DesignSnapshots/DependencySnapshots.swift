@@ -4,7 +4,10 @@ import Testing
 import TodoAPI
 @testable import TodoState
 
-@MainActor private final class DependencyFrameRecorder { var frames: [String: CGRect] = [:] }
+@MainActor private final class DependencyFrameRecorder {
+    var frames: [String: CGRect] = [:]
+    var chips: [String: CGRect] = [:]
+}
 
 @MainActor struct DependencySnapshots {
     static let checkpointStates = ["rows", "filter-ready", "filter-blocked", "order", "picker-depends", "picker-blocks", "picker-pending", "picker-refusal", "delete-empty", "delete-both", "delete-changed", "delete-long-end"]
@@ -22,6 +25,7 @@ import TodoAPI
         NSApplication.shared.setActivationPolicy(.prohibited)
         var files: [String] = []
         var geometry: [String: [String: [Double]]] = [:]
+        var quickAddActions: [String: CGRect] = [:]
         var manifest: [[String: Any]] = []
         for compact in compactOnly ? [true] : [true, false] {
             for scheme in [ColorScheme.light, .dark] {
@@ -65,9 +69,11 @@ import TodoAPI
                     let height: CGFloat = compact ? 426 : 720
                     let capture = DependencyFrameRecorder()
                     let view = Group {
-                        if let content = DependencyFixtureCases.content(name, model: model, compact: compact) { content }
+                        if name == "series-initial" { SeriesView(model: model, compact: compact) }
+                        else if let content = DependencyFixtureCases.content(name, model: model, compact: compact) { content }
                         else if name.hasPrefix("picker") { DependencyPickerView(model: model, compact: compact) }
                         else if name.hasPrefix("delete") { DependencyDeleteView(model: model, compact: compact) }
+                        else if name == "filter-empty" { TaskListView(model: model, compactMode: compact).taskContent }
                         else if name.hasPrefix("filter") { TaskFilterView(draft: model.taskFilters, compact: compact, apply: { _ in }, close: {}) }
                         else if name.hasPrefix("rows") {
                             VStack(alignment: .leading, spacing: 0) {
@@ -80,8 +86,12 @@ import TodoAPI
                         } else { TaskListView(model: model, compactMode: compact).taskContent }
                     }.frame(width: width, height: height)
                         .onPreferenceChange(CompactLayoutKey.self) { value in MainActor.assumeIsolated { capture.frames = value } }
+                        .onPreferenceChange(QuickAddChipFrames.self) { value in MainActor.assumeIsolated { capture.chips = value } }
                         .background(.background).environment(\.colorScheme, scheme).environment(\.controlActiveState, .key).tint(TodoColors.color("primary"))
-                    let controller = NSHostingController(rootView: view)
+                    let controller: NSViewController
+                    if name == "series-initial" {
+                        controller = NSHostingController(rootView: SeriesView(model: model, compact: compact).frame(width: width, height: height).background(.background).environment(\.colorScheme, scheme).tint(TodoColors.color("primary")).onPreferenceChange(CompactLayoutKey.self) { value in MainActor.assumeIsolated { capture.frames = value } })
+                    } else { controller = NSHostingController(rootView: view) }
                     let window = NSWindow(contentRect: .init(x: -10000, y: -10000, width: width, height: height), styleMask: [.borderless], backing: .buffered, defer: false)
                     window.isReleasedWhenClosed = false
                     window.appearance = appearance
@@ -122,9 +132,64 @@ import TodoAPI
                     }
                     let bitmap = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
                     host.cacheDisplay(in: host.bounds, to: bitmap)
+                    if name.hasPrefix("drag") {
+                        let row = try #require(capture.frames["row-root"])
+                        let status = try #require(capture.frames["dependency-drop-status"])
+                        #expect(status.minY >= row.maxY, "\(file) drag status never covers title or metadata")
+                    }
+                    if name == "series-initial" {
+                        let actions = try #require(capture.frames["series-actions"])
+                        let scroll = try #require(capture.frames["series-scroll"])
+                        #expect(actions.minY >= 0 && actions.maxY <= height && actions.minX >= 0 && actions.maxX <= width)
+                        #expect(scroll.maxY <= actions.minY, "Series Dependencies stay inside the scrolling form")
+                    }
+                    if ["initial", "initial-none", "initial-many"].contains(name) {
+                        let actions = try #require(capture.frames["quick-add-actions"])
+                        let metadata = try #require(capture.frames["quick-add-metadata"])
+                        let key = "\(compact)-\(scheme)"
+                        if let before = quickAddActions[key] { #expect(actions == before, "Chosen Dependencies cannot move the actions") }
+                        else { quickAddActions[key] = actions }
+                        #expect(abs(actions.minY - metadata.maxY - 16) < 0.5, "Main metadata-to-actions spacing stays16")
+                        #expect(actions.minX >= 0 && actions.maxX <= width && actions.minY >= 0 && actions.maxY <= height)
+                        if compact {
+                            #expect(metadata.height == 76, "Same five parsed chips use main's76pt metadata region")
+                            let add = try #require(capture.chips["control:add"])
+                            #expect(add == CGRect(x: 299.5, y: 217, width: 77.5, height: 36), "Main4c/cabf same-text five-chip fixture has this literal Add frame")
+                        }
+                        if name == "initial-many" {
+                            let chips = capture.frames.filter { $0.key.hasPrefix("dependency-initial-") }.map(\.value)
+                            #expect(chips.count == 13)
+                            #expect(Set(chips.map(\.minY)).count > 1, "Chosen Dependency chips wrap inside metadata")
+                            #expect(chips.allSatisfy { $0.minX >= metadata.minX - 0.5 && $0.maxX <= metadata.maxX + 0.5 })
+                        }
+                    }
+                    if name == "filter-empty" || name == "series-initial" || name == "batch-conflict" || name.hasPrefix("picker") && model.dependencies.picker?.failure != nil {
+                        let text = try SnapshotText.read(bitmap)
+                        if name == "filter-empty" {
+                            #expect(text.contains(compact ? "No matching tasks." : "No matching tasks"))
+                            #expect(text.contains("Clear filters"))
+                            #expect(!text.contains("Filter tasks"))
+                        } else if name == "series-initial" {
+                            #expect(text.contains("Create Series"))
+                            #expect(text.contains("First Occurrence Dependencies"))
+                            #expect(text.contains("Depends on"))
+                            #expect(model.dependencies.firstOccurrenceInitial.map(\.id) == ["cancelled", "open"])
+                        } else if name == "batch-conflict" {
+                            #expect(text.joined(separator: " ").contains("This Task changed. Reload its Dependencies before trying again."))
+                            #expect(text.joined(separator: " ").contains("error4") || text.joined(separator: " ").contains("error 4"))
+                            #expect(!text.joined(separator: " ").contains("Agent copy"))
+                        } else {
+                            let picker = try #require(model.dependencies.picker)
+                            let title = try #require(picker.failure?.attemptTitle)
+                            let candidate = try #require(picker.rows.first { $0.title == title })
+                            #expect(!picker.checked(candidate.id))
+                            #expect(text.joined(separator: " ").contains("Can't add \(candidate.title)."))
+                        }
+                        try JSONEncoder().encode(text).write(to: directory.appendingPathComponent(file + ".text.json"))
+                    }
                     try #require(bitmap.representation(using: .png, properties: [:])).write(to: directory.appendingPathComponent(file))
                     geometry[file] = capture.frames.mapValues { [Double($0.minX), Double($0.minY), Double($0.width), Double($0.height)] }
-                    manifest.append(["client": "macos", "layout": compact ? "compact" : "full", "appearance": scheme == .light ? "light" : "dark", "state": name, "png": file, "identifiers": name.hasPrefix("picker") ? ["dependency-picker", "dependency-direction", "dependency-search", "dependency-picker-close"] : name.hasPrefix("delete") ? ["dependency-delete-dialog", "dependency-delete-cancel", "dependency-delete-confirm"] : [], "behavior_receipt": NSNull(), "behavior_status": "pending"])
+                    manifest.append(["client": "macos", "layout": compact ? "compact" : "full", "appearance": scheme == .light ? "light" : "dark", "state": name, "png": file, "identifiers": DependencyFixtureCases.identifiers(name, model: model), "behavior_receipt": NSNull(), "behavior_status": "pending"])
                     files.append(file)
                     window.close()
                 }
