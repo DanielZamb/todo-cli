@@ -640,7 +640,7 @@ try {
         });
         current = session.credential;
         phase = "signed-in";
-        const profiles = yield* Effect.exit(http.reads.profiles());
+        const profiles = yield* Effect.exit(http.reads.profiles({ query: {} }));
         property = "client-credential-refresh";
         assert.ok(
           Exit.isSuccess(profiles),
@@ -681,7 +681,7 @@ try {
         yield* http.credentials.signOut();
         current = undefined;
         phase = "after-sign-out";
-        const after = yield* Effect.exit(http.reads.profiles());
+        const after = yield* Effect.exit(http.reads.profiles({ query: {} }));
         property = "client-no-stale-authorization";
         assert.ok(Exit.isFailure(after));
         const observed = telemetry.filter(
@@ -698,7 +698,7 @@ try {
         });
         current = renewed.credential;
         phase = "re-signed-in";
-        const again = yield* Effect.exit(http.reads.profiles());
+        const again = yield* Effect.exit(http.reads.profiles({ query: {} }));
         property = "client-credential-refresh";
         assert.ok(Exit.isSuccess(again));
         same(

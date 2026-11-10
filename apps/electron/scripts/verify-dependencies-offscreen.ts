@@ -577,7 +577,10 @@ try {
                       message: dependencyAgentMessage,
                       exit_code: 2,
                       exit_meaning: "validation or usage",
-                      details: { dependency_error: projectedError(0) },
+                      details: {
+                        current_version: null,
+                        dependency_error: projectedError(0),
+                      },
                     }
                   : {
                       code: "title_required",

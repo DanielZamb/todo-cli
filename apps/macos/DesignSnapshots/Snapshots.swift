@@ -876,8 +876,8 @@ struct Snapshots {
                         input.insert(input.removeLast(), at: 0)
                         model.loadImport(data: try JSONEncoder().encode(input), name: "repository-dependency-refusal.json")
                         #expect(rows[0].reasonText == "This Task is deleted. Restore it before importing changes.")
-                        #expect(rows[1].reasonText == "This Dependency would create a loop.")
-                        #expect(rows[1].exitDetail == "error 2 - validation or usage")
+                        #expect(rows[2].reasonText == "This Dependency would create a loop.")
+                        #expect(rows[2].exitDetail == "error 2 - validation or usage")
                     }
                     model.importReport = .init(generated_at: report.generated_at, dry_run: true, items: rows, totals: state == "preview-two-rejected" || state == "preview-dependency-rejected" ? .init(created: 1, updated: 0, unchanged: 1, rejected: 2) : report.totals)
                 }
