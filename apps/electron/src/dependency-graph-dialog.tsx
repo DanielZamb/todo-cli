@@ -552,7 +552,11 @@ export function DependencyGraphDialog({
         {!connected && (
           <p role="status">Offline. The last Dependencies are read-only.</p>
         )}
-        {state.loading && <p role="status">Loading Dependencies…</p>}
+        {state.loading && (
+          <p role="status" className={report ? "sr-only" : undefined}>
+            Loading Dependencies…
+          </p>
+        )}
         <div
           className="dependency-graph-body"
           data-diagram={diagramVisible}

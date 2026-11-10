@@ -22,6 +22,7 @@ export async function verifyDependencyGraphs({
   cli,
   capture,
   notify,
+  readGate,
 }: {
   page: Page;
   client: Effect.Success<ReturnType<typeof taskHttpClient>>;
@@ -33,6 +34,7 @@ export async function verifyDependencyGraphs({
     target?: Locator,
   ) => Promise<void>;
   notify: (notice: unknown) => Promise<unknown>;
+  readGate: { pause: () => void; pending: () => boolean; resume: () => void };
 }) {
   await page.addInitScript(() => {
     const renders: unknown[] = [];
@@ -334,6 +336,25 @@ export async function verifyDependencyGraphs({
         resetFit: await bounds(),
       });
     }
+    if (label === "DAG") {
+      await page.getByTestId("dependency-graph-overview").click();
+      await expect(shown()).toHaveCount(4);
+      await expect(scope).toHaveText("4 of 4 Tasks shown");
+      await capture(
+        "graph-DAG-overview-full",
+        "Explicit whole-group scope shows the full server DAG and remains reversible",
+        "full",
+      );
+      await layout(true);
+      await page.getByRole("button", { name: "Diagram", exact: true }).click();
+      await expect(shown()).toHaveCount(4);
+      await capture(
+        "graph-DAG-overview-compact",
+        "Compact Diagram can show the explicitly requested whole group with accessible list controls retained",
+      );
+      await page.getByTestId("dependency-graph-overview").click();
+      await expect(shown()).toHaveCount(3);
+    }
     await layout(true);
     await close();
     sets.push(data);
@@ -409,6 +430,57 @@ export async function verifyDependencyGraphs({
   await capture(
     "graph-keyboard-reset",
     "Reset returns focus to the selected root through the canonical host",
+  );
+  await diagram().locator(`[data-task-id="${chainB.id}"]`).focus();
+  await settleRenderer(page);
+  const beforeRemoval = await bounds();
+  const freshMiddle = await run(
+    client.tasks.show({ params: { profile, task: chainB.id } }),
+  );
+  const preview = await run(
+    client.tasks.delete({
+      params: { profile, task: chainB.id },
+      query: { dry_run: true, from_version: freshMiddle.row_version },
+    }),
+  );
+  assert.ok(preview.dependency_fingerprint);
+  readGate.pause();
+  let duringRefresh: Awaited<ReturnType<typeof bounds>> | null = null;
+  try {
+    await run(
+      client.tasks.delete({
+        params: { profile, task: chainB.id },
+        query: {
+          from_version: freshMiddle.row_version,
+          with_dependencies: true,
+          dependency_fingerprint: preview.dependency_fingerprint,
+        },
+      }),
+    );
+    await expect.poll(readGate.pending).toBe(true);
+    await capture(
+      "graph-sse-refreshing",
+      "An actual SSE refresh keeps the current graph while its authorized public read is held; loading must not resize the diagram frame",
+    );
+    duringRefresh = await bounds();
+    assert.deepEqual(
+      duringRefresh.frame,
+      beforeRemoval.frame,
+      `Refreshing the existing report must not resize the diagram: ${JSON.stringify({ beforeRemoval, duringRefresh })}`,
+    );
+  } finally {
+    readGate.resume();
+  }
+  await expect(shown()).toHaveCount(1);
+  await expect(
+    diagram().locator(`[data-task-id="${chainRoot.id}"]`),
+  ).toBeFocused();
+  const afterRemoval = await bounds();
+  assert.equal(afterRemoval.style, beforeRemoval.style);
+  sets.push({ beforeRemoval, duringRefresh, afterRemoval });
+  await capture(
+    "graph-sse-vanished-focus",
+    "A real public Delete and SSE remove the focused neighbour; the surviving root receives focus and the camera stays unchanged",
   );
   await close();
   sets.push(chain);

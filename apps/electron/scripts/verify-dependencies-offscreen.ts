@@ -37,10 +37,13 @@ import {
 } from "../test/fixtures/dependency-errors.ts";
 import { openImport } from "./appearance.ts";
 import { buildGraphBrowser } from "./build-graph-browser.ts";
+import { assertDagCaptureInventory } from "./dag-capture-inventory.ts";
 import { writeDagCaptureManifest } from "./dag-capture-manifest.ts";
 import { settleRenderer } from "./settle-renderer.ts";
 import { verifyDependencyEdgeCases } from "./verify-dependency-edge-cases.ts";
 import { verifyDependencyGraphs } from "./verify-dependency-graphs.ts";
+import { verifyDependencyLifecycle } from "./verify-dependency-lifecycle.ts";
+import { verifyDependencyPickerRecovery } from "./verify-dependency-picker-recovery.ts";
 import { verifyDependencyReadiness } from "./verify-dependency-readiness.ts";
 import {
   createDependencyReadProbe,
@@ -124,7 +127,15 @@ const actions: unknown[] = [];
 const requests: Request[] = [];
 const responses: { request: Request; reply: Reply }[] = [];
 const deliveries: { request: Request; reply: Reply["_tag"] }[] = [];
-const manifest: { png: string; receipt: string; [key: string]: unknown }[] = [];
+const sdkFailures: { request: Request; tag: string; detail?: string }[] = [];
+const manifest: {
+  png: string;
+  receipt: string;
+  state: string;
+  layout: string;
+  appearance: string;
+  [key: string]: unknown;
+}[] = [];
 const cliInProfile = (profile: string, ...args: string[]) => {
   const result = spawnSync(
     binaries.cli,
@@ -302,7 +313,10 @@ try {
   let delayDelete = false;
   let delayPreview = false;
   let delayGraph = false;
-  let reportFixture: "batch" | "import" | null = null;
+  let delayCandidates = false;
+  let delayCandidateReply = false;
+  let heldCandidateReply: Reply | null = null;
+  let reportFixture: "batch" | "batchSelf" | "import" | null = null;
   const projectedError = (index: number) => {
     const error = dependencyRefusals[index]?.error;
     assert.ok(error);
@@ -330,6 +344,18 @@ try {
     release = undefined;
     done?.();
   };
+  const publishReply = async (request: Request, reply: Reply) => {
+    if (request._tag === "dependencyCandidates" && delayCandidateReply) {
+      delayCandidateReply = false;
+      heldCandidateReply = reply;
+      await new Promise<void>((done) => {
+        release = done;
+      });
+      heldCandidateReply = null;
+    }
+    deliveries.push({ request, reply: reply._tag });
+    return reply;
+  };
   let holdNotices = false;
   const heldNotices: unknown[] = [];
   const notify = (notice: unknown) =>
@@ -348,12 +374,14 @@ try {
         ((request._tag === "depend" || request._tag === "undepend") && delay) ||
         (request._tag === "delete" && request.query.dry_run && delayPreview) ||
         (request._tag === "graph" && delayGraph) ||
+        (request._tag === "dependencyCandidates" && delayCandidates) ||
         (request._tag === "delete" && !request.query.dry_run && delayDelete)
       ) {
         delay = false;
         delayDelete = false;
         delayPreview = false;
         delayGraph = false;
+        delayCandidates = false;
         await new Promise<void>((done) => {
           release = done;
         });
@@ -430,15 +458,32 @@ try {
           credential = undefined;
           return { _tag: "signedOut" };
       }
-      if (reportFixture === "batch" && request._tag === "batchDepend")
+      if (
+        (reportFixture === "batch" || reportFixture === "batchSelf") &&
+        request._tag === "batchDepend"
+      )
         return Schema.decodeUnknownSync(Reply)({
           _tag: "batchDepend",
           report: {
             generated_at: "2026-11-09T00:00:00Z",
             dry_run: request.payload.dry_run === true,
-            results: request.payload.items.map((_, index) => ({
+            results: request.payload.items.map((item, index) => ({
               index,
-              error: projectedError(index),
+              error:
+                reportFixture === "batchSelf" && index === 0
+                  ? Schema.decodeUnknownSync(DependencyError)({
+                      generated_at: "2026-11-10T00:00:00Z",
+                      code: "dependency_cycle",
+                      message: dependencyAgentMessage,
+                      exit_code: 2,
+                      exit_meaning: "validation or usage",
+                      details: {
+                        dependent_id: item.blocker_id,
+                        blocker_id: item.blocker_id,
+                        path: [item.blocker_id, item.blocker_id],
+                      },
+                    })
+                  : projectedError(index),
               exit_code: 2,
             })),
           },
@@ -490,7 +535,6 @@ try {
         const reply = Schema.decodeUnknownSync(Reply)(
           await run(taskRequest(http, request)),
         );
-        deliveries.push({ request, reply: reply._tag });
         if (
           request._tag === "delete" ||
           request._tag === "depend" ||
@@ -501,13 +545,24 @@ try {
           searchProbe.record(request.filters.text ?? "", reply);
         if (reply._tag === "graph" && failRender) {
           failRender = false;
-          return {
+          return publishReply(request, {
             ...reply,
             report: { ...reply.report, mermaid: "flowchart TD\nn0[" },
-          };
+          });
         }
-        return reply;
+        return publishReply(request, reply);
       } catch (error) {
+        const tagged = Schema.decodeUnknownExit(
+          Schema.Struct({ _tag: Schema.String }),
+        )(error);
+        if (tagged._tag === "Success") {
+          const detail = exitDetail(error);
+          sdkFailures.push({
+            request,
+            tag: tagged.value._tag,
+            ...(detail ? { detail } : {}),
+          });
+        }
         if (
           error &&
           typeof error === "object" &&
@@ -521,13 +576,11 @@ try {
             exit_detail: exitDetail(error),
           });
           responses.push({ request, reply });
-          deliveries.push({ request, reply: reply._tag });
-          return reply;
+          return publishReply(request, reply);
         }
         const reply = errorReply(error, request);
         responses.push({ request, reply });
-        deliveries.push({ request, reply: reply._tag });
-        return reply;
+        return publishReply(request, reply);
       }
     },
   );
@@ -1117,6 +1170,10 @@ try {
       .frameLocator('[data-testid="dependency-graph-diagram"]')
       .locator(".pele-node:not(.graph-hidden)"),
   ).toHaveCount(2);
+  await capture(
+    "graph-pele-retried",
+    "Explicit Retry redraws the real server export through the same canonical local Pele adapter",
+  );
   await page.getByTestId("dependency-graph-close").click();
   let lastDependent = "";
   for (let index = 0; index < 20; index++)
@@ -1780,6 +1837,10 @@ try {
   await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
     "Batch root draft remains intact",
   );
+  await capture(
+    "batch-cancelled",
+    "Cancel leaves the reviewed edge and dependent Version unchanged, preserving the unsaved editor draft",
+  );
   await removeBatchPreview();
   await page.getByTestId("dependency-batch-apply").click();
   await expect(page.getByTestId("dependency-batch-summary")).toHaveText(
@@ -1887,6 +1948,32 @@ try {
     if (phase === "preview")
       await page.getByTestId("dependency-batch-apply").click();
   }
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page.getByTestId("dependency-add").click();
+  await page.getByRole("button", { name: "Batch…", exact: true }).click();
+  await page
+    .getByTestId("dependency-initial-picker")
+    .getByRole("textbox")
+    .fill("Report projection");
+  for (const task of projectionTasks)
+    await page.getByTestId(`dependency-choice-${task.id}`).check();
+  reportFixture = "batchSelf";
+  await page
+    .getByRole("button", { name: "Preview Dependencies", exact: true })
+    .click();
+  await expect(page.getByTestId("dependency-batch-row-0")).toContainText(
+    "A Task can't depend on itself.",
+  );
+  await expect(page.getByTestId("dependency-batch-row-0")).toContainText(
+    "error 2 - validation or usage",
+  );
+  await expect(page.getByTestId("dependency-batch-row-0")).not.toContainText(
+    "AGENT ONLY",
+  );
+  await capture(
+    "batch-self-cycle-projection",
+    "Controlled typed self-cycle report exercises the same projector and actual pair; this is not a public self-edge write",
+  );
   const batchFollowUp = page
     .getByTestId("dependency-batch-row-3")
     .getByTestId("dependency-follow-up");
@@ -2710,6 +2797,13 @@ try {
     cli,
     capture,
     notify,
+    readGate: {
+      pause: () => {
+        delayGraph = true;
+      },
+      pending: () => release !== undefined,
+      resume: releasePending,
+    },
   });
   writeFileSync(
     join(evidence, "graph-matrix-results.json"),
@@ -2773,6 +2867,60 @@ try {
     join(evidence, "dependency-recovery-results.json"),
     JSON.stringify(recovery, null, 2),
   );
+  const pickerRecovery = await verifyDependencyPickerRecovery({
+    page,
+    client,
+    cli,
+    capture,
+    deliveries,
+    failures: sdkFailures,
+    readGate: {
+      pause: () => {
+        delayCandidates = true;
+      },
+      pending: () => release !== undefined,
+      resume: releasePending,
+    },
+    replyGate: {
+      pause: () => {
+        delayCandidateReply = true;
+      },
+      pending: () => heldCandidateReply,
+      resume: releasePending,
+    },
+    signOut: async () => {
+      await run(client.credentials.signOut());
+      credential = undefined;
+      if (stream) {
+        await Effect.runPromise(Fiber.interrupt(stream));
+        stream = undefined;
+      }
+      await notify({ _tag: "signedOut" });
+    },
+  });
+  writeFileSync(
+    join(evidence, "dependency-picker-recovery.json"),
+    JSON.stringify(pickerRecovery, null, 2),
+  );
+  const lifecycle: unknown[] = [];
+  await verifyDependencyLifecycle({
+    page,
+    client,
+    cli,
+    capture,
+    notify,
+    prepareOtherProfile: () => {
+      cliInProfile("recovery-other", "login", "--password-stdin");
+      cliInProfile("recovery-other", "add", "Other Profile lifecycle Task");
+    },
+    record: (receipt) => {
+      lifecycle.push(receipt);
+      writeFileSync(
+        join(evidence, "dependency-lifecycle.json"),
+        JSON.stringify(lifecycle, null, 2),
+      );
+    },
+  });
   const titleDrag: unknown[] = [];
   await verifyDependencyTitleDrag({
     page,
@@ -2787,19 +2935,40 @@ try {
       );
     },
   });
+  assertDagCaptureInventory(manifest);
   assert.deepEqual(errors, []);
+  const proofHead = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: root,
+    encoding: "utf8",
+  }).trim();
+  const cleanSource =
+    execFileSync("git", ["status", "--porcelain", "--untracked-files=normal"], {
+      cwd: root,
+      encoding: "utf8",
+    }).trim() === "";
+  const finalSource = cleanSource && binaries.head === proofHead;
   writeFileSync(
     join(evidence, "result.json"),
     JSON.stringify(
       {
-        status: "DAG_INTERMEDIATE_PARTIAL",
+        status: finalSource ? "DAG_MATRIX_PASS" : "DAG_INTERMEDIATE_PARTIAL",
         exit: 0,
         binaries,
+        source: {
+          head: proofHead,
+          clean: cleanSource,
+          binaryMatches: binaries.head === proofHead,
+        },
+        captures: manifest.length,
         fixture: { blocker, blocked, resolved, ready, plain },
         limits: [
           "No native Electron IPC/safeStorage proof",
-          "Production renderer with compiled scratch server and real SSE; only literal assertions in this driver are proved. Complete DAG matrix and full client suites pending.",
-          "Binary source and embedded version are recorded in binaries; this intermediate cache is not a final-source provenance claim.",
+          "Production renderer with compiled scratch server and real SSE; only literal assertions in this driver are proved. Full client suite exits and coordinator UI review are reported separately.",
+          ...(finalSource
+            ? []
+            : [
+                "Intermediate source/cache identity; rebuild at the clean final commit before the end proof.",
+              ]),
           "Copy as Mermaid proves the validated host request carries exact server text; native clipboard is unproven here.",
           "All-six batch and nested Import error captures are controlled typed report fixtures. Actual batch changed/unchanged/blocked/Conflict and drag failures use the compiled public surface separately.",
         ],
@@ -2834,6 +3003,10 @@ try {
   writeFileSync(
     join(evidence, "sdk-deliveries.json"),
     JSON.stringify(deliveries, null, 2),
+  );
+  writeFileSync(
+    join(evidence, "sdk-failures.json"),
+    JSON.stringify(sdkFailures, null, 2),
   );
   writeDagCaptureManifest(root, evidence, manifest);
   writeFileSync(join(evidence, "server.log"), log);

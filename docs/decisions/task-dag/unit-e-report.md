@@ -5,16 +5,16 @@ are approved. V1-V11, E3/E4 and the latest parity corrections are being verified
 This report does not claim a complete matrix, full-suite success or final approval.
 
 Branch: `feat/task-dag-e-electron`. Qualified base:
-`2c78a3263c196d870459b17bf647cfc23f421fdd`. The previous product checkpoint is
-`885541bc6b526133bd573e6992273af7b371e785`. Current edge and Delete-review work was
-developed from that source, with exact working-source hashes in the proof receipts. Contract:
+`2c78a3263c196d870459b17bf647cfc23f421fdd`. The current committed product checkpoint is
+`20098c159aee8fcf56404db21c235b522cefc2c3`. Subsequent lifecycle and matrix verification
+is in progress, with exact working-source hashes in the proof receipts. Contract:
 `858612b6feba4e359ee28749b70119a36b3909ad20459ef15f82286f1b80b829`.
 No domain, CLI, server or Swift product files were added or changed by E. No
 children were launched. L1 controls integration and the correctness review seat;
 the coordinator is the sole UI reviewer. No self-approval is claimed.
 
 The current checkpoint's Electron typecheck exits 0; its complete package unit
-suite exits 0 with 150 passing tests and the existing one skip. Owned-file Biome
+suite exits 0 with 155 passing tests and the existing one skip. Owned-file Biome
 check and the permitted local no-comments audit exit 0. Latest receipts are in
 `edge-cases-setup-03`, `graph-matrix-setup-08` and `edge-cases-checkpoint-01`.
 Earlier `feature-matrix-setup/checkpoint-*` receipts remain unchanged. These are intermediate checks,
@@ -27,6 +27,10 @@ The subsequent 9/13/14, no-op and changed-Delete review proof is in
 The newer authorized-root context, Session/Profile recovery, N2 cause-specific
 Delete status and title-only drag geometry work is described in
 `unit-e-recovery-row-geometry.md`. It remains intermediate proof.
+Lifecycle, picker Profile/auth invalidation, the owned SSE refresh-frame fix and
+the checked final-matrix admission are recorded in `unit-e-lifecycle-matrix.md`.
+The failed 440-capture combined run remains failed; focused graph proof does not
+replace the pending full end run.
 
 ## Product checkpoint
 

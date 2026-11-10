@@ -198,6 +198,10 @@ export async function verifyDependencySearchRecovery({
     ).length;
     await input.fill(oldDependencyQuery);
     await expect.poll(() => probe.pending).toBe(true);
+    await capture(
+      "picker-loading",
+      "A controlled pending public candidate read keeps the current checked links and mutation refusal while loading",
+    );
     await search(input, blocker.title);
     probe.release();
     await expect
@@ -216,11 +220,31 @@ export async function verifyDependencySearchRecovery({
       "picker-search-recovered",
       "Narrow, clear and delayed older-error recovery preserve the attempted cycle refusal",
     );
+    const beforeClose = probe.delivered.filter(
+      (reply) => reply.query === oldDependencyQuery,
+    ).length;
+    await input.fill(oldDependencyQuery);
+    await expect.poll(() => probe.pending).toBe(true);
+    await page.getByTestId("dependency-picker-close").click();
+    probe.release();
+    await expect
+      .poll(
+        () =>
+          probe.delivered.filter((reply) => reply.query === oldDependencyQuery)
+            .length,
+      )
+      .toBe(beforeClose + 1);
+    await settleRenderer(page);
+    await expect(page.getByTestId("dependency-picker")).toHaveCount(0);
+    await expect(page.getByTestId("dependency-search-error")).toHaveCount(0);
+    await expect(page.getByTestId("dependency-error")).toHaveCount(0);
+    await capture(
+      "picker-obsolete-error",
+      "Close invalidates the candidate read; after actual SDK delivery its old error cannot republish outside the picker",
+    );
+    await page.getByTestId("dependency-add").click();
+    await search(input, blocker.title);
     await search(input, "");
-    await page
-      .getByTestId("dependency-error")
-      .getByRole("button", { name: "Dismiss", exact: true })
-      .click();
     await holdUpdates(true);
     const current = readTask(cli("show", root.id));
     cli(
