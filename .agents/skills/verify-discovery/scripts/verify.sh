@@ -10,7 +10,7 @@ mkdir -p "$evidence"
 cd "$root"
 pnpm --filter @todo/domain test discovery.test.ts profile-resolution.test.ts > "$evidence/domain.log" 2>&1
 bun .agents/skills/verify-discovery/scripts/properties.ts "$evidence/properties" > "$evidence/properties.log" 2>&1
-sh /Users/zambamon/Work/todo-cli/scripts/disk-guard.sh > "$evidence/disk.log"
+sh "$root/scripts/disk-guard.sh" > "$evidence/disk.log"
 bun .agents/skills/verify-cli/scripts/cache-binaries.ts > "$evidence/build.log" 2>&1
 bun .agents/skills/verify-discovery/scripts/drive.ts "$evidence/compiled" > "$evidence/drive.log" 2>&1
 bun .agents/skills/verify-discovery/scripts/run-review-boundaries.ts "$evidence/boundaries" > "$evidence/boundaries.log" 2>&1

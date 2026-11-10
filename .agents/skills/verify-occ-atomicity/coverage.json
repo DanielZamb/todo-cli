@@ -1,9 +1,9 @@
 {
-  "confirmedCommit": "3cceb41efc08b8cd835d5c883c3d370709865c3f",
+  "confirmedCommit": "97eb40021812cba9fdae76471328b890db239349",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "d9c9e4c5c09e1616c1b46ff0e8077a8d58ef3f7d2b7ea67db82dcccce2fef443",
+      "sha256": "9cbc8b8a2920b91f8cfc0e2137ade7d4ba11a28f7ad6c16fd29b4450d54cbc71",
       "functions": [
         "OperationStore.constructor",
         "OperationStore.transaction",
@@ -19,7 +19,7 @@
     },
     {
       "path": "packages/domain/src/store/projection.ts",
-      "sha256": "7c82ea08bacbb1358a809dd7b3acac0092d78ad6e137b9645971fce486604544",
+      "sha256": "dd0d3823bd6b9ecd8868ee0eaacdb8e3438aca1bf944f897cd2092eb137364b9",
       "functions": [
         "changes",
         "applyEvent",
@@ -63,7 +63,7 @@
     },
     {
       "path": "packages/domain/src/attachments.ts",
-      "sha256": "d6ba1579e84f5db261ecae9c12b9000757c42514ae99192b97c6da5a31668e26",
+      "sha256": "7094e663ad7a34dc38de76529a471c6f1b1d9c52c2f29883666b408603e1962e",
       "functions": [
         "Attachment",
         "validAttachmentLocation"
@@ -88,7 +88,7 @@
     },
     {
       "path": "packages/domain/src/dependency-rules.ts",
-      "sha256": "74369b1acd741009d752f61b4986f190519421170c90d1d2cff33a36183fa26a",
+      "sha256": "38fbc8c86349775e6eced7404e924ba5a5ab8e5e08616169e378086fe4e5fb11",
       "functions": [
         "checkDependencyAddition",
         "checkDependencyStatuses",
@@ -97,7 +97,7 @@
     },
     {
       "path": "packages/domain/src/dependencies.ts",
-      "sha256": "ca418428c4d3a7dffff822b8c2e0ae4b84e0b86ca911630d619a75f76a87c8d3",
+      "sha256": "18b75d53f24ed5a86e6c645d4d2b99766ae8a0786ec32c1c5a33254804a06caa",
       "functions": [
         "Edge",
         "VersionChange",
@@ -110,8 +110,18 @@
   "reviewedCandidate": false,
   "review": "Current merged-source AtomicCAS one-command passed at fv01-check-H5HU7k. Every covered body is byte-identical to the previously reviewed PERF source; Authentication discovery snapshot and CLI recovery changes do not alter Validate/Record/Apply/WriteVersion/Commit, rejection or replay. No model change or hash-only renewal of changed bodies.",
   "integrationReview": {
-    "base": "7c1326bd5ecd1d84cdd9a6426b18e8c380e5d336",
-    "main": "4c904d96277853c60692c685c6d4ea3b3e655bc4",
-    "status": "Reviewed identical covered bodies; fresh actual-worktree model, production and sensitivity stages passed"
+    "base": "8ef210ff08532419123653757313c5ef97201e98",
+    "main": "cabf4866835a49f23dc0fe44694740f122855e33",
+    "changed": [
+      "packages/domain/src/store/store.ts",
+      "packages/domain/src/store/projection.ts",
+      "packages/domain/src/attachments.ts",
+      "packages/domain/src/dependency-rules.ts",
+      "packages/domain/src/dependencies.ts"
+    ],
+    "controls": "docs/evidence/fv01/sensitivity-KdAFKt/result.json",
+    "scope": "Reviewed cache lifecycle hooks, Tag set projection, exit/report fields and stored witness compatibility. Both intended actual-source enumeration failures1, exact restoration before hash renewal. Full clean command follows.",
+    "renewedSensitivity": "docs/evidence/fv01/sensitivity-WnZxRk/result.json",
+    "result": "Both intended enumeration failures1, exact source restoration, restored complete command0 after reviewed hash renewal"
   }
 }

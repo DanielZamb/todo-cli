@@ -1,3 +1,4 @@
+import { repositoryInput } from "../../../../scripts/verification-inputs.ts";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -14,7 +15,7 @@ const source = join(import.meta.dirname, `${driver}.ts`);
 const scriptHash = createHash("sha256").update(readFileSync(source)).digest("hex");
 const binary = join(root, ".scratch/bin", `review-${manifest.sourceHash.slice(0, 12)}-${scriptHash.slice(0, 12)}`, "driver");
 if (!existsSync(binary)) {
-  const guard = spawnSync("sh", ["/Users/zambamon/Work/todo-cli/scripts/disk-guard.sh"], { cwd: root, stdio: "inherit" });
+  const guard = spawnSync("sh", [repositoryInput(root, "scripts/disk-guard.sh", "Discovery verification guard")], { cwd: root, stdio: "inherit" });
   assert.equal(guard.status, 0);
   const build = spawnSync("bun", [join(root, "scripts/compile.ts"), source, binary], { cwd: root, encoding: "utf8" });
   writeFileSync(evidence + ".build.log", build.stdout + build.stderr);

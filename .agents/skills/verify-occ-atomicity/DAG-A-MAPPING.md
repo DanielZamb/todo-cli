@@ -156,3 +156,28 @@ Task before check and edit projection in turn, requires exit 1 for each, restore
 bytes and requires exit 0. Final source runs the one command again. AtomicCAS
 remains bounded single-Task/no-edge safety; graph response and CLI boundaries
 have separate compiled public proofs, and final F remains coordinator-owned.
+
+## Main cache/discovery composition, product97eb4002
+
+The merged bodies were reviewed against both8ef210ff and cabf4866 before renewal.
+putTask reads the existing Tag set and skips delete/reinsert only for an equal
+set, while Task payload and Version writes retain their transaction order. The
+DAG-specific dependency Version path still uses json_set without relinking Tags.
+OperationStore adds memo initialization, close/Profile eviction, restore callback,
+a read-only event cursor and clearAll before Purge redaction. None changes the
+writer lock, before-value validation, History/Task/Version publication or crash
+boundaries. Cache epoch effects are separate from the atomic database model.
+Attachment report errors add authorized lookup details and exit pairs; stored
+Attachment values are unchanged. Dependency refusal objects add exit2/meaning;
+the stored-witness decoder supplies defaults only for older History. The graph
+checks and Version ownership rules remain the same. No model invariant or bound
+is changed by these report/cache additions.
+
+Before publishing new hashes, candidate-byte-checked calibration ran both real
+store breaks and observed the intended enumeration failures, then restored exact
+bytes. The normal sensitivity helper then reproduced both failures and the
+complete restored command exited0. Relative receipts:
+docs/evidence/fv01/sensitivity-KdAFKt/result.json and
+sensitivity-WnZxRk/result.json. These are actual current-source controls, not a
+hash-only refresh. AtomicCAS remains one Task without Dependency edges; graph
+and cache safety require their separate checks.

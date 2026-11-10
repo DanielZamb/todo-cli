@@ -163,3 +163,14 @@ finite model tracks epoch equality bits rather than integer lifetime counters.
 It is not an unbounded source-refinement theorem. Frozen latency evidence remains
 measured cc5777/source2eb2, never relabeled as the later fixed source. No retiming
 is authorized for this review-fix round.
+
+## DAG merge oracle
+
+When a merged candidate adds graph-aware Task filtering, prepare its uncached
+oracle with `build-baseline.mjs <full-merged-SHA> --uncached`. The capture changes
+only the two preparation callbacks in shared list/readTasks to the existing
+uncached taskSearchExecution preparation. Its manifest records both original
+and instrumented hashes and refuses a different number of sites. Matching,
+budget charging, yielding, graph ordering, Tag projection and schemas retain
+the exact merged source. No performance measurement or timing claim is made.
+The legacy SEC-plus-Tag preparation mode remains available for historical checks.
