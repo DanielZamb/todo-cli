@@ -4,6 +4,8 @@ import hashlib
 import os
 import plistlib
 import platform
+import shutil
+import tempfile
 from pathlib import Path
 import subprocess
 import sys
@@ -72,9 +74,32 @@ run(['node', 'apps/macos/scripts/graph-resources.mjs', str(resources / 'graph-br
 assert (resources / 'Assets.car').is_file(), 'actool did not compile the production color assets'
 environment = dict(os.environ, TODO_SNAPSHOT_DIR=str(evidence))
 viewport_resize = os.environ.get('TODO_SNAPSHOT_GRAPH_RESIZE_ONLY') == '1'
+graph_refresh = os.environ.get('TODO_SNAPSHOT_GRAPH_REFRESH_ONLY') == '1'
+assert not (viewport_resize and graph_refresh), 'Choose one focused WK proof'
 if viewport_resize:
     environment['TODO_GRAPH_RESIZE_EVIDENCE'] = str(evidence.relative_to(root))
-render_exit = run(['swift', 'test', '--no-parallel', '--package-path', 'apps/macos', '--scratch-path', str(build_path), '--skip-build', '--filter', 'DependencyViewportResizeTests' if viewport_resize else 'Snapshots'], 'render.log', environment, allow_failure=True)
+if graph_refresh:
+    environment['TODO_GRAPH_REFRESH_BINARIES'] = str(root / '.scratch/bin/build.json')
+    environment['TODO_GRAPH_REFRESH_HEAD'] = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
+    graph_home = tempfile.mkdtemp(prefix='todo-s01-verify-graph-refresh-home-')
+    environment.update(HOME=graph_home, CFFIXED_USER_HOME=graph_home)
+try:
+    render_exit = run(['swift', 'test', '--no-parallel', '--package-path', 'apps/macos', '--scratch-path', str(build_path), '--skip-build', '--filter', 'DependencyGraphRefreshTests' if graph_refresh else 'DependencyViewportResizeTests' if viewport_resize else 'Snapshots'], 'render.log', environment, allow_failure=True)
+finally:
+    if graph_refresh:
+        shutil.rmtree(graph_home)
+        (evidence / 'home-cleanup.json').write_text(json.dumps({'scratchHomeRemoved': not Path(graph_home).exists()}) + '\n')
+if graph_refresh:
+    if (evidence / 'disk-stop.json').is_file():
+        assert json.loads((evidence / 'disk-stop.json').read_text())['exit'] == 3
+        render_exit = 3
+    if render_exit == 0:
+        proof = json.loads((evidence / 'wk-refresh-proof.json').read_text())
+        assert len(proof['cases']) == 2
+        assert json.loads((evidence / 'wk-refresh-cleanup.json').read_text()) == {'serverStopped': True, 'scratchRemoved': True}
+    (evidence / 'result.json').write_text(json.dumps({'status': 'PASS' if render_exit == 0 else 'FAIL', 'exit': render_exit, 'scope': 'WK_SSE_REFRESH_ONLY', 'appLaunched': False, 'signed': False, 'keychainAccess': False}, indent=2) + '\n')
+    print(f'WK SSE refresh only; actual exit {render_exit}; {evidence}')
+    raise SystemExit(render_exit)
 if viewport_resize:
     if render_exit == 0:
         proof = json.loads((evidence / 'wk-resize-proof.json').read_text())

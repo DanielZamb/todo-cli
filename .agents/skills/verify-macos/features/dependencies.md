@@ -146,6 +146,22 @@ widths, with one resolved viewport. A manual zoom stays unchanged through resize
 Reset fits again. `wk-resize-proof.json` records the actual geometry and replies.
 This focused command does not replace the full design suite or prove native input.
 
+The held-refresh recipe is
+`scripts/swift-slot.sh env TODO_SNAPSHOT_GRAPH_REFRESH_ONLY=1 python3 apps/macos/scripts/verify-design.py "$PWD/docs/evidence/task-dag/graph-refresh-new"`.
+It requires the current-head compiled CLI/server/seed receipt from
+`sh apps/electron/scripts/guarded-run.sh bun apps/electron/scripts/prepare-dag-proof.ts`.
+The test creates its own scratch server and isolated preferences home. A real
+Task Delete arrives through the production SSE loop; a transport gate holds the
+unchanged real graph response while the production graph view remains mounted.
+Before, during and after the read, both layouts must keep identical WK frames,
+viewport reply counts, stored and DOM viewports, selection, focus and expansion.
+The native reply observer forwards every message unchanged and has wheel/Reset
+positive controls. Setup first observes its actual History watermark, so queued
+fixture events cannot race the camera controls. `wk-refresh-proof.json` retains
+the SSE operation, graph response and measurements; cleanup receipts cover the
+owned server, database and homes. This focused proof does not replace either
+client's full design suite or establish native input behavior.
+
 `DependencyDeleteReviewTests` uses the compiled scratch HTTP server and captures
 the production changed-review status. Changed fingerprints, including a set that
 became empty, return `has_dependencies` with exit 2. An unchanged fingerprint with
