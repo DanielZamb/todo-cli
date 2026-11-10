@@ -133,9 +133,45 @@ import TodoAPI
                     let bitmap = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
                     host.cacheDisplay(in: host.bounds, to: bitmap)
                     if name.hasPrefix("drag") {
+                        let during = capture.frames.filter { $0.key.hasPrefix("row-") }
+                        model.dependencies.dropTarget = nil
+                        host.layoutSubtreeIfNeeded()
+                        try await Task.sleep(for: .milliseconds(80))
+                        let before = capture.frames.filter { $0.key.hasPrefix("row-") }
+                        #expect(during == before, "\(file) every drop target stays fixed during hover")
+                        model.dependencies.dropTarget = root.id
+                        host.layoutSubtreeIfNeeded()
+                        try await Task.sleep(for: .milliseconds(80))
                         let row = try #require(capture.frames["row-root"])
                         let status = try #require(capture.frames["dependency-drop-status"])
-                        #expect(status.minY >= row.maxY, "\(file) drag status never covers title or metadata")
+                        #expect(row.contains(status), "\(file) drag status belongs to target metadata")
+                    }
+                    if ["initial", "initial-many", "initial-many-invalid", "initial-invalid", "follow-up"].contains(name) {
+                        let viewport = try #require(capture.frames["quick-add-metadata"])
+                        let chips = capture.frames.filter { $0.key.hasPrefix("dependency-initial-") }.map(\.value)
+                        let rows = Array(Set(chips.map(\.minY))).sorted()
+                        let shown = chips.filter { rows.prefix(2).contains($0.minY) }
+                        #expect(!shown.isEmpty)
+                        let expected = name == "initial-many-invalid" ? chips.filter { $0.minY == rows.first } : shown
+                        #expect(expected.allSatisfy { viewport.insetBy(dx: -0.5, dy: -0.5).contains($0) }, "\(file) first two whole chip rows are visible")
+                    }
+                    if name == "picker-long-cycle" {
+                        let loop = try #require(capture.frames["dependency-loop"])
+                        #expect(loop.height == 56, "Three whole caption lines then scroll")
+                        for index in 0..<3 { #expect(loop.insetBy(dx: -0.5, dy: -0.5).contains(try #require(capture.frames["dependency-loop-line-\(index)"]))) }
+                        let viewport = try #require(capture.frames["dependency-body"])
+                        let rows = try #require(model.dependencies.picker?.rows.prefix(2))
+                        for task in rows {
+                            let row = try #require(capture.frames["dependency-choice-\(task.id)"])
+                            #expect(viewport.insetBy(dx: -0.5, dy: -0.5).contains(row), "\(file) at least two complete candidates remain visible")
+                        }
+                    }
+                    if name == "initial-many-invalid" {
+                        let sheet = try #require(capture.frames["quick-add-sheet"])
+                        #expect(sheet.minY >= 0 && sheet.maxY <= height && sheet.minX >= 0 && sheet.maxX <= width)
+                        let viewport = try #require(capture.frames["quick-add-metadata"])
+                        let chips = capture.frames.filter { $0.key.hasPrefix("dependency-initial-") }.map(\.value)
+                        #expect(chips.filter { $0.intersects(viewport) }.allSatisfy { viewport.insetBy(dx: -0.5, dy: -0.5).contains($0) }, "No partial chip rows at rest with validation")
                     }
                     if name == "series-initial" {
                         let actions = try #require(capture.frames["series-actions"])
@@ -152,9 +188,8 @@ import TodoAPI
                         #expect(abs(actions.minY - metadata.maxY - 16) < 0.5, "Main metadata-to-actions spacing stays16")
                         #expect(actions.minX >= 0 && actions.maxX <= width && actions.minY >= 0 && actions.maxY <= height)
                         if compact {
-                            #expect(metadata.height == 76, "Same five parsed chips use main's76pt metadata region")
-                            let add = try #require(capture.chips["control:add"])
-                            #expect(add == CGRect(x: 299.5, y: 217, width: 77.5, height: 36), "Main4c/cabf same-text five-chip fixture has this literal Add frame")
+                            let add = try #require(capture.frames["quick-add-add"])
+                            #expect(add == CGRect(x: 299.5, y: 295.5, width: 77.5, height: 36), "Main4c/cabf same-text five-chip fixture Add frame in viewport coordinates")
                         }
                         if name == "initial-many" {
                             let chips = capture.frames.filter { $0.key.hasPrefix("dependency-initial-") }.map(\.value)

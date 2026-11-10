@@ -42,16 +42,16 @@ remain held. NSHostingView/WKWebView evidence does not establish native access.
 The diagram consumes only L1's exact canonical graph-browser source/lock handoff;
 there is no second renderer or tracked copy of emitted browser resources.
 
-The final native inventory adds 382 DAG captures to the 346 existing default
+The final native inventory adds 386 DAG captures to the 346 existing default
 captures and 116 discovery captures. The complete default manifest therefore
-contains 844 PNGs. The original 346-count assertion and Compact import assertions
+contains 848 PNGs. The original 346-count assertion and Compact import assertions
 remain active before the additional fixtures render. The helper retains a
 nonzero Swift Testing exit, validates the completed manifest even on failure,
 and writes a failing result with the actual exit. It never converts the known
 twelve failures to success.
 
 `env TODO_SNAPSHOT_DAG_ONLY=1 apps/macos/scripts/verify-design.py <fresh-evidence>`
-is a focused 382-image check, not final proof. At final proof every focused
+is a focused 386-image check, not final proof. At final proof every focused
 selector, including TODO_SNAPSHOT_DAG_ONLY and both checkpoint selectors, is unset.
 Graph geometry asserts tool bounds inside the diagram frame and viewport, a
 Close-only footer that does not overlap the scrolling list, an in-bounds Compact
@@ -79,7 +79,10 @@ offscreen content. The blank mixed-host fixture is kept as a failed receipt.
 Filtered empty All Tasks uses the existing empty-state message and Clear filters;
 unfiltered All Tasks keeps priority groups. Batch rows reuse relation text and
 the structured Dependency projector. Both `conflict` and `occ_conflict` require
-Reload before Apply. Task/Dependency count copy uses the shared TaskCount helper,
+Reload before Apply. The current public HTTP case decodes `conflict`; the alternate
+`occ_conflict` fixture is preparation, not public HTTP decoding proof. The later
+L1-owned shared amendment replaces that public enum and removes its specific
+dual-code tolerance. Task/Dependency count copy uses the shared TaskCount helper,
 with literal zero, one and two cases.
 
 After an actual successful committed-source state command, its receipt may be
@@ -104,3 +107,17 @@ fake-guard control under the Swift slot. It proves the Mac copy helper retains
 shared guard exit 3 and performs no compiler call or copy afterward. The real
 builder runs through the exact shared guarded-run.sh checkpoint inside the
 Electron output lock. Canonical browser bytes remain E-owned.
+
+Final review checks visible whole Dependency chip rows, with a two-row cap that
+yields before clipping validation, and main viewport Add geometry. It also checks
+three whole loop-witness lines, two whole picker candidates, unchanged hover row
+frames and conditional scope controls. The full-window `dependency-graph-shown`
+disclosure contains the accessible diagram Task list; the repeated-Task fixture
+expands it deliberately. Native key dispatch and glass remain held.
+
+The batch Version regression uses a done root at Version 2, an open blocker that
+the server refuses, then a cancelled blocker. The first preview's non-Conflict
+facts inform only the next explicit Reload/Preview plan at the same loaded base
+Version. No item is skipped and no command is resent automatically. The real
+HTTP receipt must show the accepted second item from 2 to 3, with the root still
+done and only the cancelled blocker linked.

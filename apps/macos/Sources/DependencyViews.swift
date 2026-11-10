@@ -16,7 +16,7 @@ struct InitialDependencySelection: View {
                         Button { tasks.removeAll { $0.id == task.id } } label: {
                             HStack(spacing: 6) { Text(task.title).lineLimit(1); Image(systemName: "xmark").font(.caption2) }
                         }.font(.caption).buttonStyle(.bordered).controlSize(.small).help(task.title)
-                            .disabled(!enabled).accessibilityLabel("Remove Dependency \(task.title)")
+                            .frame(height: 20).disabled(!enabled).accessibilityLabel("Remove Dependency \(task.title)")
                             .accessibilityIdentifier("dependency-initial-\(task.id)").compactBounds("dependency-initial-\(task.id)")
                     }
                 }
@@ -49,13 +49,7 @@ struct DependencyNoticeContent: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(headline).fixedSize(horizontal: false, vertical: true)
             if !titles.isEmpty {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 4) {
-                        ForEach(Array(titles.enumerated()), id: \.offset) { index, title in
-                            Text((index == 0 ? "" : "→ ") + title).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
-                        }
-                    }.frame(maxWidth: .infinity, alignment: .leading)
-                }.frame(maxHeight: 100).accessibilityElement(children: .ignore).accessibilityLabel(titles.joined(separator: " blocks "))
+                witness
             }
             ForEach(notice.tasks) { task in
                 Button { Task { _ = await model.navigate(.edit(task)) } } label: {
@@ -71,6 +65,20 @@ struct DependencyNoticeContent: View {
         }.font(font).foregroundStyle(warning ? TodoColors.color("warning") : .primary)
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier(warning ? "dependency-warning" : "dependency-error")
+    }
+    private var witness: some View {
+        let lines = min(3, titles.count)
+        let height = CGFloat(lines * 16 + max(0, lines - 1) * 4)
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(Array(titles.enumerated()), id: \.offset) { index, title in
+                    Text((index == 0 ? "" : "→ ") + title)
+                        .font(.caption).lineLimit(1).truncationMode(.middle).help(title).textSelection(.enabled)
+                        .frame(height: 16, alignment: .leading).compactBounds("dependency-loop-line-\(index)")
+                }
+            }.frame(maxWidth: .infinity, alignment: .leading)
+        }.frame(height: height).compactBounds("dependency-loop")
+            .accessibilityElement(children: .ignore).accessibilityLabel(titles.joined(separator: " blocks "))
     }
 }
 

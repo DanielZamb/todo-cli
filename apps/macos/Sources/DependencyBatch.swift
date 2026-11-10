@@ -16,6 +16,30 @@ struct DependencyBatchDraft: Identifiable {
     var failure: DependencyNotice?
     var report: DependencyBatchReport?
     var items: [DependencyBatchItem] = []
+    var versionFacts: [DependencyBatchVersionFact] = []
+    var reviewedVersionFacts: [DependencyBatchVersionFact] {
+        guard let report else { return versionFacts }
+        guard report.dry_run else { return [] }
+        return report.results.compactMap { row in
+            guard items.indices.contains(row.index) else { return nil }
+            let item = items[row.index]
+            let advances: Bool
+            if let error = row.error {
+                guard !["conflict", "occ_conflict"].contains(error.code ?? "") else { return nil }
+                advances = false
+            } else if let result = row.result { advances = result.outcome != "unchanged" }
+            else { return nil }
+            guard let base = item.dependent_id == root.id ? root.row_version : targets.first(where: { $0.id == item.dependent_id })?.row_version else { return nil }
+            return .init(action: item.action, dependent: item.dependent_id, blocker: item.blocker_id, baseVersion: base, advances: advances)
+        }
+    }
+}
+struct DependencyBatchVersionFact {
+    let action: String
+    let dependent: String
+    let blocker: String
+    let baseVersion: Int
+    let advances: Bool
 }
 struct DependencyBatchItem: Codable {
     let action: String
@@ -53,6 +77,7 @@ extension TodoModel {
             guard signedIn, profile == batch.profile, isCurrentCredential(epoch), dependencies.batch?.id == batch.id, dependencies.batch?.reloadRequest == request else { return }
             if let root = rows.first(where: { $0.id == batch.root.id }) { dependencies.batch?.root = root }
             dependencies.batch?.targets = rows.filter { $0.id != batch.root.id }
+            dependencies.batch?.versionFacts = batch.reviewedVersionFacts
             dependencies.batch?.report = nil
             dependencies.batch?.items = []
             dependencies.batch?.loading = false
@@ -74,8 +99,10 @@ extension TodoModel {
             let blocker = batch.direction == .dependsOn ? target : root
             let version = versions[dependent.id] ?? dependent.row_version
             let linked = dependent.depends_on?.contains(blocker.id) == true
-            if linked == batch.remove { versions[dependent.id] = version + 1 }
-            return .init(action: batch.remove ? "undepend" : "depend", dependent_id: dependent.id, blocker_id: blocker.id, from_version: version)
+            let action = batch.remove ? "undepend" : "depend"
+            let fact = batch.versionFacts.first { $0.action == action && $0.dependent == dependent.id && $0.blocker == blocker.id && $0.baseVersion == dependent.row_version }
+            if linked == batch.remove && fact?.advances != false { versions[dependent.id] = version + 1 }
+            return .init(action: action, dependent_id: dependent.id, blocker_id: blocker.id, from_version: version)
         }
         await runDependencyBatch(dryRun: true)
     }

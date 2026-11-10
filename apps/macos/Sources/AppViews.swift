@@ -715,6 +715,7 @@ struct TaskListView: View {
                 tagNames: task.tagNames(from: model.tags),
                 searchActive: model.appliedSearchSnapshot?.appliedIdentity.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false,
                 dependencyBadge: task.dependencyBadge(catalog: model.tasks),
+                metadataOverride: model.dependencies.dropTarget == task.id ? model.dependencies.dropStatus : nil,
                 complete: { transition(task, action: task.status == "open" ? "complete" : "reopen") }
             )
         }
@@ -751,6 +752,7 @@ struct TaskRow: View {
     var showsCompletion = true
     var relation = false
     var showsMetadata = true
+    var metadataOverride: String? = nil
     let complete: () -> Void
     private var presentation: TaskRowPresentation { TaskRowPresentation(task: task, tagNames: tagNames, now: now) }
     var body: some View {
@@ -778,6 +780,7 @@ struct TaskRow: View {
                     Text(excerpt).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                         .accessibilityIdentifier("search-excerpt-\(task.id)")
                 }
+                Group {
                 if !showsMetadata { EmptyView() }
                 else if compact || relation {
                     HStack(spacing: 6) { dependencyState; CompactRowMetadata(items: compactMetadata) }.compactBounds("metadata-\(task.id)")
@@ -802,6 +805,14 @@ struct TaskRow: View {
                         Label(scheduled, systemImage: "calendar").help("Scheduled \(scheduled)")
                     }
                 }.font(.caption).foregroundStyle(.secondary).lineLimit(1) }
+                }.opacity(metadataOverride == nil ? 1 : 0).accessibilityHidden(metadataOverride != nil)
+                    .overlay(alignment: .leading) {
+                        if let metadataOverride {
+                            Text(metadataOverride).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                                .frame(maxWidth: .infinity, alignment: .leading).accessibilityValue(metadataOverride).help(metadataOverride)
+                                .accessibilityIdentifier("dependency-drop-status").compactBounds("dependency-drop-status")
+                        }
+                    }
             }.fixedSize(horizontal: false, vertical: true)
         }.padding(.vertical, relation ? 4 : 8).frame(height: compact ? (relation ? (showsMetadata ? 48 : 24) : searchActive && TaskSearchPresentation.descriptionExcerpt(task) != nil ? 76 : 56) : nil)
             .overlay(alignment: .bottom) {
@@ -868,6 +879,7 @@ struct QuickAddView: View {
             .preferredColorScheme(model.configuration.resolvedColorScheme(storedAppearance: appearance))
     }
     var content: some View {
+        QuickAddContentAnchor(compact: compact, identity: model.newTitle + String(model.dependencies.initial.count) + (model.quickAddError ?? "")) { maximumRows in
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("New task").font(.headline)
@@ -890,7 +902,7 @@ struct QuickAddView: View {
                 Text("Try: Pay rent tomorrow p1 #bills @\"Client Project\"")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            QuickAddMetadataRegion(dependencies: InitialDependencySelection(tasks: Binding(get: { model.dependencies.initial }, set: { model.dependencies.initial = $0 }), enabled: model.canWrite, add: { Task { await model.openInitialDependencyPicker() } })) {
+            QuickAddMetadataRegion(maximumRows: maximumRows, dependencies: InitialDependencySelection(tasks: Binding(get: { model.dependencies.initial }, set: { model.dependencies.initial = $0 }), enabled: model.canWrite, add: { Task { await model.openInitialDependencyPicker() } })) {
                 if let parsed = model.parsedTask?.displayingTokens(in: model.parsedInput).removing(model.removedQuickAddFields) {
                 VStack(alignment: .leading, spacing: 8) {
                     if compact {
@@ -925,11 +937,14 @@ struct QuickAddView: View {
                     Text(model.busy ? "Adding…" : "Add task").frame(minHeight: 28)
                 }.buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction).accessibilityIdentifier("add-task")
                     .background(measure("control:add"))
+                    .compactBounds("quick-add-add")
             }.disabled(!model.canWrite || model.newTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 .compactBounds("quick-add-actions")
         }.padding(compact ? 16 : 24).frame(minWidth: compact ? nil : 540, maxWidth: compact ? .infinity : 540)
             .coordinateSpace(name: "quick-add-chips")
             .disabled(model.busy)
+            .compactBounds("quick-add-sheet")
+        }
     }
 
     @ViewBuilder private func metadataChips(_ parsed: ParsedTask) -> some View {
@@ -973,24 +988,62 @@ struct QuickAddView: View {
 }
 
 struct QuickAddMetadataRegion<Content: View>: View {
+    let maximumRows: Int
     let dependencies: InitialDependencySelection
     let content: Content
     @State private var parsedHeight: CGFloat = 0
-    init(dependencies: InitialDependencySelection, @ViewBuilder content: () -> Content) {
+    @State private var dependencyHeight: CGFloat = 24
+    init(maximumRows: Int, dependencies: InitialDependencySelection, @ViewBuilder content: () -> Content) {
+        self.maximumRows = maximumRows
         self.dependencies = dependencies
         self.content = content()
     }
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
-                dependencies
+                dependencies.background(GeometryReader { geometry in Color.clear.preference(key: QuickAddDependencyHeight.self, value: geometry.size.height) })
                 content.background(GeometryReader { geometry in Color.clear.preference(key: QuickAddParsedMetadataHeight.self, value: geometry.size.height) })
             }.frame(maxWidth: .infinity, alignment: .leading)
-        }.frame(height: max(24, parsedHeight)).compactBounds("quick-add-metadata")
+        }.frame(height: visibleHeight).compactBounds("quick-add-metadata")
+            .preference(key: QuickAddAddedMetadataHeight.self, value: Optional(visibleHeight - max(24, parsedHeight)))
             .onPreferenceChange(QuickAddParsedMetadataHeight.self) { parsedHeight = $0 }
+            .onPreferenceChange(QuickAddDependencyHeight.self) { dependencyHeight = $0 }
+    }
+    private var visibleHeight: CGFloat {
+        let cap = 32 + CGFloat(maximumRows) * 20 + CGFloat(maximumRows - 1) * 8
+        return dependencyHeight > cap ? cap : max(24, parsedHeight, dependencyHeight)
     }
 }
 
+struct QuickAddContentAnchor<Content: View>: View {
+    let compact: Bool
+    let identity: String
+    @ViewBuilder let content: (Int) -> Content
+    @State private var addedHeight: CGFloat = 0
+    @State private var maximumRows = 2
+    var body: some View {
+        content(maximumRows)
+            .background(GeometryReader { geometry in Color.clear.preference(key: QuickAddContentHeight.self, value: geometry.size.height) })
+            .offset(y: -addedHeight / 2)
+            .onPreferenceChange(QuickAddAddedMetadataHeight.self) { addedHeight = $0 ?? 0 }
+            .onPreferenceChange(QuickAddContentHeight.self) { height in
+                if compact && height + addedHeight > 426 { maximumRows = 1 }
+            }
+            .onChange(of: identity) { _, _ in maximumRows = 2 }
+    }
+}
+struct QuickAddAddedMetadataHeight: PreferenceKey {
+    static let defaultValue: CGFloat? = nil
+    static func reduce(value: inout CGFloat?, nextValue: () -> CGFloat?) { if let next = nextValue() { value = next } }
+}
+struct QuickAddDependencyHeight: PreferenceKey {
+    static let defaultValue: CGFloat = 24
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+struct QuickAddContentHeight: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
 struct QuickAddParsedMetadataHeight: PreferenceKey {
     static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }

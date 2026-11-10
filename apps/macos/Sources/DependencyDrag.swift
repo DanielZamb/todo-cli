@@ -33,13 +33,7 @@ struct DependencyDragModifier: ViewModifier {
     let model: TodoModel
     let task: TaskSnapshot
     func body(content: Content) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            content
-            if model.dependencies.dropTarget == task.id, let status = model.dependencies.dropStatus {
-                Text(status).font(.caption).fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("dependency-drop-status").compactBounds("dependency-drop-status")
-            }
-        }
+        content
             .onDrag {
                 guard model.canWrite else { return NSItemProvider() }
                 let source = DependencyDragSource(profile: task.profile_id, task: task.id)

@@ -10,12 +10,14 @@ struct DependencyGraphView: View {
     var compact: Bool
     @State private var diagram: Bool
     @State private var detailsExpanded: Bool
+    @State private var shownExpanded: Bool
     @FocusState private var focused: DependencyGraphRowID?
-    init(model: TodoModel, compact: Bool = false, initialDiagram: Bool? = nil, initialDetails: Bool = false) {
+    init(model: TodoModel, compact: Bool = false, initialDiagram: Bool? = nil, initialDetails: Bool = false, initialShown: Bool = false) {
         self.model = model
         self.compact = compact
         _diagram = State(initialValue: initialDiagram ?? !compact)
         _detailsExpanded = State(initialValue: initialDetails)
+        _shownExpanded = State(initialValue: initialShown)
     }
     private var showsDiagram: Bool { (!compact || diagram) && model.dependencies.graph?.renderError == nil }
     var body: some View {
@@ -32,8 +34,10 @@ struct DependencyGraphView: View {
                         }.pickerStyle(.segmented).compactBounds("dependency-graph-view-toggle")
                     }
                     HStack(spacing: 8) {
+                        if graph.overview || displayedIDs(graph).count < report.nodes.count {
                         Button(graph.overview ? "Show nearby Tasks" : "Show all \(TaskCount.text(report.nodes.count, capitalized: true))") { model.dependencies.graph?.overview.toggle() }
-                            .accessibilityIdentifier("dependency-graph-overview")
+                            .accessibilityIdentifier("dependency-graph-overview").compactBounds("dependency-graph-overview")
+                        }
                         Text("\(displayedIDs(graph).count) of \(TaskCount.text(report.nodes.count, capitalized: true)) shown").foregroundStyle(.secondary)
                     }.font(.caption)
                     if report.nodes.count > 10 {
@@ -63,10 +67,11 @@ struct DependencyGraphView: View {
                                     Text(energySummary(root.remaining_energy)).font(.callout)
                                     details(root, report: report)
                                 }
-                                Text("\(TaskCount.text(displayedIDs(graph).count, capitalized: true)) shown").font(.subheadline.weight(.semibold))
-                                if report.nodes.count > 50 { Text("Use the list to explore a Task at a time.").font(.caption).foregroundStyle(.secondary) }
-                                ForEach(report.topological_order.filter(displayedIDs(graph).contains), id: \.self) { id in
-                                    if let node = report.nodes.first(where: { $0.task.id == id }) { taskRow(node.task) }
+                                if compact || graph.renderError != nil {
+                                    shownTasks(graph, report: report)
+                                } else {
+                                    DisclosureGroup("Tasks in diagram · \(displayedIDs(graph).count)", isExpanded: $shownExpanded) { shownTasks(graph, report: report) }
+                                        .font(.caption).accessibilityIdentifier("dependency-graph-shown")
                                 }
                             }.frame(maxWidth: .infinity, alignment: .leading).padding(.trailing, 4)
                         }.frame(width: showsDiagram && !compact ? 320 : nil)
@@ -90,6 +95,15 @@ struct DependencyGraphView: View {
             .onChange(of: focused) { _, row in if let row { model.dependencies.graph?.focused = row.task } }
             .onChange(of: model.dependencies.graph?.report?.nodes.count) { before, count in if compact && before == nil && (count ?? 0) > 50 { diagram = false } }
             .sheet(item: Binding(get: { model.dependencies.picker }, set: { if $0 == nil { model.closeDependencyPicker() } })) { _ in DependencyPickerView(model: model, compact: compact) }
+    }
+    private func shownTasks(_ graph: DependencyGraphState, report: DependencyGraphReport) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if compact || graph.renderError != nil { Text("\(TaskCount.text(displayedIDs(graph).count, capitalized: true)) shown").font(.subheadline.weight(.semibold)) }
+            if report.nodes.count > 50 { Text("Use the list to explore a Task at a time.").font(.caption).foregroundStyle(.secondary) }
+            ForEach(report.topological_order.filter(displayedIDs(graph).contains), id: \.self) { id in
+                if let node = report.nodes.first(where: { $0.task.id == id }) { taskRow(node.task) }
+            }
+        }
     }
     private var diagramFrame: some View {
         VStack(spacing: 0) {

@@ -68,7 +68,7 @@ import WebKit
                 let height: CGFloat = compact ? 426 : 720
                 let view = Group {
                     if model.dependencies.graph == nil { TaskListView(model: model, compactMode: compact).taskContent }
-                    else { DependencyGraphView(model: model, compact: compact, initialDiagram: diagram, initialDetails: scenario == "details") }
+                    else { DependencyGraphView(model: model, compact: compact, initialDiagram: diagram, initialDetails: scenario == "details", initialShown: scenario == "details") }
                 }.onPreferenceChange(CompactLayoutKey.self) { value in MainActor.assumeIsolated { frames.frames = value } }
                     .onPreferenceChange(DependencyGraphRowIdentities.self) { value in MainActor.assumeIsolated { frames.rows = value } }
                     .frame(width: width, height: height).background(.background).environment(\.colorScheme, scheme).environment(\.controlActiveState, .key).tint(TodoColors.color("primary"))
@@ -103,11 +103,17 @@ import WebKit
                 let file = "dag-graph-\(name)-\(scheme == .light ? "light" : "dark").png"
                 #expect(Set(frames.rows.map(\.taskIdentifier)).count == frames.rows.count, "\(file) unique simultaneous Task controls")
                 #expect(Set(frames.rows.map(\.menuIdentifier)).count == frames.rows.count, "\(file) unique simultaneous action menus")
+                if !compact && scenario != "details" && model.dependencies.graph?.renderError == nil {
+                    #expect(frames.rows.allSatisfy { $0.section != .shown }, "\(file) diagram Task list starts collapsed")
+                }
                 if scenario == "details" {
                     let repeated = frames.rows.filter { $0.task == "g0" }
                     #expect(Set(repeated.map { $0.section.rawValue }) == ["lightest-next", "starts-at", "ancestors", "shown"])
                     #expect(repeated.allSatisfy { $0.task == "g0" })
                     try JSONSerialization.data(withJSONObject: ["task_id": "g0", "sections": repeated.map { $0.section.rawValue }, "task_identifiers": repeated.map(\.taskIdentifier), "menu_identifiers": repeated.map(\.menuIdentifier), "expand_identifiers": repeated.map(\.expandIdentifier), "native_key_dispatch": "held", "source": "production SwiftUI row identity preferences"], options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("\(file).selectors.json"))
+                }
+                if let graph = model.dependencies.graph, let report = graph.report, !graph.overview && graph.listIDs.count == report.nodes.count {
+                    #expect(frames.frames["dependency-graph-overview"] == nil, "\(file) no scope action when everything is shown")
                 }
                 if model.dependencies.graph != nil {
                     let actions = try #require(frames.frames["dependency-graph-actions"])

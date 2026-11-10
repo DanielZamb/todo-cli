@@ -9,7 +9,7 @@ import TodoAPI
         "rows-snoozed", "filter-combined", "filter-empty", "order-lightest",
         "picker-loading", "picker-narrowed", "picker-no-matches", "picker-added", "picker-removed", "picker-already-linked", "picker-already-removed", "picker-many", "picker-redundant", "picker-self", "picker-limit", "picker-blocked-done", "picker-profile-mismatch", "picker-conflict", "picker-search-too-broad", "picker-offline", "picker-read-only", "picker-long-end", "picker-long-cycle",
         "delete-blockers", "delete-dependents", "delete-changed-empty", "delete-loading", "delete-pending", "delete-refused", "delete-conflict", "delete-offline",
-        "initial", "initial-none", "initial-many", "initial-invalid", "series-initial", "follow-up",
+        "initial", "initial-none", "initial-many", "initial-many-invalid", "initial-invalid", "series-initial", "follow-up",
         "batch-select-long", "batch-preview", "batch-mixed", "batch-conflict", "batch-cancelled",
         "history-added", "history-removed", "history-lifecycle", "history-revert-refused", "transfer-move", "transfer-copy",
         "error-blocked-complete", "error-reopen", "error-revert", "error-nested-import",
@@ -82,16 +82,16 @@ import TodoAPI
         case "delete-offline": model.connection = .offline
         default: break
         }
-        if ["initial", "initial-none", "initial-many", "initial-invalid", "follow-up"].contains(name) {
+        if ["initial", "initial-none", "initial-many", "initial-many-invalid", "initial-invalid", "follow-up"].contains(name) {
             model.quickAdd = true; model.newTitle = "Prepare the next launch update"; model.dependencies.initial = [cancelled, blocker]
-            if ["initial", "initial-none", "initial-many"].contains(name) {
+            if ["initial", "initial-none", "initial-many", "initial-many-invalid"].contains(name) {
                 model.newTitle = #"Ship tomorrow p1 #focus #planning @Client"#
                 model.parsedInput = model.newTitle
                 model.parsedTask = .init(title: "Ship", due_at: .init(kind: "date", date: "2026-10-29"), priority: "P1", tags: ["focus", "planning"], project: "Client")
                 if name == "initial-none" { model.dependencies.initial = [] }
-                if name == "initial-many" { model.dependencies.initial = (0..<13).map { DependencySnapshots.task("initial-\($0)", title: "Launch review \($0)") } }
+                if name == "initial-many" || name == "initial-many-invalid" { model.dependencies.initial = (0..<13).map { DependencySnapshots.task("initial-\($0)", title: "Launch review \($0)") } }
             }
-            if name == "initial-invalid" {
+            if name == "initial-invalid" || name == "initial-many-invalid" {
                 let failure = try failure("dependency_profile_mismatch", details: ["dependent_id": root.id, "blocker_id": blocker.id, "profile_id": "work"])
                 model.serverErrors[.quickAdd] = failure
                 model.quickAddError = failure.nativeMessage
@@ -145,7 +145,7 @@ import TodoAPI
     static func content(_ name: String, model: TodoModel, compact: Bool) -> AnyView? {
         if name == "batch-cancelled" { return AnyView(TaskListView(model: model, compactMode: compact).taskContent) }
         if name.hasPrefix("batch") { return AnyView(DependencyBatchView(model: model, compact: compact)) }
-        if ["initial", "initial-none", "initial-many", "initial-invalid", "follow-up"].contains(name) { return AnyView(QuickAddView(model: model, floating: true, compact: compact, referenceDate: ISO8601DateFormatter().date(from: "2026-10-28T12:00:00Z")).content) }
+        if ["initial", "initial-none", "initial-many", "initial-many-invalid", "initial-invalid", "follow-up"].contains(name) { return AnyView(QuickAddView(model: model, floating: true, compact: compact, referenceDate: ISO8601DateFormatter().date(from: "2026-10-28T12:00:00Z")).content) }
         if name == "error-nested-import" { return AnyView(ImportView(model: model, compact: compact)) }
         if name.hasPrefix("error") || name.hasPrefix("history") { return AnyView(EditorView(model: model, compact: compact)) }
         if let result = model.transferResult, name.hasPrefix("transfer") { return AnyView(VStack { TaskTransferResultView(model: model, result: result); Spacer() }.padding(16)) }
