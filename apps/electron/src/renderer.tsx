@@ -480,6 +480,11 @@ function App() {
     failure: Extract<Reply, { _tag: "error" }>;
     context: DependencyContext;
   } | null>(null);
+  const quickDependencyNotice = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (quick && dependencyFailure)
+      quickDependencyNotice.current?.scrollIntoView({ block: "nearest" });
+  }, [quick, dependencyFailure]);
   const [editor, setEditor] = useState<Editor | null>(() => storedEditor());
   const editorRef = useRef(editor);
   editorRef.current = editor;
@@ -3823,8 +3828,12 @@ function App() {
                     });
                   }}
                 />
+                {dependencyFailureStatus && (
+                  <div ref={quickDependencyNotice}>
+                    {dependencyFailureStatus}
+                  </div>
+                )}
                 {error && <p role="alert">{error}</p>}
-                {dependencyFailureStatus}
               </div>
             </FieldGroup>
             <div className="quick-add-footer">

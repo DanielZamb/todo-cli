@@ -149,7 +149,16 @@ export function DependencyErrorStatus({
                 .join(" blocks ")}
             >
               {projection.witnesses.map((task, index) => (
-                <li key={`${task.id}:${index === 0 ? "start" : "step"}`}>
+                <li
+                  key={`${task.id}:${index === 0 ? "start" : "step"}`}
+                  title={task.title}
+                  aria-label={
+                    failure._tag === "error" &&
+                    failure.dependency?.code === "dependency_cycle"
+                      ? task.title
+                      : undefined
+                  }
+                >
                   {index > 0 &&
                     failure._tag === "error" &&
                     failure.dependency?.code === "dependency_cycle" && (

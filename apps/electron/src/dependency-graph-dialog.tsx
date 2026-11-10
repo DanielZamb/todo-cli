@@ -566,7 +566,7 @@ export function DependencyGraphDialog({
             <div className="space-y-2">
               {state.renderFailure ? (
                 <Alert role="status">
-                  <AlertDescription>
+                  <AlertDescription className="flex flex-col items-start gap-2">
                     Couldn't draw the diagram. The list below is complete.
                     {retry}
                   </AlertDescription>

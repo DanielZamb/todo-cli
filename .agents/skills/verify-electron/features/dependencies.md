@@ -154,6 +154,19 @@ lightest-next, starts-at, ends-at, ancestors, descendants. Tasks in diagram reta
 The driver opens Graph details, asserts unique identities for repeated Tasks and
 checks that a section menu routes to the selected Task's fresh root report.
 
+Diagram controls have a separate bottom strip outside the fitted iframe. Mixed-tree
+and DAG captures in both layouts compare every visible node box with every tool
+box after automatic fit. No pair may intersect. A quick-add Dependency refusal
+scrolls into view on appearance without changing the fixed footer; its complete
+notice must be inside the form's visible scroll region and window in both layouts.
+Long-loop witness lines use ellipsis and retain each complete title in the title
+attribute and accessible label. Keep the three whole lines and two whole choices.
+
+Pass the subject locator to capture when a viewport change could move it offscreen.
+Receipts and manifests record its bounds and visible clipping region. A subject
+that fits must be wholly visible. If it exceeds the scroll region, record the
+partial-image limit explicitly; never infer visible copy from offscreen text.
+
 The complete suite is `apps/electron/scripts/verify-design-all.ts`; its inventory
 must list all standalone offscreen files and unsigned helper modes. A failed,
 missing or partial recipe keeps the aggregate nonzero. See `verify-design-all.md`

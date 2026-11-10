@@ -1,8 +1,9 @@
 # DAG-E Electron implementation report
 
-Status: implementation and final proof in progress. Both coordinator UI checkpoints
-are approved. V1-V11, E3/E4 and the latest parity corrections are being verified.
-This report does not claim a complete matrix, full-suite success or final approval.
+Status: coordinator seat 2 requires E-F1, E-F2 and E-F3 at the completed 6fbb
+proof checkpoint. Both earlier UI checkpoints remain approved. The owned fixes
+and capture repairs are described in `unit-e-ui-final-corrections.md`; the next
+freeze and both complete end suites are pending. No final UI approval is claimed.
 
 Branch: `feat/task-dag-e-electron`. Qualified base:
 `2c78a3263c196d870459b17bf647cfc23f421fdd`. The current committed product checkpoint is
@@ -40,6 +41,18 @@ and the retained Mac suite has the same exact twelve failures. The subsequent
 transport/Series completion and compiler-discovery corrections, plus the closed
 production-backlog finding, are in `unit-e-verification-resume.md`. They are
 working verification proof pending a new committed end run.
+
+The completed 6fbb end run is retained at
+`docs/evidence/task-dag/unit-e/final-6fbb5156/`. Root check exits 0 with
+385 domain, 69 CLI, 32 server and 157 Electron tests passing, plus the existing
+Electron skip. Unsigned package and corrected unsigned Xcode build exit 0.
+The complete Electron aggregate exits 1 with 13 PASS, one known main Import
+failure, zero MISSING and named native HOLD. Its DAG driver exits 0 with all
+636 registered captures and 178 state families. Every original DAG PNG was read.
+The complete retained qualified2c78 Mac suite exits 1 with 346 registered captures
+and exactly the twelve supplied main Import fixture/assertion failures. These
+nonzero exits remain real. The coordinator's visual review then found the three
+owned issues above, so none of these results imply final acceptance.
 
 ## Product checkpoint
 

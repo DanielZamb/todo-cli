@@ -138,7 +138,7 @@ export function DependencyBatchDialog({
         )}
         {state.needsReload && (
           <Alert role="status">
-            <AlertDescription>
+            <AlertDescription className="flex flex-col items-start gap-2">
               This Task changed. Reload its Dependencies before trying again.
               <Button
                 variant="outline"

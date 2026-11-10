@@ -688,6 +688,164 @@ try {
         );
         await settleRenderer(page);
       }
+      const subject = target
+        ? await target.evaluate((element) => {
+            const box = element.getBoundingClientRect();
+            let top = 0;
+            let bottom = innerHeight;
+            let left = 0;
+            let right = innerWidth;
+            for (
+              let parent = element.parentElement;
+              parent;
+              parent = parent.parentElement
+            ) {
+              const style = getComputedStyle(parent);
+              if (/(auto|scroll|hidden)/u.test(style.overflowY)) {
+                const region = parent.getBoundingClientRect();
+                top = Math.max(top, region.top);
+                bottom = Math.min(bottom, region.bottom);
+                left = Math.max(left, region.left);
+                right = Math.min(right, region.right);
+              }
+            }
+            return {
+              box: box.toJSON(),
+              clip: { top, bottom, left, right },
+              whole:
+                box.top >= top - 0.5 &&
+                box.bottom <= bottom + 0.5 &&
+                box.left >= left - 0.5 &&
+                box.right <= right + 0.5,
+              exceedsRegion:
+                box.height > bottom - top + 0.5 ||
+                box.width > right - left + 0.5,
+            };
+          })
+        : null;
+      if (subject && !subject.exceedsRegion)
+        assert.equal(
+          subject.whole,
+          true,
+          `Capture subject must be wholly visible: ${JSON.stringify(subject)}`,
+        );
+      const imageLimits = subject?.exceedsRegion
+        ? [
+            "The subject is larger than its visible scroll region. This image shows a partial subject; the receipt and other scroll captures establish the complete report.",
+          ]
+        : [];
+      const reviewGeometry: unknown[] = [];
+      if (state === "initial-refusal-retains-draft") {
+        const notice = await page
+          .locator(".quick-dialog [data-testid=dependency-error]")
+          .evaluate((element) => {
+            const box = element.getBoundingClientRect();
+            const region = element
+              .closest(".parsed-draft")
+              ?.getBoundingClientRect();
+            const footer = document
+              .querySelector(".quick-dialog .quick-add-footer")
+              ?.getBoundingClientRect();
+            return {
+              box: box.toJSON(),
+              region: region?.toJSON(),
+              footer: footer?.toJSON(),
+              viewport: { width: innerWidth, height: innerHeight },
+            };
+          });
+        assert.ok(notice.region && notice.footer);
+        assert.ok(
+          notice.box.top >= notice.region.top - 0.5 &&
+            notice.box.bottom <= notice.region.bottom + 0.5,
+          `Initial Dependency refusal must be visible on appearance: ${JSON.stringify(notice)}`,
+        );
+        assert.ok(
+          notice.box.top >= 0 &&
+            notice.box.bottom <= notice.viewport.height &&
+            notice.footer.bottom <= notice.viewport.height,
+        );
+        reviewGeometry.push({ initialRefusal: notice });
+      }
+      if (state === "picker-long-cycle") {
+        const lines = await page
+          .locator('.dependency-witness[data-loop="true"] li')
+          .evaluateAll((elements) =>
+            elements.map((element) => ({
+              text: element.textContent?.trim().replace(/^→ /u, ""),
+              title: element.getAttribute("title"),
+              accessible: element.getAttribute("aria-label"),
+              ellipsis: getComputedStyle(element).textOverflow,
+              overflow: getComputedStyle(element).overflowX,
+            })),
+          );
+        assert.ok(lines.length > 3);
+        for (const line of lines) {
+          assert.equal(line.title, line.text);
+          assert.equal(line.accessible, line.text);
+          assert.equal(line.ellipsis, "ellipsis");
+          assert.equal(line.overflow, "hidden");
+        }
+        reviewGeometry.push({ loopLines: lines });
+      }
+      if (/^graph-(mixed-tree|DAG)-(diagram|full)$/u.test(state)) {
+        const frame = await page
+          .getByTestId("dependency-graph-diagram")
+          .boundingBox();
+        assert.ok(frame);
+        const nodes = await page
+          .frameLocator('[data-testid="dependency-graph-diagram"]')
+          .locator(".pele-node:not(.graph-hidden)")
+          .evaluateAll((elements) =>
+            elements.map((element) => {
+              const box = element.getBoundingClientRect();
+              return {
+                left: box.left,
+                right: box.right,
+                top: box.top,
+                bottom: box.bottom,
+              };
+            }),
+          );
+        const tools = await page
+          .locator(".dependency-diagram-tools button")
+          .evaluateAll((elements) =>
+            elements.map((element) => {
+              const box = element.getBoundingClientRect();
+              return {
+                left: box.left,
+                right: box.right,
+                top: box.top,
+                bottom: box.bottom,
+              };
+            }),
+          );
+        assert.ok(nodes.length > 0 && tools.length === 3);
+        for (const node of nodes) {
+          const pageNode: Pick<DOMRect, "left" | "right" | "top" | "bottom"> = {
+            left: node.left + frame.x,
+            right: node.right + frame.x,
+            top: node.top + frame.y,
+            bottom: node.bottom + frame.y,
+          };
+          assert.ok(
+            pageNode.left >= frame.x - 0.5 &&
+              pageNode.right <= frame.x + frame.width + 0.5 &&
+              pageNode.top >= frame.y - 0.5 &&
+              pageNode.bottom <= frame.y + frame.height + 0.5,
+            `Automatic fit must keep each node inside the drawing area: ${JSON.stringify({ pageNode, frame })}`,
+          );
+          for (const tool of tools)
+            assert.equal(
+              pageNode.left < tool.right &&
+                pageNode.right > tool.left &&
+                pageNode.top < tool.bottom &&
+                pageNode.bottom > tool.top,
+              false,
+              `Graph node must not intersect a tool after fit: ${JSON.stringify({ pageNode, tool })}`,
+            );
+        }
+        reviewGeometry.push({ fittedGraph: { frame, nodes, tools } });
+      }
       const popup = page
         .locator('[data-slot="dialog-content"][data-open]')
         .last();
@@ -754,6 +912,9 @@ try {
             state,
             description,
             geometry,
+            subject,
+            imageLimits,
+            reviewGeometry,
             requestCount: actions.length,
             checkboxes: await page
               .getByRole("checkbox")
@@ -791,6 +952,8 @@ try {
         png,
         receipt,
         geometry,
+        subject,
+        imageLimits,
         ids: await page
           .locator("[data-testid]")
           .evaluateAll((elements) =>
@@ -1987,6 +2150,8 @@ try {
       await capture(
         `batch-${phase}-${fixture.error.code}`,
         "Controlled typed Dependency report fixture uses the same production projector and excludes agent text; this capture does not claim the server caused this refusal",
+        "compact",
+        row,
       );
     }
     if (phase === "preview")
@@ -2285,6 +2450,8 @@ try {
   await capture(
     "drag-hover",
     "Production list drag shows the exact SOURCE to TARGET relation without overlapping the target title or metadata",
+    "compact",
+    targetButton,
   );
   release = undefined;
   delay = true;
@@ -2298,6 +2465,8 @@ try {
   await capture(
     "drag-pending",
     "The target remains pending while the same validated depend request waits; no extra row write is sent",
+    "compact",
+    targetButton,
   );
   releasePending();
   await expect(page.getByTestId("dependency-drop-status")).toContainText(
@@ -2331,6 +2500,8 @@ try {
   await capture(
     "drag-already-linked",
     "An existing relation is guidance and does not send a write",
+    "compact",
+    targetButton,
   );
   await targetButton.dispatchEvent("drop", { dataTransfer: transfer });
   assert.equal(edgeWrites(), alreadyCount);
@@ -2344,7 +2515,12 @@ try {
   );
   const selfAfter = await rowFrames();
   assert.deepEqual(selfAfter, selfFrames);
-  await capture("drag-self", "Self-drop is not allowed and cannot commit");
+  await capture(
+    "drag-self",
+    "Self-drop is not allowed and cannot commit",
+    "compact",
+    sourceButton,
+  );
   await sourceButton.dispatchEvent("drop", { dataTransfer: transfer });
   assert.equal(edgeWrites(), alreadyCount);
   await sourceButton.dispatchEvent("dragend", { dataTransfer: transfer });
@@ -2380,6 +2556,8 @@ try {
   await capture(
     "drag-foreign",
     "An untrusted foreign payload cannot commit or disclose a foreign Task title",
+    "compact",
+    targetButton,
   );
   await targetButton.dispatchEvent("drop", { dataTransfer: foreign });
   assert.equal(edgeWrites(), alreadyCount);
@@ -2804,6 +2982,8 @@ try {
   await capture(
     "initial-occurrence-successor",
     "Fresh public reads prove that initial Dependencies applied only to the first Occurrence and the open successor inherited none",
+    "compact",
+    successorRow,
   );
   const searchRecovery = await verifyDependencySearchRecovery({
     page,
