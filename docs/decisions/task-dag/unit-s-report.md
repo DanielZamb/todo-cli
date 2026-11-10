@@ -1,17 +1,25 @@
 # DAG-S SwiftUI unit
 
-Implementation is frozen at `99e2972fb5534fe898ab9f15a10038ef2d18e62f` on
-`feat/task-dag-s-swiftui`. Owned qualification is complete and ready for L1's
-correctness seat. UI seat 2 passed this exact native source. There is no correctness PASS, self-approval,
+Current native source is 2f60d70fffd25dee13eb6fa75b39fbb08fde9928 after
+the authorized S-C1 correction. Read [the S-C1 report](unit-s-sc1-report.md)
+for current proof, the coordinator's UI PASS at 2f60 and the pending short fresh
+correctness seat. The 698d delivery received CHANGES REQUIRED for S-C1.
+The material below preserves the historical 99e native and d856 retained
+Electron qualification; it is not relabelled as proof at the newer source.
+
+The earlier implementation was frozen at `99e2972fb5534fe898ab9f15a10038ef2d18e62f` on
+`feat/task-dag-s-swiftui`. That qualification was handed to L1 for review.
+Seat 1 then required S-C1, documented above. UI seat 2 passed the 99e source.
+There is no correctness PASS, self-approval,
 merge or complete new BOTH-client proof claim. The qualified base is
 `2c78a3263c196d870459b17bf647cfc23f421fdd`.
 
-Native product and final native proof use 99e. Retained Electron proof uses
+The prior native product and proof used 99e. Retained Electron proof uses
 `d856220f886abc3262e7d3d5eab7bbe9053712d3`; L1 explicitly retained that completed
 scope after the native-only corrections. Earlier native product checkpoints
 `78fe2c555c3071ba7078081c48ccebad8898af1d` and
-`a7b916ffedf971c8c32cbc789b41bdf801d94ce1` remain historical evidence. The eventual
-report-only delivery head and report hash are recorded separately in
+`a7b916ffedf971c8c32cbc789b41bdf801d94ce1` remain historical evidence. The earlier
+report-only delivery 698d55940f0b85fb2828d2297dffa83962b0629f is recorded in
 `docs/evidence/task-dag/unit-s/delivery.json` and the terminal handoff message.
 
 No domain files, HttpApi changes, generated-file edits or second renderer were
