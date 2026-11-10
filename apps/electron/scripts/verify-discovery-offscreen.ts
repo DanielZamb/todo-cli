@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
-import { type ChildProcess, spawn, spawnSync } from "node:child_process";
+import {
+  type ChildProcess,
+  execFileSync,
+  spawn,
+  spawnSync,
+} from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -122,6 +127,9 @@ try {
       }),
     )
   ).credential;
+  execFileSync("sh", [join(root, "scripts/disk-guard.sh")], {
+    stdio: ["inherit", process.stderr.fd, process.stderr.fd],
+  });
   const bundle = await build({
     configFile: join(root, "apps/electron/vite.config.ts"),
     root: join(root, "apps/electron"),

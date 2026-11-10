@@ -82,3 +82,68 @@ The hidden-host.test.ts controls prove that a missing entry exits in under one
 second without reaching a launch delegate and inventory every unsigned launch site.
 Clean-main baseline runs use plain main plus the named generic verification overlay.
 Their manifests record each overlay file and hash separately from the main source.
+
+## Isolation between recipes
+
+The aggregate gives each constituent a distinct evidence directory. Each offscreen
+driver creates a fresh `mkdtemp` HOME/database and a fresh Chromium context. Every
+`verify.sh` invocation creates its own `todo-s01-verify-*` directory; its seed and
+driver use that directory's HOME, SQLite file and Electron userData. The standalone
+Diagnostics and unauthorized-host drivers also create fresh scratch directories.
+The metadata observer shares its parent recipe's scratch server deliberately, but
+has a separate userData subdirectory. No two constituents share these settings.
+
+All scratch servers and proxies bind port 0. Electron's inspector/CDP ports are
+allocated dynamically. Cached CLI/server/seed binaries and unsigned build output
+are shared read-only inputs to the drives; Compact preferences live in each
+fresh userData directory's `window.json`, outside that build output. The build lock
+coordinates compilation and stores no client state.
+
+Clean main `cabf4866` had a Compact-size failure inside its full aggregate:
+expected 393×426, received 1280×895. Three unchanged isolated host-writes runs
+reached the later Move-copy assertion; a maintained-main run hit the size failure
+again. All those historical exits remain unchanged.
+
+Observation-only main-process tracing identified a verification precondition race
+in `verify-compact-presentation.ts`: an immediate visibility probe skipped the
+Compact request after Expand, then asserted a size it had not requested. Native
+resizing completed promptly when requested. The corrected step awaits the Compact
+control, clicks once and keeps the original 5,000 ms size predicate. It passed
+30 of 30 with exactly 30 delivered requests and 30 content-size calls. A forced
+absent control fails at `Compact control not visible` in about one second with no
+request or resize. Compact-size failure: verification precondition race, fixed;
+product unaffected. Recipe-local state isolation remains unchanged.
+
+## Retained main baseline and maintained expectations
+
+The original fourteen-recipe baseline on `cabf4866`, with the named generic
+verification overlay only, exits 1: nine PASS, three FAIL, two MISSING and the
+named native HOLD. The two missing recipes are the new Electron DAG drivers.
+The original Attachment batch and batch-edit Conflict expectations omitted the
+exit pair introduced by PR #10. The Move expectation and generic Series 422
+expectation had the same omission. Maintained expectations include the actual
+rendered pair; they do not change product copy.
+
+The maintained Attachment batch and batch-edit drives exit 0. Move and generic
+422 assertions pass in the maintained host drive, which remains nonzero at the
+known main Compact Import regression: `verify-import.ts` wholeRows >= 4 receives
+3, and partialRows === 0 receives 1. Both assertions remain unchanged. Owner
+Task `5cdbdbd6` owns that product issue. Compare the final Electron source against
+both exact predicates and values before calling its failure identical to main.
+
+One diagnostic-only scratch continuation was permitted past those two exact
+Import predicates. It exited 1 earlier at the immediate Series Skip Retry status
+assertion, so it recorded no Import continuation and proves nothing beyond it.
+That intermittent occurred once in the long driver and was not reproduced in ten
+isolated main observations, with 1,000 cancelled server-status samples. No product
+or completion-wait change follows. If the original immediate assertion fails
+again, the driver includes the Occurrence id, retained Retry HTTP status/body and
+timestamped 50 ms status samples for five seconds. The successful path adds no
+server reads, delay or changed assertion. The existing proxy passively retains
+Skip response metadata/body for that failure report.
+
+The local classification index under
+`docs/evidence/task-dag/unit-e/baseline-classification/classification-index.json`
+records existing receipts, source/binary identities, exact old/new literals,
+PR #10 commits, original exits and capture limits. It is intermediate evidence,
+not the final whole-client result. The main archive retains original failures.
