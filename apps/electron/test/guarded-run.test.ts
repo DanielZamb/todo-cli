@@ -160,3 +160,73 @@ it("stops immediately on a failed initial or nested compiler guard", () => {
   control("initial-disk-stop", "direct", 1);
   control("nested-disk-stop", "shell", 3);
 });
+
+it("keeps nested JSON delegate stdout machine-readable and guard diagnostics on stderr", () => {
+  const fixture = mkdtempSync(join(tmpdir(), "todo-guard-json-"));
+  try {
+    const scripts = join(fixture, "apps/electron/scripts");
+    const bin = join(fixture, "fake-bin");
+    mkdirSync(scripts, { recursive: true });
+    mkdirSync(join(fixture, "scripts"));
+    mkdirSync(bin);
+    const copied = join(scripts, "guarded-run.sh");
+    copyFileSync(wrapper, copied);
+    writeFileSync(
+      join(fixture, "scripts/disk-guard.sh"),
+      "#!/bin/sh\nprintf 'guard success\\n'\nprintf 'guard detail\\n' >&2\n",
+    );
+    for (const name of ["bun", "pnpm", "node", "xcrun"])
+      writeFileSync(
+        join(bin, name),
+        "#!/bin/sh\nprintf '{\"licenses\":[\"MIT\"]}\\n'\nprintf 'delegate diagnostic\\n' >&2\n",
+        { mode: 0o755 },
+      );
+    const env: NodeJS.ProcessEnv = {
+      ...process.env,
+      PATH: `${bin}:/usr/bin:/bin`,
+    };
+    for (const key of [
+      "TODO_DAG_REAL_BUN",
+      "TODO_DAG_REAL_PNPM",
+      "TODO_DAG_REAL_NODE",
+      "TODO_DAG_REAL_XCRUN",
+    ])
+      delete env[key];
+    const result = spawnSync(
+      "/bin/sh",
+      [copied, "/bin/sh", copied, "pnpm", "licenses", "list", "--json"],
+      { env, encoding: "utf8" },
+    );
+    const receipt = {
+      exit: result.status,
+      signal: result.signal,
+      stdout: result.stdout,
+      stderr: result.stderr,
+      scope: "fake JSON delegate only; no compiler or native process",
+    };
+    if (process.env.TODO_VERIFICATION_CONTROLS_DIR) {
+      const evidence = repositoryPath(
+        root,
+        process.env.TODO_VERIFICATION_CONTROLS_DIR,
+        "guard stdout control",
+      );
+      mkdirSync(evidence, { recursive: true });
+      writeFileSync(
+        join(evidence, "json-stdout.json"),
+        JSON.stringify(receipt, null, 2),
+      );
+    }
+    expect(result.status).toBe(0);
+    expect(result.signal).toBeNull();
+    expect(result.stdout).toBe('{"licenses":["MIT"]}\n');
+    expect(JSON.parse(result.stdout)).toEqual({ licenses: ["MIT"] });
+    expect(result.stderr.match(/guard success/gu)?.length).toBe(3);
+    expect(result.stderr.match(/guard detail/gu)?.length).toBe(3);
+    expect(result.stderr).toContain("delegate diagnostic");
+    expect(result.stderr).toBe(
+      `${"guard success\nguard detail\n".repeat(3)}delegate diagnostic\n`,
+    );
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
+});

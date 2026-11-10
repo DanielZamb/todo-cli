@@ -33,7 +33,7 @@ function control(
     const guard = join(fixture, "scripts/disk-guard.sh");
     writeFileSync(
       guard,
-      `#!/bin/sh\nprintf 'guard' >> "$CONTROL_CALLS"\nexit ${fail ? 3 : 0}\n`,
+      `#!/bin/sh\nprintf 'guard' >> "$CONTROL_CALLS"\nprintf 'guard diagnostic\\n'\nprintf 'guard detail\\n' >&2\nexit ${fail ? 3 : 0}\n`,
     );
     const delegate = join(fixture, "delegate.json");
     const program = join(fixture, "control.cjs");
@@ -47,6 +47,7 @@ if (mode === "api") {
   const runtime = { build(options) { fs.writeFileSync(${JSON.stringify(delegate)}, JSON.stringify({ options, preloaded: Bun.build.name })); return "literal result"; } };
   installBuildGuard(runtime);
   if (runtime.build({ entrypoints: ["fake-only.ts"] }) !== "literal result") process.exit(9);
+  process.stdout.write('{"delegate":"json"}\\n');
   process.exit(7);
 } else if (mode === "sync") execFileSync("/bin/sh", [${JSON.stringify(guard)}]);
 else if (mode === "async") Promise.resolve().then(() => execFileSync("/bin/sh", [${JSON.stringify(guard)}]));
@@ -77,6 +78,7 @@ else throw new Error("ordinary failure remains nonzero");
         ? JSON.parse(readFileSync(delegate, "utf8"))
         : null,
       stderr: result.stderr,
+      stdout: result.stdout,
     };
     if (process.env.TODO_VERIFICATION_CONTROLS_DIR) {
       const evidence = repositoryPath(
@@ -99,6 +101,10 @@ else throw new Error("ordinary failure remains nonzero");
       });
     else expect(receipt.delegate).toBeNull();
     expect(receipt.guardCalls).toBe(mode === "ordinary" ? "" : "guard");
+    if (mode === "api") {
+      expect(receipt.stdout).toBe(fail ? "" : '{"delegate":"json"}\n');
+      expect(receipt.stderr).toBe("guard diagnostic\nguard detail\n");
+    }
   } finally {
     rmSync(fixture, { recursive: true, force: true });
   }

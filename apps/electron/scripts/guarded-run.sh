@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)
-sh "$root/scripts/disk-guard.sh"
+sh "$root/scripts/disk-guard.sh" >&2
 export TODO_DAG_GUARD_ROOT="$root"
 export TODO_DAG_REAL_BUN="${TODO_DAG_REAL_BUN:-$(command -v bun)}"
 export TODO_DAG_REAL_PNPM="${TODO_DAG_REAL_PNPM:-$(command -v pnpm)}"
@@ -30,7 +30,7 @@ for executable in bun pnpm node xcrun; do
   esac
   cat > "$guards/$executable" <<'WRAPPER'
 #!/bin/sh
-sh "$TODO_DAG_GUARD_ROOT/scripts/disk-guard.sh" || exit $?
+sh "$TODO_DAG_GUARD_ROOT/scripts/disk-guard.sh" >&2 || exit $?
 WRAPPER
   printf 'exec "$%s" "$@"\n' "$target" >> "$guards/$executable"
   chmod +x "$guards/$executable"

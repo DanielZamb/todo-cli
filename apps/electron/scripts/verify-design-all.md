@@ -40,6 +40,12 @@ none is launched. Ordinary nonzero exits remain failures and the other recipes
 continue. Fake-delegate/runtime controls cover these distinctions without a
 real compiler or native app.
 
+Guard diagnostics go to stderr. Delegate stdout remains byte-for-byte intact,
+including JSON consumed by license generation; the delegate's stderr and exit
+remain intact as well. The fake JSON control covers nested shell wrappers and
+the in-process fake build guard. The earlier stdout-contamination failure is a
+retained harness incident, separate from product-copy assertion failures.
+
 Run the cheap generic controls independently of the full suite:
 
 ```sh
