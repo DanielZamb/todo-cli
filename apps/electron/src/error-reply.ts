@@ -37,7 +37,14 @@ export function errorReply(error: unknown): Extract<Reply, { _tag: "error" }> {
       Schema.Struct({ code: member.fields.code }),
     ),
   );
-  if (Schema.is(dependencyCode)(error))
+  const nested = Schema.decodeUnknownExit(
+    Schema.Struct({ details: Schema.Record(Schema.String, Schema.Unknown) }),
+  )(error);
+  if (
+    Schema.is(dependencyCode)(error) ||
+    (nested._tag === "Success" &&
+      Object.hasOwn(nested.value.details, "dependency_error"))
+  )
     return {
       _tag: "error",
       message:

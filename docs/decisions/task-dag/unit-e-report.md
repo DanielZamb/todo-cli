@@ -143,3 +143,24 @@ Only six of the canonical eleven paths change: protocol, adapter, host, CSS,
 README and lock. Build command and copy recipe remain unchanged. No generated
 output is tracked. The permitted local no-comments audit found no new comments
 or suppressions before this checkpoint commit.
+
+The V1-V11 app changes now use the installed Base UI ToggleGroup with a semantic
+selected segment, separate scope action/count, one menu per relation row, a
+collapsed shadcn Collapsible for Graph details/export, and in-frame icon zoom
+controls. Full window shows diagram/list together; Compact opens on List.
+Layout changes refit without clearing focused Task identity. Profile-wide graph
+search uses the shared Task search request and drops obsolete replies. E3/E4
+now put Dismiss in the Alert corner, show up to three complete witness lines,
+and retain two whole candidate rows with a fixed footer. The first visual drive
+exposed a shrinking title; the fixed title and other chrome no longer shrink.
+
+`view-rules-03/result.json` records exit 0 for 38 intermediate captures, actual
+compiled scratch HTTP and real SSE forwarding. Its manifest validates only
+existing files. `picker-last-bounds.json` records last-row bounds with a half
+CSS-pixel tolerance for fractional scroll rounding. Historical receipts remain
+untouched. The result's limits describe the actual partial scope and old cached
+binary provenance; they make no final-source, clipboard or native storage claim.
+The complete Electron unit suite exits 0 with 90 passing and one package skip.
+The nested malformed Dependency error regression first failed by exposing outer
+agent text, then passed after routing it through compatibility recovery.
+Full end suites and the remaining DAG flows/matrix are still pending.

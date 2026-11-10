@@ -1,9 +1,15 @@
 import type { Task, TaskId } from "@todo/domain";
 import { Schema } from "effect";
 import {
+  ChevronDown,
+  Ellipsis,
+  RotateCcw,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react";
+import {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -19,12 +25,27 @@ import {
 import { Alert, AlertDescription } from "./components/ui/alert.tsx";
 import { Button } from "./components/ui/button.tsx";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "./components/ui/collapsible.tsx";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogTitle,
 } from "./components/ui/dialog.tsx";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./components/ui/dropdown-menu.tsx";
+import { Field } from "./components/ui/field.tsx";
+import { Input } from "./components/ui/input.tsx";
+import { ToggleGroup, ToggleGroupItem } from "./components/ui/toggle-group.tsx";
 import type { DependencyGraphController } from "./dependency-graph-state.ts";
 import { DependencyTaskLabel } from "./dependency-task-label.tsx";
 import type { Reply, Request } from "./protocol.ts";
@@ -122,6 +143,7 @@ export function DependencyGraphDialog({
   returnFocus,
   openTask,
   addDependency,
+  projects,
 }: {
   controller: DependencyGraphController;
   request: (request: Request) => Promise<Reply>;
@@ -131,17 +153,22 @@ export function DependencyGraphDialog({
   returnFocus: () => HTMLElement | null;
   openTask: (task: Task) => void;
   addDependency: (task: Task) => void;
+  projects: readonly { id: string; name: string }[];
 }) {
   const state = useSyncExternalStore(controller.subscribe, controller.snapshot);
   const [diagram, setDiagram] = useState(!compact);
   const [copied, setCopied] = useState(false);
-  const reset = useRef<HTMLButtonElement>(null);
+  const frame = useRef<HTMLElement>(null);
+  const debounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const epoch = state.kind === "Open" ? state.generation : -1;
   useEffect(() => {
-    if (epoch < 0) return;
-    setDiagram(!compact);
-    setCopied(false);
-  }, [compact, epoch]);
+    if (epoch >= 0) {
+      setDiagram(!compact);
+      setCopied(false);
+      controller.refit();
+    }
+  }, [compact, epoch, controller]);
+  useEffect(() => () => clearTimeout(debounce.current), []);
   const visible = useMemo(
     () => controller.visibleIds(state),
     [controller, state],
@@ -184,23 +211,16 @@ export function DependencyGraphDialog({
         : null,
     [state, visible, dark],
   );
-  const viewport = state.kind === "Open" ? state.viewport : null;
-  useLayoutEffect(() => {
-    if (
-      viewport &&
-      reset.current?.disabled &&
-      document.activeElement === reset.current
-    )
-      document
-        .querySelector<HTMLElement>('[data-testid="dependency-graph-selected"]')
-        ?.focus();
-  }, [viewport]);
   if (state.kind === "Closed") return null;
   const report = state.report;
   const root = report?.nodes.find((node) => node.task.id === state.scope.root);
   const task = (id: string) =>
     report?.nodes.find((node) => node.task.id === id)?.task;
-  const close = () => controller.close();
+  const close = () => {
+    clearTimeout(debounce.current);
+    controller.close();
+  };
+  const diagramVisible = (!compact || diagram) && !state.renderFailure;
   const receive = (reply: GraphHostReply) => {
     switch (reply.type) {
       case "activate": {
@@ -243,53 +263,123 @@ export function DependencyGraphDialog({
         break;
     }
   };
+  const zoom = (factor: number) => {
+    if (!state.viewport || !frame.current) return;
+    const scale = Math.min(4, Math.max(0.1, state.viewport.scale * factor));
+    const ratio = scale / state.viewport.scale;
+    const { clientWidth: width, clientHeight: height } = frame.current;
+    controller.setViewport({
+      x: width / 2 - (width / 2 - state.viewport.x) * ratio,
+      y: height / 2 - (height / 2 - state.viewport.y) * ratio,
+      scale,
+    });
+  };
+  const idsInScope = new Set(visible);
+  const matches = state.searchIds;
   const identified = new Set<TaskId>();
-  const list = (name: string, ids: readonly TaskId[]) => (
-    <section className="dependency-graph-section">
-      <h3>
-        {name} · {ids.length}
-      </h3>
-      {ids.length === 0 ? (
-        <p className="text-muted-foreground">None</p>
-      ) : (
-        <ul>
-          {ids.map((id) => {
-            const value = task(id);
-            const first = !identified.has(id);
-            identified.add(id);
-            return (
-              <li key={id}>
-                <Button
-                  variant="ghost"
-                  data-testid={
-                    first ? `dependency-graph-task-${id}` : undefined
-                  }
-                  onClick={() => {
-                    if (value) {
-                      close();
-                      openTask(value);
+  const list = (name: string, ids: readonly TaskId[]) => {
+    const shown = matches === null ? ids : ids.filter((id) => matches.has(id));
+    return (
+      <section className="dependency-graph-section">
+        <h3>
+          {name} · {ids.length}
+        </h3>
+        {shown.length === 0 ? (
+          <p className="text-muted-foreground">
+            {ids.length > 0 ? "No matching Tasks" : "None"}
+          </p>
+        ) : (
+          <ul>
+            {shown.map((id) => {
+              const value = task(id);
+              const first = !identified.has(id);
+              identified.add(id);
+              return (
+                <li key={id}>
+                  <Button
+                    variant="ghost"
+                    data-testid={
+                      first ? `dependency-graph-task-${id}` : undefined
                     }
-                  }}
-                >
-                  <DependencyTaskLabel task={value} id={id} />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  data-testid={
-                    first ? `dependency-graph-expand-${id}` : undefined
-                  }
-                  onClick={() => controller.expand(id)}
-                >
-                  Expand
-                </Button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </section>
-  );
+                    onClick={() => {
+                      if (value) {
+                        close();
+                        openTask(value);
+                      }
+                    }}
+                  >
+                    <DependencyTaskLabel
+                      task={value}
+                      id={id}
+                      projects={projects}
+                    />
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Actions for ${value?.title ?? id}`}
+                        />
+                      }
+                    >
+                      <Ellipsis />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuGroup>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            void controller.open(
+                              { ...state.scope, root: id },
+                              request,
+                            )
+                          }
+                        >
+                          Show this Task's Dependencies
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={!connected}
+                          onClick={() => {
+                            if (value) {
+                              close();
+                              addDependency(value);
+                            }
+                          }}
+                        >
+                          Add dependency…
+                        </DropdownMenuItem>
+                        {diagramVisible && (
+                          <DropdownMenuItem
+                            data-testid={
+                              first
+                                ? `dependency-graph-expand-${id}`
+                                : undefined
+                            }
+                            onClick={() => controller.expand(id)}
+                          >
+                            Expand in diagram
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+    );
+  };
+  const shape =
+    report?.shape === "tree"
+      ? `${report.orientation} tree`
+      : report?.shape === "single"
+        ? "Single Task"
+        : report?.shape === "chain"
+          ? "Chain"
+          : "DAG";
   return (
     <Dialog
       open
@@ -304,68 +394,69 @@ export function DependencyGraphDialog({
         showCloseButton={false}
       >
         <DialogTitle>Dependencies</DialogTitle>
-        <DialogDescription>
+        <DialogDescription
+          className="truncate"
+          title={root?.task.title ?? state.scope.root}
+        >
           {root?.task.title ?? state.scope.root}
         </DialogDescription>
-        <div className="dependency-graph-controls">
-          <Button
-            variant="outline"
-            data-testid="dependency-graph-list"
-            aria-pressed={!diagram}
-            onClick={() => setDiagram(false)}
+        {compact && (
+          <ToggleGroup
+            variant="segment"
+            size="sm"
+            spacing={0}
+            aria-label="Dependency view"
+            data-testid="dependency-graph-mode"
+            value={[diagram ? "diagram" : "list"]}
+            onValueChange={(value) => {
+              if (value[0]) setDiagram(value[0] === "diagram");
+            }}
           >
-            List
-          </Button>
-          <Button
-            variant="outline"
-            aria-pressed={diagram}
-            onClick={() => setDiagram(true)}
-          >
-            Diagram
-          </Button>
-          <Button
-            variant="outline"
-            data-testid="dependency-graph-overview"
-            aria-pressed={state.overview}
-            onClick={() => controller.overview(!state.overview)}
-          >
-            {state.overview ? "Selected region" : "Whole group"}
-          </Button>
-        </div>
+            <ToggleGroupItem value="list" data-testid="dependency-graph-list">
+              List
+            </ToggleGroupItem>
+            <ToggleGroupItem value="diagram">Diagram</ToggleGroupItem>
+          </ToggleGroup>
+        )}
+        {report && (
+          <div className="dependency-graph-controls">
+            <Button
+              variant="outline"
+              size="sm"
+              data-testid="dependency-graph-overview"
+              onClick={() => controller.overview(!state.overview)}
+            >
+              {state.overview
+                ? "Show nearby Tasks"
+                : `Show all ${report.nodes.length} Tasks`}
+            </Button>
+            <small className="text-muted-foreground">
+              {visible.length} of {report.nodes.length} Tasks shown
+            </small>
+          </div>
+        )}
         {!connected && (
           <p role="status">Offline. The last Dependencies are read-only.</p>
         )}
         {state.loading && <p role="status">Loading Dependencies…</p>}
         <div
           className="dependency-graph-body"
-          data-diagram={diagram && !state.renderFailure}
+          data-diagram={diagramVisible}
           data-compact={compact}
         >
-          {state.failure && (
+          {(state.failure || state.renderFailure) && (
             <Alert role="status">
               <AlertDescription>
-                {state.failure.message}
-                <Button
-                  variant="outline"
-                  disabled={!connected}
-                  data-testid="dependency-graph-retry"
-                  onClick={() => void controller.refresh(request)}
-                >
-                  Retry
-                </Button>
-              </AlertDescription>
-            </Alert>
-          )}
-          {state.renderFailure && (
-            <Alert role="status">
-              <AlertDescription>
-                {state.renderFailure}
+                <p>
+                  {state.renderFailure
+                    ? "Couldn't draw the diagram. The list below is complete."
+                    : state.failure?.message}
+                </p>
                 <Button
                   variant="outline"
                   disabled={!connected}
                   data-testid="dependency-graph-retry"
                   onClick={() => {
-                    controller.renderFailed(null);
                     void controller.refresh(request);
                     setDiagram(true);
                   }}
@@ -375,162 +466,156 @@ export function DependencyGraphDialog({
               </AlertDescription>
             </Alert>
           )}
-          {diagram && !state.renderFailure && command && (
-            <section className="dependency-diagram-region">
+          {diagramVisible && command && (
+            <section ref={frame} className="dependency-diagram-region">
               <GraphDiagram command={command} receive={receive} />
-              <div className="dependency-graph-controls">
+              <fieldset
+                className="dependency-diagram-tools"
+                aria-label="Diagram controls"
+              >
                 <Button
                   variant="outline"
-                  onClick={() =>
-                    controller.setViewport({
-                      ...(state.viewport ?? { x: 0, y: 0, scale: 1 }),
-                      scale: Math.min(4, (state.viewport?.scale ?? 1) * 1.2),
-                    })
-                  }
+                  size="icon"
+                  aria-label="Zoom in"
+                  disabled={!state.viewport}
+                  onClick={() => zoom(1.2)}
                 >
-                  Zoom in
+                  <ZoomIn />
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() =>
-                    controller.setViewport({
-                      ...(state.viewport ?? { x: 0, y: 0, scale: 1 }),
-                      scale: Math.max(0.1, (state.viewport?.scale ?? 1) / 1.2),
-                    })
-                  }
+                  size="icon"
+                  aria-label="Zoom out"
+                  disabled={!state.viewport}
+                  onClick={() => zoom(1 / 1.2)}
                 >
-                  Zoom out
+                  <ZoomOut />
                 </Button>
                 <Button
-                  ref={reset}
                   variant="outline"
+                  size="icon"
+                  aria-label="Reset diagram"
                   data-testid="dependency-graph-reset"
-                  disabled={state.viewport === null}
-                  onClick={() => controller.reset()}
-                >
-                  Reset
-                </Button>
-              </div>
-              {root && (
-                <Button
-                  variant="ghost"
-                  data-testid="dependency-graph-selected"
                   onClick={() => {
-                    const value = task(state.selected);
-                    if (value) {
-                      close();
-                      openTask(value);
-                    }
+                    controller.reset();
+                    frame.current?.querySelector("iframe")?.focus();
                   }}
                 >
-                  Open {task(state.selected)?.title ?? root.task.title}
+                  <RotateCcw />
                 </Button>
-              )}
-              <p className="text-muted-foreground">
-                {visible.length} of {report?.nodes.length ?? 0} Tasks shown
-              </p>
+              </fieldset>
             </section>
           )}
-          {report && (
+          {report && (!compact || !diagramVisible) && (
             <div
               className="dependency-graph-native"
               data-testid="dependency-graph-details"
             >
+              {visible.length > 10 && (
+                <Field>
+                  <Input
+                    key={state.generation}
+                    aria-label="Search these Tasks"
+                    placeholder="Search these Tasks"
+                    defaultValue={state.query}
+                    onChange={(event) => {
+                      const query = event.target.value;
+                      clearTimeout(debounce.current);
+                      debounce.current = setTimeout(
+                        () => void controller.find(query, request),
+                        250,
+                      );
+                    }}
+                  />
+                </Field>
+              )}
               {report.nodes.length > 50 && (
-                <p>
-                  More than 50 Tasks. Use the list and Task search to choose a
-                  region.
+                <p className="text-muted-foreground">
+                  Use the list and search to choose a Task.
                 </p>
               )}
-              {(!diagram || !compact || state.renderFailure) && (
-                <>
-                  {list(
-                    "Depends on",
-                    report.edges
-                      .filter((edge) => edge.dependent_id === state.scope.root)
-                      .map((edge) => edge.blocker_id),
-                  )}
-                  {list(
-                    "Blocks",
-                    report.edges
-                      .filter((edge) => edge.blocker_id === state.scope.root)
-                      .map((edge) => edge.dependent_id),
-                  )}
-                  {list("Lightest next", report.lightest_next)}
-                </>
+              {state.searchFailure && (
+                <Alert role="status">
+                  <AlertDescription>
+                    {state.searchFailure.message}
+                  </AlertDescription>
+                </Alert>
               )}
+              {list(
+                "Depends on",
+                report.edges
+                  .filter((edge) => edge.dependent_id === state.scope.root)
+                  .map((edge) => edge.blocker_id),
+              )}
+              {list(
+                "Blocks",
+                report.edges
+                  .filter((edge) => edge.blocker_id === state.scope.root)
+                  .map((edge) => edge.dependent_id),
+              )}
+              {list("Lightest next", report.lightest_next)}
+              {state.overview &&
+                list(
+                  "All Tasks",
+                  report.topological_order.filter((id) => idsInScope.has(id)),
+                )}
               {root && (
-                <section className="dependency-graph-section">
-                  <h3>Task details</h3>
-                  <p>
-                    {report.shape === "tree"
-                      ? `${report.orientation} tree`
-                      : report.shape === "single"
-                        ? "Single Task"
-                        : report.shape === "chain"
-                          ? "Chain"
-                          : "DAG"}
-                  </p>
-                  <dl>
-                    <dt>Depends on</dt>
-                    <dd>{root.in_degree}</dd>
-                    <dt>Blocks</dt>
-                    <dd>{root.out_degree}</dd>
-                    <dt>Depth</dt>
-                    <dd>{root.depth}</dd>
-                    <dt>Remaining Energy</dt>
-                    <dd>
-                      {root.remaining_energy.energy} ·{" "}
-                      {root.remaining_energy.unweighted} unweighted
-                    </dd>
-                    <dt>Sources</dt>
-                    <dd>
-                      {report.sources
-                        .map((id) => task(id)?.title ?? id)
-                        .join(", ")}
-                    </dd>
-                    <dt>Sinks</dt>
-                    <dd>
-                      {report.sinks
-                        .map((id) => task(id)?.title ?? id)
-                        .join(", ")}
-                    </dd>
-                  </dl>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      close();
-                      addDependency(root.task);
-                    }}
-                  >
-                    Add dependency
-                  </Button>
-                </section>
+                <p>
+                  Energy left: {root.remaining_energy.energy}
+                  {root.remaining_energy.unweighted > 0 &&
+                    ` · ${root.remaining_energy.unweighted} ${root.remaining_energy.unweighted === 1 ? "Task" : "Tasks"} without Energy`}
+                </p>
               )}
-              {(!diagram || !compact || state.renderFailure) && (
-                <>
+              <Collapsible>
+                <CollapsibleTrigger render={<Button variant="ghost" />}>
+                  <ChevronDown data-icon="inline-start" />
+                  Graph details
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <section className="dependency-graph-section">
+                    <dl>
+                      <dt>Shape</dt>
+                      <dd>{shape}</dd>
+                      <dt>Depth</dt>
+                      <dd>{root?.depth ?? 0}</dd>
+                      <dt>Starts at</dt>
+                      <dd>
+                        {report.sources
+                          .map((id) => task(id)?.title ?? id)
+                          .join(", ") || "None"}
+                      </dd>
+                      <dt>Ends at</dt>
+                      <dd>
+                        {report.sinks
+                          .map((id) => task(id)?.title ?? id)
+                          .join(", ") || "None"}
+                      </dd>
+                      <dt>Direct Dependencies</dt>
+                      <dd>{root?.in_degree ?? 0}</dd>
+                      <dt>Tasks blocked</dt>
+                      <dd>{root?.out_degree ?? 0}</dd>
+                    </dl>
+                  </section>
                   {list("Ancestors", report.ancestors)}
                   {list("Descendants", report.descendants)}
-                </>
-              )}
+                  <Button
+                    variant="outline"
+                    data-testid="dependency-graph-copy-mermaid"
+                    onClick={() =>
+                      void request({
+                        _tag: "copyMermaid",
+                        text: report.mermaid,
+                      }).then((reply) => setCopied(reply._tag === "ok"))
+                    }
+                  >
+                    {copied ? "Copied Mermaid" : "Copy as Mermaid"}
+                  </Button>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
           )}
         </div>
         <DialogFooter>
-          {report && (
-            <Button
-              variant="outline"
-              data-testid="dependency-graph-copy-mermaid"
-              onClick={() =>
-                void request({
-                  _tag: "copyMermaid",
-                  text: report.mermaid,
-                }).then((reply) => setCopied(reply._tag === "ok"))
-              }
-            >
-              {copied ? "Copied Mermaid" : "Copy Mermaid"}
-            </Button>
-          )}
           <Button
             variant="outline"
             data-testid="dependency-graph-close"

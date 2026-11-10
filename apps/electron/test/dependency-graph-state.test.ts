@@ -5,6 +5,52 @@ import { dependencyGraph, dependencyTask } from "./fixtures/dependencies.ts";
 
 const graph = dependencyGraph();
 const scope = { profile: graph.profile_id, root: graph.task_id };
+it("omits the initial camera, stores a resolved camera and refits a new layout without losing focus", async () => {
+  const controller = new DependencyGraphController();
+  await controller.open(scope, async () => ({ _tag: "graph", report: graph }));
+  expect(controller.snapshot()).toMatchObject({ viewport: null });
+  controller.setViewport({ x: 12, y: 13, scale: 0.5 });
+  controller.focus(dependencyTask("linked").id);
+  controller.refit();
+  expect(controller.snapshot()).toMatchObject({
+    viewport: null,
+    focused: "linked",
+  });
+});
+it("uses the Profile server search and discards late results after closing the graph", async () => {
+  const controller = new DependencyGraphController();
+  await controller.open(scope, async () => ({ _tag: "graph", report: graph }));
+  const requests: unknown[] = [];
+  await controller.find("contract", async (request) => {
+    requests.push(request);
+    return { _tag: "dependencyCandidates", tasks: [dependencyTask("linked")] };
+  });
+  expect(requests).toEqual([
+    {
+      _tag: "dependencyCandidates",
+      profile: "work",
+      filters: { text: "contract" },
+    },
+  ]);
+  const state = controller.snapshot();
+  expect(state.kind === "Open" && [...(state.searchIds ?? [])]).toEqual([
+    "linked",
+  ]);
+  let finish: (reply: Reply) => void = () => {
+    throw new Error("not waiting");
+  };
+  const waiting = controller.find(
+    "late",
+    () =>
+      new Promise((done) => {
+        finish = done;
+      }),
+  );
+  controller.close();
+  finish({ _tag: "dependencyCandidates", tasks: [dependencyTask("other")] });
+  await waiting;
+  expect(controller.snapshot()).toEqual({ kind: "Closed" });
+});
 it("starts with direct neighbours and makes overview explicit and reversible without recomputing graph metrics", async () => {
   const controller = new DependencyGraphController();
   await controller.open(scope, async () => ({ _tag: "graph", report: graph }));

@@ -17,12 +17,16 @@ type OpenState = {
   readonly overview: boolean;
   readonly viewport: GraphViewport | null;
   readonly renderFailure: string | null;
+  readonly query: string;
+  readonly searchIds: ReadonlySet<TaskId> | null;
+  readonly searchFailure: Extract<Reply, { _tag: "error" }> | null;
 };
 export type DependencyGraphState = { readonly kind: "Closed" } | OpenState;
 export class DependencyGraphController {
   private state: DependencyGraphState = { kind: "Closed" };
   private epoch = 0;
   private read = 0;
+  private search = 0;
   private listeners = new Set<() => void>();
   readonly snapshot = () => this.state;
   readonly subscribe = (listener: () => void) => {
@@ -38,6 +42,7 @@ export class DependencyGraphController {
   readonly close = () => {
     this.epoch++;
     this.read++;
+    this.search++;
     this.publish({ kind: "Closed" });
   };
   async open(
@@ -59,8 +64,57 @@ export class DependencyGraphController {
       overview: false,
       viewport: null,
       renderFailure: null,
+      query: "",
+      searchIds: null,
+      searchFailure: null,
     });
     await this.refresh(request);
+  }
+  async find(query: string, request: (request: Request) => Promise<Reply>) {
+    const state = this.state;
+    if (state.kind === "Closed") return;
+    const epoch = this.epoch;
+    const search = ++this.search;
+    this.publish({ ...state, query, searchFailure: null });
+    if (!query.trim()) {
+      this.publish({ ...state, query, searchIds: null, searchFailure: null });
+      return;
+    }
+    let result: Reply;
+    try {
+      result = await request({
+        _tag: "dependencyCandidates",
+        profile: state.scope.profile,
+        filters: { text: query },
+      });
+    } catch {
+      result = {
+        _tag: "error",
+        message: "Couldn't search Tasks. Try again when connected.",
+      };
+    }
+    if (
+      this.state.kind === "Closed" ||
+      epoch !== this.epoch ||
+      search !== this.search
+    )
+      return;
+    this.publish({
+      ...this.state,
+      searchIds:
+        result._tag === "dependencyCandidates"
+          ? new Set(result.tasks.map((task) => task.id))
+          : this.state.searchIds,
+      searchFailure:
+        result._tag === "error"
+          ? result
+          : result._tag === "dependencyCandidates"
+            ? null
+            : {
+                _tag: "error",
+                message: "Todo returned an incompatible Task search.",
+              },
+    });
   }
   async refresh(request: (request: Request) => Promise<Reply>) {
     const state = this.state;
@@ -167,6 +221,10 @@ export class DependencyGraphController {
         viewport: null,
         focused: this.state.selected,
       });
+  }
+  refit() {
+    if (this.state.kind === "Open" && this.state.viewport !== null)
+      this.publish({ ...this.state, viewport: null });
   }
   visibleIds(state: DependencyGraphState = this.state): readonly TaskId[] {
     if (state.kind === "Closed" || !state.report) return [];

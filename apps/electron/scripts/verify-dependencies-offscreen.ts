@@ -17,7 +17,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { chromium, expect } from "@playwright/test";
 import { ProfileId } from "@todo/domain";
-import { Effect, Schema } from "effect";
+import { Effect, Fiber, Schema, Stream } from "effect";
 import { FetchHttpClient, type HttpClient } from "effect/http";
 import { build } from "vite";
 import { errorReply, exitDetail } from "../src/error-reply.ts";
@@ -49,6 +49,7 @@ const env = {
 };
 let server: ChildProcess | undefined;
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
+let stream: Fiber.Fiber<void, unknown> | undefined;
 let log = "";
 const actions: unknown[] = [];
 const manifest: { png: string; receipt: string; [key: string]: unknown }[] = [];
@@ -210,17 +211,40 @@ try {
           return { _tag: "windowMode", compact: true };
         case "setWindowMode":
           return { _tag: "windowMode", compact: request.compact };
-        case "watch":
-          await page.evaluate(
-            (profile) =>
-              window.dispatchEvent(
-                new CustomEvent("dag-notice", {
-                  detail: { _tag: "connection", profile, state: "connected" },
+        case "watch": {
+          if (stream) await Effect.runPromise(Fiber.interrupt(stream));
+          const profile = request.profile;
+          stream = Effect.runFork(
+            Effect.gen(function* () {
+              const response = yield* client.changes.stream({
+                params: { profile },
+                headers: { "x-todo-client": "electron" },
+              });
+              yield* Stream.runForEach(response.body, (frame) =>
+                Effect.promise(async () => {
+                  actions.push({
+                    sse: frame.event,
+                    ...(frame.event === "operation"
+                      ? { kind: frame.data.event.kind, seq: frame.data.seq }
+                      : {}),
+                  });
+                  await page.evaluate(
+                    (notice) =>
+                      window.dispatchEvent(
+                        new CustomEvent("dag-notice", { detail: notice }),
+                      ),
+                    frame.event === "ready"
+                      ? { _tag: "connection", profile, state: "connected" }
+                      : frame.event === "reload"
+                        ? { _tag: "reload" }
+                        : { _tag: "changed", profile },
+                  );
                 }),
-              ),
-            request.profile,
+              );
+            }).pipe(Effect.provide(FetchHttpClient.layer)),
           );
           return { _tag: "ok" };
+        }
         case "draft":
         case "copyMermaid":
           clipboard = request.text;
@@ -318,7 +342,7 @@ try {
         overflow: document.documentElement.scrollWidth > innerWidth,
         actions: [
           ...document.querySelectorAll(
-            '[data-testid="dependency-delete-confirm"], [data-testid="dependency-delete-cancel"], [data-testid="dependency-picker-close"]',
+            '[data-testid="dependency-delete-confirm"], [data-testid="dependency-delete-cancel"], [data-testid="dependency-picker-close"], [data-testid="dependency-graph-close"], [data-testid="dependency-graph-mode"], .dependency-diagram-tools',
           ),
         ].map((element) => {
           const box = element.getBoundingClientRect();
@@ -342,7 +366,7 @@ try {
         JSON.stringify(geometry),
       );
       await page.screenshot({ path: join(evidence, png) });
-      const receipt = `${state}-compact-${dark ? "dark" : "light"}.json`;
+      const receipt = `${state}-${layout}-${dark ? "dark" : "light"}.json`;
       writeFileSync(
         join(evidence, receipt),
         JSON.stringify(
@@ -618,16 +642,9 @@ try {
     "graph-list",
     "Compact opens on the accessible Depends on, Blocks, Lightest next and root details list",
   );
-  await page.getByRole("button", { name: "Diagram", exact: true }).click();
-  await expect(
-    page
-      .frameLocator('[data-testid="dependency-graph-diagram"]')
-      .locator(".pele-node:not(.graph-hidden)"),
-  ).toHaveCount(2);
-  await capture(
-    "graph-diagram",
-    "Explicit Diagram toggle draws the canonical local Pele resource",
-  );
+  await page
+    .getByRole("button", { name: "Graph details", exact: true })
+    .click();
   await page.getByTestId("dependency-graph-copy-mermaid").click();
   assert.equal(
     clipboard,
@@ -641,6 +658,19 @@ try {
         }),
       )
     ).mermaid,
+  );
+  await page
+    .getByRole("button", { name: "Graph details", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Diagram", exact: true }).click();
+  await expect(
+    page
+      .frameLocator('[data-testid="dependency-graph-diagram"]')
+      .locator(".pele-node:not(.graph-hidden)"),
+  ).toHaveCount(2);
+  await capture(
+    "graph-diagram",
+    "Explicit Diagram toggle draws the canonical local Pele resource",
   );
   await page.setViewportSize({ width: 1100, height: 720 });
   await page.evaluate(() =>
@@ -668,7 +698,9 @@ try {
   await openGraph();
   await page.getByRole("button", { name: "Diagram", exact: true }).click();
   await expect(
-    page.getByRole("status").filter({ hasText: "Couldn't draw Dependencies." }),
+    page.getByRole("status").filter({
+      hasText: "Couldn't draw the diagram. The list below is complete.",
+    }),
   ).toBeVisible();
   await expect(page.getByTestId("dependency-graph-details")).toBeVisible();
   await capture(
@@ -711,9 +743,31 @@ try {
   await expect(
     page.getByTestId(`dependency-choice-${lastDependent}`),
   ).toBeAttached();
-  await page
-    .getByTestId(`dependency-choice-${lastDependent}`)
-    .scrollIntoViewIfNeeded();
+  const lastChoice = page.locator(".dependency-choice").last();
+  await lastChoice.scrollIntoViewIfNeeded();
+  const lastChoiceBounds = await lastChoice.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const region = element
+      .closest(".dependency-scroll")
+      ?.getBoundingClientRect();
+    return {
+      top: box.top,
+      bottom: box.bottom,
+      regionTop: region?.top,
+      regionBottom: region?.bottom,
+    };
+  });
+  writeFileSync(
+    join(evidence, "picker-last-bounds.json"),
+    JSON.stringify(lastChoiceBounds),
+  );
+  assert.ok(
+    lastChoiceBounds.regionTop !== undefined &&
+      lastChoiceBounds.regionBottom !== undefined &&
+      lastChoiceBounds.top >= lastChoiceBounds.regionTop - 0.5 &&
+      lastChoiceBounds.bottom <= lastChoiceBounds.regionBottom + 0.5,
+    JSON.stringify(lastChoiceBounds),
+  );
   await capture(
     "picker-long-last",
     "Profile-wide candidate list reaches its last long row while Close remains in the Compact viewport",
@@ -725,13 +779,15 @@ try {
     join(evidence, "result.json"),
     JSON.stringify(
       {
-        status: "CHECKPOINT2_PARTIAL",
+        status: "DAG_INTERMEDIATE_PARTIAL",
         exit: 0,
         binaries,
         fixture: { blocker, blocked, resolved, ready, plain },
         limits: [
           "No native Electron IPC/safeStorage proof",
-          "Checkpoint1 includes only current implemented states; long-list geometry and complete matrix follow",
+          "Production renderer with compiled scratch server and real SSE; only literal assertions in this driver are proved. Complete DAG matrix and full client suites pending.",
+          "Binary source and embedded version are recorded in binaries; this intermediate cache is not a final-source provenance claim.",
+          "Copy as Mermaid proves the validated host request carries exact server text; native clipboard is unproven here.",
         ],
       },
       null,
@@ -739,6 +795,7 @@ try {
     ),
   );
 } finally {
+  if (stream) await Effect.runPromise(Fiber.interrupt(stream));
   await browser?.close();
   if (server && server.exitCode === null && server.signalCode === null) {
     const exited = new Promise<void>((done) =>

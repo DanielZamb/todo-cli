@@ -191,6 +191,14 @@ it("projects structured recovery without agent copy and rejects missing exit pai
   expect(dependencyAdvice(14)).toBe(
     "This Task depends on 14 Tasks. That's a lot for one Task. It might be a whole Project, or it might be clearer split under a few more parent Tasks.",
   );
+  expect(
+    errorReply({
+      details: { dependency_error: invalid },
+      message: "unsafe outer agent text",
+    }).message,
+  ).toBe(
+    "Todo returned an incompatible Dependency response. Reload after updating the server.",
+  );
 });
 it("keeps no-blocker and terminal rows calm and counts unresolved direct blockers", () => {
   const linked = dependencyTask("linked");

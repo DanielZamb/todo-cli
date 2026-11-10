@@ -1,5 +1,5 @@
 import type { Task } from "@todo/domain";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, X } from "lucide-react";
 import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 import { Alert, AlertDescription } from "./components/ui/alert.tsx";
 import { Button } from "./components/ui/button.tsx";
@@ -31,11 +31,13 @@ export function DependencyErrorStatus({
   reload,
   followUp,
   attempted,
+  dismiss,
 }: {
   failure: Extract<Reply, { _tag: "error" | "conflict" }>;
   context: DependencyContext;
   tasks: readonly Task[];
   attempted?: Task | null;
+  dismiss?: () => void;
   reload?: () => void;
   followUp?: ((id: Task["id"]) => void) | undefined;
 }) {
@@ -49,6 +51,17 @@ export function DependencyErrorStatus({
       data-testid="dependency-error"
       className="dependency-error-region"
     >
+      {dismiss && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="dependency-error-dismiss"
+          aria-label="Dismiss"
+          onClick={dismiss}
+        >
+          <X />
+        </Button>
+      )}
       <AlertDescription className="flex flex-col gap-2 break-words">
         <p>
           {attempted ? `Can't add ${attempted.title}. ` : ""}
@@ -160,7 +173,9 @@ export function DependencyPicker({
         finalFocus={returnFocus}
         showCloseButton={false}
       >
-        <DialogTitle>
+        <DialogTitle
+          title={`${root?.title ?? state.scope.root} ${state.direction === "dependsOn" ? "depends on…" : "blocks…"}`}
+        >
           {root?.title ?? state.scope.root}{" "}
           {state.direction === "dependsOn" ? "depends on…" : "blocks…"}
         </DialogTitle>
@@ -175,7 +190,9 @@ export function DependencyPicker({
             if (value[0] === "dependsOn" || value[0] === "blocks")
               controller.direction(value[0]);
           }}
-          variant="outline"
+          variant="segment"
+          size="sm"
+          spacing={0}
         >
           <ToggleGroupItem
             value="dependsOn"
@@ -213,6 +230,10 @@ export function DependencyPicker({
             context="add"
             tasks={tasks}
             reload={() => void controller.reload(request)}
+            dismiss={() => {
+              controller.dismissFailure();
+              search.current?.focus();
+            }}
           />
         )}
         <div ref={scroll} className="dependency-scroll">
@@ -328,19 +349,6 @@ export function DependencyPicker({
           <p className="dependency-save-hint text-muted-foreground">
             Changes save immediately.
           </p>
-          {state.failure && (
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-label="Dismiss error"
-              onClick={() => {
-                controller.dismissFailure();
-                search.current?.focus();
-              }}
-            >
-              Dismiss
-            </Button>
-          )}
           <Button
             variant="outline"
             data-testid="dependency-picker-close"

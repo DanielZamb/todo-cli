@@ -1653,6 +1653,7 @@ function App() {
     >
       <DependencyGraphDialog
         controller={dependencyGraph}
+        projects={catalog?.projects ?? []}
         request={request}
         compact={compact}
         dark={dark}

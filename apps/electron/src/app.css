@@ -1673,6 +1673,7 @@ nav {
   overflow-wrap: anywhere;
 }
 .dependency-scroll {
+  flex: 1;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
@@ -1681,6 +1682,9 @@ nav {
   gap: 12px;
 }
 .dependency-dialog [data-slot="dialog-footer"] {
+  flex-shrink: 0;
+}
+.dependency-dialog > :not(.dependency-scroll) {
   flex-shrink: 0;
 }
 .dependency-choices {
@@ -1794,30 +1798,7 @@ nav {
   height: 20px;
   animation: spin 1s linear infinite;
 }
-.dependency-error-region {
-  min-height: 0;
-  max-height: 140px;
-  flex-shrink: 0;
-  overflow: hidden;
-}
-.dependency-error-region [data-slot="alert-description"] {
-  min-height: 0;
-  max-height: 122px;
-  display: flex;
-  flex-direction: column;
-}
-.dependency-error-region .dependency-witness {
-  min-height: 0;
-  overflow: auto;
-  flex-shrink: 1;
-  padding-left: 0;
-  list-style: none;
-}
 
-.dependency-error-region [data-slot="alert-description"] p {
-  flex-shrink: 0;
-  margin: 0;
-}
 .dependency-row-state {
   color: var(--muted-foreground);
 }
@@ -1850,20 +1831,6 @@ nav {
 .dependency-choice-pending [data-slot="checkbox"] {
   opacity: 0;
 }
-.dependency-error-region {
-  max-height: 128px;
-}
-.dependency-error-region [data-slot="alert-description"] {
-  max-height: 110px;
-  text-wrap: wrap;
-  gap: 4px;
-}
-.dependency-error-region .dependency-witness {
-  flex: 1 1 40px;
-  min-height: 20px;
-  max-height: 40px;
-  line-height: 20px;
-}
 .dependency-graph-dialog {
   display: flex;
   flex-direction: column;
@@ -1875,7 +1842,7 @@ nav {
 }
 .dependency-graph-controls {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
   flex-shrink: 0;
 }
@@ -1884,14 +1851,22 @@ nav {
   flex: 1;
   overflow: auto;
   display: flex;
-  gap: 16px;
+  flex-direction: column;
+  gap: 12px;
+}
+.dependency-graph-body[data-diagram="true"] {
+  flex-direction: row;
+  overflow: hidden;
 }
 .dependency-graph-native {
   min-width: 0;
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+}
+.dependency-graph-body[data-diagram="true"] .dependency-graph-native {
+  overflow: auto;
 }
 .dependency-graph-section h3 {
   font-weight: 600;
@@ -1922,18 +1897,25 @@ nav {
   overflow-wrap: anywhere;
 }
 .dependency-diagram-region {
+  position: relative;
   min-width: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.dependency-diagram-region iframe {
-  width: 100%;
-  height: 300px;
-  min-height: 180px;
+  flex: 1.5;
+  overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 8px;
+}
+.dependency-diagram-region iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.dependency-diagram-tools {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  gap: 4px;
 }
 .dependency-graph-dialog [data-slot="dialog-footer"] {
   flex-shrink: 0;
@@ -1942,15 +1924,9 @@ nav {
 }
 @media (max-width: 500px) {
   .dependency-graph-dialog {
-    padding: 16px;
+    padding: 12px;
     width: calc(100vw - 16px);
     height: calc(100dvh - 16px);
-  }
-  .dependency-graph-body {
-    flex-direction: column;
-  }
-  .dependency-diagram-region iframe {
-    height: 180px;
   }
 }
 .editor-dependencies {
@@ -1976,11 +1952,56 @@ nav {
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+.dependency-error-region {
+  position: relative;
+  flex-shrink: 0;
+  min-height: 0;
+}
+.dependency-error-region [data-slot="alert-description"] {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-wrap: wrap;
+}
+.dependency-error-region [data-slot="alert-description"] p {
+  margin: 0;
+  flex-shrink: 0;
+}
+.dependency-error-region:has(.dependency-error-dismiss)
+  [data-slot="alert-description"]
+  > p:first-child {
+  padding-right: 22px;
+}
+.dependency-error-dismiss {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+}
 .dependency-error-region .dependency-witness {
-  flex: 0 0 20px;
-  height: 20px;
+  flex: 0 0 auto;
+  max-height: 60px;
+  line-height: 20px;
+  overflow: auto;
+  padding: 0;
+  list-style: none;
   scroll-snap-type: y mandatory;
 }
 .dependency-error-region .dependency-witness li {
   scroll-snap-align: start;
+}
+@media (max-width: 500px) {
+  [data-testid="dependency-picker"] {
+    height: calc(100dvh - 16px);
+    padding: 12px;
+    gap: 6px;
+  }
+  [data-testid="dependency-picker"] [data-slot="dialog-title"] {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  [data-testid="dependency-picker"] [data-slot="dialog-footer"] {
+    padding-block: 0;
+  }
 }
