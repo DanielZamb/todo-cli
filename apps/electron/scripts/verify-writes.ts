@@ -1,12 +1,13 @@
 import { execFileSync, spawn } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { _electron, type ElectronApplication, expect } from "@playwright/test";
 import { CONTRACT_ID } from "@todo/api";
 import { OpLogEntry, Task } from "@todo/domain";
 import { Schema } from "effect";
+import { hiddenHostOptions } from "./hidden-host.ts";
 import { openProfileDeletion, selectProfile } from "./profile-menu.ts";
+import { seriesRetryFailureMessage } from "./series-retry-diagnostics.ts";
 import { verifyCompact } from "./verify-compact.ts";
 import { verifyCompactPresentation } from "./verify-compact-presentation.ts";
 import { type AuthRequest, verifyHostAuth } from "./verify-host-auth.ts";
@@ -71,6 +72,17 @@ const stopServer = async () => {
 };
 const receipts: unknown[] = [];
 const authRequests: AuthRequest[] = [];
+const skipAttempts: {
+  path: string;
+  requested_at: string;
+  request_body: string | undefined;
+  response?: {
+    status: number;
+    received_at: string;
+    body?: string;
+    body_error?: string;
+  };
+}[] = [];
 let desktop: ElectronApplication | undefined;
 let upstream = "";
 const conflictRefresh = {
@@ -86,6 +98,15 @@ const proxy = Bun.serve({
   async fetch(request) {
     const url = new URL(request.url);
     const body = request.method === "GET" ? undefined : await request.text();
+    const skipAttempt: (typeof skipAttempts)[number] | undefined =
+      url.pathname.endsWith("/skip")
+        ? {
+            path: url.pathname,
+            requested_at: new Date().toISOString(),
+            request_body: body,
+          }
+        : undefined;
+    if (skipAttempt) skipAttempts.push(skipAttempt);
     let response: Response;
     try {
       response = await fetch(`${upstream}${url.pathname}${url.search}`, {
@@ -96,6 +117,24 @@ const proxy = Bun.serve({
     } catch (error) {
       if (!serverStopping) throw error;
       return new Response("Scratch server stopped", { status: 503 });
+    }
+    if (skipAttempt) {
+      const reply: NonNullable<(typeof skipAttempts)[number]["response"]> = {
+        status: response.status,
+        received_at: new Date().toISOString(),
+      };
+      skipAttempt.response = reply;
+      void response
+        .clone()
+        .text()
+        .then(
+          (body) => {
+            reply.body = body;
+          },
+          (error: unknown) => {
+            reply.body_error = String(error);
+          },
+        );
     }
     if (
       conflictRefresh.armed &&
@@ -225,17 +264,17 @@ try {
   cli("add", "Series draft");
   cli("add", "Revert race A");
   cli("add", "Revert race B");
-  const electronHost: string = createRequire(import.meta.url)("electron");
-  desktop = await _electron.launch({
-    executablePath: electronHost,
-    args: [resolve(import.meta.dirname, "../dist/verification/write-host.mjs")],
-    env: {
-      ...env,
-      TODO_SERVER_URL: `http://127.0.0.1:${proxy.port}`,
-      TODO_ELECTRON_DATA: join(scratch, "electron"),
-    },
-    timeout: 60000,
-  });
+
+  desktop = await _electron.launch(
+    hiddenHostOptions({
+      env: {
+        ...env,
+        TODO_SERVER_URL: `http://127.0.0.1:${proxy.port}`,
+        TODO_ELECTRON_DATA: join(scratch, "electron"),
+      },
+      timeout: 60000,
+    }),
+  );
   desktop.process().stderr?.on("data", (chunk) =>
     writeFileSync(join(evidence, "electron.log"), String(chunk), {
       flag: "a",
@@ -831,11 +870,31 @@ try {
   await expect(
     page.getByRole("heading", { name: "Resolve task conflict" }),
   ).toBeVisible();
+  const skipRetryStart = skipAttempts.length;
   await page.getByRole("button", { name: "Retry action", exact: true }).click();
   const afterSkip = await tasks();
-  expect(afterSkip.find((task) => task.id === series.id)?.status).toBe(
-    "cancelled",
-  );
+  try {
+    expect(afterSkip.find((task) => task.id === series.id)?.status).toBe(
+      "cancelled",
+    );
+  } catch (cause) {
+    throw new Error(
+      await seriesRetryFailureMessage({
+        occurrenceId: series.id,
+        readStatus: async () =>
+          Schema.decodeUnknownSync(Task)(
+            await api(`/profiles/work/tasks/${series.id}`),
+          ).status,
+        http: () =>
+          skipAttempts
+            .slice(skipRetryStart)
+            .filter((attempt) =>
+              attempt.path.endsWith(`/tasks/${series.id}/skip`),
+            ),
+      }),
+      { cause },
+    );
+  }
   const next = afterSkip.find(
     (task) =>
       task.occurrence?.series_id === series.occurrence?.series_id &&
@@ -849,7 +908,7 @@ try {
     .getByRole("button", { name: "Skip Occurrence", exact: true })
     .click();
   await expect(page.getByRole("dialog").getByRole("alert")).toHaveText(
-    "validation",
+    "validation\nerror 2 - validation or usage",
   );
   await shot("series-server-rejection");
   expect(

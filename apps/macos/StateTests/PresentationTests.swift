@@ -124,6 +124,7 @@ struct CompactFormattingTests {
         #expect([0, 1, 2].map { TaskCount.text($0) } == ["0 tasks", "1 task", "2 tasks"])
         #expect(TaskCount.text(1, capitalized: true) == "1 Task")
         #expect([0, 1, 2].map { TaskCount.text($0, capitalized: true) } == ["0 Tasks", "1 Task", "2 Tasks"])
+        #expect([0, 1, 2].map { TaskCount.text($0, singular: "Dependency", plural: "Dependencies") } == ["0 Dependencies", "1 Dependency", "2 Dependencies"])
     }
     @Test func foreignZoneIsVisible() {
         var calendar = Calendar(identifier: .gregorian)

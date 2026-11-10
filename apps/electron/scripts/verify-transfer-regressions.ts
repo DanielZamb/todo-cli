@@ -12,16 +12,14 @@ export async function verifyTransferRegressions(input: {
   api: (path: string, method?: string, payload?: unknown) => Promise<unknown>;
 }) {
   const { page, evidence, api } = input;
-  const expand = page.getByRole("button", {
-    name: "Expand window",
-    exact: true,
+  const mode = page.getByRole("button", {
+    name: /^(Compact mode|Expand window)$/,
   });
-  if (await expand.count()) await expand.click();
-  const light = page.getByRole("button", {
-    name: "Light appearance",
-    exact: true,
-  });
-  if (await light.count()) await light.click();
+  await expect(mode).toBeVisible();
+  if ((await mode.getAttribute("aria-pressed")) === "true") await mode.click();
+  await expect(mode).toHaveAttribute("aria-pressed", "false");
+  await setAppearance(page, "light");
+  await expect(page.locator("html")).not.toHaveClass(/\bdark\b/);
   const results: { name: string; passed: boolean; error?: string }[] = [];
   const create = async (profile: string, title: string) =>
     Schema.decodeUnknownSync(Task)(
@@ -198,7 +196,7 @@ export async function verifyTransferRegressions(input: {
             exact: true,
           });
           await expect(dialog.getByRole("alert")).toHaveText(
-            '"Personal" already has a Task with external id "c11:move-clash". Choose another Profile.',
+            '"Personal" already has a Task with external id "c11:move-clash". Choose another Profile.\nerror 2 - validation or usage',
           );
           const button = await dialog
             .getByRole("button", { name: "Cancel", exact: true })

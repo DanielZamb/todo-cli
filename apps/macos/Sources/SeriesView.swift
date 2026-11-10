@@ -2,13 +2,15 @@ import SwiftUI
 
 struct SeriesView: View {
     @Bindable var model: TodoModel
+    var compact = false
     @State private var draft: RecurrenceDraft
     @State private var start: TaskTime?
     private let original: SeriesDefinition?
     private var custom: Bool { original.map { RecurrenceDraft(rule: $0.recurrence.rrule).preset == .custom } ?? false }
 
-    init(model: TodoModel) {
+    init(model: TodoModel, compact: Bool = false) {
         self.model = model
+        self.compact = compact
         original = model.series
         _draft = State(initialValue: RecurrenceDraft(rule: model.recurrenceDraft?.rrule ?? model.series?.recurrence.rrule ?? "FREQ=DAILY"))
         let formatter = DateFormatter()
@@ -21,6 +23,7 @@ struct SeriesView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text(original == nil ? "Create Series" : "Series recurrence").font(.title2.weight(.semibold))
             Text(original == nil ? "Create a new Series using these task details. The current Task stays in this Profile." : "Changes apply to this Occurrence and future Occurrences.").foregroundStyle(.secondary)
+            ScrollView {
             Form {
                 Picker("Repeat", selection: $draft.preset) {
                     ForEach(RecurrencePreset.allCases.filter { $0 != .custom || custom }, id: \.self) { Text($0.rawValue).tag($0) }
@@ -45,12 +48,20 @@ struct SeriesView: View {
                 }
                 TimeField(title: "Starts", value: $start)
             }.formStyle(.grouped).scrollDisabled(true).scrollContentBackground(.hidden).disabled(custom || model.busy)
+            if original == nil {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("First Occurrence Dependencies").font(.subheadline.weight(.semibold))
+                    Text("Later Occurrences start without Dependencies.").font(.caption).foregroundStyle(.secondary)
+                    InitialDependencySelection(tasks: Binding(get: { model.dependencies.firstOccurrenceInitial }, set: { model.dependencies.firstOccurrenceInitial = $0 }), enabled: model.canWrite) { Task { await model.openInitialDependencyPicker(firstOccurrence: true) } }
+                }.frame(maxWidth: .infinity, alignment: .leading)
+            }
             Text(custom ? original?.recurrence.rrule ?? "" : draft.rule).font(.caption.monospaced())
             if custom { Text("This custom rule is preserved. Preset editing is unavailable.").foregroundStyle(.secondary) }
             if let dates = original?.recurrence.exdate, !dates.isEmpty {
                 Text("Excluded: " + dates.map(\.display).joined(separator: ", ")).font(.caption)
             }
             if let error = model.editorError { Text(error).foregroundStyle(TodoColors.color("destructive")) }
+            }.compactBounds("series-scroll")
             HStack {
                 if original != nil {
                     Button("Skip Occurrence") { Task { await model.write(.skipOccurrence) } }.disabled(!model.canWrite)
@@ -60,8 +71,9 @@ struct SeriesView: View {
                 Button(original == nil ? "Create Series" : "Save Series") {
                     if let start { Task { await model.saveSeries(Recurrence(dtstart: start, rrule: draft.rule, exdate: model.recurrenceDraft?.exdate ?? original?.recurrence.exdate ?? [])) } }
                 }.buttonStyle(.glassProminent).disabled(!model.canWrite || custom || !draft.valid || start == nil)
-            }
-        }.padding(24).frame(width: 580).fixedSize(horizontal: false, vertical: true)
+            }.compactBounds("series-actions")
+        }.padding(compact ? 16 : 24).frame(width: compact ? 393 : 580, height: compact ? 426 : 600)
             .interactiveDismissDisabled(model.busy)
+            .sheet(item: Binding(get: { model.dependencies.picker }, set: { if $0 == nil { model.closeDependencyPicker() } })) { _ in DependencyPickerView(model: model, compact: compact) }
     }
 }

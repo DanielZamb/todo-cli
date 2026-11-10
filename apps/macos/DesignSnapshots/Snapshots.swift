@@ -36,7 +36,7 @@ private struct TransferLayoutReceipt: Codable {
 struct Snapshots {
     @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DIR"] != nil))
     func renderScreens() async throws {
-        if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DISCOVERY_ONLY"] == "1" { return }
+        if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DISCOVERY_ONLY"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DAG_CHECKPOINT1"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DAG_CHECKPOINT2"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DAG_ONLY"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SC1_ONLY"] == "1" { return }
         NSApplication.shared.setActivationPolicy(.prohibited)
         let directory = URL(fileURLWithPath: try #require(ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DIR"]))
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -954,6 +954,17 @@ struct Snapshots {
         try JSONEncoder().encode(transferLayouts).write(to: directory.appendingPathComponent("transfer-layout.json"))
         try JSONSerialization.data(withJSONObject: compactLayouts, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("compact-layout.json"))
         #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" ? 60 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 346))
+        if !ProcessInfo.processInfo.environment.contains(where: { $0.key.hasPrefix("TODO_SNAPSHOT_") && $0.key.hasSuffix("_ONLY") && $0.value == "1" }) {
+            let discovery = try await DiscoverySnapshots.render(directory: directory)
+            let dependencies = try await DependencyMatrixSnapshots.render(directory: directory)
+            files += discovery + dependencies
+            #expect(files.count == 856)
+            #expect(Set(files).count == files.count)
+            var manifest = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: directory.appendingPathComponent("manifest.json"))) as? [String: Any])
+            manifest["files"] = files
+            manifest["counts"] = ["baseline": 346, "discovery": discovery.count, "dependencies": dependencies.count]
+            try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("manifest.json"))
+        }
     }
 
     private func fixture() -> TodoModel {

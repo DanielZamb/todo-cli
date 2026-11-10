@@ -56,7 +56,7 @@ struct HistoryEntry: Decodable, Identifiable {
     let event: Event
     var id: Int64 { seq }
     func canRevert(in entries: [Self]) -> Bool {
-        guard outcome == "committed", ["AttachmentAdded", "AttachmentRemoved", "TaskEdited", "TaskCompleted", "TaskCancelled", "TaskReopened", "TaskMovedIn", "TaskDeleted", "TaskReverted"].contains(event.kind) else { return false }
+        guard outcome == "committed", ["DependencyAdded", "DependencyRemoved", "AttachmentAdded", "AttachmentRemoved", "TaskEdited", "TaskCompleted", "TaskCancelled", "TaskReopened", "TaskMovedIn", "TaskDeleted", "TaskReverted"].contains(event.kind) else { return false }
         return !entries.contains { $0.outcome == "committed" && $0.event.originalSequence == seq }
     }
     var label: String {
@@ -65,6 +65,8 @@ struct HistoryEntry: Decodable, Identifiable {
         switch kind {
         case "TaskCreated": return event.copiedFrom.map { "Copied from \($0.profile_name) / \($0.source_task_id)" } ?? "Created"
         case "TaskEdited": return "Edited"
+        case "DependencyAdded": return "Dependency added"
+        case "DependencyRemoved": return "Dependency removed"
         case "AttachmentAdded": return "Attachment added"
         case "AttachmentRemoved": return "Attachment removed"
         case "TaskCompleted": return "Completed"
@@ -161,6 +163,7 @@ struct HistoryEntry: Decodable, Identifiable {
         let kind: String
         let occurred_at: String
         struct CopySource: Decodable { let profile_name: String; let source_task_id: String }
+        var dependencyDelta: DependencyHistoryDelta?
         var copiedFrom: CopySource?
         var originalKind: String?
         var attemptedKind: String?
@@ -172,6 +175,7 @@ struct HistoryEntry: Decodable, Identifiable {
 
         init(kind: String, occurred_at: String) { self.kind = kind; self.occurred_at = occurred_at }
         private enum CodingKeys: String, CodingKey {
+            case entity_version, dependencies, dependent_id, blocker_id, from_version, to_version
             case copied_from, kind, occurred_at, original_kind, attempted_kind, original_seq, series, series_before, series_after, task, before, after, next_occurrences, tasks, replay, task_ids
         }
         init(from decoder: any Decoder) throws {
@@ -182,6 +186,14 @@ struct HistoryEntry: Decodable, Identifiable {
             originalKind = try values.decodeIfPresent(String.self, forKey: .original_kind)
             attemptedKind = try values.decodeIfPresent(String.self, forKey: .attempted_kind)
             originalSequence = try values.decodeIfPresent(Int64.self, forKey: .original_seq)
+            let version = try values.decodeIfPresent(Int.self, forKey: .entity_version) ?? 1
+            if kind == "DependencyAdded" || kind == "DependencyRemoved" {
+                guard version == 1 else { throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Unsupported Dependency History version")) }
+                dependencyDelta = try .edge(added: kind == "DependencyAdded", dependent: values.decode(String.self, forKey: .dependent_id), blocker: values.decode(String.self, forKey: .blocker_id), fromVersion: values.decode(Int.self, forKey: .from_version), toVersion: values.decode(Int.self, forKey: .to_version))
+            } else if ["TaskCreated", "TaskDeleted", "TaskMovedOut", "TaskReverted"].contains(kind) {
+                if version == 2 { dependencyDelta = .lifecycle(try values.decode(DependencyChanges.self, forKey: .dependencies)) }
+                else if version != 1 || values.contains(.dependencies) { throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Unsupported Dependency History version")) }
+            }
             switch kind {
             case "TaskCreated":
                 seriesChanges = [SeriesChange(before: nil, after: try values.decodeIfPresent(SeriesDefinition.self, forKey: .series))]
@@ -268,7 +280,10 @@ struct SnapshotRestorePreview: Decodable {
 enum TaskCount {
     static func text(_ count: Int, capitalized: Bool = false) -> String {
         let noun = capitalized ? "Task" : "task"
-        return "\(count) \(noun)\(count == 1 ? "" : "s")"
+        return text(count, singular: noun, plural: noun + "s")
+    }
+    static func text(_ count: Int, singular: String, plural: String) -> String {
+        "\(count) \(count == 1 ? singular : plural)"
     }
 }
 

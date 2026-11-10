@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
-import { type ChildProcess, spawn, spawnSync } from "node:child_process";
+import {
+  type ChildProcess,
+  execFileSync,
+  spawn,
+  spawnSync,
+} from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -105,6 +110,9 @@ try {
       }),
     )
   ).credential;
+  execFileSync("sh", [join(root, "scripts/disk-guard.sh")], {
+    stdio: ["inherit", process.stderr.fd, process.stderr.fd],
+  });
   const bundle = await build({
     configFile: join(root, "apps/electron/vite.config.ts"),
     root: join(root, "apps/electron"),
@@ -252,7 +260,9 @@ try {
     page.getByText("Updated · Version 2", { exact: true }),
   ).toHaveCount(1);
   await expect(
-    page.getByText("Conflict · Version 2. Reload Tasks.", { exact: true }),
+    page.getByText("Conflict · Version 2. Reload Tasks.\nerror 4 - Conflict", {
+      exact: true,
+    }),
   ).toHaveCount(1);
   assert.equal(cli("show", a.id).task.row_version, 2);
   assert.equal(cli("show", a.id).task.priority, "P1");
@@ -261,7 +271,9 @@ try {
   await capture("conflict");
   await page.getByRole("button", { name: "Reload Tasks", exact: true }).click();
   await expect(
-    page.getByText("Conflict · Version 2. Reload Tasks.", { exact: true }),
+    page.getByText("Conflict · Version 2. Reload Tasks.\nerror 4 - Conflict", {
+      exact: true,
+    }),
   ).toHaveCount(0);
   await expect(
     page.getByRole("checkbox", {

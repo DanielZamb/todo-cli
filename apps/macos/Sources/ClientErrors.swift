@@ -5,7 +5,10 @@ enum ClientErrorPosition { case message, editor, history, discovery, taskLoad, q
 
 extension TodoModel {
     func serverError(at position: ClientErrorPosition, text: String?) -> ServerFailure? {
-        guard let failure = serverErrors[position], failure.humanMessage == text else { return nil }
+        guard let failure = serverErrors[position] else { return nil }
+        let notice = DependencyNotice.project(failure, context: dependencyErrorContexts[position] ?? .link)
+        let projected = [notice.message, notice.detail].compactMap { $0 }.joined(separator: "\n")
+        guard failure.nativeMessage == text || failure.isDependencyFailure && projected == text else { return nil }
         return failure
     }
     func lookupError(at position: ClientErrorPosition, text: String?) -> ServerFailure? {
@@ -46,9 +49,22 @@ struct ClientErrorNotice: View {
     let model: TodoModel
     let text: String
     let position: ClientErrorPosition
+    var dependency: DependencyNotice? = nil
+    var dependencyWarning = false
+    var retry: (() -> Void)? = nil
     var body: some View {
-        if let failure = model.serverError(at: position, text: text) {
-            ServerErrorNotice(model: model, failure: failure, neutral: position == .discovery)
+        if let dependency {
+            VStack(alignment: .leading, spacing: 8) {
+                DependencyNoticeContent(model: model, notice: dependency, warning: dependencyWarning)
+                if let retry {
+                    Button("Retry", action: retry).accessibilityIdentifier("dependency-graph-retry")
+                }
+            }
+                .padding(8).frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 6))
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color(nsColor: .separatorColor), lineWidth: 1))
+        } else if let failure = model.serverError(at: position, text: text) {
+            ServerErrorNotice(model: model, failure: failure, neutral: position == .discovery, dependencyContext: model.dependencyErrorContexts[position] ?? .link)
         } else {
             Text(text).foregroundStyle(position == .discovery ? Color.primary : TodoColors.color("destructive")).fixedSize(horizontal: false, vertical: true)
         }
@@ -60,8 +76,10 @@ struct ServerErrorNotice: View {
     let failure: ServerFailure
     var neutral = false
     var currentVersion: Int? = nil
+    var dependencyContext: DependencyActionContext = .link
     var body: some View {
-        if failure.isTaskLookup { TaskLookupErrorNotice(model: model, failure: failure) }
+        if failure.isDependencyFailure { DependencyNoticeView(model: model, notice: .project(failure, context: dependencyContext)) }
+        else if failure.isTaskLookup { TaskLookupErrorNotice(model: model, failure: failure) }
         else {
             VStack(alignment: .leading, spacing: 4) {
                 Text(failure.primaryMessage).foregroundStyle(neutral ? Color.primary : TodoColors.color("destructive"))

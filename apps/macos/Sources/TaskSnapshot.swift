@@ -4,6 +4,11 @@ struct TaskSnapshot: Codable, Identifiable, Equatable, Sendable {
     let id: String
     let profile_id: String
     let row_version: Int
+    var depends_on: [String]? = nil
+    var blocks: [String]? = nil
+    var ready: Bool? = nil
+    var blocked: Bool? = nil
+    var remaining_energy: RemainingEnergy? = nil
     var search_matches: [TaskSearchMatch]? = nil
     var external_id: String? = nil
     let title: String
@@ -183,4 +188,15 @@ struct ClientConfiguration {
         guard !authority.hasSuffix(":") else { return nil }
         return url
     }
+}
+
+struct DependencyEdge: Codable, Equatable, Sendable {
+    let profile_id: String
+    let dependent_id: String
+    let blocker_id: String
+}
+
+struct RemainingEnergy: Codable, Equatable, Sendable {
+    let energy: Int
+    let unweighted: Int
 }

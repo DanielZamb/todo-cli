@@ -29,6 +29,9 @@ public struct BearerMiddleware: ClientMiddleware {
             var data: Data?
             if let responseBody { data = try await Data(collecting: responseBody, upTo: 65_536) }
             let detail = data.flatMap { try? JSONDecoder().decode(ServerFailure.self, from: $0) }
+            if let detail, ServerFailure.dependencyCodes.contains(detail.code ?? ""), detail.dependencyError == nil {
+                throw RequestFailure(status: status, message: "The server response could not be read. Your draft is preserved.", code: "incompatible_response")
+            }
             throw RequestFailure(status: status, body: detail ?? ServerFailure(message: "The server rejected this request (HTTP \(status))."))
         }
         return (response, responseBody)
@@ -70,6 +73,9 @@ public struct FailureDetails: Codable, Sendable {
         current_version = try values.decodeIfPresent(Int.self, forKey: .current_version)
         raw = try OpenAPIValueContainer(from: decoder)
     }
+    public func decoded<Value: Decodable>(_ type: Value.Type) throws -> Value {
+        try JSONDecoder().decode(type, from: JSONEncoder().encode(self))
+    }
     public func encode(to encoder: Encoder) throws {
         if let raw { try raw.encode(to: encoder); return }
         var values = encoder.container(keyedBy: CodingKeys.self)
@@ -80,6 +86,7 @@ public struct FailureDetails: Codable, Sendable {
 }
 
 public struct ServerFailure: Error, Codable, Sendable {
+    public var generated_at: String? = nil
     public let message: String
     public let code: String?
     public let exit_code: Int?
@@ -87,6 +94,11 @@ public struct ServerFailure: Error, Codable, Sendable {
     public let details: FailureDetails?
     public init(message: String, code: String? = nil, exitCode: Int? = nil, exitMeaning: String? = nil, details: FailureDetails? = nil) {
         self.message = message; self.code = code; exit_code = exitCode; exit_meaning = exitMeaning; self.details = details
+    }
+    public static let dependencyCodes: Set<String> = ["dependency_cycle", "too_many_dependencies", "blocked", "blocks_done_task", "has_dependencies", "dependency_profile_mismatch"]
+    public var dependencyError: Components.Schemas.DependencyError? {
+        guard Self.dependencyCodes.contains(code ?? ""), exit_code == 2, exit_meaning == "validation or usage", let data = try? JSONEncoder().encode(self) else { return nil }
+        return try? JSONDecoder().decode(Components.Schemas.DependencyError.self, from: data)
     }
     public var isTaskLookup: Bool { details?.profile != nil && details?.task_id != nil }
     public var primaryMessage: String {

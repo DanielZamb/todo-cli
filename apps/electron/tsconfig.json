@@ -9,5 +9,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "test", "scripts", "vite.config.ts"]
+  "include": ["src", "test", "scripts", "vite.config.ts", "graph-browser"]
 }

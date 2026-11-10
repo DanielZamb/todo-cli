@@ -29,6 +29,16 @@ struct EditorView: View {
                         } else {
                             editorForm(draft: draft)
                         }
+                        if let task = model.editor?.base {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Dependencies").font(.headline)
+                                HStack {
+                                    Button("Add dependency", systemImage: "link") { Task { await model.openDependencyPicker(task) } }
+                                        .disabled(!model.canWrite).accessibilityIdentifier("dependency-add")
+                                    Button("View Dependencies") { Task { await model.readDependencyGraph(root: task.id) } }
+                                }
+                            }
+                        }
                         AttachmentsSection(model: model)
                         DisclosureGroup("History", isExpanded: $model.showingHistory) {
                             if let error = model.historyError { ClientErrorNotice(model: model, text: error, position: .history) }
@@ -45,6 +55,7 @@ struct EditorView: View {
                                             }
                                             if entry.outcome == "rejected" { Text("Rejected attempt. " + entry.rejectionReason) }
                                             if entry.event.kind == "TaskHistoryRedacted" { Text("Content erased by Purge.") }
+                                            DependencyHistoryView(model: model, entry: entry)
                                             ForEach(entry.fieldChanges, id: \.field) { change in
                                                 VStack(alignment: .leading, spacing: 2) {
                                                     Text(change.field).foregroundStyle(Color.secondary)
@@ -115,7 +126,7 @@ struct EditorView: View {
                     await model.openSeries(presenting: false)
                 }
             }
-            .sheet(isPresented: $model.showingSeries) { SeriesView(model: model) }
+            .sheet(isPresented: $model.showingSeries) { SeriesView(model: model, compact: compact) }
             .sheet(item: $newMetadata) { kind in
                 MetadataNameSheet(kind: kind, canWrite: model.canWrite) { name in
                     model.editor?.addMetadata(kind, name: name, projects: model.projects, tags: model.tags)
@@ -521,6 +532,16 @@ struct TaskTransferResultView: View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
                 Label(result.message, systemImage: "checkmark.circle").foregroundStyle(TodoColors.color("success"))
+                if !result.removedDependencies.isEmpty {
+                    Text("Removed Dependencies").font(.caption.weight(.semibold))
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ForEach(Array(result.removedDependencies.enumerated()), id: \.offset) { _, edge in
+                                Text("\(dependencyTitle(edge.blocker_id)) blocks \(dependencyTitle(edge.dependent_id))").font(.caption).textSelection(.enabled)
+                            }
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                    }.frame(maxHeight: 120)
+                }
                 Button(result.openTitle) { Task { await model.openTransferredTask() } }.buttonStyle(.borderless).disabled(model.busy)
             }
             Spacer(minLength: 0)
@@ -528,11 +549,13 @@ struct TaskTransferResultView: View {
                 .buttonStyle(.borderless).accessibilityLabel("Dismiss transfer result")
         }.padding(12).frame(maxWidth: .infinity, alignment: .leading).accessibilityIdentifier("task-transfer-result")
     }
+    private func dependencyTitle(_ id: String) -> String {
+        id == result.task.id ? result.task.title : model.tasks.first { $0.id == id }?.title ?? id
+    }
 }
 
 struct EditorTaskActions: View {
     @Bindable var model: TodoModel
-    @State private var confirmDelete = false
     var body: some View {
                 Menu {
                     if let task = model.editor?.base {
@@ -544,18 +567,15 @@ struct EditorTaskActions: View {
                         }
                         Divider()
                         TaskTransferActions(model: model, task: task)
-                        Button("Delete task", role: .destructive) { confirmDelete = true }
+                        Button("Add dependency…") { Task { await model.openDependencyPicker(task) } }
+                        Button("Delete task", role: .destructive) { Task { await model.openDependencyDelete(task) } }
                     }
                 } label: {
                     Image(systemName: "ellipsis")
                 }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().disabled(!model.canWrite || model.conflict != nil)
                     .accessibilityLabel("Task actions")
             .frame(minWidth: 28, minHeight: 28)
-            .confirmationDialog("Delete this task?", isPresented: $confirmDelete) {
-                if let task = model.editor?.base {
-                    Button("Delete task", role: .destructive) { Task { await model.deleteTask(task) } }
-                }
-            }
+
 
     }
 }
