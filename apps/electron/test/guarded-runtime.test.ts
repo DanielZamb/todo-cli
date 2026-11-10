@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import {
+  copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -24,12 +25,17 @@ const helper = repositoryInput(
 );
 function control(
   name: string,
-  mode: "api" | "sync" | "async" | "ordinary",
+  mode: "api" | "silent" | "sync" | "async" | "ordinary",
   fail: boolean,
 ) {
   const fixture = mkdtempSync(join(tmpdir(), "todo-runtime-control-"));
   try {
     mkdirSync(join(fixture, "scripts"));
+    const helpers = join(fixture, "apps/electron/scripts");
+    mkdirSync(helpers, { recursive: true });
+    const quietGuard = join(root, "apps/electron/scripts/guarded-disk.sh");
+    if (existsSync(quietGuard))
+      copyFileSync(quietGuard, join(helpers, "guarded-disk.sh"));
     const guard = join(fixture, "scripts/disk-guard.sh");
     writeFileSync(
       guard,
@@ -43,12 +49,15 @@ function control(
 const { execFileSync } = require("node:child_process");
 const { installBuildGuard } = require(${JSON.stringify(helper)});
 const mode = ${JSON.stringify(mode)};
-if (mode === "api") {
+if (mode === "api" || mode === "silent") {
   const runtime = { build(options) { fs.writeFileSync(${JSON.stringify(delegate)}, JSON.stringify({ options, preloaded: Bun.build.name })); return "literal result"; } };
   installBuildGuard(runtime);
   if (runtime.build({ entrypoints: ["fake-only.ts"] }) !== "literal result") process.exit(9);
-  process.stdout.write('{"delegate":"json"}\\n');
-  process.exit(7);
+  if (mode === "api") {
+    process.stdout.write('{"delegate":"json"}\\n');
+    process.stderr.write('delegate stderr\\n');
+  }
+  process.exit(mode === "api" ? 7 : 0);
 } else if (mode === "sync") execFileSync("/bin/sh", [${JSON.stringify(guard)}]);
 else if (mode === "async") Promise.resolve().then(() => execFileSync("/bin/sh", [${JSON.stringify(guard)}]));
 else throw new Error("ordinary failure remains nonzero");
@@ -60,6 +69,7 @@ else throw new Error("ordinary failure remains nonzero");
       CONTROL_CALLS: join(fixture, "calls"),
     };
     delete env.BUN_OPTIONS;
+    delete env.TODO_DAG_GUARD_TRACE;
     const result = spawnSync(
       process.env.TODO_DAG_REAL_BUN ?? process.execPath,
       ["--preload", helper, program],
@@ -93,8 +103,10 @@ else throw new Error("ordinary failure remains nonzero");
       );
     }
     expect(receipt.signal).toBeNull();
-    expect(receipt.exit).toBe(mode === "ordinary" ? 1 : fail ? 3 : 7);
-    if (mode === "api" && !fail)
+    expect(receipt.exit).toBe(
+      mode === "ordinary" ? 1 : fail ? 3 : mode === "silent" ? 0 : 7,
+    );
+    if ((mode === "api" || mode === "silent") && !fail)
       expect(receipt.delegate).toEqual({
         options: { entrypoints: ["fake-only.ts"] },
         preloaded: "guardedBuild",
@@ -103,7 +115,12 @@ else throw new Error("ordinary failure remains nonzero");
     expect(receipt.guardCalls).toBe(mode === "ordinary" ? "" : "guard");
     if (mode === "api") {
       expect(receipt.stdout).toBe(fail ? "" : '{"delegate":"json"}\n');
-      expect(receipt.stderr).toBe("guard diagnostic\nguard detail\n");
+      expect(receipt.stderr).toBe(
+        fail ? "guard diagnostic\nguard detail\n" : "delegate stderr\n",
+      );
+    } else if (mode === "silent") {
+      expect(receipt.stdout).toBe("");
+      expect(receipt.stderr).toBe("");
     }
   } finally {
     rmSync(fixture, { recursive: true, force: true });
@@ -112,6 +129,7 @@ else throw new Error("ordinary failure remains nonzero");
 it("guards each in-process build immediately before its fake delegate", () => {
   control("api-build-pass", "api", false);
   control("api-build-disk-stop", "api", true);
+  control("api-build-silent", "silent", false);
 });
 it("preserves Disk Stop from synchronous and asynchronous immediate guards", () => {
   control("sync-api-disk-stop", "sync", true);

@@ -40,17 +40,35 @@ none is launched. Ordinary nonzero exits remain failures and the other recipes
 continue. Fake-delegate/runtime controls cover these distinctions without a
 real compiler or native app.
 
-Guard diagnostics go to stderr. Delegate stdout remains byte-for-byte intact,
-including JSON consumed by license generation; the delegate's stderr and exit
-remain intact as well. The fake JSON control covers nested shell wrappers and
-the in-process fake build guard. The earlier stdout-contamination failure is a
-retained harness incident, separate from product-copy assertion failures.
+Successful guards write nothing to stdout or stderr. `guarded-disk.sh` still
+invokes the canonical disk guard immediately; it captures success output and
+optionally appends it to the file named by `TODO_DAG_GUARD_TRACE`, unset by
+default. A failed guard emits its actual diagnostic on stderr and preserves its
+exit, including hard DISK STOP 3. Delegate stdout, stderr and exit remain intact.
+Fake controls cover silent zero-exit delegates, JSON stdout plus delegate stderr,
+nested wrappers, file-only traces and in-process fake builds. Earlier stdout and
+stderr contamination failures remain retained harness incidents, separate from
+product-copy assertion failures.
 
 Run the cheap generic controls independently of the full suite:
 
 ```sh
 TODO_VERIFICATION_CONTROLS_DIR=docs/evidence/electron-controls-new sh apps/electron/scripts/guarded-run.sh pnpm --filter @todo/electron test guarded-run.test.ts guarded-runtime.test.ts design-runner.test.ts design-inventory.test.ts
 ```
+
+The silent-success regression first exited 1 with five failing fake controls on
+the old wrapper/runtime. After the fix, all eleven tests in those four files
+pass, including the existing hard-stop and inventory/runner controls. These use
+fake compiler delegates; no real build or native app proves this boundary.
+
+Run the root check plainly, after a disk preflight, using its own shared lock:
+
+```sh
+sh scripts/disk-guard.sh
+/usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check
+```
+
+Do not wrap the root check or Mac verification helpers in the Electron wrapper.
 
 The inventory includes Attachment batch, batch edit, discovery, discovery report
 errors, Dependencies, the canonical browser host, default host writes, Task
