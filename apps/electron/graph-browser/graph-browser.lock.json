@@ -1,0 +1,22 @@
+{
+  "bun": "1.4.4",
+  "pele": "1.13.0",
+  "files": {
+    "graph.js": {
+      "sha256": "a62fed5b61f8f113ecae0f98805e3624bb32748999730037d0930ee4481eab89",
+      "bytes": 235105
+    },
+    "index.html": {
+      "sha256": "3e87641dc8f577e0259d07b4535afa422f21930d453e3ef5e10e8dd8de24b928",
+      "bytes": 536
+    },
+    "graph.css": {
+      "sha256": "717729ea8612e46f2031e31cea2fef48234cf76d3796654517d7eb26a5d25a9e",
+      "bytes": 693
+    },
+    "THIRD-PARTY-NOTICES.txt": {
+      "sha256": "311bccc30de6f7b9cbfb64232bb0c911ccb2191abe316550813ae25b2c7925b9",
+      "bytes": 1934
+    }
+  }
+}
