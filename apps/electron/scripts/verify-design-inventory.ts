@@ -7,7 +7,11 @@ export const designRecipes = [
     script: "verify-discovery-offscreen.ts",
     mode: "TODO_VERIFY_REPORT_ERRORS",
   },
-  { id: "dependencies", script: "verify-dependencies-offscreen.ts" },
+  {
+    id: "dependencies",
+    script: "verify-dependencies-offscreen.ts",
+    relativeEvidence: true,
+  },
   { id: "graph-browser", script: "verify-graph-browser.ts" },
   { id: "host-writes", host: true },
   { id: "host-task-search", host: true, mode: "TODO_VERIFY_TASK_SEARCH" },

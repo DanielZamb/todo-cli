@@ -147,8 +147,11 @@ a separate preserved line. Assert the real task_deleted import row ends with
 `error 2 - validation or usage` and each Conflict ends with `error 4 - Conflict`.
 Keep the batch Conflict's Version 2 and Reload Tasks copy. The single attachMany
 Conflict reply must retain the same exit detail and latest Version 2. Compact
-light/dark and full import captures assert innerText's final line and computed
-white-space: pre-line; generic-row-pairs.json records each literal observation.
+light/dark and full import captures assert innerText's final line. Legacy notices
+retain computed white-space: pre-line. Shared Dependency status cards use normal
+block paragraphs: assert the final muted paragraph is the actual pair and its
+bounds do not intersect earlier paragraphs. The selector includes that production
+status region; generic-row-pairs.json records the rendered convention.
 Contextual TaskLookupStatus recovery remains unchanged.
 
 Report screenshots await the production renderer's finite animations and theme

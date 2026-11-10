@@ -963,6 +963,14 @@ try {
   await page
     .getByRole("menuitem", { name: "Delete task", exact: true })
     .click();
+  await expect(page.getByTestId("dependency-delete-dialog")).toBeVisible();
+  await expect(page.getByTestId("dependency-delete-cancel")).toBeFocused();
+  await expect(page.getByTestId("dependency-delete-confirm")).toHaveText(
+    "Delete Task",
+  );
+  await expect(page.getByTestId("dependency-delete-confirm")).toBeEnabled();
+  await page.getByTestId("dependency-delete-confirm").click();
+  await expect(page.getByTestId("dependency-delete-dialog")).toHaveCount(0);
   await expect
     .poll(async () => (await tasks()).some((task) => task.id === custom.id))
     .toBe(false);

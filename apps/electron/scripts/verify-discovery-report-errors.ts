@@ -69,7 +69,7 @@ export async function verifyDiscoveryReportErrors({
           const row = page
             .locator('[data-slot="dialog-content"][data-open]')
             .locator(
-              ".batch-edit-row small[role=alert], .attachment-batch-row small[role=alert], .import-row-changes.import-rejected, .import-table tbody tr td:last-child",
+              ".batch-edit-row small[role=alert], .attachment-batch-row small[role=alert], .import-row-changes.import-rejected, .import-row .dependency-error-region, .import-table tbody tr td:last-child",
             )
             .first();
           await expect(row).toContainText(expectedPair);
@@ -79,7 +79,30 @@ export async function verifyDiscoveryReportErrors({
           );
           assert.equal(text.split("\n").at(-1), expectedPair);
           assert.equal(text.split(expectedPair).length - 1, 1);
-          assert.equal(whiteSpace, "pre-line");
+          const dependencyStatus = await row.evaluate((node) =>
+            node.classList.contains("dependency-error-region"),
+          );
+          if (dependencyStatus) {
+            const pair = row.locator("p").last();
+            await expect(pair).toHaveText(expectedPair);
+            await expect(pair).toHaveClass(/text-muted-foreground/u);
+            const geometry = await row.evaluate((node) => {
+              const paragraphs = [...node.querySelectorAll("p")];
+              const pair = paragraphs.at(-1)?.getBoundingClientRect();
+              return {
+                pair: pair?.toJSON(),
+                previous: paragraphs
+                  .slice(0, -1)
+                  .map((p) => p.getBoundingClientRect().toJSON()),
+              };
+            });
+            const pairBounds = geometry.pair;
+            assert.ok(pairBounds);
+            assert.ok(
+              geometry.previous.every((p) => p.bottom <= pairBounds.top),
+              JSON.stringify(geometry),
+            );
+          } else assert.equal(whiteSpace, "pre-line");
           genericPairs.push({
             name,
             compact,
@@ -87,6 +110,7 @@ export async function verifyDiscoveryReportErrors({
             expectedPair,
             text,
             whiteSpace,
+            dependencyStatus,
           });
           writeFileSync(
             join(evidence, "generic-row-pairs.json"),

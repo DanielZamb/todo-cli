@@ -31,6 +31,10 @@ Lifecycle, picker Profile/auth invalidation, the owned SSE refresh-frame fix and
 the checked final-matrix admission are recorded in `unit-e-lifecycle-matrix.md`.
 The failed 440-capture combined run remains failed; focused graph proof does not
 replace the pending full end run.
+The first full end run at 4cdc5d47 is retained: Electron exits 1 with 11 PASS and
+three verification failures; Mac exits 1 with all 346 registered captures and
+the exact 12 main Import failures. Their classifications and the required new
+end run after verification maintenance are in `unit-e-end-proof-maintenance.md`.
 
 ## Product checkpoint
 
