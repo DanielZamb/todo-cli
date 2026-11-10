@@ -18,11 +18,18 @@ const hash = createHash("sha256");
 for (const path of sources)
   hash.update(path).update(readFileSync(join(root, path)));
 const source_hash = hash.digest("hex");
-const cli = join(directory, `todo-${source_hash}`);
-const server = join(directory, `server-${source_hash}`);
+const head = execFileSync("git", ["rev-parse", "HEAD"], {
+  cwd: root,
+  encoding: "utf8",
+}).trim();
+const cache = `${source_hash}-${head}`;
+const cli = join(directory, `todo-${cache}`);
+const server = join(directory, `server-${cache}`);
+const seed = join(directory, `seed-${cache}`);
 for (const [entry, outfile] of [
   ["apps/cli/src/main.ts", cli],
   ["apps/server/src/main.ts", server],
+  ["apps/server/scripts/seed-verification.ts", seed],
 ]) {
   if (!entry || !outfile || existsSync(outfile)) continue;
   execFileSync("sh", [join(root, "scripts/disk-guard.sh")], {
@@ -30,22 +37,29 @@ for (const [entry, outfile] of [
   });
   execFileSync(
     "bun",
-    ["build", join(root, entry), "--compile", "--outfile", outfile],
+    [
+      "build",
+      join(root, entry),
+      "--compile",
+      "--define",
+      `TODO_BUILD_ID=${JSON.stringify(head)}`,
+      "--outfile",
+      outfile,
+    ],
     { cwd: directory, stdio: "inherit" },
   );
 }
 const identity = {
   source_hash,
-  head: execFileSync("git", ["rev-parse", "HEAD"], {
-    cwd: root,
-    encoding: "utf8",
-  }).trim(),
+  head,
   cli,
   server,
+  seed,
   cli_sha256: createHash("sha256").update(readFileSync(cli)).digest("hex"),
   server_sha256: createHash("sha256")
     .update(readFileSync(server))
     .digest("hex"),
+  seed_sha256: createHash("sha256").update(readFileSync(seed)).digest("hex"),
   version: execFileSync(cli, ["--version"], { encoding: "utf8" }).trim(),
 };
 writeFileSync(
