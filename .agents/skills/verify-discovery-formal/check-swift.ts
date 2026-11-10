@@ -25,6 +25,11 @@ const skill = import.meta.dirname;
 const root = verificationRoot(skill);
 const commit = process.argv[2] ?? coverage.candidateCommit;
 assert.match(commit, /^[a-f0-9]{40}$/, "Pass the full reviewed candidate SHA");
+const repeatClean = process.argv[4] === "--repeat-clean=20";
+assert.ok(
+  process.argv[4] === undefined || repeatClean,
+  "Use --repeat-clean=20 for twenty consecutive clean discovery suites",
+);
 const inputs = discoveryInputs(root, commit);
 const base = join(root, "docs/evidence/discovery-formal");
 mkdirSync(base, { recursive: true });
@@ -462,6 +467,37 @@ try {
         "Unexpected Bun temporary needs ownership/lsof review",
       );
     }
+  }
+  if (repeatClean) {
+    const runs = [];
+    for (let index = 1; index <= 20; index += 1) {
+      const label = `clean-${String(index).padStart(2, "0")}`;
+      const result = await test(
+        label,
+        "DiscoveryStateTests|DiscoveryReportStateTests",
+      );
+      runs.push({ label, actualExit: result.exit });
+      record("clean-repetitions", { commit, runs });
+      assert.equal(
+        result.exit,
+        0,
+        "Every consecutive suite must pass without a retry",
+      );
+      restoreProof(label);
+    }
+    record("result", {
+      passed: true,
+      commit,
+      evidence,
+      consecutiveSuites: 20,
+      runs,
+      nativeApp: false,
+      keychain: false,
+    });
+    console.log(
+      JSON.stringify({ passed: true, commit, evidence, consecutiveSuites: 20 }),
+    );
+    process.exit(0);
   }
   const baseline = await test(
     "clean",

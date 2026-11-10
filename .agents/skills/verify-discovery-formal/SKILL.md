@@ -203,3 +203,9 @@ releases it. Reuse is optional: set TODO_DISCOVERY_SWIFT_REUSE to a repo-relativ
 its build directory. Every source is checked against a fresh immutable archive;
 every test still uses a fresh scratch database. Do not share a mutable build
 cache between concurrent actors. Order-30 temporary inventories remain required.
+
+For fixture maintenance, append `--repeat-clean=20` after the candidate and
+owned reuse path passed to `check-swift.ts`. It runs DiscoveryStateTests and
+DiscoveryReportStateTests twenty times consecutively, each on fresh scratch data.
+The first failure stops the command. It does not retry or replace the full
+control driver or state suite.
