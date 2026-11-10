@@ -380,3 +380,5 @@ The [Session recipe](features/session.md#credential-epochs-during-hold) adds a
 standalone production-model proof for a delayed Unauthorized response across
 sign-out/sign-in. It uses only a memory Session adapter and scratch HTTP, with a
 current-credential control. Run it through the active shared Swift slot.
+
+[Task Dependencies](features/dependencies.md) extends production state, reviewed Delete, typed graph protocol and offscreen coverage during HOLD.

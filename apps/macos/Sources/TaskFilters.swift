@@ -11,15 +11,18 @@ struct TaskListFilters: Equatable {
     var energy = ""
     var estimate = ""
     var prefix = ""
-    var count: Int { [status, priority, due, scheduled, attachment, energy, estimate, prefix].filter { !$0.isEmpty }.count }
+    var ready = false
+    var blocked = false
+    var order = ""
+    var count: Int { [status, priority, due, scheduled, attachment, energy, estimate, prefix].filter { !$0.isEmpty }.count + (ready ? 1 : 0) + (blocked ? 1 : 0) }
     var isEmpty: Bool { count == 0 }
     private func optional(_ value: String) -> String? { value.isEmpty ? nil : value }
     var query: Operations.tasks_period_list.Input.Query {
-        .init(prefix: optional(prefix), status: .init(rawValue: status), priority: .init(rawValue: priority), due: optional(due), scheduled: optional(scheduled),
+        .init(ready: ready ? ._true : nil, blocked: blocked ? ._true : nil, order: .init(rawValue: order), prefix: optional(prefix), status: .init(rawValue: status), priority: .init(rawValue: priority), due: optional(due), scheduled: optional(scheduled),
               attachment: optional(attachment), energy: .init(rawValue: energy), estimate: optional(estimate))
     }
     var summary: String {
-        [status.capitalized, priority,
+        [ready ? "Ready" : "", blocked ? "Blocked" : "", status.capitalized, priority,
          due.isEmpty ? "" : due == "none" ? "No due date" : "Due \(due)",
          scheduled.isEmpty ? "" : scheduled == "none" ? "Not scheduled" : "Scheduled \(scheduled)",
          attachment.isEmpty ? "" : "Attachment: \(attachment)",
@@ -52,6 +55,8 @@ struct TaskFilterView: View {
                     .disabled(planning)
                     .accessibilityHint(planning ? "Planning views show open Tasks only." : "")
                 if planning { Text("Planning views show open Tasks only.").font(.caption).foregroundStyle(.secondary) }
+                Toggle("Ready", isOn: $draft.ready).accessibilityIdentifier("filter-ready")
+                Toggle("Blocked", isOn: $draft.blocked).accessibilityIdentifier("filter-blocked")
                 Picker("Priority", selection: $draft.priority) {
                     Text("Any").tag("")
                     ForEach(["P1", "P2", "P3", "P4"], id: \.self) { Text($0).tag($0) }
@@ -74,7 +79,7 @@ struct TaskFilterView: View {
             }.formStyle(.grouped)
             if !draft.isValid && draft.prefixIsValid { Text("Enter a positive whole number of minutes.").foregroundStyle(TodoColors.color("destructive")) }
             HStack {
-                Button("Clear all") { draft = .init() }
+                Button("Clear all") { draft = .init(order: draft.order) }
                 Spacer()
                 Button("Cancel", action: close).keyboardShortcut(.cancelAction)
                 Button("Apply filters") { var value = draft; if planning { value.status = "" }; apply(value); close() }.keyboardShortcut(.defaultAction).disabled(!draft.isValid)

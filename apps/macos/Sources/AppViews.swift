@@ -194,7 +194,6 @@ struct TaskListView: View {
     @FocusState private var searchFocused: Bool
     private var searchBinding: Binding<String> { Binding(get: { model.searchText }, set: { model.setSearchText($0) }) }
     @State private var selection: String?
-    @State private var pendingDelete: TaskSnapshot?
     @State private var showingTaskFilters = false
     @Environment(\.defaultMinListRowHeight) private var minimumRowHeight
     private var destination: Binding<SidebarDestination?> {
@@ -230,6 +229,7 @@ struct TaskListView: View {
     var taskGroups: [PlanningResult.Group] {
         let tasks = visibleTasks
         if model.selectedView == "all" {
+            if !model.taskFilters.order.isEmpty { return [.init(name: model.taskFilters.order == "topo" ? "Dependency order" : "Lightest first", tasks: tasks)] }
             return ["P1", "P2", "P3", "P4"].compactMap { priority in
                 let rows = tasks.filter { $0.priority == priority }
                 return model.searchActive && rows.isEmpty ? nil : .init(name: priority, tasks: rows)
@@ -249,7 +249,7 @@ struct TaskListView: View {
     private func clearFilters() {
         model.selectedProject = nil
         model.selectedTag = nil
-        model.applyTaskFilters(.init())
+        model.applyTaskFilters(.init(order: model.taskFilters.order))
     }
     private var selectedTask: TaskSnapshot? { visibleTasks.first { $0.id == selection } }
     private var inspectorPresented: Binding<Bool> {
@@ -271,17 +271,15 @@ struct TaskListView: View {
         .sheet(isPresented: $showingTaskFilters) {
             TaskFilterView(draft: model.taskFilters, compact: compactMode, planning: model.selectedView != "all", apply: model.applyTaskFilters, close: { showingTaskFilters = false })
         }
-        .confirmationDialog(
-            "Delete this task?", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
-            presenting: pendingDelete
-        ) { task in
-            Button("Delete task", role: .destructive) {
-                Task { await model.deleteTask(task) }
-                pendingDelete = nil
-            }
-            Button("Cancel", role: .cancel) { pendingDelete = nil }
-        } message: { task in
-            Text(task.title)
+        .sheet(item: Binding(get: { model.dependencies.batch }, set: { model.dependencies.batch = $0 })) { _ in DependencyBatchView(model: model, compact: compactMode) }
+        .sheet(isPresented: Binding(get: { model.dependencies.graph != nil }, set: { if !$0 { model.closeDependencyGraph() } })) {
+            DependencyGraphView(model: model, compact: compactMode)
+        }
+        .sheet(item: Binding(get: { model.dependencies.picker }, set: { if $0 == nil { model.closeDependencyPicker() } })) { _ in
+            DependencyPickerView(model: model, compact: compactMode)
+        }
+        .sheet(item: Binding(get: { model.dependencies.deletion }, set: { if $0 == nil { model.closeDependencyDelete() } })) { _ in
+            DependencyDeleteView(model: model, compact: compactMode)
         }
         .sheet(item: $model.transferRequest) { request in TaskTransferPicker(model: model, request: request) }
         .alert(
@@ -298,6 +296,8 @@ struct TaskListView: View {
         .onChange(of: model.selectedView) { _, _ in showingTaskFilters = false; selection = nil }
         .background {
             Button("Find a task") { searchFocused = true }.keyboardShortcut("f", modifiers: .command).hidden()
+            Button("Add dependency") { if let task = selectedTask ?? model.editor?.base { Task { await model.openDependencyPicker(task) } } }
+                .keyboardShortcut("k", modifiers: [.command, .shift]).disabled(!model.canWrite || (selectedTask == nil && model.editor == nil)).hidden()
         }
         .onExitCommand { model.setSearchText("") }
     }
@@ -515,6 +515,17 @@ struct TaskListView: View {
                 }.frame(maxWidth: .infinity, alignment: .leading)
             }.pickerStyle(.menu).controlSize(.large)
             HStack {
+                if !compactMode {
+                    Button("Add dependency", systemImage: "link") { if let task = selectedTask { Task { await model.openDependencyPicker(task) } } }
+                        .disabled(!model.canWrite || selectedTask == nil).accessibilityIdentifier("dependency-add")
+                }
+                if model.selectedView == "all" {
+                    Picker("Order", selection: Binding(get: { model.taskFilters.order }, set: { order in var filters = model.taskFilters; filters.order = order; model.applyTaskFilters(filters) })) {
+                        Text("Priority").tag("")
+                        Text("Dependency order").tag("topo").accessibilityIdentifier("task-order-topo")
+                        Text("Lightest first").tag("lightest").accessibilityIdentifier("task-order-lightest")
+                    }.pickerStyle(.menu).labelsHidden().accessibilityLabel("Order")
+                }
                 Button(model.taskFilters.isEmpty ? "Filters" : "Filters · \(model.taskFilters.count)") { showingTaskFilters = true }
                     .accessibilityLabel("More filters").accessibilityIdentifier("more-task-filters").compactBounds("more-task-filters")
             if hasFilters {
@@ -532,6 +543,7 @@ struct TaskListView: View {
     var taskContent: some View {
         VStack(spacing: 0) {
             if let result = model.transferResult { TaskTransferResultView(model: model, result: result) }
+            ForEach(model.dependencies.latestWarnings.indices, id: \.self) { DependencyNoticeView(model: model, notice: model.dependencies.latestWarnings[$0], warning: true).padding(.horizontal, 12) }
             taskFilters
             if let error = model.searchError {
                 HStack(alignment: .top) {
@@ -644,7 +656,7 @@ struct TaskListView: View {
                         transition(task, action: task.status == "open" ? "complete" : "reopen")
                         return .handled
                     }
-                    .onDeleteCommand { if model.canWrite { pendingDelete = selectedTask } }
+                    .onDeleteCommand { if model.canWrite, let task = selectedTask { Task { await model.openDependencyDelete(task) } } }
                 if visibleTasks.isEmpty {
                     Button(hasFilters ? "Clear filters" : model.searchText.isEmpty ? "Add task" : "Clear search") {
                         if hasFilters { clearFilters() } else if model.searchText.isEmpty { model.quickAdd = true } else { model.setSearchText("") }
@@ -702,9 +714,11 @@ struct TaskListView: View {
                 projectName: model.projects.first { $0.id == task.project_id }?.name,
                 tagNames: task.tagNames(from: model.tags),
                 searchActive: model.appliedSearchSnapshot?.appliedIdentity.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false,
+                dependencyBadge: task.dependencyBadge(catalog: model.tasks),
                 complete: { transition(task, action: task.status == "open" ? "complete" : "reopen") }
             )
         }
+        .modifier(DependencyDragModifier(model: model, task: task))
         .listRowInsets(compactMode ? EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4) : nil)
         .listRowSeparator(compactMode ? .hidden : .automatic)
         .tag(task.id)
@@ -716,8 +730,9 @@ struct TaskListView: View {
                 }
                 Button("Cancel task") { transition(task, action: "cancel") }.disabled(task.status != "open")
                 TaskTransferActions(model: model, task: task)
+                Button("Add dependency…") { Task { await model.openDependencyPicker(task) } }
                 Divider()
-                Button("Delete…", role: .destructive) { pendingDelete = task }
+                Button("Delete…", role: .destructive) { Task { await model.openDependencyDelete(task) } }
             }.disabled(!model.canWrite)
         }.disabled(model.busy)
     }
@@ -732,36 +747,40 @@ struct TaskRow: View {
     let projectName: String?
     let tagNames: [String]
     var searchActive = false
+    var dependencyBadge: String? = nil
+    var showsCompletion = true
+    var relation = false
     let complete: () -> Void
     private var presentation: TaskRowPresentation { TaskRowPresentation(task: task, tagNames: tagNames, now: now) }
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
-            Button(action: complete) { Image(systemName: presentation.completionSymbol).font(.system(size: 16)).frame(width: 28, height: 28) }
+            if showsCompletion { Button(action: complete) { Image(systemName: presentation.completionSymbol).font(.system(size: 16)).frame(width: 28, height: 28) }
                 .buttonStyle(.plain).disabled(!canWrite).foregroundStyle(.secondary)
                 .accessibilityLabel(task.status == "open" ? "Complete \(task.title)" : "Reopen \(task.title)")
-                .accessibilityIdentifier("transition-\(task.id)").compactBounds("complete-\(task.id)")
+                .accessibilityIdentifier("transition-\(task.id)").compactBounds("complete-\(task.id)") }
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(TaskSearchPresentation.highlighted(task.title, spans: searchActive ? task.search_matches ?? [] : [], field: .title)).lineLimit(1).strikethrough(presentation.isDone).foregroundStyle(
-                        presentation.isDone ? .secondary : .primary)
+                        presentation.isDone ? .secondary : .primary).help(task.title)
                     Spacer(minLength: 8)
-                    if compact && ["cancelled", "snoozed"].contains(task.status) {
+                    if compact && !relation && ["cancelled", "snoozed"].contains(task.status) {
                         Text(task.status).font(.caption).foregroundStyle(.secondary).fixedSize()
                             .compactBounds("status-\(task.id)")
                     }
-                    JiraAttachmentMarker(task: task)
-                    if let priority = presentation.priority {
+                    if !relation { JiraAttachmentMarker(task: task) }
+                    if !relation, let priority = presentation.priority {
                         Label(priority, systemImage: "flag.fill").font(.caption.weight(.medium)).foregroundStyle(
                             TodoColors.color("priority-\(priority.dropFirst())"))
                     }
                 }
-                if searchActive, let excerpt = TaskSearchPresentation.descriptionExcerpt(task) {
+                if !relation && searchActive, let excerpt = TaskSearchPresentation.descriptionExcerpt(task) {
                     Text(excerpt).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                         .accessibilityIdentifier("search-excerpt-\(task.id)")
                 }
-                if compact {
-                    CompactRowMetadata(items: compactMetadata).compactBounds("metadata-\(task.id)")
+                if compact || relation {
+                    HStack(spacing: 6) { dependencyState; CompactRowMetadata(items: compactMetadata) }.compactBounds("metadata-\(task.id)")
                 } else { HStack(spacing: 4) {
+                    dependencyState
                     if let projectName { Label(projectName, systemImage: "folder").help(projectName) }
                     if projectName != nil && !tagNames.isEmpty { Text("·") }
                     ForEach(compact ? Array(presentation.tags.prefix(1)) : presentation.tags, id: \.self) { name in
@@ -782,13 +801,17 @@ struct TaskRow: View {
                     }
                 }.font(.caption).foregroundStyle(.secondary).lineLimit(1) }
             }.fixedSize(horizontal: false, vertical: true)
-        }.padding(.vertical, 8).frame(height: compact ? (searchActive && TaskSearchPresentation.descriptionExcerpt(task) != nil ? 76 : 56) : nil)
+        }.padding(.vertical, relation ? 4 : 8).frame(height: compact ? (relation ? 48 : searchActive && TaskSearchPresentation.descriptionExcerpt(task) != nil ? 76 : 56) : nil)
             .overlay(alignment: .bottom) {
                 if compact { Divider().frame(height: 1).compactBounds("separator-\(task.id)").padding(.leading, 36) }
             }
             .contentShape(Rectangle()).opacity(presentation.isDone ? 0.7 : 1).compactBounds("row-\(task.id)")
     }
+    @ViewBuilder private var dependencyState: some View {
+        if let dependencyBadge { Text(dependencyBadge).font(.caption).foregroundStyle(task.blocked == true ? TodoColors.color("warning") : .secondary).fixedSize().accessibilityIdentifier("dependency-state-\(task.id)") }
+    }
     private var compactMetadata: [CompactRowMetadata.Item] {
+        if relation { return [.init(text: task.status.capitalized)] + (projectName.map { [.init(text: $0)] } ?? []) }
         var items: [CompactRowMetadata.Item] = []
         if let date = presentation.compactDate { items.append(.init(text: date, overdue: overdue && presentation.due != nil)) }
         if let projectName { items.append(.init(text: projectName)) }
@@ -878,9 +901,16 @@ struct QuickAddView: View {
                     }
                 }
             }
+            Button("Dependencies…", systemImage: "link") { Task { await model.openInitialDependencyPicker() } }.disabled(!model.canWrite)
+            ForEach(model.dependencies.initial) { task in
+                HStack {
+                    Text("Depends on \(task.title)").lineLimit(1)
+                    Button("Remove", systemImage: "xmark") { model.dependencies.initial.removeAll { $0.id == task.id } }.labelStyle(.iconOnly)
+                }.font(.caption).accessibilityIdentifier("dependency-initial-\(task.id)")
+            }
             if let error = model.parseError { Text(error).font(.caption).foregroundStyle(TodoColors.color("destructive")) }
             if !model.canWrite { Text("Reconnect to add. Your draft stays here.").foregroundStyle(.secondary) }
-            if let error = model.quickAddError { Text(error).foregroundStyle(TodoColors.color("destructive")) }
+            if let error = model.quickAddError { ClientErrorNotice(model: model, text: error, position: .quickAdd) }
             HStack {
                 Spacer()
                 if compact {

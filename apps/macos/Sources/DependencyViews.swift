@@ -1,0 +1,209 @@
+import SwiftUI
+
+struct DependencyNoticeView: View {
+    let model: TodoModel
+    let notice: DependencyNotice
+    var warning = false
+    var body: some View {
+        ClientErrorNotice(model: model, text: notice.message, position: .message, dependency: notice, dependencyWarning: warning)
+    }
+}
+
+struct DependencyNoticeContent: View {
+    let model: TodoModel
+    let notice: DependencyNotice
+    var warning = false
+    private var titles: [String] { notice.path.map { id in model.tasks.first { $0.id == id }?.title ?? id } }
+    private var headline: String {
+        let prefix = notice.attemptTitle.map { "Can't \(notice.attemptVerb) \($0). " } ?? ""
+        let guidance = notice.followUp == nil ? notice.recovery.map { " \($0)." } ?? "" : ""
+        return prefix + notice.message + guidance
+    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(headline).fixedSize(horizontal: false, vertical: true)
+            if !titles.isEmpty {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(Array(titles.enumerated()), id: \.offset) { index, title in
+                            Text((index == 0 ? "" : "→ ") + title).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                        }
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                }.frame(maxHeight: 100).accessibilityElement(children: .ignore).accessibilityLabel(titles.joined(separator: " blocks "))
+            }
+            ForEach(notice.tasks) { task in
+                Button { Task { _ = await model.navigate(.edit(task)) } } label: {
+                    Text("\(task.title) · \(task.status.capitalized)").multilineTextAlignment(.leading)
+                }.buttonStyle(.link)
+            }
+            if let id = notice.followUp {
+                Button("Create follow-up") { Task { await model.createDependencyFollowUp(id) } }.accessibilityIdentifier("dependency-follow-up")
+            } else if let failure = notice.failure, failure.isTaskLookup {
+                Button("Find Task by id") { Task { await model.findTaskAfterLookupError(failure) } }
+            }
+            if let detail = notice.detail { Text(detail).font(.caption).foregroundStyle(.secondary) }
+        }.font(.callout).foregroundStyle(warning ? TodoColors.color("warning") : .primary)
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier(warning ? "dependency-warning" : "dependency-error")
+    }
+}
+
+struct DependencyPickerView: View {
+    @Bindable var model: TodoModel
+    var compact = false
+    @FocusState private var searchFocused: Bool
+    @FocusState private var focusedCandidate: String?
+    var body: some View {
+        if let picker = model.dependencies.picker {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(picker.direction.sentence(picker.root.title)).font(.headline).lineLimit(2)
+                Picker("Direction", selection: Binding(get: { picker.direction }, set: { direction in Task { await model.setDependencyDirection(direction) } })) {
+                    Text("Depends on").tag(DependencyDirection.dependsOn).accessibilityIdentifier("dependency-depends-on")
+                    Text("Blocks").tag(DependencyDirection.blocks).disabled(picker.purpose != .edit).accessibilityIdentifier("dependency-blocks")
+                }.pickerStyle(.segmented).accessibilityIdentifier("dependency-direction")
+                TextField("Search Tasks in this Profile", text: Binding(get: { model.dependencies.picker?.text ?? "" }, set: { model.dependencies.picker?.text = $0 }))
+                    .textFieldStyle(.roundedBorder).focused($searchFocused).accessibilityIdentifier("dependency-search")
+                    .onChange(of: picker.text) { _, text in
+                        Task {
+                            do { try await Task.sleep(for: .milliseconds(250)) } catch { return }
+                            guard model.dependencies.picker?.id == picker.id, model.dependencies.picker?.text == text else { return }
+                            await model.searchDependencyCandidates()
+                        }
+                    }
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 8) {
+                        if picker.loading { ProgressView("Loading Dependencies…") }
+                        if let notice = picker.failure {
+                            DependencyNoticeView(model: model, notice: notice)
+                            if picker.requiresReload {
+                                Button("Reload") { Task { await model.reloadDependencyPicker() } }.accessibilityIdentifier("dependency-reload")
+                            }
+                        }
+                        ForEach(picker.warnings.indices, id: \.self) { DependencyNoticeView(model: model, notice: picker.warnings[$0], warning: true) }
+                        if !model.canWrite { Text(model.connection == .offline ? "Offline · Read only" : "Dependencies are read only right now.").foregroundStyle(.secondary) }
+                        ForEach(picker.rows) { task in
+                            if picker.pending.contains(task.id) {
+                                HStack(spacing: 8) {
+                                    ProgressView().controlSize(.mini).frame(width: 14, height: 14)
+                                    TaskRow(task: task, canWrite: false, compact: compact, projectName: model.projects.first { $0.id == task.project_id }?.name, tagNames: task.tagNames(from: model.tags), showsCompletion: false, relation: true, complete: {}).opacity(0.5)
+                                }.accessibilityIdentifier("dependency-pending-\(task.id)").accessibilityLabel(task.title).accessibilityValue("Updating").focusable().focused($focusedCandidate, equals: task.id)
+                            } else {
+                            Toggle(isOn: Binding(get: { picker.checked(task.id) }, set: { _ in Task { await model.toggleDependency(task) } })) {
+                                VStack(alignment: .leading, spacing: 0) {
+                                    TaskRow(task: task, canWrite: false, compact: compact, projectName: model.projects.first { $0.id == task.project_id }?.name, tagNames: task.tagNames(from: model.tags), showsCompletion: false, relation: true, complete: {})
+                                }
+                            }.toggleStyle(.checkbox)
+                                .focused($focusedCandidate, equals: task.id)
+                                .disabled(!model.canWrite || picker.loading || picker.requiresReload || picker.pending.contains(task.id) || model.dependencies.pendingDependents.contains(picker.direction == .dependsOn ? picker.root.id : task.id))
+                                .accessibilityIdentifier("dependency-choice-\(task.id)")
+                                .accessibilityValue(picker.pending.contains(task.id) ? "Pending" : picker.checked(task.id) ? "Checked" : "Unchecked")
+                                .compactBounds("dependency-choice-\(task.id)")
+                            }
+                        }
+                        if !picker.loading && picker.rows.isEmpty { Text("No matching Tasks").foregroundStyle(.secondary) }
+                    }.frame(maxWidth: .infinity, alignment: .leading).padding(.trailing, 4)
+                }.compactBounds("dependency-body")
+                if let feedback = picker.feedback { Text(feedback).font(.caption).foregroundStyle(.secondary) }
+                HStack {
+                    Text(picker.purpose == .edit ? "Changes save immediately." : picker.purpose == .firstOccurrence ? "Saved with the first Occurrence." : "Saved with the new Task.").font(.caption).foregroundStyle(.secondary)
+                    if picker.purpose == .edit { Button("Batch…") { Task { await model.beginDependencyBatch() } }.disabled(!model.canWrite || !picker.pending.isEmpty) }
+                    Spacer(minLength: 0)
+                    Button("Close") { model.closeDependencyPicker() }.keyboardShortcut(.cancelAction).accessibilityIdentifier("dependency-picker-close")
+                }.compactBounds("dependency-actions")
+            }.padding(16).frame(width: compact ? 393 : 560, height: compact ? 426 : 600)
+                .accessibilityIdentifier("dependency-picker")
+                .task { searchFocused = true }
+                .onKeyPress(.downArrow) { moveCandidate(1, picker: picker) }
+                .onKeyPress(.upArrow) { moveCandidate(-1, picker: picker) }
+        }
+    }
+    private func moveCandidate(_ step: Int, picker: DependencyPicker) -> KeyPress.Result {
+        let ids = picker.rows.map(\.id)
+        guard !ids.isEmpty else { return .ignored }
+        let next = focusedCandidate.flatMap { ids.firstIndex(of: $0) }.map { $0 + step } ?? (step > 0 ? 0 : ids.count - 1)
+        if next < 0 { focusedCandidate = nil; searchFocused = true }
+        else if next < ids.count { searchFocused = false; focusedCandidate = ids[next] }
+        return .handled
+    }
+}
+
+struct DependencyDeleteView: View {
+    @Bindable var model: TodoModel
+    var compact = false
+    var body: some View {
+        if let deletion = model.dependencies.deletion {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Delete Task").font(.headline)
+                Text(deletion.task.title).lineLimit(2)
+                        Text(deletion.reviewMessage).fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier(deletion.changed ? "dependency-delete-changed" : "dependency-delete-review")
+                if !deletion.edges.isEmpty || deletion.loading || deletion.failure != nil {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 12, pinnedViews: [.sectionHeaders]) {
+                        if deletion.loading { ProgressView("Loading Dependencies…") }
+                        if let failure = deletion.failure {
+                            DependencyNoticeView(model: model, notice: failure)
+                            Button("Reload") { Task { await model.reloadDependencyDelete(changed: true) } }.disabled(deletion.pending || model.connection != .live).accessibilityIdentifier("dependency-reload")
+                        }
+                        incidentSection("Depends on", ids: deletion.edges.filter { $0.dependent_id == deletion.task.id }.map(\.blocker_id), deletion: deletion, identifier: "dependency-delete-depends-on")
+                        incidentSection("Blocks", ids: deletion.edges.filter { $0.blocker_id == deletion.task.id }.map(\.dependent_id), deletion: deletion, identifier: "dependency-delete-blocks")
+                        if !model.canWrite { Text("Offline or read only. Reconnect before deleting.").foregroundStyle(.secondary) }
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                }.compactBounds("dependency-body")
+                }
+                Group {
+                    if deletion.edges.isEmpty { HStack { Spacer(); cancel; confirm(deletion) } }
+                    else { VStack(spacing: 8) { cancel.frame(maxWidth: .infinity); confirm(deletion).frame(maxWidth: .infinity) }.buttonStyle(.bordered) }
+                }.compactBounds("dependency-actions")
+            }.padding(16).frame(width: compact ? 393 : 560)
+                .frame(height: deletion.edges.isEmpty && !deletion.loading && deletion.failure == nil ? nil : compact ? 426 : 600)
+                .accessibilityIdentifier("dependency-delete-dialog").compactBounds("dependency-delete-sheet")
+        }
+    }
+    @ViewBuilder private func incidentSection(_ title: String, ids: [String], deletion: DependencyDelete, identifier: String) -> some View {
+            if !ids.isEmpty {
+                Section {
+                ForEach(ids, id: \.self) { id in
+                    if let task = deletion.endpoints.first(where: { $0.id == id }) {
+                        TaskRow(task: task, canWrite: false, compact: compact, projectName: model.projects.first { $0.id == task.project_id }?.name, tagNames: task.tagNames(from: model.tags), showsCompletion: false, relation: true, complete: {})
+                    } else { Text(id).textSelection(.enabled) }
+                }
+                } header: {
+                    Text("\(title) · \(ids.count)").font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 6).background(.background)
+                }.accessibilityIdentifier(identifier)
+            }
+    }
+    private var cancel: some View {
+        Button(role: .cancel) { model.closeDependencyDelete() } label: {
+            Text("Cancel").frame(maxWidth: model.dependencies.deletion?.edges.isEmpty == false ? .infinity : nil)
+        }
+            .keyboardShortcut(.cancelAction).keyboardShortcut(.defaultAction).disabled(model.dependencies.deletion?.pending == true).accessibilityIdentifier("dependency-delete-cancel")
+    }
+    private func confirm(_ deletion: DependencyDelete) -> some View {
+        Button(role: .destructive) { Task { await model.confirmDependencyDelete() } } label: {
+            Text(deletion.pending ? "Deleting…" : deletion.action).foregroundStyle(Color(nsColor: .systemRed)).frame(maxWidth: deletion.edges.isEmpty ? nil : .infinity)
+        }
+            .tint(Color(nsColor: .systemRed)).foregroundStyle(Color(nsColor: .systemRed)).disabled(!model.canWrite || deletion.loading || deletion.pending || deletion.fingerprint == nil || deletion.acceptedFromVersion == nil)
+            .accessibilityIdentifier("dependency-delete-confirm")
+    }
+}
+
+extension TodoModel {
+    func createDependencyFollowUp(_ id: String) async {
+        guard signedIn else { return }
+        let epoch = discovery.credentialEpoch
+        let selectedProfile = profile
+        do {
+            let task = try await TaskSnapshot.decode(client.tasks_period_show(path: .init(profile: selectedProfile, task: id)).ok.body.json)
+            guard isCurrentCredential(epoch), profile == selectedProfile else { return }
+            closeDependencyPicker()
+            if !dependencies.initial.contains(where: { $0.id == task.id }) { dependencies.initial.append(task) }
+            quickAdd = true
+        } catch {
+            guard isCurrentCredential(epoch), profile == selectedProfile else { return }
+            message = describe(error)
+            handleAuthorization(error, credentialEpoch: epoch)
+        }
+    }
+}

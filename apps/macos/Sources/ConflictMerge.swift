@@ -70,9 +70,10 @@ extension TaskDraft {
         try JSONSerialization.data(withJSONObject: ["from_version": base.row_version, "changes": fieldValues(changedFields), "recurrence": JSONSerialization.jsonObject(with: JSONEncoder().encode(recurrence))])
     }
 
-    func newSeriesData(_ recurrence: Recurrence) throws -> Data {
+    func newSeriesData(_ recurrence: Recurrence, dependsOn: [String] = []) throws -> Data {
         var fields = try fieldValues(Self.fields)
         fields["source"] = "manual"
+        if !dependsOn.isEmpty { fields["depends_on"] = dependsOn }
         return try JSONSerialization.data(withJSONObject: ["task": fields, "recurrence": JSONSerialization.jsonObject(with: JSONEncoder().encode(recurrence))])
     }
 

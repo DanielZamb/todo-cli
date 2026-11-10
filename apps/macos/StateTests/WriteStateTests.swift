@@ -25,6 +25,16 @@ private actor Transport: ClientTransport {
     }
 }
 
+private func storedTaskContent(_ task: TaskSnapshot?) -> TaskSnapshot? {
+    guard var task else { return nil }
+    task.depends_on = nil
+    task.blocks = nil
+    task.ready = nil
+    task.blocked = nil
+    task.remaining_energy = nil
+    return task
+}
+
 @MainActor
 private func fixture(_ transport: Transport, json: String = taskJSON()) throws -> TodoModel {
     let model = TodoModel(configuration: .init(server: URL(string: "http://127.0.0.1:1")!, initialProfile: "work", vaultService: "unused-headless"), clientFactory: { url, credential in
@@ -440,30 +450,47 @@ func liveGeneratedWritesAgainstScratchServer() async throws {
     }
     @Test func deletingAnotherRowKeepsTheInspectorDraft() async throws {
         let otherJSON = taskJSON(deleted: true).replacingOccurrences(of: "task-1", with: "task-2")
-        let transport = Transport([.init(operation: "tasks.delete", status: 200, json: otherJSON)])
+        let transport = Transport([
+            .init(operation: "tasks.show", status: 200, json: otherJSON),
+            .init(operation: "tasks.delete", status: 200, json: String(otherJSON.dropLast()) + #","dependency_fingerprint":"reviewed-empty","removed_dependencies":[],"dry_run":true}"#),
+            .init(operation: "tasks.delete", status: 200, json: taskJSON(version: 2, deleted: true).replacingOccurrences(of: "task-1", with: "task-2"))
+        ])
         let model = try fixture(transport)
         model.editor?.title = "Draft for another Task"
         model.conflict = TaskConflict(latest: model.editor?.base)
-        await model.deleteTask(try JSONDecoder().decode(TaskSnapshot.self, from: Data(otherJSON.utf8)))
+        await model.openDependencyDelete(try JSONDecoder().decode(TaskSnapshot.self, from: Data(otherJSON.utf8)))
+        await model.confirmDependencyDelete()
         #expect(model.editor?.id == "task-1")
         #expect(model.editor?.title == "Draft for another Task")
         #expect(model.conflict?.latest?.id == "task-1")
     }
     @Test func deletingTheOpenTaskClosesItWithNotice() async throws {
-        let transport = Transport([.init(operation: "tasks.delete", status: 200, json: taskJSON(deleted: true))])
+        let transport = Transport([
+            .init(operation: "tasks.show", status: 200, json: taskJSON()),
+            .init(operation: "tasks.delete", status: 200, json: String(taskJSON().dropLast()) + #","dependency_fingerprint":"reviewed-empty","removed_dependencies":[],"dry_run":true}"#),
+            .init(operation: "tasks.delete", status: 200, json: taskJSON(version: 2, deleted: true))
+        ])
         let model = try fixture(transport)
-        await model.deleteTask(try #require(model.editor?.base))
+        await model.openDependencyDelete(try #require(model.editor?.base))
+        await model.confirmDependencyDelete()
         #expect(model.editor == nil)
         #expect(model.conflict == nil)
         #expect(model.deletionNotice == "Task deleted")
     }
     @Test func deletingAnotherConflictingRowLeavesInspectorErrorsAlone() async throws {
         let otherJSON = taskJSON().replacingOccurrences(of: "task-1", with: "task-2")
-        let transport = Transport([.init(operation: "tasks.delete", status: 409, json: #"{"_tag":"Conflict","exit_code":4,"exit_meaning":"Conflict","latest":\#(otherJSON)}"#)])
+        let transport = Transport([
+            .init(operation: "tasks.show", status: 200, json: otherJSON),
+            .init(operation: "tasks.delete", status: 200, json: String(otherJSON.dropLast()) + #","dependency_fingerprint":"reviewed-empty","removed_dependencies":[],"dry_run":true}"#),
+            .init(operation: "tasks.delete", status: 409, json: #"{"_tag":"Conflict","exit_code":4,"exit_meaning":"Conflict","latest":\#(otherJSON)}"#),
+            .init(operation: "tasks.show", status: 200, json: otherJSON),
+            .init(operation: "tasks.delete", status: 200, json: String(otherJSON.dropLast()) + #","dependency_fingerprint":"new-reviewed-empty","removed_dependencies":[],"dry_run":true}"#)
+        ])
         let model = try fixture(transport)
         model.editorError = "Existing editor warning"
         model.editor?.title = "Inspector draft"
-        await model.deleteTask(try JSONDecoder().decode(TaskSnapshot.self, from: Data(otherJSON.utf8)))
+        await model.openDependencyDelete(try JSONDecoder().decode(TaskSnapshot.self, from: Data(otherJSON.utf8)))
+        await model.confirmDependencyDelete()
         #expect(model.editor?.id == "task-1")
         #expect(model.editor?.title == "Inspector draft")
         #expect(model.editorError == "Existing editor warning")
@@ -547,11 +574,13 @@ func liveNavigationSaveDiscardAndDelete() async throws {
     model.beginEditing(destination)
     model.editor?.title = "W07 keep this draft after another Delete"
     let other = try await TaskSnapshot.decode(client.tasks_period_create(path: .init(profile: "work"), body: .json(.init(title: "W07 other deleted"))).ok.body.json)
-    await model.deleteTask(other)
+    await model.openDependencyDelete(other)
+    await model.confirmDependencyDelete()
     #expect(model.editor?.id == destination.id)
     #expect(model.editor?.title == "W07 keep this draft after another Delete")
     #expect(model.deletionNotice == nil)
-    await model.deleteTask(destination)
+    await model.openDependencyDelete(destination)
+    await model.confirmDependencyDelete()
     #expect(model.editor == nil)
     #expect(model.deletionNotice == "Task deleted")
     let receipt = ["movedTask": source.id, "otherDeletedTask": other.id, "openDeletedTask": destination.id]
@@ -590,7 +619,7 @@ func liveMetadataQuickAddAndEditorSurviveReloadAndReachSecondClient() async thro
             #expect(model.projects.first { $0.id == task.project_id }?.name == project)
             #expect(task.tagNames(from: model.tags) == [tag, "ready"].sorted())
             let reload = try await todoClient(server: server, credential: session.credential).tasks_period_show(path: .init(profile: "work", task: task.id)).ok.body.json
-            #expect(try TaskSnapshot.decode(reload) == task)
+            #expect(storedTaskContent(try TaskSnapshot.decode(reload)) == task)
             matrix.append(["entry": entry, "path": "quick-add", "names": existing ? "existing" : "new", "task": task.id, "project": project, "tags": [tag, "ready"].sorted(), "version": 1])
             let editorProject = "\(project) Editor"
             let editorTag = "\(tag) editor"
@@ -601,7 +630,7 @@ func liveMetadataQuickAddAndEditorSurviveReloadAndReachSecondClient() async thro
             #expect(model.projects.first { $0.id == edited.project_id }?.name == editorProject)
             #expect(edited.tagNames(from: model.tags) == [tag, editorTag, "ready"].sorted())
             let editorReload = try await todoClient(server: server, credential: session.credential).tasks_period_show(path: .init(profile: "work", task: edited.id)).ok.body.json
-            #expect(try TaskSnapshot.decode(editorReload) == edited)
+            #expect(storedTaskContent(try TaskSnapshot.decode(editorReload)) == edited)
             matrix.append(["entry": entry, "path": "add-and-edit controls", "names": existing ? "existing" : "new", "task": edited.id, "project": editorProject, "tags": [tag, editorTag, "ready"].sorted(), "version": 2])
             model.editor = nil
         }
@@ -618,7 +647,7 @@ func liveMetadataQuickAddAndEditorSurviveReloadAndReachSecondClient() async thro
     #expect(model.projects.first { $0.id == newlyNamed.project_id }?.name == "Editor Project")
     #expect(newlyNamed.tagNames(from: model.tags) == ["editor tag", "ready", "second tag", "window focus", "window focus editor"])
     let newReload = try await todoClient(server: server, credential: session.credential).tasks_period_show(path: .init(profile: "work", task: newlyNamed.id)).ok.body.json
-    #expect(try TaskSnapshot.decode(newReload) == newlyNamed)
+    #expect(storedTaskContent(try TaskSnapshot.decode(newReload)) == newlyNamed)
     matrix.append(["entry": "editor", "path": "existing Task controls", "names": "new", "task": newlyNamed.id, "project": "Editor Project", "tags": ["editor tag", "ready", "second tag", "window focus", "window focus editor"], "version": 3])
     model.beginEditing(newlyNamed)
     model.editor?.addMetadata(.project, name: "Window Project", projects: model.projects, tags: model.tags)
@@ -632,11 +661,11 @@ func liveMetadataQuickAddAndEditorSurviveReloadAndReachSecondClient() async thro
         if observer.tasks.first(where: { $0.id == saved.id })?.row_version == 4 { break }
         try await Task.sleep(for: .milliseconds(50))
     }
-    #expect(observer.tasks.first { $0.id == saved.id } == saved)
+    #expect(storedTaskContent(observer.tasks.first { $0.id == saved.id }) == saved)
     #expect(observer.projects.first { $0.id == saved.project_id }?.name == "Window Project")
     #expect(observer.tasks.first { $0.id == saved.id }?.tagNames(from: observer.tags) == ["editor tag", "menu focus", "ready", "second tag", "window focus", "window focus editor"])
     let reloaded = try await todoClient(server: server, credential: session.credential).tasks_period_show(path: .init(profile: "work", task: saved.id)).ok.body.json
-    #expect(try TaskSnapshot.decode(reloaded) == saved)
+    #expect(storedTaskContent(try TaskSnapshot.decode(reloaded)) == saved)
     let path = try #require(ProcessInfo.processInfo.environment["TODO_W06_RECEIPT"])
     try JSONSerialization.data(withJSONObject: ["matrix": matrix, "editedTask": saved.id, "project": "Window Project", "tags": ["editor tag", "menu focus", "ready", "second tag", "window focus", "window focus editor"], "version": 4], options: [.prettyPrinted, .sortedKeys]).write(to: URL(fileURLWithPath: path).deletingLastPathComponent().appendingPathComponent("metadata-http.json"))
 }
@@ -714,8 +743,8 @@ func liveCopyKeepsSourceAndOtherTasks() async throws {
     #expect(copied.row_version == 1)
     let sourceAfter = try await TaskSnapshot.decode(client.tasks_period_show(path: .init(profile: "work", task: source.id)).ok.body.json)
     let otherAfter = try await TaskSnapshot.decode(client.tasks_period_show(path: .init(profile: "work", task: other.id)).ok.body.json)
-    #expect(sourceAfter == completed)
-    #expect(otherAfter == other)
+    #expect(storedTaskContent(sourceAfter) == completed)
+    #expect(storedTaskContent(otherAfter) == other)
     let history = try await client.reads_period_history(path: .init(profile: "personal", task: copied.id)).ok.body.json
     let entries = try JSONDecoder().decode([HistoryEntry].self, from: JSONEncoder().encode(history))
     #expect(entries.first?.label == "Copied from Work / \(source.id)")
@@ -727,8 +756,8 @@ func liveCopyKeepsSourceAndOtherTasks() async throws {
         Issue.record("Profile did not reload")
     }
     try await waitForReload()
-    #expect(model.tasks.first { $0.id == source.id } == completed)
-    #expect(model.tasks.first { $0.id == other.id } == other)
+    #expect(storedTaskContent(model.tasks.first { $0.id == source.id }) == completed)
+    #expect(storedTaskContent(model.tasks.first { $0.id == other.id }) == other)
     #expect(await model.openTransferredTask())
     try await waitForReload()
     #expect(model.profile == "personal")
@@ -737,8 +766,8 @@ func liveCopyKeepsSourceAndOtherTasks() async throws {
     #expect(copied.tagNames(from: model.tags) == ["c10-tag"])
     model.editor = nil; model.changeProfile("work")
     try await waitForReload()
-    #expect(model.tasks.first { $0.id == source.id } == completed)
-    #expect(model.tasks.first { $0.id == other.id } == other)
+    #expect(storedTaskContent(model.tasks.first { $0.id == source.id }) == completed)
+    #expect(storedTaskContent(model.tasks.first { $0.id == other.id }) == other)
     model.beginEditing(completed)
     await model.write(.move("personal"))
     #expect(model.editorError == nil)
@@ -758,7 +787,7 @@ func liveCopyKeepsSourceAndOtherTasks() async throws {
     model.editor = nil; model.changeProfile("work")
     try await waitForReload()
     #expect(model.tasks.contains { $0.id == source.id } == false)
-    #expect(model.tasks.first { $0.id == other.id } == other)
+    #expect(storedTaskContent(model.tasks.first { $0.id == other.id }) == other)
     if let receipt = ProcessInfo.processInfo.environment["TODO_W06_RECEIPT"] {
         let output = URL(fileURLWithPath: receipt).deletingLastPathComponent().appendingPathComponent("c10-transfer-http.json")
         try JSONSerialization.data(withJSONObject: ["moved": source.id, "copied": copied.id, "other": other.id], options: [.prettyPrinted, .sortedKeys]).write(to: output)
@@ -847,7 +876,7 @@ func liveExternalIdMoveRejectionPreservesBothProfiles() async throws {
     #expect(model.editor?.title == "Keep the unsaved source draft")
     let sourceAfter = try await TaskSnapshot.decode(client.tasks_period_show(path: .init(profile: "work", task: source.id)).ok.body.json)
     let targetAfter = try await TaskSnapshot.decode(client.tasks_period_show(path: .init(profile: "personal", task: target.id)).ok.body.json)
-    #expect(sourceAfter == source)
+    #expect(storedTaskContent(sourceAfter) == source)
     #expect(targetAfter == target)
     let history = try await client.reads_period_history(path: .init(profile: "work", task: source.id)).ok.body.json
     let entries = try JSONDecoder().decode([HistoryEntry].self, from: JSONEncoder().encode(history))
@@ -1125,4 +1154,25 @@ func compactActionErrorRetainsLoadedTasksAfterRefresh() async throws {
     #expect(reloaded.row_version == 2)
     #expect(reloaded.status == "cancelled")
     try JSONSerialization.data(withJSONObject: ["version": reloaded.row_version, "status": reloaded.status, "notice": model.message ?? "", "loadError": model.taskLoadError ?? "", "loaded": model.tasks.contains { $0.id == created.id }], options: [.sortedKeys]).write(to: URL(fileURLWithPath: try #require(ProcessInfo.processInfo.environment["TODO_W06_RECEIPT"])).deletingLastPathComponent().appendingPathComponent("u02-action-error-http.json"))
+}
+
+@Test(arguments: ["preview", "foreign-profile", "foreign-task"]) @MainActor
+func deleteNeverAcceptsPreviewOrForeignRepliesAsConfirmedSuccess(reply: String) async throws {
+    let preview = String(taskJSON(version: 2, deleted: true).dropLast()) + #","dependency_fingerprint":"reviewed-empty","removed_dependencies":[],"dry_run":true}"#
+    let untrusted = reply == "preview" ? preview : reply == "foreign-profile" ? taskJSON(version: 2, profile: "personal", deleted: true) : taskJSON(version: 2, deleted: true).replacingOccurrences(of: "task-1", with: "task-foreign")
+    let transport = Transport([
+        .init(operation: "tasks.show", status: 200, json: taskJSON()),
+        .init(operation: "tasks.delete", status: 200, json: preview),
+        .init(operation: "tasks.delete", status: 200, json: untrusted)
+    ])
+    let model = try fixture(transport)
+    await model.openDependencyDelete(try #require(model.editor?.base))
+    #expect(model.dependencies.deletion?.task.row_version == 1)
+    await model.confirmDependencyDelete()
+    #expect(model.dependencies.deletion != nil)
+    #expect(model.dependencies.deletion?.fingerprint == nil)
+    #expect(model.dependencies.deletion?.failure?.message == "The server response could not be read. Reload Dependencies before confirming again.")
+    #expect(model.editor?.id == "task-1")
+    #expect(model.editor?.base.row_version == 1)
+    #expect(model.deletionNotice == nil)
 }

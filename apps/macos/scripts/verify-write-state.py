@@ -15,7 +15,7 @@ import time
 import urllib.request
 
 root = Path(__file__).resolve().parents[3]
-resolved_paths = subprocess.check_output(['git', 'ls-files', '--', ':(glob)**/Package.resolved', 'Package.resolved'], cwd=root, text=True).splitlines()
+resolved_paths = subprocess.check_output(['git', 'ls-files', '--', ':(glob)**/Package.resolved', 'Package.resolved', 'pnpm-lock.yaml'], cwd=root, text=True).splitlines()
 evidence = Path(sys.argv[1])
 snapshots_only = '--snapshots-only' in sys.argv[2:]
 shared_receipt = os.environ.get('TODO_F13_SERVER_RECEIPT')
@@ -24,7 +24,7 @@ if not evidence.is_absolute() or evidence.exists():
     raise SystemExit('Pass a fresh absolute evidence directory')
 subprocess.run([str(root / 'scripts/disk-guard.sh')], check=True)
 evidence.mkdir(parents=True)
-source_files = sorted(path for pattern in ['Sources/*.swift', 'StateTests/*.swift', 'Tests/*.swift', 'DesignSnapshots/*.swift', 'API/Sources/TodoAPI/GeneratedSources/*.swift'] for path in (root / 'apps/macos').glob(pattern))
+source_files = sorted(path for pattern in ['Sources/*.swift', 'StateTests/*.swift', 'Tests/*.swift', 'DesignSnapshots/*.swift', 'API/Sources/TodoAPI/*.swift', 'API/Sources/TodoAPI/GeneratedSources/*.swift', 'scripts/*.py', 'scripts/*.mjs', 'scripts/*.ts', 'scripts/*.rb'] for path in (root / 'apps/macos').glob(pattern))
 (evidence / 'source-provenance.json').write_text(json.dumps({
     'head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip(),
     'sources': {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest() for path in source_files}
@@ -61,7 +61,9 @@ def scratch_directory():
     finally:
         with deferring_cancellation():
             if not unsafe.exists():
+                retired = [{'path': str(path.relative_to(directory)), 'bytes': path.stat().st_size} for path in directory.rglob('*') if path.is_file() and not path.is_symlink() and (path.name in ['todo', 'server', 'seed', 'search-recovery-seed'] or path.name.endswith('.bun-build'))]
                 shutil.rmtree(directory)
+                (evidence / 'retired-runtime.json').write_text(json.dumps({'removed': not directory.exists(), 'files': retired, 'logicalBytes': sum(row['bytes'] for row in retired)}, indent=2) + '\n')
 
 def stop(process):
     with deferring_cancellation():
@@ -87,6 +89,8 @@ with scratch_directory() as temporary:
         return result.returncode
 
     def run(command, name, environment=env, timeout=600):
+        if command[0] in ['swift', 'xcrun', 'bun']:
+            subprocess.run(['sh', str(root / 'scripts/disk-guard.sh')], cwd=root, check=True)
         swift = command[:2] in [['swift', 'build'], ['swift', 'run'], ['swift', 'test']]
         if swift:
             if '--disable-automatic-resolution' not in command:

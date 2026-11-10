@@ -99,6 +99,7 @@ struct TaskTransferResult {
     let kind: TaskTransferRequest.Kind
     let task: TaskSnapshot
     let profileName: String
+    var removedDependencies: [DependencyEdge] = []
     var message: String { "Task \(kind == .copy ? "copied" : "moved") to \(profileName)" }
     var openTitle: String { "Open in \(profileName)" }
 }

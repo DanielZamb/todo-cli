@@ -1,0 +1,174 @@
+import Foundation
+import SwiftUI
+import TodoAPI
+
+struct DependencyBatchDraft: Identifiable {
+    let id = UUID()
+    var reloadRequest = 0
+    let profile: String
+    var root: TaskSnapshot
+    let direction: DependencyDirection
+    var targets: [TaskSnapshot] = []
+    var selected: Set<String> = []
+    var remove = false
+    var loading = true
+    var pending = false
+    var failure: DependencyNotice?
+    var report: DependencyBatchReport?
+    var items: [DependencyBatchItem] = []
+}
+struct DependencyBatchItem: Codable {
+    let action: String
+    let dependent_id: String
+    let blocker_id: String
+    let from_version: Int
+}
+struct DependencyBatchReport: Decodable {
+    struct Row: Decodable {
+        let index: Int
+        let result: DependencyEdgeReport?
+        let error: ServerFailure?
+        let exit_code: Int?
+    }
+    let dry_run: Bool
+    let results: [Row]
+}
+
+extension TodoModel {
+    func beginDependencyBatch() async {
+        guard let picker = dependencies.picker, canWrite else { return }
+        closeDependencyPicker()
+        dependencies.batch = .init(profile: picker.profile, root: picker.root, direction: picker.direction)
+        await reloadDependencyBatch()
+    }
+    func reloadDependencyBatch() async {
+        guard let batch = dependencies.batch, !batch.pending else { return }
+        let epoch = discovery.credentialEpoch
+        dependencies.batch?.reloadRequest += 1
+        guard let request = dependencies.batch?.reloadRequest else { return }
+        dependencies.batch?.loading = true
+        do {
+            let rows = try await client.tasks_period_list(path: .init(profile: batch.profile)).ok.body.json.map(TaskSnapshot.decode)
+            guard signedIn, profile == batch.profile, isCurrentCredential(epoch), dependencies.batch?.id == batch.id, dependencies.batch?.reloadRequest == request else { return }
+            if let root = rows.first(where: { $0.id == batch.root.id }) { dependencies.batch?.root = root }
+            dependencies.batch?.targets = rows.filter { $0.id != batch.root.id }
+            dependencies.batch?.report = nil
+            dependencies.batch?.items = []
+            dependencies.batch?.loading = false
+            dependencies.batch?.failure = nil
+        } catch {
+            guard signedIn, profile == batch.profile, isCurrentCredential(epoch), dependencies.batch?.id == batch.id, dependencies.batch?.reloadRequest == request else { return }
+            dependencies.batch?.loading = false
+            dependencies.batch?.failure = dependencyNotice(error, context: .link)
+            handleAuthorization(error, credentialEpoch: epoch)
+        }
+    }
+    func previewDependencyBatch() async {
+        guard let batch = dependencies.batch, canWrite, !batch.loading, !batch.pending else { return }
+        var versions: [String: Int] = [:]
+        let root = batch.root
+        let selected = batch.targets.filter { batch.selected.contains($0.id) }
+        dependencies.batch?.items = selected.map { target in
+            let dependent = batch.direction == .dependsOn ? root : target
+            let blocker = batch.direction == .dependsOn ? target : root
+            let version = versions[dependent.id] ?? dependent.row_version
+            let linked = dependent.depends_on?.contains(blocker.id) == true
+            if linked == batch.remove { versions[dependent.id] = version + 1 }
+            return .init(action: batch.remove ? "undepend" : "depend", dependent_id: dependent.id, blocker_id: blocker.id, from_version: version)
+        }
+        await runDependencyBatch(dryRun: true)
+    }
+    func applyDependencyBatch() async {
+        guard let report = dependencies.batch?.report, report.dry_run, !report.results.contains(where: { $0.error?.code == "occ_conflict" }) else { return }
+        await runDependencyBatch(dryRun: false)
+    }
+    private func runDependencyBatch(dryRun: Bool) async {
+        guard let batch = dependencies.batch, canWrite, !batch.items.isEmpty, !batch.pending else { return }
+        let epoch = discovery.credentialEpoch
+        dependencies.batch?.pending = true
+        defer { if dependencies.batch?.id == batch.id { dependencies.batch?.pending = false } }
+        struct Payload: Encodable { let items: [DependencyBatchItem]; let dry_run: Bool }
+        do {
+            let payload = try decode(Operations.tasks_period_batchDepend.Input.Body.jsonPayload.self, Payload(items: batch.items, dry_run: dryRun))
+            let response = try await client.tasks_period_batchDepend(path: .init(profile: batch.profile), body: .json(payload))
+            if case .conflict(let conflict) = response { throw try dependencyConflict(conflict.body.json) }
+            let wire = try response.ok.body.json
+            let report = try decode(DependencyBatchReport.self, wire)
+            guard signedIn, profile == batch.profile, isCurrentCredential(epoch), dependencies.batch?.id == batch.id else { return }
+            if report.results.contains(where: { $0.error.map { $0.hasMalformedDependencyError || $0.exitDetail == nil } ?? false }) {
+                dependencies.batch?.report = nil
+                throw DependencyGraphReply.ProtocolError.incompatible
+            }
+            dependencies.batch?.report = report
+            if !dryRun { await refreshAfterWrite("Dependencies updated") }
+        } catch {
+            guard signedIn, profile == batch.profile, isCurrentCredential(epoch), dependencies.batch?.id == batch.id else { return }
+            dependencies.batch?.failure = dependencyNotice(error, context: .link)
+            handleAuthorization(error, credentialEpoch: epoch)
+        }
+    }
+}
+
+struct DependencyBatchView: View {
+    @Bindable var model: TodoModel
+    var compact = false
+    var body: some View {
+        if let batch = model.dependencies.batch {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Edit Dependencies together").font(.headline)
+                Text(batch.direction.sentence(batch.root.title)).lineLimit(2)
+                if batch.report == nil {
+                    Picker("Action", selection: Binding(get: { batch.remove }, set: { model.dependencies.batch?.remove = $0 })) {
+                        Text("Add").tag(false)
+                        Text("Remove").tag(true)
+                    }.pickerStyle(.segmented)
+                }
+                if !model.canWrite && !batch.pending { Text("Offline or read only. Reconnect to change Dependencies.").font(.caption).foregroundStyle(.secondary) }
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 8) {
+                        if batch.loading { ProgressView("Loading Tasks…") }
+                        if let failure = batch.failure { DependencyNoticeView(model: model, notice: failure) }
+                        if let report = batch.report {
+                            Text(report.dry_run ? "Preview · No changes saved" : "Dependencies updated").font(.subheadline.weight(.semibold)).accessibilityIdentifier("dependency-batch-summary")
+                            ForEach(report.results, id: \.index) { row in
+                                VStack(alignment: .leading, spacing: 4) {
+                                    let item = batch.items.indices.contains(row.index) ? batch.items[row.index] : nil
+                                    Text(item.map { title($0.blocker_id, batch: batch) + " blocks " + title($0.dependent_id, batch: batch) } ?? "Dependency \(row.index + 1)")
+                                    if let result = row.result {
+                                        Text(result.outcome == "unchanged" ? (batch.remove ? "Already removed" : "Already linked") : result.outcome.capitalized).foregroundStyle(.secondary)
+                                        ForEach(result.warnings.indices, id: \.self) { DependencyNoticeView(model: model, notice: result.warnings[$0].notice, warning: true) }
+                                    }
+                                    if let failure = row.error { ServerErrorNotice(model: model, failure: failure, dependencyContext: .linkDone) }
+                                }.padding(8).frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 6))
+                                    .accessibilityIdentifier("dependency-batch-row-\(row.index)")
+                            }
+                        } else {
+                            ForEach(batch.targets) { task in
+                                Toggle(isOn: Binding(get: { batch.selected.contains(task.id) }, set: { checked in
+                                    if checked { model.dependencies.batch?.selected.insert(task.id) } else { model.dependencies.batch?.selected.remove(task.id) }
+                                })) {
+                                    TaskRow(task: task, canWrite: false, compact: compact, projectName: nil, tagNames: task.tagNames(from: model.tags), showsCompletion: false, complete: {})
+                                }.toggleStyle(.checkbox)
+                            }
+                        }
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                }.compactBounds("dependency-body")
+                HStack {
+                    Button("Cancel") { model.dependencies.batch = nil }.disabled(batch.pending).keyboardShortcut(.cancelAction)
+                    Button("Reload") { Task { await model.reloadDependencyBatch() } }.disabled(batch.pending || model.connection != .live).accessibilityIdentifier("dependency-reload")
+                    Spacer(minLength: 0)
+                    if batch.report?.dry_run == true {
+                        Button("Apply") { Task { await model.applyDependencyBatch() } }.disabled(!model.canWrite || batch.pending || batch.report?.results.contains { $0.error?.code == "occ_conflict" } == true).accessibilityIdentifier("dependency-batch-apply")
+                    } else if batch.report == nil {
+                        Button("Preview") { Task { await model.previewDependencyBatch() } }.disabled(!model.canWrite || batch.pending || batch.loading || batch.selected.isEmpty)
+                    }
+                }.compactBounds("dependency-actions")
+            }.padding(16).frame(width: compact ? 393 : 600, height: compact ? 426 : 640).accessibilityIdentifier("dependency-batch-preview")
+        }
+    }
+    private func title(_ id: String, batch: DependencyBatchDraft) -> String {
+        if id == batch.root.id { return batch.root.title }
+        return batch.targets.first { $0.id == id }?.title ?? id
+    }
+}

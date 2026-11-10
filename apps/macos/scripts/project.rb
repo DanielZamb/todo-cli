@@ -37,6 +37,10 @@ server_phase.output_paths = [
   '$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Server/todo-server',
   '$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Server/THIRD_PARTY_NOTICES.txt'
 ]
+graph_phase = app.new_shell_script_build_phase('Bundle canonical graph resources')
+graph_phase.shell_script = 'node "$SRCROOT/scripts/graph-resources.mjs" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/graph-browser"'
+graph_phase.always_out_of_date = '1'
+graph_phase.output_paths = ['$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/graph-browser/graph.js']
 assets = project.main_group.new_file('../../design/macos/Assets.xcassets')
 app.resources_build_phase.add_file_reference(assets)
 icon = project.main_group.new_file('../../design/icon/Todo.icon')
