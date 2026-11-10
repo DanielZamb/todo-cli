@@ -305,3 +305,9 @@ done Task reveal, response provenance, selectors and visual state matrix.
 Read [Task Dependencies](features/dependencies.md) for the current production-renderer
 scratch command, state coverage, selectors, capture receipt validation and pending
 proof boundaries. This checkpoint does not replace the full end-of-unit suites.
+The drag fixture asserts that every row keeps identical bounds for allowed,
+already-linked, self and foreign targets. Its visible target metadata is short;
+its accessible value keeps the full relation. Long-loop refusal geometry requires
+three whole witness lines and at least two whole candidate rows. Batch and nested
+Import fixtures use visibly different agent messages to catch projector leaks.
+The complete aggregate and both final client suites remain required separately.

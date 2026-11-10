@@ -30,4 +30,5 @@ Version guardrails are covered in [sessions](<sessions.md>).
 - [Profiles, Projects and Find Task by id](discovery.md) covers authorized read-only discovery, Copy, explicit Show, request epochs and the full production-renderer proof during native HOLD.
 The discovery recipe also includes a hidden production write-host regression for delayed Unauthorized replies after credential replacement and a current-credential 401 control.
 - [Task Dependencies](dependencies.md) covers the typed transport, immediate picker,
-  universal Delete confirmation, filters/order and Compact checkpoint receipts.
+  universal Delete confirmation, filters/order, initial selection, batch reports,
+  graph and metadata-line drag/keyboard paths, with explicit partial-proof limits.

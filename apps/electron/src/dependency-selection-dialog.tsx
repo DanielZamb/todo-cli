@@ -13,7 +13,9 @@ import {
 import { Empty, EmptyHeader, EmptyTitle } from "./components/ui/empty.tsx";
 import { Field } from "./components/ui/field.tsx";
 import { Input } from "./components/ui/input.tsx";
+import { moveDependencyChoice } from "./dependency-choice-keys.ts";
 import { DependencyErrorStatus } from "./dependency-dialog.tsx";
+import type { DependencyDirection } from "./dependency-state.ts";
 import { DependencyTaskLabel } from "./dependency-task-label.tsx";
 import type { Reply, Request } from "./protocol.ts";
 export function InitialDependencySection({
@@ -28,32 +30,35 @@ export function InitialDependencySection({
   onChoose: (button: HTMLButtonElement) => void;
 }) {
   return (
-    <section className="editor-dependencies">
-      <h3>Dependencies</h3>
-      <div className="chips">
-        {tasks.map((task) => (
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={disabled}
-            key={task.id}
-            data-testid={`dependency-initial-${task.id}`}
-            aria-label={`Remove Dependency ${task.title}`}
-            onClick={() => onRemove(task.id)}
-          >
-            {task.title}
-            <X data-icon="inline-end" />
-          </Button>
-        ))}
-      </div>
+    <section
+      className="dependency-initial-row"
+      aria-label="Initial Dependencies"
+    >
+      <span className="text-muted-foreground">Depends on</span>
       <Button
         type="button"
         variant="outline"
+        aria-label="Add Dependencies"
         disabled={disabled}
         onClick={(event) => onChoose(event.currentTarget)}
       >
-        Choose Dependencies
+        Add…
       </Button>
+      {tasks.map((task) => (
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={disabled}
+          key={task.id}
+          data-testid={`dependency-initial-${task.id}`}
+          aria-label={`Remove Dependency ${task.title}`}
+          title={task.title}
+          onClick={() => onRemove(task.id)}
+        >
+          <span className="truncate">{task.title}</span>
+          <X data-icon="inline-end" />
+        </Button>
+      ))}
     </section>
   );
 }
@@ -70,6 +75,9 @@ export function DependencySelectionDialog({
   onDone,
   action = "Done",
   returnFocus,
+  direction = "dependsOn",
+  description = "Dependencies are saved with the new Task. Choose up to 13 Tasks in this Profile.",
+  limit = 13,
 }: {
   profile: ProfileId;
   title: string;
@@ -82,6 +90,9 @@ export function DependencySelectionDialog({
   onDone: () => void;
   action?: string;
   returnFocus: () => HTMLElement | null;
+  direction?: DependencyDirection;
+  description?: string;
+  limit?: number;
 }) {
   const [query, setQuery] = useState("");
   const [candidates, setCandidates] = useState<readonly TaskRead[]>([]);
@@ -150,14 +161,14 @@ export function DependencySelectionDialog({
         finalFocus={returnFocus}
         showCloseButton={false}
       >
-        <DialogTitle>{title} depends on…</DialogTitle>
-        <DialogDescription>
-          Dependencies are saved with the new Task. Choose up to 13 Tasks in
-          this Profile.
-        </DialogDescription>
+        <DialogTitle>
+          {title} {direction === "dependsOn" ? "depends on…" : "blocks…"}
+        </DialogTitle>
+        <DialogDescription>{description}</DialogDescription>
         <Field>
           <Input
             ref={search}
+            onKeyDown={moveDependencyChoice}
             aria-label="Search Tasks in this Profile"
             placeholder="Search Tasks in this Profile"
             value={query}
@@ -196,10 +207,11 @@ export function DependencySelectionDialog({
                 htmlFor={`dependency-initial-${task.id}`}
               >
                 <Checkbox
+                  onKeyDown={moveDependencyChoice}
                   id={`dependency-initial-${task.id}`}
                   data-testid={`dependency-choice-${task.id}`}
                   checked={checked}
-                  disabled={!canWrite || (!checked && selected.length >= 13)}
+                  disabled={!canWrite || (!checked && selected.length >= limit)}
                   onCheckedChange={(checked) =>
                     onSelect(
                       checked

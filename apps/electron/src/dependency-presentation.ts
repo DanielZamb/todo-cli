@@ -1,6 +1,7 @@
 import {
   DependencyError,
   type DependencyWarning,
+  ExitStatus,
   type Task,
   type TaskId,
 } from "@todo/domain";
@@ -109,9 +110,10 @@ export function dependencyWarning(
     : {
         message:
           "This Dependency is already implied by the path below. The Dependency was kept.",
-        path: warning.path.map(
-          (id) => tasks.find((task) => task.id === id)?.title ?? id,
-        ),
+        path: warning.path.map((id) => ({
+          id,
+          title: tasks.find((task) => task.id === id)?.title ?? id,
+        })),
       };
 }
 export function dependencyErrorText(
@@ -121,7 +123,7 @@ export function dependencyErrorText(
 ) {
   const projection = dependencyRecovery(error, context, tasks);
   return [
-    projection.message,
+    `${projection.message}${projection.action === "choose" ? (error.code === "dependency_profile_mismatch" ? " Choose a Task in this Profile." : " Choose another Task.") : ""}`,
     projection.advice,
     ...projection.witnesses.map(
       (task, index) =>
@@ -131,6 +133,71 @@ export function dependencyErrorText(
   ]
     .filter(Boolean)
     .join("\n");
+}
+export const isDependencyConflict = (code: string | undefined) =>
+  code === "conflict" || code === "occ_conflict";
+const DependencyCode = Schema.Union(
+  DependencyError.members.map((member) =>
+    Schema.Struct({ code: member.fields.code }),
+  ),
+);
+export function hasDependencyError(input: unknown) {
+  const nested = Schema.decodeUnknownExit(
+    Schema.Struct({ details: Schema.Record(Schema.String, Schema.Unknown) }),
+  )(input);
+  return (
+    Schema.is(DependencyCode)(input) ||
+    (nested._tag === "Success" &&
+      Object.hasOwn(nested.value.details, "dependency_error"))
+  );
+}
+export function dependencyBatchFailure(error: unknown) {
+  const dependency = nestedDependencyError(error);
+  if (dependency)
+    return {
+      message: dependencyRecovery(dependency, "add").message,
+      dependency,
+      exit_detail: `error ${dependency.exit_code} - ${dependency.exit_meaning}`,
+    };
+  const status = Schema.decodeUnknownExit(ExitStatus)(error);
+  const parsed = Schema.decodeUnknownExit(
+    Schema.Struct({ code: Schema.String }),
+  )(error);
+  if (
+    status._tag === "Failure" ||
+    parsed._tag === "Failure" ||
+    hasDependencyError(error)
+  )
+    return {
+      message:
+        "Todo returned an incompatible Dependency response. Reload after updating the server.",
+    };
+  const code = parsed.value.code;
+  const message = isDependencyConflict(code)
+    ? "This Task changed. Reload its Dependencies before trying again."
+    : code === "not_found"
+      ? "Task not found."
+      : code === "auth_required"
+        ? "Sign in to update Dependencies."
+        : code === "forbidden"
+          ? "Dependencies are read-only with this access."
+          : code === "invalid_args"
+            ? "Check this Dependency and try again."
+            : "Couldn't update Dependencies. Try again.";
+  return {
+    message,
+    exit_detail: `error ${status.value.exit_code} - ${status.value.exit_meaning}`,
+  };
+}
+export function dependencyFailureText(
+  error: unknown,
+  context: DependencyContext,
+  tasks: readonly Task[] = [],
+) {
+  const dependency = nestedDependencyError(error);
+  if (dependency) return dependencyErrorText(dependency, context, tasks);
+  const failure = dependencyBatchFailure(error);
+  return [failure.message, failure.exit_detail].filter(Boolean).join("\n");
 }
 const Nested = Schema.Struct({
   details: Schema.Struct({ dependency_error: DependencyError }),

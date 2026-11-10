@@ -14,22 +14,35 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-import { chromium, expect } from "@playwright/test";
+import { join } from "node:path";
+import { chromium, expect, type Locator } from "@playwright/test";
 import { ProfileId } from "@todo/domain";
 import { Effect, Fiber, Schema, Stream } from "effect";
 import { FetchHttpClient, type HttpClient } from "effect/http";
 import { build } from "vite";
+import {
+  repositoryPath,
+  verificationRoot,
+} from "../../../scripts/verification-inputs.ts";
 import { errorReply, exitDetail } from "../src/error-reply.ts";
 import { taskHttpClient } from "../src/http-client.ts";
 import { Reply, Request } from "../src/protocol.ts";
 import { taskRequest } from "../src/task-client.ts";
+import {
+  dependencyAgentMessage,
+  dependencyRefusals,
+} from "../test/fixtures/dependency-errors.ts";
+import { openImport } from "./appearance.ts";
 import { buildGraphBrowser } from "./build-graph-browser.ts";
 import { writeDagCaptureManifest } from "./dag-capture-manifest.ts";
 import { settleRenderer } from "./settle-renderer.ts";
 
-const root = resolve(import.meta.dirname, "../../..");
-const evidence = resolve(process.argv[2] ?? "");
+const root = verificationRoot(import.meta.dirname);
+const evidence = repositoryPath(
+  root,
+  process.argv[2] ?? "",
+  "Dependency evidence",
+);
 assert.ok(
   process.argv[2] && !existsSync(evidence),
   "Choose a fresh evidence directory",
@@ -190,7 +203,21 @@ try {
   let clipboard = "";
   let delay = false;
   let delayDelete = false;
+  let reportFixture: "batch" | "import" | null = null;
   let release: (() => void) | undefined;
+  const releasePending = () => {
+    const done = release;
+    release = undefined;
+    done?.();
+  };
+  let holdNotices = false;
+  const heldNotices: unknown[] = [];
+  const notify = (notice: unknown) =>
+    page.evaluate(
+      (notice) =>
+        window.dispatchEvent(new CustomEvent("dag-notice", { detail: notice })),
+      notice,
+    );
   await page.exposeFunction(
     "dagRequest",
     async (raw: unknown): Promise<Reply> => {
@@ -233,17 +260,15 @@ try {
                       ? { kind: frame.data.event.kind, seq: frame.data.seq }
                       : {}),
                   });
-                  await page.evaluate(
-                    (notice) =>
-                      window.dispatchEvent(
-                        new CustomEvent("dag-notice", { detail: notice }),
-                      ),
+                  const notice =
                     frame.event === "ready"
                       ? { _tag: "connection", profile, state: "connected" }
                       : frame.event === "reload"
                         ? { _tag: "reload" }
-                        : { _tag: "changed", profile },
-                  );
+                        : { _tag: "changed", profile };
+                  if (holdNotices && frame.event === "operation")
+                    heldNotices.push(notice);
+                  else await notify(notice);
                 }),
               );
             }).pipe(Effect.provide(FetchHttpClient.layer)),
@@ -267,6 +292,53 @@ try {
         case "signOut":
           return { _tag: "ok" };
       }
+      if (reportFixture === "batch" && request._tag === "batchDepend")
+        return Schema.decodeUnknownSync(Reply)({
+          _tag: "batchDepend",
+          report: {
+            generated_at: "2026-11-09T00:00:00Z",
+            dry_run: request.payload.dry_run === true,
+            results: request.payload.items.map((_, index) => ({
+              index,
+              error: dependencyRefusals[index]?.error,
+              exit_code: 2,
+            })),
+          },
+        });
+      if (reportFixture === "import" && request._tag === "importTasks")
+        return Schema.decodeUnknownSync(Reply)({
+          _tag: "importReport",
+          report: {
+            generated_at: "2026-11-09T00:00:00Z",
+            dry_run: request.payload.dry_run === true,
+            totals: { created: 0, updated: 0, unchanged: 0, rejected: 8 },
+            items: request.payload.items.map((_, index) => ({
+              external_id: `projection:${index}`,
+              outcome: "rejected",
+              task_id: null,
+              from_version: null,
+              changed_fields: [],
+              error:
+                index < 6
+                  ? {
+                      exit_code: 2,
+                      exit_meaning: "validation or usage",
+                      code: "invalid_args",
+                      message: dependencyAgentMessage,
+                      details: {
+                        current_version: null,
+                        dependency_error: dependencyRefusals[index]?.error,
+                      },
+                    }
+                  : {
+                      exit_code: 4,
+                      exit_meaning: "Conflict",
+                      code: index === 6 ? "conflict" : "occ_conflict",
+                      message: dependencyAgentMessage,
+                    },
+            })),
+          },
+        });
       try {
         const reply = Schema.decodeUnknownSync(Reply)(
           await run(taskRequest(client, request)),
@@ -292,7 +364,7 @@ try {
             latest: error.latest,
             exit_detail: exitDetail(error),
           });
-        return errorReply(error);
+        return errorReply(error, request);
       }
     },
   );
@@ -333,6 +405,7 @@ try {
     state: string,
     description: string,
     layout = "compact",
+    target?: Locator,
   ) => {
     for (const dark of [false, true]) {
       await page.evaluate((dark) => {
@@ -341,13 +414,54 @@ try {
             new CustomEvent("dag-notice", { detail: { _tag: "toggleTheme" } }),
           );
       }, dark);
+      await expect
+        .poll(() =>
+          page
+            .locator("html")
+            .evaluate((element) => element.classList.contains("dark")),
+        )
+        .toBe(dark);
       await settleRenderer(page);
+      if (target) {
+        await target.evaluate((element) =>
+          element.scrollIntoView({ block: "center" }),
+        );
+        await settleRenderer(page);
+      }
+      const popup = page
+        .locator('[data-slot="dialog-content"][data-open]')
+        .last();
+      if (await popup.count()) {
+        await expect(popup).toHaveCSS("opacity", "1");
+        await expect(popup).toHaveCSS(
+          "background-color",
+          dark ? "rgb(36, 47, 39)" : "rgb(255, 255, 255)",
+        );
+      }
       const png = `${state}-${layout}-${dark ? "dark" : "light"}.png`;
       const geometry = await page.evaluate(() => ({
         overflow: document.documentElement.scrollWidth > innerWidth,
+        popups: [
+          ...document.querySelectorAll(
+            '[data-slot="dialog-content"][data-open]',
+          ),
+        ].map((element) => {
+          const style = getComputedStyle(element);
+          const box = element.getBoundingClientRect();
+          const hit = document.elementFromPoint(box.left + 12, box.top + 12);
+          return {
+            id: element.getAttribute("data-testid"),
+            background: style.backgroundColor,
+            color: style.color,
+            opacity: style.opacity,
+            transition: style.transition,
+            containsHit: hit !== null && element.contains(hit),
+            hit: hit?.outerHTML.slice(0, 300),
+          };
+        }),
         actions: [
           ...document.querySelectorAll(
-            '[data-testid="dependency-delete-confirm"], [data-testid="dependency-delete-cancel"], [data-testid="dependency-picker-close"], [data-testid="dependency-graph-close"], [data-testid="dependency-graph-mode"], [data-testid="dependency-initial-done"], [data-testid="dependency-initial-cancel"], .dependency-diagram-tools',
+            '[data-testid="dependency-delete-confirm"], [data-testid="dependency-delete-cancel"], [data-testid="dependency-picker-close"], [data-testid="dependency-graph-close"], [data-testid="dependency-graph-mode"], [data-testid="dependency-initial-done"], [data-testid="dependency-initial-cancel"], .dependency-batch-dialog [data-slot="dialog-footer"], .dependency-diagram-tools',
           ),
         ].map((element) => {
           const box = element.getBoundingClientRect();
@@ -643,6 +757,10 @@ try {
   };
   await openGraph();
   await expect(page.getByTestId("dependency-graph-diagram")).toHaveCount(0);
+  await expect(page.getByTestId("dependency-graph-overview")).toHaveCount(0);
+  await expect(page.locator(".dependency-graph-controls small")).toHaveText(
+    "2 of 2 Tasks shown",
+  );
   await capture(
     "graph-list",
     "Compact opens on the accessible Depends on, Blocks, Lightest next and root details list",
@@ -650,6 +768,7 @@ try {
   await page
     .getByRole("button", { name: "Graph details", exact: true })
     .click();
+  await page.getByRole("button", { name: /^Tasks in diagram · / }).click();
   await page.getByTestId("dependency-graph-copy-mermaid").click();
   for (const section of [
     "depends-on",
@@ -742,6 +861,8 @@ try {
       }),
     ),
   );
+  await page.getByTestId("dependency-graph-close").click();
+  await openGraph();
   await capture(
     "graph-full",
     "Full window diagram has native details beside it",
@@ -834,6 +955,86 @@ try {
     "picker-long-last",
     "Profile-wide candidate list reaches its last long row while Close remains in the Compact viewport",
   );
+  const cycleNames: readonly [string, string, string] = [
+    "Long cycle fixture A: retain the complete authorized Task title in this returned witness",
+    "Long cycle fixture B: retain the complete authorized Task title in this returned witness",
+    "Long cycle fixture C: retain the complete authorized Task title in this returned witness",
+  ];
+  const cycleA = cli("add", cycleNames[0], "--depends-on", blocked.id).task;
+  const cycleB = cli("add", cycleNames[1], "--depends-on", cycleA.id).task;
+  const cycleC = cli("add", cycleNames[2], "--depends-on", cycleB.id).task;
+  await page.getByTestId("dependency-depends-on").click();
+  await page.getByTestId("dependency-search").fill("Long cycle fixture");
+  await page.getByTestId(`dependency-choice-${cycleC.id}`).check();
+  await expect(page.getByTestId("dependency-error")).toContainText(
+    `Can't add ${cycleC.title}.`,
+  );
+  await expect(
+    page.getByTestId(`dependency-choice-${cycleC.id}`),
+  ).not.toBeChecked();
+  const chain = await page
+    .locator(".dependency-error-region .dependency-witness li")
+    .allTextContents();
+  const names = chain.map((name) => name.trim().replace(/^→ /u, ""));
+  assert.equal(names.length, 5);
+  assert.equal(names[0], names.at(-1));
+  assert.deepEqual(
+    names
+      .slice(0, -1)
+      .map((name, index) => `${name} blocks ${names[index + 1]}`)
+      .sort(),
+    [
+      `${blocked.title} blocks ${cycleA.title}`,
+      `${cycleA.title} blocks ${cycleB.title}`,
+      `${cycleB.title} blocks ${cycleC.title}`,
+      `${cycleC.title} blocks ${blocked.title}`,
+    ].sort(),
+  );
+  await expect(
+    page.locator(".dependency-error-region .dependency-witness"),
+  ).toHaveAttribute("aria-label", names.join(" blocks "));
+  const loopGeometry = await page
+    .locator(".dependency-error-region .dependency-witness")
+    .evaluate((list) => {
+      const region = list.getBoundingClientRect();
+      const rows = [...list.children].map((row) => row.getBoundingClientRect());
+      return {
+        height: list.clientHeight,
+        scrollHeight: list.scrollHeight,
+        right: region.right,
+        alertRight: list
+          .closest(".dependency-error-region")
+          ?.getBoundingClientRect().right,
+        wholeLines: rows.filter(
+          (row) =>
+            row.top >= region.top &&
+            row.bottom <= region.top + list.clientHeight,
+        ).length,
+      };
+    });
+  assert.equal(loopGeometry.wholeLines, 3);
+  assert.ok(
+    loopGeometry.alertRight !== undefined &&
+      loopGeometry.right <= loopGeometry.alertRight,
+  );
+  assert.ok(loopGeometry.scrollHeight > loopGeometry.height);
+  const wholeChoices = await page.locator(".dependency-choice").evaluateAll(
+    (rows) =>
+      rows.filter((row) => {
+        const box = row.getBoundingClientRect(),
+          region = row.closest(".dependency-scroll")?.getBoundingClientRect();
+        return region && box.top >= region.top && box.bottom <= region.bottom;
+      }).length,
+  );
+  assert.ok(wholeChoices >= 2);
+  writeFileSync(
+    join(evidence, "long-loop-geometry.json"),
+    JSON.stringify({ loopGeometry, wholeChoices, returnedArrowOrder: names }),
+  );
+  await capture(
+    "picker-long-cycle",
+    "A real long loop keeps exactly three whole witness lines, two whole candidates, the attempted candidate unchecked and the actual exit pair",
+  );
   await page.getByTestId("dependency-picker-close").click();
   await page.evaluate(() =>
     window.dispatchEvent(
@@ -843,8 +1044,46 @@ try {
   await page
     .getByLabel("Task title", { exact: true })
     .fill("Created with a reviewed Dependency");
+  const quickGeometry = async (name: string) => {
+    await settleRenderer(page);
+    const geometry = await page.locator(".quick-dialog").evaluate((dialog) => {
+      const preview = dialog
+        .querySelector(".parsed-draft")
+        ?.getBoundingClientRect();
+      const footer = dialog
+        .querySelector(".quick-add-footer")
+        ?.getBoundingClientRect();
+      const row = dialog
+        .querySelector(".dependency-initial-row")
+        ?.getBoundingClientRect();
+      if (!preview || !footer || !row)
+        throw new Error("Missing quick-add metadata geometry");
+      return {
+        previewFooter: footer.top - preview.bottom,
+        footerTop: footer.top,
+        rowHeight: row.height,
+        footerVisible: footer.top >= 0 && footer.bottom <= innerHeight,
+        horizontalOverflow: dialog.scrollWidth > dialog.clientWidth,
+      };
+    });
+    assert.equal(geometry.previewFooter, 16);
+    assert.equal(geometry.footerVisible, true);
+    assert.equal(geometry.horizontalOverflow, false);
+    writeFileSync(
+      join(evidence, `${name}-geometry.json`),
+      JSON.stringify(geometry),
+    );
+    return geometry;
+  };
+  await expect(page.locator(".parsed-draft")).toBeVisible();
+  const quickNone = await quickGeometry("quick-dependencies-none");
+  assert.equal(quickNone.rowHeight, 32);
+  await capture(
+    "quick-dependencies-none",
+    "Initial Dependencies occupy one metadata row, above the preview's fixed 16px footer gap",
+  );
   await page
-    .getByRole("button", { name: "Choose Dependencies", exact: true })
+    .getByRole("button", { name: "Add Dependencies", exact: true })
     .click();
   await page
     .getByTestId("dependency-initial-picker")
@@ -882,6 +1121,55 @@ try {
     "Initial checked Dependency stays selected while Profile search narrows; no edge write has occurred",
   );
   await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Add Dependencies", exact: true })
+    .click();
+  await page
+    .getByTestId("dependency-initial-picker")
+    .getByRole("textbox")
+    .fill(resolved.title);
+  await page.getByTestId(`dependency-choice-${resolved.id}`).check();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  assert.equal(
+    (await quickGeometry("quick-dependencies-two")).footerTop,
+    quickNone.footerTop,
+  );
+  await capture(
+    "quick-dependencies-two",
+    "Two removable Dependency chips stay inside scrolling metadata and preserve the fixed footer gap",
+  );
+  const wrapTasks = Array.from(
+    { length: 8 },
+    (_, index) =>
+      cli(
+        "add",
+        `Quick wrap fixture ${index + 1} with a long title for the metadata chips`,
+      ).task,
+  );
+  await page
+    .getByRole("button", { name: "Add Dependencies", exact: true })
+    .click();
+  await page
+    .getByTestId("dependency-initial-picker")
+    .getByRole("textbox")
+    .fill("Quick wrap fixture");
+  for (const task of wrapTasks)
+    await page.getByTestId(`dependency-choice-${task.id}`).check();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  const lastChip = wrapTasks.at(-1);
+  assert.ok(lastChip);
+  await page
+    .getByTestId(`dependency-initial-${lastChip.id}`)
+    .scrollIntoViewIfNeeded();
+  const quickMany = await quickGeometry("quick-dependencies-many");
+  assert.equal(quickMany.footerTop, quickNone.footerTop);
+  assert.ok(quickMany.rowHeight > 32);
+  await capture(
+    "quick-dependencies-many",
+    "Many chips wrap within the scrolling metadata region, with the last chip reachable and fixed footer visible",
+  );
+  for (const task of [...wrapTasks, resolved])
+    await page.getByTestId(`dependency-initial-${task.id}`).click();
   await expect(page.getByLabel("Task title", { exact: true })).toHaveValue(
     "Created with a reviewed Dependency",
   );
@@ -1043,6 +1331,737 @@ try {
     "delete-success",
     "The confirmed no-edge Task is absent from a fresh authorized server read",
   );
+  const batchRoot = cli("add", "Batch prerequisite", "--priority", "P4").task;
+  const batchChanged = cli(
+    "add",
+    "Batch changed Task",
+    "--priority",
+    "P4",
+  ).task;
+  const batchUnchanged = cli(
+    "add",
+    "Batch already linked",
+    "--priority",
+    "P4",
+    "--depends-on",
+    batchRoot.id,
+  ).task;
+  const batchRefused = cli(
+    "add",
+    "Batch done candidate",
+    "--priority",
+    "P4",
+  ).task;
+  cli("done", batchRefused.id, "--expected-version", "1");
+  await page.locator(`[data-task-id="${batchRoot.id}"] .task-content`).click();
+  await page
+    .getByLabel("Title", { exact: true })
+    .fill("Batch root draft remains intact");
+  await page.getByTestId("dependency-add").click();
+  await page.getByTestId("dependency-blocks").click();
+  await page.getByRole("button", { name: "Batch…", exact: true }).click();
+  for (const task of [batchChanged, batchUnchanged, batchRefused])
+    await page.getByTestId(`dependency-choice-${task.id}`).check();
+  await page
+    .getByRole("button", { name: "Preview Dependencies", exact: true })
+    .click();
+  await expect(page.getByTestId("dependency-batch-summary")).toHaveText(
+    "Preview: 1 changed · 1 unchanged · 1 refused",
+  );
+  await expect(page.getByTestId("dependency-batch-row-1")).toContainText(
+    "Already linked",
+  );
+  await expect(page.getByTestId("dependency-batch-row-2")).toContainText(
+    "A done Task can only depend on done or cancelled Tasks.",
+  );
+  await expect(page.getByTestId("dependency-batch-row-2")).toContainText(
+    "error 2 - validation or usage",
+  );
+  assert.equal(cli("show", batchChanged.id).task.row_version, 1);
+  await capture(
+    "batch-preview",
+    "Shared batch dry-run has changed, unchanged and typed refused rows with the actual exit pair and no durable write",
+  );
+  await page
+    .getByTestId("dependency-batch-row-2")
+    .locator('[data-testid="dependency-error"] p')
+    .last()
+    .scrollIntoViewIfNeeded();
+  assert.equal(
+    await page
+      .getByTestId("dependency-batch-row-2")
+      .locator('[data-testid="dependency-error"] p')
+      .last()
+      .evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const region = element
+          .closest(".dependency-scroll")
+          ?.getBoundingClientRect();
+        return (
+          !!region &&
+          box.top >= region.top - 0.5 &&
+          box.bottom <= region.bottom + 0.5
+        );
+      }),
+    true,
+  );
+  await capture(
+    "batch-preview-refusal-last",
+    "The refused candidate title, witness and muted actual exit pair remain reachable at the end of the batch scroll region",
+  );
+  await page.getByTestId("dependency-batch-apply").click();
+  await expect(page.getByTestId("dependency-batch-summary")).toHaveText(
+    "Results: 1 changed · 1 unchanged · 1 refused",
+  );
+  assert.equal(cli("show", batchChanged.id).task.row_version, 2);
+  assert.equal(cli("show", batchUnchanged.id).task.row_version, 1);
+  assert.equal(cli("show", batchRefused.id).task.status, "done");
+  const batchHistory = await run(
+    client.reads.history({
+      params: {
+        profile: Schema.decodeUnknownSync(ProfileId)("work"),
+        task: batchChanged.id,
+      },
+    }),
+  );
+  assert.deepEqual(
+    batchHistory.map((entry) => entry.event.kind),
+    ["TaskCreated", "DependencyAdded"],
+  );
+  const unchangedHistory = await run(
+    client.reads.history({
+      params: {
+        profile: Schema.decodeUnknownSync(ProfileId)("work"),
+        task: batchUnchanged.id,
+      },
+    }),
+  );
+  assert.equal(unchangedHistory.length, 1);
+  await capture(
+    "batch-result",
+    "Per-item apply commits the changed edge, keeps the unchanged Version/History, and preserves the refused done Task",
+  );
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
+    "Batch root draft remains intact",
+  );
+  writeFileSync(
+    join(evidence, "batch-result.json"),
+    JSON.stringify({
+      batchRoot,
+      batchChanged,
+      batchUnchanged,
+      batchRefused,
+      batchHistory,
+      unchangedHistory,
+    }),
+  );
+  const removeBatchPreview = async () => {
+    await page.getByTestId("dependency-add").click();
+    await page.getByTestId("dependency-blocks").click();
+    await page.getByRole("button", { name: "Batch…", exact: true }).click();
+    await page.getByTestId(`dependency-choice-${batchChanged.id}`).check();
+    await page
+      .getByRole("button", { name: "Preview Dependencies", exact: true })
+      .click();
+    await expect(page.getByTestId("dependency-batch-summary")).toHaveText(
+      "Preview: 0 changed · 1 unchanged · 0 refused",
+    );
+    await page.getByRole("button", { name: "Remove", exact: true }).click();
+    await page.getByRole("button", { name: "Preview", exact: true }).click();
+    await expect(page.getByTestId("dependency-batch-summary")).toHaveText(
+      "Preview: 1 changed · 0 unchanged · 0 refused",
+    );
+  };
+  await removeBatchPreview();
+  holdNotices = true;
+  cli(
+    "edit",
+    batchChanged.id,
+    "--title",
+    "Concurrent candidate edit",
+    "--expected-version",
+    "2",
+  );
+  await page.getByTestId("dependency-batch-apply").click();
+  await expect(page.getByTestId("dependency-batch-summary")).toHaveText(
+    "Results: 0 changed · 0 unchanged · 1 refused",
+  );
+  await expect(page.getByTestId("dependency-batch-row-0")).toContainText(
+    "error 4 - Conflict",
+  );
+  await expect(page.getByTestId("dependency-reload")).toBeEnabled();
+  await capture(
+    "batch-conflict",
+    "A real competing CLI edit produces a per-item Conflict with the actual pair; no blind retry occurs",
+  );
+  while (heldNotices.length) await notify(heldNotices.shift());
+  holdNotices = false;
+  await page.getByTestId("dependency-reload").click();
+  await expect(page.getByTestId("dependency-batch-summary")).toHaveText(
+    "Preview: 1 changed · 0 unchanged · 0 refused",
+  );
+  await expect(page.getByTestId("dependency-batch-row-0")).toContainText(
+    "Concurrent candidate edit",
+  );
+  await capture(
+    "batch-reloaded",
+    "Explicit Reload refreshes selected dependent Versions and retains selection and root draft; Apply remains a separate action",
+  );
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  assert.equal(cli("show", batchChanged.id).task.row_version, 3);
+  const cancelledBatch = await run(
+    client.tasks.list({
+      params: { profile: Schema.decodeUnknownSync(ProfileId)("work") },
+      query: { prefix: batchChanged.id },
+    }),
+  );
+  assert.deepEqual(cancelledBatch[0]?.depends_on, [batchRoot.id]);
+  await expect(page.getByLabel("Title", { exact: true })).toHaveValue(
+    "Batch root draft remains intact",
+  );
+  await removeBatchPreview();
+  await page.getByTestId("dependency-batch-apply").click();
+  await expect(page.getByTestId("dependency-batch-summary")).toHaveText(
+    "Results: 1 changed · 0 unchanged · 0 refused",
+  );
+  await capture(
+    "batch-remove-result",
+    "The shared batch command removes the reviewed edge using the chosen dependent's latest Version",
+  );
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Back to tasks", exact: true })
+    .click();
+  await expect(
+    page.getByTestId(`dependency-state-${batchChanged.id}`),
+  ).toHaveCount(0);
+  await page
+    .locator(`[data-task-id="${batchChanged.id}"] .task-content`)
+    .click();
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  await expect(
+    page.getByRole("button", {
+      name: "Revert dependency removed change",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await capture(
+    "history-dependency-deltas",
+    "Existing History renders typed DependencyAdded/Removed deltas and exposes the shared Revert action",
+  );
+  await page
+    .getByRole("button", {
+      name: "Revert dependency removed change",
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Task History", exact: true }),
+  ).toHaveCount(0);
+  const revertedTask = (
+    await run(
+      client.tasks.list({
+        params: { profile: Schema.decodeUnknownSync(ProfileId)("work") },
+        query: { prefix: batchChanged.id },
+      }),
+    )
+  )[0];
+  assert.equal(revertedTask?.row_version, 5);
+  assert.deepEqual(revertedTask?.depends_on, [batchRoot.id]);
+  const revertedHistory = await run(
+    client.reads.history({
+      params: {
+        profile: Schema.decodeUnknownSync(ProfileId)("work"),
+        task: batchChanged.id,
+      },
+    }),
+  );
+  const inverse = revertedHistory.at(-1)?.event;
+  assert.ok(inverse?.kind === "TaskReverted" && inverse.entity_version === 2);
+  assert.deepEqual(
+    inverse.dependencies.added.map((edge) => [
+      edge.blocker_id,
+      edge.dependent_id,
+    ]),
+    [[batchRoot.id, batchChanged.id]],
+  );
+  writeFileSync(
+    join(evidence, "batch-conflict-revert-result.json"),
+    JSON.stringify({ cancelledBatch, revertedTask, revertedHistory }),
+  );
+  await page
+    .getByRole("button", { name: "Back to tasks", exact: true })
+    .click();
+  const projectionTasks = dependencyRefusals.map(
+    ({ error }) => cli("add", `Report projection ${error.code}`).task,
+  );
+  await page.locator(`[data-task-id="${batchRoot.id}"] .task-content`).click();
+  await page.getByTestId("dependency-add").click();
+  await page.getByRole("button", { name: "Batch…", exact: true }).click();
+  await page
+    .getByTestId("dependency-initial-picker")
+    .getByRole("textbox")
+    .fill("Report projection");
+  for (const task of projectionTasks)
+    await page.getByTestId(`dependency-choice-${task.id}`).check();
+  reportFixture = "batch";
+  await page
+    .getByRole("button", { name: "Preview Dependencies", exact: true })
+    .click();
+  for (const phase of ["preview", "apply"]) {
+    for (const [index, fixture] of dependencyRefusals.entries()) {
+      const row = page.getByTestId(`dependency-batch-row-${index}`);
+      await expect(row).toContainText(fixture.human);
+      await expect(row).toContainText(
+        `Can't add ${projectionTasks[index]?.title}.`,
+      );
+      await expect(row).toContainText("error 2 - validation or usage");
+      await expect(row).not.toContainText("AGENT ONLY");
+      await row.scrollIntoViewIfNeeded();
+      await capture(
+        `batch-${phase}-${fixture.error.code}`,
+        "Controlled typed Dependency report fixture uses the same production projector and excludes agent text; this capture does not claim the server caused this refusal",
+      );
+    }
+    if (phase === "preview")
+      await page.getByTestId("dependency-batch-apply").click();
+  }
+  reportFixture = null;
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Back to tasks", exact: true })
+    .click();
+  await openImport(page);
+  const importFile = join(scratch, "dependency-errors.json");
+  writeFileSync(
+    importFile,
+    JSON.stringify(
+      Array.from({ length: 8 }, (_, index) => ({
+        external_id: `projection:${index}`,
+        title: `Import candidate ${index + 1}`,
+      })),
+    ),
+  );
+  await page.locator('input[type="file"]').setInputFiles(importFile);
+  reportFixture = "import";
+  await page
+    .getByRole("button", { name: "Preview changes", exact: true })
+    .click();
+  for (let index = 0; index < 8; index++) {
+    const row = page.locator(".import-row").nth(index);
+    const expected =
+      dependencyRefusals[index]?.human ??
+      "This Task changed. Reload its Dependencies before trying again.";
+    await expect(row).toContainText(expected);
+    await expect(row).not.toContainText("AGENT ONLY");
+    await expect(row).toContainText(
+      index < 6 ? "error 2 - validation or usage" : "error 4 - Conflict",
+    );
+    await row.scrollIntoViewIfNeeded();
+    await capture(
+      `import-dependency-error-${index}`,
+      "Controlled nested Dependency or Conflict report fixture uses production Import rows and the shared projector, retaining the actual pair without agent copy",
+      "compact",
+      row,
+    );
+  }
+  reportFixture = null;
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  const sameDependent = cli("add", "Same-dependent batch Version fixture").task;
+  cli("done", sameDependent.id, "--expected-version", "1");
+  await page
+    .locator(`[data-task-id="${sameDependent.id}"] .task-content`)
+    .click();
+  await page.getByTestId("dependency-add").click();
+  await page.getByRole("button", { name: "Batch…", exact: true }).click();
+  for (const candidate of [blocker, resolved])
+    await page.getByTestId(`dependency-choice-${candidate.id}`).check();
+  await page
+    .getByRole("button", { name: "Preview Dependencies", exact: true })
+    .click();
+  await expect(page.getByTestId("dependency-batch-summary")).toHaveText(
+    "Preview: 0 changed · 0 unchanged · 2 refused",
+  );
+  await expect(page.getByTestId("dependency-batch-apply")).toBeDisabled();
+  await page.getByTestId("dependency-reload").click();
+  await expect(page.getByTestId("dependency-batch-summary")).toHaveText(
+    "Preview: 1 changed · 0 unchanged · 1 refused",
+  );
+  assert.equal(cli("show", sameDependent.id).task.row_version, 2);
+  const beforeSameApply = await run(
+    client.tasks.graph({
+      params: {
+        profile: Schema.decodeUnknownSync(ProfileId)("work"),
+        task: sameDependent.id,
+      },
+    }),
+  );
+  assert.equal(
+    beforeSameApply.edges.filter(
+      (edge) => edge.dependent_id === sameDependent.id,
+    ).length,
+    0,
+  );
+  await capture(
+    "batch-same-dependent-preview",
+    "Explicit Reload uses the server preview's refused-first result; dry-run leaves the done dependent at Version 2 without an edge",
+  );
+  await page.getByTestId("dependency-batch-apply").click();
+  await expect(page.getByTestId("dependency-batch-summary")).toHaveText(
+    "Results: 1 changed · 0 unchanged · 1 refused",
+  );
+  assert.equal(cli("show", sameDependent.id).task.row_version, 3);
+  assert.equal(cli("show", sameDependent.id).task.status, "done");
+  const afterSameApply = await run(
+    client.tasks.graph({
+      params: {
+        profile: Schema.decodeUnknownSync(ProfileId)("work"),
+        task: sameDependent.id,
+      },
+    }),
+  );
+  assert.deepEqual(
+    afterSameApply.edges
+      .filter((edge) => edge.dependent_id === sameDependent.id)
+      .map((edge) => edge.blocker_id),
+    [resolved.id],
+  );
+  writeFileSync(
+    join(evidence, "batch-same-dependent-versions.json"),
+    JSON.stringify({
+      beforeSameApply,
+      afterSameApply,
+      from_version: 2,
+      to_version: 3,
+      refused_blocker: blocker.id,
+      added_blocker: resolved.id,
+    }),
+  );
+  await capture(
+    "batch-same-dependent-result",
+    "Per-item apply refuses the unresolved blocker, adds only the cancelled blocker and advances the shared dependent once, from 2 to 3",
+  );
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Back to tasks", exact: true })
+    .click();
+  const dragSource = cli("add", "Drag source").task;
+  const dragTarget = cli("add", "Drag target", "--due", "2026-11-12").task;
+  const sourceButton = page.getByTestId(
+    `dependency-drag-source-${dragSource.id}`,
+  );
+  const targetButton = page.getByTestId(
+    `dependency-drag-source-${dragTarget.id}`,
+  );
+  await expect(sourceButton).toBeVisible();
+  const transfer = await page.evaluateHandle(() => new DataTransfer());
+  const beginDrag = async () =>
+    sourceButton.dispatchEvent("dragstart", { dataTransfer: transfer });
+  const hoverTarget = async () => {
+    await targetButton.scrollIntoViewIfNeeded();
+    await targetButton.dispatchEvent("dragover", { dataTransfer: transfer });
+    await targetButton.scrollIntoViewIfNeeded();
+  };
+  const edgeWrites = () =>
+    actions.filter((action) =>
+      Schema.is(
+        Schema.Struct({
+          request: Schema.Struct({ _tag: Schema.Literal("depend") }),
+        }),
+      )(action),
+    ).length;
+  const rowFrames = () =>
+    page.locator(".task-row[data-task-id]").evaluateAll((rows) =>
+      rows.map((row) => ({
+        id: row.getAttribute("data-task-id"),
+        ...row.getBoundingClientRect().toJSON(),
+      })),
+    );
+  await targetButton.scrollIntoViewIfNeeded();
+  const allowedFrames = await rowFrames();
+  await beginDrag();
+  await hoverTarget();
+  await expect(page.getByTestId("dependency-drop-status")).toContainText(
+    "Will depend on Drag source",
+  );
+  const allowedAfter = await rowFrames();
+  assert.deepEqual(allowedAfter, allowedFrames);
+  const dragBounds = await page
+    .getByTestId(`dependency-drop-target-${dragTarget.id}`)
+    .evaluate((row) => {
+      const statusElement = document.querySelector(
+        '[data-testid="dependency-drop-status"]',
+      );
+      const status = statusElement?.getBoundingClientRect();
+      const title = row.querySelector(".task-title")?.getBoundingClientRect();
+      const metadataElement = row.querySelector(
+        ".compact-row-metadata, .task-meta",
+      );
+      const metadata = metadataElement?.getBoundingClientRect();
+      if (!status || !title || !metadata)
+        throw new Error("Missing drag target geometry");
+      const overlaps = (box: DOMRect) =>
+        status.left < box.right &&
+        status.right > box.left &&
+        status.top < box.bottom &&
+        status.bottom > box.top;
+      return {
+        titleOverlap: overlaps(title),
+        replacesMetadata:
+          statusElement !== null && metadataElement?.contains(statusElement),
+        fullAccessibleValue: statusElement?.getAttribute("aria-label"),
+        status: status.toJSON(),
+        title: title.toJSON(),
+        metadata: metadata.toJSON(),
+      };
+    });
+  assert.equal(dragBounds.titleOverlap, false);
+  assert.equal(dragBounds.replacesMetadata, true);
+  assert.equal(
+    dragBounds.fullAccessibleValue,
+    "Drag target will depend on Drag source",
+  );
+  writeFileSync(
+    join(evidence, "drag-hover-bounds.json"),
+    JSON.stringify(dragBounds),
+  );
+  await capture(
+    "drag-hover",
+    "Production list drag shows the exact SOURCE to TARGET relation without overlapping the target title or metadata",
+  );
+  release = undefined;
+  delay = true;
+  await targetButton.dispatchEvent("drop", { dataTransfer: transfer });
+  await sourceButton.dispatchEvent("dragend", { dataTransfer: transfer });
+  await expect(page.getByTestId("dependency-drop-status")).toContainText(
+    "Updating Dependencies",
+  );
+  assert.deepEqual(await rowFrames(), allowedFrames);
+  await expect.poll(() => release !== undefined).toBe(true);
+  await capture(
+    "drag-pending",
+    "The target remains pending while the same validated depend request waits; no extra row write is sent",
+  );
+  releasePending();
+  await expect(page.getByTestId("dependency-drop-status")).toContainText(
+    "Dependency added",
+  );
+  const dragged = await run(
+    client.tasks.list({
+      params: { profile: Schema.decodeUnknownSync(ProfileId)("work") },
+      query: { prefix: dragTarget.id },
+    }),
+  );
+  assert.deepEqual(dragged[0]?.depends_on, [dragSource.id]);
+  await capture(
+    "drag-result",
+    "A fresh authorized read proves TARGET depends on SOURCE",
+  );
+  await page
+    .getByTestId("dependency-drop-status")
+    .getByRole("button", { name: "Dismiss", exact: true })
+    .click();
+  await targetButton.scrollIntoViewIfNeeded();
+  const alreadyFrames = await rowFrames();
+  await beginDrag();
+  await hoverTarget();
+  await expect(page.getByTestId("dependency-drop-status")).toContainText(
+    "Already depends on Drag source",
+  );
+  const alreadyAfter = await rowFrames();
+  assert.deepEqual(alreadyAfter, alreadyFrames);
+  const alreadyCount = edgeWrites();
+  await capture(
+    "drag-already-linked",
+    "An existing relation is guidance and does not send a write",
+  );
+  await targetButton.dispatchEvent("drop", { dataTransfer: transfer });
+  assert.equal(edgeWrites(), alreadyCount);
+  await sourceButton.dispatchEvent("dragend", { dataTransfer: transfer });
+  await sourceButton.scrollIntoViewIfNeeded();
+  const selfFrames = await rowFrames();
+  await beginDrag();
+  await sourceButton.dispatchEvent("dragover", { dataTransfer: transfer });
+  await expect(page.getByTestId("dependency-drop-status")).toContainText(
+    "A Task can't depend on itself.",
+  );
+  const selfAfter = await rowFrames();
+  assert.deepEqual(selfAfter, selfFrames);
+  await capture("drag-self", "Self-drop is not allowed and cannot commit");
+  await sourceButton.dispatchEvent("drop", { dataTransfer: transfer });
+  assert.equal(edgeWrites(), alreadyCount);
+  await sourceButton.dispatchEvent("dragend", { dataTransfer: transfer });
+  const foreign = await page.evaluateHandle(() => {
+    const data = new DataTransfer();
+    data.setData(
+      "application/x-todo-task-dependency",
+      JSON.stringify({ v: 1, profile: "foreign", task: "foreign-secret" }),
+    );
+    return data;
+  });
+  await targetButton.scrollIntoViewIfNeeded();
+  const foreignFrames = await rowFrames();
+  await targetButton.dispatchEvent("dragover", { dataTransfer: foreign });
+  await expect(page.getByTestId("dependency-drop-status")).toContainText(
+    "Choose a Task in this Profile.",
+  );
+  await expect(page.getByTestId("dependency-drop-status")).not.toContainText(
+    "foreign-secret",
+  );
+  const foreignAfter = await rowFrames();
+  assert.deepEqual(foreignAfter, foreignFrames);
+  writeFileSync(
+    join(evidence, "drag-no-row-shifts.json"),
+    JSON.stringify({
+      allowed: { before: allowedFrames, after: allowedAfter },
+      already: { before: alreadyFrames, after: alreadyAfter },
+      self: { before: selfFrames, after: selfAfter },
+      foreign: { before: foreignFrames, after: foreignAfter },
+      unchanged: true,
+    }),
+  );
+  await capture(
+    "drag-foreign",
+    "An untrusted foreign payload cannot commit or disclose a foreign Task title",
+  );
+  await targetButton.dispatchEvent("drop", { dataTransfer: foreign });
+  assert.equal(edgeWrites(), alreadyCount);
+  await targetButton.dispatchEvent("dragleave", { dataTransfer: foreign });
+  const reverse = await page.evaluateHandle(() => new DataTransfer());
+  await targetButton.dispatchEvent("dragstart", { dataTransfer: reverse });
+  await sourceButton.dispatchEvent("dragover", { dataTransfer: reverse });
+  await sourceButton.dispatchEvent("drop", { dataTransfer: reverse });
+  await targetButton.dispatchEvent("dragend", { dataTransfer: reverse });
+  await expect(page.getByTestId("dependency-drop-status")).toContainText(
+    "Can't add Drag target. This Dependency would create a loop.",
+  );
+  await capture(
+    "drag-cycle-refusal",
+    "The authoritative server refuses a reverse drag cycle and names the attempted blocker",
+  );
+  await page
+    .getByTestId("dependency-drop-status")
+    .getByRole("button", { name: "Dismiss", exact: true })
+    .click();
+  const dragDone = cli("add", "Drag done target").task;
+  cli("done", dragDone.id, "--expected-version", "1");
+  await page.getByRole("button", { name: "More filters" }).click();
+  await page.locator("#filter-status").selectOption("");
+  await page
+    .getByRole("button", { name: "Apply filters", exact: true })
+    .click();
+  const doneButton = page.getByTestId(`dependency-drag-source-${dragDone.id}`);
+  await expect(doneButton).toBeVisible();
+  await beginDrag();
+  await doneButton.dispatchEvent("dragover", { dataTransfer: transfer });
+  await doneButton.dispatchEvent("drop", { dataTransfer: transfer });
+  await sourceButton.dispatchEvent("dragend", { dataTransfer: transfer });
+  await expect(page.getByTestId("dependency-drop-status")).toContainText(
+    "A done Task can only depend on done or cancelled Tasks.",
+  );
+  await expect(page.getByTestId("dependency-drop-status")).toContainText(
+    "error 2 - validation or usage",
+  );
+  assert.equal(cli("show", dragDone.id).task.status, "done");
+  await capture(
+    "drag-blocked-refusal",
+    "The server refuses an unresolved blocker on a done drop target and keeps it done",
+  );
+  await page
+    .getByTestId("dependency-drop-status")
+    .getByRole("button", { name: "Dismiss", exact: true })
+    .click();
+  const conflictTarget = cli("add", "Drag Conflict target").task;
+  const conflictButton = page.getByTestId(
+    `dependency-drag-source-${conflictTarget.id}`,
+  );
+  await expect(conflictButton).toBeVisible();
+  await beginDrag();
+  await conflictButton.dispatchEvent("dragover", { dataTransfer: transfer });
+  release = undefined;
+  delay = true;
+  await conflictButton.dispatchEvent("drop", { dataTransfer: transfer });
+  await sourceButton.dispatchEvent("dragend", { dataTransfer: transfer });
+  await expect.poll(() => release !== undefined).toBe(true);
+  cli(
+    "edit",
+    conflictTarget.id,
+    "--expected-version",
+    "1",
+    "--desc",
+    "Concurrent drag edit",
+  );
+  releasePending();
+  await expect(page.getByTestId("dependency-drop-status")).toContainText(
+    "This Task changed. Reload its Dependencies before trying again.",
+  );
+  await expect(page.getByTestId("dependency-drop-status")).toContainText(
+    "error 4 - Conflict",
+  );
+  await expect(
+    page.getByRole("button", { name: "Retry", exact: true }),
+  ).toHaveCount(0);
+  await capture(
+    "drag-conflict",
+    "The real stale dependent Version refuses the drop and offers Reload without a blind retry",
+  );
+  await page.getByTestId("dependency-reload").click();
+  await expect(page.getByTestId("dependency-search")).toBeFocused();
+  await page.getByTestId("dependency-picker-close").click();
+  await expect(conflictButton).toBeFocused();
+  await targetButton.click();
+  const editorTitle = page.getByLabel("Title", { exact: true });
+  await editorTitle.fill("Unsaved keyboard Dependency draft");
+  await editorTitle.press("Control+k");
+  await expect(page.getByTestId("dependency-picker")).toHaveCount(0);
+  await editorTitle.press("Control+Shift+K");
+  await expect(page.getByTestId("dependency-search")).toBeFocused();
+  await page.getByTestId("dependency-search").press("ArrowDown");
+  await expect(
+    page.getByTestId(`dependency-choice-${dragSource.id}`),
+  ).toBeFocused();
+  await page.getByTestId(`dependency-choice-${dragSource.id}`).press("Space");
+  await expect(
+    page.getByTestId(`dependency-choice-${dragSource.id}`),
+  ).not.toBeChecked();
+  await capture(
+    "keyboard-picker",
+    "Control Shift K opens the same picker, ArrowDown moves focus and Space toggles the existing link immediately",
+  );
+  await page.getByTestId("dependency-picker-close").click();
+  await expect(editorTitle).toBeFocused();
+  await expect(editorTitle).toHaveValue("Unsaved keyboard Dependency draft");
+  await page.getByRole("button", { name: "Task actions", exact: true }).click();
+  await page
+    .getByRole("menuitem", { name: "Add dependency", exact: true })
+    .click();
+  await page.getByTestId("dependency-search").fill("Drag source");
+  await expect(
+    page.getByTestId(`dependency-choice-${dragSource.id}`),
+  ).not.toBeChecked();
+  await page.getByTestId(`dependency-choice-${dragSource.id}`).press("Space");
+  await expect(
+    page.getByTestId(`dependency-choice-${dragSource.id}`),
+  ).toBeChecked();
+  await capture(
+    "menu-picker",
+    "The existing menu opens the same picker and preserves the editor draft",
+  );
+  await page.getByTestId("dependency-picker-close").click();
+  await expect(editorTitle).toHaveValue("Unsaved keyboard Dependency draft");
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Resolve task conflict", exact: true }),
+  ).toBeVisible();
+  await capture(
+    "dependency-editor-version-conflict",
+    "Immediate Dependency writes do not blindly advance an unsaved editor's expected Version; Save uses the existing Conflict flow",
+  );
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Close", exact: true })
+    .click();
   assert.equal(cli("show", plain.id).task.title, "Review tomorrow");
   assert.deepEqual(errors, []);
   writeFileSync(
@@ -1058,6 +2077,7 @@ try {
           "Production renderer with compiled scratch server and real SSE; only literal assertions in this driver are proved. Complete DAG matrix and full client suites pending.",
           "Binary source and embedded version are recorded in binaries; this intermediate cache is not a final-source provenance claim.",
           "Copy as Mermaid proves the validated host request carries exact server text; native clipboard is unproven here.",
+          "All-six batch and nested Import error captures are controlled typed report fixtures. Actual batch changed/unchanged/blocked/Conflict and drag failures use the compiled public surface separately.",
         ],
       },
       null,

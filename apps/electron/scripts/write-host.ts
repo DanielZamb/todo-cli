@@ -324,7 +324,7 @@ async function boot() {
                       exit_detail: exitDetail(error),
                     }),
                   );
-                return Effect.succeed<Reply>(errorReply(error));
+                return Effect.succeed<Reply>(errorReply(error, request));
               }),
             ),
           ).then((reply) => {

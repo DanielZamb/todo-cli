@@ -1,8 +1,12 @@
 import { useLayoutEffect, useRef, useState } from "react";
+import { cn } from "./lib/utils.ts";
 import { wholeTagCount } from "./whole-tags.ts";
 
 export function RowMetadata({
   items,
+  status,
+  statusId,
+  statusLabel,
 }: {
   items: readonly {
     id: string;
@@ -11,6 +15,9 @@ export function RowMetadata({
     dependency?: boolean;
     testId?: string;
   }[];
+  status?: string | null;
+  statusId?: string;
+  statusLabel?: string;
 }) {
   const root = useRef<HTMLSpanElement>(null);
   const [visible, setVisible] = useState(0);
@@ -38,14 +45,20 @@ export function RowMetadata({
     observer.observe(element);
     return () => observer.disconnect();
   }, [items]);
-  if (items.length === 0) return null;
+  if (items.length === 0 && !status) return null;
   return (
     <span
       ref={root}
-      className="compact-row-metadata"
-      title={items.map((item) => item.label).join(" · ")}
+      className={cn(
+        "compact-row-metadata",
+        items.length === 0 && "row-metadata-empty",
+        status && "row-metadata-has-status",
+      )}
+      title={
+        statusLabel ?? status ?? items.map((item) => item.label).join(" · ")
+      }
     >
-      <span className="sr-only">
+      <span className="sr-only" aria-hidden={status ? true : undefined}>
         {items.map((item) => item.label).join(" · ")}
       </span>
       <span className="tag-measure" aria-hidden="true">
@@ -99,6 +112,16 @@ export function RowMetadata({
             .join(" · ")}
         >
           +{items.length - visible}
+        </span>
+      )}
+      {status && (
+        <span
+          className="row-metadata-status"
+          role="status"
+          aria-label={statusLabel ?? status}
+          data-testid={statusId}
+        >
+          {status}
         </span>
       )}
     </span>

@@ -15,12 +15,16 @@ import { Empty, EmptyHeader, EmptyTitle } from "./components/ui/empty.tsx";
 import { Field } from "./components/ui/field.tsx";
 import { Input } from "./components/ui/input.tsx";
 import { ToggleGroup, ToggleGroupItem } from "./components/ui/toggle-group.tsx";
+import { moveDependencyChoice } from "./dependency-choice-keys.ts";
 import {
   type DependencyContext,
   dependencyRecovery,
   dependencyWarning,
 } from "./dependency-presentation.ts";
-import type { DependencyController } from "./dependency-state.ts";
+import type {
+  DependencyController,
+  DependencyDirection,
+} from "./dependency-state.ts";
 import { DependencyTaskLabel } from "./dependency-task-label.tsx";
 import type { Reply, Request } from "./protocol.ts";
 
@@ -31,13 +35,17 @@ export function DependencyErrorStatus({
   reload,
   followUp,
   attempted,
+  attemptedAction = "add",
   dismiss,
+  openTask,
 }: {
   failure: Extract<Reply, { _tag: "error" | "conflict" }>;
   context: DependencyContext;
   tasks: readonly Task[];
   attempted?: Task | null;
+  attemptedAction?: "add" | "remove";
   dismiss?: () => void;
+  openTask?: (id: Task["id"]) => void;
   reload?: () => void;
   followUp?: ((id: Task["id"]) => void) | undefined;
 }) {
@@ -63,62 +71,81 @@ export function DependencyErrorStatus({
         </Button>
       )}
       <AlertDescription className="flex flex-col gap-2 break-words">
-        <p>
-          {attempted ? `Can't add ${attempted.title}. ` : ""}
-          {projection?.message ??
-            (failure._tag === "conflict"
-              ? "This Task changed. Reload its Dependencies before trying again."
-              : failure.message)}
-          {projection?.action === "choose" &&
-            (failure._tag === "error" &&
-            failure.dependency?.code === "dependency_profile_mismatch"
-              ? " Choose a Task in this Profile."
-              : " Choose another Task.")}
-        </p>
+        <div className="dependency-error-content">
+          <p>
+            {attempted && (
+              <span
+                className="dependency-error-attempted"
+                title={attempted.title}
+              >{`Can't ${attemptedAction} ${attempted.title}. `}</span>
+            )}
+            <span className="dependency-error-reason">
+              {projection?.message ??
+                (failure._tag === "conflict"
+                  ? "This Task changed. Reload its Dependencies before trying again."
+                  : failure.message)}
+              {projection?.action === "choose" &&
+                (failure._tag === "error" &&
+                failure.dependency?.code === "dependency_profile_mismatch"
+                  ? " Choose a Task in this Profile."
+                  : " Choose another Task.")}
+            </span>
+          </p>
 
-        {projection?.advice && <p>{projection.advice}</p>}
-        {projection && projection.witnesses.length > 0 && (
-          <ol
-            className="dependency-witness"
-            aria-label={projection.witnesses
-              .map((task) => task.title)
-              .join(" blocks ")}
-          >
-            {projection.witnesses.map((task, index) => (
-              <li key={`${task.id}:${index === 0 ? "start" : "step"}`}>
-                {index > 0 &&
-                  failure._tag === "error" &&
-                  failure.dependency?.code === "dependency_cycle" && (
-                    <span aria-hidden="true">→ </span>
+          {projection?.advice && <p>{projection.advice}</p>}
+          {projection && projection.witnesses.length > 0 && (
+            <ol
+              className="dependency-witness"
+              data-loop={
+                failure._tag === "error" &&
+                failure.dependency?.code === "dependency_cycle"
+              }
+              aria-label={projection.witnesses
+                .map((task) => task.title)
+                .join(" blocks ")}
+            >
+              {projection.witnesses.map((task, index) => (
+                <li key={`${task.id}:${index === 0 ? "start" : "step"}`}>
+                  {index > 0 &&
+                    failure._tag === "error" &&
+                    failure.dependency?.code === "dependency_cycle" && (
+                      <span aria-hidden="true">→ </span>
+                    )}
+                  {projection.action === "openBlocker" && openTask ? (
+                    <Button variant="link" onClick={() => openTask(task.id)}>
+                      {task.title}
+                    </Button>
+                  ) : (
+                    task.title
                   )}
-                {task.title}
-                {task.status &&
-                  ` · ${task.status === "cancelled" ? "Cancelled" : task.status}`}
-              </li>
-            ))}
-          </ol>
-        )}
-        {failure._tag === "conflict" && (
-          <Button
-            variant="outline"
-            data-testid="dependency-reload"
-            onClick={reload}
-          >
-            Reload
-          </Button>
-        )}
-        {projection?.action === "followUp" && projection.followUp && (
-          <Button
-            variant="outline"
-            data-testid="dependency-follow-up"
-            onClick={() =>
-              projection.followUp && followUp?.(projection.followUp)
-            }
-            disabled={!followUp}
-          >
-            Create follow-up
-          </Button>
-        )}
+                  {task.status &&
+                    ` · ${task.status === "cancelled" ? "Cancelled" : task.status}`}
+                </li>
+              ))}
+            </ol>
+          )}
+          {failure._tag === "conflict" && (
+            <Button
+              variant="outline"
+              data-testid="dependency-reload"
+              onClick={reload}
+            >
+              Reload
+            </Button>
+          )}
+          {projection?.action === "followUp" && projection.followUp && (
+            <Button
+              variant="outline"
+              data-testid="dependency-follow-up"
+              onClick={() =>
+                projection.followUp && followUp?.(projection.followUp)
+              }
+              disabled={!followUp}
+            >
+              Create follow-up
+            </Button>
+          )}
+        </div>
         {(projection?.detail ?? failure.exit_detail) && (
           <p className="text-muted-foreground">
             {projection?.detail ?? failure.exit_detail}
@@ -135,6 +162,7 @@ export function DependencyPicker({
   returnFocus,
   onChanged,
   projects,
+  onBatch,
 }: {
   controller: DependencyController;
   request: (request: Request) => Promise<Reply>;
@@ -142,6 +170,7 @@ export function DependencyPicker({
   returnFocus: () => HTMLElement | null;
   onChanged: () => void;
   projects: readonly { id: string; name: string }[];
+  onBatch: (task: Task, direction: DependencyDirection) => void;
 }) {
   const state = useSyncExternalStore(controller.subscribe, controller.snapshot);
   const search = useRef<HTMLInputElement>(null);
@@ -209,6 +238,7 @@ export function DependencyPicker({
             ref={search}
             id="dependency-search"
             data-testid="dependency-search"
+            onKeyDown={moveDependencyChoice}
             aria-label="Search Tasks in this Profile"
             placeholder="Search Tasks in this Profile"
             maxLength={200}
@@ -261,8 +291,8 @@ export function DependencyPicker({
                   <p>{projected.message}</p>
                   {projected.path.length > 0 && (
                     <ol className="dependency-witness">
-                      {projected.path.map((title) => (
-                        <li key={title}>{title}</li>
+                      {projected.path.map((task) => (
+                        <li key={task.id}>{task.title}</li>
                       ))}
                     </ol>
                   )}
@@ -297,25 +327,7 @@ export function DependencyPicker({
                 >
                   <span className="dependency-checkbox">
                     <Checkbox
-                      onKeyDown={(event) => {
-                        if (
-                          event.key !== "ArrowDown" &&
-                          event.key !== "ArrowUp"
-                        )
-                          return;
-                        const inputs = [
-                          ...(scroll.current?.querySelectorAll<HTMLElement>(
-                            '[role="checkbox"]:not(:disabled)',
-                          ) ?? []),
-                        ];
-                        const index = inputs.indexOf(event.currentTarget);
-                        const next =
-                          inputs[index + (event.key === "ArrowDown" ? 1 : -1)];
-                        if (next) {
-                          event.preventDefault();
-                          next.focus();
-                        }
-                      }}
+                      onKeyDown={moveDependencyChoice}
                       id={`dependency-choice-${task.id}`}
                       data-testid={`dependency-choice-${task.id}`}
                       checked={state.pending.get(task.id) ?? checked}
@@ -326,6 +338,11 @@ export function DependencyPicker({
                         state.conflicts.has(dependent)
                       }
                       aria-busy={pending}
+                      aria-invalid={
+                        failure && state.attempted?.id === task.id
+                          ? true
+                          : undefined
+                      }
                       onCheckedChange={(checked) => {
                         void controller
                           .toggle(task.id, checked, request)
@@ -349,6 +366,19 @@ export function DependencyPicker({
           <p className="dependency-save-hint text-muted-foreground">
             Changes save immediately.
           </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={!canWrite || state.loading || !root}
+            onClick={() => {
+              if (root) {
+                close();
+                onBatch(root, state.direction);
+              }
+            }}
+          >
+            Batch…
+          </Button>
           <Button
             variant="outline"
             data-testid="dependency-picker-close"

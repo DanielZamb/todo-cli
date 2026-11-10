@@ -4,10 +4,12 @@ export function DependencyTaskLabel({
   task,
   id,
   projects = [],
+  metadata = true,
 }: {
   task?: TaskRead | undefined;
   id?: string;
   projects?: readonly { id: string; name: string }[];
+  metadata?: boolean;
 }) {
   const title = task?.title ?? id ?? "Task";
   const project = projects.find(
@@ -22,7 +24,7 @@ export function DependencyTaskLabel({
           field="title"
         />
       </span>
-      {task && (
+      {task && metadata && (
         <small className="text-muted-foreground">
           {task.status === "cancelled" ? "Cancelled" : task.status}
           {project ? ` · ${project}` : ""}

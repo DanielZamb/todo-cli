@@ -16,8 +16,9 @@ import {
 } from "./components/ui/dialog.tsx";
 import { Input } from "./components/ui/input.tsx";
 import {
-  dependencyErrorText,
-  nestedDependencyError,
+  dependencyFailureText,
+  hasDependencyError,
+  isDependencyConflict,
 } from "./dependency-presentation.ts";
 import { errorReply, taskLookupDetails } from "./error-reply.ts";
 import { importChangesText } from "./import-presentation.ts";
@@ -176,20 +177,18 @@ export function ImportDialog({
         : index >= report.input.length
           ? "Cancel missing Task"
           : "Untitled Task";
-    const dependency = nestedDependencyError(row.error);
     return {
       row,
       title,
-      outcome:
-        row.error?.code === "occ_conflict"
-          ? "Conflict"
-          : row.outcome.charAt(0).toUpperCase() + row.outcome.slice(1),
+      outcome: isDependencyConflict(row.error?.code)
+        ? "Conflict"
+        : row.outcome.charAt(0).toUpperCase() + row.outcome.slice(1),
       details: taskLookupDetails(row.error),
       changes: taskLookupDetails(row.error)
         ? ""
-        : dependency
-          ? dependencyErrorText(
-              dependency,
+        : hasDependencyError(row.error) || isDependencyConflict(row.error?.code)
+          ? dependencyFailureText(
+              row.error,
               Schema.is(ImportItem)(item) && item.status === "done"
                 ? "complete"
                 : "add",
@@ -436,6 +435,18 @@ export function ImportDialog({
                   onClick={() => void run(true)}
                 >
                   {busy ? "Previewing…" : "Preview changes"}
+                </Button>
+              )}
+              {report?.items.some((row) =>
+                isDependencyConflict(row.error?.code),
+              ) && (
+                <Button
+                  variant="outline"
+                  disabled={busy || !canWrite}
+                  data-testid="dependency-reload"
+                  onClick={() => void run(true)}
+                >
+                  Reload
                 </Button>
               )}
               {report?.dry_run && (

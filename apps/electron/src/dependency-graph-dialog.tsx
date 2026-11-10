@@ -48,6 +48,7 @@ import { Input } from "./components/ui/input.tsx";
 import { ToggleGroup, ToggleGroupItem } from "./components/ui/toggle-group.tsx";
 import type { DependencyGraphController } from "./dependency-graph-state.ts";
 import { DependencyTaskLabel } from "./dependency-task-label.tsx";
+import { countTasks } from "./presentation.ts";
 import type { Reply, Request } from "./protocol.ts";
 
 function graphTheme(dark: boolean): GraphTheme {
@@ -158,9 +159,17 @@ export function DependencyGraphDialog({
   const state = useSyncExternalStore(controller.subscribe, controller.snapshot);
   const [diagram, setDiagram] = useState(!compact);
   const [copied, setCopied] = useState(false);
+  const [showDiagramTasks, setShowDiagramTasks] = useState(false);
   const frame = useRef<HTMLElement>(null);
   const debounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const epoch = state.kind === "Open" ? state.generation : -1;
+  const large = state.kind === "Open" && (state.report?.nodes.length ?? 0) > 50;
+  useEffect(() => {
+    if (epoch >= 0) setShowDiagramTasks(false);
+  }, [epoch]);
+  useEffect(() => {
+    if (large) setShowDiagramTasks(true);
+  }, [large]);
   useEffect(() => {
     if (epoch >= 0) {
       setDiagram(!compact);
@@ -291,9 +300,11 @@ export function DependencyGraphDialog({
     const shown = matches === null ? ids : ids.filter((id) => matches.has(id));
     return (
       <section className="dependency-graph-section" data-section={section}>
-        <h3>
-          {name} · {ids.length}
-        </h3>
+        {section !== "shown" && (
+          <h3>
+            {name} · {ids.length}
+          </h3>
+        )}
         {shown.length === 0 ? (
           <p className="text-muted-foreground">
             {ids.length > 0 ? "No matching Tasks" : "None"}
@@ -431,18 +442,22 @@ export function DependencyGraphDialog({
         )}
         {report && (
           <div className="dependency-graph-controls">
-            <Button
-              variant="outline"
-              size="sm"
-              data-testid="dependency-graph-overview"
-              onClick={() => controller.overview(!state.overview)}
-            >
-              {state.overview
-                ? "Show nearby Tasks"
-                : `Show all ${report.nodes.length} Tasks`}
-            </Button>
+            {(state.overview ||
+              controller.visibleIds({ ...state, overview: false }).length <
+                report.nodes.length) && (
+              <Button
+                variant="outline"
+                size="sm"
+                data-testid="dependency-graph-overview"
+                onClick={() => controller.overview(!state.overview)}
+              >
+                {state.overview
+                  ? "Show nearby Tasks"
+                  : `Show all ${countTasks(report.nodes.length, true)}`}
+              </Button>
+            )}
             <small className="text-muted-foreground">
-              {visible.length} of {report.nodes.length} Tasks shown
+              {visible.length} of {countTasks(report.nodes.length, true)} shown
             </small>
           </div>
         )}
@@ -530,6 +545,7 @@ export function DependencyGraphDialog({
                     placeholder="Search these Tasks"
                     defaultValue={state.query}
                     onChange={(event) => {
+                      setShowDiagramTasks(true);
                       const query = event.target.value;
                       clearTimeout(debounce.current);
                       debounce.current = setTimeout(
@@ -571,7 +587,7 @@ export function DependencyGraphDialog({
                 <p>
                   Energy left: {root.remaining_energy.energy}
                   {root.remaining_energy.unweighted > 0 &&
-                    ` · ${root.remaining_energy.unweighted} ${root.remaining_energy.unweighted === 1 ? "Task" : "Tasks"} without Energy`}
+                    ` · ${countTasks(root.remaining_energy.unweighted, true)} without Energy`}
                 </p>
               )}
               <Collapsible>
@@ -610,7 +626,17 @@ export function DependencyGraphDialog({
                   </Button>
                 </CollapsibleContent>
               </Collapsible>
-              {list("Tasks shown", visible, "shown")}
+              <Collapsible
+                open={showDiagramTasks}
+                onOpenChange={setShowDiagramTasks}
+              >
+                <CollapsibleTrigger render={<Button variant="ghost" />}>
+                  Tasks in diagram · {visible.length}
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  {list("Tasks in diagram", visible, "shown")}
+                </CollapsibleContent>
+              </Collapsible>
             </div>
           )}
         </div>
