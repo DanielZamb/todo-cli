@@ -23,3 +23,11 @@ The [public continuation](public.md) is separately pinned to e7170510. Its
 unaffected diagnostic subset excludes the known failing malformed CLI boundary.
 G11 root-only response and clients await an explicit corrected B SHA. The f140
 proof above remains historical and is not final public acceptance.
+
+Merged ADR-0019 error fields and stored-witness compatibility use
+`bun .agents/skills/verify-dag-formal/error-contract-check.mjs <full-candidate-SHA>`.
+The compiled immutable capture checks actual authoritative refusals and strict
+public schemas, then removes producer fields and schema requirements in separate
+source controls. Both compile and fail their named assertions; each restored
+capture passes. It never mutates live product source. This is error-boundary
+conformance, separate from graph/transaction invariants and the finite model.

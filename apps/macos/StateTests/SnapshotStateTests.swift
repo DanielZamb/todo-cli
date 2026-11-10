@@ -133,5 +133,5 @@ func snapshotListCreateConfirmationRestoreAndReloadAgainstScratchServer() async 
     let encoded = try JSONEncoder().encode(wire)
     #expect(try JSONSerialization.jsonObject(with: encoded) as? NSArray == JSONSerialization.jsonObject(with: data) as? NSArray)
     let history = try JSONDecoder().decode([HistoryEntry].self, from: encoded)
-    #expect(Set(history.map { $0.event.kind }) == ["AuthAttemptRejected", "AuthChanged", "DatabaseRestored", "ProfileDeleted", "ProfileDeletionRejected", "ReminderFired", "TaskAttemptRejected", "TaskCancelled", "TaskCompleted", "TaskCreated", "TaskDeleted", "TaskEdited", "TaskHistoryRedacted", "TaskMovedIn", "TaskMovedOut", "TaskPurged", "TaskReopened", "TaskReverted"])
+    #expect(Set(history.map { $0.event.kind }) == ["AuthAttemptRejected", "AuthChanged", "DatabaseRestored", "DependencyAdded", "DependencyRemoved", "ProfileDeleted", "ProfileDeletionRejected", "ReminderFired", "TaskAttemptRejected", "TaskCancelled", "TaskCompleted", "TaskCreated", "TaskDeleted", "TaskEdited", "TaskHistoryRedacted", "TaskMovedIn", "TaskMovedOut", "TaskPurged", "TaskReopened", "TaskReverted"])
 }

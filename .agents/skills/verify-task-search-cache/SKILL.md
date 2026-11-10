@@ -174,3 +174,9 @@ and instrumented hashes and refuses a different number of sites. Matching,
 budget charging, yielding, graph ordering, Tag projection and schemas retain
 the exact merged source. No performance measurement or timing claim is made.
 The legacy SEC-plus-Tag preparation mode remains available for historical checks.
+
+The cabf4866/DAG merge renews only reviewed graph-aware read and observer
+composition after the seven cache and three observer source controls fail their
+literal assertions and restored copies pass. CLI defect classification is
+separately driven through the compiled artifact. Historical cache timing results
+remain on their original inputs and are not remeasured or relabelled here.

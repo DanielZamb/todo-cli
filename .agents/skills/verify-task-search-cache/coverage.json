@@ -41,7 +41,7 @@
     },
     {
       "path": "apps/server/src/server.ts",
-      "sha256": "676c49611faad9688938b4992cc855c26b888fb647fc3850f8ed63c841f14006"
+      "sha256": "45a392a51249de8330df1a2a95ef11f2ae223c2dc7718c98c65308ded34e7120"
     },
     {
       "path": "packages/domain/src/store/search-cache-events.ts",
@@ -53,11 +53,11 @@
     },
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "bb3f0f0855c3bd5128b8d5f4c164734d13a04250ad7dfe32eacc18cf3ac69a60"
+      "sha256": "9cbc8b8a2920b91f8cfc0e2137ade7d4ba11a28f7ad6c16fd29b4450d54cbc71"
     },
     {
       "path": "apps/cli/src/main.ts",
-      "sha256": "31a42e05fb2ae90829b2b9981cfb2ffcc4ba10e2738d47a058a3dc426f1d2b29"
+      "sha256": "1f2d4eea85ff3ce9c995d2ae018f7bda2b4be3b74b950004870b481016794432"
     }
   ],
   "integrationReview": {
@@ -69,6 +69,17 @@
     ],
     "bodyReview": "Graph slot5 and whole-Profile ordering; execution.prepare in slot4; both read tokens before auth. Store memo lifecycle and Purge fences retained. Same-source uncached oracle bypasses only preparation callbacks.",
     "controls": "docs/evidence/perf-cache/generated-tKwtxm/behavior-result.json",
-    "scope": "Seven intended behavioral failures and exact restores/strictTypecheck0 precede this renewal; complete default follows."
+    "scope": "Seven intended behavioral failures and exact restores/strictTypecheck0 precede this renewal; complete default follows.",
+    "hygiene": {
+      "review": "Observer/startup fork and event cursor/restore fences are unchanged semantically; server adds DAG routes, store adds graph transactions, CLI keeps typed refusal/defect split. Permanent erasures clear retained and pending entries in all Profiles.",
+      "changed": [
+        "apps/server/src/server.ts",
+        "packages/domain/src/store/store.ts",
+        "apps/cli/src/main.ts"
+      ],
+      "controls": "docs/evidence/perf-cache/hygiene-oj9OBZ/commands.json",
+      "cliDefect": "docs/evidence/task-dag/merge-main-cabf-f7r4k8/cache-cli-defect/result.json",
+      "result": "Three intended observer controls1, restored0, strictTypecheck0; real compiled CLI defect1/runtime_error and typed refusal2 proved before renewal"
+    }
   }
 }
