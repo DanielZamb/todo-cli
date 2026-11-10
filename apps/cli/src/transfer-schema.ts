@@ -1,6 +1,11 @@
-import { DependencyError, Edge, VersionChange } from "@todo/domain";
 import {
-  ErrorResponse,
+  DependencyError,
+  Edge,
+  TaskLookupDetails,
+  VersionChange,
+} from "@todo/domain";
+import {
+  ErrorDetails,
   ExternalIdConflictDetails,
 } from "@todo/domain/presentation";
 import { Schema } from "effect";
@@ -18,6 +23,7 @@ const TransferResult = Schema.Struct({
   details: Schema.optionalKey(
     Schema.Union([
       ExternalIdConflictDetails,
+      TaskLookupDetails,
       ...DependencyError.members.map((member) => member.fields.details),
     ]),
   ),
@@ -29,9 +35,18 @@ export const TransferResponse = Schema.Struct({
   generated_at: Schema.String,
   dry_run: Schema.Boolean,
   results: Schema.Array(TransferResult),
+  exit_code: Schema.optionalKey(Schema.Literals([1, 2, 3, 4])),
+  exit_meaning: Schema.optionalKey(
+    Schema.Literals([
+      "runtime failure",
+      "validation or usage",
+      "not found or auth missing",
+      "Conflict",
+    ]),
+  ),
   code: Schema.optionalKey(Schema.String),
   message: Schema.optionalKey(Schema.String),
-  details: ErrorResponse.fields.details,
+  details: ErrorDetails,
 });
 registerCommandSchema("move", TransferResponse);
 registerCommandSchema("copy", TransferResponse);

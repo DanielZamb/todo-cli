@@ -3,18 +3,20 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   copyFileSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { Schema } from "effect";
 import candidate from "./matcher-candidate.json";
+import { verificationRoot } from "../../../scripts/verification-inputs";
 
 const skill = import.meta.dirname;
-const root = resolve(skill, "../../..");
+const root = verificationRoot(skill);
 const base = join(root, "docs/evidence/task-search-formal");
 mkdirSync(base, { recursive: true });
 const evidence = mkdtempSync(join(base, "matcher-"));
@@ -133,6 +135,13 @@ try {
     path,
     sha256: sha256(readFileSync(join(source, path))),
   }));
+  for (const path of paths) {
+    assert.equal(lstatSync(join(source, path)).isSymbolicLink(), false);
+    assert.notEqual(
+      lstatSync(join(source, path)).ino,
+      lstatSync(join(root, path)).ino,
+    );
+  }
   record("provenance", {
     ...candidate,
     commit,
@@ -212,6 +221,12 @@ try {
         sha256(original),
         "Scratch source restoration failed",
       );
+      success(
+        `restored-${mutation.property}`,
+        "bun",
+        [join(source, "matcher-properties.ts"), mutation.property],
+        source,
+      );
     }
   }
   success("restored", "bun", [join(source, "matcher-properties.ts")], source);
@@ -250,7 +265,10 @@ try {
       exit: 1,
       restored: true,
     })),
-    integrationCheck: process.argv[2] === undefined ? "pinned-reviewed-commit" : "explicit-immutable-commit",
+    integrationCheck:
+      process.argv[2] === undefined
+        ? "pinned-reviewed-commit"
+        : "explicit-immutable-commit",
     clientOrdering: "Separate bounded model and production mapping in check.ts",
   });
   console.log(
@@ -258,7 +276,8 @@ try {
       passed: true,
       commit,
       evidence,
-      clientOrdering: "Separate bounded model and production mapping in check.ts",
+      clientOrdering:
+        "Separate bounded model and production mapping in check.ts",
     }),
   );
 } catch (error) {

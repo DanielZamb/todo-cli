@@ -13,13 +13,21 @@ trap 'rm -rf "$scratch"' EXIT HUP INT TERM
 cd "$root"
 {
   if [ -n "${TODO_SERVER_BINARY:-}" ]; then
+    printf 'Reuse cached server %s\n' "$TODO_SERVER_BINARY"
     ln -s "$TODO_SERVER_BINARY" "$scratch/server"
   else
     sh "$root/scripts/disk-guard.sh"
+    printf 'bun build --compile apps/server/src/main.ts --outfile %s/server\n' "$scratch"
     (cd "$scratch" && bun build --compile "$root/apps/server/src/main.ts" --outfile "$scratch/server")
   fi
-  printf 'bun build --compile apps/server/scripts/seed-verification.ts --outfile %s/seed\n' "$scratch"
-  (cd "$scratch" && bun build --compile "$root/apps/server/scripts/seed-verification.ts" --outfile "$scratch/seed")
+  if [ -n "${TODO_SEED_BINARY:-}" ]; then
+    printf 'Reuse cached seed %s\n' "$TODO_SEED_BINARY"
+    ln -s "$TODO_SEED_BINARY" "$scratch/seed"
+  else
+    sh "$root/scripts/disk-guard.sh"
+    printf 'bun build --compile apps/server/scripts/seed-verification.ts --outfile %s/seed\n' "$scratch"
+    (cd "$scratch" && bun build --compile "$root/apps/server/scripts/seed-verification.ts" --outfile "$scratch/seed")
+  fi
   printf 'Copy development CLI %s to %s/todo\n' "$cli" "$scratch"
   cp "$cli" "$scratch/todo"
   python3 .agents/skills/verify-sse/scripts/provenance.py "$cli" "$scratch" "$evidence"

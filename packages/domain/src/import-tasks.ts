@@ -5,6 +5,7 @@ import type { AccessRequest } from "./auth/model.ts";
 import { type TaskCommandResult, TaskCommands } from "./commands.ts";
 import { DependencyCommands } from "./dependency-commands.ts";
 import type { Task } from "./entities.ts";
+import { exitStatus } from "./exit-status.ts";
 import {
   ImportItem,
   type ImportReport,
@@ -15,6 +16,7 @@ import { planImportDependencies } from "./import-dependencies.ts";
 import { StoreError } from "./store/error.ts";
 import type { OperationStore } from "./store/store.ts";
 import { CreateTask, TaskPatch } from "./task-commands.ts";
+import { taskLookupError } from "./task-lookup-error.ts";
 import { Instant } from "./time.ts";
 
 class ImportFailure extends StoreError {
@@ -102,6 +104,7 @@ const executeImport = Effect.fn(function* (
           ...base,
           outcome: "rejected",
           error: {
+            ...exitStatus(2),
             code: "invalid_args",
             message: duplicates.has(external_id)
               ? "Each external id must occur once in the file."
@@ -396,77 +399,87 @@ const executeImport = Effect.fn(function* (
         }),
       )
       .pipe(
-        Effect.catchTag("StoreError", (error) => {
-          const failure =
-            error instanceof ImportFailure
-              ? error
-              : error.cause instanceof ImportFailure
-                ? error.cause
-                : null;
-          if (failure === null) return Effect.fail(error);
-          const result = failure.result;
-          const latest = result.outcome === "rejected" ? result.latest : null;
-          const reason =
-            result.outcome === "rejected" ? result.reason : "not_found";
-          const dependency_error =
-            result.outcome === "rejected" ? result.dependency_error : undefined;
-          return store.auth
-            .mutate(request, (actor) =>
-              store.reject({
-                ...actor,
-                ...(expectedVersion === null
-                  ? {}
-                  : { from_version: expectedVersion }),
-                reason,
-                ...(dependency_error ? { dependency_error } : {}),
-                event: {
-                  kind: before ? "TaskEdited" : "TaskCreated",
-                  occurred_at: new Date().toISOString(),
-                  input: raw,
-                  ...(before ? { task_id: before.id } : {}),
-                },
-              }),
-            )
-            .pipe(
-              Effect.map(
-                () =>
-                  ({
-                    ...base,
-                    outcome: "rejected",
-                    error: {
-                      code:
-                        dependency_error?.code ??
-                        (reason === "conflict" ? "occ_conflict" : reason),
-                      message:
-                        dependency_error?.message ??
-                        (result.outcome === "rejected"
-                          ? result.message
-                          : undefined) ??
-                        (reason === "conflict"
-                          ? adopting && latest?.external_id == null
-                            ? "Task changed and has no external id yet. Read its current Version and import again with task_id and from_version."
-                            : "Task changed since preview. Preview again and apply the current Version."
-                          : reason === "title_required"
-                            ? "New Tasks need a title. Add a title and import again."
-                            : reason === "invalid_attachment"
-                              ? "Invalid Attachment URI or file path. Fix this item and import again."
-                              : reason === "task_deleted"
-                                ? "This Task is deleted. Restore it before importing changes."
-                                : reason === "external_id_conflict"
-                                  ? "This external id already belongs to a Task. Restore the deleted Task or use another external id."
-                                  : "Task fields are invalid. Check import-item and import again."),
-                      details: {
-                        ...(dependency_error ? { dependency_error } : {}),
-                        current_version:
-                          reason === "conflict"
-                            ? (latest?.row_version ?? null)
-                            : (before?.row_version ?? null),
+        Effect.catchTag("StoreError", (error) =>
+          Effect.gen(function* () {
+            const failure =
+              error instanceof ImportFailure
+                ? error
+                : error.cause instanceof ImportFailure
+                  ? error.cause
+                  : null;
+            if (failure === null) return yield* Effect.fail(error);
+            const result = failure.result;
+            const latest = result.outcome === "rejected" ? result.latest : null;
+            const reason =
+              result.outcome === "rejected" ? result.reason : "not_found";
+            const dependency_error =
+              result.outcome === "rejected"
+                ? result.dependency_error
+                : undefined;
+            const context =
+              reason === "not_found" && item.task_id != null
+                ? yield* taskLookupError(store, request, item.task_id, "http", {
+                    action: "authenticate",
+                  })
+                : undefined;
+            return yield* store.auth
+              .mutate(request, (actor) =>
+                store.reject({
+                  ...actor,
+                  ...(expectedVersion === null
+                    ? {}
+                    : { from_version: expectedVersion }),
+                  reason,
+                  ...(dependency_error ? { dependency_error } : {}),
+                  event: {
+                    kind: before ? "TaskEdited" : "TaskCreated",
+                    occurred_at: new Date().toISOString(),
+                    input: raw,
+                    ...(before ? { task_id: before.id } : {}),
+                  },
+                }),
+              )
+              .pipe(
+                Effect.map(
+                  () =>
+                    ({
+                      ...base,
+                      outcome: "rejected",
+                      error: {
+                        ...exitStatus(reason === "conflict" ? 4 : 2),
+                        code:
+                          dependency_error?.code ??
+                          (reason === "conflict" ? "occ_conflict" : reason),
+                        message:
+                          dependency_error?.message ??
+                          (result.outcome === "rejected"
+                            ? result.message
+                            : undefined) ??
+                          context?.message ??
+                          (reason === "conflict"
+                            ? adopting && latest?.external_id == null
+                              ? "Task changed and has no external id yet. Read its current Version and import again with task_id and from_version."
+                              : "Task changed since preview. Preview again and apply the current Version."
+                            : reason === "title_required"
+                              ? "New Tasks need a title. Add a title and import again."
+                              : reason === "invalid_attachment"
+                                ? "Invalid Attachment URI or file path. Fix this item and import again."
+                                : reason === "task_deleted"
+                                  ? "This Task is deleted. Restore it before importing changes."
+                                  : reason === "external_id_conflict"
+                                    ? "This external id already belongs to a Task. Restore the deleted Task or use another external id."
+                                    : "Task fields are invalid. Check import-item and import again."),
+                        details: {
+                          ...context?.details,
+                          ...(dependency_error ? { dependency_error } : {}),
+                          current_version: latest?.row_version ?? null,
+                        },
                       },
-                    },
-                  }) satisfies ImportRow,
-              ),
-            );
-        }),
+                    }) satisfies ImportRow,
+                ),
+              );
+          }),
+        ),
       );
     recordRow(result, index);
   }
@@ -530,6 +543,11 @@ const executeImport = Effect.fn(function* (
         ...(result.outcome !== "committed"
           ? {
               error: {
+                ...exitStatus(
+                  result.outcome === "rejected" && result.reason !== "conflict"
+                    ? 2
+                    : 4,
+                ),
                 code:
                   result.outcome === "rejected" && result.reason !== "conflict"
                     ? result.reason

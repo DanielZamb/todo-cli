@@ -113,3 +113,70 @@ A close next target is preserving the caller's expected Version through import
 adoption, especially when a Task gains an external id while another client
 edits it. The current skill protects the shared storage transaction; it does
 not prove that callers pass the Version the owner approved.
+
+## PERF-tags renewal
+
+Reviewed product `07550ecd35890094625711a5269b8d7c6eb476dc` and inherited source
+drift from the previous confirmed commit. The new link comparison is private
+within `Apply`; the Task and Version writes and commit order are unchanged.
+The model remains unchanged. See the PERF-tags mapping section in `SKILL.md`
+for the reviewed inherited guards and the separate concrete Tag coverage.
+Sensitivity caught both real-code mutations at assertions, exit 1 each, then
+the restored one command passed, exit 0. Local evidence:
+`docs/evidence/fv01/sensitivity-Km03fK/`.
+
+## PERF-tags D1 renewal
+
+Product `d83d61863b95d2482ca9281a34d5db4494abffbb` restricts the equal-set
+skip to distinct payload Tag ids and restores the original array INSERT loop.
+Duplicate ids therefore fail the link primary key and roll back. The Task
+payload, Version and transaction boundaries remain in the same order, so the
+AtomicCAS model is unchanged. The compiled Tag and operation-log proofs assert
+literal duplicate failures, unchanged rows and authenticated append rejection.
+
+The first checker run reached only the expected projection source-drift failure,
+exit 1, after its model and production checks completed. The reviewed mapping
+was then renewed. Both real-code sensitivity variants failed on behavioral
+assertions with exit 1, and the restored one-command checker passed with exit 0.
+The sensitivity helper exited 0. Store source restoration was byte-for-byte.
+
+Evidence is local and ignored:
+`docs/evidence/perf-tags/d1/atomicity-before-renewal.log`,
+`docs/evidence/perf-tags/d1/sensitivity.log` and
+`docs/evidence/fv01/sensitivity-d7gc1J/`.
+The restored checker retains its own result and model logs at the path printed
+in `sensitivity-d7gc1J/restored.stdout`. No model bounds or invariants changed.
+
+## Whole-cache erasure review fix
+
+The cache review fix advances a cache-local epoch and clears maps inside Purge
+instead of scanning History for cache eviction. The sole remaining full History
+read is for redaction. The constructor supplies a cache-only post-restore callback,
+and the new metadata tail is a separate read-only SQLite transaction. These
+changes do not alter Validate, Record, Apply, WriteVersion, Commit, rejection,
+replay or crash boundaries in this model. Other covered source hashes are
+unchanged. The store diff was reviewed before the mapping hash was renewed.
+
+Both real-code sensitivity variants failed their behavioral assertions with exit
+1 and the restored checker passed with exit 0 in the isolated actual-source copy
+at .scratch/occ-review-fix/docs/evidence/fv01/sensitivity-CW3gRs. The source was
+restored byte for byte. This evidence targets the fixed candidate hashes, not
+historical measured cc5777 code. The final committed-input one-command result is
+listed in the worker's ignored final delivery receipt. No AtomicOCC model bounds,
+invariants, package dependency or SQLite configuration changed.
+
+The exact fixed code commit65033c86ec00889f84642fb76289094a23762ebb passed the
+actual-worktree one-command at docs/evidence/fv01/fv01-check-ciYXwL, exit 0.
+The later mapping-only head has identical covered source hashes.
+
+## Agent discovery renewal after the SEC merge
+
+The reviewed product is `36f9c56e200048aa2ca16186aaf713bea8d5454e`. Its SEC parent is `9de893454cb6e3f5729407e9313c73e56bfd0481`. The earlier gate failure is preserved at `docs/evidence/fv01/fv01-check-XaBaHF`. All behavior stages passed, and the source gate named only `packages/domain/src/attachments.ts`.
+
+The covered store, projection, event, entity, and id files retain the SEC-reviewed bytes. The Attachment change adds report-error exit and Task lookup context fields plus the `TaskLookupDetails` import. It changes neither stored `Attachment` validation nor the modeled transaction. The report schema is outside the atomicity claim. No model, invariant, fixture, or bound changed.
+
+The renewed one-command run exited 0 at `docs/evidence/fv01/fv01-check-E2Uefa`. TLC exhausted 37,036 distinct states. The production enumeration, replay, crash, competing-writer, rollback, strict-type, and source checks passed.
+
+`bun .agents/skills/verify-occ-atomicity/prove-sensitivity.ts` exited 0 at `docs/evidence/fv01/sensitivity-AGWD3B`. Removing the Task before-value check made a wrong before-value commit and exited 1 at the intended assertion. Omitting the TaskEdited projection made the durable Task disagree with History and exited 1 at the intended assertion. Both failures occurred before the source gate. Every mutation restored the original bytes. The restored full command exited 0.
+
+The normal command remains `bun .agents/skills/verify-occ-atomicity/check.ts`. This renewal establishes the existing bounded atomicity claim. Authorization, cross-Profile discovery, client response ordering, multiple Tasks in one transaction, and native behavior remain outside that claim. No production or domain file was added by the renewal.

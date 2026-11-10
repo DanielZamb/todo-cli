@@ -641,7 +641,12 @@ describe("Todo HTTP contract", () => {
           );
           expect(stale).toEqual({
             status: 409,
-            body: { _tag: "Conflict", latest },
+            body: {
+              _tag: "Conflict",
+              latest,
+              exit_code: 4,
+              exit_meaning: "Conflict",
+            },
           });
           for (const [version, action, status] of [
             [2, "complete", "done"],
@@ -689,9 +694,16 @@ describe("Todo HTTP contract", () => {
           expect(deleted.status).toBe(200);
           expect(parseTask(deleted.body).row_version).toBe(6);
           expect(parseTask(deleted.body).deleted_at).not.toBeNull();
-          expect(yield* request("GET", path, undefined, credential)).toEqual({
+          expect(
+            yield* request("GET", path, undefined, credential),
+          ).toMatchObject({
             status: 404,
-            body: { _tag: "NotFound", message: "Task not found" },
+            body: {
+              _tag: "NotFound",
+              exit_code: 3,
+              exit_meaning: "not found or auth missing",
+              details: { profile: { id: "work", name: "work" } },
+            },
           });
           expect(
             yield* request(
@@ -1012,7 +1024,12 @@ describe("Todo HTTP contract", () => {
           for (const response of responses)
             expect(response).toEqual({
               status: 422,
-              body: { _tag: "InvalidTask", message: "validation" },
+              body: {
+                _tag: "InvalidTask",
+                message: "validation",
+                exit_code: 2,
+                exit_meaning: "validation or usage",
+              },
             });
           expect(
             yield* request("GET", "/profiles/work/tasks", undefined, reader),
@@ -1699,6 +1716,8 @@ describe("Todo HTTP contract", () => {
             status: 422,
             body: {
               _tag: "InvalidTask",
+              exit_code: 2,
+              exit_meaning: "validation or usage",
               message: "Minute must be between 0 and 59",
             },
           });
@@ -1798,7 +1817,12 @@ describe("Todo HTTP contract", () => {
             ),
           ).toEqual({
             status: 422,
-            body: { _tag: "InvalidTask", message: "task_purged" },
+            body: {
+              _tag: "InvalidTask",
+              message: "task_purged",
+              exit_code: 2,
+              exit_meaning: "validation or usage",
+            },
           });
           expect(
             yield* request(
@@ -2273,6 +2297,8 @@ it.effect(
           });
           expect(Object.keys(response.body ?? {}).sort()).toEqual([
             "code",
+            "exit_code",
+            "exit_meaning",
             "generated_at",
             "message",
           ]);
@@ -2546,6 +2572,10 @@ it.effect(
           credential,
         );
         expect(response.status).toBe(422);
+        expect(response.body).toMatchObject({
+          exit_code: 2,
+          exit_meaning: "validation or usage",
+        });
         const error = Schema.decodeUnknownSync(
           Schema.Struct({
             generated_at: Schema.String,

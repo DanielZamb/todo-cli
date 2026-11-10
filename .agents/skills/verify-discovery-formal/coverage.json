@@ -1,0 +1,239 @@
+{
+  "status": "Reviewed main4c composition and synchronized real-SSE fixture; bounded model and real-code results remain separately recorded",
+  "contractCommit": "f85aef6faf7d93be80feef930554206e09d61be3",
+  "contract": {
+    "path": "docs/decisions/agent-discovery-phase-0.md",
+    "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
+  },
+  "productionSyncCommit": "26367043daf92787fc128ac23544afcb5709a791",
+  "productionFiles": [
+    {
+      "path": "apps/electron/src/discovery-state.ts",
+      "functions": [
+        "DiscoveryStateController.current",
+        "submit",
+        "retry",
+        "close",
+        "credentialChanged",
+        "editPrefix",
+        "offline",
+        "show"
+      ],
+      "sha256": "52b34b9887d0827b04ecb5838340e5f0cb6eb33266fce2bcf2fe4e841156d206",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/electron/src/discovery-dialog.tsx",
+      "functions": [
+        "DiscoveryDialog dismissal, form submission and Show dispatch"
+      ],
+      "sha256": "04242d5042a72860ff1cffd273d283b34a112fe2abffcf78d91c793df5d86dae",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/electron/src/renderer.tsx",
+      "functions": [
+        "openDiscovery",
+        "request discovery branches",
+        "endAuthentication",
+        "DiscoveryDialog show callbacks",
+        "draftForTask",
+        "same-key refresh and changed-navigation effect"
+      ],
+      "sha256": "6aff737ee78fc37dda9127449a504ef984ba2228a1b2e0ef26d22ec190583eb4",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/electron/src/main.ts",
+      "functions": [
+        "IPC captured credential/generation and Unauthorized side effects"
+      ],
+      "sha256": "4205be3241282869a730b753618934bb9ad4eb38875ff0f19e92d1e5c14d38b8",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/electron/scripts/write-host.ts",
+      "functions": [
+        "unsigned IPC captured credential/generation and Unauthorized side effects"
+      ],
+      "sha256": "ac7ee516e6ce9c3f8593c9f1889568474d587dc0cbad3f9bddad01dc3dbb6f78",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/electron/src/task-client.ts",
+      "functions": [
+        "directory",
+        "lookup",
+        "showTask"
+      ],
+      "sha256": "028faf302f5ca8c6ab9bc87e6e4825f02c59d328abed06ec1de0d85f6a66ab04",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/electron/src/protocol.ts",
+      "functions": [
+        "discovery Request/Reply decoders"
+      ],
+      "sha256": "b5a43619a9e5c668df820cc9941e7b7d48fe8f3209416cbeafe1881fad4dba9a",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/electron/src/error-reply.ts",
+      "functions": [
+        "errorReply",
+        "exitDetail"
+      ],
+      "sha256": "9ca2afa2579d3516830038b304e4b77dd1b0892d00d1d6273d4d42f7afab3032",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/electron/src/task-lookup-status.tsx",
+      "functions": [
+        "TaskLookupStatus"
+      ],
+      "sha256": "e08b8ab874d22e5d04919780a38d51c82e4530e0cb16be3e2700b461aa432007",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/electron/src/import-dialog.tsx",
+      "functions": [
+        "structured recovery, generic exit pair and origin dismissal"
+      ],
+      "sha256": "997fd7cfa8c22db6a3b86957fd5cddd543c22100b8be8808e90fac96595bd0fa",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/electron/src/batch-edit.tsx",
+      "functions": [
+        "structured recovery and generic exit pair"
+      ],
+      "sha256": "4e76f1dd92a651689f0b43de5ed7852adf62fba472efee8b335a058aebeabd30",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/electron/src/attachment-batch.tsx",
+      "functions": [
+        "structured recovery and generic exit pair"
+      ],
+      "sha256": "605f9b332b7bc993d133ee809e042c089350e225ffa13759f252a6f9cc096c6d",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/macos/Sources/Discovery.swift",
+      "functions": [
+        "DiscoveryState.invalidate",
+        "credentialChanged",
+        "openDiscovery",
+        "requestDiscovery",
+        "canPublishDiscovery",
+        "closeDiscovery",
+        "editDiscoveryPrefix",
+        "discoveryWentOffline",
+        "showDiscoveryMatch",
+        "canShowDiscovery",
+        "applyDiscoveryShow"
+      ],
+      "sha256": "d4cb2548215a43da7589646195d4907e74731c3b2db8ad8c7f667b350a162b60",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/macos/Sources/TodoModel.swift",
+      "functions": [
+        "replaceCredential",
+        "signOut",
+        "restore",
+        "signIn",
+        "navigate",
+        "saveAndNavigate",
+        "discardAndNavigate",
+        "applyNavigation",
+        "dismissNavigationPrompt",
+        "cancelNavigation",
+        "isCurrentCredential",
+        "handleAuthorization",
+        "expireSession",
+        "followChanges Unauthorized",
+        "metadata/parse/History/Series/import invalidation"
+      ],
+      "sha256": "8307d4d8305aa31b9d8ed0cb1d11107b7a1aee9fa01c5fcca8c27c450425ef52",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/macos/Sources/AppViews.swift",
+      "functions": [
+        "RootView authentication visibility",
+        "TaskListView sheet/alert binding",
+        "DraftNavigationActions target capture and explicit Cancel"
+      ],
+      "sha256": "0d2dd9d5eee717df7ace67df5546cd2ba5f79ea42cff29f1340694ca9c13fad6",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/macos/Sources/DiscoveryView.swift",
+      "functions": [
+        "DiscoveryView alert binding, submit, Close and Show dispatch"
+      ],
+      "sha256": "99d4fe04019a550269723afa21a2b47766242603ea8b393c14c33ce863a10de9",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/macos/Sources/ClientErrors.swift",
+      "functions": [
+        "findTaskAfterLookupError",
+        "TaskLookupErrorNotice",
+        "ServerErrorNotice"
+      ],
+      "sha256": "daa783cbaef15590f408665c79c7db986720aaf255ecfdd03be11f6247c5b712",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/macos/Sources/AttachmentModel.swift",
+      "functions": [
+        "changeAttachment captured epoch and publication"
+      ],
+      "sha256": "014232d99ade1c2178fb1ea8c2dbdf8935b8862ebad88af9865291cc2e0909fa",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/macos/Sources/BatchEdit.swift",
+      "functions": [
+        "reloadBatchEditTargets",
+        "applyBatchEdit"
+      ],
+      "sha256": "91693b636baeffda3d17128d573071d62932ee7d93fc7eb8b92db56e75693fef",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/macos/Sources/AttachmentBatch.swift",
+      "functions": [
+        "reloadAttachmentTargets",
+        "applyAttachmentBatch"
+      ],
+      "sha256": "acaa4385ca0b8b4566bdfaf747bf05f98d47c7d1f75a814379596c7c19d28dc8",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    }
+  ],
+  "mapping": "SOURCE-MAPPING.md",
+  "candidateCommit": "26367043daf92787fc128ac23544afcb5709a791",
+  "classification": {
+    "model": "bounded safety only; Discovery.tla bytes unchanged from500cdc38",
+    "domain": "separate verify-discovery generated projection/snapshot properties, not model conclusions",
+    "regressions": "Fresh current prepare-JP0mLs runs domain/scope-removal and compiled discovery/credential/boundary/enrichment-history drives; no historical receipt is reopened",
+    "sensitivity": "All original Electron/Swift controls/restoration passed. Added deterministic ready/retry transport regression,20 consecutive8-test fresh runs and full113-state suite passed; final committed command receipts determine completion.",
+    "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
+    "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
+  },
+  "previousProductionSyncCommit": "c4882258d95bb8d8e80315d2f3d5f88fd5bd9901",
+  "integrationReview": {
+    "main": "4c904d96277853c60692c685c6d4ea3b3e655bc4",
+    "source": "dc43db3f16e3e1591793bf13b18127acd2be939d",
+    "scope": "Full/query catalog debt composed with Show and credential epochs; current controller/Swift controls and compiled state drives passed before hash renewal"
+  },
+  "fixtureIntegration": {
+    "commit": "26367043daf92787fc128ac23544afcb5709a791",
+    "productDiffFromMerge": "git diff dc43db3f..26367043 -- apps/**/src packages = empty; only Swift fixture changes among app source trees",
+    "newNamedRegression": "readyFullRefreshSupersedesRetryAndKeepsRevealDraftAndCatalog",
+    "proof": "Frozen fixture matches26367043;20consecutive8-test runs0 and full113-state suite0; final immutable command results recorded separately"
+  },
+  "limits": "Native/Keychain/persistence and unbounded or mechanical refinement unproved; full Import geometry fails identically on main and is an owner follow-up."
+}

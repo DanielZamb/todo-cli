@@ -21,9 +21,11 @@ import {
 import { BunServices } from "@effect/platform-bun";
 import { BUILD_ID, CONTRACT_ID } from "@todo/api";
 import {
+  type AccessRequest,
   AttachManyItem,
   AttachManyReport,
   AttachManyRequest,
+  type AuthAction,
   BatchEdgeReport,
   BatchEdgeRequest,
   BatchEditReport,
@@ -35,12 +37,16 @@ import {
   DeleteTask,
   DependencyCommands,
   DependRequest,
+  Discovery,
   EdgeReport,
   edgeFailure,
+  exitStatus,
   GraphReport,
   inputLimits,
+  LookupQuery,
+  LookupResponse,
   ProfileDeletionReport,
-  ProfileSummary,
+  ProfileListResponse,
   parseQuickAdd,
   QuickAddDraft,
   QuickAddInput,
@@ -51,6 +57,7 @@ import {
   TaskFilters,
   TaskId,
   TaskStatus,
+  taskLookupError,
   Version,
 } from "@todo/domain";
 import { attachmentInput } from "@todo/domain/attachment-input";
@@ -85,9 +92,9 @@ import {
   renderError,
   renderExport,
   renderHistory,
+  renderList,
   renderReview,
   renderTask,
-  renderTasks,
   TaskResponse,
   taskView,
 } from "@todo/domain/presentation";
@@ -102,11 +109,19 @@ import {
   labelAttachment,
   withAttachmentStatus,
 } from "./attachments.ts";
+import {
+  credentialProfileName,
+  loadCredential,
+  credentialFile as sessionFile,
+  validateProfileSelectors,
+} from "./credential-profile.ts";
 import { diagnosticsOutput, diagnosticsRead } from "./diagnostics.ts";
+import { directoryOutput, lookupOutput } from "./discovery.ts";
 import { manualPage, withGuide } from "./help.ts";
 import { makeImportCommand, readImportFile, renderImport } from "./import.ts";
 import { decodeInput } from "./input.ts";
 import { verifyMacPassword } from "./macos-password.ts";
+import { resolveProfile } from "./profile-selection.ts";
 import {
   ConfigResponse,
   commandNames,
@@ -172,8 +187,6 @@ const io = <A>(run: () => A) =>
           : new CommandError(1, "runtime_error", String(error)),
   });
 const localDir = join(homedir(), ".todo-cli");
-const sessionFile = (profile: string) =>
-  join(localDir, `session_${encodeURIComponent(profile)}.json`);
 const Config = Schema.Struct({ db_path: Schema.optionalKey(Schema.String) });
 const loadConfig = () =>
   existsSync(join(localDir, "config.json"))
@@ -181,18 +194,6 @@ const loadConfig = () =>
         JSON.parse(readFileSync(join(localDir, "config.json"), "utf8")),
       )
     : {};
-const loadCredential = (profile: string) => {
-  try {
-    const token = Schema.decodeUnknownSync(
-      Schema.Struct({
-        token: Schema.NonEmptyString.check(Schema.isPattern(/^\S+$/)),
-      }),
-    )(JSON.parse(readFileSync(sessionFile(profile), "utf8"))).token;
-    return token;
-  } catch {
-    throw new CommandError(3, "auth_required", "run todo login");
-  }
-};
 const canonicalPath = (path: string): string => {
   if (lstatSync(path, { throwIfNoEntry: false })) return realpathSync(path);
   return join(canonicalPath(dirname(path)), basename(path));
@@ -239,6 +240,7 @@ const root = Command.make("todo").pipe(
       Flag.withDefault("md"),
     ),
     profile: string("profile", "default"),
+    credentialProfile: stringFlag("credential-profile").pipe(Flag.optional),
     noColor: bool("no-color"),
     helpHuman: bool("help-human-flag"),
   }),
@@ -246,6 +248,7 @@ const root = Command.make("todo").pipe(
 type Settings = Effect.Success<typeof root>;
 const withStore = <A, E, R>(
   cfg: Settings,
+  action: AuthAction,
   use: (store: OperationStore) => Effect.Effect<A, E, R>,
 ) =>
   Effect.gen(function* () {
@@ -259,33 +262,96 @@ const withStore = <A, E, R>(
     yield* io(() =>
       mkdirSync(dirname(resolve(path)), { recursive: true, mode: 0o700 }),
     );
-    return yield* Effect.acquireUseRelease(openStore({ path }), use, (store) =>
-      Effect.orDie(store.close()),
+    return yield* Effect.acquireUseRelease(
+      openStore({ path }),
+      (store) =>
+        use(store).pipe(
+          Effect.catch((error) =>
+            Effect.gen(function* () {
+              if (
+                !(error instanceof CommandError) ||
+                error.code !== "not_found" ||
+                error.task_id === undefined
+              )
+                return yield* Effect.fail(error);
+              const request = yield* selectProfile(store, cfg, action);
+              const context = yield* cliLookupError(
+                store,
+                cfg,
+                request,
+                error.task_id,
+                action,
+              );
+              return yield* Effect.fail(
+                new CommandError(
+                  error.exit,
+                  error.code,
+                  context.message,
+                  error.latest,
+                  context.details,
+                ),
+              );
+            }),
+          ),
+        ),
+      (store) => Effect.orDie(store.close()),
     );
   });
 const access = (cfg: Settings) =>
   io(() => ({
-    credential: loadCredential(cfg.profile),
+    credential: loadCredential(cfg),
     profile: profileId(cfg.profile),
   }));
 const selectProfile = Effect.fn(function* (
   store: OperationStore,
   cfg: Settings,
+  action: AuthAction,
 ) {
-  const credential = yield* io(() => loadCredential(cfg.profile));
-  const profiles = yield* store.profiles();
-  const profile = profiles.find(
-    (p) => p.name === cfg.profile || p.id === cfg.profile,
-  );
-  if (!profile)
-    return yield* Effect.fail(
-      new CommandError(
-        3,
-        "not_found",
-        "Profile not found; run todo init --profile <name>",
-      ),
-    );
+  const credential = yield* io(() => loadCredential(cfg));
+  const profile = yield* resolveProfile(store, {
+    credential,
+    profile: cfg.profile,
+    action,
+  });
   return { credential, profile: profile.id };
+});
+const cliLookupError = (
+  store: OperationStore,
+  cfg: Settings,
+  request: AccessRequest,
+  task_id: string,
+  action: AuthAction,
+) =>
+  taskLookupError(store, request, task_id, "cli", {
+    credentialProfile: credentialProfileName(cfg),
+    action,
+  });
+const cliLookupRowError = Effect.fn(function* <
+  E extends {
+    readonly code: string;
+    readonly message: string;
+    readonly details?: object;
+  },
+>(
+  store: OperationStore,
+  cfg: Settings,
+  request: AccessRequest,
+  task_id: string | null,
+  error: E,
+) {
+  if (error.code !== "not_found" || task_id === null) return error;
+  const context = yield* cliLookupError(
+    store,
+    cfg,
+    request,
+    task_id,
+    "authenticate",
+  );
+  return {
+    ...error,
+    ...context,
+    details: { ...error.details, ...context.details },
+  };
 });
 const taskOptions = {
   title: stringFlag("title").pipe(Flag.optional),
@@ -354,7 +420,7 @@ const init = Command.make(
         return yield* Effect.fail(
           new CommandError(2, "invalid_args", "no password provided on stdin"),
         );
-      yield* withStore(cfg, (store) =>
+      yield* withStore(cfg, "setupOwner", (store) =>
         Effect.gen(function* () {
           if (password) yield* store.auth.setupOwner(password);
           yield* ensureProfile(store, cfg.profile);
@@ -381,17 +447,17 @@ const login = Command.make(
         return yield* Effect.fail(
           new CommandError(2, "invalid_args", "no password provided on stdin"),
         );
-      yield* withStore(cfg, (store) =>
+      yield* withStore(cfg, "signIn", (store) =>
         Effect.gen(function* () {
           const result = yield* store.auth.signIn(password);
           yield* ensureProfile(store, cfg.profile);
           yield* io(() => {
             writeFileSync(
-              sessionFile(cfg.profile),
+              sessionFile(credentialProfileName(cfg)),
               JSON.stringify({ token: result.credential }),
               { mode: 0o600 },
             );
-            chmodSync(sessionFile(cfg.profile), 0o600);
+            chmodSync(sessionFile(credentialProfileName(cfg)), 0o600);
           });
           yield* response(
             cfg.format,
@@ -472,7 +538,7 @@ const resetPassphrase = Command.make(
             "macOS did not accept that login password for this account",
           ),
         );
-      yield* withStore(cfg, (store) =>
+      yield* withStore(cfg, "resetPassphrase", (store) =>
         Effect.gen(function* () {
           const result = yield* store.auth.resetPassphrase(secrets.next);
           yield* response(
@@ -492,12 +558,14 @@ const resetPassphrase = Command.make(
 const logout = Command.make("logout", {}, () =>
   Effect.gen(function* () {
     const cfg = yield* root;
-    if (existsSync(sessionFile(cfg.profile)))
-      yield* withStore(cfg, (store) =>
+    if (Option.isSome(cfg.credentialProfile))
+      yield* io(() => loadCredential(cfg));
+    if (existsSync(sessionFile(credentialProfileName(cfg))))
+      yield* withStore(cfg, "signOut", (store) =>
         Effect.gen(function* () {
           const request = yield* access(cfg);
           yield* store.auth.signOut({ credential: request.credential });
-          yield* io(() => rmSync(sessionFile(cfg.profile)));
+          yield* io(() => rmSync(sessionFile(credentialProfileName(cfg))));
         }),
       );
     yield* status(cfg.format, "logged_out", "logged out\n");
@@ -506,9 +574,9 @@ const logout = Command.make("logout", {}, () =>
 const whoami = Command.make("whoami", {}, () =>
   Effect.gen(function* () {
     const cfg = yield* root;
-    yield* withStore(cfg, (store) =>
+    yield* withStore(cfg, "authenticate", (store) =>
       Effect.gen(function* () {
-        const request = yield* selectProfile(store, cfg);
+        const request = yield* selectProfile(store, cfg, "authenticate");
         const credential = yield* store.auth.authenticate({
           ...request,
           access: "read",
@@ -603,9 +671,9 @@ const add = Command.make(
           )({ depends_on: input.dependsOn }),
         `--depends-on requires distinct nonempty Task ids, at most 13 and at most ${inputLimits.id} characters each. Choose visible Tasks in this Profile and retry.`,
       );
-      yield* withStore(cfg, (store) =>
+      yield* withStore(cfg, "mutate", (store) =>
         Effect.gen(function* () {
-          const request = yield* selectProfile(store, cfg);
+          const request = yield* selectProfile(store, cfg, "mutate");
           const result = yield* createTask(
             store,
             request,
@@ -721,12 +789,21 @@ const list = Command.make(
             `Invalid Task filters: ${String(error)}`,
           ),
       });
-      yield* withStore(cfg, (store) =>
+      yield* withStore(cfg, "read", (store) =>
         Effect.gen(function* () {
-          const request = yield* selectProfile(store, cfg);
-          const data = yield* readTasks(store, request, filters);
+          const request = yield* selectProfile(store, cfg, "read");
+          const data = yield* readTasks(store, request, filters).pipe(
+            Effect.mapError((error) =>
+              error instanceof SearchTooBroad
+                ? new CommandError(2, error.code, error.message)
+                : error,
+            ),
+            Effect.catchDefect((error) =>
+              Effect.fail(new CommandError(1, "runtime_error", String(error))),
+            ),
+          );
           yield* write(
-            renderTasks(
+            renderList(
               filterTasks(
                 data.views,
                 {
@@ -816,20 +893,18 @@ const transfer = (kind: "move" | "copy") =>
               "--status must be open, done, cancelled or snoozed",
             ),
           );
-        yield* withStore(cfg, (store) =>
+        yield* withStore(cfg, "authenticate", (store) =>
           Effect.gen(function* () {
-            const request = yield* selectProfile(store, cfg);
-            const destination = (yield* store.profiles()).find(
-              (p) => p.id === input.to || p.name === input.to,
+            const request = yield* selectProfile(store, cfg, "authenticate");
+            const destination = yield* resolveProfile(
+              store,
+              {
+                credential: request.credential,
+                profile: input.to,
+                action: "authenticate",
+              },
+              "target Profile not found; run todo init --profile <name>",
             );
-            if (!destination)
-              return yield* Effect.fail(
-                new CommandError(
-                  3,
-                  "not_found",
-                  "target Profile not found; run todo init --profile <name>",
-                ),
-              );
             if (kind === "move" && destination.id === request.profile)
               return yield* Effect.fail(
                 new CommandError(
@@ -861,7 +936,13 @@ const transfer = (kind: "move" | "copy") =>
                   target_id: null,
                   outcome: "not-found",
                   occurrence_as_plain_task: false,
-                  message: "Task not found in the selected Profile and filters",
+                  ...(yield* cliLookupError(
+                    store,
+                    cfg,
+                    request,
+                    id,
+                    "authenticate",
+                  )),
                 });
                 continue;
               }
@@ -918,6 +999,15 @@ const transfer = (kind: "move" | "copy") =>
                         : {}),
                     }
                   : {
+                      ...(result.outcome === "not-found"
+                        ? yield* cliLookupError(
+                            store,
+                            cfg,
+                            request,
+                            id,
+                            "authenticate",
+                          )
+                        : {}),
                       source_id: id,
                       target_id: null,
                       outcome:
@@ -949,12 +1039,18 @@ const transfer = (kind: "move" | "copy") =>
             const rejectionDetails = results.find(
               (result) => result.details,
             )?.details;
+            const exit = conflict
+              ? 4
+              : results.some((r) => r.outcome === "not-found")
+                ? 3
+                : 2;
             const report = {
               generated_at: iso(nowInstant()),
               dry_run: input.dryRun,
               results,
               ...(failed
                 ? {
+                    ...exitStatus(exit),
                     code: conflict
                       ? "occ_conflict"
                       : results.some((r) => r.outcome === "not-found")
@@ -985,14 +1081,13 @@ const transfer = (kind: "move" | "copy") =>
                       (r) =>
                         `${r.source_id}: ${r.outcome}${r.message ? `: ${r.message}` : ""}${r.target_id ? ` -> ${r.target_id}` : ""}${r.occurrence_as_plain_task ? " (Occurrence becomes a plain Task)" : ""}${r.current_version ? ` (current Version ${r.current_version})` : ""}${r.managed_image_count === undefined ? "" : ` (${r.managed_image_count} managed images, ${r.managed_image_bytes} bytes)`}${r.removed_dependencies?.map((edge) => `\n${edge.dependent_id} depended on ${edge.blocker_id}`).join("") ?? ""}`,
                     )
-                    .join("\n") + "\n",
+                    .join("\n") +
+                    "\n" +
+                    (failed
+                      ? `error ${exit} - ${exitStatus(exit).exit_meaning}\n`
+                      : ""),
             );
-            if (failed)
-              process.exitCode = conflict
-                ? 4
-                : results.some((r) => r.outcome === "not-found")
-                  ? 3
-                  : 2;
+            if (failed) process.exitCode = exit;
           }),
         );
       }),
@@ -1003,16 +1098,23 @@ const show = Command.make(
   ({ id }) =>
     Effect.gen(function* () {
       const cfg = yield* root;
-      yield* withStore(cfg, (store) =>
+      yield* withStore(cfg, "read", (store) =>
         Effect.gen(function* () {
           const data = yield* readTasks(
             store,
-            yield* selectProfile(store, cfg),
+            yield* selectProfile(store, cfg, "read"),
           );
           const task = data.views.find((t) => t.id === id);
           if (!task)
             return yield* Effect.fail(
-              new CommandError(3, "not_found", "task not found"),
+              new CommandError(
+                3,
+                "not_found",
+                "task not found",
+                undefined,
+                undefined,
+                id,
+              ),
             );
           yield* write(
             renderTask(
@@ -1036,33 +1138,52 @@ const batchEditCommand = Command.make(
   (input) =>
     Effect.gen(function* () {
       const cfg = yield* root;
-      const body = yield* Effect.try({
-        try: () =>
-          Schema.decodeUnknownSync(BatchEditRequest, {
-            onExcessProperty: "error",
-          })(
-            JSON.parse(
-              readFileSync(input.file === "-" ? 0 : input.file, "utf8"),
-            ),
-          ),
-        catch: (error) =>
-          new CommandError(
-            2,
-            "invalid_args",
-            `Cannot read batch edit. Supply Task ids, from_version and one shared changes field. Check todo schema batch-edit-input. ${String(error)}`,
-          ),
-      });
-      yield* withStore(cfg, (store) =>
+      yield* withStore(cfg, "authenticate", (store) =>
         Effect.gen(function* () {
-          const report = yield* batchEditTasks(
-            store,
-            yield* selectProfile(store, cfg),
-            { ...body, dry_run: input.dryRun || body.dry_run || false },
-          );
+          const request = yield* selectProfile(store, cfg, "authenticate");
+          const body = yield* Effect.try({
+            try: () =>
+              Schema.decodeUnknownSync(BatchEditRequest, {
+                onExcessProperty: "error",
+              })(
+                JSON.parse(
+                  readFileSync(input.file === "-" ? 0 : input.file, "utf8"),
+                ),
+              ),
+            catch: (error) =>
+              new CommandError(
+                2,
+                "invalid_args",
+                `Cannot read batch edit. Supply Task ids, from_version and one shared changes field. Check todo schema batch-edit-input. ${String(error)}`,
+              ),
+          });
+          const result = yield* batchEditTasks(store, request, {
+            ...body,
+            dry_run: input.dryRun || body.dry_run || false,
+          });
+          const report = {
+            ...result,
+            items: yield* Effect.forEach(result.items, (row) =>
+              Effect.gen(function* () {
+                return row.error
+                  ? {
+                      ...row,
+                      error: yield* cliLookupRowError(
+                        store,
+                        cfg,
+                        request,
+                        row.task_id,
+                        row.error,
+                      ),
+                    }
+                  : row;
+              }),
+            ),
+          };
           yield* write(
             cfg.format === "json"
               ? encodeResponse(BatchEditReport, report)
-              : `${report.dry_run ? "Dry run\n" : ""}${report.items.map((row) => `${row.task_id}\t${row.outcome}\t${row.error?.message ?? `Version ${row.current_version}`}`).join("\n")}\n`,
+              : `${report.dry_run ? "Dry run\n" : ""}${report.items.map((row) => `${row.task_id}\t${row.outcome}\t${row.error ? `${row.error.message}\nerror ${row.error.exit_code} - ${row.error.exit_meaning}` : `Version ${row.current_version}`}`).join("\n")}\n`,
           );
           if (report.totals.rejected)
             process.exitCode = report.items.some(
@@ -1091,36 +1212,56 @@ const attachManyCommand = Command.make(
   (input) =>
     Effect.gen(function* () {
       const cfg = yield* root;
-      const requestBody = yield* Effect.try({
-        try: () =>
-          Schema.decodeUnknownSync(AttachManyRequest, {
-            onExcessProperty: "error",
-          })(
-            JSON.parse(
-              readFileSync(input.file === "-" ? 0 : input.file, "utf8"),
-            ),
-          ),
-        catch: (error) =>
-          new CommandError(
-            2,
-            "invalid_args",
-            `Cannot read Attachment batch: ${String(error)}`,
-          ),
-      });
-      yield* withStore(cfg, (store) =>
+      yield* withStore(cfg, "authenticate", (store) =>
         Effect.gen(function* () {
-          const request = yield* selectProfile(store, cfg);
-          const report = yield* new AttachmentCommands(store).attachMany(
+          const request = yield* selectProfile(store, cfg, "authenticate");
+          const requestBody = yield* Effect.try({
+            try: () =>
+              Schema.decodeUnknownSync(AttachManyRequest, {
+                onExcessProperty: "error",
+              })(
+                JSON.parse(
+                  readFileSync(input.file === "-" ? 0 : input.file, "utf8"),
+                ),
+              ),
+            catch: (error) =>
+              new CommandError(
+                2,
+                "invalid_args",
+                `Cannot read Attachment batch: ${String(error)}`,
+              ),
+          });
+
+          const result = yield* new AttachmentCommands(store).attachMany(
             request,
             {
               ...requestBody,
               dry_run: input.dryRun || (requestBody.dry_run ?? false),
             },
           );
+          const report = {
+            ...result,
+            items: yield* Effect.forEach(result.items, (row) =>
+              Effect.gen(function* () {
+                return row.error
+                  ? {
+                      ...row,
+                      error: yield* cliLookupRowError(
+                        store,
+                        cfg,
+                        request,
+                        row.task_id,
+                        row.error,
+                      ),
+                    }
+                  : row;
+              }),
+            ),
+          };
           yield* write(
             cfg.format === "json"
               ? encodeResponse(AttachManyReport, report)
-              : `${report.dry_run ? "Dry run\n" : ""}${report.items.map((row) => `${row.task_id ?? "?"}\t${row.outcome}\t${row.error?.message ?? row.attached}`).join("\n")}\n`,
+              : `${report.dry_run ? "Dry run\n" : ""}${report.items.map((row) => `${row.task_id ?? "?"}\t${row.outcome}\t${row.error ? `${row.error.message}\nerror ${row.error.exit_code} - ${row.error.exit_meaning}` : row.attached}`).join("\n")}\n`,
           );
           if (report.totals.rejected)
             process.exitCode = report.items.some(
@@ -1145,10 +1286,14 @@ const attachmentCommand = (detach: boolean) =>
     (input) =>
       Effect.gen(function* () {
         const cfg = yield* root;
-        yield* withStore(cfg, (store) =>
+        const dryRun = "dryRun" in input && input.dryRun === true;
+        yield* withStore(cfg, dryRun ? "authenticate" : "mutate", (store) =>
           Effect.gen(function* () {
-            const request = yield* selectProfile(store, cfg);
-            const dryRun = "dryRun" in input && input.dryRun === true;
+            const request = yield* selectProfile(
+              store,
+              cfg,
+              dryRun ? "authenticate" : "mutate",
+            );
             const task = yield* changeAttachment(store, request, {
               id: input.id,
               value: input.value,
@@ -1190,9 +1335,9 @@ const labelAttachmentCommand = Command.make(
   (input) =>
     Effect.gen(function* () {
       const cfg = yield* root;
-      yield* withStore(cfg, (store) =>
+      yield* withStore(cfg, "mutate", (store) =>
         Effect.gen(function* () {
-          const request = yield* selectProfile(store, cfg);
+          const request = yield* selectProfile(store, cfg, "mutate");
           const task = yield* labelAttachment(
             store,
             request,
@@ -1224,9 +1369,9 @@ const history = Command.make(
   ({ id }) =>
     Effect.gen(function* () {
       const cfg = yield* root;
-      yield* withStore(cfg, (store) =>
+      yield* withStore(cfg, "read", (store) =>
         Effect.gen(function* () {
-          const request = yield* selectProfile(store, cfg);
+          const request = yield* selectProfile(store, cfg, "read");
           const task_id = yield* io(() => Schema.decodeUnknownSync(TaskId)(id));
           const entries = yield* new ClientReads(store).history({
             ...request,
@@ -1271,9 +1416,9 @@ const mutation = (name: Mutation) =>
               }),
             "rm requires a nonempty task-id, --expected-version <positive integer> and, when supplied, --dependency-fingerprint <64 lowercase hex characters>. Preview with --dry-run, then retry with the current Version and confirmation.",
           );
-        yield* withStore(cfg, (store) =>
+        yield* withStore(cfg, "mutate", (store) =>
           Effect.gen(function* () {
-            const request = yield* selectProfile(store, cfg);
+            const request = yield* selectProfile(store, cfg, "mutate");
             let fingerprint = suppliedFingerprint ?? "";
             let withDependencies = input.withDependencies;
             if (
@@ -1399,9 +1544,9 @@ const dependencyCommand = (action: "depend" | "undepend") =>
             }),
           `${action} requires a nonempty task-id, --${action === "depend" ? "on" : "from"} <nonempty blocker-id, at most ${inputLimits.id} characters> and --expected-version <positive integer>. Choose visible Tasks in the same Profile and retry.`,
         );
-        yield* withStore(cfg, (store) =>
+        yield* withStore(cfg, "mutate", (store) =>
           Effect.gen(function* () {
-            const request = yield* selectProfile(store, cfg);
+            const request = yield* selectProfile(store, cfg, "mutate");
             const result = yield* new DependencyCommands(store).change(
               {
                 ...request,
@@ -1428,6 +1573,8 @@ const dependencyCommand = (action: "depend" | "undepend") =>
                         data.series,
                       )
                     : undefined,
+                  undefined,
+                  undefined,
                   result.dependency_error,
                 ),
               );
@@ -1459,9 +1606,9 @@ const graphCommand = Command.make(
             "graph accepts json, md or mermaid. Choose --format json, md or mermaid.",
           ),
         );
-      yield* withStore(cfg, (store) =>
+      yield* withStore(cfg, "read", (store) =>
         Effect.gen(function* () {
-          const request = yield* selectProfile(store, cfg);
+          const request = yield* selectProfile(store, cfg, "read");
           const graph = yield* readGraph(
             store,
             { ...request, task_id },
@@ -1473,6 +1620,9 @@ const graphCommand = Command.make(
                 3,
                 "not_found",
                 "Task not found. Read todo list and select again.",
+                undefined,
+                undefined,
+                task_id,
               ),
             );
           yield* write(
@@ -1502,11 +1652,11 @@ const batchDependCommand = Command.make(
           })(JSON.parse(text)),
         "Invalid --file input. Supply a JSON object with items containing action depend|undepend, nonempty dependent_id/blocker_id and a positive integer from_version. Check todo schema batch-depend-input, fix the file and retry.",
       );
-      yield* withStore(cfg, (store) =>
+      yield* withStore(cfg, "authenticate", (store) =>
         Effect.gen(function* () {
           const report = yield* batchDepend(
             store,
-            yield* selectProfile(store, cfg),
+            yield* selectProfile(store, cfg, "authenticate"),
             { ...body, dry_run: input.dryRun || body.dry_run || false },
           );
           yield* write(
@@ -1541,9 +1691,9 @@ const revertCommand = Command.make(
           }),
         "revert requires seq and --expected-version to be positive integers. Read todo history <task-id>, then retry with its operation seq and the Task's current Version.",
       );
-      yield* withStore(cfg, (store) =>
+      yield* withStore(cfg, "mutate", (store) =>
         Effect.gen(function* () {
-          const request = yield* selectProfile(store, cfg);
+          const request = yield* selectProfile(store, cfg, "mutate");
           const data = yield* readTasks(store, request);
           const { seq } = payload;
           const entry = data.history.find((entry) => entry.seq === seq);
@@ -1588,6 +1738,8 @@ const revertCommand = Command.make(
                       data.series,
                     )
                   : undefined,
+                undefined,
+                undefined,
                 result.dependency_error,
               ),
             );
@@ -1613,11 +1765,11 @@ const reviewCommand = (period: "daily" | "weekly") =>
   Command.make(period, {}, () =>
     Effect.gen(function* () {
       const cfg = yield* root;
-      yield* withStore(cfg, (store) =>
+      yield* withStore(cfg, "read", (store) =>
         Effect.gen(function* () {
           const data = yield* readTasks(
             store,
-            yield* selectProfile(store, cfg),
+            yield* selectProfile(store, cfg, "read"),
           );
           yield* write(
             renderReview(data.views, period, cfg.format, nowInstant()),
@@ -1642,11 +1794,11 @@ const exportCommand = Command.make(
   (input) =>
     Effect.gen(function* () {
       const cfg = yield* root;
-      yield* withStore(cfg, (store) =>
+      yield* withStore(cfg, "read", (store) =>
         Effect.gen(function* () {
           const data = yield* readTasks(
             store,
-            yield* selectProfile(store, cfg),
+            yield* selectProfile(store, cfg, "read"),
           );
           const tasks = yield* Effect.try({
             try: () => exportScope(data.views, input.scope, nowInstant()),
@@ -1678,14 +1830,14 @@ const sync = Command.make("sync").pipe(
       (input) =>
         Effect.gen(function* () {
           const cfg = yield* root;
-          const { target, canonicalTarget } = yield* io(() =>
-            projectionTarget(input.vault, input.file),
-          );
-          yield* withStore(cfg, (store) =>
+          yield* withStore(cfg, "read", (store) =>
             Effect.gen(function* () {
               const data = yield* readTasks(
                 store,
-                yield* selectProfile(store, cfg),
+                yield* selectProfile(store, cfg, "read"),
+              );
+              const { target, canonicalTarget } = yield* io(() =>
+                projectionTarget(input.vault, input.file),
               );
               yield* io(() => {
                 mkdirSync(dirname(canonicalTarget), { recursive: true });
@@ -1791,16 +1943,35 @@ const config = Command.make("config").pipe(
 const importCommand = makeImportCommand((input) =>
   Effect.gen(function* () {
     const cfg = yield* root;
-    const items = yield* readImportFile(input.file);
-    yield* withStore(cfg, (store) =>
+    yield* withStore(cfg, "authenticate", (store) =>
       Effect.gen(function* () {
-        const request = yield* selectProfile(store, cfg);
-        const report = yield* importTasks(store, request, {
+        const request = yield* selectProfile(store, cfg, "authenticate");
+        const items = yield* readImportFile(input.file);
+        const result = yield* importTasks(store, request, {
           items,
           file_name: input.file === "-" ? "stdin" : basename(input.file),
           dry_run: input.dryRun,
           close_missing: input.closeMissing,
         });
+        const report = {
+          ...result,
+          items: yield* Effect.forEach(result.items, (row) =>
+            Effect.gen(function* () {
+              return row.error
+                ? {
+                    ...row,
+                    error: yield* cliLookupRowError(
+                      store,
+                      cfg,
+                      request,
+                      row.task_id ?? row.error.details?.task_id ?? null,
+                      row.error,
+                    ),
+                  }
+                : row;
+            }),
+          ),
+        };
         yield* write(renderImport(report, cfg.format));
         if (report.totals.rejected)
           process.exitCode = report.items.some(
@@ -1856,7 +2027,7 @@ const diagnostics = Command.make(
   (input) =>
     Effect.gen(function* () {
       const cfg = yield* root;
-      const credential = yield* io(() => loadCredential(cfg.profile));
+      const credential = yield* io(() => loadCredential(cfg));
       const snapshot = diagnosticsRead(input.server, credential).pipe(
         Effect.flatMap((snapshot) =>
           write(diagnosticsOutput(snapshot, cfg.format, input.follow)),
@@ -1880,7 +2051,7 @@ const top = Command.make(
   (input) =>
     Effect.gen(function* () {
       const cfg = yield* root;
-      const credential = yield* io(() => loadCredential(cfg.profile));
+      const credential = yield* io(() => loadCredential(cfg));
       const read = diagnosticsRead(input.server, credential);
       if (
         !process.stdout.isTTY ||
@@ -1893,33 +2064,66 @@ const top = Command.make(
       yield* runTop(read, !cfg.noColor && !process.env.NO_COLOR);
     }),
 ).pipe(withGuide("top"));
-const ProfileListResponse = Schema.Struct({
-  generated_at: Schema.String,
-  profiles: Schema.Array(ProfileSummary),
-});
+registerCommandSchema("lookup", LookupResponse);
+const lookup = Command.make(
+  "lookup",
+  { prefix: stringFlag("prefix") },
+  (input) =>
+    Effect.gen(function* () {
+      const cfg = yield* root;
+      if (!Schema.is(LookupQuery)(input))
+        return yield* Effect.fail(
+          new CommandError(
+            2,
+            "invalid_args",
+            "--prefix must contain 1 to 36 hex digits or hyphens",
+          ),
+        );
+      yield* withStore(cfg, "read", (store) =>
+        Effect.gen(function* () {
+          const credential = yield* io(() => loadCredential(cfg));
+          const matches = yield* new Discovery(store).lookup(credential, input);
+          yield* write(
+            cfg.format === "json"
+              ? encodeResponse(LookupResponse, {
+                  generated_at: nowInstant(),
+                  prefix: input.prefix,
+                  matches,
+                })
+              : lookupOutput(matches, cfg.format, credentialProfileName(cfg)),
+          );
+        }),
+      );
+    }),
+).pipe(withGuide("lookup"));
 registerCommandSchema("profile", TextResponse);
 registerCommandSchema("profile list", ProfileListResponse);
 registerCommandSchema("profile delete", ProfileDeletionReport);
 const profiles = Command.make("profile").pipe(
   Command.withSubcommands([
-    Command.make("list", {}, () =>
+    Command.make("list", { projects: bool("projects") }, (input) =>
       Effect.gen(function* () {
         const cfg = yield* root;
-        yield* withStore(cfg, (store) =>
+        yield* withStore(cfg, "read", (store) =>
           Effect.gen(function* () {
-            const credential = yield* io(() => loadCredential(cfg.profile));
-            const profiles = yield* new ClientReads(store).profiles(credential);
+            const credential = yield* io(() => loadCredential(cfg));
+            const profiles = yield* input.projects
+              ? new Discovery(store).directory(credential)
+              : new ClientReads(store).profiles(credential);
             yield* write(
               cfg.format === "json"
                 ? encodeResponse(ProfileListResponse, {
                     generated_at: nowInstant(),
                     profiles,
                   })
-                : profiles
-                    .map(
-                      (p) => `- ${p.name} (${p.visible_task_count ?? 0} Tasks)`,
-                    )
-                    .join("\n") + "\n",
+                : input.projects
+                  ? directoryOutput(profiles)
+                  : profiles
+                      .map(
+                        (p) =>
+                          `- ${p.name} (${p.visible_task_count ?? 0} Tasks)`,
+                      )
+                      .join("\n") + "\n",
             );
           }),
         );
@@ -1935,30 +2139,30 @@ const profiles = Command.make("profile").pipe(
       (input) =>
         Effect.gen(function* () {
           const cfg = yield* root;
-          yield* withStore(cfg, (store) =>
+          yield* withStore(cfg, "deleteProfile", (store) =>
             Effect.gen(function* () {
-              const credential = yield* io(() => loadCredential(cfg.profile));
-              const profiles = yield* store.auth.profiles({ credential });
-              const target = profiles.find(
-                (p) => p.name === input.name || p.id === input.name,
-              );
+              const credential = yield* io(() => loadCredential(cfg));
+              const target = yield* resolveProfile(store, {
+                credential,
+                profile: input.name,
+                action: "deleteProfile",
+              });
               const result = yield* store.auth.deleteProfile({
                 credential,
-                profile: target?.id ?? profileId(input.name),
+                profile: target.id,
                 options: { with_tasks: input.withTasks, dry_run: input.dryRun },
               });
               if (result.outcome === "refused") {
                 yield* write(
-                  cfg.format === "json"
-                    ? renderError(
-                        result.error.code,
-                        result.error.message,
-                        cfg.format,
-                        result.error.generated_at,
-                        undefined,
-                        result.error.details,
-                      )
-                    : result.error.message + "\n",
+                  renderError(
+                    result.error.code === "not_found" ? 3 : 2,
+                    result.error.code,
+                    result.error.message,
+                    cfg.format,
+                    result.error.generated_at,
+                    undefined,
+                    result.error.details,
+                  ),
                 );
                 yield* Effect.sync(() => {
                   process.exitCode = result.error.code === "not_found" ? 3 : 2;
@@ -2032,10 +2236,10 @@ function snapshotUse<S extends Schema.ConstraintEncoder<unknown>>(
 ) {
   return Effect.gen(function* () {
     const cfg = yield* root;
-    yield* withStore(cfg, (store) =>
+    yield* withStore(cfg, "authenticate", (store) =>
       Effect.gen(function* () {
         yield* store.auth.requireOwner({
-          credential: yield* io(() => loadCredential(cfg.profile)),
+          credential: yield* io(() => loadCredential(cfg)),
         });
         const result = yield* use(store, iso(nowInstant()));
         yield* response(
@@ -2061,6 +2265,7 @@ const app = root.pipe(
     whoami,
     importCommand,
     profiles,
+    lookup,
     add,
     parseCommand,
     list,
@@ -2155,6 +2360,7 @@ const follow = args.some(
 );
 const jsonOutput = format === "json" || (follow && !process.stdout.isTTY);
 const program = Effect.gen(function* () {
+  yield* io(() => validateProfileSelectors(flagArgs, stringFlags));
   if (args.length === 1 && (args[0] === "--version" || args[0] === "-v")) {
     process.stdout.write(
       `todo 0.1.0 build=${BUILD_ID} contract=${CONTRACT_ID}\n`,
@@ -2308,12 +2514,13 @@ const program = Effect.gen(function* () {
       (format === "json" && !follow ? process.stdout : process.stderr).write(
         terminalSafe(
           renderError(
+            failure.exit,
             failure.code,
             failure.message,
             follow ? "json" : format,
             nowInstant(),
             failure.dependency_error ? undefined : failure.latest,
-            failure.dependency_error?.details,
+            failure.dependency_error?.details ?? failure.details,
           ),
         ),
       );

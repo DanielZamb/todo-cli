@@ -20,6 +20,7 @@ import {
 } from "./entities.ts";
 import type { AppendResult, OpLogEntry } from "./events.ts";
 import { Event, type TaskMutationKind } from "./events.ts";
+import { type ExitCode, exitStatus } from "./exit-status.ts";
 import { type ActorId, OccurrenceId, ProfileId, TaskId } from "./ids.ts";
 import { inputLimits } from "./limits.ts";
 import {
@@ -57,17 +58,20 @@ import {
   filterTaskRecordsEffect,
   type TaskFilters,
 } from "./task-filters.ts";
+import type { TaskLookupDetails } from "./task-lookup-error.ts";
 import type { TaskRead } from "./task-read.ts";
-import type { SearchTooBroad } from "./task-search.ts";
+import { type SearchTooBroad, taskSearchExecution } from "./task-search.ts";
 import { CalendarDate, Instant, TaskTime } from "./time.ts";
 
 export class CommandError extends Error {
   readonly _tag = "CommandError";
   constructor(
-    readonly exit: number,
+    readonly exit: ExitCode,
     readonly code: string,
     message: string,
     readonly latest?: TaskView,
+    readonly details?: typeof TaskLookupDetails.Type,
+    readonly task_id?: string,
     readonly dependency_error?: DependencyError,
   ) {
     super(message);
@@ -142,6 +146,7 @@ export const readTasks = Effect.fn(function* (
   request: AccessRequest,
   filters: TaskFilters = {},
 ) {
+  const read = store.searchWords.read(request.profile);
   const data = yield* store.auth.read(request);
   const graph = yield* store.graph(request.profile);
   const ordered = graph.tasks
@@ -172,7 +177,16 @@ export const readTasks = Effect.fn(function* (
     ? Effect.sync(() =>
         filterTaskRecords(ordered, filters, data, undefined, context),
       )
-    : filterTaskRecordsEffect(ordered, filters, data, undefined, context);
+    : filterTaskRecordsEffect(
+        ordered,
+        filters,
+        data,
+        {
+          ...taskSearchExecution(),
+          prepare: (text) => store.searchWords.words(read, text),
+        },
+        context,
+      );
   return {
     ...data,
     tasks,
@@ -275,7 +289,7 @@ type CommandOptions = {
 };
 type Target = AccessRequest & { readonly task_id: TaskId };
 export type TaskCommandResult =
-  | { readonly outcome: "not-found" }
+  | { readonly outcome: "not-found"; readonly missing?: "attachment" }
   | {
       readonly outcome: "committed";
       readonly task: Task;
@@ -312,19 +326,34 @@ export class TaskCommands {
     filters: TaskFilters,
   ): Effect.Effect<TaskRead[], AuthError | StoreError | SearchTooBroad>;
   list(request: AccessRequest, filters: TaskFilters = {}) {
-    return Effect.gen({ self: this }, function* () {
-      const view = yield* this.store.auth.read(request);
-      const graph = yield* this.store.graph(request.profile);
-      const tasks = graph.tasks.filter((task) => task.deleted_at === null);
-      const context =
-        graph.edges.length || filters.ready || filters.blocked || filters.order
-          ? graph
-          : undefined;
-      return yield* filters.text === undefined
-        ? Effect.sync(() =>
-            filterTaskRecords(tasks, filters, view, undefined, context),
-          )
-        : filterTaskRecordsEffect(tasks, filters, view, undefined, context);
+    return Effect.suspend(() => {
+      const read = this.store.searchWords.read(request.profile);
+      return Effect.gen({ self: this }, function* () {
+        const view = yield* this.store.auth.read(request);
+        const graph = yield* this.store.graph(request.profile);
+        const tasks = graph.tasks.filter((task) => task.deleted_at === null);
+        const context =
+          graph.edges.length ||
+          filters.ready ||
+          filters.blocked ||
+          filters.order
+            ? graph
+            : undefined;
+        return yield* filters.text === undefined
+          ? Effect.sync(() =>
+              filterTaskRecords(tasks, filters, view, undefined, context),
+            )
+          : filterTaskRecordsEffect(
+              tasks,
+              filters,
+              view,
+              {
+                ...taskSearchExecution(),
+                prepare: (text) => this.store.searchWords.words(read, text),
+              },
+              context,
+            );
+      });
     });
   }
 
@@ -656,6 +685,7 @@ export class TaskCommands {
                 options.deletion.dependency_fingerprint !== fingerprint)
             ) {
               const dependency_error: DependencyError = {
+                ...exitStatus(2),
                 generated_at: time,
                 code: "has_dependencies",
                 message:
@@ -1017,9 +1047,19 @@ const prepareFlags = (
 const cliResult = (
   result: TaskCommandResult,
   data: Effect.Success<ReturnType<typeof readTasks>>,
+  id = "",
 ) => {
   if (result.outcome === "not-found")
-    return Effect.fail(new CommandError(3, "not_found", "task not found"));
+    return Effect.fail(
+      new CommandError(
+        3,
+        "not_found",
+        "task not found",
+        undefined,
+        undefined,
+        id,
+      ),
+    );
   if (result.outcome === "rejected")
     return Effect.fail(
       new CommandError(
@@ -1036,6 +1076,8 @@ const cliResult = (
         result.latest
           ? taskView(result.latest, data.projects, data.tags, data.series)
           : undefined,
+        undefined,
+        undefined,
         result.dependency_error,
       ),
     );
@@ -1129,6 +1171,7 @@ export const mutateTask = Effect.fn(function* (
       return yield* cliResult(
         yield* commands.edit(target, { ...version, changes: {} }),
         data,
+        id,
       );
     const prepared = yield* prepareFlags(flags, request, data, before).pipe(
       Effect.tapError(() =>
@@ -1138,7 +1181,7 @@ export const mutateTask = Effect.fn(function* (
             Effect.flatMap((result) =>
               result.outcome === "rejected" && result.reason === "validation"
                 ? Effect.void
-                : cliResult(result, data),
+                : cliResult(result, data, id),
             ),
           ),
       ),
@@ -1150,6 +1193,7 @@ export const mutateTask = Effect.fn(function* (
         prepared.options,
       ),
       data,
+      id,
     );
   }
   if (command === "rm")
@@ -1176,6 +1220,7 @@ export const mutateTask = Effect.fn(function* (
           : commands.purge(target, version)
         : commands.delete(target, { ...version, ...deletion }),
       data,
+      id,
     );
   return yield* cliResult(
     yield* commands.transition(target, {
@@ -1183,6 +1228,7 @@ export const mutateTask = Effect.fn(function* (
       action: command === "done" ? "complete" : command,
     }),
     data,
+    id,
   );
 });
 export type Filters = {
@@ -1231,7 +1277,15 @@ export function exportScope(
     return filterTasks(tasks, { project: scope.slice(8) }, now);
   if (scope.startsWith("id:") && scope.slice(3)) {
     const task = tasks.find((t) => t.id === scope.slice(3));
-    if (!task) throw new CommandError(3, "not_found", "task not found");
+    if (!task)
+      throw new CommandError(
+        3,
+        "not_found",
+        "task not found",
+        undefined,
+        undefined,
+        scope.slice(3),
+      );
     return [task];
   }
   throw invalid("invalid export scope");

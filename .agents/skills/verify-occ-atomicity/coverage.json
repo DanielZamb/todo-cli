@@ -106,5 +106,12 @@
         "RejectionDetails"
       ]
     }
-  ]
+  ],
+  "reviewedCandidate": false,
+  "review": "Current merged-source AtomicCAS one-command passed at fv01-check-H5HU7k. Every covered body is byte-identical to the previously reviewed PERF source; Authentication discovery snapshot and CLI recovery changes do not alter Validate/Record/Apply/WriteVersion/Commit, rejection or replay. No model change or hash-only renewal of changed bodies.",
+  "integrationReview": {
+    "base": "7c1326bd5ecd1d84cdd9a6426b18e8c380e5d336",
+    "main": "4c904d96277853c60692c685c6d4ea3b3e655bc4",
+    "status": "Reviewed identical covered bodies; fresh actual-worktree model, production and sensitivity stages passed"
+  }
 }

@@ -6,6 +6,7 @@ import { afterAll, beforeAll, expect, it } from "@effect/vitest";
 import { JsonSchema, Schema, SchemaRepresentation } from "effect";
 
 const scratch = mkdtempSync(join(tmpdir(), "todo-c12-contract-"));
+const fileLoadedAt = process.hrtime.bigint();
 const binary = process.env.TODO_CLI_BINARY || join(scratch, "todo");
 const serverBinary =
   process.env.TODO_SERVER_BINARY || join(scratch, "todo-server");
@@ -19,13 +20,35 @@ const actions: {
 }[] = [];
 function run(args: readonly string[], input = "", home = scratch) {
   mkdirSync(home, { recursive: true });
+  const timeout = 20000;
+  const wallStartedAt = Date.now();
+  const startedAt = process.hrtime.bigint();
   const result = spawnSync(binary, args, {
     input,
     encoding: "utf8",
     env: { ...process.env, HOME: home, TODO_DB: "" },
-    timeout: 20000,
+    timeout,
   });
-  if (result.error) throw result.error;
+  if (result.error) {
+    const diagnostics = {
+      code: "code" in result.error ? result.error.code : null,
+      signal: result.signal,
+      status: result.status,
+      pid: result.pid,
+      timeout,
+      wallTimeMs: Date.now() - wallStartedAt,
+      monotonicTimeMs: Number(process.hrtime.bigint() - startedAt) / 1e6,
+      cumulativeSinceFileLoadMs:
+        Number(process.hrtime.bigint() - fileLoadedAt) / 1e6,
+      args,
+    };
+    throw Object.assign(
+      new Error(`CLI spawn failed: ${JSON.stringify(diagnostics)}`, {
+        cause: result.error,
+      }),
+      { diagnostics },
+    );
+  }
   const action = {
     code: result.status,
     out: result.stdout,
@@ -145,8 +168,18 @@ it("publishes the Task and shared error schemas", () => {
   const error = run(["schema", "error"]);
   expect(error.code, error.err).toBe(0);
   expect(JSON.parse(error.out)).toMatchObject({
-    type: "object",
-    required: ["generated_at", "code", "message"],
+    anyOf: expect.arrayContaining([
+      expect.objectContaining({
+        type: "object",
+        required: [
+          "generated_at",
+          "code",
+          "message",
+          "exit_code",
+          "exit_meaning",
+        ],
+      }),
+    ]),
   });
 });
 
@@ -343,6 +376,11 @@ it("validates every command's single JSON object against its published JSON Sche
   });
   success("init", ["init", "--profile", "empty-profile-contract"]);
   success("profile list", ["profile", "list"]);
+  success("profile list", ["profile", "list", "--projects"]);
+  expect(success("lookup", ["lookup", "--prefix", "ab"])).toMatchObject({
+    prefix: "ab",
+    matches: [],
+  });
   success("profile delete", [
     "profile",
     "delete",

@@ -263,6 +263,9 @@ struct TaskListView: View {
                 expandedContent
             }
         }
+        .sheet(item: Binding(get: { model.discovery.dialog }, set: { if $0 == nil { model.closeDiscovery() } })) { _ in
+            DiscoveryView(model: model, compact: compactMode)
+        }
         .sheet(item: $model.batchEdit) { _ in BatchEditView(model: model, compact: compactMode).interactiveDismissDisabled(model.busy) }
         .sheet(isPresented: $model.showingImport) { ImportView(model: model, compact: compactMode).interactiveDismissDisabled(model.busy) }
         .sheet(isPresented: $showingTaskFilters) {
@@ -283,7 +286,7 @@ struct TaskListView: View {
         .sheet(item: $model.transferRequest) { request in TaskTransferPicker(model: model, request: request) }
         .alert(
             DraftNavigationPrompt.title(hasConflict: model.conflict != nil),
-            isPresented: Binding(get: { model.pendingNavigation != nil }, set: { if !$0 { model.pendingNavigation = nil } }),
+            isPresented: Binding(get: { model.pendingNavigation != nil && model.discovery.dialog == nil }, set: { if !$0 { model.dismissNavigationPrompt() } }),
             presenting: model.pendingNavigation
         ) { target in
             DraftNavigationActions(model: model, target: target)
@@ -416,6 +419,8 @@ struct TaskListView: View {
                     ForEach(model.profiles) { Text($0.name).tag($0.id) }
                 }
                 Divider()
+                DiscoveryActions(model: model)
+                Divider()
                 CompactUtilityActions(model: model)
                 Divider()
                 Picker("View", selection: destination) {
@@ -458,6 +463,7 @@ struct TaskListView: View {
                 ForEach(model.profiles) { Text($0.name).tag($0.id) }
             }.pickerStyle(.menu).labelsHidden().frame(maxWidth: .infinity, alignment: .leading)
                 .padding(12).foregroundStyle(.primary).accessibilityIdentifier("profile-picker").disabled(model.busy)
+            Menu("Discover Profiles") { DiscoveryActions(model: model) }.padding(.bottom, 8)
             List(selection: destination) {
                 sidebarRow("All tasks", icon: "checklist", count: model.viewCounts["all"] ?? 0)
                     .tag(SidebarDestination.view("all")).accessibilityIdentifier("view-all")
@@ -557,11 +563,15 @@ struct TaskListView: View {
                 }.padding(12)
             }
             if let message = model.message {
-                HStack {
-                    Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(TodoColors.color("destructive"))
-                    Spacer()
-                    Button("Retry") { model.connect() }
-                }.padding()
+                if model.lookupError(at: .message, text: message) != nil {
+                    ClientErrorNotice(model: model, text: message, position: .message).padding()
+                } else {
+                    HStack {
+                        Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(TodoColors.color("destructive"))
+                        Spacer()
+                        Button("Retry") { model.connect() }
+                    }.padding()
+                }
             }
             if model.loading && model.appliedSearchSnapshot == nil {
                 ProgressView("Loading tasks…").frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1007,15 +1017,15 @@ struct DraftNavigationActions: View {
     var saveFirst = true
     var body: some View {
         if saveFirst { save }
-        Button("Discard", role: .destructive) { Task { await model.discardAndNavigate(target) } }
+        Button("Discard", role: .destructive) { Task { [target] in await model.discardAndNavigate(target) } }
             .tint(TodoColors.color("destructive")).disabled(model.busy).accessibilityIdentifier("discard-before-navigation")
-        Button("Cancel", role: .cancel) { model.pendingNavigation = nil }
+        Button("Cancel", role: .cancel) { model.cancelNavigation() }
             .tint(nil as Color?).accessibilityIdentifier("cancel-navigation")
         if !saveFirst { save }
     }
     @ViewBuilder private var save: some View {
         if model.conflict == nil {
-            Button("Save") { Task { await model.saveAndNavigate(target) } }
+            Button("Save") { Task { [target] in await model.saveAndNavigate(target) } }
                 .buttonStyle(.borderedProminent)
                 .disabled(
                     !model.canWrite || model.editor?.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false

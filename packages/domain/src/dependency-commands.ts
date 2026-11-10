@@ -11,6 +11,7 @@ import {
 } from "./dependency-contract.ts";
 import { dependencyAdvice, shortestUpstreamPath } from "./dependency-rules.ts";
 import type { Task } from "./entities.ts";
+import { exitStatus } from "./exit-status.ts";
 import { indexGraph, type TaskGraph } from "./graph-model.ts";
 import { type TaskId, Version } from "./ids.ts";
 import type { OperationStore } from "./store/store.ts";
@@ -77,6 +78,7 @@ export const edgeFailure = (
   if (result.reason === "conflict")
     return {
       error: {
+        ...exitStatus(4),
         generated_at,
         code: "conflict",
         message:
@@ -88,6 +90,7 @@ export const edgeFailure = (
   if (result.reason === "profile_mismatch")
     return {
       error: {
+        ...exitStatus(3),
         generated_at,
         code: "not_found",
         message:
@@ -97,6 +100,7 @@ export const edgeFailure = (
     };
   return {
     error: {
+      ...exitStatus(2),
       generated_at,
       code: "invalid_args",
       message:
@@ -149,6 +153,7 @@ export class DependencyCommands {
           }
           if (!before || !index.tasks.has(input.blocker_id)) {
             const dependency_error: DependencyError = {
+              ...exitStatus(2),
               generated_at,
               code: "dependency_profile_mismatch",
               message:
@@ -258,6 +263,7 @@ const executeBatch = Effect.fn(function* (
           onFailure: (error): BatchEdgeReport["results"][number] => ({
             index,
             error: {
+              ...exitStatus(error._tag === "AuthError" ? 3 : 1),
               generated_at,
               code:
                 error._tag === "AuthError"

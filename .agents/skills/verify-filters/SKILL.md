@@ -103,3 +103,6 @@ The compiled CLI contract test in apps/cli/test/contract.test.ts requires a
 SearchTooBroad effect to produce exit 2 and search_too_broad with recovery.
 Run the public filter recipe and unsigned Electron filter/auth paths after
 changing this seam; a typecheck alone does not prove the command error boundary.
+List JSON now always includes tasks, including [] for every empty intersection.
+The shared prefix schema lives in limits.ts as TaskIdPrefix and is reused by
+TaskFilters and lookup error recovery. The matching and input bounds are unchanged.

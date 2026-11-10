@@ -17,6 +17,14 @@ export const ProfileSummary = Schema.Struct({
   ...count,
   inbox_task_count: count.open_task_count,
   visible_task_count: Schema.optionalKey(count.open_task_count),
+  projects: Schema.optionalKey(
+    Schema.Array(
+      Schema.Struct({ id: Project.fields.id, name: Project.fields.name }),
+    ).annotate({
+      description:
+        "Present with --projects or include_projects=true. Includes defined Projects even without visible Tasks; an empty Profile has [].",
+    }),
+  ),
 });
 export const ProjectSummary = Schema.Struct({ ...Project.fields, ...count });
 export const TagSummary = Schema.Struct({ ...Tag.fields, ...count });
@@ -109,6 +117,12 @@ const concernsTask = (entry: OpLogEntry, id: TaskId) => {
   }
 };
 
+export const profileTaskCounts = (tasks: readonly Task[]) => ({
+  visible_task_count: tasks.filter((task) => task.deleted_at === null).length,
+  open_task_count: openTasks(tasks).length,
+  inbox_task_count: openTasks(tasks).filter(isInboxTask).length,
+});
+
 export class ClientReads {
   constructor(private readonly store: OperationStore) {}
 
@@ -119,10 +133,7 @@ export class ClientReads {
         this.store.auth.read({ credential, profile: profile.id }).pipe(
           Effect.map((data) => ({
             ...profile,
-            visible_task_count: data.tasks.filter((t) => t.deleted_at === null)
-              .length,
-            open_task_count: openTasks(data.tasks).length,
-            inbox_task_count: openTasks(data.tasks).filter(isInboxTask).length,
+            ...profileTaskCounts(data.tasks),
           })),
         ),
       );

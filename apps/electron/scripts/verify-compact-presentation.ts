@@ -366,6 +366,14 @@ export async function verifyCompactPresentation({
     await shot("offline", theme);
     await page.getByRole("button", { name: "Reconnect", exact: true }).click();
     await expect(page.locator(".compact-state")).toBeHidden();
+    await expect(page.locator(".task-pane")).toHaveAttribute(
+      "data-search-phase",
+      "Showing",
+    );
+    await expect(page.locator(".task-pane")).toHaveAttribute(
+      "data-search-stale",
+      "false",
+    );
     await desktop.evaluate(({ BrowserWindow }) => {
       process.emit("todo:verify-list-failure");
       BrowserWindow.getAllWindows()[0]?.webContents.send("todo:notice", {

@@ -65,3 +65,7 @@ cancellation to reject stale deletion responses without losing an editor.
 The unsigned Xcode server bundle accepts TODO_SERVER_BINARY for the same source
 hash, so repeated proofs reuse the per-worktree server cache. Compare the
 embedded Server/todo-server checksum with that cache after the build.
+
+Profile navigation also exposes [authorized discovery](discovery.md). Its sheets
+preserve the selected Profile until explicit Show succeeds. They use the existing
+owner Session without a credential selector.

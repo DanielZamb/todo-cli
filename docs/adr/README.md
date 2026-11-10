@@ -141,6 +141,7 @@ images and redacts paths from History. External files are never deleted.
 | [0015](0015-search-text-retention-and-recovery.md) | Search text retention and live-update recovery | accepted; amends ADR-0014 client reset and recovery |
 | [0013](0013-attachment-uri-and-atomic-inputs.md) | Attachment URI links and atomic input groups | accepted |
 | [0012](0012-owner-snapshots.md) | Owner Snapshots | accepted |
+| [0019](0019-authorized-read-only-discovery.md) | Authorized discovery is explicit and read-only | accepted; implementation in agent-discovery |
 
 The coordinator accepted the DAG records with corrections G1 through G10.
 

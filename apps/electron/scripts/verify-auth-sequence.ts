@@ -82,7 +82,7 @@ try {
         payload: { passphrase: "auth sequence scratch" },
       });
       current = session.credential;
-      const profiles = yield* Effect.result(http.reads.profiles());
+      const profiles = yield* Effect.result(http.reads.profiles({ query: {} }));
       if (profiles._tag === "Failure")
         return {
           profiles: "Failure",
@@ -96,7 +96,7 @@ try {
       );
       yield* http.credentials.signOut();
       current = undefined;
-      const after = yield* Effect.result(http.reads.profiles());
+      const after = yield* Effect.result(http.reads.profiles({ query: {} }));
       return {
         profiles: "Success",
         sign_out: "Success",

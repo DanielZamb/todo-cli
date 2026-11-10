@@ -1,7 +1,12 @@
-import { BearerCredential, type ChangeEvent, TodoApi } from "@todo/api";
+import {
+  BadRequest,
+  BearerCredential,
+  type ChangeEvent,
+  TodoApi,
+} from "@todo/api";
 import type { OperationStore } from "@todo/domain/store";
 import { Effect, Stream } from "effect";
-import { HttpApiBuilder, HttpApiError, HttpApiSchema } from "effect/http-api";
+import { HttpApiBuilder, HttpApiSchema } from "effect/http-api";
 import { translate } from "./errors.ts";
 
 export const changesLayer = (store: OperationStore) =>
@@ -16,7 +21,7 @@ export const changesLayer = (store: OperationStore) =>
             (header !== undefined && !/^(0|[1-9][0-9]*)$/.test(header)) ||
             !Number.isSafeInteger(after)
           )
-            return yield* new HttpApiError.BadRequest();
+            return yield* new BadRequest({ message: "Invalid Last-Event-ID" });
           const authorize = translate(
             store.auth.authenticate({
               credential,

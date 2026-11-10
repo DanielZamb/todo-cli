@@ -71,7 +71,12 @@ export async function verifyTaskSearch(
   ]) {
     assert.ok(name !== undefined && value !== undefined);
     const failure = Schema.decodeUnknownSync(
-      Schema.Struct({ code: Schema.String, message: Schema.String }),
+      Schema.Struct({
+        code: Schema.String,
+        message: Schema.String,
+        exit_code: Schema.Number,
+        exit_meaning: Schema.String,
+      }),
     )(cli(["list", `--${name}=${value}`], undefined, 2));
     assert.equal(failure.code, "invalid_args");
     assert.ok(failure.message.includes(`--${name}`));
@@ -180,16 +185,33 @@ export async function verifyTaskSearch(
   );
   const budgetText = "\ufdfa".repeat(200);
   const broad = Schema.decodeUnknownSync(
-    Schema.Struct({ code: Schema.String, message: Schema.String }),
+    Schema.Struct({
+      code: Schema.String,
+      message: Schema.String,
+      exit_code: Schema.Number,
+      exit_meaning: Schema.String,
+    }),
   )(cli(["list", "--text", budgetText], undefined, 2));
   const expectedBroad = {
+    exit_code: 2,
+    exit_meaning: "validation or usage",
     code: "search_too_broad",
     message:
       "Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.",
   };
-  assert.deepEqual({ code: broad.code, message: broad.message }, expectedBroad);
+  assert.deepEqual(
+    {
+      code: broad.code,
+      message: broad.message,
+      exit_code: broad.exit_code,
+      exit_meaning: broad.exit_meaning,
+    },
+    expectedBroad,
+  );
   const remoteBroad = Schema.decodeUnknownSync(
     Schema.Struct({
+      exit_code: Schema.Number,
+      exit_meaning: Schema.String,
       generated_at: Schema.String,
       code: Schema.String,
       message: Schema.String,
@@ -203,7 +225,12 @@ export async function verifyTaskSearch(
     ),
   );
   assert.deepEqual(
-    { code: remoteBroad.code, message: remoteBroad.message },
+    {
+      code: remoteBroad.code,
+      message: remoteBroad.message,
+      exit_code: remoteBroad.exit_code,
+      exit_meaning: remoteBroad.exit_meaning,
+    },
     expectedBroad,
   );
   const budgetFirst = budgetTasks[0];

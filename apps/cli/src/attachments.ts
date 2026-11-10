@@ -19,13 +19,18 @@ export const attachmentStatus = (
     ...value,
     exists: value.kind === "link" ? null : existsSync(value.path),
   }));
-const resultTask = (result: TaskCommandResult) => {
+const resultTask = (result: TaskCommandResult, id: string) => {
   if (result.outcome === "not-found")
     return Effect.fail(
       new CommandError(
         3,
         "not_found",
-        "Task or Attachment not found; read todo show <id>",
+        result.missing === "attachment"
+          ? "Attachment not found; read todo show <id>"
+          : "Task not found; read todo list",
+        undefined,
+        undefined,
+        result.missing === "attachment" ? undefined : id,
       ),
     );
   if (result.outcome === "rejected")
@@ -58,7 +63,14 @@ export const changeAttachment = (
     const before = yield* new TaskCommands(store).get(target);
     if (before === null)
       return yield* Effect.fail(
-        new CommandError(3, "not_found", "Task not found; read todo list"),
+        new CommandError(
+          3,
+          "not_found",
+          "Task not found; read todo list",
+          undefined,
+          undefined,
+          input.id,
+        ),
       );
     const from_version = Schema.decodeUnknownSync(Version)(
       input.expected > 0 ? input.expected : before.row_version,
@@ -93,7 +105,7 @@ export const changeAttachment = (
       }
       return yield* commands
         .detach(target, { from_version, attachment_id })
-        .pipe(Effect.flatMap(resultTask));
+        .pipe(Effect.flatMap((result) => resultTask(result, task_id)));
     }
     const location = yield* Effect.try({
       try: () => attachmentInput(input.value),
@@ -105,7 +117,7 @@ export const changeAttachment = (
         location,
         ...(input.label === undefined ? {} : { label: input.label }),
       })
-      .pipe(Effect.flatMap(resultTask));
+      .pipe(Effect.flatMap((result) => resultTask(result, task_id)));
   });
 
 export const labelAttachment = (
@@ -129,5 +141,5 @@ export const labelAttachment = (
         attachment_id: Schema.decodeUnknownSync(AttachmentId)(attachment),
         label,
       })
-      .pipe(Effect.flatMap(resultTask));
+      .pipe(Effect.flatMap((result) => resultTask(result, task_id)));
   });

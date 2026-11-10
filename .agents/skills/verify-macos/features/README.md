@@ -45,3 +45,7 @@ Version guardrails are covered in [session](<session.md>).
 [Task search](task-search.md) covers server search, original UTF-16 highlights,
 prefix Filters, retained snapshots, obsolete response guards, SSE recovery,
 Profile/view text retention and full-id Copy in both layouts during HOLD.
+
+[Authorized discovery](discovery.md) covers the Profile-to-Project directory,
+explicit Task id-prefix submission, Copy and explicit Show with draft protection,
+credential/lifetime publication guards, compiled HTTP state and offscreen sheets.

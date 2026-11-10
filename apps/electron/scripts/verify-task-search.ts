@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { _electron, type ElectronApplication, expect } from "@playwright/test";
@@ -7,7 +7,7 @@ import { CONTRACT_ID } from "@todo/api";
 import { ProjectSummary, Task, TaskRead } from "@todo/domain";
 import { Schema } from "effect";
 import { setAppearance } from "./appearance.ts";
-import { selectProfile } from "./profile-menu.ts";
+import { openProfileDeletion, selectProfile } from "./profile-menu.ts";
 
 const scratch = process.argv[2];
 const evidence = process.argv[3];
@@ -35,7 +35,11 @@ writeFileSync(
 );
 const receipts: unknown[] = [];
 const checks: unknown[] = [];
-const filteredReplies: { text: string; tasks: readonly TaskRead[] }[] = [];
+const filteredReplies: {
+  text: string;
+  path: string;
+  tasks: readonly TaskRead[];
+}[] = [];
 let log = "";
 const server = spawn(join(scratch, "server"), [], {
   env,
@@ -146,6 +150,7 @@ const proxy = Bun.serve({
     if (filtered && status === 200)
       filteredReplies.push({
         text,
+        path: url.pathname + url.search,
         tasks: Schema.decodeUnknownSync(Schema.Array(TaskRead))(
           JSON.parse(body),
         ),
@@ -907,10 +912,23 @@ try {
   checks.push({ projectTagAndText: true });
   await field.fill("");
   await showing("");
+  const selectorClearStart = receipts.length;
   await page
     .getByRole("button", { name: "Clear filters", exact: true })
     .click();
   await showing("");
+  const selectorClearReads = receipts
+    .slice(selectorClearStart)
+    .filter(
+      (entry) =>
+        typeof entry === "object" &&
+        entry !== null &&
+        "path" in entry &&
+        typeof entry.path === "string" &&
+        /^\/profiles\/work\/tasks(?:\?|$)/.test(entry.path),
+    );
+  expect(selectorClearReads).toHaveLength(1);
+  checks.push({ selectorClearReads: 1 });
   await expect(page.locator(".search-excerpt")).toHaveCount(0);
   await query("cancion", ["😀 Canción de cuna", "Search receipt"]);
   const staleDescription = arm("reno");
@@ -962,6 +980,145 @@ try {
       title,
     });
   }
+  const catalogProfile = "catalog-r1";
+  const initialized = spawnSync(
+    join(scratch, "todo"),
+    ["--profile", catalogProfile, "--format", "json", "init"],
+    { env, encoding: "utf8" },
+  );
+  receipts.push({
+    cli: ["--profile", catalogProfile, "init"],
+    exit: initialized.status,
+    stdout: initialized.stdout,
+    stderr: initialized.stderr,
+  });
+  expect(initialized.status).toBe(0);
+  await api(`/profiles/${catalogProfile}/tasks`, "POST", {
+    title: "Renovar catalog",
+    project_name: "Catalog original",
+    tag_names: ["catalog-original"],
+  });
+  await navigate("Tasks", false);
+  await showing("reno");
+  await selectProfile(page, catalogProfile);
+  await field.fill("reno");
+  await showing("reno");
+  await expect
+    .poll(() => {
+      const path = join(scratch, "electron", "operations.json");
+      if (!existsSync(path)) return 0;
+      const operations = Schema.decodeUnknownSync(
+        Schema.Array(
+          Schema.Struct({ profile: Schema.String, kind: Schema.String }),
+        ),
+      )(JSON.parse(readFileSync(path, "utf8")));
+      return operations.filter(
+        (entry) =>
+          entry.profile === catalogProfile && entry.kind === "TaskCreated",
+      ).length;
+    })
+    .toBe(1);
+  await expect
+    .poll(
+      () =>
+        filteredReplies.filter(
+          (reply) =>
+            reply.text === "reno" &&
+            reply.tasks.some((task) => task.profile_id === catalogProfile),
+        ).length,
+    )
+    .toBeGreaterThanOrEqual(2);
+  await showing("reno");
+  const catalogCount = page
+    .getByRole("navigation", { name: "Planning views" })
+    .getByRole("button", { name: /^Tasks/ })
+    .locator(".nav-count");
+  await expect(catalogCount).toHaveText("1");
+  for (const [index, failing] of [false, true].entries()) {
+    const currentText = index === 0 ? "reno" : "renov";
+    const nextText = index === 0 ? "renov" : "reno";
+    const oldFull = arm(currentText, failing, catalogProfile);
+    const projectName = `Updated catalog ${index}`;
+    const tagName = `updated-catalog-${index}`;
+    await api(`/profiles/${catalogProfile}/tasks`, "POST", {
+      title: `Catalog sentinel ${index}`,
+      project_name: projectName,
+      tag_names: [tagName],
+    });
+    await expect.poll(() => oldFull.reached).toBe(true);
+    await field.fill(nextText);
+    await showing(nextText);
+    expect(await titles()).toEqual(["Renovar catalog"]);
+    await expect(catalogCount).toHaveText(index === 0 ? "2" : "3");
+    await expect(
+      page
+        .getByLabel("Filter by Project")
+        .locator("option")
+        .filter({ hasText: projectName }),
+    ).toHaveCount(1);
+    await expect(
+      page
+        .getByLabel("Filter by Tag")
+        .locator("option")
+        .filter({ hasText: tagName }),
+    ).toHaveCount(1);
+    await openProfileDeletion(page, catalogProfile);
+    await expect(
+      page.getByRole("dialog", { name: 'Delete "catalog-r1"?' }),
+    ).toContainText(index === 0 ? /2 tasks/i : /3 tasks/i);
+    await page
+      .getByRole("dialog", { name: 'Delete "catalog-r1"?' })
+      .getByRole("button", { name: "Cancel", exact: true })
+      .click();
+    oldFull.release.resolve();
+    await page.waitForTimeout(100);
+    await showing(nextText);
+    await expect(catalogCount).toHaveText(index === 0 ? "2" : "3");
+    await expect(
+      page
+        .getByLabel("Filter by Project")
+        .locator("option")
+        .filter({ hasText: projectName }),
+    ).toHaveCount(1);
+    await expect(page.getByLabel("Search failed")).toHaveCount(0);
+    checks.push({
+      fullSupersededByQuery: failing ? "obsolete error" : "obsolete success",
+      owedCatalogRefreshed: true,
+      taskCount: index === 0 ? 2 : 3,
+      projectName,
+      tagName,
+    });
+  }
+  const failedFull = arm("reno", true, catalogProfile);
+  await api(`/profiles/${catalogProfile}/tasks`, "POST", {
+    title: "Catalog sentinel 2",
+    project_name: "Updated catalog 2",
+    tag_names: ["updated-catalog-2"],
+  });
+  await expect.poll(() => failedFull.reached).toBe(true);
+  failedFull.release.resolve();
+  await expect(pane).toHaveAttribute("data-search-phase", "Error");
+  await expect(catalogCount).toHaveText("3");
+  await field.fill("renov");
+  await showing("renov");
+  await expect(catalogCount).toHaveText("4");
+  await expect(
+    page
+      .getByLabel("Filter by Project")
+      .locator("option")
+      .filter({ hasText: "Updated catalog 2" }),
+  ).toHaveCount(1);
+  await expect(
+    page
+      .getByLabel("Filter by Tag")
+      .locator("option")
+      .filter({ hasText: "updated-catalog-2" }),
+  ).toHaveCount(1);
+  expect(await titles()).toEqual(["Renovar catalog"]);
+  checks.push({ queryAfterFailedFullRefreshesCatalog: true, taskCount: 4 });
+  await selectProfile(page, "work");
+  await field.fill("reno");
+  await showing("reno");
   await page.getByRole("button", { name: "More filters", exact: true }).click();
   await page.getByLabel("Priority", { exact: true }).selectOption("P2");
   await page
@@ -1051,7 +1208,7 @@ try {
   await expect(pane).toHaveAttribute("data-search-phase", "Error");
   await expect(field).toBeFocused();
   const recovery =
-    "Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.";
+    "Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.\nerror 2 - validation or usage";
   const expectRefusal = async (context: string) => {
     await expect(page.getByLabel("Search failed").locator("span")).toHaveText(
       recovery,
@@ -1149,6 +1306,72 @@ try {
   if (!scope) throw new Error("Missing scoped Task");
   await field.fill("probe");
   await showing("probe");
+  const selectScope = async (selector: string, id: string, text: string) => {
+    const control = page.getByLabel(selector);
+    if ((await control.inputValue()) !== id) await control.selectOption(id);
+    await showing(text);
+  };
+  const scopeDesktop = desktop;
+  const fullScopeRefresh = async (text: string) => {
+    const start = receipts.length;
+    await scopeDesktop.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0]?.webContents.send("todo:notice", {
+        _tag: "connection",
+        profile: "work",
+        state: "connected",
+      });
+    });
+    await expect
+      .poll(() =>
+        receipts
+          .slice(start)
+          .some(
+            (entry) =>
+              typeof entry === "object" &&
+              entry !== null &&
+              "path" in entry &&
+              entry.path === "/profiles/work/projects",
+          ),
+      )
+      .toBe(true);
+    await showing(text);
+  };
+  const bothScopeFilters = async (
+    text: string,
+    name: string,
+    value: string | null,
+  ) => {
+    await fullScopeRefresh(text);
+    const full = filteredReplies.findLast((reply) => reply.text === text);
+    expect(new URL(`http://scratch${full?.path}`).searchParams.get(name)).toBe(
+      value,
+    );
+    const start = receipts.length;
+    await field.fill(`${text} `);
+    await showing(`${text} `);
+    await field.fill(text);
+    await showing(text);
+    const query = filteredReplies.findLast((reply) => reply.text === text);
+    expect(new URL(`http://scratch${query?.path}`).searchParams.get(name)).toBe(
+      value,
+    );
+    expect(
+      receipts
+        .slice(start)
+        .some(
+          (entry) =>
+            typeof entry === "object" &&
+            entry !== null &&
+            "path" in entry &&
+            entry.path === "/profiles/work/projects",
+        ),
+    ).toBe(false);
+    checks.push({
+      forwarding: { name, value },
+      fullPath: true,
+      queryPath: true,
+    });
+  };
   const ordinary = filteredReplies.findLast(
     (reply) => reply.text === "probe",
   )?.tasks;
@@ -1158,12 +1381,14 @@ try {
     ["Filter by Tag", "keep", scope.tags[0]],
   ] as const) {
     if (!id) throw new Error("Missing definition id");
-    await page.getByLabel("Filter by Project").selectOption("");
-    await showing("probe");
-    await page.getByLabel("Filter by Tag").selectOption("");
-    await showing("probe");
-    await page.getByLabel(selector).selectOption(id);
-    await showing("probe");
+    await selectScope("Filter by Project", "", "probe");
+    await selectScope("Filter by Tag", "", "probe");
+    await selectScope(selector, id, "probe");
+    await bothScopeFilters(
+      "probe",
+      selector === "Filter by Project" ? "project" : "tag",
+      label,
+    );
     expect(await titles()).toEqual(["Scope probe 0"]);
     expect(await page.locator(".task-title mark").allTextContents()).toEqual([
       "probe",
@@ -1178,8 +1403,7 @@ try {
   }
   await field.fill("");
   await showing("");
-  await page.getByLabel("Filter by Tag").selectOption("");
-  await showing("");
+  await selectScope("Filter by Tag", "", "");
   for (const task of scopeTasks)
     await api(`/profiles/work/tasks/${task.id}`, "PATCH", {
       from_version: 1,
@@ -1194,14 +1418,16 @@ try {
     if (!id) throw new Error("Missing definition id");
     await field.fill("");
     await showing("");
-    await page.getByLabel("Filter by Project").selectOption("");
-    await showing("");
-    await page.getByLabel("Filter by Tag").selectOption("");
-    await showing("");
-    await page.getByLabel(selector).selectOption(id);
-    await showing("");
+    await selectScope("Filter by Project", "", "");
+    await selectScope("Filter by Tag", "", "");
+    await selectScope(selector, id, "");
     await field.fill("probe");
     await showing("probe");
+    await bothScopeFilters(
+      "probe",
+      selector === "Filter by Project" ? "project" : "tag",
+      selector === "Filter by Project" ? "Small" : "keep",
+    );
     expect(await titles()).toEqual(["Scope probe 0"]);
     await expect(page.getByLabel("Search failed")).toHaveCount(0);
     expect(
@@ -1270,15 +1496,16 @@ try {
       .click();
     await field.fill("");
     await showing("");
-    await page.getByLabel("Filter by Project").selectOption("");
-    await showing("");
-    await page.getByLabel("Filter by Tag").selectOption("");
-    await showing("");
+    await selectScope("Filter by Project", "", "");
+    await selectScope("Filter by Tag", "", "");
     await field.fill("probe");
     await expect(pane).toHaveAttribute("data-search-phase", "Error");
     await expect(page.getByLabel("Search failed")).toHaveAttribute(
       "data-code",
       "search_too_broad",
+    );
+    await expect(page.getByLabel("Search failed")).toContainText(
+      "error 2 - validation or usage",
     );
     if (compactNavigation) {
       await page
@@ -1303,10 +1530,8 @@ try {
   }
   await field.fill("");
   await showing("");
-  await page.getByLabel("Filter by Project").selectOption("");
-  await showing("");
-  await page.getByLabel("Filter by Tag").selectOption("");
-  await showing("");
+  await selectScope("Filter by Project", "", "");
+  await selectScope("Filter by Tag", "", "");
   for (const task of scopeTasks)
     await api(`/profiles/work/tasks/${task.id}`, "PATCH", {
       from_version: 2,
@@ -1345,7 +1570,12 @@ try {
   });
   expect(seeded.status).toBe(0);
   const collision = Schema.decodeUnknownSync(
-    Schema.Array(Schema.Struct({ task: Task })),
+    Schema.Array(
+      Schema.Struct({
+        task: Task,
+        tag: Schema.Struct({ name: Schema.String }),
+      }),
+    ),
   )(JSON.parse(seeded.stdout));
   await field.fill("collision");
   await showing("collision");
@@ -1359,6 +1589,7 @@ try {
     if (!tagId) throw new Error("Missing case-fold Tag id");
     await page.getByLabel("Filter by Tag").selectOption(tagId);
     await showing("collision");
+    await bothScopeFilters("collision", "tag", item.tag.name);
     expect(await titles()).toEqual([item.task.title]);
     expect(await page.locator(".task-title mark").allTextContents()).toEqual([
       "Collision",
@@ -1377,6 +1608,7 @@ try {
   await page.getByLabel("Filter by Tag").selectOption("");
   await showing("collision");
   syntheticProjectSuperset = true;
+  await fullScopeRefresh("collision");
   await field.fill("");
   await showing("");
   await field.fill("collision");
@@ -1387,6 +1619,7 @@ try {
       .getByLabel("Filter by Project")
       .selectOption(item.task.project_id);
     await showing("collision");
+    await bothScopeFilters("collision", "project", "Small");
     expect(await titles()).toEqual([item.task.title]);
     expect(await page.locator(".task-title mark").allTextContents()).toEqual([
       "Collision",
@@ -1409,10 +1642,8 @@ try {
   syntheticProjectSuperset = false;
   await field.fill("");
   await showing("");
-  await page.getByLabel("Filter by Project").selectOption("");
-  await showing("");
-  await page.getByLabel("Filter by Tag").selectOption("");
-  await showing("");
+  await selectScope("Filter by Project", "", "");
+  await selectScope("Filter by Tag", "", "");
   const paddedSeed = spawnSync(recoverySeed, ["work", "padded"], {
     env,
     encoding: "utf8",
@@ -1432,6 +1663,8 @@ try {
   expect(await titles()).toEqual(["Padded marker"]);
   await page.getByLabel("Filter by Tag").selectOption(paddedTag);
   await showing("padded");
+  expect(await titles()).toEqual(["Padded marker"]);
+  await bothScopeFilters("padded", "tag", null);
   expect(await titles()).toEqual(["Padded marker"]);
   expect(lastSearchQuery("padded").has("tag")).toBe(false);
   checks.push({

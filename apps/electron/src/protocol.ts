@@ -18,6 +18,8 @@ import {
   ImportReport,
   ImportRequest,
   LabelAttachment,
+  LookupMatch,
+  LookupQuery,
   MoveTask,
   OpLogEntry,
   PlanningView,
@@ -38,6 +40,7 @@ import {
   Task,
   TaskFilters,
   TaskId,
+  TaskLookupDetails,
   TaskRead,
   TransitionTask,
   UploadAttachment,
@@ -115,6 +118,9 @@ export const Request = Schema.Union([
   Schema.TaggedStruct("signIn", { passphrase: Schema.NonEmptyString }),
   Schema.TaggedStruct("signOut", {}),
   Schema.TaggedStruct("profiles", {}),
+  Schema.TaggedStruct("directory", {}),
+  Schema.TaggedStruct("lookup", LookupQuery.fields),
+  Schema.TaggedStruct("showTask", { profile: ProfileId, task: TaskId }),
   Schema.TaggedStruct("deleteProfile", {
     profile: ProfileId,
     payload: DeleteProfile,
@@ -123,6 +129,11 @@ export const Request = Schema.Union([
     profile: ProfileId,
     view: ViewName,
     filters: Schema.optionalKey(TaskFilters),
+  }),
+  Schema.TaggedStruct("search", {
+    profile: ProfileId,
+    view: ViewName,
+    filters: TaskFilters,
   }),
   Schema.TaggedStruct("parse", { profile: ProfileId, payload: QuickAddInput }),
   Schema.TaggedStruct("history", { profile: ProfileId, task: TaskId }),
@@ -177,6 +188,8 @@ export const Request = Schema.Union([
 ]);
 export type Request = typeof Request.Type;
 export const Reply = Schema.Union([
+  Schema.TaggedStruct("directory", { profiles: Schema.Array(ProfileSummary) }),
+  Schema.TaggedStruct("lookup", { matches: Schema.Array(LookupMatch) }),
   Schema.TaggedStruct("attachmentTargets", { tasks: Schema.Array(Task) }),
   Schema.TaggedStruct("batchEdit", { report: BatchEditReport }),
   Schema.TaggedStruct("attachmentBatch", { report: AttachManyReport }),
@@ -200,7 +213,9 @@ export const Reply = Schema.Union([
   Schema.TaggedStruct("importReport", { report: ImportReport }),
   Schema.TaggedStruct("windowMode", { compact: Schema.Boolean }),
   Schema.TaggedStruct("signedIn", { profiles: Schema.Array(ProfileSummary) }),
-  Schema.TaggedStruct("signedOut", {}),
+  Schema.TaggedStruct("signedOut", {
+    message: Schema.optionalKey(Schema.String),
+  }),
   Schema.TaggedStruct("tasks", {
     tasks: Schema.Array(Task),
     matching_tasks: Schema.optionalKey(Schema.Array(TaskRead)),
@@ -211,15 +226,23 @@ export const Reply = Schema.Union([
     counts: Schema.Record(ViewName, Schema.Int),
     draft: Schema.String,
   }),
+  Schema.TaggedStruct("search", {
+    matching_tasks: Schema.Array(TaskRead),
+    planning: Schema.NullOr(PlanningView),
+  }),
   Schema.TaggedStruct("profileDeleted", { report: ProfileDeletionReport }),
   Schema.TaggedStruct("task", { task: Task }),
   Schema.TaggedStruct("series", { series: Schema.NullOr(Series) }),
   Schema.TaggedStruct("ok", {}),
   Schema.TaggedStruct("parsed", { draft: QuickAddDraft }),
   Schema.TaggedStruct("history", { entries: Schema.Array(OpLogEntry) }),
-  Schema.TaggedStruct("conflict", { latest: Schema.NullOr(Task) }),
+  Schema.TaggedStruct("conflict", {
+    latest: Schema.NullOr(Task),
+    exit_detail: Schema.optionalKey(Schema.String),
+  }),
   Schema.TaggedStruct("error", {
     message: Schema.String,
+    details: Schema.optionalKey(TaskLookupDetails),
     code: Schema.optionalKey(Schema.Literal("search_too_broad")),
   }),
 ]);

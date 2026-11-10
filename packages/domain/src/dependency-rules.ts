@@ -1,5 +1,6 @@
 import type { DependencyError, Edge } from "./dependencies.ts";
 import type { Task } from "./entities.ts";
+import { exitStatus } from "./exit-status.ts";
 import type { TaskId } from "./ids.ts";
 import type { Instant } from "./time.ts";
 
@@ -79,6 +80,7 @@ export function checkDependencyAddition(input: {
     blocker.profile_id !== edge.profile_id
   )
     return {
+      ...exitStatus(2),
       generated_at,
       code: "dependency_profile_mismatch",
       message:
@@ -88,6 +90,7 @@ export function checkDependencyAddition(input: {
   const path = dependencyCycle(edge, traversal);
   if (path)
     return {
+      ...exitStatus(2),
       generated_at,
       code: "dependency_cycle",
       message: "Remove a Dependency in this loop, then try again.",
@@ -100,6 +103,7 @@ export function checkDependencyAddition(input: {
   const count = traversal.upstream(edge.dependent_id).length + 1;
   if (count > 13)
     return {
+      ...exitStatus(2),
       generated_at,
       code: "too_many_dependencies",
       message: dependencyAdvice(count),
@@ -135,6 +139,7 @@ export function checkDependencyStatuses(input: {
     const first = done_dependents[0];
     if (first)
       return {
+        ...exitStatus(2),
         generated_at,
         code: "blocks_done_task",
         message: `Create a follow-up with todo add "<title>" --depends-on ${first.id} instead.`,
@@ -153,6 +158,7 @@ export function checkDependencyStatuses(input: {
     });
     if (blockers.length)
       return {
+        ...exitStatus(2),
         generated_at,
         code: "blocked",
         message:

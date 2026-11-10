@@ -158,3 +158,20 @@ Dependency routes and full structured 422 witnesses, equivalent CLI refusals,
 true-only filters, Delete previews/fingerprints and public edge Revert. Its
 fresh server uses the same readiness/owned-process cleanup policy as this skill.
 TaskWrite names additive response metadata; stored Task schemas stay separate.
+## Exit meanings and lookup context
+
+Every HTTP error carries the equivalent CLI exit_code and exit_meaning while
+retaining its status, tag and existing details. Framework decoding failures use
+BadRequest with the validation pair, including sign-in and non-Task routes.
+Validation History still authenticates and records rejected mutation inputs.
+The compiled test in apps/cli/test/error-list.test.ts covers decoding, missing
+credentials, Profile-scope denial, selected Profile lookup context and both
+recovery routes. Run it with TODO_CLI_BINARY and TODO_SERVER_BINARY pointing to
+same-source cached binaries. No error probes another Profile for a Task.
+## Authorized discovery
+
+[verify-discovery](../verify-discovery/SKILL.md) owns the compiled Profile directory
+and cross-Profile id-prefix lookup matrix, credential no-leak properties, WAL
+snapshot tests and auth-failure rollback proof. Run its single command after
+changing these reads or their CLI/HTTP contracts. Existing Profile-scoped SSE
+and Task search behavior retain their current recipes.

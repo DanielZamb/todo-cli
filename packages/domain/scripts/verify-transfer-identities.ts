@@ -197,6 +197,8 @@ try {
   assert.equal(same.status, 422);
   assert.deepEqual(same.body, {
     _tag: "InvalidTask",
+    exit_code: 2,
+    exit_meaning: "validation or usage",
     message: "Copy needs a different Profile.",
   });
   const copied = post(source.id, "copy", "personal");
@@ -231,6 +233,8 @@ try {
   assert.equal(clash.status, 422);
   assert.deepEqual(clash.body, {
     _tag: "InvalidTask",
+    exit_code: 2,
+    exit_meaning: "validation or usage",
     message,
     details: { external_id: "repo:clash", profile_id: "personal" },
   });

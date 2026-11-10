@@ -1,5 +1,6 @@
-import { Schema } from "effect";
+import { Effect, Schema } from "effect";
 import { Task } from "./entities.ts";
+import { exitStatusFields } from "./exit-status.ts";
 import { ProfileId, TaskId, Version } from "./ids.ts";
 import { Instant } from "./time.ts";
 
@@ -32,7 +33,11 @@ export const DependencyAdvice = Schema.String.check(
     /^This Task depends on [0-9]+ Tasks[.] That's a lot for one Task[.] It might be a whole Project, or it might be clearer split under a few more parent Tasks[.]$/u,
   ),
 );
-const errorFields = { generated_at: Instant, message: Schema.NonEmptyString };
+const errorFields = {
+  generated_at: Instant,
+  message: Schema.NonEmptyString,
+  ...exitStatusFields(2),
+};
 export const DependencyError = Schema.Union([
   Schema.Struct({
     ...errorFields,
@@ -90,9 +95,22 @@ export const DependencyError = Schema.Union([
   }),
 ]).annotate({ identifier: "DependencyError" });
 export type DependencyError = typeof DependencyError.Type;
+const StoredDependencyError = Schema.Union(
+  DependencyError.members.map((member) =>
+    Schema.Struct({
+      ...member.fields,
+      exit_code: Schema.Literal(2).pipe(
+        Schema.withDecodingDefaultKey(Effect.succeed(2)),
+      ),
+      exit_meaning: Schema.Literal("validation or usage").pipe(
+        Schema.withDecodingDefaultKey(Effect.succeed("validation or usage")),
+      ),
+    }),
+  ),
+).annotate({ identifier: "StoredDependencyError" });
 export const RejectionDetails = Schema.Union([
   Schema.Struct({
-    witness: DependencyError,
+    witness: StoredDependencyError,
     truncated: Schema.Literal(false),
     total: Schema.Int,
   }),

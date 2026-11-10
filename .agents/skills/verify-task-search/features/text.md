@@ -31,3 +31,8 @@ Closed phrases cannot cross fields. Exclusions never highlight and allow no
 typos. `-foo.bar` excludes the word prefixes foo and bar separately.
 Text limits count UTF-16 code units. Metadata must not enter stored
 Tasks, History or exports without an explicit text query.
+
+Folded-word preparation can use a store-owned content memo. Run
+`bun .agents/skills/verify-task-search-cache/verify.mjs` after changes to that
+preparation seam or lifecycle hygiene. Its generated and compiled drives compare
+cached and uncached strings and spans, including competing writes and restore.

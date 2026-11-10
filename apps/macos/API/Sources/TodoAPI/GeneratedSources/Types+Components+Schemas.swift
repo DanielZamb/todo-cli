@@ -18,21 +18,37 @@ extension Components {
             public var _tag: Components.Schemas.UnauthorizedEncoded._tagPayload
             /// - Remark: Generated from `#/components/schemas/UnauthorizedEncoded/message`.
             public var message: Swift.String
+            /// - Remark: Generated from `#/components/schemas/UnauthorizedEncoded/exit_code`.
+            public var exit_code: Swift.Double
+            /// - Remark: Generated from `#/components/schemas/UnauthorizedEncoded/exit_meaning`.
+            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+            }
+            /// - Remark: Generated from `#/components/schemas/UnauthorizedEncoded/exit_meaning`.
+            public var exit_meaning: Components.Schemas.UnauthorizedEncoded.exit_meaningPayload
             /// Creates a new `UnauthorizedEncoded`.
             ///
             /// - Parameters:
             ///   - _tag:
             ///   - message:
+            ///   - exit_code:
+            ///   - exit_meaning:
             public init(
                 _tag: Components.Schemas.UnauthorizedEncoded._tagPayload,
-                message: Swift.String
+                message: Swift.String,
+                exit_code: Swift.Double,
+                exit_meaning: Components.Schemas.UnauthorizedEncoded.exit_meaningPayload
             ) {
                 self._tag = _tag
                 self.message = message
+                self.exit_code = exit_code
+                self.exit_meaning = exit_meaning
             }
             public enum CodingKeys: String, CodingKey {
                 case _tag
                 case message
+                case exit_code
+                case exit_meaning
             }
             public init(from decoder: any Swift.Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -45,9 +61,19 @@ extension Components {
                     Swift.String.self,
                     forKey: .message
                 )
+                self.exit_code = try container.decode(
+                    Swift.Double.self,
+                    forKey: .exit_code
+                )
+                self.exit_meaning = try container.decode(
+                    Components.Schemas.UnauthorizedEncoded.exit_meaningPayload.self,
+                    forKey: .exit_meaning
+                )
                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                     "_tag",
-                    "message"
+                    "message",
+                    "exit_code",
+                    "exit_meaning"
                 ])
             }
 
@@ -55,6 +81,8 @@ extension Components {
                 var container = encoder.container(keyedBy: CodingKeys.self)
                 try container.encode(self._tag, forKey: ._tag)
                 try container.encode(self.message, forKey: .message)
+                try container.encode(self.exit_code, forKey: .exit_code)
+                try container.encode(self.exit_meaning, forKey: .exit_meaning)
             }
         }
         /// - Remark: Generated from `#/components/schemas/InternalErrorEncoded`.
@@ -69,21 +97,37 @@ extension Components {
             public var _tag: Components.Schemas.InternalErrorEncoded._tagPayload
             /// - Remark: Generated from `#/components/schemas/InternalErrorEncoded/message`.
             public var message: Swift.String
+            /// - Remark: Generated from `#/components/schemas/InternalErrorEncoded/exit_code`.
+            public var exit_code: Swift.Double
+            /// - Remark: Generated from `#/components/schemas/InternalErrorEncoded/exit_meaning`.
+            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case runtime_space_failure = "runtime failure"
+            }
+            /// - Remark: Generated from `#/components/schemas/InternalErrorEncoded/exit_meaning`.
+            public var exit_meaning: Components.Schemas.InternalErrorEncoded.exit_meaningPayload
             /// Creates a new `InternalErrorEncoded`.
             ///
             /// - Parameters:
             ///   - _tag:
             ///   - message:
+            ///   - exit_code:
+            ///   - exit_meaning:
             public init(
                 _tag: Components.Schemas.InternalErrorEncoded._tagPayload,
-                message: Swift.String
+                message: Swift.String,
+                exit_code: Swift.Double,
+                exit_meaning: Components.Schemas.InternalErrorEncoded.exit_meaningPayload
             ) {
                 self._tag = _tag
                 self.message = message
+                self.exit_code = exit_code
+                self.exit_meaning = exit_meaning
             }
             public enum CodingKeys: String, CodingKey {
                 case _tag
                 case message
+                case exit_code
+                case exit_meaning
             }
             public init(from decoder: any Swift.Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -96,9 +140,19 @@ extension Components {
                     Swift.String.self,
                     forKey: .message
                 )
+                self.exit_code = try container.decode(
+                    Swift.Double.self,
+                    forKey: .exit_code
+                )
+                self.exit_meaning = try container.decode(
+                    Components.Schemas.InternalErrorEncoded.exit_meaningPayload.self,
+                    forKey: .exit_meaning
+                )
                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                     "_tag",
-                    "message"
+                    "message",
+                    "exit_code",
+                    "exit_meaning"
                 ])
             }
 
@@ -106,6 +160,8 @@ extension Components {
                 var container = encoder.container(keyedBy: CodingKeys.self)
                 try container.encode(self._tag, forKey: ._tag)
                 try container.encode(self.message, forKey: .message)
+                try container.encode(self.exit_code, forKey: .exit_code)
+                try container.encode(self.exit_meaning, forKey: .exit_meaning)
             }
         }
         /// - Remark: Generated from `#/components/schemas/ConflictEncoded`.
@@ -912,21 +968,37 @@ extension Components {
             }
             /// - Remark: Generated from `#/components/schemas/ConflictEncoded/latest`.
             public var latest: Components.Schemas.ConflictEncoded.latestPayload?
+            /// - Remark: Generated from `#/components/schemas/ConflictEncoded/exit_code`.
+            public var exit_code: Swift.Double
+            /// - Remark: Generated from `#/components/schemas/ConflictEncoded/exit_meaning`.
+            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case Conflict = "Conflict"
+            }
+            /// - Remark: Generated from `#/components/schemas/ConflictEncoded/exit_meaning`.
+            public var exit_meaning: Components.Schemas.ConflictEncoded.exit_meaningPayload
             /// Creates a new `ConflictEncoded`.
             ///
             /// - Parameters:
             ///   - _tag:
             ///   - latest:
+            ///   - exit_code:
+            ///   - exit_meaning:
             public init(
                 _tag: Components.Schemas.ConflictEncoded._tagPayload,
-                latest: Components.Schemas.ConflictEncoded.latestPayload? = nil
+                latest: Components.Schemas.ConflictEncoded.latestPayload? = nil,
+                exit_code: Swift.Double,
+                exit_meaning: Components.Schemas.ConflictEncoded.exit_meaningPayload
             ) {
                 self._tag = _tag
                 self.latest = latest
+                self.exit_code = exit_code
+                self.exit_meaning = exit_meaning
             }
             public enum CodingKeys: String, CodingKey {
                 case _tag
                 case latest
+                case exit_code
+                case exit_meaning
             }
             public init(from decoder: any Swift.Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -939,9 +1011,19 @@ extension Components {
                     Components.Schemas.ConflictEncoded.latestPayload.self,
                     forKey: .latest
                 )
+                self.exit_code = try container.decode(
+                    Swift.Double.self,
+                    forKey: .exit_code
+                )
+                self.exit_meaning = try container.decode(
+                    Components.Schemas.ConflictEncoded.exit_meaningPayload.self,
+                    forKey: .exit_meaning
+                )
                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                     "_tag",
-                    "latest"
+                    "latest",
+                    "exit_code",
+                    "exit_meaning"
                 ])
             }
 
@@ -953,6 +1035,8 @@ extension Components {
                 } else {
                     try container.encodeIfPresent(self.latest, forKey: .latest)
                 }
+                try container.encode(self.exit_code, forKey: .exit_code)
+                try container.encode(self.exit_meaning, forKey: .exit_meaning)
             }
         }
         /// - Remark: Generated from `#/components/schemas/Attachment`.
@@ -1010,21 +1094,149 @@ extension Components {
             public var _tag: Components.Schemas.NotFoundEncoded._tagPayload
             /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/message`.
             public var message: Swift.String
+            /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/details`.
+            public struct detailsPayload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/details/profile`.
+                public struct profilePayload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/details/profile/id`.
+                    public var id: Swift.String
+                    /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/details/profile/name`.
+                    public var name: Swift.String
+                    /// Creates a new `profilePayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - id:
+                    ///   - name:
+                    public init(
+                        id: Swift.String,
+                        name: Swift.String
+                    ) {
+                        self.id = id
+                        self.name = name
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case id
+                        case name
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.id = try container.decode(
+                            Swift.String.self,
+                            forKey: .id
+                        )
+                        self.name = try container.decode(
+                            Swift.String.self,
+                            forKey: .name
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "id",
+                            "name"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.id, forKey: .id)
+                        try container.encode(self.name, forKey: .name)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/details/profile`.
+                public var profile: Components.Schemas.NotFoundEncoded.detailsPayload.profilePayload
+                /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/details/task_id`.
+                public var task_id: Swift.String
+                /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/details/recovery`.
+                public var recovery: Swift.String
+                /// Creates a new `detailsPayload`.
+                ///
+                /// - Parameters:
+                ///   - profile:
+                ///   - task_id:
+                ///   - recovery:
+                public init(
+                    profile: Components.Schemas.NotFoundEncoded.detailsPayload.profilePayload,
+                    task_id: Swift.String,
+                    recovery: Swift.String
+                ) {
+                    self.profile = profile
+                    self.task_id = task_id
+                    self.recovery = recovery
+                }
+                public enum CodingKeys: String, CodingKey {
+                    case profile
+                    case task_id
+                    case recovery
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                    self.profile = try container.decode(
+                        Components.Schemas.NotFoundEncoded.detailsPayload.profilePayload.self,
+                        forKey: .profile
+                    )
+                    self.task_id = try container.decode(
+                        Swift.String.self,
+                        forKey: .task_id
+                    )
+                    self.recovery = try container.decode(
+                        Swift.String.self,
+                        forKey: .recovery
+                    )
+                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                        "profile",
+                        "task_id",
+                        "recovery"
+                    ])
+                }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.profile, forKey: .profile)
+                        try container.encode(self.task_id, forKey: .task_id)
+                        try container.encode(self.recovery, forKey: .recovery)
+                    }
+                }
+            /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/details`.
+            public var details: Components.Schemas.NotFoundEncoded.detailsPayload?
+            /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/exit_code`.
+            public var exit_code: Swift.Double
+            /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/exit_meaning`.
+            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+            }
+            /// - Remark: Generated from `#/components/schemas/NotFoundEncoded/exit_meaning`.
+            public var exit_meaning: Components.Schemas.NotFoundEncoded.exit_meaningPayload
             /// Creates a new `NotFoundEncoded`.
             ///
             /// - Parameters:
             ///   - _tag:
             ///   - message:
+            ///   - details:
+            ///   - exit_code:
+            ///   - exit_meaning:
             public init(
                 _tag: Components.Schemas.NotFoundEncoded._tagPayload,
-                message: Swift.String
+                message: Swift.String,
+                details: Components.Schemas.NotFoundEncoded.detailsPayload? = nil,
+                exit_code: Swift.Double,
+                exit_meaning: Components.Schemas.NotFoundEncoded.exit_meaningPayload
             ) {
                 self._tag = _tag
                 self.message = message
+                self.details = details
+                self.exit_code = exit_code
+                self.exit_meaning = exit_meaning
             }
             public enum CodingKeys: String, CodingKey {
                 case _tag
                 case message
+                case details
+                case exit_code
+                case exit_meaning
             }
             public init(from decoder: any Swift.Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -1037,9 +1249,24 @@ extension Components {
                     Swift.String.self,
                     forKey: .message
                 )
+                self.details = try container.decodeIfPresent(
+                    Components.Schemas.NotFoundEncoded.detailsPayload.self,
+                    forKey: .details
+                )
+                self.exit_code = try container.decode(
+                    Swift.Double.self,
+                    forKey: .exit_code
+                )
+                self.exit_meaning = try container.decode(
+                    Components.Schemas.NotFoundEncoded.exit_meaningPayload.self,
+                    forKey: .exit_meaning
+                )
                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                     "_tag",
-                    "message"
+                    "message",
+                    "details",
+                    "exit_code",
+                    "exit_meaning"
                 ])
             }
 
@@ -1047,6 +1274,13 @@ extension Components {
                 var container = encoder.container(keyedBy: CodingKeys.self)
                 try container.encode(self._tag, forKey: ._tag)
                 try container.encode(self.message, forKey: .message)
+                if self.details == nil && _explicitNullKeys.contains(CodingKeys.details.stringValue) {
+                    try container.encodeNil(forKey: .details)
+                } else {
+                    try container.encodeIfPresent(self.details, forKey: .details)
+                }
+                try container.encode(self.exit_code, forKey: .exit_code)
+                try container.encode(self.exit_meaning, forKey: .exit_meaning)
             }
         }
         /// - Remark: Generated from `#/components/schemas/ForbiddenEncoded`.
@@ -1061,21 +1295,37 @@ extension Components {
             public var _tag: Components.Schemas.ForbiddenEncoded._tagPayload
             /// - Remark: Generated from `#/components/schemas/ForbiddenEncoded/message`.
             public var message: Swift.String
+            /// - Remark: Generated from `#/components/schemas/ForbiddenEncoded/exit_code`.
+            public var exit_code: Swift.Double
+            /// - Remark: Generated from `#/components/schemas/ForbiddenEncoded/exit_meaning`.
+            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+            }
+            /// - Remark: Generated from `#/components/schemas/ForbiddenEncoded/exit_meaning`.
+            public var exit_meaning: Components.Schemas.ForbiddenEncoded.exit_meaningPayload
             /// Creates a new `ForbiddenEncoded`.
             ///
             /// - Parameters:
             ///   - _tag:
             ///   - message:
+            ///   - exit_code:
+            ///   - exit_meaning:
             public init(
                 _tag: Components.Schemas.ForbiddenEncoded._tagPayload,
-                message: Swift.String
+                message: Swift.String,
+                exit_code: Swift.Double,
+                exit_meaning: Components.Schemas.ForbiddenEncoded.exit_meaningPayload
             ) {
                 self._tag = _tag
                 self.message = message
+                self.exit_code = exit_code
+                self.exit_meaning = exit_meaning
             }
             public enum CodingKeys: String, CodingKey {
                 case _tag
                 case message
+                case exit_code
+                case exit_meaning
             }
             public init(from decoder: any Swift.Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -1088,9 +1338,19 @@ extension Components {
                     Swift.String.self,
                     forKey: .message
                 )
+                self.exit_code = try container.decode(
+                    Swift.Double.self,
+                    forKey: .exit_code
+                )
+                self.exit_meaning = try container.decode(
+                    Components.Schemas.ForbiddenEncoded.exit_meaningPayload.self,
+                    forKey: .exit_meaning
+                )
                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                     "_tag",
-                    "message"
+                    "message",
+                    "exit_code",
+                    "exit_meaning"
                 ])
             }
 
@@ -1098,6 +1358,8 @@ extension Components {
                 var container = encoder.container(keyedBy: CodingKeys.self)
                 try container.encode(self._tag, forKey: ._tag)
                 try container.encode(self.message, forKey: .message)
+                try container.encode(self.exit_code, forKey: .exit_code)
+                try container.encode(self.exit_meaning, forKey: .exit_meaning)
             }
         }
         /// - Remark: Generated from `#/components/schemas/InvalidTaskEncoded`.
@@ -1110,6 +1372,14 @@ extension Components {
             }
             /// - Remark: Generated from `#/components/schemas/InvalidTaskEncoded/_tag`.
             public var _tag: Components.Schemas.InvalidTaskEncoded._tagPayload
+            /// - Remark: Generated from `#/components/schemas/InvalidTaskEncoded/exit_code`.
+            public var exit_code: Swift.Double
+            /// - Remark: Generated from `#/components/schemas/InvalidTaskEncoded/exit_meaning`.
+            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case validation_space_or_space_usage = "validation or usage"
+            }
+            /// - Remark: Generated from `#/components/schemas/InvalidTaskEncoded/exit_meaning`.
+            public var exit_meaning: Components.Schemas.InvalidTaskEncoded.exit_meaningPayload
             /// - Remark: Generated from `#/components/schemas/InvalidTaskEncoded/message`.
             public var message: Swift.String
             /// - Remark: Generated from `#/components/schemas/InvalidTaskEncoded/details`.
@@ -1165,19 +1435,27 @@ extension Components {
             ///
             /// - Parameters:
             ///   - _tag:
+            ///   - exit_code:
+            ///   - exit_meaning:
             ///   - message:
             ///   - details:
             public init(
                 _tag: Components.Schemas.InvalidTaskEncoded._tagPayload,
+                exit_code: Swift.Double,
+                exit_meaning: Components.Schemas.InvalidTaskEncoded.exit_meaningPayload,
                 message: Swift.String,
                 details: Components.Schemas.InvalidTaskEncoded.detailsPayload? = nil
             ) {
                 self._tag = _tag
+                self.exit_code = exit_code
+                self.exit_meaning = exit_meaning
                 self.message = message
                 self.details = details
             }
             public enum CodingKeys: String, CodingKey {
                 case _tag
+                case exit_code
+                case exit_meaning
                 case message
                 case details
             }
@@ -1187,6 +1465,14 @@ extension Components {
                 self._tag = try container.decode(
                     Components.Schemas.InvalidTaskEncoded._tagPayload.self,
                     forKey: ._tag
+                )
+                self.exit_code = try container.decode(
+                    Swift.Double.self,
+                    forKey: .exit_code
+                )
+                self.exit_meaning = try container.decode(
+                    Components.Schemas.InvalidTaskEncoded.exit_meaningPayload.self,
+                    forKey: .exit_meaning
                 )
                 self.message = try container.decode(
                     Swift.String.self,
@@ -1198,6 +1484,8 @@ extension Components {
                 )
                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                     "_tag",
+                    "exit_code",
+                    "exit_meaning",
                     "message",
                     "details"
                 ])
@@ -1206,6 +1494,8 @@ extension Components {
             public func encode(to encoder: any Swift.Encoder) throws {
                 var container = encoder.container(keyedBy: CodingKeys.self)
                 try container.encode(self._tag, forKey: ._tag)
+                try container.encode(self.exit_code, forKey: .exit_code)
+                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                 try container.encode(self.message, forKey: .message)
                 if self.details == nil && _explicitNullKeys.contains(CodingKeys.details.stringValue) {
                     try container.encodeNil(forKey: .details)
@@ -1224,6 +1514,14 @@ extension Components {
                 public var generated_at: Swift.String
                 /// - Remark: Generated from `#/components/schemas/DependencyError/value1/message`.
                 public var message: Swift.String
+                /// - Remark: Generated from `#/components/schemas/DependencyError/value1/exit_code`.
+                public var exit_code: Swift.Double
+                /// - Remark: Generated from `#/components/schemas/DependencyError/value1/exit_meaning`.
+                @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case validation_space_or_space_usage = "validation or usage"
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError/value1/exit_meaning`.
+                public var exit_meaning: Components.Schemas.DependencyError.Value1Payload.exit_meaningPayload
                 /// - Remark: Generated from `#/components/schemas/DependencyError/value1/code`.
                 @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
                     case dependency_cycle = "dependency_cycle"
@@ -1296,22 +1594,30 @@ extension Components {
                 /// - Parameters:
                 ///   - generated_at:
                 ///   - message:
+                ///   - exit_code:
+                ///   - exit_meaning:
                 ///   - code:
                 ///   - details:
                 public init(
                     generated_at: Swift.String,
                     message: Swift.String,
+                    exit_code: Swift.Double,
+                    exit_meaning: Components.Schemas.DependencyError.Value1Payload.exit_meaningPayload,
                     code: Components.Schemas.DependencyError.Value1Payload.codePayload,
                     details: Components.Schemas.DependencyError.Value1Payload.detailsPayload
                 ) {
                     self.generated_at = generated_at
                     self.message = message
+                    self.exit_code = exit_code
+                    self.exit_meaning = exit_meaning
                     self.code = code
                     self.details = details
                 }
                 public enum CodingKeys: String, CodingKey {
                     case generated_at
                     case message
+                    case exit_code
+                    case exit_meaning
                     case code
                     case details
                 }
@@ -1326,6 +1632,14 @@ extension Components {
                         Swift.String.self,
                         forKey: .message
                     )
+                    self.exit_code = try container.decode(
+                        Swift.Double.self,
+                        forKey: .exit_code
+                    )
+                    self.exit_meaning = try container.decode(
+                        Components.Schemas.DependencyError.Value1Payload.exit_meaningPayload.self,
+                        forKey: .exit_meaning
+                    )
                     self.code = try container.decode(
                         Components.Schemas.DependencyError.Value1Payload.codePayload.self,
                         forKey: .code
@@ -1337,6 +1651,8 @@ extension Components {
                     try decoder.ensureNoAdditionalProperties(knownKeys: [
                         "generated_at",
                         "message",
+                        "exit_code",
+                        "exit_meaning",
                         "code",
                         "details"
                     ])
@@ -1346,6 +1662,8 @@ extension Components {
                     var container = encoder.container(keyedBy: CodingKeys.self)
                     try container.encode(self.generated_at, forKey: .generated_at)
                     try container.encode(self.message, forKey: .message)
+                    try container.encode(self.exit_code, forKey: .exit_code)
+                    try container.encode(self.exit_meaning, forKey: .exit_meaning)
                     try container.encode(self.code, forKey: .code)
                     try container.encode(self.details, forKey: .details)
                 }
@@ -1360,6 +1678,14 @@ extension Components {
                 public var generated_at: Swift.String
                 /// - Remark: Generated from `#/components/schemas/DependencyError/value2/message`.
                 public var message: Swift.String
+                /// - Remark: Generated from `#/components/schemas/DependencyError/value2/exit_code`.
+                public var exit_code: Swift.Double
+                /// - Remark: Generated from `#/components/schemas/DependencyError/value2/exit_meaning`.
+                @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case validation_space_or_space_usage = "validation or usage"
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError/value2/exit_meaning`.
+                public var exit_meaning: Components.Schemas.DependencyError.Value2Payload.exit_meaningPayload
                 /// - Remark: Generated from `#/components/schemas/DependencyError/value2/code`.
                 @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
                     case too_many_dependencies = "too_many_dependencies"
@@ -1432,22 +1758,30 @@ extension Components {
                 /// - Parameters:
                 ///   - generated_at:
                 ///   - message:
+                ///   - exit_code:
+                ///   - exit_meaning:
                 ///   - code:
                 ///   - details:
                 public init(
                     generated_at: Swift.String,
                     message: Swift.String,
+                    exit_code: Swift.Double,
+                    exit_meaning: Components.Schemas.DependencyError.Value2Payload.exit_meaningPayload,
                     code: Components.Schemas.DependencyError.Value2Payload.codePayload,
                     details: Components.Schemas.DependencyError.Value2Payload.detailsPayload
                 ) {
                     self.generated_at = generated_at
                     self.message = message
+                    self.exit_code = exit_code
+                    self.exit_meaning = exit_meaning
                     self.code = code
                     self.details = details
                 }
                 public enum CodingKeys: String, CodingKey {
                     case generated_at
                     case message
+                    case exit_code
+                    case exit_meaning
                     case code
                     case details
                 }
@@ -1462,6 +1796,14 @@ extension Components {
                         Swift.String.self,
                         forKey: .message
                     )
+                    self.exit_code = try container.decode(
+                        Swift.Double.self,
+                        forKey: .exit_code
+                    )
+                    self.exit_meaning = try container.decode(
+                        Components.Schemas.DependencyError.Value2Payload.exit_meaningPayload.self,
+                        forKey: .exit_meaning
+                    )
                     self.code = try container.decode(
                         Components.Schemas.DependencyError.Value2Payload.codePayload.self,
                         forKey: .code
@@ -1473,6 +1815,8 @@ extension Components {
                     try decoder.ensureNoAdditionalProperties(knownKeys: [
                         "generated_at",
                         "message",
+                        "exit_code",
+                        "exit_meaning",
                         "code",
                         "details"
                     ])
@@ -1482,6 +1826,8 @@ extension Components {
                     var container = encoder.container(keyedBy: CodingKeys.self)
                     try container.encode(self.generated_at, forKey: .generated_at)
                     try container.encode(self.message, forKey: .message)
+                    try container.encode(self.exit_code, forKey: .exit_code)
+                    try container.encode(self.exit_meaning, forKey: .exit_meaning)
                     try container.encode(self.code, forKey: .code)
                     try container.encode(self.details, forKey: .details)
                 }
@@ -1496,6 +1842,14 @@ extension Components {
                 public var generated_at: Swift.String
                 /// - Remark: Generated from `#/components/schemas/DependencyError/value3/message`.
                 public var message: Swift.String
+                /// - Remark: Generated from `#/components/schemas/DependencyError/value3/exit_code`.
+                public var exit_code: Swift.Double
+                /// - Remark: Generated from `#/components/schemas/DependencyError/value3/exit_meaning`.
+                @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case validation_space_or_space_usage = "validation or usage"
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError/value3/exit_meaning`.
+                public var exit_meaning: Components.Schemas.DependencyError.Value3Payload.exit_meaningPayload
                 /// - Remark: Generated from `#/components/schemas/DependencyError/value3/code`.
                 @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
                     case blocked = "blocked"
@@ -2350,22 +2704,30 @@ extension Components {
                 /// - Parameters:
                 ///   - generated_at:
                 ///   - message:
+                ///   - exit_code:
+                ///   - exit_meaning:
                 ///   - code:
                 ///   - details:
                 public init(
                     generated_at: Swift.String,
                     message: Swift.String,
+                    exit_code: Swift.Double,
+                    exit_meaning: Components.Schemas.DependencyError.Value3Payload.exit_meaningPayload,
                     code: Components.Schemas.DependencyError.Value3Payload.codePayload,
                     details: Components.Schemas.DependencyError.Value3Payload.detailsPayload
                 ) {
                     self.generated_at = generated_at
                     self.message = message
+                    self.exit_code = exit_code
+                    self.exit_meaning = exit_meaning
                     self.code = code
                     self.details = details
                 }
                 public enum CodingKeys: String, CodingKey {
                     case generated_at
                     case message
+                    case exit_code
+                    case exit_meaning
                     case code
                     case details
                 }
@@ -2380,6 +2742,14 @@ extension Components {
                         Swift.String.self,
                         forKey: .message
                     )
+                    self.exit_code = try container.decode(
+                        Swift.Double.self,
+                        forKey: .exit_code
+                    )
+                    self.exit_meaning = try container.decode(
+                        Components.Schemas.DependencyError.Value3Payload.exit_meaningPayload.self,
+                        forKey: .exit_meaning
+                    )
                     self.code = try container.decode(
                         Components.Schemas.DependencyError.Value3Payload.codePayload.self,
                         forKey: .code
@@ -2391,6 +2761,8 @@ extension Components {
                     try decoder.ensureNoAdditionalProperties(knownKeys: [
                         "generated_at",
                         "message",
+                        "exit_code",
+                        "exit_meaning",
                         "code",
                         "details"
                     ])
@@ -2400,6 +2772,8 @@ extension Components {
                     var container = encoder.container(keyedBy: CodingKeys.self)
                     try container.encode(self.generated_at, forKey: .generated_at)
                     try container.encode(self.message, forKey: .message)
+                    try container.encode(self.exit_code, forKey: .exit_code)
+                    try container.encode(self.exit_meaning, forKey: .exit_meaning)
                     try container.encode(self.code, forKey: .code)
                     try container.encode(self.details, forKey: .details)
                 }
@@ -2414,6 +2788,14 @@ extension Components {
                 public var generated_at: Swift.String
                 /// - Remark: Generated from `#/components/schemas/DependencyError/value4/message`.
                 public var message: Swift.String
+                /// - Remark: Generated from `#/components/schemas/DependencyError/value4/exit_code`.
+                public var exit_code: Swift.Double
+                /// - Remark: Generated from `#/components/schemas/DependencyError/value4/exit_meaning`.
+                @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case validation_space_or_space_usage = "validation or usage"
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError/value4/exit_meaning`.
+                public var exit_meaning: Components.Schemas.DependencyError.Value4Payload.exit_meaningPayload
                 /// - Remark: Generated from `#/components/schemas/DependencyError/value4/code`.
                 @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
                     case blocks_done_task = "blocks_done_task"
@@ -3280,22 +3662,30 @@ extension Components {
                 /// - Parameters:
                 ///   - generated_at:
                 ///   - message:
+                ///   - exit_code:
+                ///   - exit_meaning:
                 ///   - code:
                 ///   - details:
                 public init(
                     generated_at: Swift.String,
                     message: Swift.String,
+                    exit_code: Swift.Double,
+                    exit_meaning: Components.Schemas.DependencyError.Value4Payload.exit_meaningPayload,
                     code: Components.Schemas.DependencyError.Value4Payload.codePayload,
                     details: Components.Schemas.DependencyError.Value4Payload.detailsPayload
                 ) {
                     self.generated_at = generated_at
                     self.message = message
+                    self.exit_code = exit_code
+                    self.exit_meaning = exit_meaning
                     self.code = code
                     self.details = details
                 }
                 public enum CodingKeys: String, CodingKey {
                     case generated_at
                     case message
+                    case exit_code
+                    case exit_meaning
                     case code
                     case details
                 }
@@ -3310,6 +3700,14 @@ extension Components {
                         Swift.String.self,
                         forKey: .message
                     )
+                    self.exit_code = try container.decode(
+                        Swift.Double.self,
+                        forKey: .exit_code
+                    )
+                    self.exit_meaning = try container.decode(
+                        Components.Schemas.DependencyError.Value4Payload.exit_meaningPayload.self,
+                        forKey: .exit_meaning
+                    )
                     self.code = try container.decode(
                         Components.Schemas.DependencyError.Value4Payload.codePayload.self,
                         forKey: .code
@@ -3321,6 +3719,8 @@ extension Components {
                     try decoder.ensureNoAdditionalProperties(knownKeys: [
                         "generated_at",
                         "message",
+                        "exit_code",
+                        "exit_meaning",
                         "code",
                         "details"
                     ])
@@ -3330,6 +3730,8 @@ extension Components {
                     var container = encoder.container(keyedBy: CodingKeys.self)
                     try container.encode(self.generated_at, forKey: .generated_at)
                     try container.encode(self.message, forKey: .message)
+                    try container.encode(self.exit_code, forKey: .exit_code)
+                    try container.encode(self.exit_meaning, forKey: .exit_meaning)
                     try container.encode(self.code, forKey: .code)
                     try container.encode(self.details, forKey: .details)
                 }
@@ -3344,6 +3746,14 @@ extension Components {
                 public var generated_at: Swift.String
                 /// - Remark: Generated from `#/components/schemas/DependencyError/value5/message`.
                 public var message: Swift.String
+                /// - Remark: Generated from `#/components/schemas/DependencyError/value5/exit_code`.
+                public var exit_code: Swift.Double
+                /// - Remark: Generated from `#/components/schemas/DependencyError/value5/exit_meaning`.
+                @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case validation_space_or_space_usage = "validation or usage"
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError/value5/exit_meaning`.
+                public var exit_meaning: Components.Schemas.DependencyError.Value5Payload.exit_meaningPayload
                 /// - Remark: Generated from `#/components/schemas/DependencyError/value5/code`.
                 @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
                     case has_dependencies = "has_dependencies"
@@ -3481,22 +3891,30 @@ extension Components {
                 /// - Parameters:
                 ///   - generated_at:
                 ///   - message:
+                ///   - exit_code:
+                ///   - exit_meaning:
                 ///   - code:
                 ///   - details:
                 public init(
                     generated_at: Swift.String,
                     message: Swift.String,
+                    exit_code: Swift.Double,
+                    exit_meaning: Components.Schemas.DependencyError.Value5Payload.exit_meaningPayload,
                     code: Components.Schemas.DependencyError.Value5Payload.codePayload,
                     details: Components.Schemas.DependencyError.Value5Payload.detailsPayload
                 ) {
                     self.generated_at = generated_at
                     self.message = message
+                    self.exit_code = exit_code
+                    self.exit_meaning = exit_meaning
                     self.code = code
                     self.details = details
                 }
                 public enum CodingKeys: String, CodingKey {
                     case generated_at
                     case message
+                    case exit_code
+                    case exit_meaning
                     case code
                     case details
                 }
@@ -3511,6 +3929,14 @@ extension Components {
                         Swift.String.self,
                         forKey: .message
                     )
+                    self.exit_code = try container.decode(
+                        Swift.Double.self,
+                        forKey: .exit_code
+                    )
+                    self.exit_meaning = try container.decode(
+                        Components.Schemas.DependencyError.Value5Payload.exit_meaningPayload.self,
+                        forKey: .exit_meaning
+                    )
                     self.code = try container.decode(
                         Components.Schemas.DependencyError.Value5Payload.codePayload.self,
                         forKey: .code
@@ -3522,6 +3948,8 @@ extension Components {
                     try decoder.ensureNoAdditionalProperties(knownKeys: [
                         "generated_at",
                         "message",
+                        "exit_code",
+                        "exit_meaning",
                         "code",
                         "details"
                     ])
@@ -3531,6 +3959,8 @@ extension Components {
                     var container = encoder.container(keyedBy: CodingKeys.self)
                     try container.encode(self.generated_at, forKey: .generated_at)
                     try container.encode(self.message, forKey: .message)
+                    try container.encode(self.exit_code, forKey: .exit_code)
+                    try container.encode(self.exit_meaning, forKey: .exit_meaning)
                     try container.encode(self.code, forKey: .code)
                     try container.encode(self.details, forKey: .details)
                 }
@@ -3545,6 +3975,14 @@ extension Components {
                 public var generated_at: Swift.String
                 /// - Remark: Generated from `#/components/schemas/DependencyError/value6/message`.
                 public var message: Swift.String
+                /// - Remark: Generated from `#/components/schemas/DependencyError/value6/exit_code`.
+                public var exit_code: Swift.Double
+                /// - Remark: Generated from `#/components/schemas/DependencyError/value6/exit_meaning`.
+                @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case validation_space_or_space_usage = "validation or usage"
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError/value6/exit_meaning`.
+                public var exit_meaning: Components.Schemas.DependencyError.Value6Payload.exit_meaningPayload
                 /// - Remark: Generated from `#/components/schemas/DependencyError/value6/code`.
                 @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
                     case dependency_profile_mismatch = "dependency_profile_mismatch"
@@ -3617,22 +4055,30 @@ extension Components {
                 /// - Parameters:
                 ///   - generated_at:
                 ///   - message:
+                ///   - exit_code:
+                ///   - exit_meaning:
                 ///   - code:
                 ///   - details:
                 public init(
                     generated_at: Swift.String,
                     message: Swift.String,
+                    exit_code: Swift.Double,
+                    exit_meaning: Components.Schemas.DependencyError.Value6Payload.exit_meaningPayload,
                     code: Components.Schemas.DependencyError.Value6Payload.codePayload,
                     details: Components.Schemas.DependencyError.Value6Payload.detailsPayload
                 ) {
                     self.generated_at = generated_at
                     self.message = message
+                    self.exit_code = exit_code
+                    self.exit_meaning = exit_meaning
                     self.code = code
                     self.details = details
                 }
                 public enum CodingKeys: String, CodingKey {
                     case generated_at
                     case message
+                    case exit_code
+                    case exit_meaning
                     case code
                     case details
                 }
@@ -3647,6 +4093,14 @@ extension Components {
                         Swift.String.self,
                         forKey: .message
                     )
+                    self.exit_code = try container.decode(
+                        Swift.Double.self,
+                        forKey: .exit_code
+                    )
+                    self.exit_meaning = try container.decode(
+                        Components.Schemas.DependencyError.Value6Payload.exit_meaningPayload.self,
+                        forKey: .exit_meaning
+                    )
                     self.code = try container.decode(
                         Components.Schemas.DependencyError.Value6Payload.codePayload.self,
                         forKey: .code
@@ -3658,6 +4112,8 @@ extension Components {
                     try decoder.ensureNoAdditionalProperties(knownKeys: [
                         "generated_at",
                         "message",
+                        "exit_code",
+                        "exit_meaning",
                         "code",
                         "details"
                     ])
@@ -3667,6 +4123,8 @@ extension Components {
                     var container = encoder.container(keyedBy: CodingKeys.self)
                     try container.encode(self.generated_at, forKey: .generated_at)
                     try container.encode(self.message, forKey: .message)
+                    try container.encode(self.exit_code, forKey: .exit_code)
+                    try container.encode(self.exit_meaning, forKey: .exit_meaning)
                     try container.encode(self.code, forKey: .code)
                     try container.encode(self.details, forKey: .details)
                 }
@@ -3752,10 +4210,97 @@ extension Components {
                 try self.value6?.encode(to: encoder)
             }
         }
+        /// - Remark: Generated from `#/components/schemas/BadRequestEncoded`.
+        public struct BadRequestEncoded: Codable, Hashable, Sendable {
+            private var _explicitNullKeys: Set<String> = []
+
+            /// - Remark: Generated from `#/components/schemas/BadRequestEncoded/_tag`.
+            @frozen public enum _tagPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case BadRequest = "BadRequest"
+            }
+            /// - Remark: Generated from `#/components/schemas/BadRequestEncoded/_tag`.
+            public var _tag: Components.Schemas.BadRequestEncoded._tagPayload
+            /// - Remark: Generated from `#/components/schemas/BadRequestEncoded/message`.
+            public var message: Swift.String
+            /// - Remark: Generated from `#/components/schemas/BadRequestEncoded/exit_code`.
+            public var exit_code: Swift.Double
+            /// - Remark: Generated from `#/components/schemas/BadRequestEncoded/exit_meaning`.
+            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case validation_space_or_space_usage = "validation or usage"
+            }
+            /// - Remark: Generated from `#/components/schemas/BadRequestEncoded/exit_meaning`.
+            public var exit_meaning: Components.Schemas.BadRequestEncoded.exit_meaningPayload
+            /// Creates a new `BadRequestEncoded`.
+            ///
+            /// - Parameters:
+            ///   - _tag:
+            ///   - message:
+            ///   - exit_code:
+            ///   - exit_meaning:
+            public init(
+                _tag: Components.Schemas.BadRequestEncoded._tagPayload,
+                message: Swift.String,
+                exit_code: Swift.Double,
+                exit_meaning: Components.Schemas.BadRequestEncoded.exit_meaningPayload
+            ) {
+                self._tag = _tag
+                self.message = message
+                self.exit_code = exit_code
+                self.exit_meaning = exit_meaning
+            }
+            public enum CodingKeys: String, CodingKey {
+                case _tag
+                case message
+                case exit_code
+                case exit_meaning
+            }
+            public init(from decoder: any Swift.Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                self._tag = try container.decode(
+                    Components.Schemas.BadRequestEncoded._tagPayload.self,
+                    forKey: ._tag
+                )
+                self.message = try container.decode(
+                    Swift.String.self,
+                    forKey: .message
+                )
+                self.exit_code = try container.decode(
+                    Swift.Double.self,
+                    forKey: .exit_code
+                )
+                self.exit_meaning = try container.decode(
+                    Components.Schemas.BadRequestEncoded.exit_meaningPayload.self,
+                    forKey: .exit_meaning
+                )
+                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                    "_tag",
+                    "message",
+                    "exit_code",
+                    "exit_meaning"
+                ])
+            }
+
+            public func encode(to encoder: any Swift.Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(self._tag, forKey: ._tag)
+                try container.encode(self.message, forKey: .message)
+                try container.encode(self.exit_code, forKey: .exit_code)
+                try container.encode(self.exit_meaning, forKey: .exit_meaning)
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/FilterUsageError`.
         public struct FilterUsageError: Codable, Hashable, Sendable {
             private var _explicitNullKeys: Set<String> = []
 
+            /// - Remark: Generated from `#/components/schemas/FilterUsageError/exit_code`.
+            public var exit_code: Swift.Double
+            /// - Remark: Generated from `#/components/schemas/FilterUsageError/exit_meaning`.
+            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case validation_space_or_space_usage = "validation or usage"
+            }
+            /// - Remark: Generated from `#/components/schemas/FilterUsageError/exit_meaning`.
+            public var exit_meaning: Components.Schemas.FilterUsageError.exit_meaningPayload
             /// - Remark: Generated from `#/components/schemas/FilterUsageError/generated_at`.
             public var generated_at: Swift.String
             /// - Remark: Generated from `#/components/schemas/FilterUsageError/code`.
@@ -3769,19 +4314,27 @@ extension Components {
             /// Creates a new `FilterUsageError`.
             ///
             /// - Parameters:
+            ///   - exit_code:
+            ///   - exit_meaning:
             ///   - generated_at:
             ///   - code:
             ///   - message:
             public init(
+                exit_code: Swift.Double,
+                exit_meaning: Components.Schemas.FilterUsageError.exit_meaningPayload,
                 generated_at: Swift.String,
                 code: Components.Schemas.FilterUsageError.codePayload,
                 message: Swift.String
             ) {
+                self.exit_code = exit_code
+                self.exit_meaning = exit_meaning
                 self.generated_at = generated_at
                 self.code = code
                 self.message = message
             }
             public enum CodingKeys: String, CodingKey {
+                case exit_code
+                case exit_meaning
                 case generated_at
                 case code
                 case message
@@ -3789,6 +4342,14 @@ extension Components {
             public init(from decoder: any Swift.Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                self.exit_code = try container.decode(
+                    Swift.Double.self,
+                    forKey: .exit_code
+                )
+                self.exit_meaning = try container.decode(
+                    Components.Schemas.FilterUsageError.exit_meaningPayload.self,
+                    forKey: .exit_meaning
+                )
                 self.generated_at = try container.decode(
                     Swift.String.self,
                     forKey: .generated_at
@@ -3802,6 +4363,8 @@ extension Components {
                     forKey: .message
                 )
                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                    "exit_code",
+                    "exit_meaning",
                     "generated_at",
                     "code",
                     "message"
@@ -3810,36 +4373,46 @@ extension Components {
 
             public func encode(to encoder: any Swift.Encoder) throws {
                 var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(self.exit_code, forKey: .exit_code)
+                try container.encode(self.exit_meaning, forKey: .exit_meaning)
                 try container.encode(self.generated_at, forKey: .generated_at)
                 try container.encode(self.code, forKey: .code)
                 try container.encode(self.message, forKey: .message)
             }
         }
-        /// - Remark: Generated from `#/components/schemas/DependencyError_1`.
-        public struct DependencyError_1: Codable, Hashable, Sendable {
-            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1`.
+        /// - Remark: Generated from `#/components/schemas/StoredDependencyError`.
+        public struct StoredDependencyError: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value1`.
             public struct Value1Payload: Codable, Hashable, Sendable {
                 private var _explicitNullKeys: Set<String> = []
 
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1/generated_at`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value1/generated_at`.
                 public var generated_at: Swift.String
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1/message`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value1/message`.
                 public var message: Swift.String
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1/code`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value1/exit_code`.
+                public var exit_code: Swift.Double?
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value1/exit_meaning`.
+                @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case validation_space_or_space_usage = "validation or usage"
+                }
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value1/exit_meaning`.
+                public var exit_meaning: Components.Schemas.StoredDependencyError.Value1Payload.exit_meaningPayload?
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value1/code`.
                 @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
                     case dependency_cycle = "dependency_cycle"
                 }
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1/code`.
-                public var code: Components.Schemas.DependencyError_1.Value1Payload.codePayload
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1/details`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value1/code`.
+                public var code: Components.Schemas.StoredDependencyError.Value1Payload.codePayload
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value1/details`.
                 public struct detailsPayload: Codable, Hashable, Sendable {
                     private var _explicitNullKeys: Set<String> = []
 
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1/details/dependent_id`.
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value1/details/dependent_id`.
                     public var dependent_id: Swift.String
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1/details/blocker_id`.
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value1/details/blocker_id`.
                     public var blocker_id: Swift.String
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1/details/path`.
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value1/details/path`.
                     public var path: [Swift.String]
                     /// Creates a new `detailsPayload`.
                     ///
@@ -3890,29 +4463,37 @@ extension Components {
                         try container.encode(self.path, forKey: .path)
                     }
                 }
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1/details`.
-                public var details: Components.Schemas.DependencyError_1.Value1Payload.detailsPayload
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value1/details`.
+                public var details: Components.Schemas.StoredDependencyError.Value1Payload.detailsPayload
                 /// Creates a new `Value1Payload`.
                 ///
                 /// - Parameters:
                 ///   - generated_at:
                 ///   - message:
+                ///   - exit_code:
+                ///   - exit_meaning:
                 ///   - code:
                 ///   - details:
                 public init(
                     generated_at: Swift.String,
                     message: Swift.String,
-                    code: Components.Schemas.DependencyError_1.Value1Payload.codePayload,
-                    details: Components.Schemas.DependencyError_1.Value1Payload.detailsPayload
+                    exit_code: Swift.Double? = nil,
+                    exit_meaning: Components.Schemas.StoredDependencyError.Value1Payload.exit_meaningPayload? = nil,
+                    code: Components.Schemas.StoredDependencyError.Value1Payload.codePayload,
+                    details: Components.Schemas.StoredDependencyError.Value1Payload.detailsPayload
                 ) {
                     self.generated_at = generated_at
                     self.message = message
+                    self.exit_code = exit_code
+                    self.exit_meaning = exit_meaning
                     self.code = code
                     self.details = details
                 }
                 public enum CodingKeys: String, CodingKey {
                     case generated_at
                     case message
+                    case exit_code
+                    case exit_meaning
                     case code
                     case details
                 }
@@ -3927,17 +4508,27 @@ extension Components {
                         Swift.String.self,
                         forKey: .message
                     )
+                    self.exit_code = try container.decodeIfPresent(
+                        Swift.Double.self,
+                        forKey: .exit_code
+                    )
+                    self.exit_meaning = try container.decodeIfPresent(
+                        Components.Schemas.StoredDependencyError.Value1Payload.exit_meaningPayload.self,
+                        forKey: .exit_meaning
+                    )
                     self.code = try container.decode(
-                        Components.Schemas.DependencyError_1.Value1Payload.codePayload.self,
+                        Components.Schemas.StoredDependencyError.Value1Payload.codePayload.self,
                         forKey: .code
                     )
                     self.details = try container.decode(
-                        Components.Schemas.DependencyError_1.Value1Payload.detailsPayload.self,
+                        Components.Schemas.StoredDependencyError.Value1Payload.detailsPayload.self,
                         forKey: .details
                     )
                     try decoder.ensureNoAdditionalProperties(knownKeys: [
                         "generated_at",
                         "message",
+                        "exit_code",
+                        "exit_meaning",
                         "code",
                         "details"
                     ])
@@ -3947,35 +4538,53 @@ extension Components {
                     var container = encoder.container(keyedBy: CodingKeys.self)
                     try container.encode(self.generated_at, forKey: .generated_at)
                     try container.encode(self.message, forKey: .message)
+                    if self.exit_code == nil && _explicitNullKeys.contains(CodingKeys.exit_code.stringValue) {
+                        try container.encodeNil(forKey: .exit_code)
+                    } else {
+                        try container.encodeIfPresent(self.exit_code, forKey: .exit_code)
+                    }
+                    if self.exit_meaning == nil && _explicitNullKeys.contains(CodingKeys.exit_meaning.stringValue) {
+                        try container.encodeNil(forKey: .exit_meaning)
+                    } else {
+                        try container.encodeIfPresent(self.exit_meaning, forKey: .exit_meaning)
+                    }
                     try container.encode(self.code, forKey: .code)
                     try container.encode(self.details, forKey: .details)
                 }
             }
-            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1`.
-            public var value1: Components.Schemas.DependencyError_1.Value1Payload?
-            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2`.
+            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value1`.
+            public var value1: Components.Schemas.StoredDependencyError.Value1Payload?
+            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value2`.
             public struct Value2Payload: Codable, Hashable, Sendable {
                 private var _explicitNullKeys: Set<String> = []
 
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2/generated_at`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value2/generated_at`.
                 public var generated_at: Swift.String
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2/message`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value2/message`.
                 public var message: Swift.String
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2/code`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value2/exit_code`.
+                public var exit_code: Swift.Double?
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value2/exit_meaning`.
+                @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case validation_space_or_space_usage = "validation or usage"
+                }
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value2/exit_meaning`.
+                public var exit_meaning: Components.Schemas.StoredDependencyError.Value2Payload.exit_meaningPayload?
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value2/code`.
                 @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
                     case too_many_dependencies = "too_many_dependencies"
                 }
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2/code`.
-                public var code: Components.Schemas.DependencyError_1.Value2Payload.codePayload
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2/details`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value2/code`.
+                public var code: Components.Schemas.StoredDependencyError.Value2Payload.codePayload
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value2/details`.
                 public struct detailsPayload: Codable, Hashable, Sendable {
                     private var _explicitNullKeys: Set<String> = []
 
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2/details/dependent_id`.
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value2/details/dependent_id`.
                     public var dependent_id: Swift.String
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2/details/count`.
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value2/details/count`.
                     public var count: Swift.Int
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2/details/limit`.
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value2/details/limit`.
                     public var limit: Swift.Double
                     /// Creates a new `detailsPayload`.
                     ///
@@ -4026,29 +4635,37 @@ extension Components {
                         try container.encode(self.limit, forKey: .limit)
                     }
                 }
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2/details`.
-                public var details: Components.Schemas.DependencyError_1.Value2Payload.detailsPayload
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value2/details`.
+                public var details: Components.Schemas.StoredDependencyError.Value2Payload.detailsPayload
                 /// Creates a new `Value2Payload`.
                 ///
                 /// - Parameters:
                 ///   - generated_at:
                 ///   - message:
+                ///   - exit_code:
+                ///   - exit_meaning:
                 ///   - code:
                 ///   - details:
                 public init(
                     generated_at: Swift.String,
                     message: Swift.String,
-                    code: Components.Schemas.DependencyError_1.Value2Payload.codePayload,
-                    details: Components.Schemas.DependencyError_1.Value2Payload.detailsPayload
+                    exit_code: Swift.Double? = nil,
+                    exit_meaning: Components.Schemas.StoredDependencyError.Value2Payload.exit_meaningPayload? = nil,
+                    code: Components.Schemas.StoredDependencyError.Value2Payload.codePayload,
+                    details: Components.Schemas.StoredDependencyError.Value2Payload.detailsPayload
                 ) {
                     self.generated_at = generated_at
                     self.message = message
+                    self.exit_code = exit_code
+                    self.exit_meaning = exit_meaning
                     self.code = code
                     self.details = details
                 }
                 public enum CodingKeys: String, CodingKey {
                     case generated_at
                     case message
+                    case exit_code
+                    case exit_meaning
                     case code
                     case details
                 }
@@ -4063,17 +4680,27 @@ extension Components {
                         Swift.String.self,
                         forKey: .message
                     )
+                    self.exit_code = try container.decodeIfPresent(
+                        Swift.Double.self,
+                        forKey: .exit_code
+                    )
+                    self.exit_meaning = try container.decodeIfPresent(
+                        Components.Schemas.StoredDependencyError.Value2Payload.exit_meaningPayload.self,
+                        forKey: .exit_meaning
+                    )
                     self.code = try container.decode(
-                        Components.Schemas.DependencyError_1.Value2Payload.codePayload.self,
+                        Components.Schemas.StoredDependencyError.Value2Payload.codePayload.self,
                         forKey: .code
                     )
                     self.details = try container.decode(
-                        Components.Schemas.DependencyError_1.Value2Payload.detailsPayload.self,
+                        Components.Schemas.StoredDependencyError.Value2Payload.detailsPayload.self,
                         forKey: .details
                     )
                     try decoder.ensureNoAdditionalProperties(knownKeys: [
                         "generated_at",
                         "message",
+                        "exit_code",
+                        "exit_meaning",
                         "code",
                         "details"
                     ])
@@ -4083,66 +4710,84 @@ extension Components {
                     var container = encoder.container(keyedBy: CodingKeys.self)
                     try container.encode(self.generated_at, forKey: .generated_at)
                     try container.encode(self.message, forKey: .message)
+                    if self.exit_code == nil && _explicitNullKeys.contains(CodingKeys.exit_code.stringValue) {
+                        try container.encodeNil(forKey: .exit_code)
+                    } else {
+                        try container.encodeIfPresent(self.exit_code, forKey: .exit_code)
+                    }
+                    if self.exit_meaning == nil && _explicitNullKeys.contains(CodingKeys.exit_meaning.stringValue) {
+                        try container.encodeNil(forKey: .exit_meaning)
+                    } else {
+                        try container.encodeIfPresent(self.exit_meaning, forKey: .exit_meaning)
+                    }
                     try container.encode(self.code, forKey: .code)
                     try container.encode(self.details, forKey: .details)
                 }
             }
-            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2`.
-            public var value2: Components.Schemas.DependencyError_1.Value2Payload?
-            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3`.
+            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value2`.
+            public var value2: Components.Schemas.StoredDependencyError.Value2Payload?
+            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3`.
             public struct Value3Payload: Codable, Hashable, Sendable {
                 private var _explicitNullKeys: Set<String> = []
 
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/generated_at`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/generated_at`.
                 public var generated_at: Swift.String
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/message`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/message`.
                 public var message: Swift.String
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/code`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/exit_code`.
+                public var exit_code: Swift.Double?
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/exit_meaning`.
+                @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case validation_space_or_space_usage = "validation or usage"
+                }
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/exit_meaning`.
+                public var exit_meaning: Components.Schemas.StoredDependencyError.Value3Payload.exit_meaningPayload?
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/code`.
                 @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
                     case blocked = "blocked"
                 }
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/code`.
-                public var code: Components.Schemas.DependencyError_1.Value3Payload.codePayload
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/code`.
+                public var code: Components.Schemas.StoredDependencyError.Value3Payload.codePayload
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details`.
                 public struct detailsPayload: Codable, Hashable, Sendable {
                     private var _explicitNullKeys: Set<String> = []
 
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/task_id`.
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/task_id`.
                     public var task_id: Swift.String
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload`.
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload`.
                     public struct blockersPayloadPayload: Codable, Hashable, Sendable {
                         private var _explicitNullKeys: Set<String> = []
 
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/title`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/title`.
                         public var title: Swift.String
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/description`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/description`.
                         public var description: Swift.String?
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/project_id`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/project_id`.
                         public var project_id: Swift.String?
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/priority`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/priority`.
                         @frozen public enum priorityPayload: String, Codable, Hashable, Sendable, CaseIterable {
                             case P1 = "P1"
                             case P2 = "P2"
                             case P3 = "P3"
                             case P4 = "P4"
                         }
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/priority`.
-                        public var priority: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.priorityPayload
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/priority`.
+                        public var priority: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.priorityPayload
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/scheduled_at`.
                         public struct scheduled_atPayload: Codable, Hashable, Sendable {
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at/value1`.
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/scheduled_at/value1`.
                             public struct Value1Payload: Codable, Hashable, Sendable {
                                 private var _explicitNullKeys: Set<String> = []
 
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at/value1/kind`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/scheduled_at/value1/kind`.
                                 @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                                     case instant = "instant"
                                 }
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at/value1/kind`.
-                                public var kind: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value1Payload.kindPayload
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at/value1/utc`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/scheduled_at/value1/kind`.
+                                public var kind: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value1Payload.kindPayload
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/scheduled_at/value1/utc`.
                                 public var utc: Swift.String
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at/value1/time_zone`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/scheduled_at/value1/time_zone`.
                                 public var time_zone: Swift.String
                                 /// Creates a new `Value1Payload`.
                                 ///
@@ -4151,7 +4796,7 @@ extension Components {
                                 ///   - utc:
                                 ///   - time_zone:
                                 public init(
-                                    kind: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value1Payload.kindPayload,
+                                    kind: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value1Payload.kindPayload,
                                     utc: Swift.String,
                                     time_zone: Swift.String
                                 ) {
@@ -4168,7 +4813,7 @@ extension Components {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
                                     self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
                                     self.kind = try container.decode(
-                                        Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value1Payload.kindPayload.self,
+                                        Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value1Payload.kindPayload.self,
                                         forKey: .kind
                                     )
                                     self.utc = try container.decode(
@@ -4193,19 +4838,19 @@ extension Components {
                                     try container.encode(self.time_zone, forKey: .time_zone)
                                 }
                             }
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at/value1`.
-                            public var value1: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value1Payload?
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at/value2`.
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/scheduled_at/value1`.
+                            public var value1: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value1Payload?
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/scheduled_at/value2`.
                             public struct Value2Payload: Codable, Hashable, Sendable {
                                 private var _explicitNullKeys: Set<String> = []
 
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at/value2/kind`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/scheduled_at/value2/kind`.
                                 @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                                     case date = "date"
                                 }
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at/value2/kind`.
-                                public var kind: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value2Payload.kindPayload
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at/value2/date`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/scheduled_at/value2/kind`.
+                                public var kind: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value2Payload.kindPayload
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/scheduled_at/value2/date`.
                                 public var date: Swift.String
                                 /// Creates a new `Value2Payload`.
                                 ///
@@ -4213,7 +4858,7 @@ extension Components {
                                 ///   - kind:
                                 ///   - date:
                                 public init(
-                                    kind: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value2Payload.kindPayload,
+                                    kind: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value2Payload.kindPayload,
                                     date: Swift.String
                                 ) {
                                     self.kind = kind
@@ -4227,7 +4872,7 @@ extension Components {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
                                     self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
                                     self.kind = try container.decode(
-                                        Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value2Payload.kindPayload.self,
+                                        Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value2Payload.kindPayload.self,
                                         forKey: .kind
                                     )
                                     self.date = try container.decode(
@@ -4246,16 +4891,16 @@ extension Components {
                                     try container.encode(self.date, forKey: .date)
                                 }
                             }
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at/value2`.
-                            public var value2: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value2Payload?
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/scheduled_at/value2`.
+                            public var value2: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value2Payload?
                             /// Creates a new `scheduled_atPayload`.
                             ///
                             /// - Parameters:
                             ///   - value1:
                             ///   - value2:
                             public init(
-                                value1: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value1Payload? = nil,
-                                value2: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value2Payload? = nil
+                                value1: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value1Payload? = nil,
+                                value2: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value2Payload? = nil
                             ) {
                                 self.value1 = value1
                                 self.value2 = value2
@@ -4287,23 +4932,23 @@ extension Components {
                                 try self.value2?.encode(to: encoder)
                             }
                         }
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at`.
-                        public var scheduled_at: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload?
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/scheduled_at`.
+                        public var scheduled_at: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload?
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/due_at`.
                         public struct due_atPayload: Codable, Hashable, Sendable {
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at/value1`.
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/due_at/value1`.
                             public struct Value1Payload: Codable, Hashable, Sendable {
                                 private var _explicitNullKeys: Set<String> = []
 
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at/value1/kind`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/due_at/value1/kind`.
                                 @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                                     case instant = "instant"
                                 }
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at/value1/kind`.
-                                public var kind: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value1Payload.kindPayload
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at/value1/utc`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/due_at/value1/kind`.
+                                public var kind: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value1Payload.kindPayload
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/due_at/value1/utc`.
                                 public var utc: Swift.String
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at/value1/time_zone`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/due_at/value1/time_zone`.
                                 public var time_zone: Swift.String
                                 /// Creates a new `Value1Payload`.
                                 ///
@@ -4312,7 +4957,7 @@ extension Components {
                                 ///   - utc:
                                 ///   - time_zone:
                                 public init(
-                                    kind: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value1Payload.kindPayload,
+                                    kind: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value1Payload.kindPayload,
                                     utc: Swift.String,
                                     time_zone: Swift.String
                                 ) {
@@ -4329,7 +4974,7 @@ extension Components {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
                                     self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
                                     self.kind = try container.decode(
-                                        Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value1Payload.kindPayload.self,
+                                        Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value1Payload.kindPayload.self,
                                         forKey: .kind
                                     )
                                     self.utc = try container.decode(
@@ -4354,19 +4999,19 @@ extension Components {
                                     try container.encode(self.time_zone, forKey: .time_zone)
                                 }
                             }
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at/value1`.
-                            public var value1: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value1Payload?
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at/value2`.
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/due_at/value1`.
+                            public var value1: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value1Payload?
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/due_at/value2`.
                             public struct Value2Payload: Codable, Hashable, Sendable {
                                 private var _explicitNullKeys: Set<String> = []
 
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at/value2/kind`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/due_at/value2/kind`.
                                 @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                                     case date = "date"
                                 }
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at/value2/kind`.
-                                public var kind: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value2Payload.kindPayload
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at/value2/date`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/due_at/value2/kind`.
+                                public var kind: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value2Payload.kindPayload
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/due_at/value2/date`.
                                 public var date: Swift.String
                                 /// Creates a new `Value2Payload`.
                                 ///
@@ -4374,7 +5019,7 @@ extension Components {
                                 ///   - kind:
                                 ///   - date:
                                 public init(
-                                    kind: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value2Payload.kindPayload,
+                                    kind: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value2Payload.kindPayload,
                                     date: Swift.String
                                 ) {
                                     self.kind = kind
@@ -4388,7 +5033,7 @@ extension Components {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
                                     self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
                                     self.kind = try container.decode(
-                                        Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value2Payload.kindPayload.self,
+                                        Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value2Payload.kindPayload.self,
                                         forKey: .kind
                                     )
                                     self.date = try container.decode(
@@ -4407,16 +5052,16 @@ extension Components {
                                     try container.encode(self.date, forKey: .date)
                                 }
                             }
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at/value2`.
-                            public var value2: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value2Payload?
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/due_at/value2`.
+                            public var value2: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value2Payload?
                             /// Creates a new `due_atPayload`.
                             ///
                             /// - Parameters:
                             ///   - value1:
                             ///   - value2:
                             public init(
-                                value1: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value1Payload? = nil,
-                                value2: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value2Payload? = nil
+                                value1: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value1Payload? = nil,
+                                value2: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value2Payload? = nil
                             ) {
                                 self.value1 = value1
                                 self.value2 = value2
@@ -4448,52 +5093,52 @@ extension Components {
                                 try self.value2?.encode(to: encoder)
                             }
                         }
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at`.
-                        public var due_at: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload?
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/energy`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/due_at`.
+                        public var due_at: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload?
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/energy`.
                         public var energy: Swift.Int?
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/estimate_min`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/estimate_min`.
                         public var estimate_min: Swift.Int?
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/source`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/source`.
                         public var source: Swift.String
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/tags`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/tags`.
                         public var tags: [Swift.String]
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/attachments`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/attachments`.
                         public var attachments: [Components.Schemas.Attachment]?
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/external_id`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/external_id`.
                         public var external_id: Swift.String?
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/id`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/id`.
                         public var id: Swift.String
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/profile_id`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/profile_id`.
                         public var profile_id: Swift.String
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/entity_version`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/entity_version`.
                         public var entity_version: Swift.Double
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/row_version`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/row_version`.
                         public var row_version: Swift.Int
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/status`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/status`.
                         @frozen public enum statusPayload: String, Codable, Hashable, Sendable, CaseIterable {
                             case open = "open"
                             case done = "done"
                             case cancelled = "cancelled"
                             case snoozed = "snoozed"
                         }
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/status`.
-                        public var status: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.statusPayload
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/occurrence`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/status`.
+                        public var status: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.statusPayload
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/occurrence`.
                         public struct occurrencePayload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/occurrence/id`.
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/occurrence/id`.
                             public var id: Swift.String
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/occurrence/series_id`.
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/occurrence/series_id`.
                             public var series_id: Swift.String
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/occurrence/date`.
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/occurrence/date`.
                             public var date: Swift.String
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/occurrence/time`.
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/occurrence/time`.
                             @frozen public enum timePayload: Codable, Hashable, Sendable {
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/occurrence/time/SwiftTagged_date_f80d834415328e7c`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/occurrence/time/SwiftTagged_date_f80d834415328e7c`.
                                 case date(Components.Schemas.SwiftTagged_date_f80d834415328e7c)
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/occurrence/time/SwiftTagged_instant_9528e4435984f37d`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/occurrence/time/SwiftTagged_instant_9528e4435984f37d`.
                                 case instant(Components.Schemas.SwiftTagged_instant_9528e4435984f37d)
                                 public enum CodingKeys: String, CodingKey {
                                     case kind
@@ -4526,8 +5171,8 @@ extension Components {
                                     }
                                 }
                             }
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/occurrence/time`.
-                            public var time: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.occurrencePayload.timePayload?
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/occurrence/time`.
+                            public var time: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.occurrencePayload.timePayload?
                             /// Creates a new `occurrencePayload`.
                             ///
                             /// - Parameters:
@@ -4539,7 +5184,7 @@ extension Components {
                                 id: Swift.String,
                                 series_id: Swift.String,
                                 date: Swift.String,
-                                time: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.occurrencePayload.timePayload? = nil
+                                time: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.occurrencePayload.timePayload? = nil
                             ) {
                                 self.id = id
                                 self.series_id = series_id
@@ -4568,7 +5213,7 @@ extension Components {
                                     forKey: .date
                                 )
                                 self.time = try container.decodeIfPresent(
-                                    Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.occurrencePayload.timePayload.self,
+                                    Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.occurrencePayload.timePayload.self,
                                     forKey: .time
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
@@ -4591,17 +5236,17 @@ extension Components {
                                 }
                             }
                         }
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/occurrence`.
-                        public var occurrence: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.occurrencePayload?
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/legacy_series_detached`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/occurrence`.
+                        public var occurrence: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.occurrencePayload?
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/legacy_series_detached`.
                         public var legacy_series_detached: Swift.Bool?
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/created_at`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/created_at`.
                         public var created_at: Swift.String
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/updated_at`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/updated_at`.
                         public var updated_at: Swift.String
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/completed_at`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/completed_at`.
                         public var completed_at: Swift.String?
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/deleted_at`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockersPayload/deleted_at`.
                         public var deleted_at: Swift.String?
                         /// Creates a new `blockersPayloadPayload`.
                         ///
@@ -4633,9 +5278,9 @@ extension Components {
                             title: Swift.String,
                             description: Swift.String? = nil,
                             project_id: Swift.String? = nil,
-                            priority: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.priorityPayload,
-                            scheduled_at: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload? = nil,
-                            due_at: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload? = nil,
+                            priority: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.priorityPayload,
+                            scheduled_at: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload? = nil,
+                            due_at: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload? = nil,
                             energy: Swift.Int? = nil,
                             estimate_min: Swift.Int? = nil,
                             source: Swift.String,
@@ -4646,8 +5291,8 @@ extension Components {
                             profile_id: Swift.String,
                             entity_version: Swift.Double,
                             row_version: Swift.Int,
-                            status: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.statusPayload,
-                            occurrence: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.occurrencePayload? = nil,
+                            status: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.statusPayload,
+                            occurrence: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.occurrencePayload? = nil,
                             legacy_series_detached: Swift.Bool? = nil,
                             created_at: Swift.String,
                             updated_at: Swift.String,
@@ -4720,15 +5365,15 @@ extension Components {
                                 forKey: .project_id
                             )
                             self.priority = try container.decode(
-                                Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.priorityPayload.self,
+                                Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.priorityPayload.self,
                                 forKey: .priority
                             )
                             self.scheduled_at = try container.decodeIfPresent(
-                                Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.self,
+                                Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.self,
                                 forKey: .scheduled_at
                             )
                             self.due_at = try container.decodeIfPresent(
-                                Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.self,
+                                Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.self,
                                 forKey: .due_at
                             )
                             self.energy = try container.decodeIfPresent(
@@ -4772,11 +5417,11 @@ extension Components {
                                 forKey: .row_version
                             )
                             self.status = try container.decode(
-                                Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.statusPayload.self,
+                                Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.statusPayload.self,
                                 forKey: .status
                             )
                             self.occurrence = try container.decodeIfPresent(
-                                Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.occurrencePayload.self,
+                                Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload.occurrencePayload.self,
                                 forKey: .occurrence
                             )
                             self.legacy_series_detached = try container.decodeIfPresent(
@@ -4901,10 +5546,10 @@ extension Components {
                             }
                         }
                     }
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockers`.
-                    public typealias blockersPayload = [Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload]
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockers`.
-                    public var blockers: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayload
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockers`.
+                    public typealias blockersPayload = [Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayloadPayload]
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details/blockers`.
+                    public var blockers: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayload
                     /// Creates a new `detailsPayload`.
                     ///
                     /// - Parameters:
@@ -4912,7 +5557,7 @@ extension Components {
                     ///   - blockers:
                     public init(
                         task_id: Swift.String,
-                        blockers: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayload
+                        blockers: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayload
                     ) {
                         self.task_id = task_id
                         self.blockers = blockers
@@ -4929,7 +5574,7 @@ extension Components {
                             forKey: .task_id
                         )
                         self.blockers = try container.decode(
-                            Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayload.self,
+                            Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.blockersPayload.self,
                             forKey: .blockers
                         )
                         try decoder.ensureNoAdditionalProperties(knownKeys: [
@@ -4944,29 +5589,37 @@ extension Components {
                         try container.encode(self.blockers, forKey: .blockers)
                     }
                 }
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details`.
-                public var details: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3/details`.
+                public var details: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload
                 /// Creates a new `Value3Payload`.
                 ///
                 /// - Parameters:
                 ///   - generated_at:
                 ///   - message:
+                ///   - exit_code:
+                ///   - exit_meaning:
                 ///   - code:
                 ///   - details:
                 public init(
                     generated_at: Swift.String,
                     message: Swift.String,
-                    code: Components.Schemas.DependencyError_1.Value3Payload.codePayload,
-                    details: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload
+                    exit_code: Swift.Double? = nil,
+                    exit_meaning: Components.Schemas.StoredDependencyError.Value3Payload.exit_meaningPayload? = nil,
+                    code: Components.Schemas.StoredDependencyError.Value3Payload.codePayload,
+                    details: Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload
                 ) {
                     self.generated_at = generated_at
                     self.message = message
+                    self.exit_code = exit_code
+                    self.exit_meaning = exit_meaning
                     self.code = code
                     self.details = details
                 }
                 public enum CodingKeys: String, CodingKey {
                     case generated_at
                     case message
+                    case exit_code
+                    case exit_meaning
                     case code
                     case details
                 }
@@ -4981,17 +5634,27 @@ extension Components {
                         Swift.String.self,
                         forKey: .message
                     )
+                    self.exit_code = try container.decodeIfPresent(
+                        Swift.Double.self,
+                        forKey: .exit_code
+                    )
+                    self.exit_meaning = try container.decodeIfPresent(
+                        Components.Schemas.StoredDependencyError.Value3Payload.exit_meaningPayload.self,
+                        forKey: .exit_meaning
+                    )
                     self.code = try container.decode(
-                        Components.Schemas.DependencyError_1.Value3Payload.codePayload.self,
+                        Components.Schemas.StoredDependencyError.Value3Payload.codePayload.self,
                         forKey: .code
                     )
                     self.details = try container.decode(
-                        Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.self,
+                        Components.Schemas.StoredDependencyError.Value3Payload.detailsPayload.self,
                         forKey: .details
                     )
                     try decoder.ensureNoAdditionalProperties(knownKeys: [
                         "generated_at",
                         "message",
+                        "exit_code",
+                        "exit_meaning",
                         "code",
                         "details"
                     ])
@@ -5001,66 +5664,84 @@ extension Components {
                     var container = encoder.container(keyedBy: CodingKeys.self)
                     try container.encode(self.generated_at, forKey: .generated_at)
                     try container.encode(self.message, forKey: .message)
+                    if self.exit_code == nil && _explicitNullKeys.contains(CodingKeys.exit_code.stringValue) {
+                        try container.encodeNil(forKey: .exit_code)
+                    } else {
+                        try container.encodeIfPresent(self.exit_code, forKey: .exit_code)
+                    }
+                    if self.exit_meaning == nil && _explicitNullKeys.contains(CodingKeys.exit_meaning.stringValue) {
+                        try container.encodeNil(forKey: .exit_meaning)
+                    } else {
+                        try container.encodeIfPresent(self.exit_meaning, forKey: .exit_meaning)
+                    }
                     try container.encode(self.code, forKey: .code)
                     try container.encode(self.details, forKey: .details)
                 }
             }
-            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3`.
-            public var value3: Components.Schemas.DependencyError_1.Value3Payload?
-            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4`.
+            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value3`.
+            public var value3: Components.Schemas.StoredDependencyError.Value3Payload?
+            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4`.
             public struct Value4Payload: Codable, Hashable, Sendable {
                 private var _explicitNullKeys: Set<String> = []
 
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/generated_at`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/generated_at`.
                 public var generated_at: Swift.String
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/message`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/message`.
                 public var message: Swift.String
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/code`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/exit_code`.
+                public var exit_code: Swift.Double?
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/exit_meaning`.
+                @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case validation_space_or_space_usage = "validation or usage"
+                }
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/exit_meaning`.
+                public var exit_meaning: Components.Schemas.StoredDependencyError.Value4Payload.exit_meaningPayload?
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/code`.
                 @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
                     case blocks_done_task = "blocks_done_task"
                 }
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/code`.
-                public var code: Components.Schemas.DependencyError_1.Value4Payload.codePayload
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/code`.
+                public var code: Components.Schemas.StoredDependencyError.Value4Payload.codePayload
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details`.
                 public struct detailsPayload: Codable, Hashable, Sendable {
                     private var _explicitNullKeys: Set<String> = []
 
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/task_id`.
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/task_id`.
                     public var task_id: Swift.String
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload`.
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload`.
                     public struct done_dependentsPayloadPayload: Codable, Hashable, Sendable {
                         private var _explicitNullKeys: Set<String> = []
 
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/title`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/title`.
                         public var title: Swift.String
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/description`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/description`.
                         public var description: Swift.String?
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/project_id`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/project_id`.
                         public var project_id: Swift.String?
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/priority`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/priority`.
                         @frozen public enum priorityPayload: String, Codable, Hashable, Sendable, CaseIterable {
                             case P1 = "P1"
                             case P2 = "P2"
                             case P3 = "P3"
                             case P4 = "P4"
                         }
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/priority`.
-                        public var priority: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.priorityPayload
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/priority`.
+                        public var priority: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.priorityPayload
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/scheduled_at`.
                         public struct scheduled_atPayload: Codable, Hashable, Sendable {
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at/value1`.
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/scheduled_at/value1`.
                             public struct Value1Payload: Codable, Hashable, Sendable {
                                 private var _explicitNullKeys: Set<String> = []
 
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at/value1/kind`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/scheduled_at/value1/kind`.
                                 @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                                     case instant = "instant"
                                 }
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at/value1/kind`.
-                                public var kind: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value1Payload.kindPayload
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at/value1/utc`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/scheduled_at/value1/kind`.
+                                public var kind: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value1Payload.kindPayload
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/scheduled_at/value1/utc`.
                                 public var utc: Swift.String
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at/value1/time_zone`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/scheduled_at/value1/time_zone`.
                                 public var time_zone: Swift.String
                                 /// Creates a new `Value1Payload`.
                                 ///
@@ -5069,7 +5750,7 @@ extension Components {
                                 ///   - utc:
                                 ///   - time_zone:
                                 public init(
-                                    kind: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value1Payload.kindPayload,
+                                    kind: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value1Payload.kindPayload,
                                     utc: Swift.String,
                                     time_zone: Swift.String
                                 ) {
@@ -5086,7 +5767,7 @@ extension Components {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
                                     self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
                                     self.kind = try container.decode(
-                                        Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value1Payload.kindPayload.self,
+                                        Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value1Payload.kindPayload.self,
                                         forKey: .kind
                                     )
                                     self.utc = try container.decode(
@@ -5111,19 +5792,19 @@ extension Components {
                                     try container.encode(self.time_zone, forKey: .time_zone)
                                 }
                             }
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at/value1`.
-                            public var value1: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value1Payload?
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at/value2`.
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/scheduled_at/value1`.
+                            public var value1: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value1Payload?
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/scheduled_at/value2`.
                             public struct Value2Payload: Codable, Hashable, Sendable {
                                 private var _explicitNullKeys: Set<String> = []
 
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at/value2/kind`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/scheduled_at/value2/kind`.
                                 @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                                     case date = "date"
                                 }
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at/value2/kind`.
-                                public var kind: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value2Payload.kindPayload
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at/value2/date`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/scheduled_at/value2/kind`.
+                                public var kind: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value2Payload.kindPayload
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/scheduled_at/value2/date`.
                                 public var date: Swift.String
                                 /// Creates a new `Value2Payload`.
                                 ///
@@ -5131,7 +5812,7 @@ extension Components {
                                 ///   - kind:
                                 ///   - date:
                                 public init(
-                                    kind: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value2Payload.kindPayload,
+                                    kind: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value2Payload.kindPayload,
                                     date: Swift.String
                                 ) {
                                     self.kind = kind
@@ -5145,7 +5826,7 @@ extension Components {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
                                     self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
                                     self.kind = try container.decode(
-                                        Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value2Payload.kindPayload.self,
+                                        Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value2Payload.kindPayload.self,
                                         forKey: .kind
                                     )
                                     self.date = try container.decode(
@@ -5164,16 +5845,16 @@ extension Components {
                                     try container.encode(self.date, forKey: .date)
                                 }
                             }
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at/value2`.
-                            public var value2: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value2Payload?
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/scheduled_at/value2`.
+                            public var value2: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value2Payload?
                             /// Creates a new `scheduled_atPayload`.
                             ///
                             /// - Parameters:
                             ///   - value1:
                             ///   - value2:
                             public init(
-                                value1: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value1Payload? = nil,
-                                value2: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value2Payload? = nil
+                                value1: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value1Payload? = nil,
+                                value2: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value2Payload? = nil
                             ) {
                                 self.value1 = value1
                                 self.value2 = value2
@@ -5205,23 +5886,23 @@ extension Components {
                                 try self.value2?.encode(to: encoder)
                             }
                         }
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at`.
-                        public var scheduled_at: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload?
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/scheduled_at`.
+                        public var scheduled_at: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload?
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/due_at`.
                         public struct due_atPayload: Codable, Hashable, Sendable {
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at/value1`.
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/due_at/value1`.
                             public struct Value1Payload: Codable, Hashable, Sendable {
                                 private var _explicitNullKeys: Set<String> = []
 
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at/value1/kind`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/due_at/value1/kind`.
                                 @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                                     case instant = "instant"
                                 }
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at/value1/kind`.
-                                public var kind: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value1Payload.kindPayload
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at/value1/utc`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/due_at/value1/kind`.
+                                public var kind: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value1Payload.kindPayload
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/due_at/value1/utc`.
                                 public var utc: Swift.String
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at/value1/time_zone`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/due_at/value1/time_zone`.
                                 public var time_zone: Swift.String
                                 /// Creates a new `Value1Payload`.
                                 ///
@@ -5230,7 +5911,7 @@ extension Components {
                                 ///   - utc:
                                 ///   - time_zone:
                                 public init(
-                                    kind: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value1Payload.kindPayload,
+                                    kind: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value1Payload.kindPayload,
                                     utc: Swift.String,
                                     time_zone: Swift.String
                                 ) {
@@ -5247,7 +5928,7 @@ extension Components {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
                                     self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
                                     self.kind = try container.decode(
-                                        Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value1Payload.kindPayload.self,
+                                        Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value1Payload.kindPayload.self,
                                         forKey: .kind
                                     )
                                     self.utc = try container.decode(
@@ -5272,19 +5953,19 @@ extension Components {
                                     try container.encode(self.time_zone, forKey: .time_zone)
                                 }
                             }
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at/value1`.
-                            public var value1: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value1Payload?
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at/value2`.
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/due_at/value1`.
+                            public var value1: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value1Payload?
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/due_at/value2`.
                             public struct Value2Payload: Codable, Hashable, Sendable {
                                 private var _explicitNullKeys: Set<String> = []
 
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at/value2/kind`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/due_at/value2/kind`.
                                 @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                                     case date = "date"
                                 }
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at/value2/kind`.
-                                public var kind: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value2Payload.kindPayload
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at/value2/date`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/due_at/value2/kind`.
+                                public var kind: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value2Payload.kindPayload
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/due_at/value2/date`.
                                 public var date: Swift.String
                                 /// Creates a new `Value2Payload`.
                                 ///
@@ -5292,7 +5973,7 @@ extension Components {
                                 ///   - kind:
                                 ///   - date:
                                 public init(
-                                    kind: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value2Payload.kindPayload,
+                                    kind: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value2Payload.kindPayload,
                                     date: Swift.String
                                 ) {
                                     self.kind = kind
@@ -5306,7 +5987,7 @@ extension Components {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
                                     self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
                                     self.kind = try container.decode(
-                                        Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value2Payload.kindPayload.self,
+                                        Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value2Payload.kindPayload.self,
                                         forKey: .kind
                                     )
                                     self.date = try container.decode(
@@ -5325,16 +6006,16 @@ extension Components {
                                     try container.encode(self.date, forKey: .date)
                                 }
                             }
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at/value2`.
-                            public var value2: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value2Payload?
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/due_at/value2`.
+                            public var value2: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value2Payload?
                             /// Creates a new `due_atPayload`.
                             ///
                             /// - Parameters:
                             ///   - value1:
                             ///   - value2:
                             public init(
-                                value1: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value1Payload? = nil,
-                                value2: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value2Payload? = nil
+                                value1: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value1Payload? = nil,
+                                value2: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value2Payload? = nil
                             ) {
                                 self.value1 = value1
                                 self.value2 = value2
@@ -5366,52 +6047,52 @@ extension Components {
                                 try self.value2?.encode(to: encoder)
                             }
                         }
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at`.
-                        public var due_at: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload?
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/energy`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/due_at`.
+                        public var due_at: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload?
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/energy`.
                         public var energy: Swift.Int?
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/estimate_min`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/estimate_min`.
                         public var estimate_min: Swift.Int?
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/source`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/source`.
                         public var source: Swift.String
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/tags`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/tags`.
                         public var tags: [Swift.String]
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/attachments`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/attachments`.
                         public var attachments: [Components.Schemas.Attachment]?
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/external_id`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/external_id`.
                         public var external_id: Swift.String?
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/id`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/id`.
                         public var id: Swift.String
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/profile_id`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/profile_id`.
                         public var profile_id: Swift.String
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/entity_version`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/entity_version`.
                         public var entity_version: Swift.Double
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/row_version`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/row_version`.
                         public var row_version: Swift.Int
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/status`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/status`.
                         @frozen public enum statusPayload: String, Codable, Hashable, Sendable, CaseIterable {
                             case open = "open"
                             case done = "done"
                             case cancelled = "cancelled"
                             case snoozed = "snoozed"
                         }
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/status`.
-                        public var status: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.statusPayload
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/occurrence`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/status`.
+                        public var status: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.statusPayload
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/occurrence`.
                         public struct occurrencePayload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
 
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/occurrence/id`.
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/occurrence/id`.
                             public var id: Swift.String
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/occurrence/series_id`.
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/occurrence/series_id`.
                             public var series_id: Swift.String
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/occurrence/date`.
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/occurrence/date`.
                             public var date: Swift.String
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/occurrence/time`.
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/occurrence/time`.
                             @frozen public enum timePayload: Codable, Hashable, Sendable {
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/occurrence/time/SwiftTagged_date_f80d834415328e7c`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/occurrence/time/SwiftTagged_date_f80d834415328e7c`.
                                 case date(Components.Schemas.SwiftTagged_date_f80d834415328e7c)
-                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/occurrence/time/SwiftTagged_instant_9528e4435984f37d`.
+                                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/occurrence/time/SwiftTagged_instant_9528e4435984f37d`.
                                 case instant(Components.Schemas.SwiftTagged_instant_9528e4435984f37d)
                                 public enum CodingKeys: String, CodingKey {
                                     case kind
@@ -5444,8 +6125,8 @@ extension Components {
                                     }
                                 }
                             }
-                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/occurrence/time`.
-                            public var time: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.occurrencePayload.timePayload?
+                            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/occurrence/time`.
+                            public var time: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.occurrencePayload.timePayload?
                             /// Creates a new `occurrencePayload`.
                             ///
                             /// - Parameters:
@@ -5457,7 +6138,7 @@ extension Components {
                                 id: Swift.String,
                                 series_id: Swift.String,
                                 date: Swift.String,
-                                time: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.occurrencePayload.timePayload? = nil
+                                time: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.occurrencePayload.timePayload? = nil
                             ) {
                                 self.id = id
                                 self.series_id = series_id
@@ -5486,7 +6167,7 @@ extension Components {
                                     forKey: .date
                                 )
                                 self.time = try container.decodeIfPresent(
-                                    Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.occurrencePayload.timePayload.self,
+                                    Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.occurrencePayload.timePayload.self,
                                     forKey: .time
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
@@ -5509,17 +6190,17 @@ extension Components {
                                 }
                             }
                         }
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/occurrence`.
-                        public var occurrence: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.occurrencePayload?
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/legacy_series_detached`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/occurrence`.
+                        public var occurrence: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.occurrencePayload?
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/legacy_series_detached`.
                         public var legacy_series_detached: Swift.Bool?
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/created_at`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/created_at`.
                         public var created_at: Swift.String
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/updated_at`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/updated_at`.
                         public var updated_at: Swift.String
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/completed_at`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/completed_at`.
                         public var completed_at: Swift.String?
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/deleted_at`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependentsPayload/deleted_at`.
                         public var deleted_at: Swift.String?
                         /// Creates a new `done_dependentsPayloadPayload`.
                         ///
@@ -5551,9 +6232,9 @@ extension Components {
                             title: Swift.String,
                             description: Swift.String? = nil,
                             project_id: Swift.String? = nil,
-                            priority: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.priorityPayload,
-                            scheduled_at: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload? = nil,
-                            due_at: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload? = nil,
+                            priority: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.priorityPayload,
+                            scheduled_at: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload? = nil,
+                            due_at: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload? = nil,
                             energy: Swift.Int? = nil,
                             estimate_min: Swift.Int? = nil,
                             source: Swift.String,
@@ -5564,8 +6245,8 @@ extension Components {
                             profile_id: Swift.String,
                             entity_version: Swift.Double,
                             row_version: Swift.Int,
-                            status: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.statusPayload,
-                            occurrence: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.occurrencePayload? = nil,
+                            status: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.statusPayload,
+                            occurrence: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.occurrencePayload? = nil,
                             legacy_series_detached: Swift.Bool? = nil,
                             created_at: Swift.String,
                             updated_at: Swift.String,
@@ -5638,15 +6319,15 @@ extension Components {
                                 forKey: .project_id
                             )
                             self.priority = try container.decode(
-                                Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.priorityPayload.self,
+                                Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.priorityPayload.self,
                                 forKey: .priority
                             )
                             self.scheduled_at = try container.decodeIfPresent(
-                                Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.self,
+                                Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.self,
                                 forKey: .scheduled_at
                             )
                             self.due_at = try container.decodeIfPresent(
-                                Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.self,
+                                Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.self,
                                 forKey: .due_at
                             )
                             self.energy = try container.decodeIfPresent(
@@ -5690,11 +6371,11 @@ extension Components {
                                 forKey: .row_version
                             )
                             self.status = try container.decode(
-                                Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.statusPayload.self,
+                                Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.statusPayload.self,
                                 forKey: .status
                             )
                             self.occurrence = try container.decodeIfPresent(
-                                Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.occurrencePayload.self,
+                                Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload.occurrencePayload.self,
                                 forKey: .occurrence
                             )
                             self.legacy_series_detached = try container.decodeIfPresent(
@@ -5819,11 +6500,11 @@ extension Components {
                             }
                         }
                     }
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependents`.
-                    public typealias done_dependentsPayload = [Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload]
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependents`.
-                    public var done_dependents: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayload
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/follow_up_depends_on`.
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependents`.
+                    public typealias done_dependentsPayload = [Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayloadPayload]
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/done_dependents`.
+                    public var done_dependents: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayload
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details/follow_up_depends_on`.
                     public var follow_up_depends_on: Swift.String
                     /// Creates a new `detailsPayload`.
                     ///
@@ -5833,7 +6514,7 @@ extension Components {
                     ///   - follow_up_depends_on:
                     public init(
                         task_id: Swift.String,
-                        done_dependents: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayload,
+                        done_dependents: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayload,
                         follow_up_depends_on: Swift.String
                     ) {
                         self.task_id = task_id
@@ -5853,7 +6534,7 @@ extension Components {
                             forKey: .task_id
                         )
                         self.done_dependents = try container.decode(
-                            Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayload.self,
+                            Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.done_dependentsPayload.self,
                             forKey: .done_dependents
                         )
                         self.follow_up_depends_on = try container.decode(
@@ -5874,29 +6555,37 @@ extension Components {
                         try container.encode(self.follow_up_depends_on, forKey: .follow_up_depends_on)
                     }
                 }
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details`.
-                public var details: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4/details`.
+                public var details: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload
                 /// Creates a new `Value4Payload`.
                 ///
                 /// - Parameters:
                 ///   - generated_at:
                 ///   - message:
+                ///   - exit_code:
+                ///   - exit_meaning:
                 ///   - code:
                 ///   - details:
                 public init(
                     generated_at: Swift.String,
                     message: Swift.String,
-                    code: Components.Schemas.DependencyError_1.Value4Payload.codePayload,
-                    details: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload
+                    exit_code: Swift.Double? = nil,
+                    exit_meaning: Components.Schemas.StoredDependencyError.Value4Payload.exit_meaningPayload? = nil,
+                    code: Components.Schemas.StoredDependencyError.Value4Payload.codePayload,
+                    details: Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload
                 ) {
                     self.generated_at = generated_at
                     self.message = message
+                    self.exit_code = exit_code
+                    self.exit_meaning = exit_meaning
                     self.code = code
                     self.details = details
                 }
                 public enum CodingKeys: String, CodingKey {
                     case generated_at
                     case message
+                    case exit_code
+                    case exit_meaning
                     case code
                     case details
                 }
@@ -5911,17 +6600,27 @@ extension Components {
                         Swift.String.self,
                         forKey: .message
                     )
+                    self.exit_code = try container.decodeIfPresent(
+                        Swift.Double.self,
+                        forKey: .exit_code
+                    )
+                    self.exit_meaning = try container.decodeIfPresent(
+                        Components.Schemas.StoredDependencyError.Value4Payload.exit_meaningPayload.self,
+                        forKey: .exit_meaning
+                    )
                     self.code = try container.decode(
-                        Components.Schemas.DependencyError_1.Value4Payload.codePayload.self,
+                        Components.Schemas.StoredDependencyError.Value4Payload.codePayload.self,
                         forKey: .code
                     )
                     self.details = try container.decode(
-                        Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.self,
+                        Components.Schemas.StoredDependencyError.Value4Payload.detailsPayload.self,
                         forKey: .details
                     )
                     try decoder.ensureNoAdditionalProperties(knownKeys: [
                         "generated_at",
                         "message",
+                        "exit_code",
+                        "exit_meaning",
                         "code",
                         "details"
                     ])
@@ -5931,41 +6630,59 @@ extension Components {
                     var container = encoder.container(keyedBy: CodingKeys.self)
                     try container.encode(self.generated_at, forKey: .generated_at)
                     try container.encode(self.message, forKey: .message)
+                    if self.exit_code == nil && _explicitNullKeys.contains(CodingKeys.exit_code.stringValue) {
+                        try container.encodeNil(forKey: .exit_code)
+                    } else {
+                        try container.encodeIfPresent(self.exit_code, forKey: .exit_code)
+                    }
+                    if self.exit_meaning == nil && _explicitNullKeys.contains(CodingKeys.exit_meaning.stringValue) {
+                        try container.encodeNil(forKey: .exit_meaning)
+                    } else {
+                        try container.encodeIfPresent(self.exit_meaning, forKey: .exit_meaning)
+                    }
                     try container.encode(self.code, forKey: .code)
                     try container.encode(self.details, forKey: .details)
                 }
             }
-            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4`.
-            public var value4: Components.Schemas.DependencyError_1.Value4Payload?
-            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5`.
+            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value4`.
+            public var value4: Components.Schemas.StoredDependencyError.Value4Payload?
+            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value5`.
             public struct Value5Payload: Codable, Hashable, Sendable {
                 private var _explicitNullKeys: Set<String> = []
 
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/generated_at`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value5/generated_at`.
                 public var generated_at: Swift.String
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/message`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value5/message`.
                 public var message: Swift.String
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/code`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value5/exit_code`.
+                public var exit_code: Swift.Double?
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value5/exit_meaning`.
+                @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case validation_space_or_space_usage = "validation or usage"
+                }
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value5/exit_meaning`.
+                public var exit_meaning: Components.Schemas.StoredDependencyError.Value5Payload.exit_meaningPayload?
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value5/code`.
                 @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
                     case has_dependencies = "has_dependencies"
                 }
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/code`.
-                public var code: Components.Schemas.DependencyError_1.Value5Payload.codePayload
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/details`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value5/code`.
+                public var code: Components.Schemas.StoredDependencyError.Value5Payload.codePayload
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value5/details`.
                 public struct detailsPayload: Codable, Hashable, Sendable {
                     private var _explicitNullKeys: Set<String> = []
 
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/details/task_id`.
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value5/details/task_id`.
                     public var task_id: Swift.String
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/details/dependenciesPayload`.
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value5/details/dependenciesPayload`.
                     public struct dependenciesPayloadPayload: Codable, Hashable, Sendable {
                         private var _explicitNullKeys: Set<String> = []
 
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/details/dependenciesPayload/profile_id`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value5/details/dependenciesPayload/profile_id`.
                         public var profile_id: Swift.String
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/details/dependenciesPayload/dependent_id`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value5/details/dependenciesPayload/dependent_id`.
                         public var dependent_id: Swift.String
-                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/details/dependenciesPayload/blocker_id`.
+                        /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value5/details/dependenciesPayload/blocker_id`.
                         public var blocker_id: Swift.String
                         /// Creates a new `dependenciesPayloadPayload`.
                         ///
@@ -6016,16 +6733,16 @@ extension Components {
                             try container.encode(self.blocker_id, forKey: .blocker_id)
                         }
                     }
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/details/dependencies`.
-                    public typealias dependenciesPayload = [Components.Schemas.DependencyError_1.Value5Payload.detailsPayload.dependenciesPayloadPayload]
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/details/dependencies`.
-                    public var dependencies: Components.Schemas.DependencyError_1.Value5Payload.detailsPayload.dependenciesPayload
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/details/flag`.
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value5/details/dependencies`.
+                    public typealias dependenciesPayload = [Components.Schemas.StoredDependencyError.Value5Payload.detailsPayload.dependenciesPayloadPayload]
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value5/details/dependencies`.
+                    public var dependencies: Components.Schemas.StoredDependencyError.Value5Payload.detailsPayload.dependenciesPayload
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value5/details/flag`.
                     @frozen public enum flagPayload: String, Codable, Hashable, Sendable, CaseIterable {
                         case _hyphen__hyphen_with_hyphen_dependencies = "--with-dependencies"
                     }
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/details/flag`.
-                    public var flag: Components.Schemas.DependencyError_1.Value5Payload.detailsPayload.flagPayload
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value5/details/flag`.
+                    public var flag: Components.Schemas.StoredDependencyError.Value5Payload.detailsPayload.flagPayload
                     /// Creates a new `detailsPayload`.
                     ///
                     /// - Parameters:
@@ -6034,8 +6751,8 @@ extension Components {
                     ///   - flag:
                     public init(
                         task_id: Swift.String,
-                        dependencies: Components.Schemas.DependencyError_1.Value5Payload.detailsPayload.dependenciesPayload,
-                        flag: Components.Schemas.DependencyError_1.Value5Payload.detailsPayload.flagPayload
+                        dependencies: Components.Schemas.StoredDependencyError.Value5Payload.detailsPayload.dependenciesPayload,
+                        flag: Components.Schemas.StoredDependencyError.Value5Payload.detailsPayload.flagPayload
                     ) {
                         self.task_id = task_id
                         self.dependencies = dependencies
@@ -6054,11 +6771,11 @@ extension Components {
                             forKey: .task_id
                         )
                         self.dependencies = try container.decode(
-                            Components.Schemas.DependencyError_1.Value5Payload.detailsPayload.dependenciesPayload.self,
+                            Components.Schemas.StoredDependencyError.Value5Payload.detailsPayload.dependenciesPayload.self,
                             forKey: .dependencies
                         )
                         self.flag = try container.decode(
-                            Components.Schemas.DependencyError_1.Value5Payload.detailsPayload.flagPayload.self,
+                            Components.Schemas.StoredDependencyError.Value5Payload.detailsPayload.flagPayload.self,
                             forKey: .flag
                         )
                         try decoder.ensureNoAdditionalProperties(knownKeys: [
@@ -6075,29 +6792,37 @@ extension Components {
                         try container.encode(self.flag, forKey: .flag)
                     }
                 }
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/details`.
-                public var details: Components.Schemas.DependencyError_1.Value5Payload.detailsPayload
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value5/details`.
+                public var details: Components.Schemas.StoredDependencyError.Value5Payload.detailsPayload
                 /// Creates a new `Value5Payload`.
                 ///
                 /// - Parameters:
                 ///   - generated_at:
                 ///   - message:
+                ///   - exit_code:
+                ///   - exit_meaning:
                 ///   - code:
                 ///   - details:
                 public init(
                     generated_at: Swift.String,
                     message: Swift.String,
-                    code: Components.Schemas.DependencyError_1.Value5Payload.codePayload,
-                    details: Components.Schemas.DependencyError_1.Value5Payload.detailsPayload
+                    exit_code: Swift.Double? = nil,
+                    exit_meaning: Components.Schemas.StoredDependencyError.Value5Payload.exit_meaningPayload? = nil,
+                    code: Components.Schemas.StoredDependencyError.Value5Payload.codePayload,
+                    details: Components.Schemas.StoredDependencyError.Value5Payload.detailsPayload
                 ) {
                     self.generated_at = generated_at
                     self.message = message
+                    self.exit_code = exit_code
+                    self.exit_meaning = exit_meaning
                     self.code = code
                     self.details = details
                 }
                 public enum CodingKeys: String, CodingKey {
                     case generated_at
                     case message
+                    case exit_code
+                    case exit_meaning
                     case code
                     case details
                 }
@@ -6112,17 +6837,27 @@ extension Components {
                         Swift.String.self,
                         forKey: .message
                     )
+                    self.exit_code = try container.decodeIfPresent(
+                        Swift.Double.self,
+                        forKey: .exit_code
+                    )
+                    self.exit_meaning = try container.decodeIfPresent(
+                        Components.Schemas.StoredDependencyError.Value5Payload.exit_meaningPayload.self,
+                        forKey: .exit_meaning
+                    )
                     self.code = try container.decode(
-                        Components.Schemas.DependencyError_1.Value5Payload.codePayload.self,
+                        Components.Schemas.StoredDependencyError.Value5Payload.codePayload.self,
                         forKey: .code
                     )
                     self.details = try container.decode(
-                        Components.Schemas.DependencyError_1.Value5Payload.detailsPayload.self,
+                        Components.Schemas.StoredDependencyError.Value5Payload.detailsPayload.self,
                         forKey: .details
                     )
                     try decoder.ensureNoAdditionalProperties(knownKeys: [
                         "generated_at",
                         "message",
+                        "exit_code",
+                        "exit_meaning",
                         "code",
                         "details"
                     ])
@@ -6132,35 +6867,53 @@ extension Components {
                     var container = encoder.container(keyedBy: CodingKeys.self)
                     try container.encode(self.generated_at, forKey: .generated_at)
                     try container.encode(self.message, forKey: .message)
+                    if self.exit_code == nil && _explicitNullKeys.contains(CodingKeys.exit_code.stringValue) {
+                        try container.encodeNil(forKey: .exit_code)
+                    } else {
+                        try container.encodeIfPresent(self.exit_code, forKey: .exit_code)
+                    }
+                    if self.exit_meaning == nil && _explicitNullKeys.contains(CodingKeys.exit_meaning.stringValue) {
+                        try container.encodeNil(forKey: .exit_meaning)
+                    } else {
+                        try container.encodeIfPresent(self.exit_meaning, forKey: .exit_meaning)
+                    }
                     try container.encode(self.code, forKey: .code)
                     try container.encode(self.details, forKey: .details)
                 }
             }
-            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5`.
-            public var value5: Components.Schemas.DependencyError_1.Value5Payload?
-            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6`.
+            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value5`.
+            public var value5: Components.Schemas.StoredDependencyError.Value5Payload?
+            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value6`.
             public struct Value6Payload: Codable, Hashable, Sendable {
                 private var _explicitNullKeys: Set<String> = []
 
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6/generated_at`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value6/generated_at`.
                 public var generated_at: Swift.String
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6/message`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value6/message`.
                 public var message: Swift.String
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6/code`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value6/exit_code`.
+                public var exit_code: Swift.Double?
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value6/exit_meaning`.
+                @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case validation_space_or_space_usage = "validation or usage"
+                }
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value6/exit_meaning`.
+                public var exit_meaning: Components.Schemas.StoredDependencyError.Value6Payload.exit_meaningPayload?
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value6/code`.
                 @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
                     case dependency_profile_mismatch = "dependency_profile_mismatch"
                 }
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6/code`.
-                public var code: Components.Schemas.DependencyError_1.Value6Payload.codePayload
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6/details`.
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value6/code`.
+                public var code: Components.Schemas.StoredDependencyError.Value6Payload.codePayload
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value6/details`.
                 public struct detailsPayload: Codable, Hashable, Sendable {
                     private var _explicitNullKeys: Set<String> = []
 
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6/details/dependent_id`.
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value6/details/dependent_id`.
                     public var dependent_id: Swift.String
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6/details/blocker_id`.
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value6/details/blocker_id`.
                     public var blocker_id: Swift.String
-                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6/details/profile_id`.
+                    /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value6/details/profile_id`.
                     public var profile_id: Swift.String
                     /// Creates a new `detailsPayload`.
                     ///
@@ -6211,29 +6964,37 @@ extension Components {
                         try container.encode(self.profile_id, forKey: .profile_id)
                     }
                 }
-                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6/details`.
-                public var details: Components.Schemas.DependencyError_1.Value6Payload.detailsPayload
+                /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value6/details`.
+                public var details: Components.Schemas.StoredDependencyError.Value6Payload.detailsPayload
                 /// Creates a new `Value6Payload`.
                 ///
                 /// - Parameters:
                 ///   - generated_at:
                 ///   - message:
+                ///   - exit_code:
+                ///   - exit_meaning:
                 ///   - code:
                 ///   - details:
                 public init(
                     generated_at: Swift.String,
                     message: Swift.String,
-                    code: Components.Schemas.DependencyError_1.Value6Payload.codePayload,
-                    details: Components.Schemas.DependencyError_1.Value6Payload.detailsPayload
+                    exit_code: Swift.Double? = nil,
+                    exit_meaning: Components.Schemas.StoredDependencyError.Value6Payload.exit_meaningPayload? = nil,
+                    code: Components.Schemas.StoredDependencyError.Value6Payload.codePayload,
+                    details: Components.Schemas.StoredDependencyError.Value6Payload.detailsPayload
                 ) {
                     self.generated_at = generated_at
                     self.message = message
+                    self.exit_code = exit_code
+                    self.exit_meaning = exit_meaning
                     self.code = code
                     self.details = details
                 }
                 public enum CodingKeys: String, CodingKey {
                     case generated_at
                     case message
+                    case exit_code
+                    case exit_meaning
                     case code
                     case details
                 }
@@ -6248,17 +7009,27 @@ extension Components {
                         Swift.String.self,
                         forKey: .message
                     )
+                    self.exit_code = try container.decodeIfPresent(
+                        Swift.Double.self,
+                        forKey: .exit_code
+                    )
+                    self.exit_meaning = try container.decodeIfPresent(
+                        Components.Schemas.StoredDependencyError.Value6Payload.exit_meaningPayload.self,
+                        forKey: .exit_meaning
+                    )
                     self.code = try container.decode(
-                        Components.Schemas.DependencyError_1.Value6Payload.codePayload.self,
+                        Components.Schemas.StoredDependencyError.Value6Payload.codePayload.self,
                         forKey: .code
                     )
                     self.details = try container.decode(
-                        Components.Schemas.DependencyError_1.Value6Payload.detailsPayload.self,
+                        Components.Schemas.StoredDependencyError.Value6Payload.detailsPayload.self,
                         forKey: .details
                     )
                     try decoder.ensureNoAdditionalProperties(knownKeys: [
                         "generated_at",
                         "message",
+                        "exit_code",
+                        "exit_meaning",
                         "code",
                         "details"
                     ])
@@ -6268,13 +7039,23 @@ extension Components {
                     var container = encoder.container(keyedBy: CodingKeys.self)
                     try container.encode(self.generated_at, forKey: .generated_at)
                     try container.encode(self.message, forKey: .message)
+                    if self.exit_code == nil && _explicitNullKeys.contains(CodingKeys.exit_code.stringValue) {
+                        try container.encodeNil(forKey: .exit_code)
+                    } else {
+                        try container.encodeIfPresent(self.exit_code, forKey: .exit_code)
+                    }
+                    if self.exit_meaning == nil && _explicitNullKeys.contains(CodingKeys.exit_meaning.stringValue) {
+                        try container.encodeNil(forKey: .exit_meaning)
+                    } else {
+                        try container.encodeIfPresent(self.exit_meaning, forKey: .exit_meaning)
+                    }
                     try container.encode(self.code, forKey: .code)
                     try container.encode(self.details, forKey: .details)
                 }
             }
-            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6`.
-            public var value6: Components.Schemas.DependencyError_1.Value6Payload?
-            /// Creates a new `DependencyError_1`.
+            /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value6`.
+            public var value6: Components.Schemas.StoredDependencyError.Value6Payload?
+            /// Creates a new `StoredDependencyError`.
             ///
             /// - Parameters:
             ///   - value1:
@@ -6284,12 +7065,12 @@ extension Components {
             ///   - value5:
             ///   - value6:
             public init(
-                value1: Components.Schemas.DependencyError_1.Value1Payload? = nil,
-                value2: Components.Schemas.DependencyError_1.Value2Payload? = nil,
-                value3: Components.Schemas.DependencyError_1.Value3Payload? = nil,
-                value4: Components.Schemas.DependencyError_1.Value4Payload? = nil,
-                value5: Components.Schemas.DependencyError_1.Value5Payload? = nil,
-                value6: Components.Schemas.DependencyError_1.Value6Payload? = nil
+                value1: Components.Schemas.StoredDependencyError.Value1Payload? = nil,
+                value2: Components.Schemas.StoredDependencyError.Value2Payload? = nil,
+                value3: Components.Schemas.StoredDependencyError.Value3Payload? = nil,
+                value4: Components.Schemas.StoredDependencyError.Value4Payload? = nil,
+                value5: Components.Schemas.StoredDependencyError.Value5Payload? = nil,
+                value6: Components.Schemas.StoredDependencyError.Value6Payload? = nil
             ) {
                 self.value1 = value1
                 self.value2 = value2
@@ -7568,6 +8349,2712 @@ extension Components {
                 }
             }
         }
+        /// - Remark: Generated from `#/components/schemas/DependencyError_1`.
+        public struct DependencyError_1: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1`.
+            public struct Value1Payload: Codable, Hashable, Sendable {
+                private var _explicitNullKeys: Set<String> = []
+
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1/generated_at`.
+                public var generated_at: Swift.String
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1/message`.
+                public var message: Swift.String
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1/exit_code`.
+                public var exit_code: Swift.Double
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1/exit_meaning`.
+                @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case validation_space_or_space_usage = "validation or usage"
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1/exit_meaning`.
+                public var exit_meaning: Components.Schemas.DependencyError_1.Value1Payload.exit_meaningPayload
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1/code`.
+                @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case dependency_cycle = "dependency_cycle"
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1/code`.
+                public var code: Components.Schemas.DependencyError_1.Value1Payload.codePayload
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1/details`.
+                public struct detailsPayload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1/details/dependent_id`.
+                    public var dependent_id: Swift.String
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1/details/blocker_id`.
+                    public var blocker_id: Swift.String
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1/details/path`.
+                    public var path: [Swift.String]
+                    /// Creates a new `detailsPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - dependent_id:
+                    ///   - blocker_id:
+                    ///   - path:
+                    public init(
+                        dependent_id: Swift.String,
+                        blocker_id: Swift.String,
+                        path: [Swift.String]
+                    ) {
+                        self.dependent_id = dependent_id
+                        self.blocker_id = blocker_id
+                        self.path = path
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case dependent_id
+                        case blocker_id
+                        case path
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.dependent_id = try container.decode(
+                            Swift.String.self,
+                            forKey: .dependent_id
+                        )
+                        self.blocker_id = try container.decode(
+                            Swift.String.self,
+                            forKey: .blocker_id
+                        )
+                        self.path = try container.decode(
+                            [Swift.String].self,
+                            forKey: .path
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "dependent_id",
+                            "blocker_id",
+                            "path"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.dependent_id, forKey: .dependent_id)
+                        try container.encode(self.blocker_id, forKey: .blocker_id)
+                        try container.encode(self.path, forKey: .path)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1/details`.
+                public var details: Components.Schemas.DependencyError_1.Value1Payload.detailsPayload
+                /// Creates a new `Value1Payload`.
+                ///
+                /// - Parameters:
+                ///   - generated_at:
+                ///   - message:
+                ///   - exit_code:
+                ///   - exit_meaning:
+                ///   - code:
+                ///   - details:
+                public init(
+                    generated_at: Swift.String,
+                    message: Swift.String,
+                    exit_code: Swift.Double,
+                    exit_meaning: Components.Schemas.DependencyError_1.Value1Payload.exit_meaningPayload,
+                    code: Components.Schemas.DependencyError_1.Value1Payload.codePayload,
+                    details: Components.Schemas.DependencyError_1.Value1Payload.detailsPayload
+                ) {
+                    self.generated_at = generated_at
+                    self.message = message
+                    self.exit_code = exit_code
+                    self.exit_meaning = exit_meaning
+                    self.code = code
+                    self.details = details
+                }
+                public enum CodingKeys: String, CodingKey {
+                    case generated_at
+                    case message
+                    case exit_code
+                    case exit_meaning
+                    case code
+                    case details
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                    self.generated_at = try container.decode(
+                        Swift.String.self,
+                        forKey: .generated_at
+                    )
+                    self.message = try container.decode(
+                        Swift.String.self,
+                        forKey: .message
+                    )
+                    self.exit_code = try container.decode(
+                        Swift.Double.self,
+                        forKey: .exit_code
+                    )
+                    self.exit_meaning = try container.decode(
+                        Components.Schemas.DependencyError_1.Value1Payload.exit_meaningPayload.self,
+                        forKey: .exit_meaning
+                    )
+                    self.code = try container.decode(
+                        Components.Schemas.DependencyError_1.Value1Payload.codePayload.self,
+                        forKey: .code
+                    )
+                    self.details = try container.decode(
+                        Components.Schemas.DependencyError_1.Value1Payload.detailsPayload.self,
+                        forKey: .details
+                    )
+                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                        "generated_at",
+                        "message",
+                        "exit_code",
+                        "exit_meaning",
+                        "code",
+                        "details"
+                    ])
+                }
+
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    var container = encoder.container(keyedBy: CodingKeys.self)
+                    try container.encode(self.generated_at, forKey: .generated_at)
+                    try container.encode(self.message, forKey: .message)
+                    try container.encode(self.exit_code, forKey: .exit_code)
+                    try container.encode(self.exit_meaning, forKey: .exit_meaning)
+                    try container.encode(self.code, forKey: .code)
+                    try container.encode(self.details, forKey: .details)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value1`.
+            public var value1: Components.Schemas.DependencyError_1.Value1Payload?
+            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2`.
+            public struct Value2Payload: Codable, Hashable, Sendable {
+                private var _explicitNullKeys: Set<String> = []
+
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2/generated_at`.
+                public var generated_at: Swift.String
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2/message`.
+                public var message: Swift.String
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2/exit_code`.
+                public var exit_code: Swift.Double
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2/exit_meaning`.
+                @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case validation_space_or_space_usage = "validation or usage"
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2/exit_meaning`.
+                public var exit_meaning: Components.Schemas.DependencyError_1.Value2Payload.exit_meaningPayload
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2/code`.
+                @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case too_many_dependencies = "too_many_dependencies"
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2/code`.
+                public var code: Components.Schemas.DependencyError_1.Value2Payload.codePayload
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2/details`.
+                public struct detailsPayload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2/details/dependent_id`.
+                    public var dependent_id: Swift.String
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2/details/count`.
+                    public var count: Swift.Int
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2/details/limit`.
+                    public var limit: Swift.Double
+                    /// Creates a new `detailsPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - dependent_id:
+                    ///   - count:
+                    ///   - limit:
+                    public init(
+                        dependent_id: Swift.String,
+                        count: Swift.Int,
+                        limit: Swift.Double
+                    ) {
+                        self.dependent_id = dependent_id
+                        self.count = count
+                        self.limit = limit
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case dependent_id
+                        case count
+                        case limit
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.dependent_id = try container.decode(
+                            Swift.String.self,
+                            forKey: .dependent_id
+                        )
+                        self.count = try container.decode(
+                            Swift.Int.self,
+                            forKey: .count
+                        )
+                        self.limit = try container.decode(
+                            Swift.Double.self,
+                            forKey: .limit
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "dependent_id",
+                            "count",
+                            "limit"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.dependent_id, forKey: .dependent_id)
+                        try container.encode(self.count, forKey: .count)
+                        try container.encode(self.limit, forKey: .limit)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2/details`.
+                public var details: Components.Schemas.DependencyError_1.Value2Payload.detailsPayload
+                /// Creates a new `Value2Payload`.
+                ///
+                /// - Parameters:
+                ///   - generated_at:
+                ///   - message:
+                ///   - exit_code:
+                ///   - exit_meaning:
+                ///   - code:
+                ///   - details:
+                public init(
+                    generated_at: Swift.String,
+                    message: Swift.String,
+                    exit_code: Swift.Double,
+                    exit_meaning: Components.Schemas.DependencyError_1.Value2Payload.exit_meaningPayload,
+                    code: Components.Schemas.DependencyError_1.Value2Payload.codePayload,
+                    details: Components.Schemas.DependencyError_1.Value2Payload.detailsPayload
+                ) {
+                    self.generated_at = generated_at
+                    self.message = message
+                    self.exit_code = exit_code
+                    self.exit_meaning = exit_meaning
+                    self.code = code
+                    self.details = details
+                }
+                public enum CodingKeys: String, CodingKey {
+                    case generated_at
+                    case message
+                    case exit_code
+                    case exit_meaning
+                    case code
+                    case details
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                    self.generated_at = try container.decode(
+                        Swift.String.self,
+                        forKey: .generated_at
+                    )
+                    self.message = try container.decode(
+                        Swift.String.self,
+                        forKey: .message
+                    )
+                    self.exit_code = try container.decode(
+                        Swift.Double.self,
+                        forKey: .exit_code
+                    )
+                    self.exit_meaning = try container.decode(
+                        Components.Schemas.DependencyError_1.Value2Payload.exit_meaningPayload.self,
+                        forKey: .exit_meaning
+                    )
+                    self.code = try container.decode(
+                        Components.Schemas.DependencyError_1.Value2Payload.codePayload.self,
+                        forKey: .code
+                    )
+                    self.details = try container.decode(
+                        Components.Schemas.DependencyError_1.Value2Payload.detailsPayload.self,
+                        forKey: .details
+                    )
+                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                        "generated_at",
+                        "message",
+                        "exit_code",
+                        "exit_meaning",
+                        "code",
+                        "details"
+                    ])
+                }
+
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    var container = encoder.container(keyedBy: CodingKeys.self)
+                    try container.encode(self.generated_at, forKey: .generated_at)
+                    try container.encode(self.message, forKey: .message)
+                    try container.encode(self.exit_code, forKey: .exit_code)
+                    try container.encode(self.exit_meaning, forKey: .exit_meaning)
+                    try container.encode(self.code, forKey: .code)
+                    try container.encode(self.details, forKey: .details)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value2`.
+            public var value2: Components.Schemas.DependencyError_1.Value2Payload?
+            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3`.
+            public struct Value3Payload: Codable, Hashable, Sendable {
+                private var _explicitNullKeys: Set<String> = []
+
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/generated_at`.
+                public var generated_at: Swift.String
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/message`.
+                public var message: Swift.String
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/exit_code`.
+                public var exit_code: Swift.Double
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/exit_meaning`.
+                @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case validation_space_or_space_usage = "validation or usage"
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/exit_meaning`.
+                public var exit_meaning: Components.Schemas.DependencyError_1.Value3Payload.exit_meaningPayload
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/code`.
+                @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case blocked = "blocked"
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/code`.
+                public var code: Components.Schemas.DependencyError_1.Value3Payload.codePayload
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details`.
+                public struct detailsPayload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/task_id`.
+                    public var task_id: Swift.String
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload`.
+                    public struct blockersPayloadPayload: Codable, Hashable, Sendable {
+                        private var _explicitNullKeys: Set<String> = []
+
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/title`.
+                        public var title: Swift.String
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/description`.
+                        public var description: Swift.String?
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/project_id`.
+                        public var project_id: Swift.String?
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/priority`.
+                        @frozen public enum priorityPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case P1 = "P1"
+                            case P2 = "P2"
+                            case P3 = "P3"
+                            case P4 = "P4"
+                        }
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/priority`.
+                        public var priority: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.priorityPayload
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at`.
+                        public struct scheduled_atPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at/value1`.
+                            public struct Value1Payload: Codable, Hashable, Sendable {
+                                private var _explicitNullKeys: Set<String> = []
+
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at/value1/kind`.
+                                @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case instant = "instant"
+                                }
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at/value1/kind`.
+                                public var kind: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value1Payload.kindPayload
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at/value1/utc`.
+                                public var utc: Swift.String
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at/value1/time_zone`.
+                                public var time_zone: Swift.String
+                                /// Creates a new `Value1Payload`.
+                                ///
+                                /// - Parameters:
+                                ///   - kind:
+                                ///   - utc:
+                                ///   - time_zone:
+                                public init(
+                                    kind: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value1Payload.kindPayload,
+                                    utc: Swift.String,
+                                    time_zone: Swift.String
+                                ) {
+                                    self.kind = kind
+                                    self.utc = utc
+                                    self.time_zone = time_zone
+                                }
+                                public enum CodingKeys: String, CodingKey {
+                                    case kind
+                                    case utc
+                                    case time_zone
+                                }
+                                public init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.kind = try container.decode(
+                                        Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value1Payload.kindPayload.self,
+                                        forKey: .kind
+                                    )
+                                    self.utc = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .utc
+                                    )
+                                    self.time_zone = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .time_zone
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "kind",
+                                        "utc",
+                                        "time_zone"
+                                    ])
+                                }
+
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    var container = encoder.container(keyedBy: CodingKeys.self)
+                                    try container.encode(self.kind, forKey: .kind)
+                                    try container.encode(self.utc, forKey: .utc)
+                                    try container.encode(self.time_zone, forKey: .time_zone)
+                                }
+                            }
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at/value1`.
+                            public var value1: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value1Payload?
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at/value2`.
+                            public struct Value2Payload: Codable, Hashable, Sendable {
+                                private var _explicitNullKeys: Set<String> = []
+
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at/value2/kind`.
+                                @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case date = "date"
+                                }
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at/value2/kind`.
+                                public var kind: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value2Payload.kindPayload
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at/value2/date`.
+                                public var date: Swift.String
+                                /// Creates a new `Value2Payload`.
+                                ///
+                                /// - Parameters:
+                                ///   - kind:
+                                ///   - date:
+                                public init(
+                                    kind: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value2Payload.kindPayload,
+                                    date: Swift.String
+                                ) {
+                                    self.kind = kind
+                                    self.date = date
+                                }
+                                public enum CodingKeys: String, CodingKey {
+                                    case kind
+                                    case date
+                                }
+                                public init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.kind = try container.decode(
+                                        Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value2Payload.kindPayload.self,
+                                        forKey: .kind
+                                    )
+                                    self.date = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .date
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "kind",
+                                        "date"
+                                    ])
+                                }
+
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    var container = encoder.container(keyedBy: CodingKeys.self)
+                                    try container.encode(self.kind, forKey: .kind)
+                                    try container.encode(self.date, forKey: .date)
+                                }
+                            }
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at/value2`.
+                            public var value2: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value2Payload?
+                            /// Creates a new `scheduled_atPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - value1:
+                            ///   - value2:
+                            public init(
+                                value1: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value1Payload? = nil,
+                                value2: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.Value2Payload? = nil
+                            ) {
+                                self.value1 = value1
+                                self.value2 = value2
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                var errors: [any Swift.Error] = []
+                                do {
+                                    self.value1 = try .init(from: decoder)
+                                } catch {
+                                    errors.append(error)
+                                }
+                                do {
+                                    self.value2 = try .init(from: decoder)
+                                } catch {
+                                    errors.append(error)
+                                }
+                                try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                    [
+                                        self.value1,
+                                        self.value2
+                                    ],
+                                    type: Self.self,
+                                    codingPath: decoder.codingPath,
+                                    errors: errors
+                                )
+                            }
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                try self.value1?.encode(to: encoder)
+                                try self.value2?.encode(to: encoder)
+                            }
+                        }
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/scheduled_at`.
+                        public var scheduled_at: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload?
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at`.
+                        public struct due_atPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at/value1`.
+                            public struct Value1Payload: Codable, Hashable, Sendable {
+                                private var _explicitNullKeys: Set<String> = []
+
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at/value1/kind`.
+                                @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case instant = "instant"
+                                }
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at/value1/kind`.
+                                public var kind: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value1Payload.kindPayload
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at/value1/utc`.
+                                public var utc: Swift.String
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at/value1/time_zone`.
+                                public var time_zone: Swift.String
+                                /// Creates a new `Value1Payload`.
+                                ///
+                                /// - Parameters:
+                                ///   - kind:
+                                ///   - utc:
+                                ///   - time_zone:
+                                public init(
+                                    kind: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value1Payload.kindPayload,
+                                    utc: Swift.String,
+                                    time_zone: Swift.String
+                                ) {
+                                    self.kind = kind
+                                    self.utc = utc
+                                    self.time_zone = time_zone
+                                }
+                                public enum CodingKeys: String, CodingKey {
+                                    case kind
+                                    case utc
+                                    case time_zone
+                                }
+                                public init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.kind = try container.decode(
+                                        Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value1Payload.kindPayload.self,
+                                        forKey: .kind
+                                    )
+                                    self.utc = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .utc
+                                    )
+                                    self.time_zone = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .time_zone
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "kind",
+                                        "utc",
+                                        "time_zone"
+                                    ])
+                                }
+
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    var container = encoder.container(keyedBy: CodingKeys.self)
+                                    try container.encode(self.kind, forKey: .kind)
+                                    try container.encode(self.utc, forKey: .utc)
+                                    try container.encode(self.time_zone, forKey: .time_zone)
+                                }
+                            }
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at/value1`.
+                            public var value1: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value1Payload?
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at/value2`.
+                            public struct Value2Payload: Codable, Hashable, Sendable {
+                                private var _explicitNullKeys: Set<String> = []
+
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at/value2/kind`.
+                                @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case date = "date"
+                                }
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at/value2/kind`.
+                                public var kind: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value2Payload.kindPayload
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at/value2/date`.
+                                public var date: Swift.String
+                                /// Creates a new `Value2Payload`.
+                                ///
+                                /// - Parameters:
+                                ///   - kind:
+                                ///   - date:
+                                public init(
+                                    kind: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value2Payload.kindPayload,
+                                    date: Swift.String
+                                ) {
+                                    self.kind = kind
+                                    self.date = date
+                                }
+                                public enum CodingKeys: String, CodingKey {
+                                    case kind
+                                    case date
+                                }
+                                public init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.kind = try container.decode(
+                                        Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value2Payload.kindPayload.self,
+                                        forKey: .kind
+                                    )
+                                    self.date = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .date
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "kind",
+                                        "date"
+                                    ])
+                                }
+
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    var container = encoder.container(keyedBy: CodingKeys.self)
+                                    try container.encode(self.kind, forKey: .kind)
+                                    try container.encode(self.date, forKey: .date)
+                                }
+                            }
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at/value2`.
+                            public var value2: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value2Payload?
+                            /// Creates a new `due_atPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - value1:
+                            ///   - value2:
+                            public init(
+                                value1: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value1Payload? = nil,
+                                value2: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.Value2Payload? = nil
+                            ) {
+                                self.value1 = value1
+                                self.value2 = value2
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                var errors: [any Swift.Error] = []
+                                do {
+                                    self.value1 = try .init(from: decoder)
+                                } catch {
+                                    errors.append(error)
+                                }
+                                do {
+                                    self.value2 = try .init(from: decoder)
+                                } catch {
+                                    errors.append(error)
+                                }
+                                try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                    [
+                                        self.value1,
+                                        self.value2
+                                    ],
+                                    type: Self.self,
+                                    codingPath: decoder.codingPath,
+                                    errors: errors
+                                )
+                            }
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                try self.value1?.encode(to: encoder)
+                                try self.value2?.encode(to: encoder)
+                            }
+                        }
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/due_at`.
+                        public var due_at: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload?
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/energy`.
+                        public var energy: Swift.Int?
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/estimate_min`.
+                        public var estimate_min: Swift.Int?
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/source`.
+                        public var source: Swift.String
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/tags`.
+                        public var tags: [Swift.String]
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/attachments`.
+                        public var attachments: [Components.Schemas.Attachment]?
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/external_id`.
+                        public var external_id: Swift.String?
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/id`.
+                        public var id: Swift.String
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/profile_id`.
+                        public var profile_id: Swift.String
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/entity_version`.
+                        public var entity_version: Swift.Double
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/row_version`.
+                        public var row_version: Swift.Int
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/status`.
+                        @frozen public enum statusPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case open = "open"
+                            case done = "done"
+                            case cancelled = "cancelled"
+                            case snoozed = "snoozed"
+                        }
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/status`.
+                        public var status: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.statusPayload
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/occurrence`.
+                        public struct occurrencePayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/occurrence/id`.
+                            public var id: Swift.String
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/occurrence/series_id`.
+                            public var series_id: Swift.String
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/occurrence/date`.
+                            public var date: Swift.String
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/occurrence/time`.
+                            @frozen public enum timePayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/occurrence/time/SwiftTagged_date_f80d834415328e7c`.
+                                case date(Components.Schemas.SwiftTagged_date_f80d834415328e7c)
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/occurrence/time/SwiftTagged_instant_9528e4435984f37d`.
+                                case instant(Components.Schemas.SwiftTagged_instant_9528e4435984f37d)
+                                public enum CodingKeys: String, CodingKey {
+                                    case kind
+                                }
+                                public init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    let discriminator = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .kind
+                                    )
+                                    switch discriminator {
+                                    case "date":
+                                        self = .date(try .init(from: decoder))
+                                    case "instant":
+                                        self = .instant(try .init(from: decoder))
+                                    default:
+                                        throw Swift.DecodingError.unknownOneOfDiscriminator(
+                                            discriminatorKey: CodingKeys.kind,
+                                            discriminatorValue: discriminator,
+                                            codingPath: decoder.codingPath
+                                        )
+                                    }
+                                }
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    switch self {
+                                    case let .date(value):
+                                        try value.encode(to: encoder)
+                                    case let .instant(value):
+                                        try value.encode(to: encoder)
+                                    }
+                                }
+                            }
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/occurrence/time`.
+                            public var time: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.occurrencePayload.timePayload?
+                            /// Creates a new `occurrencePayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - id:
+                            ///   - series_id:
+                            ///   - date:
+                            ///   - time:
+                            public init(
+                                id: Swift.String,
+                                series_id: Swift.String,
+                                date: Swift.String,
+                                time: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.occurrencePayload.timePayload? = nil
+                            ) {
+                                self.id = id
+                                self.series_id = series_id
+                                self.date = date
+                                self.time = time
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case id
+                                case series_id
+                                case date
+                                case time
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.id = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .id
+                                )
+                                self.series_id = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .series_id
+                                )
+                                self.date = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .date
+                                )
+                                self.time = try container.decodeIfPresent(
+                                    Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.occurrencePayload.timePayload.self,
+                                    forKey: .time
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "id",
+                                    "series_id",
+                                    "date",
+                                    "time"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.id, forKey: .id)
+                                try container.encode(self.series_id, forKey: .series_id)
+                                try container.encode(self.date, forKey: .date)
+                                if self.time == nil && _explicitNullKeys.contains(CodingKeys.time.stringValue) {
+                                    try container.encodeNil(forKey: .time)
+                                } else {
+                                    try container.encodeIfPresent(self.time, forKey: .time)
+                                }
+                            }
+                        }
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/occurrence`.
+                        public var occurrence: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.occurrencePayload?
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/legacy_series_detached`.
+                        public var legacy_series_detached: Swift.Bool?
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/created_at`.
+                        public var created_at: Swift.String
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/updated_at`.
+                        public var updated_at: Swift.String
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/completed_at`.
+                        public var completed_at: Swift.String?
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockersPayload/deleted_at`.
+                        public var deleted_at: Swift.String?
+                        /// Creates a new `blockersPayloadPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - title:
+                        ///   - description:
+                        ///   - project_id:
+                        ///   - priority:
+                        ///   - scheduled_at:
+                        ///   - due_at:
+                        ///   - energy:
+                        ///   - estimate_min:
+                        ///   - source:
+                        ///   - tags:
+                        ///   - attachments:
+                        ///   - external_id:
+                        ///   - id:
+                        ///   - profile_id:
+                        ///   - entity_version:
+                        ///   - row_version:
+                        ///   - status:
+                        ///   - occurrence:
+                        ///   - legacy_series_detached:
+                        ///   - created_at:
+                        ///   - updated_at:
+                        ///   - completed_at:
+                        ///   - deleted_at:
+                        public init(
+                            title: Swift.String,
+                            description: Swift.String? = nil,
+                            project_id: Swift.String? = nil,
+                            priority: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.priorityPayload,
+                            scheduled_at: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload? = nil,
+                            due_at: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload? = nil,
+                            energy: Swift.Int? = nil,
+                            estimate_min: Swift.Int? = nil,
+                            source: Swift.String,
+                            tags: [Swift.String],
+                            attachments: [Components.Schemas.Attachment]? = nil,
+                            external_id: Swift.String? = nil,
+                            id: Swift.String,
+                            profile_id: Swift.String,
+                            entity_version: Swift.Double,
+                            row_version: Swift.Int,
+                            status: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.statusPayload,
+                            occurrence: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.occurrencePayload? = nil,
+                            legacy_series_detached: Swift.Bool? = nil,
+                            created_at: Swift.String,
+                            updated_at: Swift.String,
+                            completed_at: Swift.String? = nil,
+                            deleted_at: Swift.String? = nil
+                        ) {
+                            self.title = title
+                            self.description = description
+                            self.project_id = project_id
+                            self.priority = priority
+                            self.scheduled_at = scheduled_at
+                            self.due_at = due_at
+                            self.energy = energy
+                            self.estimate_min = estimate_min
+                            self.source = source
+                            self.tags = tags
+                            self.attachments = attachments
+                            self.external_id = external_id
+                            self.id = id
+                            self.profile_id = profile_id
+                            self.entity_version = entity_version
+                            self.row_version = row_version
+                            self.status = status
+                            self.occurrence = occurrence
+                            self.legacy_series_detached = legacy_series_detached
+                            self.created_at = created_at
+                            self.updated_at = updated_at
+                            self.completed_at = completed_at
+                            self.deleted_at = deleted_at
+                        }
+                        public enum CodingKeys: String, CodingKey {
+                            case title
+                            case description
+                            case project_id
+                            case priority
+                            case scheduled_at
+                            case due_at
+                            case energy
+                            case estimate_min
+                            case source
+                            case tags
+                            case attachments
+                            case external_id
+                            case id
+                            case profile_id
+                            case entity_version
+                            case row_version
+                            case status
+                            case occurrence
+                            case legacy_series_detached
+                            case created_at
+                            case updated_at
+                            case completed_at
+                            case deleted_at
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            guard try container.decode(Swift.Double.self, forKey: .entity_version) == 1 else { throw Swift.DecodingError.dataCorruptedError(forKey: .entity_version, in: container, debugDescription: "Expected entity_version 1") }
+                            self.title = try container.decode(
+                                Swift.String.self,
+                                forKey: .title
+                            )
+                            self.description = try container.decodeIfPresent(
+                                Swift.String.self,
+                                forKey: .description
+                            )
+                            self.project_id = try container.decodeIfPresent(
+                                Swift.String.self,
+                                forKey: .project_id
+                            )
+                            self.priority = try container.decode(
+                                Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.priorityPayload.self,
+                                forKey: .priority
+                            )
+                            self.scheduled_at = try container.decodeIfPresent(
+                                Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.scheduled_atPayload.self,
+                                forKey: .scheduled_at
+                            )
+                            self.due_at = try container.decodeIfPresent(
+                                Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.due_atPayload.self,
+                                forKey: .due_at
+                            )
+                            self.energy = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .energy
+                            )
+                            self.estimate_min = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .estimate_min
+                            )
+                            self.source = try container.decode(
+                                Swift.String.self,
+                                forKey: .source
+                            )
+                            self.tags = try container.decode(
+                                [Swift.String].self,
+                                forKey: .tags
+                            )
+                            self.attachments = try container.decodeIfPresent(
+                                [Components.Schemas.Attachment].self,
+                                forKey: .attachments
+                            )
+                            self.external_id = try container.decodeIfPresent(
+                                Swift.String.self,
+                                forKey: .external_id
+                            )
+                            self.id = try container.decode(
+                                Swift.String.self,
+                                forKey: .id
+                            )
+                            self.profile_id = try container.decode(
+                                Swift.String.self,
+                                forKey: .profile_id
+                            )
+                            self.entity_version = try container.decode(
+                                Swift.Double.self,
+                                forKey: .entity_version
+                            )
+                            self.row_version = try container.decode(
+                                Swift.Int.self,
+                                forKey: .row_version
+                            )
+                            self.status = try container.decode(
+                                Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.statusPayload.self,
+                                forKey: .status
+                            )
+                            self.occurrence = try container.decodeIfPresent(
+                                Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload.occurrencePayload.self,
+                                forKey: .occurrence
+                            )
+                            self.legacy_series_detached = try container.decodeIfPresent(
+                                Swift.Bool.self,
+                                forKey: .legacy_series_detached
+                            )
+                            self.created_at = try container.decode(
+                                Swift.String.self,
+                                forKey: .created_at
+                            )
+                            self.updated_at = try container.decode(
+                                Swift.String.self,
+                                forKey: .updated_at
+                            )
+                            self.completed_at = try container.decodeIfPresent(
+                                Swift.String.self,
+                                forKey: .completed_at
+                            )
+                            self.deleted_at = try container.decodeIfPresent(
+                                Swift.String.self,
+                                forKey: .deleted_at
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "title",
+                                "description",
+                                "project_id",
+                                "priority",
+                                "scheduled_at",
+                                "due_at",
+                                "energy",
+                                "estimate_min",
+                                "source",
+                                "tags",
+                                "attachments",
+                                "external_id",
+                                "id",
+                                "profile_id",
+                                "entity_version",
+                                "row_version",
+                                "status",
+                                "occurrence",
+                                "legacy_series_detached",
+                                "created_at",
+                                "updated_at",
+                                "completed_at",
+                                "deleted_at"
+                            ])
+                        }
+
+                        public func encode(to encoder: any Swift.Encoder) throws {
+                            var container = encoder.container(keyedBy: CodingKeys.self)
+                            try container.encode(self.title, forKey: .title)
+                            if self.description == nil && _explicitNullKeys.contains(CodingKeys.description.stringValue) {
+                                try container.encodeNil(forKey: .description)
+                            } else {
+                                try container.encodeIfPresent(self.description, forKey: .description)
+                            }
+                            if self.project_id == nil && _explicitNullKeys.contains(CodingKeys.project_id.stringValue) {
+                                try container.encodeNil(forKey: .project_id)
+                            } else {
+                                try container.encodeIfPresent(self.project_id, forKey: .project_id)
+                            }
+                            try container.encode(self.priority, forKey: .priority)
+                            if self.scheduled_at == nil && _explicitNullKeys.contains(CodingKeys.scheduled_at.stringValue) {
+                                try container.encodeNil(forKey: .scheduled_at)
+                            } else {
+                                try container.encodeIfPresent(self.scheduled_at, forKey: .scheduled_at)
+                            }
+                            if self.due_at == nil && _explicitNullKeys.contains(CodingKeys.due_at.stringValue) {
+                                try container.encodeNil(forKey: .due_at)
+                            } else {
+                                try container.encodeIfPresent(self.due_at, forKey: .due_at)
+                            }
+                            if self.energy == nil && _explicitNullKeys.contains(CodingKeys.energy.stringValue) {
+                                try container.encodeNil(forKey: .energy)
+                            } else {
+                                try container.encodeIfPresent(self.energy, forKey: .energy)
+                            }
+                            if self.estimate_min == nil && _explicitNullKeys.contains(CodingKeys.estimate_min.stringValue) {
+                                try container.encodeNil(forKey: .estimate_min)
+                            } else {
+                                try container.encodeIfPresent(self.estimate_min, forKey: .estimate_min)
+                            }
+                            try container.encode(self.source, forKey: .source)
+                            try container.encode(self.tags, forKey: .tags)
+                            if self.attachments == nil && _explicitNullKeys.contains(CodingKeys.attachments.stringValue) {
+                                try container.encodeNil(forKey: .attachments)
+                            } else {
+                                try container.encodeIfPresent(self.attachments, forKey: .attachments)
+                            }
+                            if self.external_id == nil && _explicitNullKeys.contains(CodingKeys.external_id.stringValue) {
+                                try container.encodeNil(forKey: .external_id)
+                            } else {
+                                try container.encodeIfPresent(self.external_id, forKey: .external_id)
+                            }
+                            try container.encode(self.id, forKey: .id)
+                            try container.encode(self.profile_id, forKey: .profile_id)
+                            try container.encode(self.entity_version, forKey: .entity_version)
+                            try container.encode(self.row_version, forKey: .row_version)
+                            try container.encode(self.status, forKey: .status)
+                            if self.occurrence == nil && _explicitNullKeys.contains(CodingKeys.occurrence.stringValue) {
+                                try container.encodeNil(forKey: .occurrence)
+                            } else {
+                                try container.encodeIfPresent(self.occurrence, forKey: .occurrence)
+                            }
+                            if self.legacy_series_detached == nil && _explicitNullKeys.contains(CodingKeys.legacy_series_detached.stringValue) {
+                                try container.encodeNil(forKey: .legacy_series_detached)
+                            } else {
+                                try container.encodeIfPresent(self.legacy_series_detached, forKey: .legacy_series_detached)
+                            }
+                            try container.encode(self.created_at, forKey: .created_at)
+                            try container.encode(self.updated_at, forKey: .updated_at)
+                            if self.completed_at == nil && _explicitNullKeys.contains(CodingKeys.completed_at.stringValue) {
+                                try container.encodeNil(forKey: .completed_at)
+                            } else {
+                                try container.encodeIfPresent(self.completed_at, forKey: .completed_at)
+                            }
+                            if self.deleted_at == nil && _explicitNullKeys.contains(CodingKeys.deleted_at.stringValue) {
+                                try container.encodeNil(forKey: .deleted_at)
+                            } else {
+                                try container.encodeIfPresent(self.deleted_at, forKey: .deleted_at)
+                            }
+                        }
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockers`.
+                    public typealias blockersPayload = [Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayloadPayload]
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details/blockers`.
+                    public var blockers: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayload
+                    /// Creates a new `detailsPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - task_id:
+                    ///   - blockers:
+                    public init(
+                        task_id: Swift.String,
+                        blockers: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayload
+                    ) {
+                        self.task_id = task_id
+                        self.blockers = blockers
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case task_id
+                        case blockers
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.task_id = try container.decode(
+                            Swift.String.self,
+                            forKey: .task_id
+                        )
+                        self.blockers = try container.decode(
+                            Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.blockersPayload.self,
+                            forKey: .blockers
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "task_id",
+                            "blockers"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.task_id, forKey: .task_id)
+                        try container.encode(self.blockers, forKey: .blockers)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3/details`.
+                public var details: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload
+                /// Creates a new `Value3Payload`.
+                ///
+                /// - Parameters:
+                ///   - generated_at:
+                ///   - message:
+                ///   - exit_code:
+                ///   - exit_meaning:
+                ///   - code:
+                ///   - details:
+                public init(
+                    generated_at: Swift.String,
+                    message: Swift.String,
+                    exit_code: Swift.Double,
+                    exit_meaning: Components.Schemas.DependencyError_1.Value3Payload.exit_meaningPayload,
+                    code: Components.Schemas.DependencyError_1.Value3Payload.codePayload,
+                    details: Components.Schemas.DependencyError_1.Value3Payload.detailsPayload
+                ) {
+                    self.generated_at = generated_at
+                    self.message = message
+                    self.exit_code = exit_code
+                    self.exit_meaning = exit_meaning
+                    self.code = code
+                    self.details = details
+                }
+                public enum CodingKeys: String, CodingKey {
+                    case generated_at
+                    case message
+                    case exit_code
+                    case exit_meaning
+                    case code
+                    case details
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                    self.generated_at = try container.decode(
+                        Swift.String.self,
+                        forKey: .generated_at
+                    )
+                    self.message = try container.decode(
+                        Swift.String.self,
+                        forKey: .message
+                    )
+                    self.exit_code = try container.decode(
+                        Swift.Double.self,
+                        forKey: .exit_code
+                    )
+                    self.exit_meaning = try container.decode(
+                        Components.Schemas.DependencyError_1.Value3Payload.exit_meaningPayload.self,
+                        forKey: .exit_meaning
+                    )
+                    self.code = try container.decode(
+                        Components.Schemas.DependencyError_1.Value3Payload.codePayload.self,
+                        forKey: .code
+                    )
+                    self.details = try container.decode(
+                        Components.Schemas.DependencyError_1.Value3Payload.detailsPayload.self,
+                        forKey: .details
+                    )
+                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                        "generated_at",
+                        "message",
+                        "exit_code",
+                        "exit_meaning",
+                        "code",
+                        "details"
+                    ])
+                }
+
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    var container = encoder.container(keyedBy: CodingKeys.self)
+                    try container.encode(self.generated_at, forKey: .generated_at)
+                    try container.encode(self.message, forKey: .message)
+                    try container.encode(self.exit_code, forKey: .exit_code)
+                    try container.encode(self.exit_meaning, forKey: .exit_meaning)
+                    try container.encode(self.code, forKey: .code)
+                    try container.encode(self.details, forKey: .details)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value3`.
+            public var value3: Components.Schemas.DependencyError_1.Value3Payload?
+            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4`.
+            public struct Value4Payload: Codable, Hashable, Sendable {
+                private var _explicitNullKeys: Set<String> = []
+
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/generated_at`.
+                public var generated_at: Swift.String
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/message`.
+                public var message: Swift.String
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/exit_code`.
+                public var exit_code: Swift.Double
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/exit_meaning`.
+                @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case validation_space_or_space_usage = "validation or usage"
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/exit_meaning`.
+                public var exit_meaning: Components.Schemas.DependencyError_1.Value4Payload.exit_meaningPayload
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/code`.
+                @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case blocks_done_task = "blocks_done_task"
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/code`.
+                public var code: Components.Schemas.DependencyError_1.Value4Payload.codePayload
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details`.
+                public struct detailsPayload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/task_id`.
+                    public var task_id: Swift.String
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload`.
+                    public struct done_dependentsPayloadPayload: Codable, Hashable, Sendable {
+                        private var _explicitNullKeys: Set<String> = []
+
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/title`.
+                        public var title: Swift.String
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/description`.
+                        public var description: Swift.String?
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/project_id`.
+                        public var project_id: Swift.String?
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/priority`.
+                        @frozen public enum priorityPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case P1 = "P1"
+                            case P2 = "P2"
+                            case P3 = "P3"
+                            case P4 = "P4"
+                        }
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/priority`.
+                        public var priority: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.priorityPayload
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at`.
+                        public struct scheduled_atPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at/value1`.
+                            public struct Value1Payload: Codable, Hashable, Sendable {
+                                private var _explicitNullKeys: Set<String> = []
+
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at/value1/kind`.
+                                @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case instant = "instant"
+                                }
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at/value1/kind`.
+                                public var kind: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value1Payload.kindPayload
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at/value1/utc`.
+                                public var utc: Swift.String
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at/value1/time_zone`.
+                                public var time_zone: Swift.String
+                                /// Creates a new `Value1Payload`.
+                                ///
+                                /// - Parameters:
+                                ///   - kind:
+                                ///   - utc:
+                                ///   - time_zone:
+                                public init(
+                                    kind: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value1Payload.kindPayload,
+                                    utc: Swift.String,
+                                    time_zone: Swift.String
+                                ) {
+                                    self.kind = kind
+                                    self.utc = utc
+                                    self.time_zone = time_zone
+                                }
+                                public enum CodingKeys: String, CodingKey {
+                                    case kind
+                                    case utc
+                                    case time_zone
+                                }
+                                public init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.kind = try container.decode(
+                                        Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value1Payload.kindPayload.self,
+                                        forKey: .kind
+                                    )
+                                    self.utc = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .utc
+                                    )
+                                    self.time_zone = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .time_zone
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "kind",
+                                        "utc",
+                                        "time_zone"
+                                    ])
+                                }
+
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    var container = encoder.container(keyedBy: CodingKeys.self)
+                                    try container.encode(self.kind, forKey: .kind)
+                                    try container.encode(self.utc, forKey: .utc)
+                                    try container.encode(self.time_zone, forKey: .time_zone)
+                                }
+                            }
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at/value1`.
+                            public var value1: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value1Payload?
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at/value2`.
+                            public struct Value2Payload: Codable, Hashable, Sendable {
+                                private var _explicitNullKeys: Set<String> = []
+
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at/value2/kind`.
+                                @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case date = "date"
+                                }
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at/value2/kind`.
+                                public var kind: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value2Payload.kindPayload
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at/value2/date`.
+                                public var date: Swift.String
+                                /// Creates a new `Value2Payload`.
+                                ///
+                                /// - Parameters:
+                                ///   - kind:
+                                ///   - date:
+                                public init(
+                                    kind: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value2Payload.kindPayload,
+                                    date: Swift.String
+                                ) {
+                                    self.kind = kind
+                                    self.date = date
+                                }
+                                public enum CodingKeys: String, CodingKey {
+                                    case kind
+                                    case date
+                                }
+                                public init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.kind = try container.decode(
+                                        Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value2Payload.kindPayload.self,
+                                        forKey: .kind
+                                    )
+                                    self.date = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .date
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "kind",
+                                        "date"
+                                    ])
+                                }
+
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    var container = encoder.container(keyedBy: CodingKeys.self)
+                                    try container.encode(self.kind, forKey: .kind)
+                                    try container.encode(self.date, forKey: .date)
+                                }
+                            }
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at/value2`.
+                            public var value2: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value2Payload?
+                            /// Creates a new `scheduled_atPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - value1:
+                            ///   - value2:
+                            public init(
+                                value1: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value1Payload? = nil,
+                                value2: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.Value2Payload? = nil
+                            ) {
+                                self.value1 = value1
+                                self.value2 = value2
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                var errors: [any Swift.Error] = []
+                                do {
+                                    self.value1 = try .init(from: decoder)
+                                } catch {
+                                    errors.append(error)
+                                }
+                                do {
+                                    self.value2 = try .init(from: decoder)
+                                } catch {
+                                    errors.append(error)
+                                }
+                                try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                    [
+                                        self.value1,
+                                        self.value2
+                                    ],
+                                    type: Self.self,
+                                    codingPath: decoder.codingPath,
+                                    errors: errors
+                                )
+                            }
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                try self.value1?.encode(to: encoder)
+                                try self.value2?.encode(to: encoder)
+                            }
+                        }
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/scheduled_at`.
+                        public var scheduled_at: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload?
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at`.
+                        public struct due_atPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at/value1`.
+                            public struct Value1Payload: Codable, Hashable, Sendable {
+                                private var _explicitNullKeys: Set<String> = []
+
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at/value1/kind`.
+                                @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case instant = "instant"
+                                }
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at/value1/kind`.
+                                public var kind: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value1Payload.kindPayload
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at/value1/utc`.
+                                public var utc: Swift.String
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at/value1/time_zone`.
+                                public var time_zone: Swift.String
+                                /// Creates a new `Value1Payload`.
+                                ///
+                                /// - Parameters:
+                                ///   - kind:
+                                ///   - utc:
+                                ///   - time_zone:
+                                public init(
+                                    kind: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value1Payload.kindPayload,
+                                    utc: Swift.String,
+                                    time_zone: Swift.String
+                                ) {
+                                    self.kind = kind
+                                    self.utc = utc
+                                    self.time_zone = time_zone
+                                }
+                                public enum CodingKeys: String, CodingKey {
+                                    case kind
+                                    case utc
+                                    case time_zone
+                                }
+                                public init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.kind = try container.decode(
+                                        Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value1Payload.kindPayload.self,
+                                        forKey: .kind
+                                    )
+                                    self.utc = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .utc
+                                    )
+                                    self.time_zone = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .time_zone
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "kind",
+                                        "utc",
+                                        "time_zone"
+                                    ])
+                                }
+
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    var container = encoder.container(keyedBy: CodingKeys.self)
+                                    try container.encode(self.kind, forKey: .kind)
+                                    try container.encode(self.utc, forKey: .utc)
+                                    try container.encode(self.time_zone, forKey: .time_zone)
+                                }
+                            }
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at/value1`.
+                            public var value1: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value1Payload?
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at/value2`.
+                            public struct Value2Payload: Codable, Hashable, Sendable {
+                                private var _explicitNullKeys: Set<String> = []
+
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at/value2/kind`.
+                                @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case date = "date"
+                                }
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at/value2/kind`.
+                                public var kind: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value2Payload.kindPayload
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at/value2/date`.
+                                public var date: Swift.String
+                                /// Creates a new `Value2Payload`.
+                                ///
+                                /// - Parameters:
+                                ///   - kind:
+                                ///   - date:
+                                public init(
+                                    kind: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value2Payload.kindPayload,
+                                    date: Swift.String
+                                ) {
+                                    self.kind = kind
+                                    self.date = date
+                                }
+                                public enum CodingKeys: String, CodingKey {
+                                    case kind
+                                    case date
+                                }
+                                public init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.kind = try container.decode(
+                                        Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value2Payload.kindPayload.self,
+                                        forKey: .kind
+                                    )
+                                    self.date = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .date
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "kind",
+                                        "date"
+                                    ])
+                                }
+
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    var container = encoder.container(keyedBy: CodingKeys.self)
+                                    try container.encode(self.kind, forKey: .kind)
+                                    try container.encode(self.date, forKey: .date)
+                                }
+                            }
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at/value2`.
+                            public var value2: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value2Payload?
+                            /// Creates a new `due_atPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - value1:
+                            ///   - value2:
+                            public init(
+                                value1: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value1Payload? = nil,
+                                value2: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.Value2Payload? = nil
+                            ) {
+                                self.value1 = value1
+                                self.value2 = value2
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                var errors: [any Swift.Error] = []
+                                do {
+                                    self.value1 = try .init(from: decoder)
+                                } catch {
+                                    errors.append(error)
+                                }
+                                do {
+                                    self.value2 = try .init(from: decoder)
+                                } catch {
+                                    errors.append(error)
+                                }
+                                try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                    [
+                                        self.value1,
+                                        self.value2
+                                    ],
+                                    type: Self.self,
+                                    codingPath: decoder.codingPath,
+                                    errors: errors
+                                )
+                            }
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                try self.value1?.encode(to: encoder)
+                                try self.value2?.encode(to: encoder)
+                            }
+                        }
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/due_at`.
+                        public var due_at: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload?
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/energy`.
+                        public var energy: Swift.Int?
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/estimate_min`.
+                        public var estimate_min: Swift.Int?
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/source`.
+                        public var source: Swift.String
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/tags`.
+                        public var tags: [Swift.String]
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/attachments`.
+                        public var attachments: [Components.Schemas.Attachment]?
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/external_id`.
+                        public var external_id: Swift.String?
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/id`.
+                        public var id: Swift.String
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/profile_id`.
+                        public var profile_id: Swift.String
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/entity_version`.
+                        public var entity_version: Swift.Double
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/row_version`.
+                        public var row_version: Swift.Int
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/status`.
+                        @frozen public enum statusPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case open = "open"
+                            case done = "done"
+                            case cancelled = "cancelled"
+                            case snoozed = "snoozed"
+                        }
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/status`.
+                        public var status: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.statusPayload
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/occurrence`.
+                        public struct occurrencePayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/occurrence/id`.
+                            public var id: Swift.String
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/occurrence/series_id`.
+                            public var series_id: Swift.String
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/occurrence/date`.
+                            public var date: Swift.String
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/occurrence/time`.
+                            @frozen public enum timePayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/occurrence/time/SwiftTagged_date_f80d834415328e7c`.
+                                case date(Components.Schemas.SwiftTagged_date_f80d834415328e7c)
+                                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/occurrence/time/SwiftTagged_instant_9528e4435984f37d`.
+                                case instant(Components.Schemas.SwiftTagged_instant_9528e4435984f37d)
+                                public enum CodingKeys: String, CodingKey {
+                                    case kind
+                                }
+                                public init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    let discriminator = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .kind
+                                    )
+                                    switch discriminator {
+                                    case "date":
+                                        self = .date(try .init(from: decoder))
+                                    case "instant":
+                                        self = .instant(try .init(from: decoder))
+                                    default:
+                                        throw Swift.DecodingError.unknownOneOfDiscriminator(
+                                            discriminatorKey: CodingKeys.kind,
+                                            discriminatorValue: discriminator,
+                                            codingPath: decoder.codingPath
+                                        )
+                                    }
+                                }
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    switch self {
+                                    case let .date(value):
+                                        try value.encode(to: encoder)
+                                    case let .instant(value):
+                                        try value.encode(to: encoder)
+                                    }
+                                }
+                            }
+                            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/occurrence/time`.
+                            public var time: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.occurrencePayload.timePayload?
+                            /// Creates a new `occurrencePayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - id:
+                            ///   - series_id:
+                            ///   - date:
+                            ///   - time:
+                            public init(
+                                id: Swift.String,
+                                series_id: Swift.String,
+                                date: Swift.String,
+                                time: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.occurrencePayload.timePayload? = nil
+                            ) {
+                                self.id = id
+                                self.series_id = series_id
+                                self.date = date
+                                self.time = time
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case id
+                                case series_id
+                                case date
+                                case time
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.id = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .id
+                                )
+                                self.series_id = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .series_id
+                                )
+                                self.date = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .date
+                                )
+                                self.time = try container.decodeIfPresent(
+                                    Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.occurrencePayload.timePayload.self,
+                                    forKey: .time
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "id",
+                                    "series_id",
+                                    "date",
+                                    "time"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.id, forKey: .id)
+                                try container.encode(self.series_id, forKey: .series_id)
+                                try container.encode(self.date, forKey: .date)
+                                if self.time == nil && _explicitNullKeys.contains(CodingKeys.time.stringValue) {
+                                    try container.encodeNil(forKey: .time)
+                                } else {
+                                    try container.encodeIfPresent(self.time, forKey: .time)
+                                }
+                            }
+                        }
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/occurrence`.
+                        public var occurrence: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.occurrencePayload?
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/legacy_series_detached`.
+                        public var legacy_series_detached: Swift.Bool?
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/created_at`.
+                        public var created_at: Swift.String
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/updated_at`.
+                        public var updated_at: Swift.String
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/completed_at`.
+                        public var completed_at: Swift.String?
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependentsPayload/deleted_at`.
+                        public var deleted_at: Swift.String?
+                        /// Creates a new `done_dependentsPayloadPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - title:
+                        ///   - description:
+                        ///   - project_id:
+                        ///   - priority:
+                        ///   - scheduled_at:
+                        ///   - due_at:
+                        ///   - energy:
+                        ///   - estimate_min:
+                        ///   - source:
+                        ///   - tags:
+                        ///   - attachments:
+                        ///   - external_id:
+                        ///   - id:
+                        ///   - profile_id:
+                        ///   - entity_version:
+                        ///   - row_version:
+                        ///   - status:
+                        ///   - occurrence:
+                        ///   - legacy_series_detached:
+                        ///   - created_at:
+                        ///   - updated_at:
+                        ///   - completed_at:
+                        ///   - deleted_at:
+                        public init(
+                            title: Swift.String,
+                            description: Swift.String? = nil,
+                            project_id: Swift.String? = nil,
+                            priority: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.priorityPayload,
+                            scheduled_at: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload? = nil,
+                            due_at: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload? = nil,
+                            energy: Swift.Int? = nil,
+                            estimate_min: Swift.Int? = nil,
+                            source: Swift.String,
+                            tags: [Swift.String],
+                            attachments: [Components.Schemas.Attachment]? = nil,
+                            external_id: Swift.String? = nil,
+                            id: Swift.String,
+                            profile_id: Swift.String,
+                            entity_version: Swift.Double,
+                            row_version: Swift.Int,
+                            status: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.statusPayload,
+                            occurrence: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.occurrencePayload? = nil,
+                            legacy_series_detached: Swift.Bool? = nil,
+                            created_at: Swift.String,
+                            updated_at: Swift.String,
+                            completed_at: Swift.String? = nil,
+                            deleted_at: Swift.String? = nil
+                        ) {
+                            self.title = title
+                            self.description = description
+                            self.project_id = project_id
+                            self.priority = priority
+                            self.scheduled_at = scheduled_at
+                            self.due_at = due_at
+                            self.energy = energy
+                            self.estimate_min = estimate_min
+                            self.source = source
+                            self.tags = tags
+                            self.attachments = attachments
+                            self.external_id = external_id
+                            self.id = id
+                            self.profile_id = profile_id
+                            self.entity_version = entity_version
+                            self.row_version = row_version
+                            self.status = status
+                            self.occurrence = occurrence
+                            self.legacy_series_detached = legacy_series_detached
+                            self.created_at = created_at
+                            self.updated_at = updated_at
+                            self.completed_at = completed_at
+                            self.deleted_at = deleted_at
+                        }
+                        public enum CodingKeys: String, CodingKey {
+                            case title
+                            case description
+                            case project_id
+                            case priority
+                            case scheduled_at
+                            case due_at
+                            case energy
+                            case estimate_min
+                            case source
+                            case tags
+                            case attachments
+                            case external_id
+                            case id
+                            case profile_id
+                            case entity_version
+                            case row_version
+                            case status
+                            case occurrence
+                            case legacy_series_detached
+                            case created_at
+                            case updated_at
+                            case completed_at
+                            case deleted_at
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            guard try container.decode(Swift.Double.self, forKey: .entity_version) == 1 else { throw Swift.DecodingError.dataCorruptedError(forKey: .entity_version, in: container, debugDescription: "Expected entity_version 1") }
+                            self.title = try container.decode(
+                                Swift.String.self,
+                                forKey: .title
+                            )
+                            self.description = try container.decodeIfPresent(
+                                Swift.String.self,
+                                forKey: .description
+                            )
+                            self.project_id = try container.decodeIfPresent(
+                                Swift.String.self,
+                                forKey: .project_id
+                            )
+                            self.priority = try container.decode(
+                                Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.priorityPayload.self,
+                                forKey: .priority
+                            )
+                            self.scheduled_at = try container.decodeIfPresent(
+                                Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.scheduled_atPayload.self,
+                                forKey: .scheduled_at
+                            )
+                            self.due_at = try container.decodeIfPresent(
+                                Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.due_atPayload.self,
+                                forKey: .due_at
+                            )
+                            self.energy = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .energy
+                            )
+                            self.estimate_min = try container.decodeIfPresent(
+                                Swift.Int.self,
+                                forKey: .estimate_min
+                            )
+                            self.source = try container.decode(
+                                Swift.String.self,
+                                forKey: .source
+                            )
+                            self.tags = try container.decode(
+                                [Swift.String].self,
+                                forKey: .tags
+                            )
+                            self.attachments = try container.decodeIfPresent(
+                                [Components.Schemas.Attachment].self,
+                                forKey: .attachments
+                            )
+                            self.external_id = try container.decodeIfPresent(
+                                Swift.String.self,
+                                forKey: .external_id
+                            )
+                            self.id = try container.decode(
+                                Swift.String.self,
+                                forKey: .id
+                            )
+                            self.profile_id = try container.decode(
+                                Swift.String.self,
+                                forKey: .profile_id
+                            )
+                            self.entity_version = try container.decode(
+                                Swift.Double.self,
+                                forKey: .entity_version
+                            )
+                            self.row_version = try container.decode(
+                                Swift.Int.self,
+                                forKey: .row_version
+                            )
+                            self.status = try container.decode(
+                                Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.statusPayload.self,
+                                forKey: .status
+                            )
+                            self.occurrence = try container.decodeIfPresent(
+                                Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload.occurrencePayload.self,
+                                forKey: .occurrence
+                            )
+                            self.legacy_series_detached = try container.decodeIfPresent(
+                                Swift.Bool.self,
+                                forKey: .legacy_series_detached
+                            )
+                            self.created_at = try container.decode(
+                                Swift.String.self,
+                                forKey: .created_at
+                            )
+                            self.updated_at = try container.decode(
+                                Swift.String.self,
+                                forKey: .updated_at
+                            )
+                            self.completed_at = try container.decodeIfPresent(
+                                Swift.String.self,
+                                forKey: .completed_at
+                            )
+                            self.deleted_at = try container.decodeIfPresent(
+                                Swift.String.self,
+                                forKey: .deleted_at
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "title",
+                                "description",
+                                "project_id",
+                                "priority",
+                                "scheduled_at",
+                                "due_at",
+                                "energy",
+                                "estimate_min",
+                                "source",
+                                "tags",
+                                "attachments",
+                                "external_id",
+                                "id",
+                                "profile_id",
+                                "entity_version",
+                                "row_version",
+                                "status",
+                                "occurrence",
+                                "legacy_series_detached",
+                                "created_at",
+                                "updated_at",
+                                "completed_at",
+                                "deleted_at"
+                            ])
+                        }
+
+                        public func encode(to encoder: any Swift.Encoder) throws {
+                            var container = encoder.container(keyedBy: CodingKeys.self)
+                            try container.encode(self.title, forKey: .title)
+                            if self.description == nil && _explicitNullKeys.contains(CodingKeys.description.stringValue) {
+                                try container.encodeNil(forKey: .description)
+                            } else {
+                                try container.encodeIfPresent(self.description, forKey: .description)
+                            }
+                            if self.project_id == nil && _explicitNullKeys.contains(CodingKeys.project_id.stringValue) {
+                                try container.encodeNil(forKey: .project_id)
+                            } else {
+                                try container.encodeIfPresent(self.project_id, forKey: .project_id)
+                            }
+                            try container.encode(self.priority, forKey: .priority)
+                            if self.scheduled_at == nil && _explicitNullKeys.contains(CodingKeys.scheduled_at.stringValue) {
+                                try container.encodeNil(forKey: .scheduled_at)
+                            } else {
+                                try container.encodeIfPresent(self.scheduled_at, forKey: .scheduled_at)
+                            }
+                            if self.due_at == nil && _explicitNullKeys.contains(CodingKeys.due_at.stringValue) {
+                                try container.encodeNil(forKey: .due_at)
+                            } else {
+                                try container.encodeIfPresent(self.due_at, forKey: .due_at)
+                            }
+                            if self.energy == nil && _explicitNullKeys.contains(CodingKeys.energy.stringValue) {
+                                try container.encodeNil(forKey: .energy)
+                            } else {
+                                try container.encodeIfPresent(self.energy, forKey: .energy)
+                            }
+                            if self.estimate_min == nil && _explicitNullKeys.contains(CodingKeys.estimate_min.stringValue) {
+                                try container.encodeNil(forKey: .estimate_min)
+                            } else {
+                                try container.encodeIfPresent(self.estimate_min, forKey: .estimate_min)
+                            }
+                            try container.encode(self.source, forKey: .source)
+                            try container.encode(self.tags, forKey: .tags)
+                            if self.attachments == nil && _explicitNullKeys.contains(CodingKeys.attachments.stringValue) {
+                                try container.encodeNil(forKey: .attachments)
+                            } else {
+                                try container.encodeIfPresent(self.attachments, forKey: .attachments)
+                            }
+                            if self.external_id == nil && _explicitNullKeys.contains(CodingKeys.external_id.stringValue) {
+                                try container.encodeNil(forKey: .external_id)
+                            } else {
+                                try container.encodeIfPresent(self.external_id, forKey: .external_id)
+                            }
+                            try container.encode(self.id, forKey: .id)
+                            try container.encode(self.profile_id, forKey: .profile_id)
+                            try container.encode(self.entity_version, forKey: .entity_version)
+                            try container.encode(self.row_version, forKey: .row_version)
+                            try container.encode(self.status, forKey: .status)
+                            if self.occurrence == nil && _explicitNullKeys.contains(CodingKeys.occurrence.stringValue) {
+                                try container.encodeNil(forKey: .occurrence)
+                            } else {
+                                try container.encodeIfPresent(self.occurrence, forKey: .occurrence)
+                            }
+                            if self.legacy_series_detached == nil && _explicitNullKeys.contains(CodingKeys.legacy_series_detached.stringValue) {
+                                try container.encodeNil(forKey: .legacy_series_detached)
+                            } else {
+                                try container.encodeIfPresent(self.legacy_series_detached, forKey: .legacy_series_detached)
+                            }
+                            try container.encode(self.created_at, forKey: .created_at)
+                            try container.encode(self.updated_at, forKey: .updated_at)
+                            if self.completed_at == nil && _explicitNullKeys.contains(CodingKeys.completed_at.stringValue) {
+                                try container.encodeNil(forKey: .completed_at)
+                            } else {
+                                try container.encodeIfPresent(self.completed_at, forKey: .completed_at)
+                            }
+                            if self.deleted_at == nil && _explicitNullKeys.contains(CodingKeys.deleted_at.stringValue) {
+                                try container.encodeNil(forKey: .deleted_at)
+                            } else {
+                                try container.encodeIfPresent(self.deleted_at, forKey: .deleted_at)
+                            }
+                        }
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependents`.
+                    public typealias done_dependentsPayload = [Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayloadPayload]
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/done_dependents`.
+                    public var done_dependents: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayload
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details/follow_up_depends_on`.
+                    public var follow_up_depends_on: Swift.String
+                    /// Creates a new `detailsPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - task_id:
+                    ///   - done_dependents:
+                    ///   - follow_up_depends_on:
+                    public init(
+                        task_id: Swift.String,
+                        done_dependents: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayload,
+                        follow_up_depends_on: Swift.String
+                    ) {
+                        self.task_id = task_id
+                        self.done_dependents = done_dependents
+                        self.follow_up_depends_on = follow_up_depends_on
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case task_id
+                        case done_dependents
+                        case follow_up_depends_on
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.task_id = try container.decode(
+                            Swift.String.self,
+                            forKey: .task_id
+                        )
+                        self.done_dependents = try container.decode(
+                            Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.done_dependentsPayload.self,
+                            forKey: .done_dependents
+                        )
+                        self.follow_up_depends_on = try container.decode(
+                            Swift.String.self,
+                            forKey: .follow_up_depends_on
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "task_id",
+                            "done_dependents",
+                            "follow_up_depends_on"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.task_id, forKey: .task_id)
+                        try container.encode(self.done_dependents, forKey: .done_dependents)
+                        try container.encode(self.follow_up_depends_on, forKey: .follow_up_depends_on)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4/details`.
+                public var details: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload
+                /// Creates a new `Value4Payload`.
+                ///
+                /// - Parameters:
+                ///   - generated_at:
+                ///   - message:
+                ///   - exit_code:
+                ///   - exit_meaning:
+                ///   - code:
+                ///   - details:
+                public init(
+                    generated_at: Swift.String,
+                    message: Swift.String,
+                    exit_code: Swift.Double,
+                    exit_meaning: Components.Schemas.DependencyError_1.Value4Payload.exit_meaningPayload,
+                    code: Components.Schemas.DependencyError_1.Value4Payload.codePayload,
+                    details: Components.Schemas.DependencyError_1.Value4Payload.detailsPayload
+                ) {
+                    self.generated_at = generated_at
+                    self.message = message
+                    self.exit_code = exit_code
+                    self.exit_meaning = exit_meaning
+                    self.code = code
+                    self.details = details
+                }
+                public enum CodingKeys: String, CodingKey {
+                    case generated_at
+                    case message
+                    case exit_code
+                    case exit_meaning
+                    case code
+                    case details
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                    self.generated_at = try container.decode(
+                        Swift.String.self,
+                        forKey: .generated_at
+                    )
+                    self.message = try container.decode(
+                        Swift.String.self,
+                        forKey: .message
+                    )
+                    self.exit_code = try container.decode(
+                        Swift.Double.self,
+                        forKey: .exit_code
+                    )
+                    self.exit_meaning = try container.decode(
+                        Components.Schemas.DependencyError_1.Value4Payload.exit_meaningPayload.self,
+                        forKey: .exit_meaning
+                    )
+                    self.code = try container.decode(
+                        Components.Schemas.DependencyError_1.Value4Payload.codePayload.self,
+                        forKey: .code
+                    )
+                    self.details = try container.decode(
+                        Components.Schemas.DependencyError_1.Value4Payload.detailsPayload.self,
+                        forKey: .details
+                    )
+                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                        "generated_at",
+                        "message",
+                        "exit_code",
+                        "exit_meaning",
+                        "code",
+                        "details"
+                    ])
+                }
+
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    var container = encoder.container(keyedBy: CodingKeys.self)
+                    try container.encode(self.generated_at, forKey: .generated_at)
+                    try container.encode(self.message, forKey: .message)
+                    try container.encode(self.exit_code, forKey: .exit_code)
+                    try container.encode(self.exit_meaning, forKey: .exit_meaning)
+                    try container.encode(self.code, forKey: .code)
+                    try container.encode(self.details, forKey: .details)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value4`.
+            public var value4: Components.Schemas.DependencyError_1.Value4Payload?
+            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5`.
+            public struct Value5Payload: Codable, Hashable, Sendable {
+                private var _explicitNullKeys: Set<String> = []
+
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/generated_at`.
+                public var generated_at: Swift.String
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/message`.
+                public var message: Swift.String
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/exit_code`.
+                public var exit_code: Swift.Double
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/exit_meaning`.
+                @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case validation_space_or_space_usage = "validation or usage"
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/exit_meaning`.
+                public var exit_meaning: Components.Schemas.DependencyError_1.Value5Payload.exit_meaningPayload
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/code`.
+                @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case has_dependencies = "has_dependencies"
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/code`.
+                public var code: Components.Schemas.DependencyError_1.Value5Payload.codePayload
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/details`.
+                public struct detailsPayload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/details/task_id`.
+                    public var task_id: Swift.String
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/details/dependenciesPayload`.
+                    public struct dependenciesPayloadPayload: Codable, Hashable, Sendable {
+                        private var _explicitNullKeys: Set<String> = []
+
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/details/dependenciesPayload/profile_id`.
+                        public var profile_id: Swift.String
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/details/dependenciesPayload/dependent_id`.
+                        public var dependent_id: Swift.String
+                        /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/details/dependenciesPayload/blocker_id`.
+                        public var blocker_id: Swift.String
+                        /// Creates a new `dependenciesPayloadPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - profile_id:
+                        ///   - dependent_id:
+                        ///   - blocker_id:
+                        public init(
+                            profile_id: Swift.String,
+                            dependent_id: Swift.String,
+                            blocker_id: Swift.String
+                        ) {
+                            self.profile_id = profile_id
+                            self.dependent_id = dependent_id
+                            self.blocker_id = blocker_id
+                        }
+                        public enum CodingKeys: String, CodingKey {
+                            case profile_id
+                            case dependent_id
+                            case blocker_id
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.profile_id = try container.decode(
+                                Swift.String.self,
+                                forKey: .profile_id
+                            )
+                            self.dependent_id = try container.decode(
+                                Swift.String.self,
+                                forKey: .dependent_id
+                            )
+                            self.blocker_id = try container.decode(
+                                Swift.String.self,
+                                forKey: .blocker_id
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "profile_id",
+                                "dependent_id",
+                                "blocker_id"
+                            ])
+                        }
+
+                        public func encode(to encoder: any Swift.Encoder) throws {
+                            var container = encoder.container(keyedBy: CodingKeys.self)
+                            try container.encode(self.profile_id, forKey: .profile_id)
+                            try container.encode(self.dependent_id, forKey: .dependent_id)
+                            try container.encode(self.blocker_id, forKey: .blocker_id)
+                        }
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/details/dependencies`.
+                    public typealias dependenciesPayload = [Components.Schemas.DependencyError_1.Value5Payload.detailsPayload.dependenciesPayloadPayload]
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/details/dependencies`.
+                    public var dependencies: Components.Schemas.DependencyError_1.Value5Payload.detailsPayload.dependenciesPayload
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/details/flag`.
+                    @frozen public enum flagPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case _hyphen__hyphen_with_hyphen_dependencies = "--with-dependencies"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/details/flag`.
+                    public var flag: Components.Schemas.DependencyError_1.Value5Payload.detailsPayload.flagPayload
+                    /// Creates a new `detailsPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - task_id:
+                    ///   - dependencies:
+                    ///   - flag:
+                    public init(
+                        task_id: Swift.String,
+                        dependencies: Components.Schemas.DependencyError_1.Value5Payload.detailsPayload.dependenciesPayload,
+                        flag: Components.Schemas.DependencyError_1.Value5Payload.detailsPayload.flagPayload
+                    ) {
+                        self.task_id = task_id
+                        self.dependencies = dependencies
+                        self.flag = flag
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case task_id
+                        case dependencies
+                        case flag
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.task_id = try container.decode(
+                            Swift.String.self,
+                            forKey: .task_id
+                        )
+                        self.dependencies = try container.decode(
+                            Components.Schemas.DependencyError_1.Value5Payload.detailsPayload.dependenciesPayload.self,
+                            forKey: .dependencies
+                        )
+                        self.flag = try container.decode(
+                            Components.Schemas.DependencyError_1.Value5Payload.detailsPayload.flagPayload.self,
+                            forKey: .flag
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "task_id",
+                            "dependencies",
+                            "flag"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.task_id, forKey: .task_id)
+                        try container.encode(self.dependencies, forKey: .dependencies)
+                        try container.encode(self.flag, forKey: .flag)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5/details`.
+                public var details: Components.Schemas.DependencyError_1.Value5Payload.detailsPayload
+                /// Creates a new `Value5Payload`.
+                ///
+                /// - Parameters:
+                ///   - generated_at:
+                ///   - message:
+                ///   - exit_code:
+                ///   - exit_meaning:
+                ///   - code:
+                ///   - details:
+                public init(
+                    generated_at: Swift.String,
+                    message: Swift.String,
+                    exit_code: Swift.Double,
+                    exit_meaning: Components.Schemas.DependencyError_1.Value5Payload.exit_meaningPayload,
+                    code: Components.Schemas.DependencyError_1.Value5Payload.codePayload,
+                    details: Components.Schemas.DependencyError_1.Value5Payload.detailsPayload
+                ) {
+                    self.generated_at = generated_at
+                    self.message = message
+                    self.exit_code = exit_code
+                    self.exit_meaning = exit_meaning
+                    self.code = code
+                    self.details = details
+                }
+                public enum CodingKeys: String, CodingKey {
+                    case generated_at
+                    case message
+                    case exit_code
+                    case exit_meaning
+                    case code
+                    case details
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                    self.generated_at = try container.decode(
+                        Swift.String.self,
+                        forKey: .generated_at
+                    )
+                    self.message = try container.decode(
+                        Swift.String.self,
+                        forKey: .message
+                    )
+                    self.exit_code = try container.decode(
+                        Swift.Double.self,
+                        forKey: .exit_code
+                    )
+                    self.exit_meaning = try container.decode(
+                        Components.Schemas.DependencyError_1.Value5Payload.exit_meaningPayload.self,
+                        forKey: .exit_meaning
+                    )
+                    self.code = try container.decode(
+                        Components.Schemas.DependencyError_1.Value5Payload.codePayload.self,
+                        forKey: .code
+                    )
+                    self.details = try container.decode(
+                        Components.Schemas.DependencyError_1.Value5Payload.detailsPayload.self,
+                        forKey: .details
+                    )
+                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                        "generated_at",
+                        "message",
+                        "exit_code",
+                        "exit_meaning",
+                        "code",
+                        "details"
+                    ])
+                }
+
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    var container = encoder.container(keyedBy: CodingKeys.self)
+                    try container.encode(self.generated_at, forKey: .generated_at)
+                    try container.encode(self.message, forKey: .message)
+                    try container.encode(self.exit_code, forKey: .exit_code)
+                    try container.encode(self.exit_meaning, forKey: .exit_meaning)
+                    try container.encode(self.code, forKey: .code)
+                    try container.encode(self.details, forKey: .details)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value5`.
+            public var value5: Components.Schemas.DependencyError_1.Value5Payload?
+            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6`.
+            public struct Value6Payload: Codable, Hashable, Sendable {
+                private var _explicitNullKeys: Set<String> = []
+
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6/generated_at`.
+                public var generated_at: Swift.String
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6/message`.
+                public var message: Swift.String
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6/exit_code`.
+                public var exit_code: Swift.Double
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6/exit_meaning`.
+                @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case validation_space_or_space_usage = "validation or usage"
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6/exit_meaning`.
+                public var exit_meaning: Components.Schemas.DependencyError_1.Value6Payload.exit_meaningPayload
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6/code`.
+                @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case dependency_profile_mismatch = "dependency_profile_mismatch"
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6/code`.
+                public var code: Components.Schemas.DependencyError_1.Value6Payload.codePayload
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6/details`.
+                public struct detailsPayload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6/details/dependent_id`.
+                    public var dependent_id: Swift.String
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6/details/blocker_id`.
+                    public var blocker_id: Swift.String
+                    /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6/details/profile_id`.
+                    public var profile_id: Swift.String
+                    /// Creates a new `detailsPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - dependent_id:
+                    ///   - blocker_id:
+                    ///   - profile_id:
+                    public init(
+                        dependent_id: Swift.String,
+                        blocker_id: Swift.String,
+                        profile_id: Swift.String
+                    ) {
+                        self.dependent_id = dependent_id
+                        self.blocker_id = blocker_id
+                        self.profile_id = profile_id
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case dependent_id
+                        case blocker_id
+                        case profile_id
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.dependent_id = try container.decode(
+                            Swift.String.self,
+                            forKey: .dependent_id
+                        )
+                        self.blocker_id = try container.decode(
+                            Swift.String.self,
+                            forKey: .blocker_id
+                        )
+                        self.profile_id = try container.decode(
+                            Swift.String.self,
+                            forKey: .profile_id
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "dependent_id",
+                            "blocker_id",
+                            "profile_id"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.dependent_id, forKey: .dependent_id)
+                        try container.encode(self.blocker_id, forKey: .blocker_id)
+                        try container.encode(self.profile_id, forKey: .profile_id)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6/details`.
+                public var details: Components.Schemas.DependencyError_1.Value6Payload.detailsPayload
+                /// Creates a new `Value6Payload`.
+                ///
+                /// - Parameters:
+                ///   - generated_at:
+                ///   - message:
+                ///   - exit_code:
+                ///   - exit_meaning:
+                ///   - code:
+                ///   - details:
+                public init(
+                    generated_at: Swift.String,
+                    message: Swift.String,
+                    exit_code: Swift.Double,
+                    exit_meaning: Components.Schemas.DependencyError_1.Value6Payload.exit_meaningPayload,
+                    code: Components.Schemas.DependencyError_1.Value6Payload.codePayload,
+                    details: Components.Schemas.DependencyError_1.Value6Payload.detailsPayload
+                ) {
+                    self.generated_at = generated_at
+                    self.message = message
+                    self.exit_code = exit_code
+                    self.exit_meaning = exit_meaning
+                    self.code = code
+                    self.details = details
+                }
+                public enum CodingKeys: String, CodingKey {
+                    case generated_at
+                    case message
+                    case exit_code
+                    case exit_meaning
+                    case code
+                    case details
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                    self.generated_at = try container.decode(
+                        Swift.String.self,
+                        forKey: .generated_at
+                    )
+                    self.message = try container.decode(
+                        Swift.String.self,
+                        forKey: .message
+                    )
+                    self.exit_code = try container.decode(
+                        Swift.Double.self,
+                        forKey: .exit_code
+                    )
+                    self.exit_meaning = try container.decode(
+                        Components.Schemas.DependencyError_1.Value6Payload.exit_meaningPayload.self,
+                        forKey: .exit_meaning
+                    )
+                    self.code = try container.decode(
+                        Components.Schemas.DependencyError_1.Value6Payload.codePayload.self,
+                        forKey: .code
+                    )
+                    self.details = try container.decode(
+                        Components.Schemas.DependencyError_1.Value6Payload.detailsPayload.self,
+                        forKey: .details
+                    )
+                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                        "generated_at",
+                        "message",
+                        "exit_code",
+                        "exit_meaning",
+                        "code",
+                        "details"
+                    ])
+                }
+
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    var container = encoder.container(keyedBy: CodingKeys.self)
+                    try container.encode(self.generated_at, forKey: .generated_at)
+                    try container.encode(self.message, forKey: .message)
+                    try container.encode(self.exit_code, forKey: .exit_code)
+                    try container.encode(self.exit_meaning, forKey: .exit_meaning)
+                    try container.encode(self.code, forKey: .code)
+                    try container.encode(self.details, forKey: .details)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/DependencyError_1/value6`.
+            public var value6: Components.Schemas.DependencyError_1.Value6Payload?
+            /// Creates a new `DependencyError_1`.
+            ///
+            /// - Parameters:
+            ///   - value1:
+            ///   - value2:
+            ///   - value3:
+            ///   - value4:
+            ///   - value5:
+            ///   - value6:
+            public init(
+                value1: Components.Schemas.DependencyError_1.Value1Payload? = nil,
+                value2: Components.Schemas.DependencyError_1.Value2Payload? = nil,
+                value3: Components.Schemas.DependencyError_1.Value3Payload? = nil,
+                value4: Components.Schemas.DependencyError_1.Value4Payload? = nil,
+                value5: Components.Schemas.DependencyError_1.Value5Payload? = nil,
+                value6: Components.Schemas.DependencyError_1.Value6Payload? = nil
+            ) {
+                self.value1 = value1
+                self.value2 = value2
+                self.value3 = value3
+                self.value4 = value4
+                self.value5 = value5
+                self.value6 = value6
+            }
+            public init(from decoder: any Swift.Decoder) throws {
+                var errors: [any Swift.Error] = []
+                do {
+                    self.value1 = try .init(from: decoder)
+                } catch {
+                    errors.append(error)
+                }
+                do {
+                    self.value2 = try .init(from: decoder)
+                } catch {
+                    errors.append(error)
+                }
+                do {
+                    self.value3 = try .init(from: decoder)
+                } catch {
+                    errors.append(error)
+                }
+                do {
+                    self.value4 = try .init(from: decoder)
+                } catch {
+                    errors.append(error)
+                }
+                do {
+                    self.value5 = try .init(from: decoder)
+                } catch {
+                    errors.append(error)
+                }
+                do {
+                    self.value6 = try .init(from: decoder)
+                } catch {
+                    errors.append(error)
+                }
+                try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                    [
+                        self.value1,
+                        self.value2,
+                        self.value3,
+                        self.value4,
+                        self.value5,
+                        self.value6
+                    ],
+                    type: Self.self,
+                    codingPath: decoder.codingPath,
+                    errors: errors
+                )
+            }
+            public func encode(to encoder: any Swift.Encoder) throws {
+                try self.value1?.encode(to: encoder)
+                try self.value2?.encode(to: encoder)
+                try self.value3?.encode(to: encoder)
+                try self.value4?.encode(to: encoder)
+                try self.value5?.encode(to: encoder)
+                try self.value6?.encode(to: encoder)
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/TooManySignInsEncoded`.
         public struct TooManySignInsEncoded: Codable, Hashable, Sendable {
             private var _explicitNullKeys: Set<String> = []
@@ -7582,25 +11069,41 @@ extension Components {
             public var message: Swift.String
             /// - Remark: Generated from `#/components/schemas/TooManySignInsEncoded/locked_until`.
             public var locked_until: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/TooManySignInsEncoded/exit_code`.
+            public var exit_code: Swift.Double
+            /// - Remark: Generated from `#/components/schemas/TooManySignInsEncoded/exit_meaning`.
+            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+            }
+            /// - Remark: Generated from `#/components/schemas/TooManySignInsEncoded/exit_meaning`.
+            public var exit_meaning: Components.Schemas.TooManySignInsEncoded.exit_meaningPayload
             /// Creates a new `TooManySignInsEncoded`.
             ///
             /// - Parameters:
             ///   - _tag:
             ///   - message:
             ///   - locked_until:
+            ///   - exit_code:
+            ///   - exit_meaning:
             public init(
                 _tag: Components.Schemas.TooManySignInsEncoded._tagPayload,
                 message: Swift.String,
-                locked_until: Swift.String? = nil
+                locked_until: Swift.String? = nil,
+                exit_code: Swift.Double,
+                exit_meaning: Components.Schemas.TooManySignInsEncoded.exit_meaningPayload
             ) {
                 self._tag = _tag
                 self.message = message
                 self.locked_until = locked_until
+                self.exit_code = exit_code
+                self.exit_meaning = exit_meaning
             }
             public enum CodingKeys: String, CodingKey {
                 case _tag
                 case message
                 case locked_until
+                case exit_code
+                case exit_meaning
             }
             public init(from decoder: any Swift.Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -7617,10 +11120,20 @@ extension Components {
                     Swift.String.self,
                     forKey: .locked_until
                 )
+                self.exit_code = try container.decode(
+                    Swift.Double.self,
+                    forKey: .exit_code
+                )
+                self.exit_meaning = try container.decode(
+                    Components.Schemas.TooManySignInsEncoded.exit_meaningPayload.self,
+                    forKey: .exit_meaning
+                )
                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                     "_tag",
                     "message",
-                    "locked_until"
+                    "locked_until",
+                    "exit_code",
+                    "exit_meaning"
                 ])
             }
 
@@ -7633,6 +11146,8 @@ extension Components {
                 } else {
                     try container.encodeIfPresent(self.locked_until, forKey: .locked_until)
                 }
+                try container.encode(self.exit_code, forKey: .exit_code)
+                try container.encode(self.exit_meaning, forKey: .exit_meaning)
             }
         }
         /// - Remark: Generated from `#/components/schemas/CommittedOperation`.
@@ -89364,21 +92879,21 @@ extension Components {
                 try container.encode(self.replay, forKey: .replay)
             }
         }
-        /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349`.
-        public struct SwiftTagged_TaskAttemptRejected_4cfad4fa33032349: Codable, Hashable, Sendable {
+        /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664`.
+        public struct SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664: Codable, Hashable, Sendable {
             private var _explicitNullKeys: Set<String> = []
 
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/entity_version`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/entity_version`.
             public var entity_version: Swift.Double
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/occurred_at`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/occurred_at`.
             public var occurred_at: Swift.String
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/kind`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/kind`.
             @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case TaskAttemptRejected = "TaskAttemptRejected"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/kind`.
-            public var kind: Components.Schemas.SwiftTagged_TaskAttemptRejected_4cfad4fa33032349.kindPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/attempted_kind`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/kind`.
+            public var kind: Components.Schemas.SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664.kindPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/attempted_kind`.
             @frozen public enum attempted_kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case DependencyAdded = "DependencyAdded"
                 case DependencyRemoved = "DependencyRemoved"
@@ -89395,19 +92910,19 @@ extension Components {
                 case TaskPurged = "TaskPurged"
                 case TaskReverted = "TaskReverted"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/attempted_kind`.
-            public var attempted_kind: Components.Schemas.SwiftTagged_TaskAttemptRejected_4cfad4fa33032349.attempted_kindPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/task_id`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/attempted_kind`.
+            public var attempted_kind: Components.Schemas.SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664.attempted_kindPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/task_id`.
             public var task_id: Swift.String?
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/violationsPayload`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/violationsPayload`.
             public struct violationsPayloadPayload: Codable, Hashable, Sendable {
                 private var _explicitNullKeys: Set<String> = []
 
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/violationsPayload/field`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/violationsPayload/field`.
                 public var field: Swift.String
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/violationsPayload/received`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/violationsPayload/received`.
                 public var received: OpenAPIRuntime.OpenAPIValueContainer
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/violationsPayload/code`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/violationsPayload/code`.
                 public var code: Swift.String
                 /// Creates a new `violationsPayloadPayload`.
                 ///
@@ -89458,21 +92973,21 @@ extension Components {
                     try container.encode(self.code, forKey: .code)
                 }
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/violations`.
-            public typealias violationsPayload = [Components.Schemas.SwiftTagged_TaskAttemptRejected_4cfad4fa33032349.violationsPayloadPayload]
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/violations`.
-            public var violations: Components.Schemas.SwiftTagged_TaskAttemptRejected_4cfad4fa33032349.violationsPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/details`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/violations`.
+            public typealias violationsPayload = [Components.Schemas.SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664.violationsPayloadPayload]
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/violations`.
+            public var violations: Components.Schemas.SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664.violationsPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/details`.
             public struct detailsPayload: Codable, Hashable, Sendable {
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/details/value1`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/details/value1`.
                 public struct Value1Payload: Codable, Hashable, Sendable {
                     private var _explicitNullKeys: Set<String> = []
 
-                    /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/details/value1/witness`.
-                    public var witness: Components.Schemas.DependencyError_1
-                    /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/details/value1/truncated`.
+                    /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/details/value1/witness`.
+                    public var witness: Components.Schemas.StoredDependencyError
+                    /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/details/value1/truncated`.
                     public var truncated: Swift.Bool
-                    /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/details/value1/total`.
+                    /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/details/value1/total`.
                     public var total: Swift.Int
                     /// Creates a new `Value1Payload`.
                     ///
@@ -89481,7 +92996,7 @@ extension Components {
                     ///   - truncated:
                     ///   - total:
                     public init(
-                        witness: Components.Schemas.DependencyError_1,
+                        witness: Components.Schemas.StoredDependencyError,
                         truncated: Swift.Bool,
                         total: Swift.Int
                     ) {
@@ -89498,7 +93013,7 @@ extension Components {
                         let container = try decoder.container(keyedBy: CodingKeys.self)
                         self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
                         self.witness = try container.decode(
-                            Components.Schemas.DependencyError_1.self,
+                            Components.Schemas.StoredDependencyError.self,
                             forKey: .witness
                         )
                         self.truncated = try container.decode(
@@ -89523,21 +93038,21 @@ extension Components {
                         try container.encode(self.total, forKey: .total)
                     }
                 }
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/details/value1`.
-                public var value1: Components.Schemas.SwiftTagged_TaskAttemptRejected_4cfad4fa33032349.detailsPayload.Value1Payload?
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/details/value2`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/details/value1`.
+                public var value1: Components.Schemas.SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664.detailsPayload.Value1Payload?
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/details/value2`.
                 public struct Value2Payload: Codable, Hashable, Sendable {
                     private var _explicitNullKeys: Set<String> = []
 
-                    /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/details/value2/witness`.
+                    /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/details/value2/witness`.
                     @frozen public enum witnessPayload: String, Codable, Hashable, Sendable, CaseIterable {
                         case _empty = ""
                     }
-                    /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/details/value2/witness`.
-                    public var witness: Components.Schemas.SwiftTagged_TaskAttemptRejected_4cfad4fa33032349.detailsPayload.Value2Payload.witnessPayload?
-                    /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/details/value2/truncated`.
+                    /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/details/value2/witness`.
+                    public var witness: Components.Schemas.SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664.detailsPayload.Value2Payload.witnessPayload?
+                    /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/details/value2/truncated`.
                     public var truncated: Swift.Bool
-                    /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/details/value2/total`.
+                    /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/details/value2/total`.
                     public var total: Swift.Int
                     /// Creates a new `Value2Payload`.
                     ///
@@ -89546,7 +93061,7 @@ extension Components {
                     ///   - truncated:
                     ///   - total:
                     public init(
-                        witness: Components.Schemas.SwiftTagged_TaskAttemptRejected_4cfad4fa33032349.detailsPayload.Value2Payload.witnessPayload? = nil,
+                        witness: Components.Schemas.SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664.detailsPayload.Value2Payload.witnessPayload? = nil,
                         truncated: Swift.Bool,
                         total: Swift.Int
                     ) {
@@ -89563,7 +93078,7 @@ extension Components {
                         let container = try decoder.container(keyedBy: CodingKeys.self)
                         self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
                         self.witness = try container.decodeIfPresent(
-                            Components.Schemas.SwiftTagged_TaskAttemptRejected_4cfad4fa33032349.detailsPayload.Value2Payload.witnessPayload.self,
+                            Components.Schemas.SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664.detailsPayload.Value2Payload.witnessPayload.self,
                             forKey: .witness
                         )
                         self.truncated = try container.decode(
@@ -89592,16 +93107,16 @@ extension Components {
                         try container.encode(self.total, forKey: .total)
                     }
                 }
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/details/value2`.
-                public var value2: Components.Schemas.SwiftTagged_TaskAttemptRejected_4cfad4fa33032349.detailsPayload.Value2Payload?
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/details/value2`.
+                public var value2: Components.Schemas.SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664.detailsPayload.Value2Payload?
                 /// Creates a new `detailsPayload`.
                 ///
                 /// - Parameters:
                 ///   - value1:
                 ///   - value2:
                 public init(
-                    value1: Components.Schemas.SwiftTagged_TaskAttemptRejected_4cfad4fa33032349.detailsPayload.Value1Payload? = nil,
-                    value2: Components.Schemas.SwiftTagged_TaskAttemptRejected_4cfad4fa33032349.detailsPayload.Value2Payload? = nil
+                    value1: Components.Schemas.SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664.detailsPayload.Value1Payload? = nil,
+                    value2: Components.Schemas.SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664.detailsPayload.Value2Payload? = nil
                 ) {
                     self.value1 = value1
                     self.value2 = value2
@@ -89633,9 +93148,9 @@ extension Components {
                     try self.value2?.encode(to: encoder)
                 }
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349/details`.
-            public var details: Components.Schemas.SwiftTagged_TaskAttemptRejected_4cfad4fa33032349.detailsPayload?
-            /// Creates a new `SwiftTagged_TaskAttemptRejected_4cfad4fa33032349`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664/details`.
+            public var details: Components.Schemas.SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664.detailsPayload?
+            /// Creates a new `SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664`.
             ///
             /// - Parameters:
             ///   - entity_version:
@@ -89648,11 +93163,11 @@ extension Components {
             public init(
                 entity_version: Swift.Double,
                 occurred_at: Swift.String,
-                kind: Components.Schemas.SwiftTagged_TaskAttemptRejected_4cfad4fa33032349.kindPayload,
-                attempted_kind: Components.Schemas.SwiftTagged_TaskAttemptRejected_4cfad4fa33032349.attempted_kindPayload,
+                kind: Components.Schemas.SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664.kindPayload,
+                attempted_kind: Components.Schemas.SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664.attempted_kindPayload,
                 task_id: Swift.String? = nil,
-                violations: Components.Schemas.SwiftTagged_TaskAttemptRejected_4cfad4fa33032349.violationsPayload,
-                details: Components.Schemas.SwiftTagged_TaskAttemptRejected_4cfad4fa33032349.detailsPayload? = nil
+                violations: Components.Schemas.SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664.violationsPayload,
+                details: Components.Schemas.SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664.detailsPayload? = nil
             ) {
                 self.entity_version = entity_version
                 self.occurred_at = occurred_at
@@ -89684,11 +93199,11 @@ extension Components {
                     forKey: .occurred_at
                 )
                 self.kind = try container.decode(
-                    Components.Schemas.SwiftTagged_TaskAttemptRejected_4cfad4fa33032349.kindPayload.self,
+                    Components.Schemas.SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664.kindPayload.self,
                     forKey: .kind
                 )
                 self.attempted_kind = try container.decode(
-                    Components.Schemas.SwiftTagged_TaskAttemptRejected_4cfad4fa33032349.attempted_kindPayload.self,
+                    Components.Schemas.SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664.attempted_kindPayload.self,
                     forKey: .attempted_kind
                 )
                 self.task_id = try container.decodeIfPresent(
@@ -89696,11 +93211,11 @@ extension Components {
                     forKey: .task_id
                 )
                 self.violations = try container.decode(
-                    Components.Schemas.SwiftTagged_TaskAttemptRejected_4cfad4fa33032349.violationsPayload.self,
+                    Components.Schemas.SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664.violationsPayload.self,
                     forKey: .violations
                 )
                 self.details = try container.decodeIfPresent(
-                    Components.Schemas.SwiftTagged_TaskAttemptRejected_4cfad4fa33032349.detailsPayload.self,
+                    Components.Schemas.SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664.detailsPayload.self,
                     forKey: .details
                 )
                 try decoder.ensureNoAdditionalProperties(knownKeys: [
@@ -90241,27 +93756,27 @@ extension Components {
                 }
             }
         }
-        /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_993d4a6b635d9109`.
-        public struct SwiftTagged_rejected_993d4a6b635d9109: Codable, Hashable, Sendable {
+        /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_a50acde06abbb338`.
+        public struct SwiftTagged_rejected_a50acde06abbb338: Codable, Hashable, Sendable {
             private var _explicitNullKeys: Set<String> = []
 
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_993d4a6b635d9109/seq`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_a50acde06abbb338/seq`.
             public var seq: Swift.Int
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_993d4a6b635d9109/actor`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_a50acde06abbb338/actor`.
             public var actor: Swift.String
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_993d4a6b635d9109/profile`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_a50acde06abbb338/profile`.
             public var profile: Swift.String?
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_993d4a6b635d9109/from_version`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_a50acde06abbb338/from_version`.
             public var from_version: Swift.Int?
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_993d4a6b635d9109/event`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_a50acde06abbb338/event`.
             @frozen public enum eventPayload: Codable, Hashable, Sendable {
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_993d4a6b635d9109/event/SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_a50acde06abbb338/event/SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21`.
                 case AuthAttemptRejected(Components.Schemas.SwiftTagged_AuthAttemptRejected_8d9ee12f263fef21)
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_993d4a6b635d9109/event/SwiftTagged_ProfileDeletionRejected_310fcd3b740927d2`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_a50acde06abbb338/event/SwiftTagged_ProfileDeletionRejected_310fcd3b740927d2`.
                 case ProfileDeletionRejected(Components.Schemas.SwiftTagged_ProfileDeletionRejected_310fcd3b740927d2)
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_993d4a6b635d9109/event/SwiftTagged_TaskAttemptRejected_4cfad4fa33032349`.
-                case TaskAttemptRejected(Components.Schemas.SwiftTagged_TaskAttemptRejected_4cfad4fa33032349)
-                /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_993d4a6b635d9109/event/SwiftTagged_TaskHistoryRedacted_6b8fcebfc243c67b`.
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_a50acde06abbb338/event/SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664`.
+                case TaskAttemptRejected(Components.Schemas.SwiftTagged_TaskAttemptRejected_bf25b9bbbdcdc664)
+                /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_a50acde06abbb338/event/SwiftTagged_TaskHistoryRedacted_6b8fcebfc243c67b`.
                 case TaskHistoryRedacted(Components.Schemas.SwiftTagged_TaskHistoryRedacted_6b8fcebfc243c67b)
                 public enum CodingKeys: String, CodingKey {
                     case kind
@@ -90302,23 +93817,23 @@ extension Components {
                     }
                 }
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_993d4a6b635d9109/event`.
-            public var event: Components.Schemas.SwiftTagged_rejected_993d4a6b635d9109.eventPayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_993d4a6b635d9109/to_version`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_a50acde06abbb338/event`.
+            public var event: Components.Schemas.SwiftTagged_rejected_a50acde06abbb338.eventPayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_a50acde06abbb338/to_version`.
             @frozen public enum to_versionPayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case _empty = ""
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_993d4a6b635d9109/to_version`.
-            public var to_version: Components.Schemas.SwiftTagged_rejected_993d4a6b635d9109.to_versionPayload?
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_993d4a6b635d9109/outcome`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_a50acde06abbb338/to_version`.
+            public var to_version: Components.Schemas.SwiftTagged_rejected_a50acde06abbb338.to_versionPayload?
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_a50acde06abbb338/outcome`.
             @frozen public enum outcomePayload: String, Codable, Hashable, Sendable, CaseIterable {
                 case rejected = "rejected"
             }
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_993d4a6b635d9109/outcome`.
-            public var outcome: Components.Schemas.SwiftTagged_rejected_993d4a6b635d9109.outcomePayload
-            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_993d4a6b635d9109/reason`.
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_a50acde06abbb338/outcome`.
+            public var outcome: Components.Schemas.SwiftTagged_rejected_a50acde06abbb338.outcomePayload
+            /// - Remark: Generated from `#/components/schemas/SwiftTagged_rejected_a50acde06abbb338/reason`.
             public var reason: Swift.String
-            /// Creates a new `SwiftTagged_rejected_993d4a6b635d9109`.
+            /// Creates a new `SwiftTagged_rejected_a50acde06abbb338`.
             ///
             /// - Parameters:
             ///   - seq:
@@ -90334,9 +93849,9 @@ extension Components {
                 actor: Swift.String,
                 profile: Swift.String? = nil,
                 from_version: Swift.Int? = nil,
-                event: Components.Schemas.SwiftTagged_rejected_993d4a6b635d9109.eventPayload,
-                to_version: Components.Schemas.SwiftTagged_rejected_993d4a6b635d9109.to_versionPayload? = nil,
-                outcome: Components.Schemas.SwiftTagged_rejected_993d4a6b635d9109.outcomePayload,
+                event: Components.Schemas.SwiftTagged_rejected_a50acde06abbb338.eventPayload,
+                to_version: Components.Schemas.SwiftTagged_rejected_a50acde06abbb338.to_versionPayload? = nil,
+                outcome: Components.Schemas.SwiftTagged_rejected_a50acde06abbb338.outcomePayload,
                 reason: Swift.String
             ) {
                 self.seq = seq
@@ -90378,15 +93893,15 @@ extension Components {
                     forKey: .from_version
                 )
                 self.event = try container.decode(
-                    Components.Schemas.SwiftTagged_rejected_993d4a6b635d9109.eventPayload.self,
+                    Components.Schemas.SwiftTagged_rejected_a50acde06abbb338.eventPayload.self,
                     forKey: .event
                 )
                 self.to_version = try container.decodeIfPresent(
-                    Components.Schemas.SwiftTagged_rejected_993d4a6b635d9109.to_versionPayload.self,
+                    Components.Schemas.SwiftTagged_rejected_a50acde06abbb338.to_versionPayload.self,
                     forKey: .to_version
                 )
                 self.outcome = try container.decode(
-                    Components.Schemas.SwiftTagged_rejected_993d4a6b635d9109.outcomePayload.self,
+                    Components.Schemas.SwiftTagged_rejected_a50acde06abbb338.outcomePayload.self,
                     forKey: .outcome
                 )
                 self.reason = try container.decode(

@@ -55,3 +55,19 @@ Codex gpt-6.1-sol xhigh for workers and max for seat 1. Every thread sends its
 terminal status to DAG-L1 and the coordinator. If launch is unavailable, report
 blocked without fallback. Client-base clearance for E and S comes separately.
 The graph frame legibility pass is due before Phase 2.
+
+## Main integration amendments, 2026-11-10
+
+The coordinator authorized merging main cabf4866, including ADR-0019 and the
+Performance cache. New Dependency errors carry exit_code and exit_meaning.
+Both apps must project human copy from structured details; client units own
+that presentation alongside their DAG controls. Read capabilities retain the
+ADR-0009 agent/human parity requirement. Existing rejected History stays
+readable without rewriting stored rows.
+
+Every permanent Task-text erasure clears TaskSearchCache, including Purge.
+Verification inputs resolve from the repository, without required machine paths.
+Client units run the complete offscreen suite and report the unchanged main
+baseline of twelve Compact import geometry failures separately from new failures.
+They must neither fix nor weaken that baseline during this run. The generated
+Excalidraw scene is local and ignored; generation refuses intersecting frames.

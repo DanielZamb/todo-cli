@@ -1,5 +1,12 @@
 # Task search
 
+PERF package commands use `--disable-automatic-resolution` for Swift build,
+run and test, and `-disableAutomaticPackageResolution` for xcodebuild. The
+write-state and design helpers record `git diff --exit-code HEAD` for all three
+tracked Package.resolved files before and after each Swift package command.
+The measurement driver records the same pre/post results. Any changed lockfile
+fails verification; no resolver version change belongs in this unit.
+
 `deterministicRefusalRetainsSnapshotAndRecoversFromSse` creates three maximum-size
 U+FDFA descriptions on compiled scratch HTTP. It requires `search_too_broad`,
 the server recovery text, retained typed text and applied rows, and `canRetry ==
@@ -129,3 +136,33 @@ also includes TaskSearch.swift. No native app, hosted XCTest, Keychain, signing,
 installed binary or real owner database is used. Native toolbar focus, Cmd+F,
 Esc, native glass and VoiceOver remain under HOLD. Offscreen fixture failure
 feedback does not prove an operating-system clipboard failure.
+
+## Query refresh request counts
+
+`RefreshMeasurementTests.refreshMeasurement` drives the production TodoModel
+and generated client through the shared transparent recorder in
+`apps/electron/scripts/measure-refresh.ts`. Pass `swift`, the absolute compiled
+unhosted Swift Testing bundle binary, and a fresh absolute evidence directory.
+The runner selects the frozen bundle binary and uses `swift test --skip-build`.
+It never invokes a build inside the measurement slot. Acquire `scripts/swift-slot.sh` outside
+`/tmp/todo-perf-measure.lock` before running it. Preserve the baseline executable
+before changing production sources, then alternate five compiled inputs per
+side under one measurement slot. Record every real process exit.
+
+Each run includes explicit warmup, 25 measured operations across All tasks and
+all planning views, full-refresh rows, typed text, filter Apply, Clear and Retry.
+Literal titles, spans, identities and the retained unfiltered Task count must
+pass every sample. The recorder keeps route lifetimes, failures, cancellation,
+per-interval one-minute load and artifact hashes. Candidate query counts are
+one for All tasks and two for planning when `TODO_REFRESH_EXPECT_MINIMAL=1`.
+Use `TODO_REFRESH_DELAY_MS=200` only as a separately labelled concurrency proof.
+The production state suite delays full successes and errors after a write, then
+types a query. With `catalogStale` set, that query must fetch and publish the full
+catalog's literal Task/Project/Tag names, discovery counts and unfiltered rows
+before the old reply is released. A failed current full followed by a query
+also retains that obligation. Only guarded full publication clears the flag.
+The separate full/reconnect/write request counts include these owed refreshes;
+steady-state query counts remain1/2.
+
+`verify-design.py` accepts the same `TODO_SWIFT_BUILD_PATH` override as the state
+helper. The directory must remain under this checkout's `apps/macos`.

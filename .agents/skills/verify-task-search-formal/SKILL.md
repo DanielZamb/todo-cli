@@ -18,6 +18,13 @@ commit in matcher-candidate.json. For final integration, pass its exact full SHA
 The command checks the model, source mapping and matcher separately; client
 behavior also requires the compiled verification recipes.
 
+All required paths resolve from `git rev-parse --show-toplevel`. The optional
+`TODO_TASK_SEARCH_TOOL_CACHE` names a repo-relative cache directory; its default
+is `docs/evidence/task-search-formal/tool-cache`. Absolute paths, paths above
+the checkout and symlinks escaping it fail before TLC starts. The command runs
+each bad-input control and a restored preflight. Historical discovery receipt
+paths in the mapping are provenance text; this workflow does not open them.
+
 Prerequisites are Java 11 or newer, Bun, curl, and dependencies from the existing
 pnpm lockfile. Follow the active run's disk guard before `pnpm install`.
 The Git object named in `matcher-candidate.json` must exist locally. The command
@@ -43,7 +50,7 @@ An exit other than 0, a timeout, or a nonempty TLC queue is incomplete proof.
 [tool.json](tool.json) pins TLA+ tools v1.7.4, TLC 2.19, by HTTPS URL and SHA-256.
 The first run downloads the jar into the ignored `tool-cache` after the disk
 guard passes. Every run checks its hash. Java uses one worker, fingerprint
-polynomial 17, seed 1, a 2 GiB heap, and the bundled `MemFPSet1` implementation.
+polynomial 17, seed 1, a 2 GiB heap, one temporary directory per stage, and the bundled `MemFPSet1` implementation.
 That fingerprint set avoids the disk-set reporting exception observed during
 this unit and the quadratic final distance scan in `MemFPSet`. No symmetry
 reduction or state constraint
@@ -60,6 +67,8 @@ The normal command checks these properties separately:
 | `ShowingIsCurrent` | Showing presents a response for an identity other than the current request. This invariant reads only phase and snapshot identity. |
 | `ExactStale` | The UI presents old rows as current, or keeps current rows dimmed. `stale` must equal the complete identity inequality. |
 | `Convergence` | Stable input remains stale forever despite fair debounce, recovery, and successful replies. |
+| `CatalogOwedUntilPublish` | Requesting a replacement loses the full refresh required after a write, SSE event or reconnect. |
+| `NoOwedQueryPublication` | Fresh matching rows publish with a catalog whose required update was discarded. |
 
 `LatestPublication` uses `publicationOK` as an observation of the pre-response
 guard. It does not make that guard true. Both response branches compute the
@@ -192,11 +201,36 @@ mapping is renewed. No branch name is resolved implicitly. Mutation anchors
 that change fail closed and require a new source review. The domain worker owns
 `verify-task-search`, the matcher, and all product edits.
 
-The run forbids extra children. The `no-comments` workflow therefore receives
-only a local audit in this unit, with independent comment review left to L1's
-permitted reviewer. No child or native app is launched by this check. The relative
+The check launches no agents or native apps. Review launches follow the active
+run's standing orders. The relative
 `.claude/skills/verify-task-search-formal` link resolves to this skill. Fresh
 session skill discovery is not proven by that filesystem check.
+
+## Full and query refresh publication
+
+The model now includes `catalogReady` and the latest pending `issuedFull` token.
+Startup and current-Profile SSE request full scope. Query changes, dialog Apply
+and Retry promote to full until a catalog has successfully published and no
+catalog update is owed. `catalogOwed` is set on full requests, survives input,
+failures and obsolete responses, and clears only on guarded full publication.
+A current query-only success retains the catalog. Reset clears readiness and
+sets the obligation. Obsolete success and error branches publish no catalog
+side effects. The source mapping describes why obsolete request scope can be
+forgotten while the full-publication obligation must survive invalidation.
+
+The command also checks `QueryHasCatalog`. Its `BrokenFallback` control removes
+bootstrap promotion and must fail that invariant with TLC exit 12. The existing
+five search safety and convergence properties and their sensitivity controls
+remain required. Full/query metadata values, offline cache contents and literal
+Task strings still require the compiled client recipes.
+
+`CatalogOwedUntilPublish` checks that a request cannot erase an owed full
+publication. Its `BrokenCatalogOwed` control clears the flag at request time and
+must fail with TLC exit12. `NoOwedQueryPublication` checks that publication cannot
+reuse an owed catalog. `BrokenCatalogPromotion` disables owed-scope promotion
+and must fail it with exit12. Both use independent transition observations,
+described in `CLIENT-MAPPING.md`, so clearing the flag cannot conceal the fault.
+Both controls and the restored run are part of the one command.
 
 ## Work-budget and yielding mapping
 

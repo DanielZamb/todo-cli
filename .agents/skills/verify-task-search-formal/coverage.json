@@ -1,6 +1,6 @@
 {
-  "sourceCommit": "c14371075593a4a163f15797c495ac821510a449",
-  "status": "sec-l1-reviewed-F1a-F1b-catalog-lifetime-and-tag-representability; independent-seats-pending",
+  "sourceCommit": "26367043daf92787fc128ac23544afcb5709a791",
+  "status": "Current main4c composition: bounded safety/liveness, intended controls/restoration, fresh matcher properties and compiled full/query client drives passed",
   "files": [
     {
       "path": "apps/electron/src/renderer.tsx",
@@ -11,10 +11,15 @@
         "activateProfile",
         "activateView",
         "clearFilters",
+        "changed/connection notice handlers",
+        "catalogRef",
+        "catalogOwedRef",
+        "invalidate",
+        "searchDefinitions Profile-keyed metadata",
         "endAuthentication",
         "changed/connection/reload notice handlers"
       ],
-      "sha256": "694b5c90572436b93dd18619b7728209adbf00d053e8f9ae5205bda3966d27fb"
+      "sha256": "6aff737ee78fc37dda9127449a504ef984ba2228a1b2e0ef26d22ec190583eb4"
     },
     {
       "path": "apps/electron/src/task-search-results.ts",
@@ -30,17 +35,20 @@
     {
       "path": "apps/electron/src/task-client.ts",
       "functions": [
-        "taskRequest list branch"
+        "taskRequest list branch",
+        "taskRequest search branch"
       ],
-      "sha256": "82f28b053590d063679cc5fde5d5e54a2db84fc6519a198d4d0f207ae5400329"
+      "sha256": "028faf302f5ca8c6ab9bc87e6e4825f02c59d328abed06ec1de0d85f6a66ab04"
     },
     {
       "path": "apps/electron/src/protocol.ts",
       "functions": [
+        "Request search decoder",
+        "Reply tasks/search TaskRead decoders",
         "Reply tasks TaskRead decoder",
         "Reply error code decoder"
       ],
-      "sha256": "822a023127ec533577f6d05f5ed6d86592d27fd676761ebf9eaa4a8fe6119e62"
+      "sha256": "b5a43619a9e5c668df820cc9941e7b7d48fe8f3209416cbeafe1881fad4dba9a"
     },
     {
       "path": "apps/macos/Sources/TodoModel.swift",
@@ -54,9 +62,14 @@
         "activateProfile",
         "selectView",
         "followChanges",
-        "applyTaskFilters"
+        "applyTaskFilters",
+        "catalogReady",
+        "catalogStale",
+        "readSearchRows",
+        "readSearchPlanning",
+        "readSearchCatalog"
       ],
-      "sha256": "f321afdea1fa9b9f8a6ace8ba1f312c021fb6ea245f5656e457de0bbbde1d35e"
+      "sha256": "8307d4d8305aa31b9d8ed0cb1d11107b7a1aee9fa01c5fcca8c27c450425ef52"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -64,10 +77,10 @@
         "TaskSearchIdentity",
         "TaskSearchSnapshot",
         "TaskSearchRefreshOutcome",
-        "TaskSearchFailure",
-        "TaskSearchPresentation"
+        "TaskSearchPresentation",
+        "TaskSearchFailure"
       ],
-      "sha256": "6742564f220867bce552b686b7efc9e8072d94df3aaa30fb512f1cec52019a00"
+      "sha256": "2b98d8fb63ae9be6afc2983e63a0c60bf2ac640b1dbceeef842dc1b6ef8a2445"
     },
     {
       "path": "apps/macos/Sources/AppViews.swift",
@@ -78,7 +91,7 @@
         "taskContent",
         "searchField"
       ],
-      "sha256": "cbd1ab46f108718e7bbf9e6a5f6faf64089d6656225686c9dd1ceb3ff9a931da"
+      "sha256": "0d2dd9d5eee717df7ace67df5546cd2ba5f79ea42cff29f1340694ca9c13fad6"
     },
     {
       "path": "apps/macos/Sources/TaskSnapshot.swift",
@@ -92,15 +105,15 @@
       "path": "packages/domain/src/task-search.ts",
       "functions": [
         "normalizeTaskSearch",
+        "parseTaskSearch",
+        "matchTaskSearch",
         "PreparedField",
         "taskSearchWorkLimits",
         "TaskSearchWork",
         "fieldWords",
-        "parseTaskSearch",
         "prefixMatcher",
         "clauseMatches",
-        "matchTaskSearchSteps",
-        "matchTaskSearch"
+        "matchTaskSearchSteps"
       ],
       "sha256": "1a82bab698508fe98c1d7de11fddbaf910454d69c3f6534e45e8b0ce9203c23c"
     },
@@ -115,12 +128,12 @@
       "path": "packages/domain/src/task-filters.ts",
       "functions": [
         "TaskFilters",
-        "filterTaskRecordSteps",
         "filterTaskRecords",
+        "filterTaskRecordSteps",
         "runTaskRecordSteps",
         "filterTaskRecordsEffect"
       ],
-      "sha256": "59b835514b51dc7c301cefabce5954c77160857ace8b75a6d994f83b6925369d"
+      "sha256": "8cd2744d66656987286a0d179b37ec41f1424f9d4dce13418d8d6f3c5bdec890"
     },
     {
       "path": "packages/domain/src/task-read.ts",
@@ -134,7 +147,7 @@
       "functions": [
         "inputLimits.searchText"
       ],
-      "sha256": "2845803b1fb0fc6e3984bfc83fccc59cd3e0356e0f61a70a432672633f102767"
+      "sha256": "cd83a481987cf5e0b2edfd657a9ea5a599e8726e55d9b6fa11edcbca7fd17f17"
     },
     {
       "path": "packages/domain/src/presentation.ts",
@@ -142,7 +155,7 @@
         "TaskViewSchema",
         "taskView"
       ],
-      "sha256": "f1063952fb0fbe58f09ce3464fad6ed93784b019db261fe0e21abe81d5b293c5"
+      "sha256": "7639e50a4a0213173c0b2f297eec637879bb1fd4325b534d0aa7cd9eb7fb3e2d"
     },
     {
       "path": "packages/domain/src/commands.ts",
@@ -150,7 +163,17 @@
         "readTasks",
         "TaskCommands.list"
       ],
-      "sha256": "970d2db6c8631c3819138451c778fb79b462e079a1ccb556f5dfcca5dfbd3078"
+      "sha256": "6d4c1e4b478d4fc62e9c1c115ddb693cf28f09558cc0260610b1682be9e47e12"
+    },
+    {
+      "path": "apps/electron/src/task-search-presentation.tsx",
+      "functions": [
+        "appliedSearchContext",
+        "SearchErrorMessage",
+        "SearchHighlight",
+        "descriptionMatch"
+      ],
+      "sha256": "a0e6e2e98aa724364a43254bfc4a1b1b284a2815160c509712f933292a884e6a"
     }
   ],
   "mapping": "CLIENT-MAPPING.md",
@@ -160,12 +183,42 @@
     "formal": "4c8c6932; both seats complete; R1/reset amendment228e3485",
     "swift": "code76035210 + visual8fd49f25; integratedc19fd669; approved presentation alignment0d5b2198",
     "electron": "codedf13e2a8 + visuale8178e24; integratedbc288b30",
+    "refresh": "Both seats passed f1c5f221, product ada9f319. Full/query catalog debt and F1a/F1b forwarding are preserved. Compiled Swift/Electron, Snapshot reload, final request-count pairs and exact-head locked check passed; local delivery receipt records bounds and native limits.",
     "security": "SEC-W1 local source review, literal client/core proofs, immutable real matcher properties and all five behavioral mutations passed at0a2eef1c in matcher-zwScvg. Covered source bytes unchanged at this product commit. Seat1 held for SEC-L1 to launch; seat2 coordinator.",
     "v1": "Reviewed display-only diff against CLIENT-MAPPING.md: shared applied-context helpers, unchanged refusal sentence, secondary context, no state transition/publication guard/generation/identity changes. Immutable matcher properties and all five behavioral mutations passed at064b2667 in matcher-1eyrdt before these four hashes were renewed. Seat1/visual review pending.",
+    "cache": "Both seats passed 7f63b0e2, code65033c86. TaskCommands.list captures the store Read before auth/SQLite access and supplies existing SEC execution.prepare. Whole-cache epoch fencing covers Purge and restore, with a narrow external-erasure observer. CLI unexpected defects retain runtime_error exit1; typed refusal remains2. Exact committed cache, model/code controls, lifecycle, AtomicCAS and locked check passed. Bounded hygiene model and instrumented compiled erasure proofs are separate from response ordering.",
     "f1": "Reviewed F1 against CLIENT-MAPPING.md: catalog-name request narrowing only; explicit dialog names win, unresolved ids add no name, same-response id joins remain. No state transition, publication guard, generation, identity, snapshot or SSE recovery change. Immutable real matcher properties and all five behavioral mutations passed at5d42f32b in matcher-uo9W7V before renewing only the three changed source hashes. Compiled Electron/Swift recovery, ordinary JSON, real raw-append case-fold Tags and synthetic same-name Projects passed.",
-    "f1ab": "Reviewed F1a/F1b against CLIENT-MAPPING.md: Electron keeps a Profile-keyed name catalog ref refreshed from each published result and cleared on Profile switch, endAuthentication and reload, used only for a matching Profile; both clients infer a Tag name only when trimming leaves it unchanged (Swift: whitespacesAndNewlines plus U+FEFF, a superset of JS trim), Project names stay exact. Request narrowing only: no state transition, publication guard, generation, identity, snapshot or SSE recovery change. Immutable real matcher properties and all five behavioral mutations passed at c1437107 in matcher-qRXiUP before renewing only the three changed source hashes."
+    "f1ab": "Reviewed F1a/F1b against CLIENT-MAPPING.md: Electron keeps a Profile-keyed name catalog ref refreshed from each published result and cleared on Profile switch, endAuthentication and reload, used only for a matching Profile; both clients infer a Tag name only when trimming leaves it unchanged (Swift: whitespacesAndNewlines plus U+FEFF, a superset of JS trim), Project names stay exact. Request narrowing only: no state transition, publication guard, generation, identity, snapshot or SSE recovery change. Immutable real matcher properties and all five behavioral mutations passed at c1437107 in matcher-qRXiUP before renewing only the three changed source hashes.",
+    "main9deRefresh": "Reviewed final main F1a/F1b through the shared full/query request construction. Profile-keyed metadata survives view clearing and resets on Profile/auth/reload. Swift trim-invariance guard is inside readSearchRows used by both filtered scopes. Catalog debt and guarded publication are unchanged. Immutable main matcher properties, five behavioral controls and strict checks passed in matcher-6dcbM8 before renewing only these three client hashes. Compiled F1a/F1b and final C3 proofs remain pending.",
+    "perfFinal": "Product ada9f319, verifier-only12124354. Full TaskSearch check-XmY6pO passed immutable matcher, all finite safety/liveness bounds and nine expected-failure controls. Swift105 plus contracts/diagnostics, real Snapshot5/reload, Electron F1a/F1b and R1, unsigned Xcode and346offscreen renders passed. Both full/query paths forward names safely. Main9de baseline versus current product on identical SEC+Tag D1 backend3f88: five alternating pairs per client,25 successful query actions each, Swift215 to45 and Electron225 to45 data requests; health/full/warmup/controlled-errors separate. Exact pin guards passed. Delivery check and independent verdicts are recorded in the local PERF-refresh report and final receipt.",
+    "rootIntegration": "Both seats approved refresh f1c5f221 and cache7f63b0e2. The integrated source preserves their reviewed bodies and all mapped hashes. Exact-tip TaskSearch, cache, AtomicCAS and locked-check results are recorded locally in docs/evidence/perf-integration/final-root. These are finite/model and real-code checks, not a mechanical source-refinement theorem.",
+    "finalIntegration": "E final semantic review at f85, product exact36f9, proof-only integration81c. Publication guards/snapshot pairing/debounce/reset/SSE unchanged. Discovery SignOut/replacement invalidates lifecycle/search generations and guards auth errors; Show explicitly refreshes same navigation key and selects full-id. SEC refusal retains applied context plus shared error2 line; filtered query forwarding/Profile-keyed catalog/trim-invariant Tags retain id joins. Real matcher5 mutation controls and per-property restored checks passed at f85 in matcher-wrLTPA BEFORE this single renewal. Root merged client drives and final corrected Electron TaskSearch drive actual0, all carried by immutable input equivalence. Parent final E seats remain pending.",
+    "main4c": "Reviewed full/query publication, retained catalog debt, Show navigation and credential reset composition. Fresh matcher-Lyo5Sz mutants/restoration0; Electron task-search full drive0,170receipts/no page errors including R1 and both F1 paths; Swift full112state suite, diagnostics and generated contracts0 with pin diff0. No formula or product policy change. Full TaskSearch command check-uMSuJ8 passed after the single semantic/hash renewal, including required path controls and restored finite model."
   },
   "productionMatcher": "Immutable real source with generated properties, behavioral mutations and byte restoration; final-tip command uses its explicit full SHA.",
-  "recovery": "Transient errors offer Retry; search_too_broad hides Retry and retains text/snapshot. Current-Profile SSE op/reconnect remains available. Liveness is conditional on a later affordable successful response and a fair available recovery source.",
-  "clientRefinement": "Mapped and regression-checked; no mechanical TypeScript/Swift refinement theorem."
+  "recovery": "Transient errors offer Retry; search_too_broad hides Retry and retains text/snapshot. Current-Profile SSE op/reconnect remains available. Liveness requires a later affordable successful response and a fair available recovery source.",
+  "clientRefinement": "Mapped full/query publication, catalog retention and bootstrap fallback with compiled regressions; no mechanical TypeScript/Swift refinement theorem.",
+  "previousSourceCommit": "c14371075593a4a163f15797c495ac821510a449",
+  "productCommit": "36f9c56e200048aa2ca16186aaf713bea8d5454e",
+  "integrationCommit": "81cdef8ec257a8ca7e1cbfb1ab2b3ff3afcbbf14",
+  "securityBase": "9de893454cb6e3f5729407e9313c73e56bfd0481",
+  "integrationComponents": {
+    "refresh": "f1c5f22115c361ff0dda48c2e277b9547a2208a5",
+    "cache": "7f63b0e20ad2f8c3a47db4e0d10f5594d97f9ed9",
+    "cacheCode": "65033c86ec00889f84642fb76289094a23762ebb",
+    "securityBase": "9de893454cb6e3f5729407e9313c73e56bfd0481",
+    "sourceAnchor": "dc43db3f16e3e1591793bf13b18127acd2be939d",
+    "agentDiscoveryMain": "4c904d96277853c60692c685c6d4ea3b3e655bc4"
+  },
+  "integrationReview": {
+    "base": "7c1326bd5ecd1d84cdd9a6426b18e8c380e5d336",
+    "main": "4c904d96277853c60692c685c6d4ea3b3e655bc4",
+    "status": "Covered bodies reviewed; current matcher controls and both compiled client drives passed before hash renewal"
+  },
+  "fixtureIntegration": {
+    "commit": "26367043daf92787fc128ac23544afcb5709a791",
+    "productDiffFromMerge": "git diff dc43db3f..26367043 -- apps/**/src packages = empty; only Swift fixture changes among app source trees",
+    "newNamedRegression": "readyFullRefreshSupersedesRetryAndKeepsRevealDraftAndCatalog",
+    "proof": "Frozen fixture matches26367043;20consecutive8-test runs0 and full113-state suite0; final immutable command results recorded separately"
+  }
 }

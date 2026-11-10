@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { fileURLToPath } from "node:url";
+import { repositoryInput, verificationRoot } from "../../../scripts/verification-inputs.ts";
 import { spawnSync } from "node:child_process";
 import {
   lstatSync,
@@ -35,7 +37,7 @@ export function beforeCompile({ evidence, label }) {
     });
   const result = spawnSync(
     "sh",
-    ["/Users/zambamon/Work/todo-cli/scripts/disk-guard.sh"],
+    [repositoryInput(verificationRoot(dirname(fileURLToPath(import.meta.url))), "scripts/disk-guard.sh", "DAG compiler guard")],
     { encoding: "utf8" },
   );
   const exitCode = result.status;

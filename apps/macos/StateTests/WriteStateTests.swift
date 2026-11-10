@@ -38,7 +38,7 @@ private func fixture(_ transport: Transport, json: String = taskJSON()) throws -
 
 @Test @MainActor func moveConflictPreservesDraftAndRetriesAtLatestVersion() async throws {
     let transport = Transport([
-        .init(operation: "tasks.move", status: 409, json: #"{"_tag":"Conflict","latest":\#(taskJSON(version: 4, title: "Remote"))}"#),
+        .init(operation: "tasks.move", status: 409, json: #"{"_tag":"Conflict","exit_code":4,"exit_meaning":"Conflict","latest":\#(taskJSON(version: 4, title: "Remote"))}"#),
         .init(operation: "tasks.move", status: 422, json: #"{"message":"series_move_not_supported"}"#)
     ])
     let model = try fixture(transport)
@@ -73,7 +73,7 @@ private func fixture(_ transport: Transport, json: String = taskJSON()) throws -
 }
 
 @Test @MainActor func unavailableConflictCannotRetry() async throws {
-    let transport = Transport([.init(operation: "tasks.revert", status: 409, json: #"{"_tag":"Conflict","latest":null}"#)])
+    let transport = Transport([.init(operation: "tasks.revert", status: 409, json: #"{"_tag":"Conflict","exit_code":4,"exit_meaning":"Conflict","latest":null}"#)])
     let model = try fixture(transport)
     await model.write(.revert(7))
     await model.resolveConflict()
@@ -85,7 +85,7 @@ private func fixture(_ transport: Transport, json: String = taskJSON()) throws -
 @Test @MainActor func seriesConflictRequiresFieldChoiceAndPreservesExclusions() async throws {
     let recurrence = Recurrence(dtstart: TaskTime(kind: "date", date: "2026-10-28"), rrule: "FREQ=DAILY", exdate: [TaskTime(kind: "date", date: "2026-10-29")])
     let transport = Transport([
-        .init(operation: "tasks.editSeries", status: 409, json: #"{"_tag":"Conflict","latest":\#(taskJSON(version: 3, title: "Remote"))}"#),
+        .init(operation: "tasks.editSeries", status: 409, json: #"{"_tag":"Conflict","exit_code":4,"exit_meaning":"Conflict","latest":\#(taskJSON(version: 3, title: "Remote"))}"#),
         .init(operation: "tasks.editSeries", status: 422, json: #"{"message":"invalid_recurrence"}"#)
     ])
     let model = try fixture(transport)
@@ -183,6 +183,7 @@ func liveGeneratedWritesAgainstScratchServer() async throws {
     let created = try await client.tasks_period_create(path: .init(profile: "work"), body: .json(.init(title: "W06 original"))).ok.body.json
     let base = try TaskSnapshot.decode(created)
     let model = TodoModel(configuration: .init(server: server, initialProfile: "work", vaultService: "never-used"), clientFactory: { _, _ in todoClient(server: server, credential: session.credential) })
+    defer { model.signedIn = false; model.connect() }
     model.signedIn = true
     model.connection = .live
     model.beginEditing(base)
@@ -458,7 +459,7 @@ func liveGeneratedWritesAgainstScratchServer() async throws {
     }
     @Test func deletingAnotherConflictingRowLeavesInspectorErrorsAlone() async throws {
         let otherJSON = taskJSON().replacingOccurrences(of: "task-1", with: "task-2")
-        let transport = Transport([.init(operation: "tasks.delete", status: 409, json: #"{"_tag":"Conflict","latest":\#(otherJSON)}"#)])
+        let transport = Transport([.init(operation: "tasks.delete", status: 409, json: #"{"_tag":"Conflict","exit_code":4,"exit_meaning":"Conflict","latest":\#(otherJSON)}"#)])
         let model = try fixture(transport)
         model.editorError = "Existing editor warning"
         model.editor?.title = "Inspector draft"
@@ -503,6 +504,7 @@ func liveNavigationSaveDiscardAndDelete() async throws {
     let source = try await TaskSnapshot.decode(client.tasks_period_create(path: .init(profile: "work"), body: .json(.init(title: "W07 source"))).ok.body.json)
     let destination = try await TaskSnapshot.decode(client.tasks_period_create(path: .init(profile: "work"), body: .json(.init(title: "W07 destination task"))).ok.body.json)
     let model = TodoModel(configuration: .init(server: server, initialProfile: "work", vaultService: "never-used"), clientFactory: { _, _ in todoClient(server: server, credential: session.credential) })
+    defer { model.signedIn = false; model.connect() }
     model.signedIn = true
     model.connection = .live
     model.beginEditing(source)
@@ -666,7 +668,7 @@ func liveMetadataQuickAddAndEditorSurviveReloadAndReachSecondClient() async thro
 
 @Test @MainActor func copyConflictPreservesDraftAndUsesCurrentVersion() async throws {
     let transport = Transport([
-        .init(operation: "tasks.copy", status: 409, json: #"{"_tag":"Conflict","latest":\#(taskJSON(version: 4, title: "Remote"))}"#),
+        .init(operation: "tasks.copy", status: 409, json: #"{"_tag":"Conflict","exit_code":4,"exit_meaning":"Conflict","latest":\#(taskJSON(version: 4, title: "Remote"))}"#),
         .init(operation: "tasks.copy", status: 422, json: #"{"message":"destination_rejected"}"#)
     ])
     let model = try fixture(transport)
@@ -694,6 +696,7 @@ func liveCopyKeepsSourceAndOtherTasks() async throws {
     let source = try TaskSnapshot.decode(sourceWire)
     let completed = try await TaskSnapshot.decode(client.tasks_period_transition(path: .init(profile: "work", task: source.id), body: .json(.init(from_version: 1, action: .complete))).ok.body.json)
     let model = TodoModel(configuration: .init(server: server, initialProfile: "work", vaultService: "never-used"), clientFactory: { _, _ in todoClient(server: server, credential: session.credential) })
+    defer { model.signedIn = false; model.connect() }
     model.signedIn = true; model.connection = .live
     model.beginEditing(completed)
     await model.write(.copy("personal"))
@@ -789,7 +792,7 @@ func liveCopyKeepsSourceAndOtherTasks() async throws {
 }
 
 @Test @MainActor func cancellingTransferConflictPreservesSourceDraft() async throws {
-    let transport = Transport([.init(operation: "tasks.copy", status: 409, json: #"{"_tag":"Conflict","latest":\#(taskJSON(version: 4, title: "Remote"))}"#)])
+    let transport = Transport([.init(operation: "tasks.copy", status: 409, json: #"{"_tag":"Conflict","exit_code":4,"exit_meaning":"Conflict","latest":\#(taskJSON(version: 4, title: "Remote"))}"#)])
     let model = try fixture(transport)
     model.editor?.title = "Local source draft"
     await model.write(.copy("personal"))
@@ -838,7 +841,7 @@ func liveExternalIdMoveRejectionPreservesBothProfiles() async throws {
     model.beginEditing(source)
     model.editor?.title = "Keep the unsaved source draft"
     await model.write(.move("personal"))
-    #expect(model.editorError == "\"Personal\" already has a Task with external id \"c11:move-clash\". Choose another Profile.")
+    #expect(model.editorError == "\"Personal\" already has a Task with external id \"c11:move-clash\". Choose another Profile.\nerror 2 - validation or usage")
     #expect(model.writeIntent?.transfer?.kind == .move)
     #expect(model.conflict == nil)
     #expect(model.editor?.title == "Keep the unsaved source draft")
@@ -1031,8 +1034,8 @@ func compactFormattingSurvivesModelSaveAndReload() async throws {
     model.signedIn = true
     model.connection = .live
     model.beginEditing(created)
-    model.editor?.due = TaskTime(kind: "instant", utc: "2026-10-28T14:00:00Z", time_zone: "America/Bogota")
-    model.editor?.scheduled = TaskTime(kind: "date", date: "2026-10-29")
+    model.editor?.due = TaskTime(kind: "instant", utc: "2100-10-28T14:00:00Z", time_zone: "America/Bogota")
+    model.editor?.scheduled = TaskTime(kind: "date", date: "2100-10-29")
     await model.save()
     #expect(model.editor?.id == nil)
     let reloaded = try TaskSnapshot.decode(await client.tasks_period_show(path: .init(profile: "work", task: created.id)).ok.body.json)
@@ -1040,7 +1043,7 @@ func compactFormattingSurvivesModelSaveAndReload() async throws {
     let accepted = try #require(model.editor?.base)
     var calendar = Calendar(identifier: .gregorian)
     calendar.timeZone = TimeZone(identifier: "America/Bogota")!
-    let row = TaskRowPresentation(task: accepted, tagNames: [], now: ISO8601DateFormatter().date(from: "2026-10-28T15:00:00Z")!, locale: Locale(identifier: "en_US"), calendar: calendar)
+    let row = TaskRowPresentation(task: accepted, tagNames: [], now: ISO8601DateFormatter().date(from: "2100-10-28T15:00:00Z")!, locale: Locale(identifier: "en_US"), calendar: calendar)
     #expect(row.due == "Today 9:00\u{202F}AM")
     #expect(row.scheduled == "Tomorrow")
     #expect(TaskCount.text([accepted].count) == "1 task")

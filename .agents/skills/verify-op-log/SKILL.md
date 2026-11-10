@@ -45,6 +45,14 @@ edits a task at version 7, repeats that edit to produce a conflict, records an
 invalid-title rejection, drops and
 rebuilds the projection, and reverts the accepted edit at version 8.
 It checks literal titles, versions, sequence numbers, reasons, and settings.
+The compiled Tag proof also checks exact payload JSON and sorted `task_tags`
+after unchanged, reordered, added, removed, empty and new-name Tags, full and
+replay-checkpoint rebuild, Revert, Move and Delete. A trigger rejects unnecessary
+link Deletes for equal sets with distinct payload ids. Projection-only duplicate
+cases require the exact UNIQUE constraint error and unchanged payload, links and
+Version; a failed new Task stays absent. Public append still rejects duplicate ids.
+SQL failures after either link branch must roll back payload, links, Version
+and History together. Direct INSERT, UPDATE and DELETE on links remain guarded.
 It also attempts a direct SQL Delete and requires rejection. The compiled
 [Purge drive](features/purge.md) proves atomic redaction, replay, Revert refusal
 and absence of private strings in raw database bytes after checkpoint and VACUUM.
@@ -64,7 +72,8 @@ the browser fixture without importing `bun:sqlite`.
 
 The supplied evidence directory contains `commands.log`, `actions.json`,
 `result.json`, SQL dumps `00-legacy.sql` through `05-revert.sql`, and `purge.json`.
-The commands record both the compiled build and the actual binary invocation.
+`tag-links.json` contains every edited payload and literal link rows from the Tag
+proof. The commands record both the compiled build and the actual binary invocation.
 The SQL dumps show the attempted actions and their durable results, including
 the rejected conflict. `result.json` contains the final task rows and history.
 Inspect the dumps and literal assertions in the driver before claiming proof.

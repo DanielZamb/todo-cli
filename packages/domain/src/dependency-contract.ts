@@ -6,6 +6,7 @@ import {
   VersionChange,
 } from "./dependencies.ts";
 import { Task } from "./entities.ts";
+import { exitStatusFields } from "./exit-status.ts";
 import { Sequence, TaskId, Version } from "./ids.ts";
 import { limitedItems, TaskIdInput } from "./limits.ts";
 import { Instant } from "./time.ts";
@@ -56,21 +57,24 @@ export const BatchEdgeRequest = Schema.Struct({
 export type BatchEdgeRequest = typeof BatchEdgeRequest.Type;
 export const EdgeFailure = Schema.Union([
   DependencyError,
-  Schema.Struct({
-    generated_at: Instant,
-    code: Schema.Literals([
-      "conflict",
-      "not_found",
-      "invalid_args",
-      "auth_required",
-      "forbidden",
-      "runtime",
-    ]),
-    message: Schema.String,
-    details: Schema.optionalKey(
-      Schema.Struct({ current_version: Schema.NullOr(Version) }),
-    ),
-  }),
+  ...([1, 2, 3, 4] as const).map((exit) =>
+    Schema.Struct({
+      ...exitStatusFields(exit),
+      generated_at: Instant,
+      code: Schema.Literals([
+        "conflict",
+        "not_found",
+        "invalid_args",
+        "auth_required",
+        "forbidden",
+        "runtime",
+      ]),
+      message: Schema.String,
+      details: Schema.optionalKey(
+        Schema.Struct({ current_version: Schema.NullOr(Version) }),
+      ),
+    }),
+  ),
 ]);
 export type EdgeFailure = typeof EdgeFailure.Type;
 export const BatchEdgeReport = Schema.Struct({

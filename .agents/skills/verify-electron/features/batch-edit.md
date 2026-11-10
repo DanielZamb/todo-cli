@@ -47,3 +47,7 @@ This proof never launches a native app, signs, accesses Keychain, restores a
 Session, or exercises production Electron IPC or native window behavior.
 Those remain under native HOLD. Send absolute PNG paths to the coordinator and
 wait for APPROVE before calling a visual change done.
+
+[Discovery report recovery](discovery.md#same-profile-show-and-report-row-recovery)
+checks a selected Task deleted before Preview, structured not_found details and
+the neutral Find Task by id status in the actual app renderer.

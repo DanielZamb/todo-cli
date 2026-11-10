@@ -1,3 +1,16 @@
+# Final merged matcher candidate
+
+Candidate f85aef6faf7d93be80feef930554206e09d61be3, product exact 36f9.
+Standalone matcher-wrLTPA and the matcher stage of check-4n4nBS both exit 0.
+All five real-code behavioral mutations exit 1 at their intended assertions.
+Every copied source restores byte-for-byte, each restored property now reruns
+clean immediately, then the complete corpus and both strict checks exit 0.
+Only source copies with distinct inodes are tested; installed dependencies may
+be linked. The seed/corpus/bounds below are unchanged. These are generated
+properties, not an unbounded Unicode or matcher-completeness proof.
+
+## Historical matcher receipts
+
 # Candidate matcher property checks
 
 All five generated-input properties pass against real candidate

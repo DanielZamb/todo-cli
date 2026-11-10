@@ -46,6 +46,20 @@ The callback is trusted adapter code and uses the supplied actor and Profile.
 It must finish synchronously and must not wait on HTTP, timers or cryptography.
 The local CLI and migration code can still use the privileged OperationStore.
 
+`resolveProfile({ credential, profile: nameOrId, action })` returns only the
+authorized Profile's id and name. It uses the same authorized set as `profiles`.
+Absent, Deleted and unauthorized targets return the same caller error. Pass the
+real operation's AuthAction so a rejected credential records the same selected
+Profile and action as that operation. Resolution grants read visibility; the
+operation must still enforce its existing write access.
+
+`readSnapshot(reads => synchronousReadEffect)` encloses credential checks and
+all authorized Profile reads in one deferred SQLite transaction. Its callback
+must finish synchronously: do not use asynchronous search matching, yielding,
+HTTP, timers or cryptography inside it. Directory and id-prefix lookup use the
+synchronous prefix matcher. A credential failure rolls back the whole read,
+then records the rejection once; consumers never receive a partial aggregate.
+
 `startSeries` and `finishTask` accept authenticated requests derived from C03's
 command schemas. They check write access before calling the store's synchronous
 recurrence ports in the same transaction. They derive actor from the credential

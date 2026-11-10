@@ -10,6 +10,7 @@ import { ActorId, Instant, ProfileId, Sequence } from "../src/index.ts";
 
 import { dagCases, runDagCase } from "./dag-proof.ts";
 import { provePurge, proveSharedMetadataPurge } from "./purge-proof.ts";
+import { proveProjectionTagSets, proveTagLinks } from "./tag-link-proof.ts";
 
 const directory = process.argv[2];
 const evidence = process.argv[3];
@@ -312,4 +313,12 @@ for (const name of ["edges", "groupedDelete"] as const) {
 writeFileSync(
   join(evidence, "dag-replay.json"),
   JSON.stringify(dagReplay, null, 2),
+);
+proveProjectionTagSets();
+const tagLinkProof = await Effect.runPromise(
+  proveTagLinks(join(directory, "tag-links.db")),
+);
+writeFileSync(
+  join(evidence, "tag-links.json"),
+  `${JSON.stringify(tagLinkProof, null, 2)}\n`,
 );

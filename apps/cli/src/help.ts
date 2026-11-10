@@ -1,9 +1,12 @@
 import { taskSearchWorkLimits } from "@todo/domain";
 import { Command } from "effect/cli";
+import { credentialSelectionDescription } from "./credential-profile.ts";
 
 const exitCodes =
-  "0 success\n1 runtime failure\n2 validation/usage error\n3 not found/auth missing\n4 OCC conflict";
-const agentContract = `With --format json, each command writes exactly one JSON object to stdout with generated_at. Diagnostics go to stderr. Errors use {"generated_at","code","message","details"?} on stdout. Usage and parse errors exit 2 without help text. Conflict and missing-Version errors include details.current_version and name the --expected-version value to pass. details.latest contains the current Task.
+  "0 success\n1 runtime failure\n2 validation or usage\n3 not found or auth missing\n4 Conflict";
+const agentContract = `With --format json, each command writes exactly one JSON object to stdout with generated_at. Diagnostics go to stderr. Errors use {"generated_at","code","message","exit_code","exit_meaning","details"?} on stdout. Usage and parse errors exit 2 without help text. Conflict and missing-Version errors include details.current_version and name the --expected-version value to pass. details.latest contains the current Task.
+
+JSON error example: {"generated_at":"2030-01-01T00:00:00Z","code":"not_found","message":"Task not found","exit_code":3,"exit_meaning":"not found or auth missing"}. Markdown and table errors print error 3 - not found or auth missing. The pair always describes the actual process exit code. Success responses do not include it. A missing Task names only the authorized selected Profile and offers todo list --profile <id> --prefix <hex-prefix> or explicit todo lookup --prefix <hex-prefix> --credential-profile <credential-key>. Mutations need the full Task id and an explicit Profile.
 
 The --format flag can be supplied only once. Duplicate format flags exit 2 in the shared error shape.
 
@@ -15,7 +18,8 @@ String flag values beginning with a single dash work in split or equals form, in
 const globals = [
   "--format md|json|table (default md)",
   "--db <path> (default TODO_DB, config db.path, then ~/.todo-cli/todo.db)",
-  "--profile <name> (default default)",
+  "--profile <name> (default default; target Profile and default credential file)",
+  `--credential-profile <name> (default --profile; ${credentialSelectionDescription})`,
   "--no-color (default false)",
   "--help-human-flag (default false)",
 ];
@@ -409,7 +413,7 @@ const guides = {
       "todo list --energy 3 --estimate 45 --scheduled none --format json",
       "todo list --status open --format json",
     ],
-    output: `All filters combine. Project names match exactly. Tags ignore case and surrounding spaces. closed includes done and cancelled. Dates match the calendar date in each Task's stored time zone; none matches a missing value. Energy and estimated minutes match exactly. Attachment text ignores case and searches names, labels, paths and URLs. --inbox matches open Tasks with no due or scheduled date. Text searches title and description, ignoring case and accents. Every word prefix must match, with one typo from 5 characters and two from 9. Adjacent transpositions count as one typo. Closed quotes match consecutive whole words exactly in one field. An unclosed quote allows its last word to prefix-match without typos. A minus at the start of a whitespace-delimited term excludes word prefixes without typos; follow-up searches follow AND up. Search keeps the existing order. JSON includes active filters and response-only search_matches with whole-word, half-open UTF-16 offsets into the original title or description. Supplied blank text returns search_matches: []. Without text the field is omitted. Text or prefix search returns tasks: [] for no match. Other empty results retain the existing omitted tasks field. Exact-id commands still require a full id. Search refuses work above ${taskSearchWorkLimits.budget.toLocaleString("en-US")} units with search_too_broad and exit 2, without partial results. Each folded UTF-16 field unit counts once, plus ${taskSearchWorkLimits.evaluationWeight.numerator / taskSearchWorkLimits.evaluationWeight.denominator} per evaluated Damerau cell or clause visit. A visit walks a word occurrence or tests a phrase start position. Narrow with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.`,
+    output: `All filters combine. Project names match exactly. Tags ignore case and surrounding spaces. closed includes done and cancelled. Dates match the calendar date in each Task's stored time zone; none matches a missing value. Energy and estimated minutes match exactly. Attachment text ignores case and searches names, labels, paths and URLs. --inbox matches open Tasks with no due or scheduled date. Text searches title and description, ignoring case and accents. Every word prefix must match, with one typo from 5 characters and two from 9. Adjacent transpositions count as one typo. Closed quotes match consecutive whole words exactly in one field. An unclosed quote allows its last word to prefix-match without typos. A minus at the start of a whitespace-delimited term excludes word prefixes without typos; follow-up searches follow AND up. Search keeps the existing order. JSON includes active filters and response-only search_matches with whole-word, half-open UTF-16 offsets into the original title or description. Supplied blank text returns search_matches: []. Without text the field is omitted. JSON always includes tasks, with tasks: [] for every empty result, with or without filters. Exact-id commands still require a full id. Search refuses work above ${taskSearchWorkLimits.budget.toLocaleString("en-US")} units with search_too_broad and exit 2, without partial results. Each folded UTF-16 field unit counts once, plus ${taskSearchWorkLimits.evaluationWeight.numerator / taskSearchWorkLimits.evaluationWeight.denominator} per evaluated Damerau cell or clause visit. A visit walks a word occurrence or tests a phrase start position. Narrow with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.`,
   }),
   show: reference({
     purpose: "Show one visible Task with its metadata and description.",
@@ -666,14 +670,28 @@ const guides = {
     examples: ["todo profile list", "todo profile delete personal --dry-run"],
     output: "Choose list or delete. JSON help returns generated_at and text.",
   }),
+  lookup: reference({
+    purpose:
+      "Explicitly find Tasks by id prefix across Profiles available to this credential.",
+    synopsis: "todo lookup --prefix <hex-prefix>",
+    flags: [
+      "--prefix <value> (required, 1 through 36 hex digits or hyphens; no trimming)",
+    ],
+    examples: ["todo lookup --prefix 45A3 --format json"],
+    auth: "A Session or unscoped Token sees all active Profiles. A scoped Token sees only its Profile. Global --profile selects the stored credential unless --credential-profile is supplied.",
+    output:
+      "JSON returns generated_at, the original prefix and matches (always an array). Each match has profile {id,name}, task_id, title and project (name or null). Markdown and table include a quoted todo show command with --credential-profile when the credential file differs from the result Profile. Deleted Tasks and Profiles are excluded. Empty results succeed. No selected Profile changes; mutations still require a full id and an explicit Profile.",
+  }),
   "profile list": reference({
     purpose: "List active Profiles and their Task counts.",
-    synopsis: "todo profile list",
-    flags: [],
+    synopsis: "todo profile list [--projects]",
+    flags: [
+      "--projects (include defined Projects with stable ids, including empty Profiles)",
+    ],
     examples: ["todo profile list --format json"],
     auth: "Requires a Session or Access Token. Scoped Tokens see their Profile only.",
     output:
-      "json returns generated_at and profiles, including visible_task_count. Deleted Profiles stay hidden.",
+      "json returns generated_at and profiles, including visible_task_count. --projects adds projects to every Profile, including [] for empty Profiles and Projects with no Tasks. Global --profile selects the stored credential unless --credential-profile is supplied; it does not change credential scope. Deleted Profiles stay hidden.",
   }),
   "profile delete": reference({
     purpose:

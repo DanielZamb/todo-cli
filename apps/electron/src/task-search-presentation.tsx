@@ -19,7 +19,7 @@ export function SearchErrorMessage({
   const context = appliedSearchContext(appliedText);
   return (
     <>
-      <span>
+      <span className="whitespace-pre-line">
         {kind === "search_too_broad" ? message : `Couldn't search. ${context}`}
       </span>
       {kind === "search_too_broad" && (

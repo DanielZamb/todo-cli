@@ -1187,6 +1187,251 @@ for (const [suffix, name, offset] of [["electron", "Electron", 0], ["swift", "Sw
   "Pele is pinned 1.13.0. Electron renderer and SwiftUI NSViewRepresentable/WKWebView use the same offline adapter and design tokens. Drag-to-connect is later.",
 ]);
 
+frame("perf-tags", "PERF: putTask Tag links", 0, 16000, 2800, (x, y) => {
+  heading("pt", x + 50, y + 32, "putTask: unchanged task_tags", "Set comparison inside the existing OperationStore.transaction. Task payload and Version writes remain mandatory.");
+  card("pt-begin", x + 50, y + 200, 650, { title: "OperationStore.appendSync", body: "transaction / BEGIN IMMEDIATE\nvalidate; record committed op_log\napplyEvent -> applyChanges -> putTask", h: 150 });
+  card("pt-compare", x + 1800, y + 200, 850, { title: "putTask / compare Tag ids", body: "tasks LEFT JOIN task_tags WHERE tasks.id=?\nexisting Task + equal sets + no duplicates\nINSERT / UPDATE tasks payload", h: 150 });
+  card("pt-keep", x + 1800, y + 700, 850, { title: "Equal distinct sets / keep task_tags", body: "skip task_tags DELETE and INSERT\npreserve task.tags order in payload", fill: c.accent, h: 130 });
+  card("pt-relink", x + 50, y + 700, 850, { title: "Different, duplicate or new / relink", body: "DELETE FROM task_tags WHERE task_id=?\nINSERT each task.tags array value; duplicates fail\nnew/rebuild projections use actual rows", h: 150 });
+  card("pt-commit", x + 950, y + 1180, 850, { title: "putTask / task_versions -> COMMIT", body: "upsert row_version; publish History + projection\nSQL error rolls the whole transaction back", h: 140 });
+  arrow("pt-enter", "pt-begin", "pt-compare", { label: "validated Event", from: "right", to: "left", labelFont: SANS });
+  arrow("pt-equal", "pt-compare", "pt-keep", { label: "equal sets, no duplicates", from: "bottom", to: "top", labelFont: SANS });
+  arrow("pt-different", "pt-compare", "pt-relink", { label: "different, duplicate or new", from: "left", to: "top", labelFont: SANS, labelAt: [x + 1200, y + 540] });
+  arrow("pt-kept", "pt-keep", "pt-commit", { label: "unchanged links", from: "bottom", to: "right", labelFont: SANS });
+  arrow("pt-relinked", "pt-relink", "pt-commit", { label: "replaced links", from: "bottom", to: "left", labelFont: SANS });
+  marker("pt-m1", x + 1760, y + 180, 1);
+  marker("pt-m2", x + 910, y + 1160, 2);
+  notes("pt-notes", x + 50, y + 1450, 2650, "Numbered notes", [
+    "Equal distinct Tag sets skip relinking. Duplicate arrays take the original INSERT path and fail. Payload order and domain guards stay unchanged.",
+    "Measure WAL frames per real Task edit. verify-op-log compares exact task_tags; verify-occ-atomicity rechecks crash stages.",
+  ]);
+});
+
+frame("perf-cache", "PERF: folded-word cache", 3000, 16000, 3000, (x, y) => {
+  heading("pc", x + 50, y + 32, "TaskSearchCache: PreparedField per Profile + exact text", "The content key preserves output correctness; epoch, ownership tokens and purgeGen fence cache-local retention.\nNo Version key, DB coherence protocol or stored query results.");
+  card("pc-read", x + 50, y + 200, 1050, { title: "TaskCommands.list / CLI list: capture read", body: "read = searchWords.read(request.profile)\nbefore auth.read / SQLite Task read\ncarry captured epoch + generation to EVERY lookup\ncurrent Task title + description + profile_id\nblank clauses skip field preparation", bodySize: 16, h: 230 });
+  card("pc-lookup", x + 1850, y + 200, 1050, { title: "TaskSearchCache.words(read, text)", body: "key = length-prefixed Profile + exact text\nPreparedField { words, preparedUnits }\nhit: entries.get(key).prepared; no prep yield\nmiss: register(read, key, bytes) -> fresh token\nyield* fieldWords(text) prepares words + offsets\nfailed registration computes without retention", bodySize: 16, h: 240 });
+  card("pc-serve", x + 1850, y + 900, 1050, { title: "matchTaskSearchSteps / TaskSearchWork", body: "filterTaskRecordsEffect -> runTaskRecordSteps\nexecution.prepare returns complete PreparedField\ncharge preparedUnits ONCE per field, hit or miss\nsame original strings + ordered UTF-16 spans\nshared search_too_broad; no partial rows", bodySize: 16, fill: c.accent, h: 230 });
+  card("pc-purge", x + 50, y + 900, 1050, { title: "TaskPurged / Snapshots.restore / hygiene observer", body: "clearAll(): epoch++; entries.clear(); pending.clear()\nANY Purge / restore fences EVERY old Read\nlocal Profile delete: evictProfile(profile)\nserver: taskSearchCacheHygiene.run, 250 ms polls\nnew committed seq/kind/original_kind only\nclose(): permanent closed fence + clearAll()", bodySize: 16, fill: c.warningFill, h: 230 });
+  card("pc-admit", x + 1150, y + 1510, 1750, { title: "TaskSearchCache.prepare / retain / dropPending", body: "pending.get(key) === token && canAdmit(read)\ncanAdmit: !closed && read.epoch == epoch\nAND captured generation == current purgeGen\nretain only completed PreparedField; later token wins\nfinally: dropPending(key, token), OWN current slot only\nretained + pending cocharged <= 16 MiB; LRU reserve()\nentries <= 4096 AND pending <= 4096\nentry > 4 MiB / no slot -> compute without retention\ntransient buffers + purgeGen metadata outside charge", bodySize: 16, h: 270 });
+  arrow("pc-start", "pc-read", "pc-lookup", { label: "read + exact current text", from: "right", to: "left", labelFont: SANS });
+  arrow("pc-use", "pc-lookup", "pc-serve", { label: "synchronous hit / complete payload", from: "bottom", to: "top", labelFont: SANS });
+  arrow("pc-hygiene", "pc-purge", "pc-admit", { label: "clearAll / Profile revocation", from: "bottom", to: "left", labelFont: SANS });
+  arrow("pc-bound", "pc-lookup", "pc-admit", { label: "miss / yield* fieldWords(text)", from: "left", fromT: 0.8, to: "top", via: [[x + 1450, y + 392], [x + 1450, y + 1420]], labelFont: SANS });
+  arrow("pc-prepared", "pc-admit", "pc-serve", { label: "PreparedField / retained or uncached", from: "top", fromT: 0.78, to: "bottom", toT: 0.7, labelFont: SANS });
+  marker("pc-m1", x + 1810, y + 180, 1);
+  marker("pc-m2", x + 20, y + 880, 2);
+  marker("pc-m3", x + 1110, y + 1490, 3);
+  notes("pc-notes", x + 50, y + 1900, 2850, "Numbered notes", [
+    "The exact Profile/text key preserves words, original UTF-16 offsets and preparedUnits after edits, Revert, Snapshot restore and rebuild.\nThe matcher charges the same preparation count on both paths. This memo does not mitigate the first fold of expanding text.",
+    "ANY Purge or Snapshot restore clears ALL Profiles and fences old reads. Observer: committed redacted TaskPurged / ProfileDeleted, <= 1000 ms; generation change clears then resets max seq.\nOwn writes can clear again harmlessly. One uncached refill after rare owner Purge is deliberate. Local Profile delete can evict its Profile. Memory hygiene is not DB coherence.",
+    "TaskSearchCacheAdmission.tla checks ClearAll epoch fencing, admission provenance, pending cleanup, complete hits and bounds at 2 keys / 2 preparations / capacity 2.\nReal-Effect controls and same-source cold/partial/warm/uncached work, full JSON/spans and literal bounds complement the finite model; charged bytes are not RSS.",
+  ]);
+});
+
+frame("perf-refresh", "PERF: minimal client refresh", 6400, 16000, 3000, (x, y) => {
+  heading("pr", x + 50, y + 32, "TodoModel.refresh / renderer refresh: request scope", "Full/query split. Existing requestedIdentity, appliedSearchSnapshot, appliedSearch and canPublishSearch remain authoritative.");
+  card("pr-input", x + 50, y + 220, 900, { title: "setSearchText / changeSearch / filter Apply", body: "invalidate refreshGeneration immediately\ncapture full requestedIdentity after debounce\nretain rows + highlights while Requesting", h: 150 });
+  card("pr-query", x + 1950, y + 220, 900, { title: "Query-only refresh / search IPC", body: "taskRequest search / readSearchRows\ntasks.list with current text and filters\nreads.view only for current planning view\nasync let / Effect.all: await both", h: 150 });
+  card("pr-full", x + 50, y + 850, 1000, { title: "Full refresh / catalog still owed", body: "catalogStale / catalogOwedRef set before reads\ntasks, matching_tasks, discovery, four views\ninput, failed or obsolete full keeps obligation\nonly guarded full publication clears it", h: 175 });
+  card("pr-guard", x + 1950, y + 850, 900, { title: "canPublishSearch / activeQuery guards", body: "latest request + generation + full identity\naccept all awaited reads or guarded Error\nobsolete success/error changes no visible state", h: 150 });
+  card("pr-publish", x + 800, y + 1450, 1400, { title: "appliedSearchSnapshot / appliedSearch", body: "publish response strings + spans + planning membership together\nquery-only keeps catalog; full publishes owed names and counts\nError retains rows; Retry or current-Profile SSE recovers", fill: c.accent, h: 150 });
+  arrow("pr-request", "pr-input", "pr-query", { label: "catalog ready; no full owed", from: "right", to: "left", labelFont: SANS });
+  arrow("pr-queryready", "pr-query", "pr-guard", { label: "1 request for All tasks; 2 for planning", from: "bottom", to: "top", labelFont: SANS });
+  arrow("pr-fullready", "pr-full", "pr-guard", { label: "all full-refresh reads settle", from: "right", to: "left", labelFont: SANS });
+  arrow("pr-fallback", "pr-input", "pr-full", { label: "catalog absent or still owed", from: "bottom", to: "top", labelFont: SANS });
+  arrow("pr-current", "pr-guard", "pr-publish", { label: "current response only", from: "bottom", to: "right", labelFont: SANS });
+  marker("pr-m1", x + 1910, y + 200, 1);
+  marker("pr-m2", x + 1910, y + 830, 2);
+  marker("pr-m3", x + 760, y + 1430, 3);
+  notes("pr-notes", x + 50, y + 1780, 2850, "Numbered notes", [
+    "Electron already runs nine reads concurrently. Swift uses async let for full and query reads. Count real HTTP calls through both clients.",
+    "TaskSearch.tla guards full/query races and catalogOwed. A query superseding SSE or a write must still publish the owed full catalog.",
+    "Keep offline unfiltered cache, drafts and dialog rollback. Compact-first headless drives and offscreen captures respect native HOLD.",
+  ]);
+});
+const discoveryFrames = [
+  {
+    id: "agent-errors", name: "Exit-code meanings", x: 0, y: 16000,
+    subtitle: "Proposed additive contract. Existing error names, details and process exits remain unchanged.",
+    nodes: [
+      ["failure", "CommandError / HTTP error", "CommandError.exit / actual process exit\nCLI program catch / follow stderr\nHTTP tagged errors keep _tag"],
+      ["mapping", "exit-status.ts / proposed", "0 success / 1 runtime failure\n2 validation or usage\n3 not found or auth missing / 4 Conflict"],
+      ["output", "renderError / HTTP boundary", "exit_code + exit_meaning\ntodo schema error / manual examples\nmd, json, table; one JSON object"],
+      ["client", "TaskLookupStatus / lookupErrorNotice", "details -> human Profile context / retain draft\nsecondary error <code> - <meaning>\nneutral status / Find Task by id"],
+    ],
+    edges: [
+      ["failure", "mapping", "failure / map actual exit", "right", "left"],
+      ["mapping", "output", "mapping / add matching pair", "right", "left"],
+      ["output", "client", "HTTP error / preserve pair", "bottom", "top"],
+      ["client", "failure", "Retry [operation available] / issue again", "left", "bottom"],
+    ],
+    notes: [
+      "1. Mapping keys on the exit code. A new DAG error name inherits the existing meaning. No success envelope gains fields.",
+      "2. Existing latest/current_version details and HTTP tags stay intact. JSON usage errors remain exit 2; follow errors use stderr.",
+    ],
+  },
+  {
+    id: "agent-lookup-errors", name: "Selected Profile in Task errors", x: 2800, y: 16000,
+    subtitle: "Proposed recovery contract. Exact-id reads and mutations never search other Profiles.",
+    nodes: [
+      ["request", "selectProfile / HTTP :profile", "CLI resolveProfile with real operation action\nHTTP authorizes the selected route operation\nselected Profile stays unchanged"],
+      ["auth", "Authentication.resolveProfile / operation auth", "authorized set / return only {id,name}\none rejected-auth row / real Profile and action\nno preliminary null-Profile discovery rejection"],
+      ["missing", "Task not found", "commands.cliResult / show / History\nnot_found exit 3 / HTTP NotFound 404\nno cross-Profile probe"],
+      ["recover", "task-lookup-error.ts / proposed", "details.profile {id,name} / task_id\nlist --profile <id> --prefix <p> [--credential-profile <used>]\nlookup --prefix <p> --credential-profile <used> / HTTP both routes"],
+      ["human", "TaskLookupStatus / lookupErrorNotice", "Task not found in <Profile name>.\nsecondary error 3 - not found or auth missing\nneutral status / no agent commands"],
+      ["prefill", "openDiscovery / findTaskAfterLookupError", "Find Task by id / retain draft\nprefill discovery-prefix / no request yet\nexplicit Find continues in agent-prefix"],
+    ],
+    edges: [
+      ["request", "auth", "request / authorize first", "right", "left"],
+      ["auth", "missing", "authorized + absent / existing outcome", "right", "left"],
+      ["missing", "recover", "safe context / enrich message + details", "bottom", "top"],
+      ["recover", "request", "explicit user recovery / retain draft", "left", "bottom"],
+      ["recover", "human", "apps / project structured details", "bottom", "top"],
+      ["human", "prefill", "Find Task by id / prefill only", "bottom", "top"],
+    ],
+    notes: [
+      "1. Enrich only an authorized missing Task, never a missing Attachment on an existing Task. Absent and unauthorized Profile outcomes are identical.",
+      "2. Both hints query nothing. Mutations need full ids and an explicit Profile. Human detail uses error 3 - not found or auth missing.",
+      "3. Apps also use the shared human status for report rows. CLI and HTTP retain full recovery; apps never concatenate message and recovery.",
+    ],
+  },
+  {
+    id: "agent-directory", name: "Profile-to-Project directory", x: 0, y: 20000,
+    subtitle: "Proposed read-only directory. Current Profile, main Task filters, search text and editor drafts stay intact.",
+    nodes: [
+      ["entry", "Profile navigation / Open", "todo profile list --projects [--credential-profile <key>]\nGET /profiles?include_projects=true\ndiscovery-directory / Closed -> Loading"],
+      ["auth", "Authentication.profiles", "credential -> authorized active Profiles\nAuthentication.read per authorized id\nONE SQLite read transaction / one database state"],
+      ["query", "discovery.ts / proposed query", "ProfileSummary + projects [{id,name}]\ninclude Projects with no visible Tasks\nempty Profile projects: []"],
+      ["show", "Showing / Empty", "guard credential + dialog generation\nread-only names and full selectable ids\nCompact stacked rows / no navigation"],
+      ["error", "Error / Offline", "discard failed aggregate response\nretain no foreign context / show Retry\ndiscovery-directory-retry"],
+      ["closed", "Closed / SignOut", "clear rows / invalidate generation\nlate success and error publish nothing\nrestore focus to navigation trigger"],
+    ],
+    edges: [
+      ["entry", "auth", "Open / load authorized directory", "right", "left"],
+      ["auth", "query", "authorized / read Projects", "right", "left"],
+      ["query", "show", "current success / publish whole response", "bottom", "top"],
+      ["query", "error", "failure / no partial result", "bottom", "top"],
+      ["error", "entry", "Retry / issue new generation", "left", "bottom"],
+      ["show", "closed", "Close or credential change / clear", "right", "left"],
+    ],
+    notes: [
+      "1. Authentication.profiles is the sole scope rule. ONE read transaction returns one database state; credential failure returns no partial result.",
+      "2. Close, sign-out and credential replacement invalidate in-flight replies. Bounded TLA+ and delayed-reply regressions cover this gate.",
+    ],
+  },
+  {
+    id: "agent-prefix", name: "Read-only id-prefix discovery", x: 2800, y: 20000,
+    subtitle: "Proposed explicit lookup. Normal list, exact-id reads and every mutation retain their selected Profile.",
+    nodes: [
+      ["edit", "Editing / Invalid", "todo lookup --prefix <value> [--credential-profile <key>]\nFind Task by id / discovery-prefix\n1..36 hex or hyphen / no trim"],
+      ["auth", "Requesting / authorized Profiles", "Find / Return submits explicitly\nGET /tasks/lookup?prefix=<value>\nAuthentication.profiles + auth.read in ONE read transaction"],
+      ["query", "filterTaskRecords / discovery.ts", "reuse TaskFilters.prefix validation\nliteral case-insensitive startsWith\nexclude Deleted Tasks and Profiles"],
+      ["show", "Showing / Empty", "every match / Profile {id,name}\nfull task_id / title / Project or null\nCopy task id + Show in <Profile name> / [] succeeds"],
+      ["error", "Error / Retry", "retain typed prefix / exact submitted query\nError pair and recovery remain visible\nno partial or hidden-result count"],
+      ["closed", "Closed / authorization reset", "clear rows / invalidate replies\nclear applied snapshot / invalidate generation\nlate reply -> discard visible-state stutter"],
+    ],
+    edges: [
+      ["edit", "auth", "Find [valid] / capture query + generation", "right", "left"],
+      ["auth", "query", "authorized / evaluate only allowed Tasks", "right", "left"],
+      ["query", "show", "current success / publish all matches", "bottom", "top"],
+      ["query", "error", "current failure / no rows", "bottom", "top"],
+      ["error", "edit", "Edit or Retry / retain query", "left", "bottom"],
+      ["show", "closed", "Close or credential change / clear", "right", "left"],
+      ["show", "opened", "Show [current authorized applied snapshot] / explicit navigation", "bottom", "top"],
+      ["show", "edit", "Edit prefix / clear applied snapshot", "right", "right"],
+    ],
+    notes: [
+      "1. Invalid input does not query Tasks. CLI names --prefix and exits 2. No match exits 0 and returns matches: [] or HTTP [].",
+      "2. requestedIdentity, generation and applied snapshot guard publication AND Show. CLI rows print show --profile <id> with --credential-profile <used> when different.",
+    ],
+  },
+  {
+    id: "agent-list", name: "List JSON always contains tasks", x: 0, y: 24000,
+    subtitle: "Proposed list fix. HTTP retains its array; existing export and review goldens must be preserved.",
+    nodes: [
+      ["entry", "todo list / selected Profile", "selectProfile -> readTasks\nTaskFilters / existing planning filters\nnormal Profile scope"],
+      ["filter", "filterTaskRecords / filterTasks", "same membership and order\nzero Tasks is successful\ntext and prefix compose as before"],
+      ["json", "renderTasks / list schema", "{generated_at, filters?, tasks: []}\ntasks required for every list result\nexit 0 / todo schema list"],
+      ["http", "GET /profiles/:profile/tasks", "TaskRead[] remains an array\nempty response [] / HTTP 200\nElectron and SwiftUI empty states retained"],
+    ],
+    edges: [
+      ["entry", "filter", "authorized list / apply filters", "right", "left"],
+      ["filter", "json", "CLI JSON / include tasks unconditionally", "right", "left"],
+      ["filter", "http", "HTTP / preserve array contract", "bottom", "top"],
+      ["http", "entry", "Clear filters or search / explicit reload", "left", "bottom"],
+    ],
+    notes: [
+      "1. Reproduce the missing unfiltered tasks key through the compiled CLI on scratch data before changing the renderer.",
+      "2. TasksResponse is shared with export and review. Keep unrelated output byte-identical; use a list-specific schema if needed.",
+    ],
+  },
+];
+
+const prefixFlow = discoveryFrames.find((flow) => flow.id === "agent-prefix");
+const prefixByKey = new Map(prefixFlow.nodes.map((node) => [node[0], node]));
+prefixByKey.set("opened", ["opened", "Show / explicit user navigation", "discovery-show-<task-id> / protect editor draft\nclose dialog / select Profile / open exact Task\nif hidden: All tasks + full-id prefix / visible error on failure"]);
+prefixFlow.nodes = ["edit", "auth", "query", "error", "show", "opened", "closed"].map((key) => prefixByKey.get(key));
+prefixFlow.notes.push("3. Close, SignOut and CredentialChanged invalidate every open state. Show is explicit navigation; CLI credentialProfileName chooses the named key without fallback.");
+
+for (const flow of discoveryFrames) {
+  frame(flow.id, flow.name, flow.x, flow.y, 2660, (X, Y) => {
+    heading(flow.id, X + 40, Y + 32, flow.name + ": proposed states", flow.subtitle);
+    flow.nodes.forEach(([key, title, body], i) => {
+      card(flow.id + "-" + key, X + 80, Y + 200 + i * 300, 1540, { title, body, h: 150, bodySize: 17 });
+    });
+    flow.edges.forEach(([from, to, label], i) => {
+      const fromIndex = flow.nodes.findIndex(([key]) => key === from);
+      const toIndex = flow.nodes.findIndex(([key]) => key === to);
+      const adjacent = toIndex === fromIndex + 1;
+      const fromY = Y + 275 + fromIndex * 300;
+      const toY = Y + 275 + toIndex * 300;
+      const lane = X + (toIndex < fromIndex ? 2540 : 1950 + i * 70);
+      arrow(flow.id + "-transition-" + i, flow.id + "-" + from, flow.id + "-" + to, {
+        label: label.replace(" / ", "\n/ "), labelFont: SANS, labelSize: 17,
+        from: adjacent ? "bottom" : "right", to: adjacent ? "top" : "right",
+        ...(adjacent ? {} : {
+          via: [[lane, fromY], [lane, toY]],
+          labelAt: [X + 2120, toIndex < fromIndex ? toY + 175 : fromY + 175],
+          bindLabel: true,
+        }),
+      });
+    });
+    marker(flow.id + "-step1", X + 60, Y + 180, 1);
+    marker(flow.id + "-step2", X + 60, Y + 180 + (flow.nodes.length - 1) * 300, 2);
+    notes(flow.id + "-notes", X + 40, Y + 400 + flow.nodes.length * 300, 2580, "Numbered workflow notes", flow.notes);
+  });
+}
+
+const frames = elements.filter((element) => element.type === "frame");
+const columnWidth = Math.max(...frames.map((frame) => frame.width)) + 240;
+let rowY = 180;
+for (let start = 0; start < frames.length; start += 3) {
+  const row = frames.slice(start, start + 3);
+  row.forEach((frame, column) => {
+    const dx = column * columnWidth - frame.x;
+    const dy = rowY - frame.y;
+    for (const element of elements) {
+      if (element.id === frame.id || element.frameId === frame.id) {
+        element.x += dx;
+        element.y += dy;
+      }
+    }
+  });
+  rowY += Math.max(...row.map((frame) => frame.height)) + 240;
+}
+function assertNoFrameIntersections(frames) {
+  for (let a = 0; a < frames.length; a++) {
+    for (let b = a + 1; b < frames.length; b++) {
+      const first = frames[a], second = frames[b];
+      if (first.x <= second.x + second.width && second.x <= first.x + first.width && first.y <= second.y + second.height && second.y <= first.y + first.height) {
+        throw new Error(`Diagram frames intersect: ${first.id} and ${second.id}`);
+      }
+    }
+  }
+}
+assertNoFrameIntersections(frames);
+
 const scene = {
   type: "excalidraw",
   version: 2,

@@ -1,9 +1,20 @@
 {
-  "commit": "c14371075593a4a163f15797c495ac821510a449",
-  "status": "sec-l1-reviewed-F1a-F1b; independent-seats-pending",
+  "commit": "26367043daf92787fc128ac23544afcb5709a791",
+  "status": "Fresh merged-source matcher properties, five real-code mutants and byte restoration passed at matcher-Lyo5Sz; full client mapping/model remains separate",
   "normalization": "normalizeTaskSearch",
   "parsing": "parseTaskSearch",
   "matching": "matchTaskSearch",
   "prefix": "filterTaskRecords",
-  "integrationRecheck": "Use an explicit full final-tip SHA; the L1 final ledger records its process result."
+  "integrationRecheck": "Use an explicit full final-tip SHA; the L1 final ledger records its process result.",
+  "integrationReview": {
+    "base": "7c1326bd5ecd1d84cdd9a6426b18e8c380e5d336",
+    "main": "4c904d96277853c60692c685c6d4ea3b3e655bc4",
+    "status": "Matcher check passed at immutable merged source; client/model renewal pending"
+  },
+  "fixtureIntegration": {
+    "commit": "26367043daf92787fc128ac23544afcb5709a791",
+    "productDiffFromMerge": "git diff dc43db3f..26367043 -- apps/**/src packages = empty; only Swift fixture changes among app source trees",
+    "newNamedRegression": "readyFullRefreshSupersedesRetryAndKeepsRevealDraftAndCatalog",
+    "proof": "Frozen fixture matches26367043;20consecutive8-test runs0 and full113-state suite0; final immutable command results recorded separately"
+  }
 }

@@ -111,3 +111,7 @@ asserts literal Task ids/titles/Versions, auth and Profile-deletion tables,
 external-id column/index, Attachment cleanup and Dependency tables, plus the
 version-1 pre-migration Snapshot. Versions 2 through 5 retain concurrent migration
 and byte-identical saved schema/rows checks.
+Import rejection rows add the equivalent exit_code and exit_meaning. Existing
+codes, outcomes, current_version and command exit precedence remain unchanged.
+An exact-id adoption failure may include only its authorized selected Profile
+and generic lookup recovery. Markdown and table rows print the exit pair.

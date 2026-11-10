@@ -35,6 +35,16 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           }
         }
       }
@@ -124,7 +134,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -143,6 +160,14 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "exit_code": {
+                      "type": "number",
+                      "enum": [3]
+                    },
+                    "exit_meaning": {
+                      "type": "string",
+                      "enum": ["not found or auth missing"]
+                    },
                     "generated_at": {
                       "type": "string"
                     },
@@ -154,7 +179,13 @@
                       "type": "string"
                     }
                   },
-                  "required": ["generated_at", "code", "message"],
+                  "required": [
+                    "exit_code",
+                    "exit_meaning",
+                    "generated_at",
+                    "code",
+                    "message"
+                  ],
                   "additionalProperties": false
                 }
               }
@@ -217,7 +248,14 @@
             "description": "<No Content>"
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -246,6 +284,14 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "exit_code": {
+                      "type": "number",
+                      "enum": [3]
+                    },
+                    "exit_meaning": {
+                      "type": "string",
+                      "enum": ["not found or auth missing"]
+                    },
                     "generated_at": {
                       "type": "string"
                     },
@@ -257,7 +303,13 @@
                       "type": "string"
                     }
                   },
-                  "required": ["generated_at", "code", "message"],
+                  "required": [
+                    "exit_code",
+                    "exit_meaning",
+                    "generated_at",
+                    "code",
+                    "message"
+                  ],
                   "additionalProperties": false
                 }
               }
@@ -365,7 +417,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -394,6 +453,14 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "exit_code": {
+                      "type": "number",
+                      "enum": [3]
+                    },
+                    "exit_meaning": {
+                      "type": "string",
+                      "enum": ["not found or auth missing"]
+                    },
                     "generated_at": {
                       "type": "string"
                     },
@@ -405,7 +472,13 @@
                       "type": "string"
                     }
                   },
-                  "required": ["generated_at", "code", "message"],
+                  "required": [
+                    "exit_code",
+                    "exit_meaning",
+                    "generated_at",
+                    "code",
+                    "message"
+                  ],
                   "additionalProperties": false
                 }
               }
@@ -555,7 +628,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -584,6 +664,14 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "exit_code": {
+                      "type": "number",
+                      "enum": [3]
+                    },
+                    "exit_meaning": {
+                      "type": "string",
+                      "enum": ["not found or auth missing"]
+                    },
                     "generated_at": {
                       "type": "string"
                     },
@@ -595,7 +683,13 @@
                       "type": "string"
                     }
                   },
-                  "required": ["generated_at", "code", "message"],
+                  "required": [
+                    "exit_code",
+                    "exit_meaning",
+                    "generated_at",
+                    "code",
+                    "message"
+                  ],
                   "additionalProperties": false
                 }
               }
@@ -639,7 +733,14 @@
             "description": "<No Content>"
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -668,6 +769,14 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "exit_code": {
+                      "type": "number",
+                      "enum": [3]
+                    },
+                    "exit_meaning": {
+                      "type": "string",
+                      "enum": ["not found or auth missing"]
+                    },
                     "generated_at": {
                       "type": "string"
                     },
@@ -679,7 +788,13 @@
                       "type": "string"
                     }
                   },
-                  "required": ["generated_at", "code", "message"],
+                  "required": [
+                    "exit_code",
+                    "exit_meaning",
+                    "generated_at",
+                    "code",
+                    "message"
+                  ],
                   "additionalProperties": false
                 }
               }
@@ -869,7 +984,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -903,6 +1025,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -914,7 +1044,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -1160,7 +1296,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -1194,6 +1337,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -1205,7 +1356,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -1475,6 +1632,14 @@
                                   {
                                     "type": "object",
                                     "properties": {
+                                      "exit_code": {
+                                        "type": "number",
+                                        "enum": [1]
+                                      },
+                                      "exit_meaning": {
+                                        "type": "string",
+                                        "enum": ["runtime failure"]
+                                      },
                                       "generated_at": {
                                         "type": "string"
                                       },
@@ -1513,6 +1678,179 @@
                                       }
                                     },
                                     "required": [
+                                      "exit_code",
+                                      "exit_meaning",
+                                      "generated_at",
+                                      "code",
+                                      "message"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "exit_code": {
+                                        "type": "number",
+                                        "enum": [2]
+                                      },
+                                      "exit_meaning": {
+                                        "type": "string",
+                                        "enum": ["validation or usage"]
+                                      },
+                                      "generated_at": {
+                                        "type": "string"
+                                      },
+                                      "code": {
+                                        "type": "string",
+                                        "enum": [
+                                          "conflict",
+                                          "not_found",
+                                          "invalid_args",
+                                          "auth_required",
+                                          "forbidden",
+                                          "runtime"
+                                        ]
+                                      },
+                                      "message": {
+                                        "type": "string"
+                                      },
+                                      "details": {
+                                        "type": "object",
+                                        "properties": {
+                                          "current_version": {
+                                            "anyOf": [
+                                              {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": 9007199254740991
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "required": ["current_version"],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "required": [
+                                      "exit_code",
+                                      "exit_meaning",
+                                      "generated_at",
+                                      "code",
+                                      "message"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "exit_code": {
+                                        "type": "number",
+                                        "enum": [3]
+                                      },
+                                      "exit_meaning": {
+                                        "type": "string",
+                                        "enum": ["not found or auth missing"]
+                                      },
+                                      "generated_at": {
+                                        "type": "string"
+                                      },
+                                      "code": {
+                                        "type": "string",
+                                        "enum": [
+                                          "conflict",
+                                          "not_found",
+                                          "invalid_args",
+                                          "auth_required",
+                                          "forbidden",
+                                          "runtime"
+                                        ]
+                                      },
+                                      "message": {
+                                        "type": "string"
+                                      },
+                                      "details": {
+                                        "type": "object",
+                                        "properties": {
+                                          "current_version": {
+                                            "anyOf": [
+                                              {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": 9007199254740991
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "required": ["current_version"],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "required": [
+                                      "exit_code",
+                                      "exit_meaning",
+                                      "generated_at",
+                                      "code",
+                                      "message"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "exit_code": {
+                                        "type": "number",
+                                        "enum": [4]
+                                      },
+                                      "exit_meaning": {
+                                        "type": "string",
+                                        "enum": ["Conflict"]
+                                      },
+                                      "generated_at": {
+                                        "type": "string"
+                                      },
+                                      "code": {
+                                        "type": "string",
+                                        "enum": [
+                                          "conflict",
+                                          "not_found",
+                                          "invalid_args",
+                                          "auth_required",
+                                          "forbidden",
+                                          "runtime"
+                                        ]
+                                      },
+                                      "message": {
+                                        "type": "string"
+                                      },
+                                      "details": {
+                                        "type": "object",
+                                        "properties": {
+                                          "current_version": {
+                                            "anyOf": [
+                                              {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": 9007199254740991
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "required": ["current_version"],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "required": [
+                                      "exit_code",
+                                      "exit_meaning",
                                       "generated_at",
                                       "code",
                                       "message"
@@ -1544,7 +1882,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -1578,6 +1923,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -1589,7 +1942,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -2732,7 +3091,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -2766,6 +3132,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -2777,7 +3151,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -2914,6 +3294,19 @@
                           "error": {
                             "type": "object",
                             "properties": {
+                              "exit_code": {
+                                "type": "number",
+                                "enum": [1, 2, 3, 4]
+                              },
+                              "exit_meaning": {
+                                "type": "string",
+                                "enum": [
+                                  "runtime failure",
+                                  "validation or usage",
+                                  "not found or auth missing",
+                                  "Conflict"
+                                ]
+                              },
                               "code": {
                                 "type": "string"
                               },
@@ -2934,13 +3327,38 @@
                                         "type": "null"
                                       }
                                     ]
+                                  },
+                                  "profile": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["id", "name"],
+                                    "additionalProperties": false
+                                  },
+                                  "task_id": {
+                                    "type": "string"
+                                  },
+                                  "recovery": {
+                                    "type": "string"
                                   }
                                 },
                                 "required": ["current_version"],
                                 "additionalProperties": false
                               }
                             },
-                            "required": ["code", "message"],
+                            "required": [
+                              "exit_code",
+                              "exit_meaning",
+                              "code",
+                              "message"
+                            ],
                             "additionalProperties": false
                           }
                         },
@@ -2988,7 +3406,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -3022,6 +3447,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -3033,7 +3466,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -3150,7 +3589,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -3184,6 +3630,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -3195,7 +3649,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -3372,7 +3832,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -3406,6 +3873,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -3417,7 +3892,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -3537,7 +4018,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -3571,6 +4059,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -3582,7 +4078,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -3714,7 +4216,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -3748,6 +4257,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -3759,7 +4276,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -3923,7 +4446,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -3957,6 +4487,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -3968,7 +4506,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -4086,6 +4630,19 @@
                           "error": {
                             "type": "object",
                             "properties": {
+                              "exit_code": {
+                                "type": "number",
+                                "enum": [1, 2, 3, 4]
+                              },
+                              "exit_meaning": {
+                                "type": "string",
+                                "enum": [
+                                  "runtime failure",
+                                  "validation or usage",
+                                  "not found or auth missing",
+                                  "Conflict"
+                                ]
+                              },
                               "generated_at": {
                                 "type": "string"
                               },
@@ -4109,6 +4666,26 @@
                                         "type": "null"
                                       }
                                     ]
+                                  },
+                                  "profile": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["id", "name"],
+                                    "additionalProperties": false
+                                  },
+                                  "task_id": {
+                                    "type": "string"
+                                  },
+                                  "recovery": {
+                                    "type": "string"
                                   }
                                 },
                                 "required": ["current_version"],
@@ -4116,6 +4693,8 @@
                               }
                             },
                             "required": [
+                              "exit_code",
+                              "exit_meaning",
                               "generated_at",
                               "code",
                               "message",
@@ -4162,7 +4741,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -4196,6 +4782,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -4207,7 +4801,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -4528,6 +5128,19 @@
                           "error": {
                             "type": "object",
                             "properties": {
+                              "exit_code": {
+                                "type": "number",
+                                "enum": [1, 2, 3, 4]
+                              },
+                              "exit_meaning": {
+                                "type": "string",
+                                "enum": [
+                                  "runtime failure",
+                                  "validation or usage",
+                                  "not found or auth missing",
+                                  "Conflict"
+                                ]
+                              },
                               "code": {
                                 "type": "string"
                               },
@@ -4551,13 +5164,38 @@
                                   },
                                   "dependency_error": {
                                     "$ref": "#/components/schemas/DependencyError_1"
+                                  },
+                                  "profile": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": ["id", "name"],
+                                    "additionalProperties": false
+                                  },
+                                  "task_id": {
+                                    "type": "string"
+                                  },
+                                  "recovery": {
+                                    "type": "string"
                                   }
                                 },
                                 "required": ["current_version"],
                                 "additionalProperties": false
                               }
                             },
-                            "required": ["code", "message"],
+                            "required": [
+                              "exit_code",
+                              "exit_meaning",
+                              "code",
+                              "message"
+                            ],
                             "additionalProperties": false
                           }
                         },
@@ -4615,7 +5253,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -4649,6 +5294,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -4660,7 +5313,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -5294,7 +5953,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -5328,6 +5994,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -5339,7 +6013,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -5375,6 +6055,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [2]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["validation or usage"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -5386,7 +6074,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     }
                   ]
@@ -5441,7 +6135,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -5475,6 +6176,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -5486,7 +6195,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -6229,7 +6944,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -6263,6 +6985,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -6274,7 +7004,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -6368,7 +7104,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -6402,6 +7145,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -6413,7 +7164,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -6743,7 +7500,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -6777,6 +7541,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -6788,7 +7560,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -6884,7 +7662,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -6918,6 +7703,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -6929,7 +7722,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -7048,7 +7847,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -7082,6 +7888,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -7093,7 +7907,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -7212,7 +8032,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -7246,6 +8073,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -7257,7 +8092,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -7376,7 +8217,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -7410,6 +8258,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -7421,7 +8277,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -7532,7 +8394,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -7566,6 +8435,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -7577,7 +8454,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -8050,7 +8933,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -8084,6 +8974,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -8095,7 +8993,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -8476,7 +9380,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -8510,6 +9421,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -8521,7 +9440,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -27936,9 +28861,22 @@
                                     },
                                     "message": {
                                       "type": "string"
+                                    },
+                                    "exit_code": {
+                                      "type": "number",
+                                      "enum": [3]
+                                    },
+                                    "exit_meaning": {
+                                      "type": "string",
+                                      "enum": ["not found or auth missing"]
                                     }
                                   },
-                                  "required": ["_tag", "message"],
+                                  "required": [
+                                    "_tag",
+                                    "message",
+                                    "exit_code",
+                                    "exit_meaning"
+                                  ],
                                   "additionalProperties": false
                                 },
                                 {
@@ -27950,14 +28888,35 @@
                                     },
                                     "message": {
                                       "type": "string"
+                                    },
+                                    "exit_code": {
+                                      "type": "number",
+                                      "enum": [3]
+                                    },
+                                    "exit_meaning": {
+                                      "type": "string",
+                                      "enum": ["not found or auth missing"]
                                     }
                                   },
-                                  "required": ["_tag", "message"],
+                                  "required": [
+                                    "_tag",
+                                    "message",
+                                    "exit_code",
+                                    "exit_meaning"
+                                  ],
                                   "additionalProperties": false
                                 },
                                 {
                                   "type": "object",
                                   "properties": {
+                                    "exit_code": {
+                                      "type": "number",
+                                      "enum": [3]
+                                    },
+                                    "exit_meaning": {
+                                      "type": "string",
+                                      "enum": ["not found or auth missing"]
+                                    },
                                     "generated_at": {
                                       "type": "string"
                                     },
@@ -27970,6 +28929,8 @@
                                     }
                                   },
                                   "required": [
+                                    "exit_code",
+                                    "exit_meaning",
                                     "generated_at",
                                     "code",
                                     "message"
@@ -27985,9 +28946,22 @@
                                     },
                                     "message": {
                                       "type": "string"
+                                    },
+                                    "exit_code": {
+                                      "type": "number",
+                                      "enum": [1]
+                                    },
+                                    "exit_meaning": {
+                                      "type": "string",
+                                      "enum": ["runtime failure"]
                                     }
                                   },
-                                  "required": ["_tag", "message"],
+                                  "required": [
+                                    "_tag",
+                                    "message",
+                                    "exit_code",
+                                    "exit_meaning"
+                                  ],
                                   "additionalProperties": false
                                 }
                               ]
@@ -28043,6 +29017,14 @@
                       {
                         "type": "object",
                         "properties": {
+                          "exit_code": {
+                            "type": "number",
+                            "enum": [3]
+                          },
+                          "exit_meaning": {
+                            "type": "string",
+                            "enum": ["not found or auth missing"]
+                          },
                           "generated_at": {
                             "type": "string"
                           },
@@ -28054,7 +29036,13 @@
                             "type": "string"
                           }
                         },
-                        "required": ["generated_at", "code", "message"],
+                        "required": [
+                          "exit_code",
+                          "exit_meaning",
+                          "generated_at",
+                          "code",
+                          "message"
+                        ],
                         "additionalProperties": false
                       },
                       {
@@ -28077,7 +29065,14 @@
             }
           },
           "400": {
-            "description": "BadRequest"
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -28106,6 +29101,14 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "exit_code": {
+                      "type": "number",
+                      "enum": [3]
+                    },
+                    "exit_meaning": {
+                      "type": "string",
+                      "enum": ["not found or auth missing"]
+                    },
                     "generated_at": {
                       "type": "string"
                     },
@@ -28117,8 +29120,209 @@
                       "type": "string"
                     }
                   },
-                  "required": ["generated_at", "code", "message"],
+                  "required": [
+                    "exit_code",
+                    "exit_meaning",
+                    "generated_at",
+                    "code",
+                    "message"
+                  ],
                   "additionalProperties": false
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "InternalError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalErrorEncoded"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tasks/lookup": {
+      "get": {
+        "tags": ["reads"],
+        "operationId": "reads.lookup",
+        "parameters": [
+          {
+            "name": "prefix",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 36,
+              "pattern": "^[0-9A-Fa-f-]+$",
+              "description": "Case-insensitive literal Task id prefix. Hex digits and hyphens only."
+            },
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "profile": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "required": ["id", "name"],
+                        "additionalProperties": false
+                      },
+                      "task_id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "project": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": ["profile", "task_id", "title", "project"],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "FilterUsageError | BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedEncoded"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForbiddenEncoded"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NotFound",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
+                        "generated_at": {
+                          "type": "string"
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": ["not_found"]
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "$ref": "#/components/schemas/NotFoundEncoded"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictEncoded"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "DependencyError | InvalidTask",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/DependencyError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidTaskEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -28224,7 +29428,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -28258,6 +29469,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -28269,7 +29488,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -28305,6 +29530,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [2]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["validation or usage"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -28328,6 +29561,8 @@
                         }
                       },
                       "required": [
+                        "exit_code",
+                        "exit_meaning",
                         "generated_at",
                         "code",
                         "message",
@@ -28377,7 +29612,17 @@
       "get": {
         "tags": ["reads"],
         "operationId": "reads.profiles",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "include_projects",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["true", "false"]
+            },
+            "required": false
+          }
+        ],
         "security": [
           {
             "bearer": []
@@ -28421,6 +29666,25 @@
                         "type": "integer",
                         "minimum": 0,
                         "maximum": 9007199254740991
+                      },
+                      "projects": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          },
+                          "required": ["id", "name"],
+                          "additionalProperties": false
+                        },
+                        "description": "Present with --projects or include_projects=true. Includes defined Projects even without visible Tasks; an empty Profile has []."
                       }
                     },
                     "required": [
@@ -28442,7 +29706,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -28476,6 +29747,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -28487,7 +29766,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -28611,7 +29896,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -28645,6 +29937,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -28656,7 +29956,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -28767,7 +30073,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -28801,6 +30114,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -28812,7 +30133,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -29271,7 +30598,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -29305,6 +30639,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -29316,7 +30658,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -45194,7 +46542,7 @@
                                         "type": "object",
                                         "properties": {
                                           "witness": {
-                                            "$ref": "#/components/schemas/DependencyError_1"
+                                            "$ref": "#/components/schemas/StoredDependencyError"
                                           },
                                           "truncated": {
                                             "type": "boolean",
@@ -47128,7 +48476,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -47162,6 +48517,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -47173,7 +48536,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -47381,7 +48750,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -47415,6 +48791,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -47426,7 +48810,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -48181,6 +49571,16 @@
               }
             }
           },
+          "400": {
+            "description": "BadRequest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestEncoded"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Unauthorized",
             "content": {
@@ -48208,6 +49608,14 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "exit_code": {
+                      "type": "number",
+                      "enum": [3]
+                    },
+                    "exit_meaning": {
+                      "type": "string",
+                      "enum": ["not found or auth missing"]
+                    },
                     "generated_at": {
                       "type": "string"
                     },
@@ -48219,7 +49627,13 @@
                       "type": "string"
                     }
                   },
-                  "required": ["generated_at", "code", "message"],
+                  "required": [
+                    "exit_code",
+                    "exit_meaning",
+                    "generated_at",
+                    "code",
+                    "message"
+                  ],
                   "additionalProperties": false
                 }
               }
@@ -48351,7 +49765,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -48385,6 +49806,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -48396,7 +49825,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -48537,7 +49972,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -48571,6 +50013,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -48582,7 +50032,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -48753,7 +50209,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -48787,6 +50250,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -48798,7 +50269,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -49023,7 +50500,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -49057,6 +50541,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -49068,7 +50560,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -49246,7 +50744,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FilterUsageError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FilterUsageError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestEncoded"
+                    }
+                  ]
                 }
               }
             }
@@ -49280,6 +50785,14 @@
                     {
                       "type": "object",
                       "properties": {
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [3]
+                        },
+                        "exit_meaning": {
+                          "type": "string",
+                          "enum": ["not found or auth missing"]
+                        },
                         "generated_at": {
                           "type": "string"
                         },
@@ -49291,7 +50804,13 @@
                           "type": "string"
                         }
                       },
-                      "required": ["generated_at", "code", "message"],
+                      "required": [
+                        "exit_code",
+                        "exit_meaning",
+                        "generated_at",
+                        "code",
+                        "message"
+                      ],
                       "additionalProperties": false
                     },
                     {
@@ -49371,9 +50890,17 @@
           },
           "message": {
             "type": "string"
+          },
+          "exit_code": {
+            "type": "number",
+            "enum": [3]
+          },
+          "exit_meaning": {
+            "type": "string",
+            "enum": ["not found or auth missing"]
           }
         },
-        "required": ["_tag", "message"],
+        "required": ["_tag", "message", "exit_code", "exit_meaning"],
         "additionalProperties": false
       },
       "InternalErrorEncoded": {
@@ -49385,9 +50912,17 @@
           },
           "message": {
             "type": "string"
+          },
+          "exit_code": {
+            "type": "number",
+            "enum": [1]
+          },
+          "exit_meaning": {
+            "type": "string",
+            "enum": ["runtime failure"]
           }
         },
-        "required": ["_tag", "message"],
+        "required": ["_tag", "message", "exit_code", "exit_meaning"],
         "additionalProperties": false
       },
       "ConflictEncoded": {
@@ -49707,9 +51242,17 @@
                 "type": "null"
               }
             ]
+          },
+          "exit_code": {
+            "type": "number",
+            "enum": [4]
+          },
+          "exit_meaning": {
+            "type": "string",
+            "enum": ["Conflict"]
           }
         },
-        "required": ["_tag", "latest"],
+        "required": ["_tag", "latest", "exit_code", "exit_meaning"],
         "additionalProperties": false
       },
       "Attachment": {
@@ -49820,9 +51363,44 @@
           },
           "message": {
             "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "properties": {
+              "profile": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": ["id", "name"],
+                "additionalProperties": false
+              },
+              "task_id": {
+                "type": "string"
+              },
+              "recovery": {
+                "type": "string"
+              }
+            },
+            "required": ["profile", "task_id", "recovery"],
+            "additionalProperties": false
+          },
+          "exit_code": {
+            "type": "number",
+            "enum": [3]
+          },
+          "exit_meaning": {
+            "type": "string",
+            "enum": ["not found or auth missing"]
           }
         },
-        "required": ["_tag", "message"],
+        "required": ["_tag", "message", "exit_code", "exit_meaning"],
         "additionalProperties": false
       },
       "ForbiddenEncoded": {
@@ -49834,9 +51412,17 @@
           },
           "message": {
             "type": "string"
+          },
+          "exit_code": {
+            "type": "number",
+            "enum": [3]
+          },
+          "exit_meaning": {
+            "type": "string",
+            "enum": ["not found or auth missing"]
           }
         },
-        "required": ["_tag", "message"],
+        "required": ["_tag", "message", "exit_code", "exit_meaning"],
         "additionalProperties": false
       },
       "InvalidTaskEncoded": {
@@ -49845,6 +51431,14 @@
           "_tag": {
             "type": "string",
             "enum": ["InvalidTask"]
+          },
+          "exit_code": {
+            "type": "number",
+            "enum": [2]
+          },
+          "exit_meaning": {
+            "type": "string",
+            "enum": ["validation or usage"]
           },
           "message": {
             "type": "string"
@@ -49864,7 +51458,7 @@
             "additionalProperties": false
           }
         },
-        "required": ["_tag", "message"],
+        "required": ["_tag", "exit_code", "exit_meaning", "message"],
         "additionalProperties": false
       },
       "DependencyError": {
@@ -49878,6 +51472,14 @@
               "message": {
                 "type": "string",
                 "minLength": 1
+              },
+              "exit_code": {
+                "type": "number",
+                "enum": [2]
+              },
+              "exit_meaning": {
+                "type": "string",
+                "enum": ["validation or usage"]
               },
               "code": {
                 "type": "string",
@@ -49907,7 +51509,14 @@
                 "additionalProperties": false
               }
             },
-            "required": ["generated_at", "message", "code", "details"],
+            "required": [
+              "generated_at",
+              "message",
+              "exit_code",
+              "exit_meaning",
+              "code",
+              "details"
+            ],
             "additionalProperties": false
           },
           {
@@ -49919,6 +51528,14 @@
               "message": {
                 "type": "string",
                 "pattern": "^This Task depends on [0-9]+ Tasks[.] That's a lot for one Task[.] It might be a whole Project, or it might be clearer split under a few more parent Tasks[.]$"
+              },
+              "exit_code": {
+                "type": "number",
+                "enum": [2]
+              },
+              "exit_meaning": {
+                "type": "string",
+                "enum": ["validation or usage"]
               },
               "code": {
                 "type": "string",
@@ -49945,7 +51562,14 @@
                 "additionalProperties": false
               }
             },
-            "required": ["generated_at", "message", "code", "details"],
+            "required": [
+              "generated_at",
+              "message",
+              "exit_code",
+              "exit_meaning",
+              "code",
+              "details"
+            ],
             "additionalProperties": false
           },
           {
@@ -49957,6 +51581,14 @@
               "message": {
                 "type": "string",
                 "minLength": 1
+              },
+              "exit_code": {
+                "type": "number",
+                "enum": [2]
+              },
+              "exit_meaning": {
+                "type": "string",
+                "enum": ["validation or usage"]
               },
               "code": {
                 "type": "string",
@@ -50282,7 +51914,14 @@
                 "additionalProperties": false
               }
             },
-            "required": ["generated_at", "message", "code", "details"],
+            "required": [
+              "generated_at",
+              "message",
+              "exit_code",
+              "exit_meaning",
+              "code",
+              "details"
+            ],
             "additionalProperties": false
           },
           {
@@ -50294,6 +51933,14 @@
               "message": {
                 "type": "string",
                 "minLength": 1
+              },
+              "exit_code": {
+                "type": "number",
+                "enum": [2]
+              },
+              "exit_meaning": {
+                "type": "string",
+                "enum": ["validation or usage"]
               },
               "code": {
                 "type": "string",
@@ -50627,7 +52274,14 @@
                 "additionalProperties": false
               }
             },
-            "required": ["generated_at", "message", "code", "details"],
+            "required": [
+              "generated_at",
+              "message",
+              "exit_code",
+              "exit_meaning",
+              "code",
+              "details"
+            ],
             "additionalProperties": false
           },
           {
@@ -50639,6 +52293,14 @@
               "message": {
                 "type": "string",
                 "minLength": 1
+              },
+              "exit_code": {
+                "type": "number",
+                "enum": [2]
+              },
+              "exit_meaning": {
+                "type": "string",
+                "enum": ["validation or usage"]
               },
               "code": {
                 "type": "string",
@@ -50682,7 +52344,14 @@
                 "additionalProperties": false
               }
             },
-            "required": ["generated_at", "message", "code", "details"],
+            "required": [
+              "generated_at",
+              "message",
+              "exit_code",
+              "exit_meaning",
+              "code",
+              "details"
+            ],
             "additionalProperties": false
           },
           {
@@ -50694,6 +52363,14 @@
               "message": {
                 "type": "string",
                 "minLength": 1
+              },
+              "exit_code": {
+                "type": "number",
+                "enum": [2]
+              },
+              "exit_meaning": {
+                "type": "string",
+                "enum": ["validation or usage"]
               },
               "code": {
                 "type": "string",
@@ -50719,14 +52396,51 @@
                 "additionalProperties": false
               }
             },
-            "required": ["generated_at", "message", "code", "details"],
+            "required": [
+              "generated_at",
+              "message",
+              "exit_code",
+              "exit_meaning",
+              "code",
+              "details"
+            ],
             "additionalProperties": false
           }
         ]
       },
+      "BadRequestEncoded": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["BadRequest"]
+          },
+          "message": {
+            "type": "string"
+          },
+          "exit_code": {
+            "type": "number",
+            "enum": [2]
+          },
+          "exit_meaning": {
+            "type": "string",
+            "enum": ["validation or usage"]
+          }
+        },
+        "required": ["_tag", "message", "exit_code", "exit_meaning"],
+        "additionalProperties": false
+      },
       "FilterUsageError": {
         "type": "object",
         "properties": {
+          "exit_code": {
+            "type": "number",
+            "enum": [2]
+          },
+          "exit_meaning": {
+            "type": "string",
+            "enum": ["validation or usage"]
+          },
           "generated_at": {
             "type": "string"
           },
@@ -50738,10 +52452,16 @@
             "type": "string"
           }
         },
-        "required": ["generated_at", "code", "message"],
+        "required": [
+          "exit_code",
+          "exit_meaning",
+          "generated_at",
+          "code",
+          "message"
+        ],
         "additionalProperties": false
       },
-      "DependencyError_1": {
+      "StoredDependencyError": {
         "anyOf": [
           {
             "type": "object",
@@ -50752,6 +52472,14 @@
               "message": {
                 "type": "string",
                 "minLength": 1
+              },
+              "exit_code": {
+                "type": "number",
+                "enum": [2]
+              },
+              "exit_meaning": {
+                "type": "string",
+                "enum": ["validation or usage"]
               },
               "code": {
                 "type": "string",
@@ -50794,6 +52522,14 @@
                 "type": "string",
                 "pattern": "^This Task depends on [0-9]+ Tasks[.] That's a lot for one Task[.] It might be a whole Project, or it might be clearer split under a few more parent Tasks[.]$"
               },
+              "exit_code": {
+                "type": "number",
+                "enum": [2]
+              },
+              "exit_meaning": {
+                "type": "string",
+                "enum": ["validation or usage"]
+              },
               "code": {
                 "type": "string",
                 "enum": ["too_many_dependencies"]
@@ -50831,6 +52567,14 @@
               "message": {
                 "type": "string",
                 "minLength": 1
+              },
+              "exit_code": {
+                "type": "number",
+                "enum": [2]
+              },
+              "exit_meaning": {
+                "type": "string",
+                "enum": ["validation or usage"]
               },
               "code": {
                 "type": "string",
@@ -51168,6 +52912,14 @@
               "message": {
                 "type": "string",
                 "minLength": 1
+              },
+              "exit_code": {
+                "type": "number",
+                "enum": [2]
+              },
+              "exit_meaning": {
+                "type": "string",
+                "enum": ["validation or usage"]
               },
               "code": {
                 "type": "string",
@@ -51514,6 +53266,14 @@
                 "type": "string",
                 "minLength": 1
               },
+              "exit_code": {
+                "type": "number",
+                "enum": [2]
+              },
+              "exit_meaning": {
+                "type": "string",
+                "enum": ["validation or usage"]
+              },
               "code": {
                 "type": "string",
                 "enum": ["has_dependencies"]
@@ -51568,6 +53328,14 @@
               "message": {
                 "type": "string",
                 "minLength": 1
+              },
+              "exit_code": {
+                "type": "number",
+                "enum": [2]
+              },
+              "exit_meaning": {
+                "type": "string",
+                "enum": ["validation or usage"]
               },
               "code": {
                 "type": "string",
@@ -52025,6 +53793,953 @@
         ],
         "additionalProperties": false
       },
+      "DependencyError_1": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "generated_at": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exit_code": {
+                "type": "number",
+                "enum": [2]
+              },
+              "exit_meaning": {
+                "type": "string",
+                "enum": ["validation or usage"]
+              },
+              "code": {
+                "type": "string",
+                "enum": ["dependency_cycle"]
+              },
+              "details": {
+                "type": "object",
+                "properties": {
+                  "dependent_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "blocker_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "path": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "minItems": 2
+                  }
+                },
+                "required": ["dependent_id", "blocker_id", "path"],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "generated_at",
+              "message",
+              "exit_code",
+              "exit_meaning",
+              "code",
+              "details"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "generated_at": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string",
+                "pattern": "^This Task depends on [0-9]+ Tasks[.] That's a lot for one Task[.] It might be a whole Project, or it might be clearer split under a few more parent Tasks[.]$"
+              },
+              "exit_code": {
+                "type": "number",
+                "enum": [2]
+              },
+              "exit_meaning": {
+                "type": "string",
+                "enum": ["validation or usage"]
+              },
+              "code": {
+                "type": "string",
+                "enum": ["too_many_dependencies"]
+              },
+              "details": {
+                "type": "object",
+                "properties": {
+                  "dependent_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "limit": {
+                    "type": "number",
+                    "enum": [13]
+                  }
+                },
+                "required": ["dependent_id", "count", "limit"],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "generated_at",
+              "message",
+              "exit_code",
+              "exit_meaning",
+              "code",
+              "details"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "generated_at": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exit_code": {
+                "type": "number",
+                "enum": [2]
+              },
+              "exit_meaning": {
+                "type": "string",
+                "enum": ["validation or usage"]
+              },
+              "code": {
+                "type": "string",
+                "enum": ["blocked"]
+              },
+              "details": {
+                "type": "object",
+                "properties": {
+                  "task_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "blockers": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "title": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "description": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "project_id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "priority": {
+                          "type": "string",
+                          "enum": ["P1", "P2", "P3", "P4"]
+                        },
+                        "scheduled_at": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": ["instant"]
+                                    },
+                                    "utc": {
+                                      "type": "string"
+                                    },
+                                    "time_zone": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["kind", "utc", "time_zone"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": ["date"]
+                                    },
+                                    "date": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["kind", "date"],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "due_at": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": ["instant"]
+                                    },
+                                    "utc": {
+                                      "type": "string"
+                                    },
+                                    "time_zone": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["kind", "utc", "time_zone"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": ["date"]
+                                    },
+                                    "date": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["kind", "date"],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "energy": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 5
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "estimate_min": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "maximum": 9007199254740991,
+                              "exclusiveMinimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "source": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "tags": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "attachments": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Attachment"
+                          }
+                        },
+                        "external_id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "profile_id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "entity_version": {
+                          "type": "number",
+                          "enum": [1]
+                        },
+                        "row_version": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": ["open", "done", "cancelled", "snoozed"]
+                        },
+                        "occurrence": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "series_id": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "date": {
+                                  "type": "string"
+                                },
+                                "time": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "kind": {
+                                          "type": "string",
+                                          "enum": ["instant"]
+                                        },
+                                        "utc": {
+                                          "type": "string"
+                                        },
+                                        "time_zone": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": ["kind", "utc", "time_zone"],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "kind": {
+                                          "type": "string",
+                                          "enum": ["date"]
+                                        },
+                                        "date": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": ["kind", "date"],
+                                      "additionalProperties": false
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["id", "series_id", "date"],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "legacy_series_detached": {
+                          "type": "boolean",
+                          "enum": [true]
+                        },
+                        "created_at": {
+                          "type": "string"
+                        },
+                        "updated_at": {
+                          "type": "string"
+                        },
+                        "completed_at": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "deleted_at": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "title",
+                        "description",
+                        "project_id",
+                        "priority",
+                        "scheduled_at",
+                        "due_at",
+                        "energy",
+                        "estimate_min",
+                        "source",
+                        "tags",
+                        "id",
+                        "profile_id",
+                        "entity_version",
+                        "row_version",
+                        "status",
+                        "occurrence",
+                        "created_at",
+                        "updated_at",
+                        "completed_at",
+                        "deleted_at"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1
+                  }
+                },
+                "required": ["task_id", "blockers"],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "generated_at",
+              "message",
+              "exit_code",
+              "exit_meaning",
+              "code",
+              "details"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "generated_at": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exit_code": {
+                "type": "number",
+                "enum": [2]
+              },
+              "exit_meaning": {
+                "type": "string",
+                "enum": ["validation or usage"]
+              },
+              "code": {
+                "type": "string",
+                "enum": ["blocks_done_task"]
+              },
+              "details": {
+                "type": "object",
+                "properties": {
+                  "task_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "done_dependents": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "title": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "description": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "project_id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "priority": {
+                          "type": "string",
+                          "enum": ["P1", "P2", "P3", "P4"]
+                        },
+                        "scheduled_at": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": ["instant"]
+                                    },
+                                    "utc": {
+                                      "type": "string"
+                                    },
+                                    "time_zone": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["kind", "utc", "time_zone"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": ["date"]
+                                    },
+                                    "date": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["kind", "date"],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "due_at": {
+                          "anyOf": [
+                            {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": ["instant"]
+                                    },
+                                    "utc": {
+                                      "type": "string"
+                                    },
+                                    "time_zone": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["kind", "utc", "time_zone"],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": ["date"]
+                                    },
+                                    "date": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": ["kind", "date"],
+                                  "additionalProperties": false
+                                }
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "energy": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 5
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "estimate_min": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "maximum": 9007199254740991,
+                              "exclusiveMinimum": 0
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "source": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "tags": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        },
+                        "attachments": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Attachment"
+                          }
+                        },
+                        "external_id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "profile_id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "entity_version": {
+                          "type": "number",
+                          "enum": [1]
+                        },
+                        "row_version": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": ["open", "done", "cancelled", "snoozed"]
+                        },
+                        "occurrence": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "series_id": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "date": {
+                                  "type": "string"
+                                },
+                                "time": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "kind": {
+                                          "type": "string",
+                                          "enum": ["instant"]
+                                        },
+                                        "utc": {
+                                          "type": "string"
+                                        },
+                                        "time_zone": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": ["kind", "utc", "time_zone"],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "kind": {
+                                          "type": "string",
+                                          "enum": ["date"]
+                                        },
+                                        "date": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": ["kind", "date"],
+                                      "additionalProperties": false
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": ["id", "series_id", "date"],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "legacy_series_detached": {
+                          "type": "boolean",
+                          "enum": [true]
+                        },
+                        "created_at": {
+                          "type": "string"
+                        },
+                        "updated_at": {
+                          "type": "string"
+                        },
+                        "completed_at": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "deleted_at": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "title",
+                        "description",
+                        "project_id",
+                        "priority",
+                        "scheduled_at",
+                        "due_at",
+                        "energy",
+                        "estimate_min",
+                        "source",
+                        "tags",
+                        "id",
+                        "profile_id",
+                        "entity_version",
+                        "row_version",
+                        "status",
+                        "occurrence",
+                        "created_at",
+                        "updated_at",
+                        "completed_at",
+                        "deleted_at"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1
+                  },
+                  "follow_up_depends_on": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "task_id",
+                  "done_dependents",
+                  "follow_up_depends_on"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "generated_at",
+              "message",
+              "exit_code",
+              "exit_meaning",
+              "code",
+              "details"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "generated_at": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exit_code": {
+                "type": "number",
+                "enum": [2]
+              },
+              "exit_meaning": {
+                "type": "string",
+                "enum": ["validation or usage"]
+              },
+              "code": {
+                "type": "string",
+                "enum": ["has_dependencies"]
+              },
+              "details": {
+                "type": "object",
+                "properties": {
+                  "task_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "dependencies": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "profile_id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "dependent_id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "blocker_id": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": ["profile_id", "dependent_id", "blocker_id"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "flag": {
+                    "type": "string",
+                    "enum": ["--with-dependencies"]
+                  }
+                },
+                "required": ["task_id", "dependencies", "flag"],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "generated_at",
+              "message",
+              "exit_code",
+              "exit_meaning",
+              "code",
+              "details"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "generated_at": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1
+              },
+              "exit_code": {
+                "type": "number",
+                "enum": [2]
+              },
+              "exit_meaning": {
+                "type": "string",
+                "enum": ["validation or usage"]
+              },
+              "code": {
+                "type": "string",
+                "enum": ["dependency_profile_mismatch"]
+              },
+              "details": {
+                "type": "object",
+                "properties": {
+                  "dependent_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "blocker_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "profile_id": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": ["dependent_id", "blocker_id", "profile_id"],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "generated_at",
+              "message",
+              "exit_code",
+              "exit_meaning",
+              "code",
+              "details"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
       "TooManySignInsEncoded": {
         "type": "object",
         "properties": {
@@ -52044,9 +54759,23 @@
                 "type": "null"
               }
             ]
+          },
+          "exit_code": {
+            "type": "number",
+            "enum": [3]
+          },
+          "exit_meaning": {
+            "type": "string",
+            "enum": ["not found or auth missing"]
           }
         },
-        "required": ["_tag", "message", "locked_until"],
+        "required": [
+          "_tag",
+          "message",
+          "locked_until",
+          "exit_code",
+          "exit_meaning"
+        ],
         "additionalProperties": false
       }
     },

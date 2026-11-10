@@ -294,3 +294,8 @@ out, clears the credential, then reads without a bearer. The proxy records only
 header presence and statuses. The unsigned host write drive now reuses this
 production factory and verify-host-auth.ts signs out/in through the actual
 renderer. Native safeStorage/session.enc restoration remains held.
+## Authorized discovery
+
+Read [Profiles, Projects and Find Task by id](features/discovery.md) for the
+Compact-first production-renderer scratch proof, explicit Show, draft retention,
+done Task reveal, response provenance, selectors and visual state matrix.

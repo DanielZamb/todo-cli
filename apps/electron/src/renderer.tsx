@@ -1,4 +1,5 @@
 import {
+  LookupQuery,
   ProfileId,
   type QuickAddDraft,
   QuickAddInput,
@@ -7,6 +8,7 @@ import {
   type Series,
   Task,
   type TaskFilters,
+  type TaskLookupDetails,
   TaskTime,
 } from "@todo/domain";
 import { cn } from "cn";
@@ -84,6 +86,11 @@ import { NativeSelect } from "./components/ui/native-select.tsx";
 import { Textarea } from "./components/ui/textarea.tsx";
 import { DatePicker } from "./date-picker.tsx";
 import { Diagnostics } from "./diagnostics.tsx";
+import { DiscoveryDialog } from "./discovery-dialog.tsx";
+import {
+  type DiscoveryKind,
+  DiscoveryStateController,
+} from "./discovery-state.ts";
 import {
   canRevertHistory,
   editedChanges,
@@ -116,6 +123,7 @@ import { RowMetadata } from "./row-metadata.tsx";
 import { SnapshotSettings } from "./snapshot-settings.tsx";
 import { TaskFilterDialog, taskFilterSummary } from "./task-filter-dialog.tsx";
 import { TaskIdCopy } from "./task-id-copy.tsx";
+import { TaskLookupStatus } from "./task-lookup-status.tsx";
 import {
   DescriptionMatch,
   descriptionMatch,
@@ -304,6 +312,8 @@ type WriteIntent =
   | { kind: "editSeries"; recurrence: Recurrence }
   | { kind: "skipOccurrence" };
 function App() {
+  const [discovery] = useState(() => new DiscoveryStateController());
+  const discoveryReturnFocus = useRef<HTMLElement | null>(null);
   const [outdated, setOutdated] = useState<Extract<
     Reply,
     { _tag: "outdatedServer" }
@@ -319,6 +329,9 @@ function App() {
     null,
   );
   const catalog = appliedSearch?.catalog ?? null;
+  const catalogRef = useRef(catalog);
+  const catalogOwedRef = useRef(true);
+  catalogRef.current = catalog;
   const searchDefinitions = useRef<
     Pick<TaskCatalog, "projects" | "tags"> & {
       profile: typeof ProfileId.Type | null;
@@ -385,6 +398,9 @@ function App() {
     "connected" | "reconnecting" | "offline"
   >("reconnecting");
   const [error, setError] = useState("");
+  const [lookupError, setLookupError] = useState<
+    typeof TaskLookupDetails.Type | null
+  >(null);
   const [loadFailure, setLoadFailure] = useState<{
     kind: "transient" | "search_too_broad";
     message: string;
@@ -402,6 +418,8 @@ function App() {
   const [quick, setQuick] = useState(false);
   const [draft, setDraft] = useState("");
   const [editor, setEditor] = useState<Editor | null>(() => storedEditor());
+  const editorRef = useRef(editor);
+  editorRef.current = editor;
   const [latest, setLatest] = useState<typeof Task.Type | null>(null);
   const transferIntent =
     writeIntent && (writeIntent.kind === "move" || writeIntent.kind === "copy")
@@ -445,6 +463,7 @@ function App() {
     selected.current = restored?.base.id;
     refreshGeneration.current++;
     setProfileDelete(null);
+    setLookupError(null);
     setEditor(restored);
     setLatest(null);
     setChoices({});
@@ -455,6 +474,8 @@ function App() {
     setSeriesDialog(null);
     setWriteIntent(null);
     setAppliedSearch(null);
+    catalogRef.current = null;
+    catalogOwedRef.current = true;
     unfilteredSearch.current = null;
     searchDefinitions.current = { profile: null, projects: [], tags: [] };
     setSearchPhase("Idle");
@@ -475,18 +496,23 @@ function App() {
     setTransferResult(null);
   }, []);
   const activateEditor = (next: Editor) => {
-    if (editor && editor.base.id !== next.base.id) preserveDraft(editor);
+    const current = editorRef.current;
+    if (current && current.base.id !== next.base.id) preserveDraft(current);
     const saved = storedEditor(next.base.profile_id);
     if (saved && saved.base.id !== next.base.id) preserveDraft(saved);
     activateProfile(next.base.profile_id);
     setEditor(next);
   };
   const endAuthentication = useCallback(() => {
+    discovery.credentialChanged();
+    setLookupError(null);
     refreshGeneration.current++;
     profileGeneration.current++;
     setSignedIn(false);
     setConnection("offline");
     setAppliedSearch(null);
+    catalogRef.current = null;
+    catalogOwedRef.current = true;
     unfilteredSearch.current = null;
     searchDefinitions.current = { profile: null, projects: [], tags: [] };
     setSearchPhase("Idle");
@@ -501,9 +527,14 @@ function App() {
     appliedFiltersRef.current = {};
     setApplyingFilters(false);
     setFiltersOpen(false);
-  }, []);
+  }, [discovery.credentialChanged]);
   const request = useCallback(
     async (request: Request): Promise<Reply> => {
+      if (request._tag === "signIn" || request._tag === "signOut")
+        discovery.credentialChanged();
+      const scopedDiscovery = ["directory", "lookup", "showTask"].includes(
+        request._tag,
+      );
       try {
         const reply = Schema.decodeUnknownSync(Reply)(
           await window.desktop.request(request),
@@ -514,11 +545,12 @@ function App() {
           (request._tag === "restore" && reply._tag === "signedOut")
         )
           setOutdated(null);
-        if (reply._tag === "signedIn" || reply._tag === "tasks")
+        if (reply._tag === "signedIn")
           for (const entry of reply.profiles)
             profileNames.current.set(entry.id, entry.name);
 
-        if (reply._tag === "task") {
+        if (reply._tag === "task" && request._tag !== "showTask") {
+          setLookupError(null);
           localStorage.removeItem(
             taskDraftKey(reply.task.profile_id, reply.task.id),
           );
@@ -533,13 +565,24 @@ function App() {
         }
         if (
           reply._tag === "error" &&
+          !scopedDiscovery &&
           request._tag !== "list" &&
+          request._tag !== "search" &&
           request._tag !== "copyTaskId" &&
           (!("profile" in request) || active.current === request.profile)
+        ) {
+          setLookupError(reply.details ?? null);
+          setError(reply.details ? "" : reply.message);
+        }
+        if (
+          reply._tag === "conflict" &&
+          reply.exit_detail &&
+          (!("profile" in request) || active.current === request.profile)
         )
-          setError(reply.message);
+          setError(reply.exit_detail);
         if (reply._tag === "signedOut") {
           endAuthentication();
+          if (reply.message) setError(reply.message);
         }
         return reply;
       } catch {
@@ -547,98 +590,123 @@ function App() {
           _tag: "error",
           message: "Could not contact Todo. Retry.",
         };
-        if (request._tag !== "list" && request._tag !== "copyTaskId")
+        if (
+          !scopedDiscovery &&
+          request._tag !== "list" &&
+          request._tag !== "search" &&
+          request._tag !== "copyTaskId"
+        )
           setError(reply.message);
         return reply;
       }
     },
-    [endAuthentication],
+    [endAuthentication, discovery.credentialChanged],
   );
-  const refresh = useCallback(async () => {
-    if (
-      active.current !== profile ||
-      activeQuery.current.profile !== profile ||
-      activeQuery.current.view !== view ||
-      activeQuery.current.project !== project ||
-      activeQuery.current.tag !== tag
-    )
-      return;
-    clearTimeout(debounce.current);
-    const identity: SearchIdentity = {
-      profile,
-      view,
-      filters: advancedFiltersRef.current,
-      project,
-      tag,
-      text: searchTextRef.current,
-    };
-    activeQuery.current = identity;
-    const query = identityKey(identity);
-    const generation = ++refreshGeneration.current;
-    const changingFilters =
-      JSON.stringify(identity.filters) !==
-      JSON.stringify(appliedFiltersRef.current);
-    setPhase("Requesting");
-    const result = await request({
-      _tag: "list",
-      profile,
-      view,
-      filters: taskSearchQuery(
-        identity,
-        searchDefinitions.current.profile === identity.profile
-          ? searchDefinitions.current
-          : { projects: [], tags: [] },
-      ),
-    });
-    if (
-      active.current !== profile ||
-      identityKey(activeQuery.current) !== query ||
-      refreshGeneration.current !== generation
-    )
-      return;
-    if (result._tag === "tasks") {
-      setLoadFailure(null);
-      setAppliedSearch({ catalog: result, appliedIdentity: identity });
-      unfilteredSearch.current = {
-        catalog: { ...result, matching_tasks: result.tasks },
-        appliedIdentity: {
-          ...identity,
-          filters: {},
-          project: null,
-          tag: null,
-          text: "",
-        },
+  const refresh = useCallback(
+    async (scope: "full" | "query" = "full") => {
+      if (
+        active.current !== profile ||
+        activeQuery.current.profile !== profile ||
+        activeQuery.current.view !== view ||
+        activeQuery.current.project !== project ||
+        activeQuery.current.tag !== tag
+      )
+        return;
+      if (scope === "full") catalogOwedRef.current = true;
+      clearTimeout(debounce.current);
+      const identity: SearchIdentity = {
+        profile,
+        view,
+        filters: advancedFiltersRef.current,
+        project,
+        tag,
+        text: searchTextRef.current,
       };
-      appliedFiltersRef.current = identity.filters;
-      setAdvancedFilters(identity.filters);
-      setApplyingFilters(false);
-      setPhase("Showing");
-      if (changingFilters)
-        setError((current) => (current === filterApplyError ? "" : current));
-      if (needsDraft.current) {
-        needsDraft.current = false;
-        setDraft(result.draft);
+      activeQuery.current = identity;
+      const query = identityKey(identity);
+      const generation = ++refreshGeneration.current;
+      const changingFilters =
+        JSON.stringify(identity.filters) !==
+        JSON.stringify(appliedFiltersRef.current);
+      setPhase("Requesting");
+      const retained = catalogRef.current;
+      const result = await request({
+        _tag:
+          scope === "query" && retained && !catalogOwedRef.current
+            ? "search"
+            : "list",
+        profile,
+        view,
+        filters: taskSearchQuery(
+          identity,
+          searchDefinitions.current.profile === identity.profile
+            ? searchDefinitions.current
+            : { projects: [], tags: [] },
+        ),
+      });
+      if (
+        active.current !== profile ||
+        identityKey(activeQuery.current) !== query ||
+        refreshGeneration.current !== generation
+      )
+        return;
+      const next: TaskCatalog | null =
+        result._tag === "tasks"
+          ? result
+          : result._tag === "search" && retained
+            ? { ...retained, ...result, _tag: "tasks" }
+            : null;
+      if (next) {
+        setLoadFailure(null);
+        catalogRef.current = next;
+        setAppliedSearch({ catalog: next, appliedIdentity: identity });
+        if (result._tag === "tasks") {
+          for (const entry of result.profiles)
+            profileNames.current.set(entry.id, entry.name);
+          unfilteredSearch.current = {
+            catalog: { ...result, matching_tasks: result.tasks },
+            appliedIdentity: {
+              ...identity,
+              filters: {},
+              project: null,
+              tag: null,
+              text: "",
+            },
+          };
+          catalogOwedRef.current = false;
+        }
+        appliedFiltersRef.current = identity.filters;
+        setAdvancedFilters(identity.filters);
+        setApplyingFilters(false);
+        setPhase("Showing");
+        if (changingFilters)
+          setError((current) => (current === filterApplyError ? "" : current));
+        if (result._tag === "tasks" && needsDraft.current) {
+          needsDraft.current = false;
+          setDraft(result.draft);
+        }
+      } else if (result._tag === "error") {
+        advancedFiltersRef.current = appliedFiltersRef.current;
+        setApplyingFilters(false);
+        if (changingFilters) {
+          if (result.code !== "search_too_broad") setError(filterApplyError);
+          activeQuery.current = {
+            ...identity,
+            filters: appliedFiltersRef.current,
+          };
+        }
+        setPhase("Error");
+        setLoadFailure(
+          result.code === "search_too_broad"
+            ? { kind: "search_too_broad", message: result.message }
+            : changingFilters
+              ? null
+              : { kind: "transient", message: result.message },
+        );
       }
-    } else if (result._tag === "error") {
-      advancedFiltersRef.current = appliedFiltersRef.current;
-      setApplyingFilters(false);
-      if (changingFilters) {
-        if (result.code !== "search_too_broad") setError(filterApplyError);
-        activeQuery.current = {
-          ...identity,
-          filters: appliedFiltersRef.current,
-        };
-      }
-      setPhase("Error");
-      setLoadFailure(
-        result.code === "search_too_broad"
-          ? { kind: "search_too_broad", message: result.message }
-          : changingFilters
-            ? null
-            : { kind: "transient", message: result.message },
-      );
-    }
-  }, [profile, project, tag, request, view, setPhase]);
+    },
+    [profile, project, tag, request, view, setPhase],
+  );
   const refreshRef = useRef(refresh);
   refreshRef.current = refresh;
   const changeSearch = (text: string) => {
@@ -650,7 +718,7 @@ function App() {
     setLoadFailure(null);
     setPhase("Debouncing");
     debounce.current = setTimeout(() => {
-      void refreshRef.current();
+      void refreshRef.current("query");
     }, 250);
   };
   useEffect(() => () => clearTimeout(debounce.current), []);
@@ -698,9 +766,10 @@ function App() {
       if (notice._tag === "windowMode") setCompact(notice.compact);
       if (notice._tag === "settings") setSettingsOpen(true);
       if (notice._tag === "toggleTheme") setDark((value) => !value);
+      if (notice._tag === "signedIn") discovery.credentialChanged();
       if (notice._tag === "signedOut") endAuthentication();
     });
-  }, [request, endAuthentication]);
+  }, [request, endAuthentication, discovery.credentialChanged]);
   const toggleCompact = () => {
     void request({ _tag: "setWindowMode", compact: !compact }).then((reply) => {
       if (reply._tag === "windowMode") setCompact(reply.compact);
@@ -796,8 +865,11 @@ function App() {
       )
         void refreshRef.current();
       if (notice._tag === "reload") {
+        discovery.credentialChanged();
         refreshGeneration.current++;
         setAppliedSearch(null);
+        catalogRef.current = null;
+        catalogOwedRef.current = true;
         unfilteredSearch.current = null;
         searchDefinitions.current = { profile: null, projects: [], tags: [] };
         setSearchPhase("Idle");
@@ -840,8 +912,8 @@ function App() {
         active.current === profile
       ) {
         setConnection(notice.state);
-        if (notice.state === "connected" && searchPhaseRef.current === "Error")
-          void refreshRef.current();
+        if (notice.state !== "connected") discovery.offline();
+        if (notice.state === "connected") void refreshRef.current();
         if (notice.state === "offline")
           void request({ _tag: "profiles" }).then((result) => {
             if (
@@ -854,7 +926,15 @@ function App() {
       if (notice._tag === "notificationError") setError(notice.message);
       if (notice._tag === "quickAdd") setQuick(true);
     });
-  }, [signedIn, profile, request, activateProfile, leaveDeletedProfile]);
+  }, [
+    signedIn,
+    profile,
+    request,
+    activateProfile,
+    leaveDeletedProfile,
+    discovery.credentialChanged,
+    discovery.offline,
+  ]);
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
     localStorage.setItem("theme", dark ? "dark" : "light");
@@ -1248,11 +1328,62 @@ function App() {
     }
     setPending(false);
   };
+  const discoveryTrigger = () =>
+    discoveryReturnFocus.current?.isConnected &&
+    discoveryReturnFocus.current.getClientRects().length
+      ? discoveryReturnFocus.current
+      : document.querySelector<HTMLElement>(
+          compact
+            ? 'button[aria-label="Navigate tasks"]'
+            : 'button[aria-label="Profile"]',
+        );
+  const openDiscovery = (kind: DiscoveryKind, prefix = "") => {
+    discoveryReturnFocus.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    discovery.open(kind, prefix);
+    if (kind === "directory") {
+      void discovery.submit(request, "", kind);
+      if (connection !== "connected") discovery.offline();
+    }
+  };
+  const discoveryItems = (
+    <>
+      <DropdownMenuItem onClick={() => openDiscovery("directory")}>
+        Profiles and Projects
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => openDiscovery("lookup")}>
+        Find Task by id
+      </DropdownMenuItem>
+    </>
+  );
+  const findLookupTask = (details: typeof TaskLookupDetails.Type) =>
+    openDiscovery(
+      "lookup",
+      Schema.is(LookupQuery.fields.prefix)(details.task_id)
+        ? details.task_id
+        : "",
+    );
+  const lookupStatus = lookupError && (
+    <TaskLookupStatus
+      details={lookupError}
+      onFind={() =>
+        openDiscovery(
+          "lookup",
+          Schema.is(LookupQuery.fields.prefix)(lookupError.task_id)
+            ? lookupError.task_id
+            : "",
+        )
+      }
+    />
+  );
   const filtered =
     project !== null || tag !== null || Object.keys(advancedFilters).length > 0;
   const invalidate = () => {
     clearTimeout(debounce.current);
     refreshGeneration.current++;
+    setPhase("Debouncing");
   };
   const clearFilters = () => {
     invalidate();
@@ -1266,11 +1397,14 @@ function App() {
     }
     setApplyingFilters(true);
     setError((current) => (current === filterApplyError ? "" : current));
-    void refreshRef.current();
+    if (project === null && tag === null) void refreshRef.current("query");
   };
   const activateView = (next: ViewName, nextProject: string | null = null) => {
     invalidate();
     setAppliedSearch(null);
+    setPhase("Idle");
+    catalogRef.current = null;
+    catalogOwedRef.current = true;
     unfilteredSearch.current = null;
     setEditor(null);
     setHistory(null);
@@ -1287,7 +1421,7 @@ function App() {
       void refreshRef.current();
   };
   useEffect(() => {
-    if (signedIn) void refresh();
+    if (signedIn) void refresh("query");
   }, [signedIn, refresh]);
   const groups = catalog
     ? searchGroups(catalog)
@@ -1407,7 +1541,11 @@ function App() {
               Sign in
             </Button>
           </FieldGroup>
-          {error && <p role="alert">{error}</p>}
+          {error && (
+            <p role="alert" className="whitespace-pre-wrap break-words">
+              {error}
+            </p>
+          )}
         </form>
       </main>
     );
@@ -1448,6 +1586,47 @@ function App() {
         quick && "quick-search",
       )}
     >
+      <DiscoveryDialog
+        controller={discovery}
+        returnFocus={discoveryTrigger}
+        request={request}
+        connected={connection === "connected"}
+        onClose={() => {
+          discovery.close();
+          requestAnimationFrame(() => discoveryTrigger()?.focus());
+        }}
+        show={{
+          prepare: () => true,
+          request,
+          error: (reply) => {
+            setLookupError(reply.details ?? null);
+            setError(reply.details ? "" : reply.message);
+          },
+          open: (task) => {
+            setLookupError(null);
+            activateEditor(draftForTask(task, editorRef.current));
+            invalidate();
+            setView("tasks");
+            setProject(null);
+            setTag(null);
+            searchTextRef.current = "";
+            setSearchText("");
+            advancedFiltersRef.current = { prefix: task.id };
+            setAdvancedFilters({ prefix: task.id });
+            appliedFiltersRef.current = {};
+            setAppliedSearch(null);
+            unfilteredSearch.current = null;
+            setApplyingFilters(true);
+            if (
+              profile === task.profile_id &&
+              view === "tasks" &&
+              project === null &&
+              tag === null
+            )
+              void refresh();
+          },
+        }}
+      />
       {filtersOpen && (
         <TaskFilterDialog
           planning={view !== "tasks"}
@@ -1457,7 +1636,7 @@ function App() {
             invalidate();
             advancedFiltersRef.current = value;
             setApplyingFilters(true);
-            void refresh();
+            void refresh("query");
           }}
         />
       )}
@@ -1480,6 +1659,7 @@ function App() {
           profile={profile}
           request={request}
           canWrite={!readOnly}
+          onFindTask={findLookupTask}
           onClose={() => setBatchEditOpen(false)}
           onApplied={() => {
             void refresh();
@@ -1495,6 +1675,7 @@ function App() {
               profile,
           )}
           compact={compact}
+          onFindTask={findLookupTask}
           canWrite={connection === "connected" && !pending}
           onClose={() => setImportOpen(false)}
           onApplied={() => {
@@ -1616,6 +1797,8 @@ function App() {
                   </DropdownMenuRadioItem>
                 ))}
               </DropdownMenuRadioGroup>
+              <DropdownMenuSeparator />
+              {discoveryItems}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"
@@ -1753,6 +1936,7 @@ function App() {
                     ))}
                   </DropdownMenuRadioGroup>
                   <DropdownMenuGroup>
+                    {discoveryItems}
                     <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
                       Settings
                     </DropdownMenuItem>
@@ -2045,7 +2229,7 @@ function App() {
                   <Button
                     variant="outline"
                     onClick={() => {
-                      void refresh();
+                      void refresh("query");
                     }}
                   >
                     Retry
@@ -2054,10 +2238,11 @@ function App() {
             </AlertDescription>
           </Alert>
         )}
+        {!editor && lookupStatus}
         {error && (
           <Alert variant="destructive">
             <CircleAlert />
-            <AlertDescription>
+            <AlertDescription className="whitespace-pre-wrap break-words">
               {error}
               <Button
                 variant="ghost"
@@ -2486,6 +2671,7 @@ function App() {
             </div>
           </div>
           {compact && taskSearchField}
+          {lookupStatus}
           <form
             id="task-editor-form"
             onSubmit={(e) => {
@@ -2722,6 +2908,7 @@ function App() {
               }
               readOnly={readOnly || latest !== null}
               request={request}
+              onFindTask={findLookupTask}
               onAccepted={(accepted) => {
                 if (
                   active.current === accepted.profile_id &&
