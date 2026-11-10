@@ -6,6 +6,7 @@ import {
   parseImportText,
 } from "@todo/domain";
 import { Option, Schema } from "effect";
+import { MoreHorizontal } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "./components/ui/button.tsx";
 import {
@@ -14,8 +15,14 @@ import {
   DialogDescription,
   DialogTitle,
 } from "./components/ui/dialog.tsx";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./components/ui/dropdown-menu.tsx";
 import { Input } from "./components/ui/input.tsx";
-import { errorReply, taskLookupDetails } from "./error-reply.ts";
+import { errorReply, exitDetail, taskLookupDetails } from "./error-reply.ts";
 import { importChangesText } from "./import-presentation.ts";
 import { countTasks } from "./presentation.ts";
 import { type FindTask, TaskLookupStatus } from "./task-lookup-status.tsx";
@@ -50,6 +57,7 @@ export function ImportDialog({
   const [busy, setBusy] = useState(false);
   const [reading, setReading] = useState(false);
   const [error, setError] = useState("");
+  const [contextRow, setContextRow] = useState<string | null>(null);
   const generation = useRef(0);
   const fileInput = useRef<HTMLInputElement>(null);
   useEffect(
@@ -172,14 +180,25 @@ export function ImportDialog({
         : index >= report.input.length
           ? "Cancel missing Task"
           : "Untitled Task";
+    const details = taskLookupDetails(row.error);
+    const reason = details
+      ? `Task not found in ${details.profile.name}.`
+      : row.error?.message;
+    const pair = exitDetail(row.error);
+    const rejectionDetail = row.error
+      ? [reason, pair, row.external_id].filter(Boolean).join("\n")
+      : undefined;
     return {
       row,
+      reason,
+      pair,
+      rejectionDetail,
       title,
       outcome:
         row.error?.code === "occ_conflict"
           ? "Conflict"
           : row.outcome.charAt(0).toUpperCase() + row.outcome.slice(1),
-      details: taskLookupDetails(row.error),
+      details,
       changes: taskLookupDetails(row.error)
         ? ""
         : row.error
@@ -284,51 +303,130 @@ export function ImportDialog({
             <div className="import-list-scroll">
               {compact ? (
                 <ul className="import-stack" aria-label="Import preview">
-                  {rows?.map(({ row, title, outcome, changes, details }) => (
-                    <li className="import-row" key={row.key}>
-                      <div className="import-row-heading">
-                        <span className="import-row-title" title={title}>
-                          {title}
-                        </span>
-                        <span
-                          className={
-                            row.outcome === "rejected" && !details
-                              ? "import-rejected"
-                              : ""
-                          }
+                  {rows?.map(
+                    ({
+                      row,
+                      title,
+                      outcome,
+                      changes,
+                      details,
+                      reason,
+                      pair,
+                      rejectionDetail,
+                    }) => (
+                      <li
+                        className="import-row"
+                        key={row.key}
+                        data-testid={details ? "task-lookup-status" : undefined}
+                        title={rejectionDetail}
+                        aria-label={
+                          rejectionDetail
+                            ? `${title}\n${rejectionDetail}\n${outcome}`
+                            : undefined
+                        }
+                        onContextMenu={
+                          details && onFindTask
+                            ? (event) => {
+                                event.preventDefault();
+                                setContextRow(row.key);
+                              }
+                            : undefined
+                        }
+                      >
+                        <div
+                          className={`import-row-heading ${details && onFindTask ? "has-actions" : ""}`}
                         >
-                          {outcome}
-                        </span>
-                      </div>
-                      <small className="import-row-id" title={row.external_id}>
-                        {row.external_id || "Missing external id"}
-                      </small>
-                      {details ? (
-                        <TaskLookupStatus
-                          details={details}
-                          onFind={
-                            onFindTask
-                              ? () => {
-                                  onClose();
-                                  onFindTask(details);
+                          <span
+                            className="import-row-title"
+                            title={rejectionDetail ?? title}
+                          >
+                            {title}
+                          </span>
+                          <span
+                            className={
+                              row.outcome === "rejected" && !details
+                                ? "import-rejected"
+                                : ""
+                            }
+                          >
+                            {outcome}
+                          </span>
+                        </div>
+                        {row.error ? (
+                          <>
+                            <p
+                              className={
+                                details
+                                  ? "import-row-changes import-lookup-reason"
+                                  : "import-row-changes import-rejected"
+                              }
+                              data-testid="import-reason"
+                            >
+                              {reason}
+                            </p>
+                            <p
+                              className="import-row-changes"
+                              data-testid="import-exit"
+                            >
+                              {pair}
+                            </p>
+                            {details && onFindTask && (
+                              <DropdownMenu
+                                open={contextRow === row.key}
+                                onOpenChange={(open) =>
+                                  setContextRow(open ? row.key : null)
                                 }
-                              : undefined
-                          }
-                        />
-                      ) : (
-                        <p
-                          title={changes}
-                          className={
-                            row.error
-                              ? "import-rejected import-row-changes"
-                              : "import-row-changes"
-                          }
-                        >
-                          {changes}
-                        </p>
-                      )}
-                    </li>
-                  ))}
+                              >
+                                <DropdownMenuTrigger
+                                  render={
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="import-row-actions"
+                                      aria-label={`Actions for ${title}. Find Task by id available`}
+                                    />
+                                  }
+                                  onKeyDown={(event) => {
+                                    if (
+                                      event.key === "ContextMenu" ||
+                                      (event.shiftKey && event.key === "F10")
+                                    ) {
+                                      event.preventDefault();
+                                      setContextRow(row.key);
+                                    }
+                                  }}
+                                >
+                                  <MoreHorizontal />
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      onClose();
+                                      onFindTask(details);
+                                    }}
+                                  >
+                                    Find Task by id
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </>
+                        ) : (
+                          <small
+                            className="import-row-id"
+                            title={row.external_id}
+                          >
+                            {row.external_id || "Missing external id"}
+                          </small>
+                        )}
+                        {!row.error && (
+                          <p title={changes} className="import-row-changes">
+                            {changes}
+                          </p>
+                        )}
+                      </li>
+                    ),
+                  )}
                 </ul>
               ) : (
                 <table className="import-table" aria-label="Import preview">
@@ -359,13 +457,12 @@ export function ImportDialog({
                         </td>
                         <td
                           className={
-                            row.error && !details
-                              ? "whitespace-pre-line"
-                              : undefined
+                            row.error ? "whitespace-pre-line" : undefined
                           }
                         >
                           {details ? (
                             <TaskLookupStatus
+                              reasonClassName="import-lookup-caption"
                               details={details}
                               onFind={
                                 onFindTask
@@ -376,6 +473,16 @@ export function ImportDialog({
                                   : undefined
                               }
                             />
+                          ) : row.error ? (
+                            <>
+                              <span className="import-error">
+                                {row.error.message}
+                              </span>
+                              {"\n"}
+                              <span className="import-exit-detail">
+                                {exitDetail(row.error)}
+                              </span>
+                            </>
                           ) : (
                             changes
                           )}

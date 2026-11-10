@@ -66,12 +66,15 @@ export async function verifyDiscoveryReportErrors({
         );
         await settleRenderer(page);
         if (expectedPair) {
-          const row = page
-            .locator('[data-slot="dialog-content"][data-open]')
-            .locator(
-              ".batch-edit-row small[role=alert], .attachment-batch-row small[role=alert], .import-row-changes.import-rejected, .import-table tbody tr td:last-child",
-            )
-            .first();
+          const compactImport = compact && name.startsWith("import-");
+          const row = compactImport
+            ? page.locator(".import-row:has([data-testid=import-exit])").first()
+            : page
+                .locator('[data-slot="dialog-content"][data-open]')
+                .locator(
+                  ".batch-edit-row small[role=alert], .attachment-batch-row small[role=alert], .import-row-changes.import-rejected, .import-table tbody tr td:last-child",
+                )
+                .first();
           await expect(row).toContainText(expectedPair);
           const text = await row.innerText();
           const whiteSpace = await row.evaluate(
@@ -79,7 +82,15 @@ export async function verifyDiscoveryReportErrors({
           );
           assert.equal(text.split("\n").at(-1), expectedPair);
           assert.equal(text.split(expectedPair).length - 1, 1);
-          assert.equal(whiteSpace, "pre-line");
+          if (compactImport) {
+            await expect(row.getByTestId("import-reason")).toHaveCSS(
+              "white-space",
+              "nowrap",
+            );
+            await expect(row.getByTestId("import-exit")).toHaveText(
+              expectedPair,
+            );
+          } else assert.equal(whiteSpace, "pre-line");
           genericPairs.push({
             name,
             compact,
@@ -127,7 +138,9 @@ export async function verifyDiscoveryReportErrors({
               };
             }),
             cards: [
-              ...popup.querySelectorAll('[data-testid="task-lookup-status"]'),
+              ...popup.querySelectorAll(
+                '[data-slot="alert"][data-testid="task-lookup-status"]',
+              ),
             ].map((card) => ({
               background: getComputedStyle(card).backgroundColor,
               color: getComputedStyle(card).color,
@@ -211,9 +224,29 @@ export async function verifyDiscoveryReportErrors({
     await expect(status).not.toContainText("GET /");
     await expect(status).not.toContainText("todo ");
     const count = lookupRequestCount();
-    await status
-      .getByRole("button", { name: "Find Task by id", exact: true })
-      .click();
+    if (await status.locator(".import-row-actions").count()) {
+      const action = status.getByRole("button", {
+        name: /Find Task by id available/,
+      });
+      await action.focus();
+      await action.press("Shift+F10");
+      await expect(
+        page.getByRole("menuitem", { name: "Find Task by id", exact: true }),
+      ).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(action).toBeFocused();
+      await status.click({ button: "right" });
+      await expect(
+        page.getByRole("menuitem", { name: "Find Task by id", exact: true }),
+      ).toBeVisible();
+      await page
+        .getByRole("menuitem", { name: "Find Task by id", exact: true })
+        .click();
+    } else {
+      await status
+        .getByRole("button", { name: "Find Task by id", exact: true })
+        .click();
+    }
     await expect(page.getByTestId("discovery-prefix")).toHaveValue(task);
     await page.waitForTimeout(300);
     assert.equal(lookupRequestCount(), count);

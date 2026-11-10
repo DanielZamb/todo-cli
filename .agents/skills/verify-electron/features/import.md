@@ -31,3 +31,22 @@ at Version 4 with its concurrent title, and the report must show a Conflict.
 [Discovery report recovery](discovery.md#same-profile-show-and-report-row-recovery)
 records the real task_deleted rejection for a stale Task before Preview, then
 uses an explicitly typed not-found UI fixture to verify structured recovery.
+
+For import-only proof, compile the server, CLI and verification seed into a
+worktree-local binary directory, build the unsigned verification host, then run
+`TODO_ELECTRON_VERIFY_HOST=1 pnpm --filter @todo/electron exec bun scripts/verify-import-focused.ts <absolute-binary-directory> <fresh-absolute-evidence-directory>`.
+The directory contains `server`, `todo` and `seed`. This calls the same exported
+import steps as the write drive, provisions a fresh scratch database and HOME,
+and closes only its own host and server. It avoids unrelated write assertions.
+
+Compact rejected rows retain the common 56 px frame with title, one caption
+reason line and muted exit pair. Full reason, pair and external id remain in
+that order in the row title and accessible label. The drive checks rejected-first,
+rejected-last and two-rejected previews, equal frames, one-line reason styles,
+exit pairs and complete rows in both appearances. Accepted rows retain their
+external-id and changes lines.
+
+The report-error drive also checks the Compact lookup row's action menu through
+Shift+F10, focus return after Escape, and right-click. The action is announced by
+the native button's accessible name and menu semantics. Full-window recovery
+stays inline. VoiceOver and real keyboard operation remain supervised checks.

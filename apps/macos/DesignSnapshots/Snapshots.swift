@@ -18,6 +18,8 @@ private struct ImportLayoutReceipt: Codable {
     let viewportHeight: CGFloat?
     let summaryHeight: CGFloat?
     let targetHeights: [CGFloat]
+    let rowBounds: [[CGFloat]]
+    let textBounds: [[CGFloat]]
 }
 
 @MainActor private final class ImportFrameCapture { var frames: [ImportLayoutRegion: CGRect] = [:] }
@@ -834,8 +836,8 @@ struct Snapshots {
             model.quickAdd = false
             model.connection = .live
             let importFile = Data(#"[{"external_id":"repository:weekly-export","title":"Enable weekly telemetry export"},{"external_id":"repository:jira-follow-up","title":"Jira: draft the ETL follow-up"},{"external_id":"repository:validation","title":"Validate the dashboard refresh"},{"external_id":"repository:review","title":"Review the repository inventory"}]"#.utf8)
-            let previewJSON = #"{"generated_at":"2026-10-29T00:00:00Z","dry_run":true,"items":[{"external_id":"repository:weekly-export","outcome":"created","task_id":null,"from_version":null,"changed_fields":["title","project_name","tag_names"]},{"external_id":"repository:jira-follow-up","outcome":"updated","task_id":"b","from_version":2,"changed_fields":["description","status"]},{"external_id":"repository:validation","outcome":"unchanged","task_id":"c","from_version":1,"changed_fields":[]},{"external_id":"repository:review","outcome":"rejected","task_id":"d","from_version":1,"changed_fields":[],"error":{"code":"title_required","message":"New Tasks need a title. Add a title and import again."}}],"totals":{"created":1,"updated":1,"unchanged":1,"rejected":1}}"#
-            for state in ["file", "single-file", "preview", "long-preview", "result", "conflict", "empty", "error", "offline"] {
+            let previewJSON = #"{"generated_at":"2026-10-29T00:00:00Z","dry_run":true,"items":[{"external_id":"repository:weekly-export","outcome":"created","task_id":null,"from_version":null,"changed_fields":["title","project_name","tag_names"]},{"external_id":"repository:jira-follow-up","outcome":"updated","task_id":"b","from_version":2,"changed_fields":["description","status"]},{"external_id":"repository:validation","outcome":"unchanged","task_id":"c","from_version":1,"changed_fields":[]},{"external_id":"repository:review","outcome":"rejected","task_id":"d","from_version":1,"changed_fields":[],"error":{"code":"task_deleted","message":"This Task is deleted. Restore it before importing changes.","exit_code":2,"exit_meaning":"validation or usage"}}],"totals":{"created":1,"updated":1,"unchanged":1,"rejected":1}}"#
+            for state in ["file", "single-file", "preview", "preview-rejected-first", "preview-rejected-last", "preview-two-rejected", "long-preview", "result", "conflict", "empty", "error", "offline"] {
                 model.resetImport()
                 model.connection = state == "offline" ? .offline : .live
                 if state == "single-file" {
@@ -847,10 +849,24 @@ struct Snapshots {
                     var json = previewJSON
                     if state == "result" { json = json.replacingOccurrences(of: "\"dry_run\":true", with: "\"dry_run\":false") }
                     if state == "conflict" {
-                        json = #"{"generated_at":"2026-10-29T00:00:00Z","dry_run":false,"items":[{"external_id":"repository:weekly-export","outcome":"rejected","task_id":"a","from_version":2,"changed_fields":[],"error":{"code":"occ_conflict","message":"Task changed since preview. Preview again and apply the current Version.","details":{"current_version":3}}}],"totals":{"created":0,"updated":0,"unchanged":0,"rejected":1}}"#
+                        json = #"{"generated_at":"2026-10-29T00:00:00Z","dry_run":false,"items":[{"external_id":"repository:weekly-export","outcome":"rejected","task_id":"a","from_version":2,"changed_fields":[],"error":{"code":"occ_conflict","message":"Task changed since preview. Preview again and apply the current Version.","exit_code":4,"exit_meaning":"Conflict","details":{"current_version":3}}}],"totals":{"created":0,"updated":0,"unchanged":0,"rejected":1}}"#
                     }
                     if state == "empty" { json = #"{"generated_at":"2026-10-29T00:00:00Z","dry_run":true,"items":[],"totals":{"created":0,"updated":0,"unchanged":0,"rejected":0}}"# }
                     model.importReport = try JSONDecoder().decode(ImportSummary.self, from: Data(json.utf8))
+                }
+                if let report = model.importReport, state.hasPrefix("preview-") {
+                    var rows = report.items
+                    if state == "preview-rejected-first" {
+                        rows.insert(rows.removeLast(), at: 0)
+                        var input = try #require(model.importDocument).items
+                        input.insert(input.removeLast(), at: 0)
+                        model.loadImport(data: try JSONEncoder().encode(input), name: "repository-rejected-first.json")
+                    }
+                    if state == "preview-two-rejected" {
+                        let original = rows[1]
+                        rows[1] = .init(external_id: original.external_id, outcome: "rejected", task_id: original.task_id, from_version: original.from_version, changed_fields: [], error: rows[3].error)
+                    }
+                    model.importReport = .init(generated_at: report.generated_at, dry_run: true, items: rows, totals: state == "preview-two-rejected" ? .init(created: 1, updated: 0, unchanged: 1, rejected: 2) : report.totals)
                 }
                 if state == "long-preview" {
                     let items = (0..<12).map { index in ["external_id": "repository:scroll:\(index)", "title": "Review the repository inventory \(index + 1)"] }
@@ -889,9 +905,28 @@ struct Snapshots {
                             #expect(wholeRows >= min(4, report.items.count))
                             #expect(intersecting == wholeRows)
                             #expect(try #require(summaryHeight) <= 18)
+                            #expect(rows.map(\.height) == Array(repeating: CGFloat(56), count: report.items.count))
+                            for (index, row) in report.items.enumerated() {
+                                let rowFrame = try #require(capture.frames[.row(index)])
+                                let regions: [ImportLayoutRegion] = [.rowTitle(index), .outcome(index)] + (row.error == nil ? [.externalID(index), .changes(index)] : [.reason(index), .exitPair(index)])
+                                for region in regions {
+                                    let line = try #require(capture.frames[region])
+                                    #expect(line.height > 0)
+                                    #expect(rowFrame.contains(line), "\(state) \(region) \(line) must fit inside \(rowFrame)")
+                                }
+                                if row.error != nil {
+                                    #expect(try #require(capture.frames[.reason(index)]).height <= 14)
+                                    #expect(try #require(capture.frames[.exitPair(index)]).height <= 14)
+                                }
+                            }
                         }
                     }
-                    importLayouts.append(.init(screen: "\(isCompact ? "compact-" : "")import-\(state)-\(mode)", compact: isCompact, wholeRows: wholeRows, partialRows: intersecting-wholeRows, viewportHeight: viewport?.height, summaryHeight: summaryHeight, targetHeights: targets))
+                    importLayouts.append(.init(screen: "\(isCompact ? "compact-" : "")import-\(state)-\(mode)", compact: isCompact, wholeRows: wholeRows, partialRows: intersecting-wholeRows, viewportHeight: viewport?.height, summaryHeight: summaryHeight, targetHeights: targets, rowBounds: rows.map { [$0.minX, $0.minY, $0.width, $0.height] }, textBounds: capture.frames.compactMap { region, frame in
+                        switch region {
+                        case .rowTitle, .outcome, .externalID, .changes, .reason, .exitPair: return [frame.minX, frame.minY, frame.width, frame.height]
+                        default: return nil
+                        }
+                    }))
                 }
             }
             model.connection = .live
@@ -953,7 +988,7 @@ struct Snapshots {
         try JSONEncoder().encode(importLayouts).write(to: directory.appendingPathComponent("import-layout.json"))
         try JSONEncoder().encode(transferLayouts).write(to: directory.appendingPathComponent("transfer-layout.json"))
         try JSONSerialization.data(withJSONObject: compactLayouts, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("compact-layout.json"))
-        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" ? 60 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 346))
+        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" ? 60 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 358))
     }
 
     private func fixture() -> TodoModel {

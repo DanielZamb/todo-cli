@@ -125,10 +125,43 @@ export async function verifyImport({
         );
         for (const height of bounds.targetHeights)
           expect(height).toBeGreaterThanOrEqual(32);
-        if (compact && ["preview", "result", "long-preview"].includes(state)) {
+        if (
+          compact &&
+          (["preview", "result", "long-preview"].includes(state) ||
+            state.startsWith("preview-"))
+        ) {
           expect(bounds.wholeRows).toBeGreaterThanOrEqual(4);
           expect(bounds.partialRows).toBe(0);
           expect(bounds.summaryHeight).toBeLessThanOrEqual(18);
+        }
+        if (compact && bounds.wholeRows >= 4) {
+          const rows = page.locator(".import-row");
+          expect(
+            await rows.evaluateAll((rows) =>
+              rows.map((row) => row.getBoundingClientRect().height),
+            ),
+          ).toEqual(Array(await rows.count()).fill(56));
+          for (const row of await rows.all()) {
+            const reason = row.getByTestId("import-reason");
+            if (await reason.count()) {
+              await expect(reason).toHaveCSS("white-space", "nowrap");
+              await expect(reason).toHaveCSS("text-overflow", "ellipsis");
+              await expect(reason).toHaveCSS("line-height", "12px");
+              expect((await reason.boundingBox())?.height).toBeLessThanOrEqual(
+                12,
+              );
+              await expect(row.getByTestId("import-exit")).toHaveText(
+                "error 2 - validation or usage",
+              );
+              await expect(row.locator(".import-row-id")).toHaveCount(0);
+            }
+          }
+        }
+        if (!compact) {
+          for (const pair of await page.locator(".import-exit-detail").all()) {
+            await expect(pair).toHaveCSS("font-size", "11px");
+            await expect(pair).toHaveCSS("line-height", "12px");
+          }
         }
         layouts.push({ screen: `${name}-${state}`, compact, ...bounds });
         return page.screenshot({
@@ -189,6 +222,87 @@ export async function verifyImport({
         page.locator(".import-footer").getByRole("button"),
       ).toHaveCount(2);
       await shot("preview");
+      if (compact) {
+        const reason = "New Tasks need a title. Add a title and import again.";
+        const detail = `${reason}\nerror 2 - validation or usage\n${prefix}:d`;
+        const rejected = page.locator(".import-row").last();
+        await expect(rejected).toHaveAttribute("title", detail);
+        await expect(rejected.locator(".import-row-title")).toHaveAttribute(
+          "title",
+          detail,
+        );
+        await expect(rejected).toHaveAttribute(
+          "aria-label",
+          `Untitled Task\n${detail}\nRejected`,
+        );
+        await shot("preview-rejected-last");
+        const original = Schema.decodeUnknownSync(Schema.Array(Schema.Unknown))(
+          JSON.parse(await Bun.file(file).text()),
+        );
+        for (const [state, input] of [
+          ["preview-rejected-first", [original[3], ...original.slice(0, 3)]],
+          [
+            "preview-two-rejected",
+            [
+              original[0],
+              original[3],
+              original[2],
+              { external_id: `${prefix}:e` },
+            ],
+          ],
+        ] as const) {
+          const variant = join(scratch, `${name}-${state}.json`);
+          writeFileSync(variant, JSON.stringify(input));
+          const chooser = page.waitForEvent("filechooser");
+          await page
+            .getByRole("button", { name: "Change…", exact: true })
+            .click();
+          await (await chooser).setFiles(variant);
+          await page
+            .getByRole("button", { name: "Preview changes", exact: true })
+            .click();
+          await expect(
+            page.getByRole("heading", { name: "Preview import", exact: true }),
+          ).toBeVisible();
+          await shot(state);
+          const ids =
+            state === "preview-two-rejected"
+              ? [`${prefix}:d`, `${prefix}:e`]
+              : [`${prefix}:d`];
+          const rejections = page.locator(
+            ".import-row:has([data-testid=import-reason])",
+          );
+          expect(
+            await rejections.evaluateAll((rows) =>
+              rows.map((row) => row.getAttribute("title")),
+            ),
+          ).toEqual(
+            ids.map((id) => `${reason}\nerror 2 - validation or usage\n${id}`),
+          );
+          expect(
+            await rejections.evaluateAll((rows) =>
+              rows.map((row) => row.getAttribute("aria-label")),
+            ),
+          ).toEqual(
+            ids.map(
+              (id) =>
+                `Untitled Task\n${reason}\nerror 2 - validation or usage\n${id}\nRejected`,
+            ),
+          );
+        }
+        writeFileSync(file, JSON.stringify(original));
+        const restore = page.waitForEvent("filechooser");
+        await page
+          .getByRole("button", { name: "Change…", exact: true })
+          .click();
+        await (await restore).setFiles(file);
+        await page
+          .getByRole("button", { name: "Preview changes", exact: true })
+          .click();
+        await expect(
+          page.getByRole("heading", { name: "Preview import", exact: true }),
+        ).toBeVisible();
+      }
       await page.getByRole("button", { name: /^Apply \d+ changes?$/ }).click();
       await expect(
         page.getByRole("heading", { name: "Import results", exact: true }),
