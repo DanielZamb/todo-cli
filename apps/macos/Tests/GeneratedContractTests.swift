@@ -7,6 +7,29 @@ import OpenAPIRuntime
 #endif
 
 final class GeneratedContractTests: XCTestCase {
+    func testDeletePreviewKeepsConfirmationVersionSeparateFromProjectedVersion() throws {
+        let json = #"{"id":"delete-preview","profile_id":"work","entity_version":1,"row_version":2,"title":"Projected delete","description":null,"project_id":null,"priority":"P3","scheduled_at":null,"due_at":null,"energy":null,"estimate_min":null,"source":"manual","tags":[],"status":"open","occurrence":null,"created_at":"2026-11-10T00:00:00Z","updated_at":"2026-11-10T00:00:00Z","completed_at":null,"deleted_at":"2026-11-10T00:00:00Z","removed_dependencies":[],"affected_versions":[],"dependency_fingerprint":"reviewed","dry_run":true,"confirm_from_version":1}"#
+        let preview = try JSONDecoder().decode(Components.Schemas.TaskWrite.self, from: Data(json.utf8))
+        XCTAssertEqual(preview.confirm_from_version, 1)
+        XCTAssertEqual(preview.row_version, 2)
+        XCTAssertEqual(preview.dry_run, true)
+        try roundTrip(Components.Schemas.TaskWrite.self, json)
+        var deleted = preview
+        deleted.confirm_from_version = nil
+        deleted.dry_run = false
+        let encoded = try JSONSerialization.jsonObject(with: JSONEncoder().encode(deleted)) as? NSDictionary
+        XCTAssertNil(encoded?["confirm_from_version"])
+        XCTAssertEqual(encoded?["dry_run"] as? Bool, false)
+    }
+
+    func testBatchDependencyVersionConflictHasOnlyOccCode() throws {
+        typealias Report = Operations.tasks_period_batchDepend.Output.Ok.Body.jsonPayload
+        let json = #"{"generated_at":"2026-11-10T00:00:00Z","dry_run":true,"results":[{"index":0,"exit_code":4,"error":{"generated_at":"2026-11-10T00:00:00Z","code":"occ_conflict","message":"Reload the current Version.","exit_code":4,"exit_meaning":"Conflict","details":{"current_version":2}}}]}"#
+        try roundTrip(Report.self, json)
+        let obsolete = json.replacingOccurrences(of: "occ_conflict", with: "conflict")
+        XCTAssertThrowsError(try JSONDecoder().decode(Report.self, from: Data(obsolete.utf8)))
+    }
+
     func testDiscoveryDirectoryAndLookupKeepFullIdsAndNullProject() throws {
         try roundTrip(Operations.reads_period_profiles.Output.Ok.Body.jsonPayload.self, #"[{"id":"work","name":"Work","created_at":"2026-10-27T00:00:00Z","updated_at":"2026-10-27T00:00:00Z","open_task_count":0,"inbox_task_count":0,"visible_task_count":0,"projects":[{"id":"project-full-id","name":"Empty Project"}]}]"#)
         try roundTrip(Operations.reads_period_lookup.Output.Ok.Body.jsonPayload.self, #"[{"profile":{"id":"personal","name":"Personal"},"task_id":"aaaaaaaa-1111-4222-8333-444444444444","title":"Done Task","project":null}]"#)

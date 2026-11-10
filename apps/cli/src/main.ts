@@ -1495,6 +1495,9 @@ const mutation = (name: Mutation) =>
                 removed_dependencies: result.removed_dependencies ?? [],
                 affected_versions: result.affected_versions ?? [],
                 dependency_fingerprint: result.dependency_fingerprint ?? "",
+                ...(result.confirm_from_version !== undefined
+                  ? { confirm_from_version: result.confirm_from_version }
+                  : {}),
                 dry_run: result.dry_run ?? false,
               };
               return yield* write(

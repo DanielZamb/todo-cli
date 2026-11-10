@@ -1562,7 +1562,7 @@
                                       "code": {
                                         "type": "string",
                                         "enum": [
-                                          "conflict",
+                                          "occ_conflict",
                                           "not_found",
                                           "invalid_args",
                                           "auth_required",
@@ -1613,7 +1613,7 @@
                                       "code": {
                                         "type": "string",
                                         "enum": [
-                                          "conflict",
+                                          "occ_conflict",
                                           "not_found",
                                           "invalid_args",
                                           "auth_required",
@@ -1664,7 +1664,7 @@
                                       "code": {
                                         "type": "string",
                                         "enum": [
-                                          "conflict",
+                                          "occ_conflict",
                                           "not_found",
                                           "invalid_args",
                                           "auth_required",
@@ -1715,7 +1715,7 @@
                                       "code": {
                                         "type": "string",
                                         "enum": [
-                                          "conflict",
+                                          "occ_conflict",
                                           "not_found",
                                           "invalid_args",
                                           "auth_required",
@@ -6764,7 +6764,8 @@
               "type": "string",
               "pattern": "^[+-]?\\d*\\.?\\d+(?:[Ee][+-]?\\d+)?$"
             },
-            "required": true
+            "required": true,
+            "description": "Confirm with the Version you sent for the preview (confirm_from_version) and the returned fingerprint. The Task in a preview is the projected result; its Version is not the one to send."
           },
           {
             "name": "with_dependencies",
@@ -6929,7 +6930,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Confirm with the Version you sent for the preview (confirm_from_version) and the returned fingerprint. The Task in a preview is the projected result; its Version is not the one to send."
       }
     },
     "/profiles/{profile}/tasks/{task}/transition": {
@@ -15333,6 +15335,12 @@
           },
           "dependency_fingerprint": {
             "type": "string"
+          },
+          "confirm_from_version": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991,
+            "description": "Confirm with the Version you sent for the preview (confirm_from_version) and the returned fingerprint. The Task in a preview is the projected result; its Version is not the one to send."
           },
           "dry_run": {
             "type": "boolean"

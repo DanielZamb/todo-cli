@@ -43,6 +43,7 @@ struct DependencyGraphView: View {
                     if report.nodes.count > 10 {
                         TextField("Search these Tasks", text: Binding(get: { model.dependencies.graph?.search ?? "" }, set: { model.dependencies.graph?.search = $0 }))
                             .textFieldStyle(.roundedBorder).accessibilityIdentifier("dependency-graph-search")
+                            .accessibilityHint("Filters the Tasks shown. Lightest next is not filtered.")
                             .onChange(of: graph.search) { _, text in
                                 Task {
                                     do { try await Task.sleep(for: .milliseconds(250)) } catch { return }

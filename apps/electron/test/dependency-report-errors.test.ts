@@ -42,7 +42,7 @@ for (const { error, human } of dependencyRefusals)
     }
   });
 
-for (const code of ["conflict", "occ_conflict"])
+for (const code of ["occ_conflict"])
   it(`uses safe Conflict recovery for ${code}`, () => {
     const error = {
       code,
@@ -61,9 +61,24 @@ for (const code of ["conflict", "occ_conflict"])
     );
   });
 
+it("keeps an unknown item code on the generic error path", () => {
+  expect(isDependencyConflict("conflict")).toBe(false);
+  expect(
+    dependencyBatchFailure({
+      code: "conflict",
+      message: dependencyAgentMessage,
+      exit_code: 4,
+      exit_meaning: "Conflict",
+    }),
+  ).toEqual({
+    message: "Couldn't update Dependencies. Try again.",
+    exit_detail: "error 4 - Conflict",
+  });
+});
+
 it("rejects missing pairs and malformed nested witnesses instead of displaying agent copy", () => {
   for (const error of [
-    { code: "conflict", message: dependencyAgentMessage },
+    { code: "occ_conflict", message: dependencyAgentMessage },
     {
       code: "invalid_args",
       message: dependencyAgentMessage,

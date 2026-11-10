@@ -5947,7 +5947,7 @@ public enum Operations {
                                         public var generated_at: Swift.String
                                         /// - Remark: Generated from `#/paths/profiles/{profile}/dependencies/batch/POST/responses/200/content/json/resultsPayload/value2/error/value2/code`.
                                         @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
-                                            case conflict = "conflict"
+                                            case occ_conflict = "occ_conflict"
                                             case not_found = "not_found"
                                             case invalid_args = "invalid_args"
                                             case auth_required = "auth_required"
@@ -6098,7 +6098,7 @@ public enum Operations {
                                         public var generated_at: Swift.String
                                         /// - Remark: Generated from `#/paths/profiles/{profile}/dependencies/batch/POST/responses/200/content/json/resultsPayload/value2/error/value3/code`.
                                         @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
-                                            case conflict = "conflict"
+                                            case occ_conflict = "occ_conflict"
                                             case not_found = "not_found"
                                             case invalid_args = "invalid_args"
                                             case auth_required = "auth_required"
@@ -6249,7 +6249,7 @@ public enum Operations {
                                         public var generated_at: Swift.String
                                         /// - Remark: Generated from `#/paths/profiles/{profile}/dependencies/batch/POST/responses/200/content/json/resultsPayload/value2/error/value4/code`.
                                         @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
-                                            case conflict = "conflict"
+                                            case occ_conflict = "occ_conflict"
                                             case not_found = "not_found"
                                             case invalid_args = "invalid_args"
                                             case auth_required = "auth_required"
@@ -6400,7 +6400,7 @@ public enum Operations {
                                         public var generated_at: Swift.String
                                         /// - Remark: Generated from `#/paths/profiles/{profile}/dependencies/batch/POST/responses/200/content/json/resultsPayload/value2/error/value5/code`.
                                         @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
-                                            case conflict = "conflict"
+                                            case occ_conflict = "occ_conflict"
                                             case not_found = "not_found"
                                             case invalid_args = "invalid_args"
                                             case auth_required = "auth_required"
@@ -25358,6 +25358,8 @@ public enum Operations {
             }
         }
     }
+    /// Confirm with the Version you sent for the preview (confirm_from_version) and the returned fingerprint. The Task in a preview is the projected result; its Version is not the one to send.
+    ///
     /// - Remark: HTTP `DELETE /profiles/{profile}/tasks/{task}`.
     /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/delete(tasks.delete)`.
     public enum tasks_period_delete {
@@ -25385,6 +25387,8 @@ public enum Operations {
             public var path: Operations.tasks_period_delete.Input.Path
             /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/DELETE/query`.
             public struct Query: Sendable, Hashable {
+                /// Confirm with the Version you sent for the preview (confirm_from_version) and the returned fingerprint. The Task in a preview is the projected result; its Version is not the one to send.
+                ///
                 /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/DELETE/query/from_version`.
                 public var from_version: Swift.String
                 /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/DELETE/query/with_dependencies`.
@@ -25406,7 +25410,7 @@ public enum Operations {
                 /// Creates a new `Query`.
                 ///
                 /// - Parameters:
-                ///   - from_version:
+                ///   - from_version: Confirm with the Version you sent for the preview (confirm_from_version) and the returned fingerprint. The Task in a preview is the projected result; its Version is not the one to send.
                 ///   - with_dependencies:
                 ///   - dry_run:
                 ///   - dependency_fingerprint:

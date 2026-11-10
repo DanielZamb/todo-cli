@@ -267,8 +267,8 @@ and numbered notes explain lock boundaries, direction or request identity.
 Separate picker, drag, delete and graph frames keep their sub-machines legible.
 
 Compact is the first review target. Depends on and Blocks open one searchable
-native picker with linked rows checked, explicit relation labels, and current
-Versions. Checking a Depends on candidate means selected depends on candidate;
+native picker with linked rows checked and explicit relation labels. Current
+Versions stay in state for Conflict handling and are not displayed. Checking a Depends on candidate means selected depends on candidate;
 checking a Blocks candidate means candidate depends on selected. Toggle writes
 are immediate and serialize per dependent. Failure retains selection and shows
 the recovery, Conflict requires Reload rather than a blind retry. A cancelled
@@ -482,3 +482,25 @@ a further legibility pass after the coordinator review. Retry, SSE reconnect
 and failed-read labels each sit on a separate horizontal transition segment.
 The design check rejects overlapping transition labels or state-card collisions
 and verifies those three recovery labels against the actual arrow geometry.
+
+## Integration amendment, 2026-11-10
+
+A successful Delete preview adds `confirm_from_version`, equal to the request
+Version accepted for that preview. The returned Task remains the projected result.
+Real deletion replies omit the field. CLI JSON and HTTP expose the same value.
+Confirm with the Version you sent for the preview (confirm_from_version) and the
+returned fingerprint. The Task in a preview is the projected result; its Version
+is not the one to send. Clients retain their request Version as the source and
+require Reload if a supplied confirmation Version disagrees, preserving drafts.
+
+Batch Dependency Version conflicts use `occ_conflict`, with exit 4 and meaning
+`Conflict`, matching the existing batch commands. The pre-main `conflict` item
+code is removed from the public enum and generated clients. The existing single
+HTTP 409 envelope, including `_tag: Conflict` and `latest`, is unchanged. These
+response changes add no migration, event or graph-model transition.
+
+Both graph search fields have the accessibility hint "Filters the Tasks shown.
+Lightest next is not filtered." Their visible labels and search behavior stay
+unchanged. Drag status names only the source Task visibly; its accessibility value
+retains the full target/source sentence. Picker Versions stay in state and are
+not displayed.

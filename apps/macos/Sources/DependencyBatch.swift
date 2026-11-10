@@ -25,7 +25,7 @@ struct DependencyBatchDraft: Identifiable {
             let item = items[row.index]
             let advances: Bool
             if let error = row.error {
-                guard !["conflict", "occ_conflict"].contains(error.code ?? "") else { return nil }
+                guard error.code != "occ_conflict" else { return nil }
                 advances = false
             } else if let result = row.result { advances = result.outcome != "unchanged" }
             else { return nil }
@@ -56,7 +56,7 @@ struct DependencyBatchReport: Decodable {
     }
     let dry_run: Bool
     let results: [Row]
-    var requiresReload: Bool { results.contains { ["conflict", "occ_conflict"].contains($0.error?.code ?? "") } }
+    var requiresReload: Bool { results.contains { $0.error?.code == "occ_conflict" } }
 }
 
 extension TodoModel {

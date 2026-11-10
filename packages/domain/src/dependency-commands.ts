@@ -80,7 +80,7 @@ export const edgeFailure = (
       error: {
         ...exitStatus(4),
         generated_at,
-        code: "conflict",
+        code: "occ_conflict",
         message:
           "Task changed. Reload and retry with its current --expected-version.",
         details: { current_version: result.latest?.row_version ?? null },

@@ -40,6 +40,17 @@ private actor DeleteReceiptTransport: ClientTransport {
     }
 }
 
+private struct WrongConfirmationVersionTransport: ClientTransport {
+    func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
+        let (response, responseBody) = try await URLSessionTransport().send(request, body: body, baseURL: baseURL, operationID: operationID)
+        guard operationID == "tasks.delete", let responseBody else { return (response, responseBody) }
+        let data = try await Data(collecting: responseBody, upTo: 65_536)
+        var preview = try JSONDecoder().decode(Components.Schemas.TaskWrite.self, from: data)
+        preview.confirm_from_version = 2
+        return (response, HTTPBody(try JSONEncoder().encode(preview)))
+    }
+}
+
 extension DependencyDeleteStateTests {
     @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_W06_SERVER"] != nil))
     func liveOldDeleteReadCannotReplaceANewerReviewedPreview() async throws {
@@ -70,6 +81,23 @@ extension DependencyDeleteStateTests {
 }
 
 @MainActor struct DependencyDeleteStateTests {
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_W06_SERVER"] != nil))
+    func incompatibleConfirmationVersionKeepsDraftAndRequiresReload() async throws {
+        let server = try #require(ProcessInfo.processInfo.environment["TODO_W06_SERVER"].flatMap(URL.init(string:)))
+        let session = try await todoClient(server: server, credential: "").signIn_period_signIn(body: .json(.init(passphrase: "scratch verification passphrase"))).ok.body.json
+        let api = todoClient(server: server, credential: session.credential)
+        let task = try await TaskSnapshot.decode(api.tasks_period_create(path: .init(profile: "work"), body: .json(.init(title: "Confirmation Version compatibility"))).ok.body.json)
+        let model = TodoModel(configuration: .init(server: server, initialProfile: "work", vaultService: "unused-confirm-version"), clientFactory: { url, credential in Client(serverURL: url, transport: WrongConfirmationVersionTransport(), middlewares: [BearerMiddleware(credential: credential)]) })
+        model.replaceCredential(session.credential); model.signedIn = true; model.connection = .live
+        defer { model.signedIn = false; model.connect() }
+        model.beginEditing(task); model.editor?.title = "Keep the confirmation draft"
+        await model.openDependencyDelete(task)
+        #expect(model.editor?.title == "Keep the confirmation draft")
+        #expect(model.dependencies.deletion?.fingerprint == nil)
+        #expect(model.dependencies.deletion?.acceptedFromVersion == nil)
+        #expect(model.dependencies.deletion?.failure?.message == "The server response could not be read. Your draft is preserved.")
+        #expect(try await api.tasks_period_show(path: .init(profile: "work", task: task.id)).ok.body.json.row_version == 1)
+    }
     @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_W06_SERVER"] != nil))
     func livePreviewRequestVersionIsRetainedWhenResponseContainsTheSimulatedAfterTask() async throws {
         let server = try #require(ProcessInfo.processInfo.environment["TODO_W06_SERVER"].flatMap(URL.init(string:)))

@@ -644,6 +644,7 @@ export function DependencyGraphDialog({
                   <Input
                     key={state.generation}
                     aria-label="Search these Tasks"
+                    aria-description="Filters the Tasks shown. Lightest next is not filtered."
                     placeholder="Search these Tasks"
                     defaultValue={state.query}
                     onChange={(event) => {

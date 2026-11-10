@@ -26,8 +26,8 @@ private actor DependencyBatchReceiptTransport: ClientTransport {
 }
 
 @MainActor struct DependencyBatchStateTests {
-    @Test func bothConflictCodesRequireReload() {
-        for code in ["conflict", "occ_conflict"] {
+    @Test func occConflictRequiresReload() {
+        for code in ["occ_conflict"] {
             let report = DependencyBatchReport(dry_run: true, results: [.init(index: 0, result: nil, error: .init(message: "Different agent copy", code: code, exitCode: 4, exitMeaning: "Conflict"), exit_code: 4)])
             #expect(report.requiresReload)
         }
@@ -51,10 +51,10 @@ private actor DependencyBatchReceiptTransport: ClientTransport {
         _ = try await api.tasks_period_edit(path: .init(profile: "work", task: root.id), body: .json(edit)).ok.body.json
         await model.previewDependencyBatch()
         let failure = try #require(model.dependencies.batch?.report?.results.first?.error)
-        #expect(failure.code == "conflict")
+        #expect(failure.code == "occ_conflict")
         #expect(failure.message == "Task changed. Reload and retry with its current --expected-version.")
         #expect(failure.exitDetail == "error 4 - Conflict")
-        for code in ["conflict", "occ_conflict"] {
+        for code in ["occ_conflict"] {
             let projected = DependencyNotice.project(.init(message: "Different agent recovery must never appear", code: code, exitCode: 4, exitMeaning: "Conflict"), context: .linkDone)
             #expect(projected.message == "This Task changed. Reload its Dependencies before trying again.")
             #expect(projected.detail == "error 4 - Conflict")
@@ -116,7 +116,7 @@ private actor DependencyBatchReceiptTransport: ClientTransport {
         #expect(human.detail == "error 2 - validation or usage")
         #expect(try await show(root).row_version == 2)
         #expect(try await show(root).depends_on == [])
-        #expect(model.dependencies.batch?.report?.results.last?.error?.code == "conflict")
+        #expect(model.dependencies.batch?.report?.results.last?.error?.code == "occ_conflict")
         #expect(model.dependencies.batch?.report?.requiresReload == true)
         let firstCount = await transport.requests.count
         await model.applyDependencyBatch()

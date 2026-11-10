@@ -584,7 +584,7 @@ try {
                   : {
                       exit_code: 4,
                       exit_meaning: "Conflict",
-                      code: index === 6 ? "conflict" : "occ_conflict",
+                      code: "occ_conflict",
                       message: dependencyAgentMessage,
                     },
             })),

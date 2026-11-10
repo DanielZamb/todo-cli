@@ -10,6 +10,7 @@ import {
   CreateSeries,
   CreateTask,
   CredentialInfo,
+  DeletePreviewConfirmationDescription,
   DeleteProfile,
   DeleteTask,
   DependencyError,
@@ -378,7 +379,22 @@ const Tasks = HttpApiGroup.make("tasks")
       query: DeleteTask,
       success: TaskWrite,
       error: taskErrors,
-    }),
+    })
+      .annotate(OpenApi.Description, DeletePreviewConfirmationDescription)
+      .annotate(
+        OpenApi.Transform,
+        (operation: Partial<OpenApi.OpenAPISpecOperation>) => ({
+          ...operation,
+          parameters: operation.parameters?.map((parameter) =>
+            parameter.name === "from_version"
+              ? {
+                  ...parameter,
+                  description: DeletePreviewConfirmationDescription,
+                }
+              : parameter,
+          ),
+        }),
+      ),
   )
   .middleware(ValidationHistory)
   .middleware(Authorization);

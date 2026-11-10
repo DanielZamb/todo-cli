@@ -158,7 +158,7 @@ it("uses the server's refused preview result when Reload rebuilds Versions for o
             exit_code: 4,
             error: {
               generated_at: "2026-11-09T00:00:00Z",
-              code: "conflict",
+              code: "occ_conflict",
               message: "AGENT ONLY stale Version",
               exit_code: 4,
               exit_meaning: "Conflict",
@@ -210,7 +210,7 @@ it("requires Reload after a Conflict or an SSE change before Apply", async () =>
             exit_code: 4,
             error: {
               generated_at: "2026-11-09T00:00:00Z",
-              code: "conflict",
+              code: "occ_conflict",
               message: "unsafe recovery",
               exit_code: 4,
               exit_meaning: "Conflict",

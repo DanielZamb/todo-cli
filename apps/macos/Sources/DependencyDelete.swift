@@ -27,6 +27,7 @@ extension TodoModel {
             let preview = try response.ok.body.json
             let after = try TaskSnapshot.decode(preview)
             guard let fingerprint = preview.dependency_fingerprint, !fingerprint.isEmpty, preview.dry_run == true,
+                  preview.confirm_from_version == nil || preview.confirm_from_version == current.row_version,
                   after.id == current.id, after.profile_id == current.profile_id else { throw DependencyGraphReply.ProtocolError.incompatible }
             let edges = try (preview.removed_dependencies ?? []).map { try decode(DependencyEdge.self, $0) }
             var endpoints: [TaskSnapshot] = []

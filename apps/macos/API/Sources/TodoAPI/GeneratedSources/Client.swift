@@ -4572,6 +4572,8 @@ public struct Client: APIProtocol {
             }
         )
     }
+    /// Confirm with the Version you sent for the preview (confirm_from_version) and the returned fingerprint. The Task in a preview is the projected result; its Version is not the one to send.
+    ///
     /// - Remark: HTTP `DELETE /profiles/{profile}/tasks/{task}`.
     /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/delete(tasks.delete)`.
     public func tasks_period_delete(_ input: Operations.tasks_period_delete.Input) async throws -> Operations.tasks_period_delete.Output {

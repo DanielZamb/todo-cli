@@ -55,6 +55,11 @@ export const BatchEdgeRequest = Schema.Struct({
   dry_run: Schema.optionalKey(Schema.Boolean),
 });
 export type BatchEdgeRequest = typeof BatchEdgeRequest.Type;
+export const DeletePreviewConfirmationDescription =
+  "Confirm with the Version you sent for the preview (confirm_from_version) and the returned fingerprint. The Task in a preview is the projected result; its Version is not the one to send.";
+export const DeleteConfirmationVersion = Version.annotate({
+  description: DeletePreviewConfirmationDescription,
+});
 export const EdgeFailure = Schema.Union([
   DependencyError,
   ...([1, 2, 3, 4] as const).map((exit) =>
@@ -62,7 +67,7 @@ export const EdgeFailure = Schema.Union([
       ...exitStatusFields(exit),
       generated_at: Instant,
       code: Schema.Literals([
-        "conflict",
+        "occ_conflict",
         "not_found",
         "invalid_args",
         "auth_required",
@@ -96,7 +101,9 @@ export const BatchEdgeReport = Schema.Struct({
 });
 export type BatchEdgeReport = typeof BatchEdgeReport.Type;
 export const DeleteTask = Schema.Struct({
-  from_version: Version,
+  from_version: Version.annotate({
+    description: DeletePreviewConfirmationDescription,
+  }),
   with_dependencies: Schema.optionalKey(Schema.Boolean),
   dry_run: Schema.optionalKey(Schema.Boolean),
   dependency_fingerprint: Schema.optionalKey(
@@ -110,6 +117,7 @@ export const DeleteReport = Schema.Struct({
   removed_dependencies: Schema.Array(Edge),
   affected_versions: Schema.Array(VersionChange),
   dependency_fingerprint: Schema.String,
+  confirm_from_version: Schema.optionalKey(DeleteConfirmationVersion),
   dry_run: Schema.Boolean,
 });
 export type DeleteReport = typeof DeleteReport.Type;

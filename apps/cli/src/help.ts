@@ -1,4 +1,7 @@
-import { taskSearchWorkLimits } from "@todo/domain";
+import {
+  DeletePreviewConfirmationDescription,
+  taskSearchWorkLimits,
+} from "@todo/domain";
 import { Command } from "effect/cli";
 import { credentialSelectionDescription } from "./credential-profile.ts";
 
@@ -474,15 +477,14 @@ const guides = {
       "--force (default false, Purge a deleted Task)",
       "--with-dependencies (confirm incident edge removal)",
       "--dry-run (no Task, History or Snapshot writes)",
-      "--dependency-fingerprint <sha256> (reviewed preview)",
+      `--dependency-fingerprint <sha256> (reviewed preview). ${DeletePreviewConfirmationDescription}`,
     ],
     examples: [
       "todo rm TASK --expected-version 1",
       "todo rm TASK --expected-version 2 --force",
     ],
     concurrency,
-    output:
-      "json retains generated_at/status and adds the Task, removed_dependencies, affected_versions, dependency_fingerprint and dry_run. On a TTY in md, incident Dependencies require a [y/N] confirmation with default No. JSON and non-TTY never prompt; use --with-dependencies. A changed fingerprint requires renewed confirmation.",
+    output: `json retains generated_at/status and adds the Task, removed_dependencies, affected_versions, dependency_fingerprint, dry_run and confirm_from_version on Delete previews only. On a TTY in md, incident Dependencies require a [y/N] confirmation with default No. JSON and non-TTY never prompt; use --with-dependencies. A changed fingerprint requires renewed confirmation. ${DeletePreviewConfirmationDescription}`,
   }),
   review: reference({
     purpose: "Review Tasks for daily or weekly planning.",

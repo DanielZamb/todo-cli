@@ -297,6 +297,7 @@ export type TaskCommandResult =
       readonly removed_dependencies?: readonly Edge[];
       readonly affected_versions?: readonly VersionChange[];
       readonly dependency_fingerprint?: string;
+      readonly confirm_from_version?: Task["row_version"];
       readonly dry_run?: boolean;
     }
   | {
@@ -920,7 +921,11 @@ export class TaskCommands {
                 .pipe(
                   Effect.map((result) =>
                     result.outcome === "committed"
-                      ? { ...result, dry_run: true }
+                      ? {
+                          ...result,
+                          dry_run: true,
+                          confirm_from_version: input.from_version,
+                        }
                       : result,
                   ),
                 ),

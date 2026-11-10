@@ -78,11 +78,10 @@ first-Occurrence picker through scratch HTTP before saving, then reads actual
 offscreen content. The blank mixed-host fixture is kept as a failed receipt.
 Filtered empty All Tasks uses the existing empty-state message and Clear filters;
 unfiltered All Tasks keeps priority groups. Batch rows reuse relation text and
-the structured Dependency projector. Both `conflict` and `occ_conflict` require
-Reload before Apply. The current public HTTP case decodes `conflict`; the alternate
-`occ_conflict` fixture is preparation, not public HTTP decoding proof. The later
-L1-owned shared amendment replaces that public enum and removes its specific
-dual-code tolerance. Task/Dependency count copy uses the shared TaskCount helper,
+the structured Dependency projector. Public batch Version conflicts use only
+`occ_conflict` and require Reload before Apply. Generated Swift rejects the former
+item-level `conflict` value; unknown string errors keep generic recovery.
+Task/Dependency count copy uses the shared TaskCount helper,
 with literal zero, one and two cases.
 
 After an actual successful committed-source state command, its receipt may be
@@ -99,6 +98,10 @@ a binary or launching an app.
 Delete previews retain the accepted request Version independently of the returned
 simulated after-Task. `DependencyDeleteStateTests` records real scratch HTTP:
 request1/preview-after2, then confirmation1/deleted2, with dry_run true then false.
+The preview's `confirm_from_version` must agree with the remembered request Version
+when present. A mismatch preserves the draft and requires Reload. Generated
+contract tests keep the confirmation Version separate from the projected Version
+and verify that real deletion encoding omits it.
 Foreign and preview confirmation replies require Reload and cannot close the
 inspector. A delayed older read cannot replace a newer reviewed preview.
 

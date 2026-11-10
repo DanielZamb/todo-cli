@@ -30,6 +30,9 @@ An open or snoozed Task whose direct Dependencies are all done or cancelled.
 **Blocked**:
 An open or snoozed Task with at least one open or snoozed direct Dependency. Done and cancelled Tasks are neither Ready nor Blocked.
 
+**Dependency order**:
+An order that places blockers before the Tasks they block.
+
 **Energy**:
 How much energy a Task takes, from 1 light to 5 draining.
 

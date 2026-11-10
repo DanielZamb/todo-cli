@@ -155,7 +155,7 @@ export function dependencyErrorText(
     .join("\n");
 }
 export const isDependencyConflict = (code: string | undefined) =>
-  code === "conflict" || code === "occ_conflict";
+  code === "occ_conflict";
 const DependencyCode = Schema.Union(
   DependencyError.members.map((member) =>
     Schema.Struct({ code: member.fields.code }),

@@ -82,6 +82,8 @@ export class DependencyDeleteController {
       result.task.id !== task.id ||
       result.task.profile_id !== task.profile_id ||
       result.task.dry_run !== true ||
+      (result.task.confirm_from_version !== undefined &&
+        result.task.confirm_from_version !== task.row_version) ||
       !/^[a-f0-9]{64}$/u.test(result.task.dependency_fingerprint ?? "") ||
       !result.task.removed_dependencies
     ) {
@@ -141,7 +143,9 @@ export class DependencyDeleteController {
       result._tag === "task" &&
       result.task.id === state.task.id &&
       result.task.profile_id === state.task.profile_id &&
-      result.task.dry_run === false
+      result.task.dry_run === false &&
+      (result.task.confirm_from_version === undefined ||
+        result.task.confirm_from_version === state.fromVersion)
     ) {
       this.close();
       return result.task;

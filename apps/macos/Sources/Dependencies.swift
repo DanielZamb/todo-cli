@@ -80,7 +80,7 @@ struct DependencyDelete: Identifiable {
     var action: String { edges.isEmpty ? "Delete Task" : "Delete Task and remove Dependencies" }
     var reviewMessage: String {
         if changed {
-            if reviewFailure?.code == "occ_conflict" || reviewFailure?.code == "conflict" { return "This Task changed. Confirm again to delete it." }
+            if reviewFailure?.code == "occ_conflict" { return "This Task changed. Confirm again to delete it." }
             return edges.isEmpty ? "This Task has no Dependencies now. Confirm again to delete it." : "Dependencies changed. Review the current list and confirm again."
         }
         return edges.isEmpty ? "Delete this Task?" : "Review these Dependencies before deleting this Task."

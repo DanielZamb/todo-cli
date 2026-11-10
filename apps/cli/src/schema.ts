@@ -1,4 +1,5 @@
 import {
+  DeletePreviewConfirmationDescription,
   DeleteReport,
   SnapshotList,
   SnapshotManifest,
@@ -162,7 +163,7 @@ registerCommandSchema(
       ...DeleteReport.fields,
       status: Schema.Literal("deleted"),
     }),
-  ]),
+  ]).annotate({ description: DeletePreviewConfirmationDescription }),
 );
 
 registerCommandSchema("export", ExportResponse);

@@ -936,6 +936,7 @@ final class TodoModel {
             let wire = try response.ok.body.json
             let deleted = try TaskSnapshot.decode(wire)
             guard wire.dry_run != true, deleted.id == task.id, deleted.profile_id == deletionProfile,
+                  wire.confirm_from_version == nil || wire.confirm_from_version == fromVersion,
                   deleted.row_version == fromVersion + 1, deleted.deleted_at != nil else { throw DependencyGraphReply.ProtocolError.incompatible }
             if editor?.id == task.id {
                 editor = nil

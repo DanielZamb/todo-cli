@@ -41,7 +41,7 @@ struct DependencyNotice {
         if ServerFailure.dependencyCodes.contains(failure.code ?? "") { return .init(message: "The server response could not be read. Your draft is preserved.") }
         let message: String
         switch failure.code {
-        case "occ_conflict", "conflict": message = "This Task changed. Reload its Dependencies before trying again."
+        case "occ_conflict": message = "This Task changed. Reload its Dependencies before trying again."
         case "not_found": message = failure.isTaskLookup ? failure.primaryMessage : "Task not found."
         case "search_too_broad": message = "This search is too broad. Narrow the words or add more of the Task title."
         case "validation": message = "Check this Dependency and try again."

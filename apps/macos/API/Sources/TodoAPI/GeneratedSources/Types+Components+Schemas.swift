@@ -7979,6 +7979,10 @@ extension Components {
             public var affected_versions: Components.Schemas.TaskWrite.affected_versionsPayload?
             /// - Remark: Generated from `#/components/schemas/TaskWrite/dependency_fingerprint`.
             public var dependency_fingerprint: Swift.String?
+            /// Confirm with the Version you sent for the preview (confirm_from_version) and the returned fingerprint. The Task in a preview is the projected result; its Version is not the one to send.
+            ///
+            /// - Remark: Generated from `#/components/schemas/TaskWrite/confirm_from_version`.
+            public var confirm_from_version: Swift.Int?
             /// - Remark: Generated from `#/components/schemas/TaskWrite/dry_run`.
             public var dry_run: Swift.Bool?
             /// Creates a new `TaskWrite`.
@@ -8011,6 +8015,7 @@ extension Components {
             ///   - removed_dependencies:
             ///   - affected_versions:
             ///   - dependency_fingerprint:
+            ///   - confirm_from_version: Confirm with the Version you sent for the preview (confirm_from_version) and the returned fingerprint. The Task in a preview is the projected result; its Version is not the one to send.
             ///   - dry_run:
             public init(
                 title: Swift.String,
@@ -8040,6 +8045,7 @@ extension Components {
                 removed_dependencies: Components.Schemas.TaskWrite.removed_dependenciesPayload? = nil,
                 affected_versions: Components.Schemas.TaskWrite.affected_versionsPayload? = nil,
                 dependency_fingerprint: Swift.String? = nil,
+                confirm_from_version: Swift.Int? = nil,
                 dry_run: Swift.Bool? = nil
             ) {
                 self.title = title
@@ -8069,6 +8075,7 @@ extension Components {
                 self.removed_dependencies = removed_dependencies
                 self.affected_versions = affected_versions
                 self.dependency_fingerprint = dependency_fingerprint
+                self.confirm_from_version = confirm_from_version
                 self.dry_run = dry_run
             }
             public enum CodingKeys: String, CodingKey {
@@ -8099,6 +8106,7 @@ extension Components {
                 case removed_dependencies
                 case affected_versions
                 case dependency_fingerprint
+                case confirm_from_version
                 case dry_run
             }
             public init(from decoder: any Swift.Decoder) throws {
@@ -8213,6 +8221,10 @@ extension Components {
                     Swift.String.self,
                     forKey: .dependency_fingerprint
                 )
+                self.confirm_from_version = try container.decodeIfPresent(
+                    Swift.Int.self,
+                    forKey: .confirm_from_version
+                )
                 self.dry_run = try container.decodeIfPresent(
                     Swift.Bool.self,
                     forKey: .dry_run
@@ -8245,6 +8257,7 @@ extension Components {
                     "removed_dependencies",
                     "affected_versions",
                     "dependency_fingerprint",
+                    "confirm_from_version",
                     "dry_run"
                 ])
             }
@@ -8341,6 +8354,11 @@ extension Components {
                     try container.encodeNil(forKey: .dependency_fingerprint)
                 } else {
                     try container.encodeIfPresent(self.dependency_fingerprint, forKey: .dependency_fingerprint)
+                }
+                if self.confirm_from_version == nil && _explicitNullKeys.contains(CodingKeys.confirm_from_version.stringValue) {
+                    try container.encodeNil(forKey: .confirm_from_version)
+                } else {
+                    try container.encodeIfPresent(self.confirm_from_version, forKey: .confirm_from_version)
                 }
                 if self.dry_run == nil && _explicitNullKeys.contains(CodingKeys.dry_run.stringValue) {
                     try container.encodeNil(forKey: .dry_run)

@@ -1,6 +1,9 @@
 import { Schema } from "effect";
 import { Edge, VersionChange } from "./dependencies.ts";
-import { DependencyWarning } from "./dependency-contract.ts";
+import {
+  DeleteConfirmationVersion,
+  DependencyWarning,
+} from "./dependency-contract.ts";
 import { Task } from "./entities.ts";
 import { RemainingEnergySchema } from "./graph-contract.ts";
 import { TaskId } from "./ids.ts";
@@ -19,6 +22,7 @@ export const TaskWrite = Schema.Struct({
   removed_dependencies: Schema.optionalKey(Schema.Array(Edge)),
   affected_versions: Schema.optionalKey(Schema.Array(VersionChange)),
   dependency_fingerprint: Schema.optionalKey(Schema.String),
+  confirm_from_version: Schema.optionalKey(DeleteConfirmationVersion),
   dry_run: Schema.optionalKey(Schema.Boolean),
 }).annotate({ identifier: "TaskWrite" });
 export type TaskWrite = typeof TaskWrite.Type;

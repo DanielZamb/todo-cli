@@ -102,7 +102,7 @@ private actor DependencySearchRecoveryTransport: ClientTransport {
             await model.toggleDependency(try task())
             #expect(await transport.mutations == 2)
             #expect(model.dependencies.picker?.requiresReload == true)
-            model.dependencies.batch = .init(profile: "work", root: root, direction: direction, loading: false, report: .init(dry_run: true, results: [.init(index: 0, result: nil, error: .init(message: "Batch agent copy", code: "conflict", exitCode: 4, exitMeaning: "Conflict"), exit_code: 4)]))
+            model.dependencies.batch = .init(profile: "work", root: root, direction: direction, loading: false, report: .init(dry_run: true, results: [.init(index: 0, result: nil, error: .init(message: "Batch agent copy", code: "occ_conflict", exitCode: 4, exitMeaning: "Conflict"), exit_code: 4)]))
             let batch = model.dependencies.batch?.id
             for query in ["broad", "current", ""] {
                 model.dependencies.picker?.text = query
@@ -111,7 +111,7 @@ private actor DependencySearchRecoveryTransport: ClientTransport {
                 #expect(model.dependencies.picker?.failure?.detail == "error 4 - Conflict")
                 #expect(model.dependencies.picker?.requiresReload == true)
                 #expect(model.dependencies.batch?.id == batch)
-                #expect(model.dependencies.batch?.report?.results.first?.error?.code == "conflict")
+                #expect(model.dependencies.batch?.report?.results.first?.error?.code == "occ_conflict")
                 #expect(model.dependencies.batch?.report?.requiresReload == true)
             }
         }
@@ -136,7 +136,7 @@ private actor DependencySearchRecoveryTransport: ClientTransport {
         #expect(await transport.searches == 3)
         model.connection = .live
         model.dependencies.graph?.failure = .init(message: "Keep the graph read refusal", detail: "error 4 - Conflict")
-        model.dependencies.batch = .init(profile: "work", root: try task(), direction: .dependsOn, loading: false, report: .init(dry_run: true, results: [.init(index: 0, result: nil, error: .init(message: "Batch agent copy", code: "conflict", exitCode: 4, exitMeaning: "Conflict"), exit_code: 4)]))
+        model.dependencies.batch = .init(profile: "work", root: try task(), direction: .dependsOn, loading: false, report: .init(dry_run: true, results: [.init(index: 0, result: nil, error: .init(message: "Batch agent copy", code: "occ_conflict", exitCode: 4, exitMeaning: "Conflict"), exit_code: 4)]))
         for query in ["broad", "current", ""] {
             model.dependencies.graph?.search = query
             await model.searchDependencyGraph()

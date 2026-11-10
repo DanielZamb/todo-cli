@@ -54,6 +54,11 @@ Occurrence; a public reload must prove the successor inherited no edge.
 
 Every Task Delete entry shares the server-preview controller and dialog. Confirm
 uses the reviewed preview request Version and fingerprint even with no edges.
+The public preview adds `confirm_from_version`. The controller keeps its remembered
+request Version as the source and requires Reload if a supplied value disagrees.
+Rejected results preserve saved drafts. Public batch Version conflicts use only
+`occ_conflict`; their Apply gate and human projector require deliberate Reload.
+Unknown string codes retain the generic error path.
 Changed or changed-to-empty previews require another explicit confirmation. Cancel
 has initial focus; long lists scroll while counted headers and actions stay visible.
 The changed-review notice retains the actual reply's exit pair, including a
