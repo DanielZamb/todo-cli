@@ -22,6 +22,11 @@ extension DependencyGraphReport.Node {
     }
 }
 
+enum DependencyViewportState {
+    case automatic(DependencyViewport?)
+    case manual(DependencyViewport)
+}
+
 struct DependencyGraphState {
     let profile: String
     var root: String
@@ -37,7 +42,21 @@ struct DependencyGraphState {
     var renderedNodeCount: Int?
     var renderError: String?
     var deleted = false
-    var viewport: DependencyViewport?
+    var viewportState: DependencyViewportState = .automatic(nil)
+    var viewport: DependencyViewport? {
+        get {
+            switch viewportState {
+            case .automatic(let value): value
+            case .manual(let value): value
+            }
+        }
+        set { viewportState = newValue.map(DependencyViewportState.manual) ?? .automatic(nil) }
+    }
+    var isViewportAutomatic: Bool {
+        if case .automatic = viewportState { return true }
+        return false
+    }
+    mutating func acceptAutomaticViewport(_ viewport: DependencyViewport) { viewportState = .automatic(viewport) }
     var selected: String?
     var focused: String?
     var expanded: Set<String> = []

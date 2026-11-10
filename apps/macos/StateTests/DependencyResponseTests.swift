@@ -83,7 +83,7 @@ private actor DependencyHeldTransport: ClientTransport {
     @Test func graphReportKeepsAuthoritativeShapeRootSetsAndViewportWhenDataChanges() throws {
         let wire = try JSONDecoder().decode(Operations.tasks_period_graph.Output.Ok.Body.jsonPayload.self, from: Data(graphWire(title: "Ready root").utf8))
         let report = try JSONDecoder().decode(DependencyGraphReport.self, from: JSONEncoder().encode(wire))
-        var graph = DependencyGraphState(profile: "work", root: "a", viewport: .init(x: 9, y: -4, scale: 2), selected: "vanished", focused: "vanished", expanded: ["a", "vanished"])
+        var graph = DependencyGraphState(profile: "work", root: "a", viewportState: .manual(.init(x: 9, y: -4, scale: 2)), selected: "vanished", focused: "vanished", expanded: ["a", "vanished"])
         graph.publish(report)
         #expect(graph.report?.shape == "single")
         #expect(graph.report?.lightest_next == ["a"])

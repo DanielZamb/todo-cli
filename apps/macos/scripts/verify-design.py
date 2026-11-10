@@ -71,7 +71,17 @@ run(['xcrun', 'actool', str(root / 'design/macos/Assets.xcassets'), '--compile',
 run(['node', 'apps/macos/scripts/graph-resources.mjs', str(resources / 'graph-browser')], 'graph-resources.log')
 assert (resources / 'Assets.car').is_file(), 'actool did not compile the production color assets'
 environment = dict(os.environ, TODO_SNAPSHOT_DIR=str(evidence))
-render_exit = run(['swift', 'test', '--no-parallel', '--package-path', 'apps/macos', '--scratch-path', str(build_path), '--skip-build', '--filter', 'Snapshots'], 'render.log', environment, allow_failure=True)
+viewport_resize = os.environ.get('TODO_SNAPSHOT_GRAPH_RESIZE_ONLY') == '1'
+if viewport_resize:
+    environment['TODO_GRAPH_RESIZE_EVIDENCE'] = str(evidence.relative_to(root))
+render_exit = run(['swift', 'test', '--no-parallel', '--package-path', 'apps/macos', '--scratch-path', str(build_path), '--skip-build', '--filter', 'DependencyViewportResizeTests' if viewport_resize else 'Snapshots'], 'render.log', environment, allow_failure=True)
+if viewport_resize:
+    if render_exit == 0:
+        proof = json.loads((evidence / 'wk-resize-proof.json').read_text())
+        assert len(proof['phases']) == 6
+    (evidence / 'result.json').write_text(json.dumps({'status': 'PASS' if render_exit == 0 else 'FAIL', 'exit': render_exit, 'scope': 'WK_VIEWPORT_RESIZE_ONLY', 'appLaunched': False, 'signed': False, 'keychainAccess': False}, indent=2) + '\n')
+    print(f'WK viewport resize only; actual exit {render_exit}; {evidence}')
+    raise SystemExit(render_exit)
 for dag_manifest_path in evidence.glob('dag*-capture-manifest.json'):
     for row in json.loads(dag_manifest_path.read_text()):
         if row.get('behavior_status') == 'pending':

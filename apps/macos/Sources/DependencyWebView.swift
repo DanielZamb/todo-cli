@@ -2,6 +2,19 @@ import AppKit
 import SwiftUI
 import WebKit
 
+@MainActor final class DependencyDiagramWebView: WKWebView {
+    var onFrameChanged: (() -> Void)?
+    override func setFrameSize(_ newSize: NSSize) {
+        let before = bounds.size
+        super.setFrameSize(newSize)
+        if bounds.size != before && !inLiveResize { onFrameChanged?() }
+    }
+    override func viewDidEndLiveResize() {
+        super.viewDidEndLiveResize()
+        onFrameChanged?()
+    }
+}
+
 struct DependencyWebView: NSViewRepresentable {
     let model: TodoModel
     @Environment(\.colorScheme) private var colorScheme
@@ -15,7 +28,9 @@ struct DependencyWebView: NSViewRepresentable {
         configuration.websiteDataStore = .nonPersistent()
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = false
         configuration.userContentController.add(context.coordinator, name: "todoGraph")
-        let web = WKWebView(frame: .zero, configuration: configuration)
+        let web = DependencyDiagramWebView(frame: .zero, configuration: configuration)
+        let coordinator = context.coordinator
+        web.onFrameChanged = { [weak coordinator] in coordinator?.sendRender() }
         web.navigationDelegate = context.coordinator
         context.coordinator.web = web
         if let resourceURL {
@@ -42,6 +57,7 @@ struct DependencyWebView: NSViewRepresentable {
         context.coordinator.sendRender()
     }
     static func dismantleNSView(_ web: WKWebView, coordinator: Coordinator) {
+        (web as? DependencyDiagramWebView)?.onFrameChanged = nil
         web.stopLoading()
         web.configuration.userContentController.removeScriptMessageHandler(forName: "todoGraph")
         web.navigationDelegate = nil
@@ -68,19 +84,40 @@ struct DependencyWebView: NSViewRepresentable {
         var loaded = false
         var render: DependencyGraphRender?
         private var lastSent: Data?
+        private var lastFrame: NSSize?
+        private var sendRevision = 0
+        private var awaitingAutomaticFit = false
         init(model: TodoModel, onReply: ((DependencyGraphReply) -> Void)?) { self.model = model; self.onReply = onReply }
-        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { loaded = true; lastSent = nil; sendRender() }
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { loaded = true; lastSent = nil; lastFrame = nil; sendRender() }
         func sendRender() {
-            guard loaded, let web, let render, let data = Self.encoded(render), data != lastSent,
-                  let message = try? JSONSerialization.jsonObject(with: data) else { return }
-            lastSent = data
+            guard loaded else { return }
+            sendRevision += 1
+            let revision = sendRevision
             Task { @MainActor [weak self] in
-                do {
-                    _ = try await web.callAsyncJavaScript("window.todoGraph.receive(message)", arguments: ["message": message], in: nil, contentWorld: .page)
-                } catch {
-                    guard let self, self.isCurrent(render.identity) else { return }
-                    self.model.dependencies.graph?.renderError = "The diagram could not be read. Use the Task list or Retry."
-                }
+                await Task.yield()
+                guard let self, self.loaded, self.sendRevision == revision else { return }
+                await self.renderNow(revision: revision)
+            }
+        }
+        private func renderNow(revision: Int) async {
+            guard let web, let render, isCurrent(render.identity), let graph = model.dependencies.graph,
+                  let encoded = Self.encoded(render), var message = try? JSONSerialization.jsonObject(with: encoded) as? [String: Any] else { return }
+            let frame = web.bounds.size
+            guard frame.width > 0 && frame.height > 0 else { return }
+            let fitting = graph.isViewportAutomatic && (awaitingAutomaticFit || graph.viewport == nil || frame != lastFrame)
+            if fitting || graph.viewport == nil { message.removeValue(forKey: "viewport") }
+            else if let viewport = graph.viewport, let data = try? JSONEncoder().encode(viewport) {
+                message["viewport"] = try? JSONSerialization.jsonObject(with: data)
+            }
+            guard let data = try? JSONSerialization.data(withJSONObject: message, options: .sortedKeys), data != lastSent || frame != lastFrame else { return }
+            lastSent = data
+            lastFrame = frame
+            awaitingAutomaticFit = fitting
+            do {
+                _ = try await web.callAsyncJavaScript("window.todoGraph.receive(message)", arguments: ["message": message], in: nil, contentWorld: .page)
+            } catch {
+                guard loaded, sendRevision == revision, isCurrent(render.identity) else { return }
+                model.dependencies.graph?.renderError = "The diagram could not be read. Use the Task list or Retry."
             }
         }
         private static func encoded(_ render: DependencyGraphRender) -> Data? {
@@ -103,9 +140,14 @@ struct DependencyWebView: NSViewRepresentable {
                 switch reply.event {
                 case .ready: break
                 case .rendered(let count): model.dependencies.graph?.renderedNodeCount = count; model.dependencies.graph?.renderError = nil
-                case .renderError(let error): model.dependencies.graph?.renderError = error
+                case .renderError(let error): awaitingAutomaticFit = false; model.dependencies.graph?.renderError = error
                 case .focus(let id): model.dependencies.graph?.focused = id
-                case .viewport(let viewport): model.dependencies.graph?.viewport = viewport
+                case .viewport(let viewport):
+                    if awaitingAutomaticFit {
+                        awaitingAutomaticFit = false
+                        if model.dependencies.graph?.isViewportAutomatic == true { model.dependencies.graph?.acceptAutomaticViewport(viewport) }
+                        else { sendRender() }
+                    } else { model.dependencies.graph?.viewport = viewport }
                 case .expand(let id): model.dependencies.graph?.expanded.insert(id)
                 case .activate(let id):
                     guard let task = model.dependencies.graph?.report?.nodes.first(where: { $0.task.id == id })?.task else { return }

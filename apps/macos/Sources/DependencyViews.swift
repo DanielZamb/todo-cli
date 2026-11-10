@@ -169,8 +169,12 @@ struct DependencyDeleteView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Delete Task").font(.headline)
                 Text(deletion.task.title).lineLimit(2)
-                        Text(deletion.reviewMessage).fixedSize(horizontal: false, vertical: true)
-                            .accessibilityIdentifier(deletion.changed ? "dependency-delete-changed" : "dependency-delete-review")
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(deletion.reviewMessage).fixedSize(horizontal: false, vertical: true)
+                    if deletion.changed, let detail = deletion.reviewExitDetail {
+                        Text(detail).font(.caption).foregroundStyle(.secondary)
+                    }
+                }.accessibilityIdentifier(deletion.changed ? "dependency-delete-changed" : "dependency-delete-review")
                 if !deletion.edges.isEmpty || deletion.loading || deletion.failure != nil {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 12, pinnedViews: [.sectionHeaders]) {

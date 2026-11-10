@@ -137,3 +137,19 @@ proof. Unset it for the complete suite. They render a current result after a
 valid broad-query refusal, using existing picker and graph views. The manifest
 records both responses and leaves behavior pending until the same-source state
 receipt is verified. No native UI behavior follows from these offscreen images.
+
+The focused viewport recipe is
+`scripts/swift-slot.sh env TODO_SNAPSHOT_GRAPH_RESIZE_ONLY=1 python3 apps/macos/scripts/verify-design.py "$PWD/docs/evidence/task-dag/viewport-resize-new"`.
+It runs one offscreen production WKWebView test with a fresh evidence directory.
+Automatic fit follows a settled frame change, including a burst of intermediate
+widths, with one resolved viewport. A manual zoom stays unchanged through resize;
+Reset fits again. `wk-resize-proof.json` records the actual geometry and replies.
+This focused command does not replace the full design suite or prove native input.
+
+`DependencyDeleteReviewTests` uses the compiled scratch HTTP server and captures
+the production changed-review status. Changed fingerprints, including a set that
+became empty, return `has_dependencies` with exit 2. An unchanged fingerprint with
+a stale Version returns HTTP 409 with exit 4. The test records decoded raw replies
+and checks their actual pair in offscreen text, the refreshed Version/fingerprint,
+no extra Reload, and deletion only after a second explicit confirmation. The
+muted pair belongs to the review status and survives successful preview reload.

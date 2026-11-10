@@ -75,6 +75,7 @@ struct DependencyDelete: Identifiable {
     var pending = false
     var changed = false
     var failure: DependencyNotice?
+    var reviewExitDetail: String?
     var action: String { edges.isEmpty ? "Delete Task" : "Delete Task and remove Dependencies" }
     var reviewMessage: String {
         if changed { return edges.isEmpty ? "This Task has no Dependencies now. Confirm again to delete it." : "Dependencies changed. Review the current list and confirm again." }
