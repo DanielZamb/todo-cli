@@ -40,6 +40,12 @@ none is launched. Ordinary nonzero exits remain failures and the other recipes
 continue. Fake-delegate/runtime controls cover these distinctions without a
 real compiler or native app.
 
+Guard diagnostics go to stderr. Delegate stdout remains byte-for-byte intact,
+including JSON consumed by license generation; the delegate's stderr and exit
+remain intact as well. The fake JSON control covers nested shell wrappers and
+the in-process fake build guard. The earlier stdout-contamination failure is a
+retained harness incident, separate from product-copy assertion failures.
+
 Run the cheap generic controls independently of the full suite:
 
 ```sh
@@ -62,3 +68,17 @@ nonzero while existing recipes still run. A Dependencies result explicitly marke
 its command's actual zero exit. Never replace these entries with a passing older
 focused recipe. Native safeStorage, Session restoration, Keychain, notifications
 and VoiceOver remain outside the unsigned/offscreen proof.
+# Host launch preflight
+
+Every unsigned Electron launcher uses hiddenHostOptions before spawning. It resolves
+apps/electron/dist/verification/write-host.mjs from the script location and checks
+the entry and installed Electron runtime without importing the auto-download module.
+Missing files fail before Electron starts. Existing environment and window visibility
+behavior are preserved. Diagnostics opens its production window; main write-host
+windows follow the existing TODO_ELECTRON_VERIFY_BACKGROUND setting. The signed
+verifier remains on its native HOLD.
+
+The hidden-host.test.ts controls prove that a missing entry exits in under one
+second without reaching a launch delegate and inventory every unsigned launch site.
+Clean-main baseline runs use plain main plus the named generic verification overlay.
+Their manifests record each overlay file and hash separately from the main source.

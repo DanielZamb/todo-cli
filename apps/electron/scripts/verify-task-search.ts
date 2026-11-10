@@ -1,12 +1,12 @@
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { _electron, type ElectronApplication, expect } from "@playwright/test";
 import { CONTRACT_ID } from "@todo/api";
 import { ProjectSummary, Task, TaskRead } from "@todo/domain";
 import { Schema } from "effect";
 import { setAppearance } from "./appearance.ts";
+import { hiddenHostOptions } from "./hidden-host.ts";
 import { openProfileDeletion, selectProfile } from "./profile-menu.ts";
 
 const scratch = process.argv[2];
@@ -282,16 +282,16 @@ try {
     title: "Personal pasaporte",
     priority: "P3",
   });
-  desktop = await _electron.launch({
-    executablePath: createRequire(import.meta.url)("electron"),
-    args: [resolve(import.meta.dirname, "../dist/verification/write-host.mjs")],
-    env: {
-      ...env,
-      TODO_SERVER_URL: `http://127.0.0.1:${proxy.port}`,
-      TODO_ELECTRON_DATA: join(scratch, "electron"),
-    },
-    timeout: 60000,
-  });
+  desktop = await _electron.launch(
+    hiddenHostOptions({
+      env: {
+        ...env,
+        TODO_SERVER_URL: `http://127.0.0.1:${proxy.port}`,
+        TODO_ELECTRON_DATA: join(scratch, "electron"),
+      },
+      timeout: 60000,
+    }),
+  );
   const page = await desktop.firstWindow();
   checks.push({
     verificationWindows: await desktop.evaluate(({ BrowserWindow }) =>

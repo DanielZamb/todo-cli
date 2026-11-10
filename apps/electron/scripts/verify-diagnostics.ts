@@ -6,13 +6,13 @@ import {
   request as forwardRequest,
   type Server,
 } from "node:http";
-import { createRequire } from "node:module";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { _electron, type ElectronApplication, expect } from "@playwright/test";
 import { DiagnosticsSnapshot } from "@todo/domain";
 import { TasksResponse } from "@todo/domain/presentation";
 import { Schema } from "effect";
 import { setAppearance } from "./appearance.ts";
+import { hiddenHostOptions } from "./hidden-host.ts";
 
 const scratch = process.argv[2] ?? "";
 const evidence = process.argv[3] ?? "";
@@ -165,7 +165,7 @@ try {
     assert.equal(conflict.status, 409);
     await conflict.arrayBuffer();
   }
-  const require = createRequire(import.meta.url);
+
   proxy = createServer((incoming, outgoing) => {
     const forward = forwardRequest(
       url + incoming.url,
@@ -205,12 +205,12 @@ try {
       resolve(`http://127.0.0.1:${address.port}`);
     }),
   );
-  desktop = await _electron.launch({
-    executablePath: require("electron"),
-    args: [resolve("dist/verification/write-host.mjs")],
-    env: { ...env, TODO_SERVER_URL: proxyUrl },
-    timeout: 60000,
-  });
+  desktop = await _electron.launch(
+    hiddenHostOptions({
+      env: { ...env, TODO_SERVER_URL: proxyUrl },
+      timeout: 60000,
+    }),
+  );
   const page = await desktop.firstWindow();
   await expect(
     page.getByRole("heading", { name: "Tasks", exact: true }),
