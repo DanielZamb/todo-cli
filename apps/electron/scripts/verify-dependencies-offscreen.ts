@@ -2337,6 +2337,8 @@ try {
     "import-mixed-rejections",
     "One ordinary refusal and one nested Dependency refusal share PR12's exact 56px Compact row, caption reason and actual muted pair. The errors are controlled valid report fixtures.",
   );
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await openImport(page);
   await page.locator('input[type="file"]').setInputFiles(importFile);
   reportFixture = "import";
   await page
