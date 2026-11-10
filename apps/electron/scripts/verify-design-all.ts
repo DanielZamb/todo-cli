@@ -21,6 +21,10 @@ import {
   heldDesignRecipes,
   uncheckedDesignRecipes,
 } from "./verify-design-inventory.ts";
+import {
+  type DesignReceipt,
+  runDesignRecipes,
+} from "./verify-design-runner.ts";
 
 const root = verificationRoot(import.meta.dirname);
 const evidence = repositoryPath(
@@ -30,15 +34,7 @@ const evidence = repositoryPath(
 );
 assert.ok(!existsSync(evidence), "Choose a fresh evidence directory");
 mkdirSync(evidence, { recursive: true });
-type Receipt = {
-  id: string;
-  argv: readonly string[];
-  exit: number | null;
-  status: "PASS" | "FAIL" | "MISSING" | "SKIPPED";
-  evidence: string;
-  reason?: string;
-};
-const receipts: Receipt[] = [];
+const receipts: DesignReceipt[] = [];
 const head = execFileSync("git", ["rev-parse", "HEAD"], {
   cwd: root,
   encoding: "utf8",
@@ -49,13 +45,15 @@ const summary = () =>
     join(evidence, "summary.json"),
     `${JSON.stringify(
       {
-        status: receipts.some(
-          (item) => item.status === "FAIL" || item.status === "MISSING",
-        )
-          ? "FAIL"
-          : complete
-            ? "PASS_WITH_NAMED_HOLDS"
-            : "RUNNING",
+        status: receipts.some((item) => item.exit === 3)
+          ? "DISK_STOP"
+          : receipts.some(
+                (item) => item.status === "FAIL" || item.status === "MISSING",
+              )
+            ? "FAIL"
+            : complete
+              ? "PASS_WITH_NAMED_HOLDS"
+              : "RUNNING",
         constituents: receipts,
         head,
         inputs: {
@@ -184,7 +182,7 @@ if (!blocked) {
     blocked =
       "DISK STOP: the full build batch needs at least 30 GB free; see disk.log.";
 }
-for (const recipe of designRecipes) {
+function planRecipe(recipe: (typeof designRecipes)[number]) {
   const directory = join(evidence, recipe.id);
   const path = "host" in recipe ? helper : join(scripts, recipe.script);
   const outputArg =
@@ -207,72 +205,91 @@ for (const recipe of designRecipes) {
           outputArg,
         ]),
   ];
-  let missing = "";
-  try {
-    repositoryInput(root, relative(root, path), recipe.id);
-  } catch (error) {
-    missing = String(error);
-  }
-  if (missing)
-    receipts.push({
-      id: recipe.id,
-      argv,
-      exit: null,
-      status: "MISSING",
-      evidence: relative(root, directory),
-      reason: `${missing}; this base does not prove that recipe.`,
-    });
-  else if (blocked)
-    receipts.push({
-      id: recipe.id,
-      argv,
-      exit: null,
-      status: "SKIPPED",
-      evidence: relative(root, directory),
-      reason: blocked,
-    });
-  else {
-    process.stdout.write(`Running ${recipe.id}\n`);
-    const code = await run(argv, join(evidence, `${recipe.id}.log`), {
-      ...env,
-      ...("mode" in recipe ? { [recipe.mode]: "1" } : {}),
-    });
-    const result = join(directory, "result.json");
-    let missingProof = "";
-    if (code === 0) {
-      try {
-        const receipt = JSON.parse(readFileSync(result, "utf8"));
-        if (
-          recipe.id === "dependencies" &&
-          Schema.is(
-            Schema.Struct({
-              status: Schema.Literal("DAG_INTERMEDIATE_PARTIAL"),
-            }),
-          )(receipt)
-        )
-          missingProof =
-            "The DAG driver reported intermediate partial coverage; the final new-client matrix remains missing.";
-      } catch {
-        missingProof =
-          "A zero-exit command did not produce a readable result.json receipt.";
-      }
-    }
-    receipts.push({
-      id: recipe.id,
-      argv,
-      exit: code,
-      status: code !== 0 ? "FAIL" : missingProof ? "MISSING" : "PASS",
-      evidence: relative(root, directory),
-      ...(missingProof
-        ? {
-            reason: missingProof,
-          }
-        : {}),
-    });
-    process.stdout.write(`${recipe.id} exit ${code}\n`);
-  }
-  summary();
+  return { directory, path, argv };
 }
+const suiteCode = await runDesignRecipes(
+  designRecipes,
+  async (recipe) => {
+    const { directory, path, argv } = planRecipe(recipe);
+    let missing = "";
+    try {
+      repositoryInput(root, relative(root, path), recipe.id);
+    } catch (error) {
+      missing = String(error);
+    }
+    if (missing)
+      return {
+        id: recipe.id,
+        argv,
+        exit: null,
+        status: "MISSING",
+        evidence: relative(root, directory),
+        reason: `${missing}; this base does not prove that recipe.`,
+      };
+    else if (blocked)
+      return {
+        id: recipe.id,
+        argv,
+        exit: null,
+        status: "SKIPPED",
+        evidence: relative(root, directory),
+        reason: blocked,
+      };
+    else {
+      process.stdout.write(`Running ${recipe.id}\n`);
+      const code = await run(argv, join(evidence, `${recipe.id}.log`), {
+        ...env,
+        ...("mode" in recipe ? { [recipe.mode]: "1" } : {}),
+      });
+      const result = join(directory, "result.json");
+      let missingProof = "";
+      if (code === 0) {
+        try {
+          const receipt = JSON.parse(readFileSync(result, "utf8"));
+          if (
+            recipe.id === "dependencies" &&
+            Schema.is(
+              Schema.Struct({
+                status: Schema.Literal("DAG_INTERMEDIATE_PARTIAL"),
+              }),
+            )(receipt)
+          )
+            missingProof =
+              "The DAG driver reported intermediate partial coverage; the final new-client matrix remains missing.";
+        } catch {
+          missingProof =
+            "A zero-exit command did not produce a readable result.json receipt.";
+        }
+      }
+      const receipt: DesignReceipt = {
+        id: recipe.id,
+        argv,
+        exit: code,
+        status: code !== 0 ? "FAIL" : missingProof ? "MISSING" : "PASS",
+        evidence: relative(root, directory),
+        ...(missingProof
+          ? {
+              reason: missingProof,
+            }
+          : {}),
+      };
+      process.stdout.write(`${recipe.id} exit ${code}\n`);
+      return receipt;
+    }
+  },
+  (recipe, reason) => ({
+    id: recipe.id,
+    argv: planRecipe(recipe).argv,
+    exit: null,
+    status: "SKIPPED",
+    evidence: relative(root, planRecipe(recipe).directory),
+    reason,
+  }),
+  (receipt) => {
+    receipts.push(receipt);
+    summary();
+  },
+);
 for (const held of heldDesignRecipes)
   receipts.push({
     id: held.id,
@@ -294,11 +311,14 @@ if (
     evidence: relative(root, evidence),
     reason: blocked,
   });
-const code = receipts.some(
-  (item) => item.status === "FAIL" || item.status === "MISSING",
-)
-  ? 1
-  : 0;
+const code =
+  suiteCode === 3
+    ? 3
+    : receipts.some(
+          (item) => item.status === "FAIL" || item.status === "MISSING",
+        )
+      ? 1
+      : 0;
 complete = true;
 summary();
 process.stdout.write(

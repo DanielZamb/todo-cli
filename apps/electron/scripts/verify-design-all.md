@@ -29,6 +29,23 @@ aggregate also records `df` and enforces the 30 GB soft floor. The Diagnostics
 adapter uses the same cached binaries in a fresh owned scratch directory; it does
 not invoke the retained-server convenience helper.
 
+Nested wrappers retain the original absolute Bun/pnpm/Node/xcrun delegates.
+The Bun runtime preload guards each in-process `Bun.build` immediately, and
+preserves hard guard exit 3 through synchronous/asynchronous guard exceptions.
+It uses an owned temporary preload symlink so checkout paths with spaces do not
+become Bun option fragments. The outer wrapper removes it after all nested work.
+The wrapper does not add Node/Electron preload options. A constituent exit 3
+keeps aggregate exit 3 and records every later recipe as skipped for DISK STOP;
+none is launched. Ordinary nonzero exits remain failures and the other recipes
+continue. Fake-delegate/runtime controls cover these distinctions without a
+real compiler or native app.
+
+Run the cheap generic controls independently of the full suite:
+
+```sh
+TODO_VERIFICATION_CONTROLS_DIR=docs/evidence/electron-controls-new sh apps/electron/scripts/guarded-run.sh pnpm --filter @todo/electron test guarded-run.test.ts guarded-runtime.test.ts design-runner.test.ts design-inventory.test.ts
+```
+
 The inventory includes Attachment batch, batch edit, discovery, discovery report
 errors, Dependencies, the canonical browser host, default host writes, Task
 search, priority groups, version guardrails, Snapshots, metadata/Tag layout,
