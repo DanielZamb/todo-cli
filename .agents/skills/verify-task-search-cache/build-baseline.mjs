@@ -12,6 +12,7 @@ import {
 } from "node:fs";
 import { join, resolve } from "node:path";
 const root = resolve(import.meta.dirname, "../../..");
+mkdirSync(join(root, "docs/evidence/perf-cache"), { recursive: true });
 const commit = process.argv[2];
 assert.match(commit ?? "", /^[a-f0-9]{40}$/);
 const uncached = process.argv.includes("--uncached");
