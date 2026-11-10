@@ -42,16 +42,16 @@ remain held. NSHostingView/WKWebView evidence does not establish native access.
 The diagram consumes only L1's exact canonical graph-browser source/lock handoff;
 there is no second renderer or tracked copy of emitted browser resources.
 
-The final native inventory adds 386 DAG captures to the 346 existing default
+The final native inventory adds 394 DAG captures to the 346 existing default
 captures and 116 discovery captures. The complete default manifest therefore
-contains 848 PNGs. The original 346-count assertion and Compact import assertions
+contains 856 PNGs. The original 346-count assertion and Compact import assertions
 remain active before the additional fixtures render. The helper retains a
 nonzero Swift Testing exit, validates the completed manifest even on failure,
 and writes a failing result with the actual exit. It never converts the known
 twelve failures to success.
 
 `env TODO_SNAPSHOT_DAG_ONLY=1 apps/macos/scripts/verify-design.py <fresh-evidence>`
-is a focused 386-image check, not final proof. At final proof every focused
+is a focused 394-image check, not final proof. At final proof every focused
 selector, including TODO_SNAPSHOT_DAG_ONLY and both checkpoint selectors, is unset.
 Graph geometry asserts tool bounds inside the diagram frame and viewport, a
 Close-only footer that does not overlap the scrolling list, an in-bounds Compact
@@ -121,3 +121,19 @@ facts inform only the next explicit Reload/Preview plan at the same loaded base
 Version. No item is skipped and no command is resent automatically. The real
 HTTP receipt must show the accepted second item from 2 to 3, with the root still
 done and only the cancelled blocker linked.
+
+S-C1 separates search notices from operation notices. `DependencySearchRecoveryTests`
+drives valid public 422 search errors and 200 results through the generated client
+and production TodoModel. It asserts narrower success and Clear in both picker
+directions, graph success and offline Clear, and delivered older-error rejection.
+A typed cycle refusal keeps its witness and attempted Task. A real generated HTTP
+409 Conflict keeps Reload required; search success, failure and Clear also retain
+the batch report. Refresh must not promote a stale search notice to an operation
+notice. These are controlled transport tests, not a server search-threshold proof.
+
+The eight S-C1 recovery fixtures are part of the full manifest, in both layouts
+and appearances. `TODO_SNAPSHOT_SC1_ONLY=1` selects those eight as additional
+proof. Unset it for the complete suite. They render a current result after a
+valid broad-query refusal, using existing picker and graph views. The manifest
+records both responses and leaves behavior pending until the same-source state
+receipt is verified. No native UI behavior follows from these offscreen images.

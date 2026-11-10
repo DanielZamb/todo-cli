@@ -382,3 +382,11 @@ sign-out/sign-in. It uses only a memory Session adapter and scratch HTTP, with a
 current-credential control. Run it through the active shared Swift slot.
 
 [Task Dependencies](features/dependencies.md) extends production state, reviewed Delete, typed graph protocol and offscreen coverage during HOLD.
+
+## Dependency search recovery during HOLD
+
+Use [the Dependency recipe](features/dependencies.md) for S-C1. Successful current
+searches and cleared queries remove only their search notice. Mutation refusals,
+Conflict/Reload and batch reports survive. The controlled-transport regression
+and offscreen captures use production TodoModel and the generated client. Native
+key dispatch and VoiceOver remain held.

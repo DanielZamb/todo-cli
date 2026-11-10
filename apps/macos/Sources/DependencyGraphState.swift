@@ -28,7 +28,12 @@ struct DependencyGraphState {
     var request = 0
     var report: DependencyGraphReport?
     var loading = false
-    var failure: DependencyNotice?
+    var operationFailure: DependencyNotice?
+    var searchFailure: DependencyNotice?
+    var failure: DependencyNotice? {
+        get { operationFailure ?? searchFailure }
+        set { operationFailure = newValue }
+    }
     var renderedNodeCount: Int?
     var renderError: String?
     var deleted = false
@@ -105,7 +110,7 @@ extension TodoModel {
             dependencies.deletion?.acceptedFromVersion = nil
         }
         if let picker = dependencies.picker, !picker.requiresReload, picker.pending.isEmpty {
-            let notice = picker.failure
+            let notice = picker.operationFailure
             let warnings = picker.warnings
             await reloadDependencyPicker()
             if dependencies.picker?.id == picker.id {
@@ -119,18 +124,20 @@ extension TodoModel {
 
 extension TodoModel {
     func searchDependencyGraph() async {
-        guard signedIn, connection == .live, let graph = dependencies.graph else { return }
+        guard signedIn, let graph = dependencies.graph else { return }
         dependencies.graphSearchRequest += 1
         let request = dependencies.graphSearchRequest
         let epoch = discovery.credentialEpoch
-        if graph.search.isEmpty { dependencies.graph?.matches = nil; return }
+        if graph.search.isEmpty { dependencies.graph?.matches = nil; dependencies.graph?.searchFailure = nil; return }
+        guard connection == .live else { return }
         do {
             let rows = try await client.tasks_period_list(path: .init(profile: graph.profile), query: .init(text: graph.search)).ok.body.json
             guard isCurrentCredential(epoch), profile == graph.profile, dependencies.graphSearchRequest == request, dependencies.graph?.root == graph.root, dependencies.graph?.request == graph.request, dependencies.graph?.search == graph.search else { return }
             dependencies.graph?.matches = Set(rows.map(\.id))
+            dependencies.graph?.searchFailure = nil
         } catch {
             guard isCurrentCredential(epoch), profile == graph.profile, dependencies.graphSearchRequest == request, dependencies.graph?.root == graph.root, dependencies.graph?.search == graph.search else { return }
-            dependencies.graph?.failure = dependencyNotice(error, context: .search)
+            dependencies.graph?.searchFailure = dependencyNotice(error, context: .search)
             handleAuthorization(error, credentialEpoch: epoch)
         }
     }

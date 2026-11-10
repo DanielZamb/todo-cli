@@ -49,7 +49,12 @@ struct DependencyPicker: Identifiable {
     var candidates: [TaskSnapshot] = []
     var loading = false
     var pending: Set<String> = []
-    var failure: DependencyNotice?
+    var operationFailure: DependencyNotice?
+    var searchFailure: DependencyNotice?
+    var failure: DependencyNotice? {
+        get { operationFailure ?? searchFailure }
+        set { operationFailure = newValue }
+    }
     var warnings: [DependencyNotice] = []
     var feedback: String?
     var requiresReload = false
@@ -170,9 +175,10 @@ extension TodoModel {
         }
     }
     func searchDependencyCandidates() async {
-        guard connection == .live else { dependencies.picker?.loading = false; return }
         guard let picker = dependencies.picker else { return }
         dependencies.searchRequest += 1
+        if picker.text.isEmpty { dependencies.picker?.searchFailure = nil }
+        guard connection == .live else { dependencies.picker?.loading = false; return }
         let request = dependencies.searchRequest
         let epoch = discovery.credentialEpoch
         let run = dependencies.generation
@@ -180,13 +186,14 @@ extension TodoModel {
         do {
             let wire = try await client.tasks_period_list(path: .init(profile: picker.profile), query: .init(text: picker.text.isEmpty ? nil : picker.text)).ok.body.json
             let rows = try wire.map(TaskSnapshot.decode)
-            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.searchRequest == request, dependencies.picker?.id == picker.id else { return }
+            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.searchRequest == request, dependencies.picker?.id == picker.id, dependencies.picker?.text == picker.text else { return }
             dependencies.picker?.candidates = rows.filter { $0.id != picker.root.id }
+            dependencies.picker?.searchFailure = nil
             dependencies.picker?.loading = false
         } catch {
-            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.searchRequest == request, dependencies.picker?.id == picker.id else { return }
+            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.searchRequest == request, dependencies.picker?.id == picker.id, dependencies.picker?.text == picker.text else { return }
             dependencies.picker?.loading = false
-            dependencies.picker?.failure = dependencyNotice(error, context: .search)
+            dependencies.picker?.searchFailure = dependencyNotice(error, context: .search)
             handleAuthorization(error, credentialEpoch: epoch)
         }
     }
