@@ -299,3 +299,9 @@ renderer. Native safeStorage/session.enc restoration remains held.
 Read [Profiles, Projects and Find Task by id](features/discovery.md) for the
 Compact-first production-renderer scratch proof, explicit Show, draft retention,
 done Task reveal, response provenance, selectors and visual state matrix.
+
+## Task Dependencies
+
+Read [Task Dependencies](features/dependencies.md) for the current production-renderer
+scratch command, state coverage, selectors, capture receipt validation and pending
+proof boundaries. This checkpoint does not replace the full end-of-unit suites.

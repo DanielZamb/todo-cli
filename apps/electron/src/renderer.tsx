@@ -7,7 +7,7 @@ import {
   type Sequence,
   type Series,
   Task,
-  type TaskFilters,
+  TaskFilters,
   type TaskLookupDetails,
   TaskTime,
 } from "@todo/domain";
@@ -50,6 +50,7 @@ import { acceptAttachmentTask } from "./attachment-model.ts";
 import { AttachmentsSection, JiraMarker } from "./attachments.tsx";
 import { BatchEditDialog } from "./batch-edit.tsx";
 import { Alert, AlertDescription } from "./components/ui/alert.tsx";
+import { Badge } from "./components/ui/badge.tsx";
 import { Button } from "./components/ui/button.tsx";
 import {
   Dialog,
@@ -85,6 +86,11 @@ import {
 import { NativeSelect } from "./components/ui/native-select.tsx";
 import { Textarea } from "./components/ui/textarea.tsx";
 import { DatePicker } from "./date-picker.tsx";
+import { DependencyDeleteDialog } from "./dependency-delete-dialog.tsx";
+import { DependencyDeleteController } from "./dependency-delete-state.ts";
+import { DependencyPicker } from "./dependency-dialog.tsx";
+import { dependencyBadge } from "./dependency-presentation.ts";
+import { DependencyController } from "./dependency-state.ts";
 import { Diagnostics } from "./diagnostics.tsx";
 import { DiscoveryDialog } from "./discovery-dialog.tsx";
 import {
@@ -312,6 +318,9 @@ type WriteIntent =
   | { kind: "editSeries"; recurrence: Recurrence }
   | { kind: "skipOccurrence" };
 function App() {
+  const [dependencies] = useState(() => new DependencyController());
+  const [taskDelete] = useState(() => new DependencyDeleteController());
+  const dependencyTrigger = useRef<HTMLElement | null>(null);
   const [discovery] = useState(() => new DiscoveryStateController());
   const discoveryReturnFocus = useRef<HTMLElement | null>(null);
   const [outdated, setOutdated] = useState<Extract<
@@ -455,46 +464,51 @@ function App() {
   }, []);
   const refreshGeneration = useRef(0);
   const profileGeneration = useRef(0);
-  const activateProfile = useCallback((next: typeof ProfileId.Type) => {
-    if (active.current === next) return;
-    const restored = storedEditor(next);
-    active.current = next;
-    profileGeneration.current++;
-    selected.current = restored?.base.id;
-    refreshGeneration.current++;
-    setProfileDelete(null);
-    setLookupError(null);
-    setEditor(restored);
-    setLatest(null);
-    setChoices({});
-    setIgnored([]);
-    setParsed(null);
-    setHistory(null);
-    setMoveOpen(false);
-    setSeriesDialog(null);
-    setWriteIntent(null);
-    setAppliedSearch(null);
-    catalogRef.current = null;
-    catalogOwedRef.current = true;
-    unfilteredSearch.current = null;
-    searchDefinitions.current = { profile: null, projects: [], tags: [] };
-    setSearchPhase("Idle");
-    clearTimeout(debounce.current);
-    setProject(null);
-    setTag(null);
-    setAdvancedFilters({});
-    advancedFiltersRef.current = {};
-    appliedFiltersRef.current = {};
-    setApplyingFilters(false);
-    setFiltersOpen(false);
-    needsDraft.current = true;
-    setDraft("");
-    setProfile(next);
-    localStorage.setItem("profile", next);
-    setError("");
-    setLoadFailure(null);
-    setTransferResult(null);
-  }, []);
+  const activateProfile = useCallback(
+    (next: typeof ProfileId.Type) => {
+      if (active.current === next) return;
+      dependencies.close();
+      taskDelete.close();
+      const restored = storedEditor(next);
+      active.current = next;
+      profileGeneration.current++;
+      selected.current = restored?.base.id;
+      refreshGeneration.current++;
+      setProfileDelete(null);
+      setLookupError(null);
+      setEditor(restored);
+      setLatest(null);
+      setChoices({});
+      setIgnored([]);
+      setParsed(null);
+      setHistory(null);
+      setMoveOpen(false);
+      setSeriesDialog(null);
+      setWriteIntent(null);
+      setAppliedSearch(null);
+      catalogRef.current = null;
+      catalogOwedRef.current = true;
+      unfilteredSearch.current = null;
+      searchDefinitions.current = { profile: null, projects: [], tags: [] };
+      setSearchPhase("Idle");
+      clearTimeout(debounce.current);
+      setProject(null);
+      setTag(null);
+      setAdvancedFilters({});
+      advancedFiltersRef.current = {};
+      appliedFiltersRef.current = {};
+      setApplyingFilters(false);
+      setFiltersOpen(false);
+      needsDraft.current = true;
+      setDraft("");
+      setProfile(next);
+      localStorage.setItem("profile", next);
+      setError("");
+      setLoadFailure(null);
+      setTransferResult(null);
+    },
+    [dependencies, taskDelete],
+  );
   const activateEditor = (next: Editor) => {
     const current = editorRef.current;
     if (current && current.base.id !== next.base.id) preserveDraft(current);
@@ -505,6 +519,8 @@ function App() {
   };
   const endAuthentication = useCallback(() => {
     discovery.credentialChanged();
+    dependencies.close();
+    taskDelete.close();
     setLookupError(null);
     refreshGeneration.current++;
     profileGeneration.current++;
@@ -527,14 +543,22 @@ function App() {
     appliedFiltersRef.current = {};
     setApplyingFilters(false);
     setFiltersOpen(false);
-  }, [discovery.credentialChanged]);
+  }, [discovery.credentialChanged, dependencies, taskDelete]);
   const request = useCallback(
     async (request: Request): Promise<Reply> => {
       if (request._tag === "signIn" || request._tag === "signOut")
         discovery.credentialChanged();
-      const scopedDiscovery = ["directory", "lookup", "showTask"].includes(
-        request._tag,
-      );
+      const scopedDiscovery = [
+        "directory",
+        "lookup",
+        "showTask",
+        "graph",
+        "dependencyCandidates",
+        "depend",
+        "undepend",
+        "batchDepend",
+        "delete",
+      ].includes(request._tag);
       try {
         const reply = Schema.decodeUnknownSync(Reply)(
           await window.desktop.request(request),
@@ -549,7 +573,11 @@ function App() {
           for (const entry of reply.profiles)
             profileNames.current.set(entry.id, entry.name);
 
-        if (reply._tag === "task" && request._tag !== "showTask") {
+        if (
+          reply._tag === "task" &&
+          request._tag !== "showTask" &&
+          !(request._tag === "delete" && request.query.dry_run)
+        ) {
           setLookupError(null);
           localStorage.removeItem(
             taskDraftKey(reply.task.profile_id, reply.task.id),
@@ -865,6 +893,8 @@ function App() {
       )
         void refreshRef.current();
       if (notice._tag === "reload") {
+        dependencies.close();
+        taskDelete.close();
         discovery.credentialChanged();
         refreshGeneration.current++;
         setAppliedSearch(null);
@@ -934,6 +964,8 @@ function App() {
     leaveDeletedProfile,
     discovery.credentialChanged,
     discovery.offline,
+    dependencies.close,
+    taskDelete.close,
   ]);
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
@@ -1217,34 +1249,43 @@ function App() {
     }
     setPending(false);
   };
-  const deleteTask = async () => {
-    if (!editor || readOnly) return;
-    setPending(true);
-    setError("");
-    const reply = await request({
-      _tag: "delete",
-      profile,
-      task: editor.base.id,
-      query: { from_version: editor.base.row_version },
-    });
-    if (active.current !== profile || selected.current !== editor.base.id) {
-      setPending(false);
-      return;
-    }
-    if (reply._tag === "task") {
-      setEditor(null);
-      setAnnouncement("Task deleted");
-      await refresh();
-    }
-    if (reply._tag === "conflict") {
-      setLatest(reply.latest);
-      setChoices({});
-      setError(
-        "This task changed. Review the latest accepted Version before deleting.",
-      );
-    }
-    setPending(false);
+  const openDependencies = (task: Task) => {
+    if (readOnly) return;
+    dependencyTrigger.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    void dependencies.open(
+      { profile: task.profile_id, root: task.id },
+      request,
+    );
   };
+  const deleteTask = (task = editor?.base) => {
+    if (!task || readOnly) return;
+    dependencyTrigger.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    void taskDelete.open(task, request);
+  };
+  useEffect(() => {
+    const shortcut = (event: KeyboardEvent) => {
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        event.shiftKey &&
+        event.key.toLowerCase() === "k" &&
+        editor &&
+        !readOnly &&
+        dependencies.snapshot().kind === "Closed" &&
+        taskDelete.snapshot().kind === "Closed"
+      ) {
+        event.preventDefault();
+        openDependencies(editor.base);
+      }
+    };
+    window.addEventListener("keydown", shortcut);
+    return () => window.removeEventListener("keydown", shortcut);
+  });
   useEffect(() => {
     draftRef.current = draft;
     if (!draft.trim() || !quick || !signedIn || connection !== "connected") {
@@ -1378,8 +1419,10 @@ function App() {
       }
     />
   );
-  const filtered =
-    project !== null || tag !== null || Object.keys(advancedFilters).length > 0;
+  const filterCount = Object.keys(advancedFilters).filter(
+    (key) => key !== "order",
+  ).length;
+  const filtered = project !== null || tag !== null || filterCount > 0;
   const invalidate = () => {
     clearTimeout(debounce.current);
     refreshGeneration.current++;
@@ -1389,8 +1432,9 @@ function App() {
     invalidate();
     setProject(null);
     setTag(null);
-    advancedFiltersRef.current = {};
-    if (searchTextRef.current === "" && unfilteredSearch.current) {
+    const order = advancedFiltersRef.current.order;
+    advancedFiltersRef.current = order ? { order } : {};
+    if (!order && searchTextRef.current === "" && unfilteredSearch.current) {
       setAppliedSearch(unfilteredSearch.current);
       appliedFiltersRef.current = {};
       setAdvancedFilters({});
@@ -1424,7 +1468,7 @@ function App() {
     if (signedIn) void refresh("query");
   }, [signedIn, refresh]);
   const groups = catalog
-    ? searchGroups(catalog)
+    ? searchGroups(catalog, appliedSearch?.appliedIdentity.filters.order)
         .map((group) => ({
           ...group,
           tasks: group.tasks.filter(
@@ -1586,6 +1630,34 @@ function App() {
         quick && "quick-search",
       )}
     >
+      <DependencyPicker
+        controller={dependencies}
+        request={request}
+        canWrite={!readOnly}
+        returnFocus={() =>
+          dependencyTrigger.current?.isConnected
+            ? dependencyTrigger.current
+            : document.querySelector<HTMLElement>(
+                '[data-testid="dependency-add"]',
+              )
+        }
+        onChanged={() => void refresh()}
+      />
+      <DependencyDeleteDialog
+        controller={taskDelete}
+        request={request}
+        canWrite={!readOnly}
+        returnFocus={() =>
+          dependencyTrigger.current?.isConnected
+            ? dependencyTrigger.current
+            : document.querySelector<HTMLElement>('[aria-label="More filters"]')
+        }
+        onDeleted={() => {
+          setEditor(null);
+          setAnnouncement("Task deleted");
+          void refresh();
+        }}
+      />
       <DiscoveryDialog
         controller={discovery}
         returnFocus={discoveryTrigger}
@@ -2131,22 +2203,51 @@ function App() {
             disabled={applyingFilters}
           >
             Filters
-            {Object.keys(advancedFilters).length > 0
-              ? ` · ${Object.keys(advancedFilters).length}`
-              : ""}
+            {filterCount > 0 ? ` · ${filterCount}` : ""}
           </Button>
+          {view === "tasks" && (
+            <Field orientation="horizontal" className="task-order-control">
+              <NativeSelect
+                id="task-order"
+                aria-label="Order"
+                value={advancedFilters.order ?? "default"}
+                onChange={(event) => {
+                  const { order: _order, ...rest } = advancedFiltersRef.current;
+                  const next = Schema.decodeUnknownSync(TaskFilters)({
+                    ...rest,
+                    ...(event.target.value === "default"
+                      ? {}
+                      : { order: event.target.value }),
+                  });
+                  invalidate();
+                  advancedFiltersRef.current = next;
+                  setApplyingFilters(true);
+                  void refresh("query");
+                }}
+              >
+                <option value="default">Priority</option>
+                <option value="topo" data-testid="task-order-topo">
+                  Dependency order
+                </option>
+                <option value="lightest" data-testid="task-order-lightest">
+                  Lightest first
+                </option>
+              </NativeSelect>
+            </Field>
+          )}
           {filtered && (
             <Button variant="ghost" onClick={clearFilters}>
               Clear filters
             </Button>
           )}
         </FieldSet>
+
         {applyingFilters && (
           <p role="status" className="filter-summary">
             Applying filters…
           </p>
         )}
-        {Object.keys(advancedFilters).length > 0 && (
+        {filterCount > 0 && (
           <p
             className="filter-summary"
             role="status"
@@ -2292,7 +2393,8 @@ function App() {
                       const tagNames = tags
                         .map((name) => `#${name}`)
                         .join(" · ");
-                      const metadata = [projectName, tagNames]
+                      const badge = dependencyBadge(task, catalog?.tasks ?? []);
+                      const metadata = [badge, projectName, tagNames]
                         .filter(Boolean)
                         .join(" · ");
                       const overdue =
@@ -2379,6 +2481,16 @@ function App() {
                             {compact ? (
                               <RowMetadata
                                 items={[
+                                  ...(badge
+                                    ? [
+                                        {
+                                          id: "dependency",
+                                          label: badge,
+                                          dependency: true,
+                                          testId: `dependency-state-${task.id}`,
+                                        },
+                                      ]
+                                    : []),
                                   ...(task.due_at
                                     ? [
                                         {
@@ -2416,6 +2528,14 @@ function App() {
                             ) : (
                               <>
                                 <span className="task-meta" title={metadata}>
+                                  {badge && (
+                                    <Badge
+                                      variant="secondary"
+                                      data-testid={`dependency-state-${task.id}`}
+                                    >
+                                      {badge}
+                                    </Badge>
+                                  )}
                                   {projectName && (
                                     <span className="task-project">
                                       {projectName}
@@ -2467,6 +2587,16 @@ function App() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent>
                               <DropdownMenuGroup>
+                                <DropdownMenuItem
+                                  onClick={() => openDependencies(task)}
+                                >
+                                  Add dependency
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => deleteTask(task)}
+                                >
+                                  Delete task
+                                </DropdownMenuItem>
                                 {(["move", "copy"] as const).map((kind) => (
                                   <DropdownMenuItem
                                     key={kind}
@@ -2627,6 +2757,12 @@ function App() {
                         Reopen task
                       </DropdownMenuItem>
                     )}
+                    <DropdownMenuItem
+                      data-testid="dependency-add"
+                      onClick={() => openDependencies(editor.base)}
+                    >
+                      Add dependency
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
                         void deleteTask();
@@ -2924,6 +3060,14 @@ function App() {
           </form>
           <div className="editor-foot">
             <div className="actions">
+              <Button
+                variant="ghost"
+                data-testid="dependency-add"
+                disabled={readOnly}
+                onClick={() => openDependencies(editor.base)}
+              >
+                Dependencies
+              </Button>
               <Button
                 type="button"
                 variant="ghost"

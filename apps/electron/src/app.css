@@ -1659,3 +1659,162 @@ nav {
 .task-filter-grid :is(input, select, button) {
   scroll-margin: 4px;
 }
+
+.dependency-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: calc(100dvh - 24px);
+  min-height: 0;
+  width: min(560px, calc(100vw - 24px));
+}
+.dependency-dialog [data-slot="dialog-title"],
+.dependency-dialog [data-slot="dialog-description"] {
+  overflow-wrap: anywhere;
+}
+.dependency-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.dependency-dialog [data-slot="dialog-footer"] {
+  flex-shrink: 0;
+}
+.dependency-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dependency-choice {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-height: 44px;
+  padding: 4px;
+  overflow-wrap: anywhere;
+}
+.dependency-choice > span:not(.dependency-checkbox) {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dependency-choice input {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+.dependency-witness {
+  padding-left: 20px;
+  overflow-wrap: anywhere;
+}
+.dependency-delete h3 {
+  font-weight: 600;
+}
+.dependency-delete [data-slot="dialog-footer"] {
+  flex-wrap: wrap;
+}
+.dependency-delete [data-slot="dialog-footer"] button {
+  white-space: normal;
+  min-height: 32px;
+}
+@media (max-width: 500px) {
+  .dependency-dialog {
+    width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+    padding: 16px;
+    gap: 8px;
+  }
+}
+.dependency-dialog [data-slot="dialog-footer"] {
+  flex-direction: row;
+  justify-content: flex-end;
+}
+@media (max-width: 500px) {
+  .dependency-delete [data-slot="dialog-footer"] {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+.task-order-control {
+  min-width: 0;
+}
+.compact .task-filters {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.compact .task-filter-fields {
+  grid-column: 1 / -1;
+}
+.compact .task-order-control {
+  grid-column: 1;
+  grid-row: 2;
+}
+.compact .task-filters > button[aria-label="More filters"] {
+  grid-column: 2;
+  grid-row: 2;
+}
+.dependency-delete h3 {
+  position: sticky;
+  top: 0;
+  background: var(--popover);
+  padding-block: 4px;
+}
+.dependency-delete ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dependency-dialog.dependency-delete [data-slot="dialog-footer"] {
+  flex-direction: row;
+}
+.dependency-dialog.dependency-delete-has-edges [data-slot="dialog-footer"] {
+  flex-direction: column;
+  align-items: stretch;
+}
+.dependency-checkbox {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+.dependency-checkbox > * {
+  grid-area: 1 / 1;
+}
+.dependency-choice-pending {
+  opacity: 0.6;
+}
+.dependency-choice-pending input {
+  opacity: 0;
+}
+.dependency-checkbox svg {
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+}
+.dependency-error-region {
+  min-height: 0;
+  max-height: 140px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.dependency-error-region [data-slot="alert-description"] {
+  min-height: 0;
+  max-height: 122px;
+  display: flex;
+  flex-direction: column;
+}
+.dependency-error-region .dependency-witness {
+  min-height: 0;
+  overflow: auto;
+  flex-shrink: 1;
+  padding-left: 0;
+  list-style: none;
+}
+
+.dependency-error-region [data-slot="alert-description"] p {
+  flex-shrink: 0;
+  margin: 0;
+}

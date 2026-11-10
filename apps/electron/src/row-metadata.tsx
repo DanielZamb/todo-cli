@@ -1,10 +1,17 @@
 import { useLayoutEffect, useRef, useState } from "react";
+import { Badge } from "./components/ui/badge.tsx";
 import { wholeTagCount } from "./whole-tags.ts";
 
 export function RowMetadata({
   items,
 }: {
-  items: readonly { id: string; label: string; overdue?: boolean }[];
+  items: readonly {
+    id: string;
+    label: string;
+    overdue?: boolean;
+    dependency?: boolean;
+    testId?: string;
+  }[];
 }) {
   const root = useRef<HTMLSpanElement>(null);
   const [visible, setVisible] = useState(0);
@@ -45,7 +52,11 @@ export function RowMetadata({
       <span className="tag-measure" aria-hidden="true">
         {items.map((item) => (
           <span key={item.id} data-item-measure>
-            {item.label}
+            {item.dependency ? (
+              <Badge variant="secondary">{item.label}</Badge>
+            ) : (
+              item.label
+            )}
           </span>
         ))}
         {items.map((item, index) => (
@@ -61,7 +72,13 @@ export function RowMetadata({
           aria-hidden="true"
           className={item.overdue ? "overdue" : undefined}
         >
-          {item.label}
+          {item.dependency ? (
+            <Badge variant="secondary" data-testid={item.testId}>
+              {item.label}
+            </Badge>
+          ) : (
+            item.label
+          )}
         </span>
       ))}
       {visible < items.length && (

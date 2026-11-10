@@ -4,16 +4,23 @@ import {
   AttachManyRequest,
   Attachment,
   AttachTask,
+  BatchEdgeReport,
+  BatchEdgeRequest,
   BatchEditReport,
   BatchEditRequest,
   CreateSeries,
   CreateTask,
   DeleteProfile,
+  DeleteTask,
+  DependencyError,
+  DependRequest,
   DetachTask,
   DiagnosticsSnapshot,
+  EdgeReport,
   EditSeries,
   EditTask,
   ExpectedVersion,
+  GraphReport,
   ImageMime,
   ImportReport,
   ImportRequest,
@@ -42,6 +49,7 @@ import {
   TaskId,
   TaskLookupDetails,
   TaskRead,
+  TaskWrite,
   TransitionTask,
   UploadAttachment,
 } from "@todo/domain";
@@ -64,7 +72,30 @@ export const NativeAttachmentRequest = Schema.Union([
     action: Schema.Literals(["open", "reveal"]),
   }),
 ]);
+export const ClientTask = Schema.Struct({
+  ...TaskRead.fields,
+  ...TaskWrite.fields,
+});
 export const Request = Schema.Union([
+  Schema.TaggedStruct("graph", { profile: ProfileId, task: TaskId }),
+  Schema.TaggedStruct("dependencyCandidates", {
+    profile: ProfileId,
+    filters: TaskFilters,
+  }),
+  Schema.TaggedStruct("depend", {
+    profile: ProfileId,
+    task: TaskId,
+    payload: DependRequest,
+  }),
+  Schema.TaggedStruct("undepend", {
+    profile: ProfileId,
+    task: TaskId,
+    payload: DependRequest,
+  }),
+  Schema.TaggedStruct("batchDepend", {
+    profile: ProfileId,
+    payload: BatchEdgeRequest,
+  }),
   Schema.TaggedStruct("diagnostics", {}),
   Schema.TaggedStruct("openDiagnostics", {}),
   Schema.TaggedStruct("snapshots", {}),
@@ -152,7 +183,7 @@ export const Request = Schema.Union([
   Schema.TaggedStruct("delete", {
     profile: ProfileId,
     task: TaskId,
-    query: ExpectedVersion,
+    query: DeleteTask,
   }),
   Schema.TaggedStruct("move", {
     profile: ProfileId,
@@ -188,6 +219,12 @@ export const Request = Schema.Union([
 ]);
 export type Request = typeof Request.Type;
 export const Reply = Schema.Union([
+  Schema.TaggedStruct("graph", { report: GraphReport }),
+  Schema.TaggedStruct("dependencyCandidates", {
+    tasks: Schema.Array(TaskRead),
+  }),
+  Schema.TaggedStruct("edge", { report: EdgeReport }),
+  Schema.TaggedStruct("batchDepend", { report: BatchEdgeReport }),
   Schema.TaggedStruct("directory", { profiles: Schema.Array(ProfileSummary) }),
   Schema.TaggedStruct("lookup", { matches: Schema.Array(LookupMatch) }),
   Schema.TaggedStruct("attachmentTargets", { tasks: Schema.Array(Task) }),
@@ -217,7 +254,7 @@ export const Reply = Schema.Union([
     message: Schema.optionalKey(Schema.String),
   }),
   Schema.TaggedStruct("tasks", {
-    tasks: Schema.Array(Task),
+    tasks: Schema.Array(TaskRead),
     matching_tasks: Schema.optionalKey(Schema.Array(TaskRead)),
     profiles: Schema.Array(ProfileSummary),
     projects: Schema.Array(ProjectSummary),
@@ -231,7 +268,7 @@ export const Reply = Schema.Union([
     planning: Schema.NullOr(PlanningView),
   }),
   Schema.TaggedStruct("profileDeleted", { report: ProfileDeletionReport }),
-  Schema.TaggedStruct("task", { task: Task }),
+  Schema.TaggedStruct("task", { task: ClientTask }),
   Schema.TaggedStruct("series", { series: Schema.NullOr(Series) }),
   Schema.TaggedStruct("ok", {}),
   Schema.TaggedStruct("parsed", { draft: QuickAddDraft }),
@@ -242,6 +279,8 @@ export const Reply = Schema.Union([
   }),
   Schema.TaggedStruct("error", {
     message: Schema.String,
+    dependency: Schema.optionalKey(DependencyError),
+    exit_detail: Schema.optionalKey(Schema.String),
     details: Schema.optionalKey(TaskLookupDetails),
     code: Schema.optionalKey(Schema.Literal("search_too_broad")),
   }),

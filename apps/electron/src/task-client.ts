@@ -35,6 +35,38 @@ export const taskRequest = (
     HttpClient.HttpClient
   > {
     switch (request._tag) {
+      case "graph":
+        return {
+          _tag: "graph",
+          report: yield* http.tasks.graph({
+            params: { profile: request.profile, task: request.task },
+          }),
+        };
+      case "dependencyCandidates":
+        return {
+          _tag: "dependencyCandidates",
+          tasks: yield* http.tasks.list({
+            params: { profile: request.profile },
+            query: request.filters,
+          }),
+        };
+      case "depend":
+      case "undepend":
+        return {
+          _tag: "edge",
+          report: yield* http.tasks[request._tag]({
+            params: { profile: request.profile, task: request.task },
+            payload: request.payload,
+          }),
+        };
+      case "batchDepend":
+        return {
+          _tag: "batchDepend",
+          report: yield* http.tasks.batchDepend({
+            params: { profile: request.profile },
+            payload: request.payload,
+          }),
+        };
       case "diagnostics":
         return {
           _tag: "diagnostics",

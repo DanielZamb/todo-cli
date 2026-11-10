@@ -1,5 +1,9 @@
-import { ExitStatus, TaskLookupDetails } from "@todo/domain";
+import { DependencyError, ExitStatus, TaskLookupDetails } from "@todo/domain";
 import { Schema } from "effect";
+import {
+  dependencyRecovery,
+  nestedDependencyError,
+} from "./dependency-presentation.ts";
 import type { Reply } from "./protocol.ts";
 
 export function exitDetail(error: unknown): string | undefined {
@@ -20,6 +24,25 @@ export function taskLookupDetails(
 
 const Message = Schema.Struct({ message: Schema.String });
 export function errorReply(error: unknown): Extract<Reply, { _tag: "error" }> {
+  const dependency = nestedDependencyError(error);
+  if (dependency)
+    return {
+      _tag: "error",
+      message: dependencyRecovery(dependency, "add").message,
+      dependency,
+      exit_detail: `error ${dependency.exit_code} - ${dependency.exit_meaning}`,
+    };
+  const dependencyCode = Schema.Union(
+    DependencyError.members.map((member) =>
+      Schema.Struct({ code: member.fields.code }),
+    ),
+  );
+  if (Schema.is(dependencyCode)(error))
+    return {
+      _tag: "error",
+      message:
+        "Todo returned an incompatible Dependency response. Reload after updating the server.",
+    };
   const message = Schema.decodeUnknownExit(Message)(error);
   const details = taskLookupDetails(error);
   if (details)
