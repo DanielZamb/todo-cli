@@ -233,8 +233,14 @@ const request = { request_id: DiagnosticRequestId };
 const refresh = { refresh_id: DiagnosticRefreshId };
 const generation = { generation: DiagnosticCount };
 const stream = { stream_id: DiagnosticStreamId };
-const event = <const Fields extends Schema.Struct.Fields>(fields: Fields) =>
-  Schema.Struct({ ...DiagnosticEnvelope.fields, ...fields });
+const event = <const Fields extends Schema.Struct.Fields>(fields: Fields) => {
+  const merged: Omit<typeof DiagnosticEnvelope.fields, keyof Fields> & Fields =
+    {
+      ...DiagnosticEnvelope.fields,
+      ...fields,
+    };
+  return Schema.Struct(merged);
+};
 const payloads = [
   event({ name: Schema.Literal("ui.input.observed"), ...action }),
   event({ name: Schema.Literal("ui.action.started"), ...action }),
@@ -390,10 +396,18 @@ export type DiagnosticEventOf<Name extends DiagnosticEvent["name"]> = Extract<
   DiagnosticEvent,
   { readonly name: Name }
 >;
+type RequiredEnvelopeKeys = {
+  [Key in keyof typeof DiagnosticEnvelope.Type]-?: Pick<
+    typeof DiagnosticEnvelope.Type,
+    Key
+  > extends Required<Pick<typeof DiagnosticEnvelope.Type, Key>>
+    ? Key
+    : never;
+}[keyof typeof DiagnosticEnvelope.Type];
 export type DiagnosticPayloads = {
   readonly [Name in DiagnosticEvent["name"]]: Omit<
     DiagnosticEventOf<Name>,
-    keyof typeof DiagnosticEnvelope.Type
+    RequiredEnvelopeKeys
   >;
 };
 export const makeDiagnosticEvent = (value: DiagnosticEvent): DiagnosticEvent =>
