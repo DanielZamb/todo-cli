@@ -29,7 +29,7 @@ it.effect(
           ),
         ),
       );
-      const snapshot = recorder.snapshot();
+      const snapshot = recorder.details();
       expect(snapshot.started).toBe(3);
       expect(snapshot.finished).toBe(3);
       expect(snapshot.active).toEqual([]);
@@ -50,14 +50,14 @@ it.effect(
         .pipe(Effect.forkChild);
       yield* Effect.yieldNow;
       yield* Fiber.interrupt(fiber);
-      expect(recorder.snapshot().recent.at(-1)?.outcome).toBe("cancelled");
+      expect(recorder.details().recent.at(-1)?.outcome).toBe("cancelled");
       const malformed = recorder.root({
         trace: "private",
         request: "private",
         action: "private",
       });
       expect(malformed.trace_id).toMatch(/^[a-f0-9-]{36}$/);
-      expect(JSON.stringify(recorder.snapshot())).not.toContain("private");
+      expect(JSON.stringify(recorder.details())).not.toContain("private");
     }),
 );
 
@@ -79,7 +79,7 @@ it.effect("isolates concurrently yielding trace contexts", () =>
       { concurrency: "unbounded" },
     );
     const records = recorder
-      .snapshot()
+      .details()
       .recent.filter((x) => x.stage === "authentication");
     expect(records.map((x) => x.trace_id).sort()).toEqual(
       [first.trace_id, second.trace_id].sort(),
@@ -99,15 +99,15 @@ it.effect(
         recorder.root({}),
         diagnosticSpan("handler", Effect.void),
       );
-      const snapshot = recorder.snapshot();
+      const snapshot = recorder.details();
       expect(snapshot.started).toBe(2);
       expect(snapshot.finished).toBe(1);
       expect(snapshot.lost_starts).toBe(1);
       yield* recorder
         .withRoot(recorder.root({}), Effect.fail("private failure"))
         .pipe(Effect.exit);
-      expect(recorder.snapshot().recent.at(-1)?.outcome).toBe("failed");
-      expect(recorder.snapshot().dropped_events).toBe(1);
+      expect(recorder.details().recent.at(-1)?.outcome).toBe("failed");
+      expect(recorder.details().dropped_events).toBe(1);
       expect(recorder.commitReceipt(1, "epoch-a")).not.toBe(
         recorder.commitReceipt(1, "epoch-b"),
       );
@@ -185,7 +185,7 @@ it.effect(
             "command",
           );
           expect(result.outcome).toBe("committed");
-          expect(recorder.snapshot().recording_failures).toBeGreaterThan(0);
+          expect(recorder.details().recording_failures).toBeGreaterThan(0);
         }
         expect((yield* store.tasks()).map((x) => x.title).sort()).toEqual([
           "Kept after end failure",
@@ -210,8 +210,8 @@ it.effect(
         Effect.succeed(37),
       );
       expect(result).toBe(37);
-      expect(recorder.snapshot().recording_failures).toBe(1);
-      expect(recorder.snapshot().lost_starts).toBe(1);
-      expect(recorder.snapshot().started).toBe(1);
+      expect(recorder.details().recording_failures).toBe(1);
+      expect(recorder.details().lost_starts).toBe(1);
+      expect(recorder.details().started).toBe(1);
     }),
 );

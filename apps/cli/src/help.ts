@@ -187,10 +187,12 @@ const guides = {
   diagnostics: reference({
     purpose:
       "Read server diagnostics using an owner Session. Polling is read only and includes metadata across all Profiles.",
-    synopsis: "todo diagnostics [--server <url>] [--follow] [--format json]",
+    synopsis:
+      "todo diagnostics [--server <url>] [--follow | --detail] [--format json]",
     flags: [
       "--server <url> (default TODO_SERVER_URL or http://127.0.0.1:4310)",
       "--follow (NDJSON, one snapshot per second)",
+      "--detail (one bounded detail sample; cannot be combined with --follow)",
     ],
     examples: [
       "todo diagnostics --format json",
@@ -198,7 +200,7 @@ const guides = {
       "todo schema diagnostics",
     ],
     output:
-      "JSON snapshots and each NDJSON line use the published diagnostics schema. Contains no Task content or credential secrets.",
+      "Default JSON and each NDJSON line are at most 48 KiB, including indentation. --detail opts into a one-shot sample of at most 64 KiB. Omitted metadata is counted in profiler.omitted. Contains no Task content or credential secrets.",
     auth: "Requires an active owner Session saved by todo login in the selected Profile. Access Tokens are denied.",
   }),
   top: reference({

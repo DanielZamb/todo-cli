@@ -48,6 +48,30 @@ reads and exports require an owner Session, as ADR-0005 already requires.
 Access Tokens cannot read them. Keep collection bounded and outside the Task
 database. Pass context at execution boundaries rather than through business rules.
 
+The polled GET /diagnostics body has a hard 49,152-byte budget, including UTF-8
+pretty JSON and its final newline, so the ordinary CLI output has the same cap.
+Compact HTTP JSON is smaller. Version 2 of the profiler object contains counters,
+one fixed 11-bucket duration histogram, bounded per-stage and per-category span
+summaries, and at most eight recent slow or failed span labels. Histogram
+quantiles are bucket upper bounds, with null for an overflowing bucket; these
+are explicitly span summaries, not the exact frozen interaction quantiles above.
+Unfinished starts remain counted. Existing per-route quantiles retain the raw
+300-second/2048-sample window. Legacy metadata lists are bounded samples too,
+with omission counts in profiler.omitted. UTF-8 admission budgets cover complete
+rows without changing their ids or display words. Aggregate totals are retained.
+
+Detailed active spans, recent spans and stream delivery events are excluded from
+the polled body. The same owner-only route accepts the declared detail=true
+query for an explicit bounded sample, at most 65,536 bytes including pretty JSON.
+The detail sample hoists run_id, build_id and contract_id out of its rows. It
+returns at most 32 recent spans, four active spans and 16 delivery records;
+separate total and omission counts state what the sample did not include.
+The CLI exposes it as --detail and rejects --detail with --follow. Normal app
+and CLI polling never opts in. No new endpoint or persistent profiler API is
+introduced. Row quotas and a final schema byte predicate enforce both budgets.
+The internal diagnostic rings remain bounded and are accessed in full only by
+verification seams; counts distinguish omission from zero or unavailable work.
+
 The shared schemas are published through `todo schema 'diagnostics event'` and
 `todo schema 'diagnostics observation'`. U01 changes no HTTP schema. U02 first
 adds bounded internal collection and optional headers with the existing contract,

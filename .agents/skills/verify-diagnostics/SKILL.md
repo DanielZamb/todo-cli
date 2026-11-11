@@ -166,6 +166,11 @@ the unknown payload. Unknown capabilities map to unknown, never zero.
 
 ## Joined request proof
 
+After changing snapshot collection or projection, also run the
+[payload budget drive](features/payload.md). Default snapshots and CLI JSON are
+at most 48 KiB including pretty formatting. Explicit detail=true/--detail is
+bounded separately at 64 KiB and never used by ordinary polling.
+
 Read [request and stream joins](features/joins.md). After the main recipe,
 run `bun apps/server/scripts/verify-diagnostic-joins.ts <absolute-new-evidence-directory>`.
 It uses matching cached binaries with a private temporary HOME and database.

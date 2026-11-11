@@ -1120,3 +1120,22 @@ it("locks login after 10 wrong passphrases and requires the macOS password to re
     required: ["generated_at", "status", "sessions_revoked"],
   });
 });
+
+it("rejects polling detailed Diagnostics before reading a Session or contacting a server", () => {
+  const result = run([
+    "diagnostics",
+    "--detail",
+    "--follow",
+    "--credential-profile",
+    "missing-diagnostics-session",
+    "--format",
+    "json",
+  ]);
+  expect(result.code).toBe(2);
+  expect(JSON.parse(result.out)).toMatchObject({
+    code: "invalid_args",
+    message:
+      "--detail is a one-shot sample and cannot be combined with --follow",
+    exit_code: 2,
+  });
+});

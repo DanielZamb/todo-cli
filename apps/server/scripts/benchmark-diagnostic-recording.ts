@@ -37,7 +37,7 @@ async function read(fixture: Fixture) {
   return { duration, request: response.headers.get("x-todo-request") };
 }
 async function snapshot(fixture: Fixture) {
-  const response = await fetch(`${fixture.url}/diagnostics`, {
+  const response = await fetch(`${fixture.url}/diagnostics?detail=true`, {
     headers: { Authorization: `Bearer ${fixture.credential}` },
   });
   assert.equal(response.status, 200);
@@ -134,7 +134,9 @@ try {
   const recorded = await snapshot(on);
   const disabled = await snapshot(off);
   assert.ok(recorded && disabled);
-  const spans = recorded.recent.filter((x) => x.request_id === probe.request);
+  const spans = (recorded.detail?.recent ?? []).filter(
+    (x) => x.request_id === probe.request,
+  );
   assert.ok(spans.length >= 8);
   assert.equal(disabled.started, 0);
   const diffs = paired.map((x) => x.p50_difference_ms);

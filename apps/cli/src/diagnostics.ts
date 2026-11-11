@@ -14,7 +14,11 @@ const allowedServerHost = (hostname: string) =>
     .filter(Boolean)
     .includes(hostname.toLowerCase());
 
-export const diagnosticsRead = (server: string, credential: string) =>
+export const diagnosticsRead = (
+  server: string,
+  credential: string,
+  detail = false,
+) =>
   Effect.tryPromise({
     try: async (signal) => {
       let url: URL;
@@ -43,14 +47,17 @@ export const diagnosticsRead = (server: string, credential: string) =>
         );
       let response: Response;
       try {
-        response = await fetch(new URL("/diagnostics", url), {
-          signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
-          headers: {
-            Authorization: `Bearer ${credential}`,
-            "X-Todo-Client": "cli",
+        response = await fetch(
+          new URL(detail ? "/diagnostics?detail=true" : "/diagnostics", url),
+          {
+            signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
+            headers: {
+              Authorization: `Bearer ${credential}`,
+              "X-Todo-Client": "cli",
+            },
+            cache: "no-store",
           },
-          cache: "no-store",
-        });
+        );
       } catch {
         throw new CommandError(
           1,
@@ -102,7 +109,7 @@ export const diagnosticsOutput = (
   if (format === "json") return encoded;
   const profiler = snapshot.profiler;
   const traceSummary = profiler
-    ? `\nServer traces ${profiler.finished} finished · ${profiler.active.length} active · ${profiler.lost_starts} lost starts · ${profiler.dropped_events} detailed records displaced\n${profiler.unobserved.length} stages remain unobserved. Use JSON to inspect their names.\n`
+    ? `\nServer spans ${profiler.finished} finished · ${profiler.active} active · ${profiler.lost_starts} lost starts · ${profiler.dropped_events} detailed records displaced\n${profiler.unobserved.length} stages remain unobserved. Use JSON for summaries or --detail for a bounded detail sample.\n`
     : "";
   return `# Diagnostics\n\nGenerated ${snapshot.generated_at}\n\nServer ${snapshot.runtime.version} · up ${Math.floor(snapshot.runtime.uptime_seconds)}s\nDatabase ${snapshot.storage.database_bytes} B · WAL ${snapshot.storage.wal_bytes} B · Snapshots ${snapshot.storage.snapshot_bytes} B\nOperations ${snapshot.operations.total} · accepted ${snapshot.operations.committed} · rejected ${snapshot.operations.rejected} · ${snapshot.operations.per_second.toFixed(2)}/s\nClients ${snapshot.clients.length} · Sessions ${snapshot.credentials.filter((credential) => credential.kind === "session").length} · Access Tokens ${snapshot.credentials.filter((credential) => credential.kind === "token").length}\nPending reminders ${snapshot.scheduler.pending_reminders} · next wake ${snapshot.scheduler.next_wake_at ?? "none"}\n\n${snapshot.storage.tables.map((table) => `- ${table.name}: ${table.count}`).join("\n")}\n\n${snapshot.latency.routes.map((route) => `- ${route.route}: ${route.count} requests · p50 ${route.p50_ms.toFixed(2)}ms · p95 ${route.p95_ms.toFixed(2)}ms · p99 ${route.p99_ms.toFixed(2)}ms`).join("\n")}\n\n${traceSummary}\nUse --format json for all sections or todo top for live monitoring.\n`;
 };

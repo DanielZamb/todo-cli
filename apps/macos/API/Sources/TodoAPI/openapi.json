@@ -11099,7 +11099,17 @@
       "get": {
         "tags": ["diagnostics"],
         "operationId": "diagnostics.snapshot",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "detail",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["true"]
+            },
+            "required": false
+          }
+        ],
         "security": [
           {
             "bearer": []
@@ -11118,7 +11128,7 @@
                       "properties": {
                         "schema_version": {
                           "type": "number",
-                          "enum": [1]
+                          "enum": [2]
                         },
                         "run_id": {
                           "type": "string"
@@ -11162,424 +11172,190 @@
                           "maximum": 9007199254740991
                         },
                         "active": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "unit": {
+                          "type": "string",
+                          "enum": ["span"]
+                        },
+                        "quantiles": {
+                          "type": "string",
+                          "enum": ["histogram_upper_bound"]
+                        },
+                        "outcome_order": {
                           "type": "array",
                           "items": {
-                            "type": "object",
-                            "properties": {
-                              "schema_version": {
+                            "type": "string",
+                            "enum": [
+                              "completed",
+                              "refused",
+                              "conflicted",
+                              "failed",
+                              "cancelled"
+                            ]
+                          },
+                          "minItems": 5,
+                          "maxItems": 5
+                        },
+                        "histogram": {
+                          "type": "object",
+                          "properties": {
+                            "upper_ms": {
+                              "type": "array",
+                              "items": {
                                 "type": "number",
-                                "enum": [1]
+                                "nullable": true
                               },
-                              "run_id": {
-                                "type": "string"
-                              },
-                              "process_role": {
-                                "type": "string",
-                                "enum": [
-                                  "server",
-                                  "cli",
-                                  "scheduler",
-                                  "electron.main",
-                                  "electron.renderer",
-                                  "macos",
-                                  "unknown"
-                                ]
-                              },
-                              "build_id": {
-                                "type": "string",
-                                "pattern": "^(?:[a-f0-9]{8,64}|dev)$"
-                              },
-                              "contract_id": {
-                                "type": "string",
-                                "pattern": "^(?:[a-f0-9]{64}|unknown)$"
-                              },
-                              "mode": {
-                                "type": "string",
-                                "enum": [
-                                  "full",
-                                  "compact",
-                                  "terminal",
-                                  "headless",
-                                  "unknown"
-                                ]
-                              },
-                              "input_kind": {
-                                "type": "string",
-                                "enum": [
-                                  "pointer",
-                                  "keyboard",
-                                  "menu",
-                                  "accessibility",
-                                  "notification",
-                                  "command",
-                                  "background",
-                                  "unknown"
-                                ]
-                              },
-                              "workload": {
-                                "type": "string",
-                                "enum": [
-                                  "cold",
-                                  "warm",
-                                  "empty",
-                                  "error",
-                                  "refusal",
-                                  "large",
-                                  "diagnostics_open",
-                                  "diagnostics_closed",
-                                  "catch_up",
-                                  "unknown"
-                                ]
-                              },
-                              "category": {
-                                "$ref": "#/components/schemas/DiagnosticCategory"
-                              },
-                              "request_id": {
-                                "type": "string"
-                              },
-                              "refresh_id": {
-                                "type": "string"
-                              },
-                              "sequence": {
+                              "minItems": 11,
+                              "maxItems": 11
+                            },
+                            "counts": {
+                              "type": "array",
+                              "items": {
                                 "type": "integer",
                                 "minimum": 0,
                                 "maximum": 9007199254740991
                               },
-                              "monotonic_ms": {
+                              "minItems": 11,
+                              "maxItems": 11
+                            }
+                          },
+                          "required": ["upper_ms", "counts"],
+                          "additionalProperties": false
+                        },
+                        "stages": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string"
+                              },
+                              "started": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "finished": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "unfinished": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "p50_ms": {
                                 "type": "number",
-                                "minimum": 0
+                                "minimum": 0,
+                                "nullable": true
                               },
-                              "clock_unit": {
-                                "type": "string",
-                                "enum": ["ms"]
-                              },
-                              "wall_anchor_ms": {
+                              "p90_ms": {
                                 "type": "number",
-                                "minimum": 0
+                                "minimum": 0,
+                                "nullable": true
                               },
-                              "trace_id": {
-                                "type": "string"
+                              "p99_ms": {
+                                "type": "number",
+                                "minimum": 0,
+                                "nullable": true
                               },
-                              "span_id": {
-                                "type": "string"
-                              },
-                              "parent_span_id": {
-                                "type": "string"
-                              },
-                              "action_id": {
-                                "type": "string"
-                              },
-                              "metadata": {
-                                "type": "object",
-                                "properties": {
-                                  "operation": {
-                                    "type": "string",
-                                    "enum": [
-                                      "health",
-                                      "diagnostics",
-                                      "auth",
-                                      "profiles",
-                                      "tasks.list",
-                                      "tasks.show",
-                                      "tasks.write",
-                                      "history",
-                                      "graph",
-                                      "search",
-                                      "stream",
-                                      "snapshots",
-                                      "attachments",
-                                      "discovery",
-                                      "other",
-                                      "unmatched"
-                                    ]
-                                  },
-                                  "statement": {
-                                    "type": "string",
-                                    "enum": [
-                                      "auth.credential",
-                                      "store.read",
-                                      "store.write",
-                                      "store.begin",
-                                      "store.commit",
-                                      "store.rollback",
-                                      "store.projection",
-                                      "store.graph",
-                                      "stream.tail",
-                                      "scheduler.due",
-                                      "unknown"
-                                    ]
-                                  },
-                                  "rows": {
-                                    "type": "integer",
-                                    "minimum": 0,
-                                    "maximum": 9007199254740991
-                                  },
-                                  "bytes": {
-                                    "type": "integer",
-                                    "minimum": 0,
-                                    "maximum": 9007199254740991
-                                  },
-                                  "work_units": {
-                                    "type": "number",
-                                    "minimum": 0
-                                  },
-                                  "cache": {
-                                    "type": "string",
-                                    "enum": ["hit", "miss", "bypass", "unknown"]
-                                  },
-                                  "error": {
-                                    "type": "string",
-                                    "enum": [
-                                      "unauthorized",
-                                      "forbidden",
-                                      "conflict",
-                                      "validation",
-                                      "not_found",
-                                      "internal",
-                                      "aborted",
-                                      "unknown"
-                                    ]
-                                  }
+                              "outcomes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
                                 },
-                                "additionalProperties": false
-                              },
-                              "name": {
-                                "type": "string",
-                                "enum": ["span.started"]
-                              },
-                              "stage": {
-                                "type": "string",
-                                "enum": [
-                                  "entry",
-                                  "authentication",
-                                  "writer_lock_wait",
-                                  "handler",
-                                  "domain",
-                                  "database",
-                                  "projection",
-                                  "graph",
-                                  "search_preparation",
-                                  "search_evaluation",
-                                  "search_meter",
-                                  "encoding",
-                                  "response_handoff",
-                                  "body_completion",
-                                  "worker_queue",
-                                  "command",
-                                  "job",
-                                  "stdout",
-                                  "ipc",
-                                  "decode"
-                                ]
+                                "minItems": 5,
+                                "maxItems": 5
                               }
                             },
                             "required": [
-                              "schema_version",
-                              "run_id",
-                              "process_role",
-                              "build_id",
-                              "contract_id",
-                              "mode",
-                              "input_kind",
-                              "workload",
-                              "category",
-                              "sequence",
-                              "monotonic_ms",
-                              "clock_unit",
-                              "trace_id",
-                              "span_id",
-                              "name",
-                              "stage"
+                              "key",
+                              "started",
+                              "finished",
+                              "unfinished",
+                              "p50_ms",
+                              "p90_ms",
+                              "p99_ms",
+                              "outcomes"
                             ],
                             "additionalProperties": false
-                          }
+                          },
+                          "maxItems": 65
                         },
-                        "recent": {
+                        "categories": {
                           "type": "array",
                           "items": {
                             "type": "object",
                             "properties": {
-                              "schema_version": {
-                                "type": "number",
-                                "enum": [1]
-                              },
-                              "run_id": {
+                              "key": {
                                 "type": "string"
                               },
-                              "process_role": {
-                                "type": "string",
-                                "enum": [
-                                  "server",
-                                  "cli",
-                                  "scheduler",
-                                  "electron.main",
-                                  "electron.renderer",
-                                  "macos",
-                                  "unknown"
-                                ]
-                              },
-                              "build_id": {
-                                "type": "string",
-                                "pattern": "^(?:[a-f0-9]{8,64}|dev)$"
-                              },
-                              "contract_id": {
-                                "type": "string",
-                                "pattern": "^(?:[a-f0-9]{64}|unknown)$"
-                              },
-                              "mode": {
-                                "type": "string",
-                                "enum": [
-                                  "full",
-                                  "compact",
-                                  "terminal",
-                                  "headless",
-                                  "unknown"
-                                ]
-                              },
-                              "input_kind": {
-                                "type": "string",
-                                "enum": [
-                                  "pointer",
-                                  "keyboard",
-                                  "menu",
-                                  "accessibility",
-                                  "notification",
-                                  "command",
-                                  "background",
-                                  "unknown"
-                                ]
-                              },
-                              "workload": {
-                                "type": "string",
-                                "enum": [
-                                  "cold",
-                                  "warm",
-                                  "empty",
-                                  "error",
-                                  "refusal",
-                                  "large",
-                                  "diagnostics_open",
-                                  "diagnostics_closed",
-                                  "catch_up",
-                                  "unknown"
-                                ]
-                              },
-                              "category": {
-                                "$ref": "#/components/schemas/DiagnosticCategory"
-                              },
-                              "request_id": {
-                                "type": "string"
-                              },
-                              "refresh_id": {
-                                "type": "string"
-                              },
-                              "sequence": {
+                              "started": {
                                 "type": "integer",
                                 "minimum": 0,
                                 "maximum": 9007199254740991
                               },
-                              "monotonic_ms": {
+                              "finished": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "unfinished": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "p50_ms": {
                                 "type": "number",
-                                "minimum": 0
+                                "minimum": 0,
+                                "nullable": true
                               },
-                              "clock_unit": {
-                                "type": "string",
-                                "enum": ["ms"]
-                              },
-                              "wall_anchor_ms": {
+                              "p90_ms": {
                                 "type": "number",
-                                "minimum": 0
+                                "minimum": 0,
+                                "nullable": true
                               },
-                              "trace_id": {
-                                "type": "string"
+                              "p99_ms": {
+                                "type": "number",
+                                "minimum": 0,
+                                "nullable": true
                               },
-                              "span_id": {
-                                "type": "string"
-                              },
-                              "parent_span_id": {
-                                "type": "string"
-                              },
-                              "action_id": {
-                                "type": "string"
-                              },
-                              "metadata": {
-                                "type": "object",
-                                "properties": {
-                                  "operation": {
-                                    "type": "string",
-                                    "enum": [
-                                      "health",
-                                      "diagnostics",
-                                      "auth",
-                                      "profiles",
-                                      "tasks.list",
-                                      "tasks.show",
-                                      "tasks.write",
-                                      "history",
-                                      "graph",
-                                      "search",
-                                      "stream",
-                                      "snapshots",
-                                      "attachments",
-                                      "discovery",
-                                      "other",
-                                      "unmatched"
-                                    ]
-                                  },
-                                  "statement": {
-                                    "type": "string",
-                                    "enum": [
-                                      "auth.credential",
-                                      "store.read",
-                                      "store.write",
-                                      "store.begin",
-                                      "store.commit",
-                                      "store.rollback",
-                                      "store.projection",
-                                      "store.graph",
-                                      "stream.tail",
-                                      "scheduler.due",
-                                      "unknown"
-                                    ]
-                                  },
-                                  "rows": {
-                                    "type": "integer",
-                                    "minimum": 0,
-                                    "maximum": 9007199254740991
-                                  },
-                                  "bytes": {
-                                    "type": "integer",
-                                    "minimum": 0,
-                                    "maximum": 9007199254740991
-                                  },
-                                  "work_units": {
-                                    "type": "number",
-                                    "minimum": 0
-                                  },
-                                  "cache": {
-                                    "type": "string",
-                                    "enum": ["hit", "miss", "bypass", "unknown"]
-                                  },
-                                  "error": {
-                                    "type": "string",
-                                    "enum": [
-                                      "unauthorized",
-                                      "forbidden",
-                                      "conflict",
-                                      "validation",
-                                      "not_found",
-                                      "internal",
-                                      "aborted",
-                                      "unknown"
-                                    ]
-                                  }
+                              "outcomes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
                                 },
-                                "additionalProperties": false
-                              },
-                              "name": {
-                                "type": "string",
-                                "enum": ["span.finished"]
-                              },
+                                "minItems": 5,
+                                "maxItems": 5
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "started",
+                              "finished",
+                              "unfinished",
+                              "p50_ms",
+                              "p90_ms",
+                              "p99_ms",
+                              "outcomes"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "maxItems": 65
+                        },
+                        "slow": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
                               "stage": {
                                 "type": "string",
                                 "enum": [
@@ -11624,261 +11400,770 @@
                                   "timed_out",
                                   "lost"
                                 ]
-                              }
-                            },
-                            "required": [
-                              "schema_version",
-                              "run_id",
-                              "process_role",
-                              "build_id",
-                              "contract_id",
-                              "mode",
-                              "input_kind",
-                              "workload",
-                              "category",
-                              "sequence",
-                              "monotonic_ms",
-                              "clock_unit",
-                              "trace_id",
-                              "span_id",
-                              "name",
-                              "stage",
-                              "duration_ms",
-                              "outcome"
-                            ],
-                            "additionalProperties": false
-                          }
-                        },
-                        "deliveries": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "schema_version": {
-                                "type": "number",
-                                "enum": [1]
-                              },
-                              "run_id": {
-                                "type": "string"
-                              },
-                              "process_role": {
-                                "type": "string",
-                                "enum": [
-                                  "server",
-                                  "cli",
-                                  "scheduler",
-                                  "electron.main",
-                                  "electron.renderer",
-                                  "macos",
-                                  "unknown"
-                                ]
-                              },
-                              "build_id": {
-                                "type": "string",
-                                "pattern": "^(?:[a-f0-9]{8,64}|dev)$"
-                              },
-                              "contract_id": {
-                                "type": "string",
-                                "pattern": "^(?:[a-f0-9]{64}|unknown)$"
-                              },
-                              "mode": {
-                                "type": "string",
-                                "enum": [
-                                  "full",
-                                  "compact",
-                                  "terminal",
-                                  "headless",
-                                  "unknown"
-                                ]
-                              },
-                              "input_kind": {
-                                "type": "string",
-                                "enum": [
-                                  "pointer",
-                                  "keyboard",
-                                  "menu",
-                                  "accessibility",
-                                  "notification",
-                                  "command",
-                                  "background",
-                                  "unknown"
-                                ]
-                              },
-                              "workload": {
-                                "type": "string",
-                                "enum": [
-                                  "cold",
-                                  "warm",
-                                  "empty",
-                                  "error",
-                                  "refusal",
-                                  "large",
-                                  "diagnostics_open",
-                                  "diagnostics_closed",
-                                  "catch_up",
-                                  "unknown"
-                                ]
-                              },
-                              "category": {
-                                "$ref": "#/components/schemas/DiagnosticCategory"
                               },
                               "request_id": {
                                 "type": "string"
-                              },
-                              "refresh_id": {
-                                "type": "string"
-                              },
-                              "sequence": {
-                                "type": "integer",
-                                "minimum": 0,
-                                "maximum": 9007199254740991
-                              },
-                              "monotonic_ms": {
-                                "type": "number",
-                                "minimum": 0
-                              },
-                              "clock_unit": {
-                                "type": "string",
-                                "enum": ["ms"]
-                              },
-                              "wall_anchor_ms": {
-                                "type": "number",
-                                "minimum": 0
-                              },
-                              "trace_id": {
-                                "type": "string"
-                              },
-                              "span_id": {
-                                "type": "string"
-                              },
-                              "parent_span_id": {
-                                "type": "string"
-                              },
-                              "action_id": {
-                                "type": "string"
-                              },
-                              "metadata": {
+                              }
+                            },
+                            "required": ["stage", "duration_ms", "outcome"],
+                            "additionalProperties": false
+                          },
+                          "maxItems": 8
+                        },
+                        "budget_bytes": {
+                          "type": "number",
+                          "enum": [49152, 65536]
+                        },
+                        "omitted": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "detail": {
+                          "type": "object",
+                          "properties": {
+                            "schema_version": {
+                              "type": "number",
+                              "enum": [1]
+                            },
+                            "run_id": {
+                              "type": "string"
+                            },
+                            "build_id": {
+                              "type": "string",
+                              "pattern": "^(?:[a-f0-9]{8,64}|dev)$"
+                            },
+                            "contract_id": {
+                              "type": "string",
+                              "pattern": "^(?:[a-f0-9]{64}|unknown)$"
+                            },
+                            "total_active": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "total_recent": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "total_deliveries": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "active": {
+                              "type": "array",
+                              "items": {
                                 "type": "object",
                                 "properties": {
-                                  "operation": {
-                                    "type": "string",
-                                    "enum": [
-                                      "health",
-                                      "diagnostics",
-                                      "auth",
-                                      "profiles",
-                                      "tasks.list",
-                                      "tasks.show",
-                                      "tasks.write",
-                                      "history",
-                                      "graph",
-                                      "search",
-                                      "stream",
-                                      "snapshots",
-                                      "attachments",
-                                      "discovery",
-                                      "other",
-                                      "unmatched"
-                                    ]
+                                  "schema_version": {
+                                    "type": "number",
+                                    "enum": [1]
                                   },
-                                  "statement": {
+                                  "process_role": {
                                     "type": "string",
                                     "enum": [
-                                      "auth.credential",
-                                      "store.read",
-                                      "store.write",
-                                      "store.begin",
-                                      "store.commit",
-                                      "store.rollback",
-                                      "store.projection",
-                                      "store.graph",
-                                      "stream.tail",
-                                      "scheduler.due",
+                                      "server",
+                                      "cli",
+                                      "scheduler",
+                                      "electron.main",
+                                      "electron.renderer",
+                                      "macos",
                                       "unknown"
                                     ]
                                   },
-                                  "rows": {
+                                  "mode": {
+                                    "type": "string",
+                                    "enum": [
+                                      "full",
+                                      "compact",
+                                      "terminal",
+                                      "headless",
+                                      "unknown"
+                                    ]
+                                  },
+                                  "input_kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "pointer",
+                                      "keyboard",
+                                      "menu",
+                                      "accessibility",
+                                      "notification",
+                                      "command",
+                                      "background",
+                                      "unknown"
+                                    ]
+                                  },
+                                  "workload": {
+                                    "type": "string",
+                                    "enum": [
+                                      "cold",
+                                      "warm",
+                                      "empty",
+                                      "error",
+                                      "refusal",
+                                      "large",
+                                      "diagnostics_open",
+                                      "diagnostics_closed",
+                                      "catch_up",
+                                      "unknown"
+                                    ]
+                                  },
+                                  "category": {
+                                    "$ref": "#/components/schemas/DiagnosticCategory"
+                                  },
+                                  "request_id": {
+                                    "type": "string"
+                                  },
+                                  "refresh_id": {
+                                    "type": "string"
+                                  },
+                                  "sequence": {
                                     "type": "integer",
                                     "minimum": 0,
                                     "maximum": 9007199254740991
+                                  },
+                                  "monotonic_ms": {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  "clock_unit": {
+                                    "type": "string",
+                                    "enum": ["ms"]
+                                  },
+                                  "wall_anchor_ms": {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  "trace_id": {
+                                    "type": "string"
+                                  },
+                                  "span_id": {
+                                    "type": "string"
+                                  },
+                                  "parent_span_id": {
+                                    "type": "string"
+                                  },
+                                  "action_id": {
+                                    "type": "string"
+                                  },
+                                  "metadata": {
+                                    "type": "object",
+                                    "properties": {
+                                      "operation": {
+                                        "type": "string",
+                                        "enum": [
+                                          "health",
+                                          "diagnostics",
+                                          "auth",
+                                          "profiles",
+                                          "tasks.list",
+                                          "tasks.show",
+                                          "tasks.write",
+                                          "history",
+                                          "graph",
+                                          "search",
+                                          "stream",
+                                          "snapshots",
+                                          "attachments",
+                                          "discovery",
+                                          "other",
+                                          "unmatched"
+                                        ]
+                                      },
+                                      "statement": {
+                                        "type": "string",
+                                        "enum": [
+                                          "auth.credential",
+                                          "store.read",
+                                          "store.write",
+                                          "store.begin",
+                                          "store.commit",
+                                          "store.rollback",
+                                          "store.projection",
+                                          "store.graph",
+                                          "stream.tail",
+                                          "scheduler.due",
+                                          "unknown"
+                                        ]
+                                      },
+                                      "rows": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "bytes": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "work_units": {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      "cache": {
+                                        "type": "string",
+                                        "enum": [
+                                          "hit",
+                                          "miss",
+                                          "bypass",
+                                          "unknown"
+                                        ]
+                                      },
+                                      "error": {
+                                        "type": "string",
+                                        "enum": [
+                                          "unauthorized",
+                                          "forbidden",
+                                          "conflict",
+                                          "validation",
+                                          "not_found",
+                                          "internal",
+                                          "aborted",
+                                          "unknown"
+                                        ]
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "enum": ["span.started"]
+                                  },
+                                  "stage": {
+                                    "type": "string",
+                                    "enum": [
+                                      "entry",
+                                      "authentication",
+                                      "writer_lock_wait",
+                                      "handler",
+                                      "domain",
+                                      "database",
+                                      "projection",
+                                      "graph",
+                                      "search_preparation",
+                                      "search_evaluation",
+                                      "search_meter",
+                                      "encoding",
+                                      "response_handoff",
+                                      "body_completion",
+                                      "worker_queue",
+                                      "command",
+                                      "job",
+                                      "stdout",
+                                      "ipc",
+                                      "decode"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "schema_version",
+                                  "process_role",
+                                  "mode",
+                                  "input_kind",
+                                  "workload",
+                                  "category",
+                                  "sequence",
+                                  "monotonic_ms",
+                                  "clock_unit",
+                                  "trace_id",
+                                  "span_id",
+                                  "name",
+                                  "stage"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "maxItems": 4
+                            },
+                            "recent": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "schema_version": {
+                                    "type": "number",
+                                    "enum": [1]
+                                  },
+                                  "process_role": {
+                                    "type": "string",
+                                    "enum": [
+                                      "server",
+                                      "cli",
+                                      "scheduler",
+                                      "electron.main",
+                                      "electron.renderer",
+                                      "macos",
+                                      "unknown"
+                                    ]
+                                  },
+                                  "mode": {
+                                    "type": "string",
+                                    "enum": [
+                                      "full",
+                                      "compact",
+                                      "terminal",
+                                      "headless",
+                                      "unknown"
+                                    ]
+                                  },
+                                  "input_kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "pointer",
+                                      "keyboard",
+                                      "menu",
+                                      "accessibility",
+                                      "notification",
+                                      "command",
+                                      "background",
+                                      "unknown"
+                                    ]
+                                  },
+                                  "workload": {
+                                    "type": "string",
+                                    "enum": [
+                                      "cold",
+                                      "warm",
+                                      "empty",
+                                      "error",
+                                      "refusal",
+                                      "large",
+                                      "diagnostics_open",
+                                      "diagnostics_closed",
+                                      "catch_up",
+                                      "unknown"
+                                    ]
+                                  },
+                                  "category": {
+                                    "$ref": "#/components/schemas/DiagnosticCategory"
+                                  },
+                                  "request_id": {
+                                    "type": "string"
+                                  },
+                                  "refresh_id": {
+                                    "type": "string"
+                                  },
+                                  "sequence": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "monotonic_ms": {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  "clock_unit": {
+                                    "type": "string",
+                                    "enum": ["ms"]
+                                  },
+                                  "wall_anchor_ms": {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  "trace_id": {
+                                    "type": "string"
+                                  },
+                                  "span_id": {
+                                    "type": "string"
+                                  },
+                                  "parent_span_id": {
+                                    "type": "string"
+                                  },
+                                  "action_id": {
+                                    "type": "string"
+                                  },
+                                  "metadata": {
+                                    "type": "object",
+                                    "properties": {
+                                      "operation": {
+                                        "type": "string",
+                                        "enum": [
+                                          "health",
+                                          "diagnostics",
+                                          "auth",
+                                          "profiles",
+                                          "tasks.list",
+                                          "tasks.show",
+                                          "tasks.write",
+                                          "history",
+                                          "graph",
+                                          "search",
+                                          "stream",
+                                          "snapshots",
+                                          "attachments",
+                                          "discovery",
+                                          "other",
+                                          "unmatched"
+                                        ]
+                                      },
+                                      "statement": {
+                                        "type": "string",
+                                        "enum": [
+                                          "auth.credential",
+                                          "store.read",
+                                          "store.write",
+                                          "store.begin",
+                                          "store.commit",
+                                          "store.rollback",
+                                          "store.projection",
+                                          "store.graph",
+                                          "stream.tail",
+                                          "scheduler.due",
+                                          "unknown"
+                                        ]
+                                      },
+                                      "rows": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "bytes": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "work_units": {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      "cache": {
+                                        "type": "string",
+                                        "enum": [
+                                          "hit",
+                                          "miss",
+                                          "bypass",
+                                          "unknown"
+                                        ]
+                                      },
+                                      "error": {
+                                        "type": "string",
+                                        "enum": [
+                                          "unauthorized",
+                                          "forbidden",
+                                          "conflict",
+                                          "validation",
+                                          "not_found",
+                                          "internal",
+                                          "aborted",
+                                          "unknown"
+                                        ]
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "enum": ["span.finished"]
+                                  },
+                                  "stage": {
+                                    "type": "string",
+                                    "enum": [
+                                      "entry",
+                                      "authentication",
+                                      "writer_lock_wait",
+                                      "handler",
+                                      "domain",
+                                      "database",
+                                      "projection",
+                                      "graph",
+                                      "search_preparation",
+                                      "search_evaluation",
+                                      "search_meter",
+                                      "encoding",
+                                      "response_handoff",
+                                      "body_completion",
+                                      "worker_queue",
+                                      "command",
+                                      "job",
+                                      "stdout",
+                                      "ipc",
+                                      "decode"
+                                    ]
+                                  },
+                                  "duration_ms": {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  "outcome": {
+                                    "type": "string",
+                                    "enum": [
+                                      "completed",
+                                      "pending",
+                                      "superseded",
+                                      "refused",
+                                      "conflicted",
+                                      "failed",
+                                      "cancelled",
+                                      "unavailable",
+                                      "crashed",
+                                      "timed_out",
+                                      "lost"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "schema_version",
+                                  "process_role",
+                                  "mode",
+                                  "input_kind",
+                                  "workload",
+                                  "category",
+                                  "sequence",
+                                  "monotonic_ms",
+                                  "clock_unit",
+                                  "trace_id",
+                                  "span_id",
+                                  "name",
+                                  "stage",
+                                  "duration_ms",
+                                  "outcome"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "maxItems": 32
+                            },
+                            "deliveries": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "schema_version": {
+                                    "type": "number",
+                                    "enum": [1]
+                                  },
+                                  "process_role": {
+                                    "type": "string",
+                                    "enum": [
+                                      "server",
+                                      "cli",
+                                      "scheduler",
+                                      "electron.main",
+                                      "electron.renderer",
+                                      "macos",
+                                      "unknown"
+                                    ]
+                                  },
+                                  "mode": {
+                                    "type": "string",
+                                    "enum": [
+                                      "full",
+                                      "compact",
+                                      "terminal",
+                                      "headless",
+                                      "unknown"
+                                    ]
+                                  },
+                                  "input_kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "pointer",
+                                      "keyboard",
+                                      "menu",
+                                      "accessibility",
+                                      "notification",
+                                      "command",
+                                      "background",
+                                      "unknown"
+                                    ]
+                                  },
+                                  "workload": {
+                                    "type": "string",
+                                    "enum": [
+                                      "cold",
+                                      "warm",
+                                      "empty",
+                                      "error",
+                                      "refusal",
+                                      "large",
+                                      "diagnostics_open",
+                                      "diagnostics_closed",
+                                      "catch_up",
+                                      "unknown"
+                                    ]
+                                  },
+                                  "category": {
+                                    "$ref": "#/components/schemas/DiagnosticCategory"
+                                  },
+                                  "request_id": {
+                                    "type": "string"
+                                  },
+                                  "refresh_id": {
+                                    "type": "string"
+                                  },
+                                  "sequence": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "monotonic_ms": {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  "clock_unit": {
+                                    "type": "string",
+                                    "enum": ["ms"]
+                                  },
+                                  "wall_anchor_ms": {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  "trace_id": {
+                                    "type": "string"
+                                  },
+                                  "span_id": {
+                                    "type": "string"
+                                  },
+                                  "parent_span_id": {
+                                    "type": "string"
+                                  },
+                                  "action_id": {
+                                    "type": "string"
+                                  },
+                                  "metadata": {
+                                    "type": "object",
+                                    "properties": {
+                                      "operation": {
+                                        "type": "string",
+                                        "enum": [
+                                          "health",
+                                          "diagnostics",
+                                          "auth",
+                                          "profiles",
+                                          "tasks.list",
+                                          "tasks.show",
+                                          "tasks.write",
+                                          "history",
+                                          "graph",
+                                          "search",
+                                          "stream",
+                                          "snapshots",
+                                          "attachments",
+                                          "discovery",
+                                          "other",
+                                          "unmatched"
+                                        ]
+                                      },
+                                      "statement": {
+                                        "type": "string",
+                                        "enum": [
+                                          "auth.credential",
+                                          "store.read",
+                                          "store.write",
+                                          "store.begin",
+                                          "store.commit",
+                                          "store.rollback",
+                                          "store.projection",
+                                          "store.graph",
+                                          "stream.tail",
+                                          "scheduler.due",
+                                          "unknown"
+                                        ]
+                                      },
+                                      "rows": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "bytes": {
+                                        "type": "integer",
+                                        "minimum": 0,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "work_units": {
+                                        "type": "number",
+                                        "minimum": 0
+                                      },
+                                      "cache": {
+                                        "type": "string",
+                                        "enum": [
+                                          "hit",
+                                          "miss",
+                                          "bypass",
+                                          "unknown"
+                                        ]
+                                      },
+                                      "error": {
+                                        "type": "string",
+                                        "enum": [
+                                          "unauthorized",
+                                          "forbidden",
+                                          "conflict",
+                                          "validation",
+                                          "not_found",
+                                          "internal",
+                                          "aborted",
+                                          "unknown"
+                                        ]
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "enum": ["stream.delivery"]
+                                  },
+                                  "stream_id": {
+                                    "type": "string"
+                                  },
+                                  "frame_id": {
+                                    "type": "string"
+                                  },
+                                  "commit_receipt": {
+                                    "type": "string"
+                                  },
+                                  "stage": {
+                                    "type": "string",
+                                    "enum": ["commit_seen", "transport_handoff"]
                                   },
                                   "bytes": {
                                     "type": "integer",
                                     "minimum": 0,
-                                    "maximum": 9007199254740991
-                                  },
-                                  "work_units": {
-                                    "type": "number",
-                                    "minimum": 0
-                                  },
-                                  "cache": {
-                                    "type": "string",
-                                    "enum": ["hit", "miss", "bypass", "unknown"]
-                                  },
-                                  "error": {
-                                    "type": "string",
-                                    "enum": [
-                                      "unauthorized",
-                                      "forbidden",
-                                      "conflict",
-                                      "validation",
-                                      "not_found",
-                                      "internal",
-                                      "aborted",
-                                      "unknown"
-                                    ]
+                                    "maximum": 9007199254740991,
+                                    "nullable": true
                                   }
                                 },
+                                "required": [
+                                  "schema_version",
+                                  "process_role",
+                                  "mode",
+                                  "input_kind",
+                                  "workload",
+                                  "category",
+                                  "sequence",
+                                  "monotonic_ms",
+                                  "clock_unit",
+                                  "trace_id",
+                                  "span_id",
+                                  "name",
+                                  "stream_id",
+                                  "frame_id",
+                                  "commit_receipt",
+                                  "stage",
+                                  "bytes"
+                                ],
                                 "additionalProperties": false
                               },
-                              "name": {
-                                "type": "string",
-                                "enum": ["stream.delivery"]
-                              },
-                              "stream_id": {
-                                "type": "string"
-                              },
-                              "frame_id": {
-                                "type": "string"
-                              },
-                              "commit_receipt": {
-                                "type": "string"
-                              },
-                              "stage": {
-                                "type": "string",
-                                "enum": ["commit_seen", "transport_handoff"]
-                              },
-                              "bytes": {
-                                "type": "integer",
-                                "minimum": 0,
-                                "maximum": 9007199254740991,
-                                "nullable": true
-                              }
-                            },
-                            "required": [
-                              "schema_version",
-                              "run_id",
-                              "process_role",
-                              "build_id",
-                              "contract_id",
-                              "mode",
-                              "input_kind",
-                              "workload",
-                              "category",
-                              "sequence",
-                              "monotonic_ms",
-                              "clock_unit",
-                              "trace_id",
-                              "span_id",
-                              "name",
-                              "stream_id",
-                              "frame_id",
-                              "commit_receipt",
-                              "stage",
-                              "bytes"
-                            ],
-                            "additionalProperties": false
-                          }
+                              "maxItems": 16
+                            }
+                          },
+                          "required": [
+                            "schema_version",
+                            "run_id",
+                            "build_id",
+                            "contract_id",
+                            "total_active",
+                            "total_recent",
+                            "total_deliveries",
+                            "active",
+                            "recent",
+                            "deliveries"
+                          ],
+                          "additionalProperties": false
                         },
                         "unobserved": {
                           "type": "array",
@@ -11914,8 +12199,15 @@
                         "dropped_events",
                         "recording_failures",
                         "active",
-                        "recent",
-                        "deliveries",
+                        "unit",
+                        "quantiles",
+                        "outcome_order",
+                        "histogram",
+                        "stages",
+                        "categories",
+                        "slow",
+                        "budget_bytes",
+                        "omitted",
                         "unobserved"
                       ],
                       "additionalProperties": false

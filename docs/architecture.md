@@ -349,7 +349,12 @@ X-Todo-Request. Owner Session responses add numeric Server-Timing. No diagnostic
 record is written to the Task database.
 
 Owner Diagnostics adds one optional versioned profiler object with counters,
-active spans, bounded recent spans, stream delivery records and explicit gaps.
+fixed histograms, per-stage/category span summaries, a short slow/failed list
+and explicit gaps. The default whole body and CLI JSON fit 48 KiB including
+pretty formatting. Detailed active/recent spans and stream delivery records
+require owner-only detail=true or CLI --detail and fit a separate 64 KiB budget.
+Section byte admission and a whole-schema predicate enforce both caps. Metadata
+lists are bounded samples with omission counts; aggregate totals remain complete.
 Adapter recorder calls use observeDiagnostic. A thrown observation increments
 recording_failures and loss counters while the original work continues once.
 The guard and shared per-object failure counts live in diagnostic-guard.ts,

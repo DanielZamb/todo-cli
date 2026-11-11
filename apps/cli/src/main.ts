@@ -2044,12 +2044,25 @@ const diagnostics = Command.make(
       process.env.TODO_SERVER_URL || "http://127.0.0.1:4310",
     ),
     follow: bool("follow"),
+    detail: bool("detail"),
   },
   (input) =>
     Effect.gen(function* () {
       const cfg = yield* root;
+      if (input.follow && input.detail)
+        return yield* Effect.fail(
+          new CommandError(
+            2,
+            "invalid_args",
+            "--detail is a one-shot sample and cannot be combined with --follow",
+          ),
+        );
       const credential = yield* io(() => loadCredential(cfg));
-      const snapshot = diagnosticsRead(input.server, credential).pipe(
+      const snapshot = diagnosticsRead(
+        input.server,
+        credential,
+        input.detail,
+      ).pipe(
         Effect.flatMap((snapshot) =>
           write(diagnosticsOutput(snapshot, cfg.format, input.follow)),
         ),

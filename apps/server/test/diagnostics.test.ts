@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "@effect/vitest";
-import { DiagnosticRecorder, Profile } from "@todo/domain";
+import { DiagnosticRecorder, DiagnosticsSnapshot, Profile } from "@todo/domain";
 import { openStore } from "@todo/domain/store";
 import { Context, Effect, Layer, Schema } from "effect";
 import { HttpServer } from "effect/http";
@@ -105,7 +105,7 @@ it.effect(
         );
         yield* Effect.promise(() => response.text());
         const joined = profiler
-          .snapshot()
+          .details()
           .recent.filter((x) => x.request_id === headers["X-Todo-Request"]);
         expect([...new Set(joined.map((x) => x.stage))].sort()).toEqual([
           "authentication",
@@ -140,7 +140,7 @@ it.effect(
         const body = yield* Effect.promise(() => denied.text());
         expect(body).not.toContain("profiler");
         expect(body).not.toContain("recent");
-        expect(JSON.stringify(profiler.snapshot())).not.toContain("private");
+        expect(JSON.stringify(profiler.details())).not.toContain("private");
         expect((yield* get(session.credential)).status).toBe(200);
       }),
     ),
@@ -190,7 +190,7 @@ it.effect(
               yield* TestClock.adjust("250 millis");
           }
         }
-        const deliveries = profiler.snapshot().deliveries;
+        const deliveries = profiler.details().deliveries;
         expect(deliveries.map((x) => x.stage)).toEqual([
           "commit_seen",
           "transport_handoff",
@@ -202,7 +202,7 @@ it.effect(
         expect(new Set(deliveries.map((x) => x.commit_receipt)).size).toBe(1);
         expect(deliveries[0]?.bytes).toBe(null);
         expect(deliveries[1]?.bytes).toBeGreaterThan(0);
-        expect(JSON.stringify(profiler.snapshot())).not.toContain(
+        expect(JSON.stringify(profiler.details())).not.toContain(
           "private stream fixture",
         );
       }),
@@ -215,8 +215,11 @@ it.effect("adds one versioned profiler object only to owner Diagnostics", () =>
       const { get, session, token } = yield* fixture;
       const owner = yield* get(session.credential);
       const body = yield* Effect.promise(() => owner.json());
-      expect(body.profiler.schema_version).toBe(1);
+      expect(body.profiler.schema_version).toBe(2);
       expect(body.profiler.capacity).toBe(2048);
+      expect(body.profiler.detail).toBeUndefined();
+      expect(body.profiler.recent).toBeUndefined();
+      expect(body.profiler.deliveries).toBeUndefined();
       expect(body.profiler.unobserved).toContain("socket_accept_to_entry");
       const agent = yield* get(token.credential);
       expect(agent.headers.get("server-timing")).toBe(null);
@@ -224,4 +227,39 @@ it.effect("adds one versioned profiler object only to owner Diagnostics", () =>
       expect(refused).not.toContain("profiler");
     }),
   ),
+);
+
+it.effect(
+  "requires an owner Session for the declared bounded detail opt-in",
+  () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const { base, session, token } = yield* fixture;
+        for (const [credential, expected] of [
+          [undefined, 401],
+          [token.credential, 403],
+          [session.credential, 200],
+        ] as const) {
+          const response = yield* Effect.promise(() =>
+            fetch(`${base}/diagnostics?detail=true`, {
+              headers: credential
+                ? { Authorization: `Bearer ${credential}` }
+                : {},
+            }),
+          );
+          expect(response.status).toBe(expected);
+          const text = yield* Effect.promise(() => response.text());
+          if (expected === 200) {
+            const body = Schema.decodeUnknownSync(
+              Schema.fromJsonString(DiagnosticsSnapshot),
+            )(text);
+            expect(body.profiler?.detail?.run_id).toBe(body.profiler?.run_id);
+            expect(
+              new TextEncoder().encode(JSON.stringify(body, null, 2) + "\n")
+                .length,
+            ).toBeLessThanOrEqual(65536);
+          } else expect(text).not.toContain("profiler");
+        }
+      }),
+    ),
 );

@@ -3,23 +3,36 @@ import { Context, Effect, Exit, Fiber, Option, Schema } from "effect";
 import {
   DiagnosticActionId,
   DiagnosticCommitReceipt,
-  DiagnosticCount,
   DiagnosticEnvelope,
   type DiagnosticEventOf,
-  DiagnosticFrameId,
+  type DiagnosticFrameId,
   type DiagnosticMetadata,
-  DiagnosticOutcome,
   DiagnosticRequestId,
   DiagnosticRunId,
   DiagnosticSpanId,
-  DiagnosticStage,
-  DiagnosticStreamId,
+  type DiagnosticStage,
+  type DiagnosticStreamId,
   DiagnosticTraceId,
 } from "./client-diagnostics.ts";
 import {
   diagnosticFailureCounts,
   observeDiagnostic,
 } from "./diagnostic-guard.ts";
+import {
+  type DiagnosticProfiler,
+  type DiagnosticProfilerDetail,
+  type DiagnosticProfilerSample,
+  DiagnosticSummaries,
+  diagnosticDeliverySampleCapacity,
+  type SlowSpan,
+} from "./diagnostic-summary.ts";
+
+export {
+  DiagnosticProfiler,
+  DiagnosticProfilerDetail,
+  DiagnosticProfilerSample,
+  diagnosticDeliverySampleCapacity,
+} from "./diagnostic-summary.ts";
 
 const id = <S extends Schema.Top & { readonly DecodingServices: never }>(
   schema: S,
@@ -43,63 +56,15 @@ const current = () => {
   const fiber = Fiber.getCurrent();
   return fiber ? Context.get(fiber.context, CurrentDiagnostic) : undefined;
 };
-export const DiagnosticProfiler = Schema.Struct({
-  schema_version: Schema.Literal(1),
-  run_id: DiagnosticRunId,
-  enabled: Schema.Boolean,
-  capacity: DiagnosticCount,
-  active_capacity: DiagnosticCount,
-  started: DiagnosticCount,
-  finished: DiagnosticCount,
-  lost_starts: DiagnosticCount,
-  dropped_events: DiagnosticCount,
-  recording_failures: DiagnosticCount,
-  active: Schema.Array(
-    Schema.Struct({
-      ...DiagnosticEnvelope.fields,
-      name: Schema.Literal("span.started"),
-      stage: DiagnosticStage,
-    }),
-  ),
-  recent: Schema.Array(
-    Schema.Struct({
-      ...DiagnosticEnvelope.fields,
-      name: Schema.Literal("span.finished"),
-      stage: DiagnosticStage,
-      duration_ms: Schema.Finite.check(Schema.isGreaterThanOrEqualTo(0)),
-      outcome: DiagnosticOutcome,
-    }),
-  ),
-  deliveries: Schema.Array(
-    Schema.Struct({
-      ...DiagnosticEnvelope.fields,
-      name: Schema.Literal("stream.delivery"),
-      stream_id: DiagnosticStreamId,
-      frame_id: DiagnosticFrameId,
-      commit_receipt: DiagnosticCommitReceipt,
-      stage: Schema.Literals(["commit_seen", "transport_handoff"]),
-      bytes: Schema.NullOr(DiagnosticCount),
-    }),
-  ),
-  unobserved: Schema.Array(
-    Schema.Literals([
-      "socket_accept_to_entry",
-      "worker_queue",
-      "socket_handoff",
-      "body_completion",
-      "client_receipt",
-      "cross_process_commit",
-      "encoding",
-      "database_other",
-      "graph_computation",
-      "search_preparation",
-      "search_meter",
-      "command_startup",
-      "stdout_drain",
-    ]),
-  ),
-});
-
+const withoutRun = <T extends typeof DiagnosticEnvelope.Type>(value: T) => {
+  const {
+    run_id: _run,
+    build_id: _build,
+    contract_id: _contract,
+    ...row
+  } = value;
+  return row;
+};
 export class DiagnosticRecorder {
   readonly runId = id(DiagnosticRunId);
   enabled: boolean;
@@ -127,6 +92,8 @@ export class DiagnosticRecorder {
   private readonly active = new Map<string, ActiveSpan>();
   private readonly recent: FinishedSpan[] = [];
   private readonly deliveries: Delivery[] = [];
+  private readonly summaries = new DiagnosticSummaries();
+  private readonly slow: Array<typeof SlowSpan.Type> = [];
   private recentCursor = 0;
   private deliveryCursor = 0;
   constructor(
@@ -227,6 +194,7 @@ export class DiagnosticRecorder {
   ) {
     if (!this.enabled) return undefined;
     this.started++;
+    this.summaries.start(stage, envelope.category.inventory_id);
     if (this.active.size >= this.activeCapacity) {
       this.lostStarts++;
       return undefined;
@@ -254,6 +222,21 @@ export class DiagnosticRecorder {
   ) {
     if (!start || !this.active.delete(start.span_id)) return;
     this.finished++;
+    this.summaries.finish(
+      start.stage,
+      start.category.inventory_id,
+      Math.max(0, end - start.monotonic_ms),
+      outcome,
+    );
+    if (end - start.monotonic_ms >= 20 || outcome !== "completed") {
+      this.slow.push({
+        stage: start.stage,
+        duration_ms: Math.max(0, end - start.monotonic_ms),
+        outcome,
+        ...(start.request_id ? { request_id: start.request_id } : {}),
+      });
+      if (this.slow.length > 8) this.slow.shift();
+    }
     const state = this.states.get(start);
     state?.timings.set(
       start.stage,
@@ -356,7 +339,68 @@ export class DiagnosticRecorder {
     for (const key of this.pendingFrames.keys())
       if (key.startsWith(request + ":")) this.pendingFrames.delete(key);
   }
-  snapshot(): typeof DiagnosticProfiler.Type {
+  snapshot(detail = false): typeof DiagnosticProfiler.Type {
+    const failures = diagnosticFailureCounts(this);
+    return {
+      schema_version: 2,
+      run_id: this.runId,
+      enabled: this.enabled,
+      capacity: this.capacity,
+      active_capacity: this.activeCapacity,
+      started: this.started + failures.lost_starts,
+      finished: this.finished,
+      lost_starts: this.lostStarts + failures.lost_starts,
+      dropped_events: this.droppedEvents + failures.lost_events,
+      recording_failures: failures.total,
+      active: this.active.size,
+      ...this.summaries.snapshot(),
+      slow: [...this.slow],
+      budget_bytes: detail ? 65536 : 49152,
+      omitted: {},
+      ...(detail ? { detail: this.sample() } : {}),
+      unobserved: this.unobserved(),
+    };
+  }
+  private unobserved(): typeof DiagnosticProfilerDetail.Type.unobserved {
+    return [
+      "socket_accept_to_entry",
+      "worker_queue",
+      "socket_handoff",
+      "body_completion",
+      "client_receipt",
+      "cross_process_commit",
+      "encoding",
+      "database_other",
+      "graph_computation",
+      "search_preparation",
+      "search_meter",
+      "command_startup",
+      "stdout_drain",
+    ];
+  }
+  private sample(): typeof DiagnosticProfilerSample.Type {
+    const value = this.details();
+    const current = (row: typeof DiagnosticEnvelope.Type) =>
+      row.run_id === this.runId &&
+      row.build_id === this.buildId &&
+      row.contract_id === this.contractId;
+    return {
+      schema_version: 1,
+      run_id: this.runId,
+      build_id: this.buildId,
+      contract_id: this.contractId,
+      total_active: value.active.length,
+      total_recent: value.recent.length,
+      total_deliveries: value.deliveries.length,
+      active: value.active.filter(current).slice(0, 4).map(withoutRun),
+      recent: value.recent.filter(current).slice(-32).map(withoutRun),
+      deliveries: value.deliveries
+        .filter(current)
+        .slice(-diagnosticDeliverySampleCapacity)
+        .map(withoutRun),
+    };
+  }
+  details(): typeof DiagnosticProfilerDetail.Type {
     const failures = diagnosticFailureCounts(this);
     return {
       schema_version: 1,

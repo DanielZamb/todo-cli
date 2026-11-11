@@ -75,14 +75,14 @@ export const verifyHttpFailures = Effect.scoped(
       let attempt = 0;
       attempt < 100 &&
       !store.diagnostics.profiler
-        .snapshot()
+        .details()
         .active.some((x) => x.request_id === requestId);
       attempt++
     )
       yield* Effect.sleep("10 millis");
     assert.ok(
       store.diagnostics.profiler
-        .snapshot()
+        .details()
         .active.some((x) => x.request_id === requestId),
     );
     controller.abort();
@@ -91,14 +91,14 @@ export const verifyHttpFailures = Effect.scoped(
       let attempt = 0;
       attempt < 100 &&
       !store.diagnostics.profiler
-        .snapshot()
+        .details()
         .recent.some((x) => x.request_id === requestId && x.stage === "entry");
       attempt++
     )
       yield* Effect.sleep("10 millis");
     assert.equal(
       store.diagnostics.profiler
-        .snapshot()
+        .details()
         .recent.find((x) => x.request_id === requestId && x.stage === "entry")
         ?.outcome,
       "cancelled",

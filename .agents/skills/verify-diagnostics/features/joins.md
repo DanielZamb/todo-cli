@@ -4,9 +4,11 @@
 
 Validated recording headers, owner Session Server-Timing, bounded server spans,
 CLI command roots, scheduler job roots and per-client encoded stream handoff.
-The existing owner Diagnostics snapshot adds one optional version 1 profiler
+The existing owner Diagnostics snapshot adds one optional version 2 profiler
 object. A failed recorder snapshot omits that object and preserves the read.
-Existing keys retain their meaning.
+Normal polling contains summaries. Explicit detail=true supplies a separately
+bounded recent-span sample; existing metadata lists are bounded with omission
+counts. See [the payload budget](payload.md).
 
 ## How to get to it (user POV)
 

@@ -99,7 +99,7 @@ function checkedLoss(
     assert.ok(
       snapshot.lost_starts > 0 ||
         snapshot.dropped_events > 0 ||
-        snapshot.active.length > 0,
+        snapshot.active > 0,
       `Loss was not explicit: ${point}`,
     );
   }
@@ -108,7 +108,7 @@ function checkedLoss(
     recording_failures: snapshot.recording_failures,
     lost_starts: snapshot.lost_starts,
     dropped_events: snapshot.dropped_events,
-    active: snapshot.active.length,
+    active: snapshot.active,
   };
 }
 

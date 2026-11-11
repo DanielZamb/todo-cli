@@ -30,14 +30,14 @@ try {
     tasks.map((x) => x.title),
     ["Benchmark Task 000"],
   );
-  const snapshot = await fetch(`${fixture.url}/diagnostics`, {
+  const snapshot = await fetch(`${fixture.url}/diagnostics?detail=true`, {
     headers: { Authorization: `Bearer ${fixture.credential}` },
   });
   const body = Schema.decodeUnknownSync(DiagnosticsSnapshot)(
     await snapshot.json(),
   );
   assert.ok(body.profiler);
-  const spans = body.profiler.recent.filter(
+  const spans = (body.profiler.detail?.recent ?? []).filter(
     (x) => x.request_id === ids["X-Todo-Request"],
   );
   assert.ok(spans.length >= 8);
@@ -76,7 +76,7 @@ try {
     "json",
   ]);
   const cli = Schema.decodeUnknownSync(DiagnosticsSnapshot)(JSON.parse(output));
-  assert.equal(cli.profiler?.schema_version, 1);
+  assert.equal(cli.profiler?.schema_version, 2);
   assert.ok(!JSON.stringify(body.profiler).includes("Benchmark Task"));
   writeFileSync(join(evidence, "snapshot.json"), JSON.stringify(body, null, 2));
   writeFileSync(

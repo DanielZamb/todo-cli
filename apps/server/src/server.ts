@@ -565,10 +565,13 @@ export const serverLayer = (options: {
         "diagnostics",
         (handlers) =>
           handlers.handleAll({
-            snapshot: () =>
+            snapshot: ({ query }) =>
               Effect.gen(function* () {
                 const body = yield* translate(
-                  diagnostics.read({ credential: yield* BearerCredential }),
+                  diagnostics.read({
+                    credential: yield* BearerCredential,
+                    detail: query.detail === "true",
+                  }),
                 );
                 return HttpApiSchema.withHeaders({
                   headers: { "cache-control": "no-store" },
