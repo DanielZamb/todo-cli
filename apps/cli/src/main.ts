@@ -45,6 +45,7 @@ import {
   inputLimits,
   LookupQuery,
   LookupResponse,
+  observeDiagnostic,
   ProfileDeletionReport,
   ProfileListResponse,
   parseQuickAdd,
@@ -59,6 +60,7 @@ import {
   TaskStatus,
   taskLookupError,
   Version,
+  withDiagnosticRoot,
 } from "@todo/domain";
 import { attachmentInput } from "@todo/domain/attachment-input";
 import { attachmentCopyStats } from "@todo/domain/attachment-store";
@@ -266,15 +268,20 @@ const withStore = <A, E, R>(
       openStore({ path }),
       (store) =>
         (() => {
-          store.diagnostics.profiler.configure({
-            enabled: process.env.TODO_DIAGNOSTICS_RECORDING !== "0",
-            build_id: BUILD_ID,
-            contract_id: CONTRACT_ID,
-          });
-          return store.diagnostics.profiler.withRoot(
-            store.diagnostics.profiler.root({}, "cli"),
+          observeDiagnostic(store.diagnostics.profiler, () =>
+            store.diagnostics.profiler.configure({
+              enabled: process.env.TODO_DIAGNOSTICS_RECORDING !== "0",
+              build_id: BUILD_ID,
+              contract_id: CONTRACT_ID,
+            }),
+          );
+          return withDiagnosticRoot(
+            {
+              recorder: store.diagnostics.profiler,
+              role: "cli",
+              stage: "command",
+            },
             use(store),
-            "command",
           );
         })().pipe(
           Effect.catch((error) =>

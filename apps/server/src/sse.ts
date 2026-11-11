@@ -9,6 +9,7 @@ import {
   DiagnosticFrameId,
   DiagnosticStreamId,
   diagnosticContext,
+  observeDiagnostic,
 } from "@todo/domain";
 import type { OperationStore } from "@todo/domain/store";
 import { Effect, Schema, Stream } from "effect";
@@ -23,36 +24,42 @@ export const changesLayer = (store: OperationStore) =>
           const credential = yield* BearerCredential;
           const scope = diagnosticContext();
           const profiler = scope?.recorder ?? store.diagnostics.profiler;
-          const streamId = Schema.decodeUnknownSync(DiagnosticStreamId)(
-            randomUUID(),
+          const streamId = observeDiagnostic(profiler, () =>
+            Schema.decodeUnknownSync(DiagnosticStreamId)(randomUUID()),
           );
           let generation = "initial";
-          const observe = (event: typeof ChangeEvent.Type) => {
-            if (event.event !== "operation" || !scope || !profiler.enabled)
-              return;
-            const frame_id = Schema.decodeUnknownSync(DiagnosticFrameId)(
-              randomUUID(),
-            );
-            const commit_receipt = profiler.commitReceipt(
-              event.data.seq,
-              generation,
-            );
-            profiler.delivery(
-              scope.envelope,
-              streamId,
-              frame_id,
-              commit_receipt,
-              "commit_seen",
-              null,
-            );
-            profiler.awaitTransport(event.data.seq, {
-              ...scope.envelope,
-              name: "stream.delivery",
-              stream_id: streamId,
-              frame_id,
-              commit_receipt,
+          const observe = (event: typeof ChangeEvent.Type) =>
+            observeDiagnostic(profiler, () => {
+              if (
+                event.event !== "operation" ||
+                !scope ||
+                !streamId ||
+                !profiler.enabled
+              )
+                return;
+              const frame_id = Schema.decodeUnknownSync(DiagnosticFrameId)(
+                randomUUID(),
+              );
+              const commit_receipt = profiler.commitReceipt(
+                event.data.seq,
+                generation,
+              );
+              profiler.delivery(
+                scope.envelope,
+                streamId,
+                frame_id,
+                commit_receipt,
+                "commit_seen",
+                null,
+              );
+              profiler.awaitTransport(event.data.seq, {
+                ...scope.envelope,
+                name: "stream.delivery",
+                stream_id: streamId,
+                frame_id,
+                commit_receipt,
+              });
             });
-          };
           const header = headers["last-event-id"];
           const after = header === undefined ? 0 : Number(header);
           if (
@@ -149,18 +156,27 @@ export const changesLayer = (store: OperationStore) =>
               Effect.gen(function* () {
                 const kind = headers["x-todo-client"];
                 const id = yield* Effect.acquireRelease(
-                  Effect.sync(() =>
-                    store.diagnostics.connect(
-                      params.profile,
-                      kind ?? "unknown",
-                      reset ? undefined : header,
-                    ),
+                  Effect.sync(
+                    () =>
+                      observeDiagnostic(profiler, () =>
+                        store.diagnostics.connect(
+                          params.profile,
+                          kind ?? "unknown",
+                          reset ? undefined : header,
+                        ),
+                      ) ?? null,
                   ),
                   (id) =>
                     Effect.sync(() => {
-                      store.diagnostics.disconnect(id);
+                      observeDiagnostic(profiler, () =>
+                        store.diagnostics.disconnect(id),
+                      );
                       if (scope?.envelope.request_id)
-                        profiler.releaseStream(scope.envelope.request_id);
+                        observeDiagnostic(profiler, () =>
+                          profiler.releaseStream(
+                            scope.envelope.request_id ?? "",
+                          ),
+                        );
                     }),
                 );
                 return Stream.concat(
@@ -170,7 +186,9 @@ export const changesLayer = (store: OperationStore) =>
                   Stream.tap((event) =>
                     Effect.sync(() => {
                       if ("id" in event)
-                        store.diagnostics.delivered(id, event.id);
+                        observeDiagnostic(profiler, () =>
+                          store.diagnostics.delivered(id, event.id),
+                        );
                     }),
                   ),
                 );

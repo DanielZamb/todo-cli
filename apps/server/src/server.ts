@@ -32,8 +32,10 @@ import {
   ExpectedVersion,
   exitStatus,
   Instant,
+  observeDiagnostic,
   ProfileId,
   parseQuickAdd,
+  provideDiagnosticContext,
   readGraph,
   SnapshotError,
   TaskId,
@@ -277,13 +279,24 @@ export const diagnosticsMiddleware =
       const query = request.url.indexOf("?");
       const path = query === -1 ? request.url : request.url.slice(0, query);
       const route = `${request.method} ${knownRoutes.find((value) => value.pattern.test(path))?.path ?? "unmatched"}`;
-      const root = profiler.root({
-        trace: request.headers["x-todo-trace"],
-        request: request.headers["x-todo-request"],
-        action: request.headers["x-todo-action"],
-      });
-      const start = root.monotonic_ms;
-      const entry = profiler.start(root, "entry");
+      const root = observeDiagnostic(
+        profiler,
+        () =>
+          profiler.root({
+            trace: request.headers["x-todo-trace"],
+            request: request.headers["x-todo-request"],
+            action: request.headers["x-todo-action"],
+          }),
+        "start",
+      );
+      const start = root?.monotonic_ms ?? performance.now();
+      const entry = root
+        ? observeDiagnostic(
+            profiler,
+            () => profiler.start(root, "entry"),
+            "start",
+          )
+        : undefined;
       let handed = false;
       const handoffResponse = (
         response: HttpServerResponse.HttpServerResponse,
@@ -291,32 +304,44 @@ export const diagnosticsMiddleware =
         if (handed) return response;
         handed = true;
         const end = performance.now();
-        diagnostics.request(route, end - start, response.status, end);
-        const handoff = profiler.start(root, "response_handoff");
-        profiler.end(handoff, "completed");
-        profiler.end(
-          entry,
-          response.status === 499
-            ? "cancelled"
-            : response.status === 409
-              ? "conflicted"
-              : response.status >= 500
-                ? "failed"
-                : response.status >= 400
-                  ? "refused"
-                  : "completed",
-          end,
+        observeDiagnostic(profiler, () =>
+          diagnostics.request(route, end - start, response.status, end),
+        );
+        const handoff = root
+          ? observeDiagnostic(
+              profiler,
+              () => profiler.start(root, "response_handoff"),
+              "start",
+            )
+          : undefined;
+        observeDiagnostic(profiler, () => profiler.end(handoff, "completed"));
+        observeDiagnostic(profiler, () =>
+          profiler.end(
+            entry,
+            response.status === 499
+              ? "cancelled"
+              : response.status === 409
+                ? "conflicted"
+                : response.status >= 500
+                  ? "failed"
+                  : response.status >= 400
+                    ? "refused"
+                    : "completed",
+            end,
+          ),
         );
         const body = response.body;
         const accepted =
-          body._tag === "Stream"
+          root && body._tag === "Stream"
             ? HttpServerResponse.setBody(
                 response,
                 HttpBody.stream(
                   body.stream.pipe(
                     Stream.tap((chunk) =>
                       Effect.sync(() =>
-                        profiler.transport(root.request_id, chunk),
+                        observeDiagnostic(profiler, () =>
+                          profiler.transport(root.request_id, chunk),
+                        ),
                       ),
                     ),
                   ),
@@ -325,15 +350,19 @@ export const diagnosticsMiddleware =
                 ),
               )
             : response;
-        const joined = HttpServerResponse.setHeader(
-          accepted,
-          "x-todo-request",
-          root.request_id,
-        );
+        const joined = root
+          ? HttpServerResponse.setHeader(
+              accepted,
+              "x-todo-request",
+              root.request_id,
+            )
+          : accepted;
         const timing =
-          response.status === 401 || response.status === 403
+          !root || response.status === 401 || response.status === 403
             ? undefined
-            : profiler.serverTiming(root, end - start);
+            : observeDiagnostic(profiler, () =>
+                profiler.serverTiming(root, end - start),
+              );
         return timing
           ? HttpServerResponse.setHeader(joined, "server-timing", timing)
           : joined;
@@ -341,14 +370,19 @@ export const diagnosticsMiddleware =
       HttpEffect.appendPreResponseHandlerUnsafe(request, (_, response) =>
         Effect.succeed(handoffResponse(response)),
       );
-      return profiler.run(root, diagnosticSpan("handler", httpEffect)).pipe(
+      return provideDiagnosticContext(
+        root ? { recorder: profiler, envelope: root } : undefined,
+        diagnosticSpan("handler", httpEffect),
+      ).pipe(
         Effect.map(handoffResponse),
         Effect.onExit((exit) =>
           Effect.sync(() => {
             if (Exit.isFailure(exit))
-              profiler.end(
-                entry,
-                Exit.hasInterrupts(exit) ? "cancelled" : "failed",
+              observeDiagnostic(profiler, () =>
+                profiler.end(
+                  entry,
+                  Exit.hasInterrupts(exit) ? "cancelled" : "failed",
+                ),
               );
           }),
         ),
@@ -413,11 +447,13 @@ export const serverLayer = (options: {
       const diagnostics = store.diagnostics;
       const profiler = options.profiler ?? diagnostics.profiler;
       diagnostics.profiler = profiler;
-      profiler.configure({
-        enabled: process.env.TODO_DIAGNOSTICS_RECORDING !== "0",
-        build_id: BUILD_ID,
-        contract_id: CONTRACT_ID,
-      });
+      observeDiagnostic(profiler, () =>
+        profiler.configure({
+          enabled: process.env.TODO_DIAGNOSTICS_RECORDING !== "0",
+          build_id: BUILD_ID,
+          contract_id: CONTRACT_ID,
+        }),
+      );
       const attachments = new AttachmentCommands(store);
       const reads = new ClientReads(store);
       const discovery = new Discovery(store);

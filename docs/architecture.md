@@ -350,6 +350,10 @@ record is written to the Task database.
 
 Owner Diagnostics adds one optional versioned profiler object with counters,
 active spans, bounded recent spans, stream delivery records and explicit gaps.
+Adapter recorder calls use observeDiagnostic. A thrown observation increments
+recording_failures and loss counters while the original work continues once.
+A failed profiler snapshot omits the optional object and preserves the existing
+owner Diagnostics body. Recorder failures retain no error text.
 A stream delivery joins commit observation to encoded bytes handed to the HTTP
 adapter. It does not prove receipt. Bun dispatch before middleware, socket flush,
 body completion and the remaining internal attribution stay unobserved. The

@@ -4,7 +4,10 @@ import { join } from "node:path";
 import { Effect, Schema } from "effect";
 import type { AuthError } from "../auth/model.ts";
 import { CredentialInfo } from "../auth/model.ts";
-import { DiagnosticRecorder } from "../diagnostic-context.ts";
+import {
+  DiagnosticRecorder,
+  observeDiagnostic,
+} from "../diagnostic-context.ts";
 import {
   type DiagnosticClient,
   DiagnosticOperation,
@@ -305,8 +308,11 @@ export class Diagnostics {
           "SELECT count(*) AS count FROM op_log WHERE julianday(json_extract(event,'$.occurred_at'))>julianday(?)",
         )
         .get(instant(now - 60000))?.count ?? 0;
+    const profiler = observeDiagnostic(this.profiler, () =>
+      this.profiler.snapshot(),
+    );
     return Schema.decodeUnknownSync(DiagnosticsSnapshot)({
-      profiler: this.profiler.snapshot(),
+      ...(profiler ? { profiler } : {}),
       generated_at: instant(now),
       poll_interval_ms: 1000,
       runtime: {

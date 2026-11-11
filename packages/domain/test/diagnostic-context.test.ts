@@ -4,6 +4,7 @@ import {
   DiagnosticRecorder,
   diagnosticSpan,
   diagnosticSync,
+  withDiagnosticRoot,
 } from "../src/diagnostic-context.ts";
 
 it.effect(
@@ -192,4 +193,25 @@ it.effect(
         ]);
       }),
     ),
+);
+
+it.effect(
+  "counts lost observations while preserving the original effect when root creation throws",
+  () =>
+    Effect.gen(function* () {
+      class BrokenRoot extends DiagnosticRecorder {
+        override root(): ReturnType<DiagnosticRecorder["root"]> {
+          throw new Error("private root failure");
+        }
+      }
+      const recorder = new BrokenRoot();
+      const result = yield* withDiagnosticRoot(
+        { recorder, role: "cli", stage: "command" },
+        Effect.succeed(37),
+      );
+      expect(result).toBe(37);
+      expect(recorder.snapshot().recording_failures).toBe(1);
+      expect(recorder.snapshot().lost_starts).toBe(1);
+      expect(recorder.snapshot().started).toBe(1);
+    }),
 );

@@ -4,3 +4,4 @@
 - [Terminal and desktop monitoring](panels.md)
 - [Shared interaction vocabulary](vocabulary.md)
 - [Request and stream joins](joins.md)
+- [Recorder failure isolation](faults.md)

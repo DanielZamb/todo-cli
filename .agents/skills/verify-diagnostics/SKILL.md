@@ -177,3 +177,8 @@ on the main recipe. HTTP, JSON/NDJSON, CLI, PTY text and storage assertions stil
 run. The helper writes terminal-png-hold.json and result.json explicitly marks
 terminal_pngs HOLD. The terminal PNG render is owed by a unit that holds the
 Swift slot. This option does not relax a required visual gate for a UI unit.
+
+After recorder or adapter changes run the compiled
+[failure-isolation controls](features/faults.md) as well. They prove that a
+recorder failure cannot change an HTTP response, stream delivery, scheduler
+job or CLI result. They do not invoke Swift.

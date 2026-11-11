@@ -25,6 +25,22 @@ const id = <S extends Schema.Top & { readonly DecodingServices: never }>(
     Schema.decodeUnknownSync(schema)(randomUUID()),
   );
 const recordingFailures = new WeakMap<DiagnosticRecorder, number>();
+const failedStarts = new WeakMap<DiagnosticRecorder, number>();
+const failedEvents = new WeakMap<DiagnosticRecorder, number>();
+export function observeDiagnostic<A>(
+  recorder: DiagnosticRecorder,
+  observation: () => A,
+  loss: "start" | "event" = "event",
+): A | undefined {
+  try {
+    return observation();
+  } catch {
+    recordingFailures.set(recorder, (recordingFailures.get(recorder) ?? 0) + 1);
+    const losses = loss === "start" ? failedStarts : failedEvents;
+    losses.set(recorder, (losses.get(recorder) ?? 0) + 1);
+    return undefined;
+  }
+}
 type FinishedSpan = DiagnosticEventOf<"span.finished">;
 type ActiveSpan = DiagnosticEventOf<"span.started">;
 type Delivery = DiagnosticEventOf<"stream.delivery">;
@@ -360,10 +376,10 @@ export class DiagnosticRecorder {
       enabled: this.enabled,
       capacity: this.capacity,
       active_capacity: this.activeCapacity,
-      started: this.started,
+      started: this.started + (failedStarts.get(this) ?? 0),
       finished: this.finished,
-      lost_starts: this.lostStarts,
-      dropped_events: this.droppedEvents,
+      lost_starts: this.lostStarts + (failedStarts.get(this) ?? 0),
+      dropped_events: this.droppedEvents + (failedEvents.get(this) ?? 0),
       recording_failures: recordingFailures.get(this) ?? 0,
       active: [...this.active.values()],
       recent: [
@@ -401,38 +417,59 @@ export function beginDiagnosticSpan(
   stage: typeof DiagnosticStage.Type,
   metadata?: typeof DiagnosticMetadata.Type,
 ): Timing | undefined {
-  let recorder: DiagnosticRecorder | undefined;
-  try {
-    const scope = current();
-    if (!scope?.recorder.enabled) return undefined;
-    recorder = scope.recorder;
-    return {
-      recorder,
-      start: recorder.start(scope.envelope, stage, metadata),
-      envelope: scope.envelope,
-    };
-  } catch {
-    if (recorder)
-      recordingFailures.set(
-        recorder,
-        (recordingFailures.get(recorder) ?? 0) + 1,
-      );
-    return undefined;
-  }
+  const scope = current();
+  if (!scope) return undefined;
+  return observeDiagnostic(
+    scope.recorder,
+    () => {
+      if (!scope.recorder.enabled) return undefined;
+      return {
+        recorder: scope.recorder,
+        start: scope.recorder.start(scope.envelope, stage, metadata),
+        envelope: scope.envelope,
+      };
+    },
+    "start",
+  );
 }
 export function finishDiagnosticSpan(
   timing: Timing | undefined,
   outcome: "completed" | "refused" | "conflicted" | "failed" | "cancelled",
 ) {
-  if (!timing) return;
-  try {
-    timing.recorder.end(timing.start, outcome);
-  } catch {
-    recordingFailures.set(
-      timing.recorder,
-      (recordingFailures.get(timing.recorder) ?? 0) + 1,
+  if (timing)
+    observeDiagnostic(timing.recorder, () =>
+      timing.recorder.end(timing.start, outcome),
     );
-  }
+}
+export function provideDiagnosticContext<A, E, R>(
+  scope: Scope | undefined,
+  effect: Effect.Effect<A, E, R>,
+): Effect.Effect<A, E, R> {
+  return scope
+    ? Effect.provideService(effect, CurrentDiagnostic, scope)
+    : effect;
+}
+export function withDiagnosticRoot<A, E, R>(
+  options: {
+    readonly recorder: DiagnosticRecorder;
+    readonly role: typeof DiagnosticEnvelope.Type.process_role;
+    readonly stage: typeof DiagnosticStage.Type;
+  },
+  effect: Effect.Effect<A, E, R>,
+): Effect.Effect<A, E, R> {
+  return Effect.suspend(() => {
+    const envelope = observeDiagnostic(
+      options.recorder,
+      () => options.recorder.root({}, options.role),
+      "start",
+    );
+    return envelope
+      ? provideDiagnosticContext(
+          { recorder: options.recorder, envelope },
+          diagnosticSpan(options.stage, effect),
+        )
+      : effect;
+  });
 }
 export function diagnosticSync<A>(
   stage: typeof DiagnosticStage.Type,
@@ -479,13 +516,8 @@ export function diagnosticSpan<A, E, R>(
 export const diagnosticContext = current;
 export const diagnosticOwnerAuthenticated = () => {
   const scope = current();
-  if (!scope) return;
-  try {
-    scope.recorder.authorize(scope.envelope);
-  } catch {
-    recordingFailures.set(
-      scope.recorder,
-      (recordingFailures.get(scope.recorder) ?? 0) + 1,
+  if (scope)
+    observeDiagnostic(scope.recorder, () =>
+      scope.recorder.authorize(scope.envelope),
     );
-  }
 };

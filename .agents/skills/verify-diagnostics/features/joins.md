@@ -5,7 +5,8 @@
 Validated recording headers, owner Session Server-Timing, bounded server spans,
 CLI command roots, scheduler job roots and per-client encoded stream handoff.
 The existing owner Diagnostics snapshot adds one optional version 1 profiler
-object. Newly built servers always send it. Existing keys retain their meaning.
+object. A failed recorder snapshot omits that object and preserves the read.
+Existing keys retain their meaning.
 
 ## How to get to it (user POV)
 
