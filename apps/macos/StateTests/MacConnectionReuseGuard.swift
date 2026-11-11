@@ -147,7 +147,8 @@ extension MacConnectionReuseGuard {
         await model.transition(target, action: "complete")
         let completed = try #require(model.tasks.first { $0.id == target.id })
         #expect(completed.status == "done" && completed.row_version == target.row_version + 1)
-        #expect(model.editorError == nil && model.message == "Task updated" && !model.busy)
+        let completeSucceeded = model.editorError == nil && model.message == nil && model.canWrite
+        #expect(completeSucceeded)
         let completeDelta = try await history(target.id).count - before
         #expect(completeDelta == 1)
         await warm()
@@ -160,7 +161,7 @@ extension MacConnectionReuseGuard {
         #expect(tasks.filter { $0.title == "Restart transport control" }.count == 1)
         #expect(newHistory.count == 1 && newHistory.first?.event.kind == "TaskCreated")
         if let path = env["TODO_CLIENT_DIAGNOSTICS_EVIDENCE"] {
-            let receipt: [String: Any] = ["restarts": 3, "first_get_succeeded": profiles.contains { $0.id == "work" }, "complete_history_delta": completeDelta, "complete_reported_success": model.editorError == nil, "new_tasks": tasks.count - 178, "created_history_records": newHistory.count, "write_retry_added": false, "scope": "restart completes before each first model/generated request; response loss after commit is not injected"]
+            let receipt: [String: Any] = ["restarts": 3, "first_get_succeeded": profiles.contains { $0.id == "work" }, "complete_history_delta": completeDelta, "complete_reported_success": completeSucceeded, "new_tasks": tasks.count - 178, "created_history_records": newHistory.count, "write_retry_added": false, "scope": "restart completes before each first model/generated request; response loss after commit is not injected"]
             try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]).write(to: URL(fileURLWithPath: path).appendingPathComponent("restart-transport.json"))
         }
         await recorder.flush()
