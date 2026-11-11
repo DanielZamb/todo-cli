@@ -92,7 +92,7 @@ export function topPanes(
       title: "Operations",
       lines: [
         `${snapshot.operations.per_second.toFixed(2)} ops/s · 60s window · ${snapshot.operations.rejected} rejected total`,
-        spark(snapshot.operations.samples),
+        spark([...snapshot.operations.samples].reverse()),
         ...operations.map(
           (operation) =>
             `${operation.outcome === "rejected" ? "REJECT" : "ACCEPT"} #${operation.seq} ${operation.type} · ${name(operation.profile)} · ${time(operation.time)}`,
@@ -113,7 +113,7 @@ export function topPanes(
       title: "Latency",
       lines: [
         "Completed responses · last 5m · max 2048",
-        spark(snapshot.latency.samples),
+        spark([...snapshot.latency.samples].reverse()),
         ...snapshot.latency.routes
           .map((route) => `${route.route}  n=${route.count}`)
           .flatMap((route, index) => [
