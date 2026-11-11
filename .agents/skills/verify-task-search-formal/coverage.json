@@ -133,7 +133,7 @@
         "runTaskRecordSteps",
         "filterTaskRecordsEffect"
       ],
-      "sha256": "aff1e83b4486135946a007018ec2551b145aaefb5d7a51f5bcf213db991e6f55"
+      "sha256": "6d6b556533587af76b5aebae7a6a993452ea94016de35205f56a3883d9045f27"
     },
     {
       "path": "packages/domain/src/task-read.ts",
@@ -262,5 +262,14 @@
     "limits": "Finite models and manual function mapping; native signing, storage, Keychain, Session persistence, real OS dispatch and VoiceOver remain held."
   },
   "previousProductCommit": "36f9c56e200048aa2ca16186aaf713bea8d5454e",
-  "previousIntegrationCommit": "81cdef8ec257a8ca7e1cbfb1ab2b3ff3afcbbf14"
+  "previousIntegrationCommit": "81cdef8ec257a8ca7e1cbfb1ab2b3ff3afcbbf14",
+  "diagnosticsReview": {
+    "product": "a2dea2d6328298671796cc856738fd0e4e68469d",
+    "changed": [
+      "packages/domain/src/task-filters.ts"
+    ],
+    "scope": "Only filterTaskRecordsEffect gains an outer diagnosticSpan. The original suspended generator driver and its ensuring cleanup stay intact; clauses, preparation, matching, meter, checkpoint positions, result values and client request/publication rules are unchanged. Diagnostic finalization is synchronous, outside the original driver finalizer, and contains recorder failures. No matcher-candidate or model change.",
+    "proof": "The complete pre-renewal model/control run passed all expected outcomes then stopped only on this whole-file hash. Root behavior tests and same-source compiled HTTP/CLI checks pass. Real Effect interruption and throwing-recorder tests pass.",
+    "report": "docs/decisions/ui-speed/diag-core-report.md"
+  }
 }

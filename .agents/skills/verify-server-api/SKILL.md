@@ -175,3 +175,7 @@ and cross-Profile id-prefix lookup matrix, credential no-leak properties, WAL
 snapshot tests and auth-failure rollback proof. Run its single command after
 changing these reads or their CLI/HTTP contracts. Existing Profile-scoped SSE
 and Task search behavior retain their current recipes.
+
+Set TODO_SEED_BINARY to the matching source-hash cached provisioning executable
+alongside TODO_SERVER_BINARY to reuse both artifacts. The helper links the seed
+inside its owned scratch directory and does not recompile that source hash.

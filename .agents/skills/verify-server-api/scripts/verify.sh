@@ -18,8 +18,12 @@ cd "$root"
     (cd "$scratch" && bun build --compile "$root/apps/server/src/main.ts" --outfile "$server")
   fi
   test -x "$server"
-  printf 'bun build --compile apps/server/scripts/seed-verification.ts --outfile %s/seed\n' "$scratch"
-  (cd "$scratch" && bun build --compile "$root/apps/server/scripts/seed-verification.ts" --outfile "$scratch/seed")
+  if [ -n "${TODO_SEED_BINARY:-}" ]; then
+    ln -s "$TODO_SEED_BINARY" "$scratch/seed"
+  else
+    printf 'bun build --compile apps/server/scripts/seed-verification.ts --outfile %s/seed\n' "$scratch"
+    (cd "$scratch" && bun build --compile "$root/apps/server/scripts/seed-verification.ts" --outfile "$scratch/seed")
+  fi
   printf '%s/seed %s\n' "$scratch" "$scratch"
   "$scratch/seed" "$scratch"
   printf 'HOME=%s TODO_DB=%s/scratch.db TODO_PORT=0 %s\n' "$HOME" "$scratch" "$server"
