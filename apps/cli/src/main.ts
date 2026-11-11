@@ -265,7 +265,18 @@ const withStore = <A, E, R>(
     return yield* Effect.acquireUseRelease(
       openStore({ path }),
       (store) =>
-        use(store).pipe(
+        (() => {
+          store.diagnostics.profiler.configure({
+            enabled: process.env.TODO_DIAGNOSTICS_RECORDING !== "0",
+            build_id: BUILD_ID,
+            contract_id: CONTRACT_ID,
+          });
+          return store.diagnostics.profiler.withRoot(
+            store.diagnostics.profiler.root({}, "cli"),
+            use(store),
+            "command",
+          );
+        })().pipe(
           Effect.catch((error) =>
             Effect.gen(function* () {
               if (

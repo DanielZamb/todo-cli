@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { Effect, Schema } from "effect";
 import type { AuthError } from "../auth/model.ts";
 import { CredentialInfo } from "../auth/model.ts";
+import { DiagnosticRecorder } from "../diagnostic-context.ts";
 import {
   type DiagnosticClient,
   DiagnosticOperation,
@@ -92,6 +93,7 @@ class RequestRing {
 }
 
 export class Diagnostics {
+  readonly profiler = new DiagnosticRecorder();
   private readonly started = Date.now();
   private readonly monotonicStart = performance.now();
   private readonly requests = new RequestRing(2048);

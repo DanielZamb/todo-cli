@@ -1,6 +1,10 @@
 import type { Database } from "bun:sqlite";
 import { createHash, randomBytes } from "node:crypto";
 import { Cause, Clock, Effect, Exit, Schema } from "effect";
+import {
+  diagnosticOwnerAuthenticated,
+  diagnosticSync,
+} from "../diagnostic-context.ts";
 import type { Profile } from "../entities.ts";
 import { type AppendResult, type AuthAction, Event } from "../events.ts";
 import { ActorId, ProfileId, Sequence } from "../ids.ts";
@@ -336,38 +340,48 @@ export class Authentication<Read> {
     access: "owner" | "read" | "write" | "profiles",
     profile: ProfileId | null = null,
   ) {
-    const { credential } = parse(OwnerRequest, input);
-    if (!/^(ses|tok)_[a-f0-9]{64}$/.test(credential))
-      throw new AuthError("invalid_credential");
-    const row = this.db
-      .query(`SELECT ${credentialColumns} FROM credentials WHERE secret_hash=?`)
-      .get(sha256(credential));
-    if (row === null) throw new AuthError("invalid_credential");
-    const value = Schema.decodeUnknownSync(CredentialInfo)(row);
-    if ((value.kind === "session") !== credential.startsWith("ses_"))
-      throw new AuthError("invalid_credential");
-    if (value.revoked_at !== null) throw new AuthError("revoked", value.id);
-    if (Date.parse(value.expires_at) <= time)
-      throw new AuthError("expired", value.id);
-    if (access === "owner" && value.kind !== "session")
-      throw new AuthError("owner_required", value.id);
-    if (
-      access !== "profiles" &&
-      value.profile !== null &&
-      value.profile !== profile
-    )
-      throw new AuthError("profile_scope", value.id);
-    if (access === "write" && value.scope !== "read-write")
-      throw new AuthError("write_scope", value.id);
-    if (
-      profile !== null &&
-      this.db
-        .query("SELECT 1 FROM profile_deletions WHERE profile=?")
-        .get(profile)
-    )
-      throw new AuthError("profile_deleted", value.id);
-    this.ports.credentialUsed?.(value.id, time);
-    return value;
+    return diagnosticSync("authentication", () => {
+      const { credential } = parse(OwnerRequest, input);
+      if (!/^(ses|tok)_[a-f0-9]{64}$/.test(credential))
+        throw new AuthError("invalid_credential");
+      const row = diagnosticSync(
+        "database",
+        () =>
+          this.db
+            .query(
+              `SELECT ${credentialColumns} FROM credentials WHERE secret_hash=?`,
+            )
+            .get(sha256(credential)),
+        { statement: "auth.credential" },
+      );
+      if (row === null) throw new AuthError("invalid_credential");
+      const value = Schema.decodeUnknownSync(CredentialInfo)(row);
+      if ((value.kind === "session") !== credential.startsWith("ses_"))
+        throw new AuthError("invalid_credential");
+      if (value.revoked_at !== null) throw new AuthError("revoked", value.id);
+      if (Date.parse(value.expires_at) <= time)
+        throw new AuthError("expired", value.id);
+      if (access === "owner" && value.kind !== "session")
+        throw new AuthError("owner_required", value.id);
+      if (
+        access !== "profiles" &&
+        value.profile !== null &&
+        value.profile !== profile
+      )
+        throw new AuthError("profile_scope", value.id);
+      if (access === "write" && value.scope !== "read-write")
+        throw new AuthError("write_scope", value.id);
+      if (
+        profile !== null &&
+        this.db
+          .query("SELECT 1 FROM profile_deletions WHERE profile=?")
+          .get(profile)
+      )
+        throw new AuthError("profile_deleted", value.id);
+      if (value.kind === "session") diagnosticOwnerAuthenticated();
+      this.ports.credentialUsed?.(value.id, time);
+      return value;
+    });
   }
 
   private issue(

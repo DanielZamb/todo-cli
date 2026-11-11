@@ -163,8 +163,10 @@ export const DiagnosticMetadata = Schema.Struct({
 const identity = {
   run_id: DiagnosticRunId,
   process_role: DiagnosticProcessRole,
-  build_id: Schema.String.check(Schema.isPattern(/^[a-f0-9]{40,64}$/u)),
-  contract_id: Schema.String.check(Schema.isPattern(/^[a-f0-9]{64}$/u)),
+  build_id: Schema.String.check(Schema.isPattern(/^(?:[a-f0-9]{8,64}|dev)$/u)),
+  contract_id: Schema.String.check(
+    Schema.isPattern(/^(?:[a-f0-9]{64}|unknown)$/u),
+  ),
   mode: Schema.Literals(["full", "compact", "terminal", "headless", "unknown"]),
   input_kind: Schema.Literals([
     "pointer",
@@ -189,10 +191,19 @@ const identity = {
     "unknown",
   ]),
 };
+export const DiagnosticCategory = Schema.Union([
+  InteractionCategory,
+  Schema.Struct({
+    inventory_id: Schema.Literal("unknown"),
+    subtype: Schema.Literal("unknown"),
+  }),
+]);
 export const DiagnosticEnvelope = Schema.Struct({
   schema_version: Schema.Literal(1),
   ...identity,
-  category: InteractionCategory,
+  category: DiagnosticCategory,
+  request_id: Schema.optionalKey(DiagnosticRequestId),
+  refresh_id: Schema.optionalKey(DiagnosticRefreshId),
   sequence: DiagnosticCount,
   monotonic_ms: DiagnosticMetric,
   clock_unit: Schema.Literal("ms"),
@@ -333,7 +344,7 @@ const payloads = [
     frame_id: DiagnosticFrameId,
     commit_receipt: DiagnosticCommitReceipt,
     stage: Schema.Literals(["commit_seen", "transport_handoff"]),
-    bytes: DiagnosticCount,
+    bytes: Schema.NullOr(DiagnosticCount),
   }),
   event({
     name: Schema.Literal("span.started"),

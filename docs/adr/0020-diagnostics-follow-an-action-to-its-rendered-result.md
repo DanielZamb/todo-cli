@@ -13,6 +13,17 @@ Recording ids never identify Tasks, Profiles or credentials. Request headers
 X-Todo-Trace, X-Todo-Request and X-Todo-Action carry these joins and confer no
 authority. The server validates them and echoes the accepted request id.
 
+Owner Session responses also carry Server-Timing. The required todo-handler
+metric measures middleware entry to response handoff in milliseconds, matching
+the request entry span. Optional todo-auth, todo-queue, todo-domain, todo-db and
+todo-encode metrics report observed work only. Values use dur= with at most
+three decimal places, comma separation and no descriptions, ids or content.
+Authentication refusals and unauthenticated responses carry no timing. Stream
+responses carry timing only on their initial headers. These optional headers
+leave the typed contract unchanged. Socket acceptance and worker dispatch occur
+before middleware entry in the Bun adapter and remain unattributed. No server
+header proves client receipt.
+
 Categories cover I01 through I30 and C01 through C08. Each subtype has the
 inventory row's result predicate. A current authoritative result or visible
 refusal completes only at an observed render marker. Model publication, layout,

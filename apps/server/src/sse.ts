@@ -1,11 +1,17 @@
+import { randomUUID } from "node:crypto";
 import {
   BadRequest,
   BearerCredential,
   type ChangeEvent,
   TodoApi,
 } from "@todo/api";
+import {
+  DiagnosticFrameId,
+  DiagnosticStreamId,
+  diagnosticContext,
+} from "@todo/domain";
 import type { OperationStore } from "@todo/domain/store";
-import { Effect, Stream } from "effect";
+import { Effect, Schema, Stream } from "effect";
 import { HttpApiBuilder, HttpApiSchema } from "effect/http-api";
 import { translate } from "./errors.ts";
 
@@ -15,6 +21,38 @@ export const changesLayer = (store: OperationStore) =>
       stream: ({ params, headers }) =>
         Effect.gen(function* () {
           const credential = yield* BearerCredential;
+          const scope = diagnosticContext();
+          const profiler = scope?.recorder ?? store.diagnostics.profiler;
+          const streamId = Schema.decodeUnknownSync(DiagnosticStreamId)(
+            randomUUID(),
+          );
+          let generation = "initial";
+          const observe = (event: typeof ChangeEvent.Type) => {
+            if (event.event !== "operation" || !scope || !profiler.enabled)
+              return;
+            const frame_id = Schema.decodeUnknownSync(DiagnosticFrameId)(
+              randomUUID(),
+            );
+            const commit_receipt = profiler.commitReceipt(
+              event.data.seq,
+              generation,
+            );
+            profiler.delivery(
+              scope.envelope,
+              streamId,
+              frame_id,
+              commit_receipt,
+              "commit_seen",
+              null,
+            );
+            profiler.awaitTransport(event.data.seq, {
+              ...scope.envelope,
+              name: "stream.delivery",
+              stream_id: streamId,
+              frame_id,
+              commit_receipt,
+            });
+          };
           const header = headers["last-event-id"];
           const after = header === undefined ? 0 : Number(header);
           if (
@@ -31,6 +69,7 @@ export const changesLayer = (store: OperationStore) =>
           );
           yield* authorize;
           const initial = yield* translate(store.snapshots.generation());
+          generation = initial.generation;
           const reset =
             after > initial.seq ||
             (initial.generation !== "initial" &&
@@ -44,6 +83,7 @@ export const changesLayer = (store: OperationStore) =>
               Effect.gen(function* () {
                 yield* Effect.sleep("250 millis");
                 const current = yield* translate(store.snapshots.generation());
+                generation = current.generation;
                 const events: Array<typeof ChangeEvent.Type> = [];
                 if (current.generation !== state.generation) {
                   events.push({
@@ -85,7 +125,10 @@ export const changesLayer = (store: OperationStore) =>
                   yield* authorize;
                 return [events, { ...state, cursor }] as const;
               }),
-          ).pipe(Stream.flattenIterable);
+          ).pipe(
+            Stream.flattenIterable,
+            Stream.tap((event) => Effect.sync(() => observe(event))),
+          );
           const greeting: Array<typeof ChangeEvent.Type> = [
             { event: "ready", data: null },
             ...(reset
@@ -113,7 +156,12 @@ export const changesLayer = (store: OperationStore) =>
                       reset ? undefined : header,
                     ),
                   ),
-                  (id) => Effect.sync(() => store.diagnostics.disconnect(id)),
+                  (id) =>
+                    Effect.sync(() => {
+                      store.diagnostics.disconnect(id);
+                      if (scope?.envelope.request_id)
+                        profiler.releaseStream(scope.envelope.request_id);
+                    }),
                 );
                 return Stream.concat(
                   Stream.fromIterable(greeting),

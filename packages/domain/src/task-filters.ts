@@ -1,4 +1,5 @@
 import { Effect, Schema } from "effect";
+import { diagnosticSpan } from "./diagnostic-context.ts";
 import { type Project, type Tag, type Task, TaskPriority } from "./entities.ts";
 import { graphEnergy } from "./graph-energy.ts";
 import { dependencyState, indexGraph, type TaskGraph } from "./graph-model.ts";
@@ -232,7 +233,8 @@ export function runTaskRecordSteps<E = never>(
 export function filterTaskRecordsEffect(
   ...args: Parameters<typeof filterTaskRecordSteps>
 ) {
-  return Effect.suspend(() =>
-    runTaskRecordSteps(filterTaskRecordSteps(...args)),
+  return diagnosticSpan(
+    "search_evaluation",
+    Effect.suspend(() => runTaskRecordSteps(filterTaskRecordSteps(...args))),
   );
 }

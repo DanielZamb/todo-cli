@@ -391,7 +391,7 @@ it("checks variant-specific keys without accepting another variant's fields", ()
   expectTypeOf<DiagnosticEventOf<"request.started">>().toHaveProperty(
     "request_id",
   );
-  expectTypeOf<"request_id">().not.toExtend<
+  expectTypeOf<"status">().not.toExtend<
     keyof DiagnosticEventOf<"span.started">
   >();
   expectTypeOf<DiagnosticPayloads["span.started"]["stage"]>().toEqualTypeOf<

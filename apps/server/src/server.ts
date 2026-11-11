@@ -24,7 +24,9 @@ import {
   ClientReads,
   DependencyCommands,
   type DependencyError,
+  type DiagnosticRecorder,
   Discovery,
+  diagnosticSpan,
   type EdgeCommandResult,
   type EdgeReport,
   ExpectedVersion,
@@ -55,8 +57,9 @@ import {
   type TaskCommandResult,
   TaskCommands,
 } from "@todo/domain/store";
-import { Effect, Layer, Option, Redacted, Schema } from "effect";
+import { Effect, Exit, Layer, Option, Redacted, Schema, Stream } from "effect";
 import {
+  HttpBody,
   HttpEffect,
   HttpRouter,
   HttpServerRequest,
@@ -263,7 +266,10 @@ export const allowedHostsFrom = (value: string | undefined) =>
       .filter(Boolean),
   );
 export const diagnosticsMiddleware =
-  (diagnostics: OperationStore["diagnostics"]) =>
+  (
+    diagnostics: OperationStore["diagnostics"],
+    profiler = diagnostics.profiler,
+  ) =>
   <E, R>(
     httpEffect: Effect.Effect<HttpServerResponse.HttpServerResponse, E, R>,
   ) =>
@@ -271,18 +277,88 @@ export const diagnosticsMiddleware =
       const query = request.url.indexOf("?");
       const path = query === -1 ? request.url : request.url.slice(0, query);
       const route = `${request.method} ${knownRoutes.find((value) => value.pattern.test(path))?.path ?? "unmatched"}`;
-      const start = performance.now();
-      HttpEffect.appendPreResponseHandlerUnsafe(request, (_, response) => {
+      const root = profiler.root({
+        trace: request.headers["x-todo-trace"],
+        request: request.headers["x-todo-request"],
+        action: request.headers["x-todo-action"],
+      });
+      const start = root.monotonic_ms;
+      const entry = profiler.start(root, "entry");
+      let handed = false;
+      const handoffResponse = (
+        response: HttpServerResponse.HttpServerResponse,
+      ) => {
+        if (handed) return response;
+        handed = true;
         const end = performance.now();
         diagnostics.request(route, end - start, response.status, end);
-        return Effect.succeed(response);
-      });
-      return httpEffect;
+        const handoff = profiler.start(root, "response_handoff");
+        profiler.end(handoff, "completed");
+        profiler.end(
+          entry,
+          response.status === 499
+            ? "cancelled"
+            : response.status === 409
+              ? "conflicted"
+              : response.status >= 500
+                ? "failed"
+                : response.status >= 400
+                  ? "refused"
+                  : "completed",
+          end,
+        );
+        const body = response.body;
+        const accepted =
+          body._tag === "Stream"
+            ? HttpServerResponse.setBody(
+                response,
+                HttpBody.stream(
+                  body.stream.pipe(
+                    Stream.tap((chunk) =>
+                      Effect.sync(() =>
+                        profiler.transport(root.request_id, chunk),
+                      ),
+                    ),
+                  ),
+                  body.contentType,
+                  body.contentLength,
+                ),
+              )
+            : response;
+        const joined = HttpServerResponse.setHeader(
+          accepted,
+          "x-todo-request",
+          root.request_id,
+        );
+        const timing =
+          response.status === 401 || response.status === 403
+            ? undefined
+            : profiler.serverTiming(root, end - start);
+        return timing
+          ? HttpServerResponse.setHeader(joined, "server-timing", timing)
+          : joined;
+      };
+      HttpEffect.appendPreResponseHandlerUnsafe(request, (_, response) =>
+        Effect.succeed(handoffResponse(response)),
+      );
+      return profiler.run(root, diagnosticSpan("handler", httpEffect)).pipe(
+        Effect.map(handoffResponse),
+        Effect.onExit((exit) =>
+          Effect.sync(() => {
+            if (Exit.isFailure(exit))
+              profiler.end(
+                entry,
+                Exit.hasInterrupts(exit) ? "cancelled" : "failed",
+              );
+          }),
+        ),
+      );
     });
 
 export const serverLayer = (options: {
   readonly path: string;
   readonly port: number;
+  readonly profiler?: DiagnosticRecorder;
   readonly allowedHosts?: ReadonlySet<string>;
 }) =>
   Layer.unwrap(
@@ -335,6 +411,12 @@ export const serverLayer = (options: {
             return yield* taskResult(result);
           });
       const diagnostics = store.diagnostics;
+      const profiler = options.profiler ?? diagnostics.profiler;
+      profiler.configure({
+        enabled: process.env.TODO_DIAGNOSTICS_RECORDING !== "0",
+        build_id: BUILD_ID,
+        contract_id: CONTRACT_ID,
+      });
       const attachments = new AttachmentCommands(store);
       const reads = new ClientReads(store);
       const discovery = new Discovery(store);
@@ -1008,7 +1090,10 @@ export const serverLayer = (options: {
       );
       return HttpRouter.serve(routes, {
         middleware: (effect) =>
-          diagnosticsMiddleware(diagnostics)(
+          diagnosticsMiddleware(
+            diagnostics,
+            profiler,
+          )(
             rejectForeignRequests(options.allowedHosts)(
               rejectUnknownQuery(effect),
             ),
