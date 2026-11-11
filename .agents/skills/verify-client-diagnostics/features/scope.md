@@ -20,6 +20,10 @@ journal directory. Run the parent skill's verify.py command. Require literal
 owner/Access Token results, denied exports, journal sizes/permissions and absence
 of synthetic private content. Race clearing against pending writes and require
 no file to reappear. Preserve the resulting small JSON receipts.
+After clear and reauthorization, finish an old refresh, request and action and
+deliver an old-scope background callback. Each must leave the new journal at
+zero records and increment its dropped counter once. A stale finish cannot
+create a record just because its opaque id is well formed.
 
 ## Gotchas
 

@@ -38,6 +38,7 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
     private var requests: [UUID: Request] = [:]
     private var actions: [UUID: Action] = [:]
     private var incomplete: [ActionKey: Int] = [:]
+    private var superseded: [ActionKey: Int] = [:]
     private var incompleteAge: [ActionKey: Double] = [:]
     private var availability: ClientDiagnosticAvailability?
     private var latencies: [ActionKey: [Double]] = [:]
@@ -58,7 +59,7 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
         lock.withLock {
             authorized = false; epoch += 1; draining = false; events.removeAll(keepingCapacity: true); pending.removeAll(keepingCapacity: true)
             requests.removeAll(); refreshCounts.removeAll(); actions.removeAll(); availability = nil
-            recorded = 0; dropped = 0; journalFailures = 0; incomplete.removeAll(); incompleteAge.removeAll()
+            recorded = 0; dropped = 0; journalFailures = 0; incomplete.removeAll(); incompleteAge.removeAll(); superseded.removeAll()
             latencies.removeAll(); unproven.removeAll(); refreshTotal = 0; requestTotal = 0; longestStallMS = 0; resources = nil
             writer.async { [self] in
                 directoryPrepared = false
@@ -75,7 +76,11 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
     public var scopeToken: Int { lock.withLock { epoch } }
     public func record(_ event: ClientDiagnosticEvent, ifScope scope: Int? = nil) {
         guard isEnabled else { return }
-        lock.withLock { if scope == nil || scope == epoch { appendLocked(event) } }
+        lock.withLock {
+            guard authorized else { return }
+            guard scope == nil || scope == epoch else { dropped += 1; return }
+            appendLocked(event)
+        }
     }
     private func appendLocked(_ event: ClientDiagnosticEvent) {
         guard authorized else { return }
@@ -182,7 +187,9 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
     public func layoutCommitted(_ id: UUID?) {
         guard let id else { return }
         lock.withLock {
-            guard let action = actions[id], let handler = action.handler, let publication = action.publication else { return }
+            guard authorized else { return }
+            guard let action = actions[id] else { dropped += 1; return }
+            guard let handler = action.handler, let publication = action.publication else { return }
             actions.removeValue(forKey: id)
             let now = clock(), duration = max(0, now - action.started)
             if latencies[action.key, default: []].count == 512 { latencies[action.key]?.removeFirst() }
@@ -193,13 +200,17 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
             appendLocked(record)
         }
     }
-    public func endIncomplete(_ id: UUID?, outcome: ClientDiagnosticOutcome) {
+    public func endAction(_ id: UUID?, outcome: ClientDiagnosticOutcome) {
         guard let id else { return }
         lock.withLock {
-            guard let action = actions.removeValue(forKey: id) else { return }
+            guard authorized else { return }
+            guard let action = actions.removeValue(forKey: id) else { dropped += 1; return }
             let age = max(0, clock() - action.started)
-            if outcome != .drag { incomplete[action.key, default: 0] += 1 }
-            incompleteAge[action.key] = max(incompleteAge[action.key] ?? 0, age)
+            if outcome == .superseded { superseded[action.key, default: 0] += 1 }
+            else if outcome != .drag {
+                incomplete[action.key, default: 0] += 1
+                incompleteAge[action.key] = max(incompleteAge[action.key] ?? 0, age)
+            }
             var record = event(.actionEnded); record.actionID = id; record.action = action.key.category; record.mode = action.key.mode; record.inputKind = action.key.inputKind; record.traceID = id; record.outcome = outcome; record.durationMS = age
             appendLocked(record)
         }
@@ -218,7 +229,9 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
     public func refreshFinished(_ id: UUID?, outcome: ClientDiagnosticOutcome, durationMS: Double) {
         guard let id else { return }
         lock.withLock {
-            var record = event(.refreshFinished); record.refreshID = id; record.actionID = ClientDiagnosticContext.actionID; record.outcome = outcome; record.durationMS = durationMS; record.requestCount = refreshCounts.removeValue(forKey: id) ?? 0
+            guard authorized else { return }
+            guard let count = refreshCounts.removeValue(forKey: id) else { dropped += 1; return }
+            var record = event(.refreshFinished); record.refreshID = id; record.actionID = ClientDiagnosticContext.actionID; record.outcome = outcome; record.durationMS = durationMS; record.requestCount = count
             appendLocked(record)
         }
     }
@@ -246,7 +259,8 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
     public func requestFinished(_ id: UUID?, status: Int?, reason: ClientDiagnosticReason? = nil, phases: ClientDiagnosticRequestPhases? = nil) {
         guard let id else { return }
         lock.withLock {
-            guard let request = requests.removeValue(forKey: id) else { return }
+            guard authorized else { return }
+            guard let request = requests.removeValue(forKey: id) else { dropped += 1; return }
             if let action = request.action, actions[action] != nil {
                 if (actions[action]?.requests.count ?? 0) < 512 { actions[action]?.requests.append((request.started, clock())) } else { dropped += 1 }
              }
@@ -268,11 +282,11 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
             let now = clock()
             var result = ClientDiagnosticSummary()
             result.recorded = recorded; result.dropped = dropped; result.journalFailures = journalFailures; result.refreshes = refreshTotal; result.requests = requestTotal
-            let keys = Set(latencies.keys).union(incomplete.keys).union(unproven.keys).union(actions.values.map(\.key))
+            let keys = Set(latencies.keys).union(incomplete.keys).union(superseded.keys).union(unproven.keys).union(actions.values.map(\.key))
             result.actions = keys.map { key in
                 let samples = (latencies[key] ?? []).sorted(), pending = actions.values.filter { $0.key == key }
                 func quantile(_ q: Double) -> Double? { samples.isEmpty ? nil : samples[max(0, Int(ceil(Double(samples.count) * q)) - 1)] }
-                return .init(action: key.category, mode: key.mode, inputKind: key.inputKind, unprovenCount: unproven[key] ?? 0, p50MS: quantile(0.5), p90MS: quantile(0.9), p99MS: quantile(0.99), maxMS: samples.last, count: samples.count, incompleteCount: pending.count + (incomplete[key] ?? 0), oldestIncompleteMS: max(incompleteAge[key] ?? 0, pending.map { max(0, now - $0.started) }.max() ?? 0))
+                return .init(action: key.category, mode: key.mode, inputKind: key.inputKind, unprovenCount: unproven[key] ?? 0, p50MS: quantile(0.5), p90MS: quantile(0.9), p99MS: quantile(0.99), maxMS: samples.last, count: samples.count, supersededCount: superseded[key] ?? 0, incompleteCount: pending.count + (incomplete[key] ?? 0), oldestIncompleteMS: max(incompleteAge[key] ?? 0, pending.map { max(0, now - $0.started) }.max() ?? 0))
             }.sorted { $0.id < $1.id }
             let selection = result.actions.filter { $0.action == .taskSelection || $0.action == .keyboardSelection }
             result.completedSelections = selection.reduce(0) { $0 + $1.count }; result.incompleteSelections = selection.reduce(0) { $0 + $1.incompleteCount }

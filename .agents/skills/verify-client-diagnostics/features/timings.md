@@ -26,3 +26,13 @@ alternating runs before reporting overhead.
 A settled query and a superseded keystroke have different outcomes. Label both.
 Handler wall time includes awaits. URLSession phases omit the server's internal
 handler unless independently correlated. Missing phases must remain unknown.
+# Supersession and selection intent
+
+Six Find inputs must produce five superseded outcomes and one completed Search,
+with zero incomplete actions after the final result. Superseded actions keep
+their own count and never contribute an incomplete age or a red budget marker.
+The synthetic native-handler control requires the event's window and table
+row to match, then checks Up at the first row, Down at the last, Return and a
+pointer on the selected row. None starts a selection action. Moving Down and
+clicking a different row are positive controls. These direct handler calls do
+not establish actual SwiftUI input delivery or visible selection.

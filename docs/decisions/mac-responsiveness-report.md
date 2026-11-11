@@ -547,3 +547,31 @@ uses vertical cards in Compact. ADR-0009 Electron and CLI parity is owed by
 the separate cross-client unit. The explicit category coverage gaps above
 remain; this candidate does not qualify every interaction against the
 20 ms median and 300 ms p99 objective.
+
+## Review correction: outcomes and recording scope
+
+The recorder now keeps superseded inputs as a separate outcome and count.
+They contribute no incomplete count or age and do not mark a timing row red.
+Six synthetic Find inputs through the production monitor produce five
+superseded Searches and one completed Search, with zero incomplete. Pending
+inputs still carry their age until a matching result or an explicit outcome.
+
+Keyboard selection is observed only for a move to an available selectable row.
+Up at the beginning, Down at the end and Return do not start a selection action.
+A pointer on the already selected native table row also does not start one.
+The direct native-handler test validates the event/window/row binding and
+includes working Down and different-row positive controls. It stays unordered
+and does not prove physical input delivery to the production SwiftUI List.
+
+Finishes now require an active start in the current recording scope. An old
+refresh, request or action finish, or a stale background callback, leaves the
+new journal at zero records and increments dropped once. The earlier finish
+without an active refresh id could create a record in the new Session.
+
+The sensitive failing control recorded 14 issues in four test functions.
+After the fixes, the complete focused Diagnostics selection passed 18 tests
+in three suites. An earlier native fixture omitted a required AppKit data-source
+method; the corrected fixture's positive controls passed in the failing run.
+A misplaced summary field caused an intermediate compile failure and was
+corrected before the green proof. The complete candidate gates and richer
+in-window captures follow with the retention and panel corrections.

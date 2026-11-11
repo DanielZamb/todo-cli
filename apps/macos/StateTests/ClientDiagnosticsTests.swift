@@ -15,7 +15,116 @@ private final class DiagnosticTestClock: @unchecked Sendable {
     func set(_ value: Double) { lock.withLock { self.value = value } }
 }
 
+@MainActor private final class DiagnosticSelectionRows: NSObject, NSTableViewDataSource {
+    func numberOfRows(in tableView: NSTableView) -> Int { 3 }
+    func tableView(_ tableView: NSTableView, objectValueFor tableColumn: NSTableColumn?, row: Int) -> Any? { "Synthetic Task \(row)" }
+}
+
 @Suite(.serialized) struct ClientDiagnosticsTests {
+    @Test @MainActor func sixFindInputsHaveFiveSupersededAndOneCompletedWithNoIncomplete() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: root)
+        recorder.authorizeOwnerSession(true)
+        let monitor = ClientDiagnosticsMonitor(recorder: recorder)
+        var last: UUID?
+        for character in "review" {
+            let event = try #require(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: 0, context: nil, characters: String(character), charactersIgnoringModifiers: String(character), isARepeat: false, keyCode: 15))
+            monitor.input(event)
+            last = monitor.begin(.search)
+        }
+        monitor.publish(last); recorder.layoutCommitted(last)
+        let summary = await recorder.snapshot(), row = try #require(summary.actions.first { $0.action == .search })
+        #expect(row.count == 1)
+        #expect(row.supersededCount == 5)
+        #expect(row.incompleteCount == 0)
+        #expect(row.oldestIncompleteMS == 0)
+        #expect(summary.recent.filter { $0.name == .actionEnded && $0.outcome == .superseded }.count == 5)
+        #expect(summary.recent.filter { $0.name == .layoutCommitted && $0.outcome == .applied }.count == 1)
+        recorder.clear(); await recorder.flush()
+    }
+    @Test(arguments: ["refresh", "request", "layout", "ended", "callback"])
+    func oldScopeFinishesAreDroppedAndCannotEnterTheNewJournal(_ kind: String) async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: root)
+        recorder.authorizeOwnerSession(true)
+        let scope = recorder.scopeToken
+        let id: UUID?
+        if kind == "refresh" { id = recorder.refreshStarted(.manual) }
+        else if kind == "request" { id = recorder.requestStarted(operation: "tasks.list") }
+        else { id = recorder.beginAction(.search, inputMS: 1); recorder.handlerStarted(id); recorder.resultPublished(id) }
+        recorder.clear(); recorder.authorizeOwnerSession(true)
+        switch kind {
+        case "refresh": recorder.refreshFinished(id, outcome: .superseded, durationMS: 10)
+        case "request": recorder.requestFinished(id, status: 200)
+        case "layout": recorder.layoutCommitted(id)
+        case "ended": recorder.endAction(id, outcome: .superseded)
+        default: recorder.record(.init(name: .stall, run: recorder.run), ifScope: scope)
+        }
+        await recorder.flush()
+        let result = await recorder.snapshot()
+        #expect(result.recorded == 0)
+        #expect(result.recent.isEmpty)
+        #expect(result.dropped == 1)
+        let records = try FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil).filter { $0.pathExtension == "ndjson" }
+        #expect(records.isEmpty)
+        recorder.clear(); await recorder.flush()
+    }
+    @Test @MainActor func nonMovingSelectionInputsDoNotBeginAnAction() async throws {
+        _ = NSApplication.shared
+        for (row, key) in [(0, UInt16(126)), (2, UInt16(125)), (1, UInt16(36))] {
+            let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+            let recorder = ClientDiagnosticsRecorder(journalDirectory: root); recorder.authorizeOwnerSession(true)
+            let monitor = ClientDiagnosticsMonitor(recorder: recorder), rows = DiagnosticSelectionRows()
+            let table = NSTableView(frame: NSRect(x: 0, y: 0, width: 320, height: 140))
+            table.addTableColumn(NSTableColumn(identifier: .init("task"))); table.dataSource = rows; table.headerView = nil; table.rowHeight = 28; table.reloadData()
+            let window = NSWindow(contentRect: table.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false; window.contentView = table
+            defer { window.contentView = nil; window.close() }
+            let marker = ClientDiagnosticNativeView(frame: table.bounds); marker.monitor = monitor; marker.task = "synthetic-selection"; table.addSubview(marker); monitor.register(marker)
+            try #require(table.numberOfRows == 3)
+            try #require(window.makeFirstResponder(table))
+            func press(_ key: UInt16) throws {
+                let event = try #require(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber, context: nil, characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: key))
+                try #require(event.window === window)
+                monitor.input(event)
+            }
+            table.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false); try press(key)
+            #expect((await recorder.snapshot()).actions.isEmpty)
+            let before = (await recorder.snapshot()).recent.filter { $0.name == .inputObserved }.count
+            table.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false); try press(125)
+            #expect((await recorder.snapshot()).recent.filter { $0.name == .inputObserved }.count == before + 1)
+            #expect(!window.isVisible)
+            recorder.clear(); await recorder.flush()
+            withExtendedLifetime(rows) {}
+        }
+    }
+    @Test @MainActor func aPointerOnTheSelectedRowDoesNotBeginASelection() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: root); recorder.authorizeOwnerSession(true)
+        let monitor = ClientDiagnosticsMonitor(recorder: recorder), rows = DiagnosticSelectionRows()
+        let table = NSTableView(frame: NSRect(x: 0, y: 0, width: 320, height: 140))
+        table.addTableColumn(NSTableColumn(identifier: .init("task"))); table.dataSource = rows; table.headerView = nil; table.rowHeight = 28; table.reloadData()
+        let window = NSWindow(contentRect: table.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false; window.contentView = table
+        defer { window.contentView = nil; window.close() }
+        let marker = ClientDiagnosticNativeView(frame: table.bounds); marker.monitor = monitor; marker.task = "synthetic-selection"; table.addSubview(marker); monitor.register(marker)
+        func click(_ row: Int) throws {
+            let rect = table.rect(ofRow: row), point = table.convert(NSPoint(x: 70, y: rect.midY), to: nil)
+            let event = try #require(NSEvent.mouseEvent(with: .leftMouseDown, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: 1))
+            try #require(event.window === window)
+            try #require(table.row(at: table.convert(event.locationInWindow, from: nil)) == row)
+            monitor.input(event)
+        }
+        table.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
+        try click(0)
+        #expect((await recorder.snapshot()).actions.isEmpty)
+        let before = (await recorder.snapshot()).recent.filter { $0.name == .inputObserved }.count
+        try click(1)
+        #expect((await recorder.snapshot()).recent.filter { $0.name == .inputObserved }.count == before + 1)
+        #expect(!window.isVisible)
+        recorder.clear(); await recorder.flush()
+        withExtendedLifetime(rows) {}
+    }
     private func directory() throws -> URL {
         let path = FileManager.default.temporaryDirectory.appendingPathComponent("todo-s01-verify-client-diagnostics-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: path, withIntermediateDirectories: false)

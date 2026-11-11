@@ -293,6 +293,7 @@ public struct ClientDiagnosticActionSummary: Codable, Sendable, Identifiable {
     public let p99MS: Double?
     public let maxMS: Double?
     public let count: Int
+    public let supersededCount: Int
     public let incompleteCount: Int
     public let oldestIncompleteMS: Double
 }

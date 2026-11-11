@@ -125,10 +125,10 @@ struct ClientDiagnosticInputReceipt {
         while let candidate = current { if let table = candidate as? NSTableView { return table }; current = candidate.superview }
         return nil
     }
-    private func input(_ event: NSEvent) {
+    func input(_ event: NSEvent) {
         guard recorder.isOwnerSession else { return }
         if event.type == .leftMouseDragged {
-            if let selected = selection { recorder.endIncomplete(selected.id, outcome: .drag); pending.removeValue(forKey: selected.id); selection = nil }
+            if let selected = selection { recorder.endAction(selected.id, outcome: .drag); pending.removeValue(forKey: selected.id); selection = nil }
             return
         }
         let kind: ClientDiagnosticInputKind = event.type == .keyDown ? .keyboard : .pointer
@@ -143,20 +143,36 @@ struct ClientDiagnosticInputReceipt {
                 guard let view = region.view, let task = view.task, view.window === event.window else { continue }
                 let point = view.convert(event.locationInWindow, from: nil)
                 guard view.bounds.contains(point), point.x >= 36 else { continue }
-                if let selected = selection { recorder.endIncomplete(selected.id, outcome: .superseded); pending.removeValue(forKey: selected.id) }
+                if let table = table(view) {
+                    let row = table.row(at: table.convert(event.locationInWindow, from: nil))
+                    if row >= 0 && row == table.selectedRow {
+                        if let selected = selection { recorder.endAction(selected.id, outcome: .superseded); pending.removeValue(forKey: selected.id); selection = nil }
+                        return
+                    }
+                }
+                if let selected = selection { recorder.endAction(selected.id, outcome: .superseded); pending.removeValue(forKey: selected.id) }
                 if let id = begin(.taskSelection, surface: .inspector, identity: task, startHandler: false) { selection = (id, task) }
                 if hasSurface(.inspector, identity: task) { selected(task) }
                 return
             }
-        } else if event.type == .keyDown && [36, 125, 126].contains(event.keyCode) {
+        } else if event.type == .keyDown && [125, 126].contains(event.keyCode) {
             guard let table = table(event.window?.firstResponder as? NSView), regions.values.contains(where: { $0.view?.task != nil && self.table($0.view) === table }) else { return }
-            if let selected = selection { recorder.endIncomplete(selected.id, outcome: .superseded); pending.removeValue(forKey: selected.id) }
+            guard table.isEnabled, table.selectedRow >= 0 else { return }
+            let direction = event.keyCode == 125 ? 1 : -1
+            var next = table.selectedRow + direction
+            while next >= 0 && next < table.numberOfRows {
+                let group = table.delegate?.tableView?(table, isGroupRow: next) ?? false
+                if !group && (table.delegate?.tableView?(table, shouldSelectRow: next) ?? true) { break }
+                next += direction
+            }
+            guard next >= 0 && next < table.numberOfRows else { return }
+            if let selected = selection { recorder.endAction(selected.id, outcome: .superseded); pending.removeValue(forKey: selected.id) }
             if let id = begin(.keyboardSelection, surface: .inspector, startHandler: false) { selection = (id, nil) }
         }
     }
     @discardableResult func begin(_ category: ClientDiagnosticAction, surface: ClientDiagnosticSurface = .main, identity: String? = nil, startHandler: Bool = true) -> UUID? {
         guard recorder.isOwnerSession else { return nil }
-        for (id, item) in pending where item.category == category { recorder.endIncomplete(id, outcome: .superseded); pending.removeValue(forKey: id) }
+        for (id, item) in pending where item.category == category { recorder.endAction(id, outcome: .superseded); pending.removeValue(forKey: id) }
         let input = lastInput.flatMap { value in value.isRecent(at: ProcessInfo.processInfo.systemUptime * 1000) ? value : nil }
         lastInput?.consumed = true
         guard let id = recorder.beginAction(category, inputMS: input?.time, mode: mode, inputKind: input?.kind ?? .unknown) else { return nil }

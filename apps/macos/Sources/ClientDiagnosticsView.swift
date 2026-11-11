@@ -128,6 +128,7 @@ struct ClientDiagnosticsView: View {
             if overBudget(row) { Text(row.incompleteCount > 0 ? "Incomplete" : "Over budget").foregroundStyle(.red) }
             if !compact && row.incompleteCount > 0 { Text("Oldest incomplete: \(milliseconds(row.oldestIncompleteMS)) ms").foregroundStyle(.secondary) }
             if !compact && row.unprovenCount > 0 { Text("\(row.unprovenCount) with unverified input").foregroundStyle(.secondary) }
+            if row.supersededCount > 0 { Text("\(row.supersededCount) superseded").foregroundStyle(.secondary) }
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
     private func total(_ label: String, _ value: Int) -> some View { pair(label, "\(value)") }
