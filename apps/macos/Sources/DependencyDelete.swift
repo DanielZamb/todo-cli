@@ -11,6 +11,7 @@ extension TodoModel {
     func reloadDependencyDelete(changed: Bool = false) async {
         guard let deletion = dependencies.deletion else { return }
         let epoch = discovery.credentialEpoch
+        let client = self.client
         dependencies.deletion?.request += 1
         guard let request = dependencies.deletion?.request else { return }
         dependencies.deletion?.loading = true
@@ -23,6 +24,7 @@ extension TodoModel {
             guard currentDependencyDelete(deletion, epoch: epoch, request: request) else { return }
             guard current.id == deletion.task.id, current.profile_id == deletion.profile else { throw DependencyGraphReply.ProtocolError.incompatible }
             let response = try await client.tasks_period_delete(path: .init(profile: deletion.profile, task: current.id), query: .init(from_version: String(current.row_version), with_dependencies: ._true, dry_run: ._true))
+            guard currentDependencyDelete(deletion, epoch: epoch, request: request) else { return }
             if case .conflict(let conflict) = response { throw try dependencyConflict(conflict.body.json) }
             let preview = try response.ok.body.json
             let after = try TaskSnapshot.decode(preview)

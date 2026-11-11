@@ -48,14 +48,15 @@ extension TodoModel {
       attachmentBatch?.error = describe(error, at: .attachmentBatch)
       handleAuthorization(error, credentialEpoch: credentialEpoch)
     }
-    if attachmentBatch?.id == draft.id { attachmentBatch?.loading = false }
+    if isCurrentCredential(credentialEpoch), attachmentBatch?.id == draft.id { attachmentBatch?.loading = false }
   }
   func applyAttachmentBatch(dryRun: Bool) async {
     let credentialEpoch = discovery.credentialEpoch
     guard canWrite, let draft = attachmentBatch, !draft.loading, !draft.selected.isEmpty else { return }
+    let client = self.client
     busy = true
     attachmentBatch?.error = nil
-    defer { busy = false }
+    defer { if discovery.credentialEpoch == credentialEpoch { busy = false } }
     do {
       let encoded = try JSONEncoder().encode(draft.reference)
       var reference = try JSONDecoder().decode([String: String].self, from: encoded)
@@ -72,7 +73,9 @@ extension TodoModel {
       attachmentBatch?.report = report
       if !dryRun {
         if let editor, draft.selected.contains(editor.id) {
-          let latest = try TaskSnapshot.decode(try await client.tasks_period_show(path: .init(profile: draft.profile, task: editor.id)).ok.body.json)
+          let wire = try await client.tasks_period_show(path: .init(profile: draft.profile, task: editor.id)).ok.body.json
+          guard isCurrentCredential(credentialEpoch), attachmentBatch?.id == draft.id, profile == draft.profile, self.editor?.id == editor.id else { return }
+          let latest = try TaskSnapshot.decode(wire)
           self.editor = self.editor?.acceptingAttachmentChange(latest)
         }
         await refreshAfterWrite("Attachments updated")

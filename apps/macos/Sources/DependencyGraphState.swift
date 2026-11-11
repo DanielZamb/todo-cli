@@ -117,6 +117,8 @@ extension TodoModel {
     }
     func closeDependencyGraph() { dependencies.graph = nil; dependencies.graphRequest += 1; dependencies.graphSearchRequest += 1 }
     func refreshDependencyReads(erased: Bool = false) async {
+        let epoch = discovery.credentialEpoch
+        let run = dependencies.generation
         if erased {
             dependencies.graph?.report = nil
             dependencies.graph?.matches = nil
@@ -137,6 +139,7 @@ extension TodoModel {
                 dependencies.picker?.warnings = warnings
             }
         }
+        guard isCurrentCredential(epoch), dependencies.generation == run else { return }
         await readDependencyGraph()
     }
 }

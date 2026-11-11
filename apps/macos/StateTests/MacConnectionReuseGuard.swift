@@ -110,3 +110,90 @@ extension MacConnectionReuseGuard {
         await recorder.flush()
     }
 }
+
+extension MacConnectionReuseGuard {
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_MAC_RESTART_CONTROL"] != nil))
+    func reusedProductionPoolSurvivesRestartBeforeTheFirstReadAndEachWrite() async throws {
+        let env = ProcessInfo.processInfo.environment
+        let server = try #require(env["TODO_CLIENT_DIAGNOSTICS_SERVER"].flatMap(URL.init(string:)))
+        let control = try #require(env["TODO_MAC_RESTART_CONTROL"].flatMap(URL.init(string:)))
+        let owner = try await todoClient(server: server, credential: "").signIn_period_signIn(body: .json(.init(passphrase: "scratch verification passphrase"))).ok.body.json.credential
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("todo-s01-verify-mac-restart-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: directory)
+        let model = TodoModel(configuration: .init(server: server, initialProfile: "work", vaultService: "never-used-restart-guard"), clientDiagnostics: recorder, catalogNotifications: NotificationCenter(), wakeNotifications: NotificationCenter())
+        model.selectedView = "all"; model.replaceCredential(owner); model.signedIn = true; model.connection = .live; model.clientDiagnosticsUI.stop()
+        defer { model.signedIn = false; model.replaceCredential("") }
+        let observer = todoClient(server: server, credential: owner)
+        func restart() async throws {
+            var request = URLRequest(url: control); request.httpMethod = "POST"
+            let (_, response) = try await URLSession.shared.data(for: request)
+            try #require((response as? HTTPURLResponse)?.statusCode == 200)
+        }
+        func warm() async {
+            for _ in 0..<2 { await model.refreshAfterWrite("Restart pool warmup") }
+        }
+        func history(_ task: String) async throws -> [HistoryEntry] {
+            try model.decode([HistoryEntry].self, await observer.reads_period_history(path: .init(profile: "work", task: task)).ok.body.json)
+        }
+        await warm(); try #require(model.tasks.count == 178 && model.canWrite)
+        try await restart()
+        let profiles = try model.decode([DiscoveryEntry].self, await model.client.reads_period_profiles().ok.body.json)
+        #expect(profiles.contains { $0.id == "work" })
+        await warm()
+        let target = try #require(model.tasks.first { $0.status == "open" && $0.occurrence == nil && ($0.depends_on ?? []).isEmpty })
+        let before = try await history(target.id).count
+        try await restart()
+        await model.transition(target, action: "complete")
+        let completed = try #require(model.tasks.first { $0.id == target.id })
+        #expect(completed.status == "done" && completed.row_version == target.row_version + 1)
+        #expect(model.editorError == nil && model.message == "Task updated" && !model.busy)
+        let completeDelta = try await history(target.id).count - before
+        #expect(completeDelta == 1)
+        await warm()
+        try await restart()
+        let created = try await model.client.tasks_period_create(path: .init(profile: "work"), body: .json(.init(title: "Restart transport control"))).ok.body.json
+        let createdTask = try model.decode(TaskSnapshot.self, created)
+        let newHistory = try await history(createdTask.id)
+        let tasks = try model.decode([TaskSnapshot].self, await observer.tasks_period_list(path: .init(profile: "work")).ok.body.json)
+        #expect(tasks.count == 179)
+        #expect(tasks.filter { $0.title == "Restart transport control" }.count == 1)
+        #expect(newHistory.count == 1 && newHistory.first?.event.kind == "TaskCreated")
+        if let path = env["TODO_CLIENT_DIAGNOSTICS_EVIDENCE"] {
+            let receipt: [String: Any] = ["restarts": 3, "first_get_succeeded": profiles.contains { $0.id == "work" }, "complete_history_delta": completeDelta, "complete_reported_success": model.editorError == nil, "new_tasks": tasks.count - 178, "created_history_records": newHistory.count, "write_retry_added": false, "scope": "restart completes before each first model/generated request; response loss after commit is not injected"]
+            try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]).write(to: URL(fileURLWithPath: path).appendingPathComponent("restart-transport.json"))
+        }
+        await recorder.flush()
+    }
+}
+
+extension MacConnectionReuseGuard {
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_MAC_RETIREMENT_RACE"] == "1"))
+    func productionRefreshCredentialReplacementRaceDoesNotAbort() async throws {
+        let env = ProcessInfo.processInfo.environment
+        let server = try #require(env["TODO_CLIENT_DIAGNOSTICS_SERVER"].flatMap(URL.init(string:)))
+        let auth = todoClient(server: server, credential: "")
+        let first = try await auth.signIn_period_signIn(body: .json(.init(passphrase: "scratch verification passphrase"))).ok.body.json.credential
+        let second = try await auth.signIn_period_signIn(body: .json(.init(passphrase: "scratch verification passphrase"))).ok.body.json.credential
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("todo-s01-verify-retirement-race-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: directory)
+        let model = TodoModel(configuration: .init(server: server, initialProfile: "work", vaultService: "never-used-retirement-race"), clientDiagnostics: recorder, catalogNotifications: NotificationCenter(), wakeNotifications: NotificationCenter())
+        model.selectedView = "all"; model.replaceCredential(first); model.signedIn = true; model.connection = .live; model.clientDiagnosticsUI.stop()
+        defer { model.signedIn = false; model.replaceCredential("") }
+        for index in 0..<200 {
+            let refresh = Task { await model.refreshAfterWrite("Retirement creation race") }
+            for _ in 0..<3 { await Task.yield() }
+            model.replaceCredential(index.isMultiple(of: 2) ? second : first)
+            model.signedIn = true; model.connection = .live; model.clientDiagnosticsUI.stop()
+            await refresh.value
+        }
+        await model.refreshAfterWrite("Final credential scope")
+        #expect(model.tasks.count == 178 && model.appliedSearchSnapshot?.rows.count == 178)
+        #expect(model.signedIn && model.canWrite)
+        if let path = env["TODO_CLIENT_DIAGNOSTICS_EVIDENCE"] {
+            let receipt: [String: Any] = ["iterations": 200, "yields_before_replacement": 3, "tasks": model.tasks.count, "final_writable": model.canWrite, "client_factory_override": false, "transport_override": false, "crashed": false]
+            try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]).write(to: URL(fileURLWithPath: path).appendingPathComponent("retirement-model-race.json"))
+        }
+    }
+}

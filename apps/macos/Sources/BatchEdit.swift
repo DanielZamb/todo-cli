@@ -92,14 +92,14 @@ extension TodoModel {
       batchEdit?.error = describe(error, at: .batchEdit)
       handleAuthorization(error, credentialEpoch: credentialEpoch)
     }
-    if batchEdit?.id == draft.id { batchEdit?.loading = false }
+    if isCurrentCredential(credentialEpoch), batchEdit?.id == draft.id { batchEdit?.loading = false }
   }
   func applyBatchEdit(dryRun: Bool) async {
     let credentialEpoch = discovery.credentialEpoch
     guard canWrite, !busy, let draft = batchEdit, !draft.loading, draft.valid, !draft.selected.isEmpty else { return }
     busy = true
     batchEdit?.error = nil
-    defer { busy = false }
+    defer { if discovery.credentialEpoch == credentialEpoch { busy = false } }
     do {
       let items: [[String: Any]] = draft.targets.filter { draft.selected.contains($0.id) }.map { ["task_id": $0.id, "from_version": $0.row_version] }
       let payload = try JSONDecoder().decode(Operations.tasks_period_batchEdit.Input.Body.jsonPayload.self, from: JSONSerialization.data(withJSONObject: ["items": items, "changes": draft.change, "dry_run": dryRun]))

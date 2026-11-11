@@ -173,7 +173,7 @@ extension TodoModel {
         closeDiscovery()
         discovery.showIntent = intent
         busy = true
-        defer { busy = false }
+        defer { if discovery.credentialEpoch == intent.identity.credentialEpoch { busy = false } }
         do {
             let task = try await TaskSnapshot.decode(client.tasks_period_show(path: .init(profile: sourceProfile, task: fullID)).ok.body.json)
             guard canShowDiscovery(intent) else { return false }

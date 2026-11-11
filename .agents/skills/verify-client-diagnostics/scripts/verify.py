@@ -16,8 +16,11 @@ import time
 ROOT = Path(__file__).resolve().parents[4]
 EVIDENCE = Path(sys.argv[1]).resolve()
 subscribers_only = '--subscribers-only' in sys.argv[2:]
+restart_only = '--restart-only' in sys.argv[2:]
+retirement_only = '--retirement-only' in sys.argv[2:]
+retirement_stress = '--retirement-stress' in sys.argv[2:]
 sockets_only = '--sockets-only' in sys.argv[2:]
-connections_only = '--connections-only' in sys.argv[2:] or sockets_only
+connections_only = '--connections-only' in sys.argv[2:] or sockets_only or restart_only or retirement_only or retirement_stress
 stream_only = '--stream-only' in sys.argv[2:] or subscribers_only
 configuration = 'debug' if '--debug' in sys.argv[2:] else 'release'
 EVIDENCE.mkdir(parents=True, exist_ok=False)
@@ -31,7 +34,7 @@ commands = []
 base = {key: value for key, value in os.environ.items() if not key.startswith(('TODO_', 'MAC_PERF_'))}
 
 def run(argv, name, environment=base, input=None):
-    result = subprocess.run([str(value) for value in argv], cwd=ROOT, env=environment, input=input, text=True, capture_output=True, timeout=1200)
+    result = subprocess.run([str(value) for value in argv], cwd=ROOT, env=environment, input=input, text=True, capture_output=True, timeout=1200) if input is not None else owned.run([str(value) for value in argv], environment, timeout=3600 if retirement_stress else 1200)
     (EVIDENCE / (name + '.log')).write_text(result.stdout + result.stderr)
     commands.append(dict(command=[str(value) for value in argv], exit=result.returncode, log=name + '.log'))
     (EVIDENCE / 'commands.json').write_text(json.dumps(commands, indent=2))
@@ -55,6 +58,9 @@ home = scratch / 'home'; home.mkdir()
 environment = dict(base, HOME=str(home), CFFIXED_USER_HOME=str(home), TODO_DB=str(scratch / 'scratch.db'), TODO_PORT='0')
 server = None
 proxy = None
+restart_proxy = None
+restart_lock = threading.Lock()
+closing = threading.Event()
 result = dict(result='FAIL', errors=1)
 try:
     run([bin_dir / 'seed', scratch], 'seed', environment)
@@ -102,6 +108,12 @@ try:
         class DelayedHealth(http.server.BaseHTTPRequestHandler):
             def log_message(self, *_): pass
             def do_GET(self):
+                if self.path == '/counts/health':
+                    count = (EVIDENCE / 'server.log').read_text().count('"http.url": "/health",')
+                    data = json.dumps(dict(count=count)).encode()
+                    self.send_response(200); self.send_header('Content-Type', 'application/json'); self.send_header('Content-Length', str(len(data))); self.end_headers()
+                    self.wfile.write(data)
+                    return
                 time.sleep(.5)
                 connection = http.client.HTTPConnection('127.0.0.1', port, timeout=10)
                 try:
@@ -114,13 +126,66 @@ try:
         proxy = http.server.ThreadingHTTPServer(('127.0.0.1', 0), DelayedHealth)
         threading.Thread(target=proxy.serve_forever, daemon=True).start()
         environment.update(TODO_IDLE_NATIVE_SERVER=f'http://127.0.0.1:{port}', TODO_IDLE_DELAYED_SERVER=f'http://127.0.0.1:{proxy.server_port}')
+    if restart_only:
+        restart_receipts = []
+        class RestartServer(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *_): pass
+            def do_POST(self):
+                global server
+                status = 200
+                try:
+                    with restart_lock:
+                        assert not closing.is_set(), 'helper is closing'
+                        old = server.pid; owned.stop(server)
+                        assert not closing.is_set(), 'helper closed during restart'
+                        offset = (EVIDENCE / 'server.log').stat().st_size
+                        server = subprocess.Popen([str(bin_dir / 'todo-server')], env=dict(environment, TODO_PORT=str(port)), stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+                        deadline = time.monotonic() + 30
+                        while time.monotonic() < deadline:
+                            assert server.poll() is None, 'restarted owned server exited'
+                            text = (EVIDENCE / 'server.log').read_text()[offset:]
+                            if f'Listening on http://127.0.0.1:{port}' in text: break
+                            time.sleep(.02)
+                        else: raise AssertionError('restart readiness deadline')
+                        assert request('GET', '/health')['contract'] == health['contract']
+                        restart_receipts.append(dict(before=old, after=server.pid, ready=True))
+                        (EVIDENCE / 'server-restarts.json').write_text(json.dumps(restart_receipts, indent=2))
+                except Exception:
+                    status = 500
+                self.send_response(status); self.send_header('Content-Length', '0'); self.end_headers()
+        restart_proxy = http.server.ThreadingHTTPServer(('127.0.0.1', 0), RestartServer)
+        restart_proxy.daemon_threads = True
+        threading.Thread(target=restart_proxy.serve_forever, daemon=True).start()
+        environment['TODO_MAC_RESTART_CONTROL'] = f'http://127.0.0.1:{restart_proxy.server_port}/restart'
     (EVIDENCE / 'host.json').write_text(json.dumps(dict(load=os.getloadavg(), cores=os.cpu_count(), at=time.time())))
-    selected = 'productionModelHoldsAtMostSixteenSocketsAfterThreeHundredRefreshes' if sockets_only else 'MacConnectionReuseGuard' if connections_only else 'productionModelCancelsIdleSubscribersAtEveryLifecycleBoundary' if subscribers_only else 'StreamIdleTests|StreamIdleTransportTests' if stream_only else 'ClientDiagnosticsTests|ClientDiagnosticsLiveTests|ClientDiagnosticsPanelTests'
+    if retirement_only: environment['TODO_MAC_RETIREMENT_RACE'] = '1'
+    if retirement_stress:
+        environment['TODO_MAC_RETIREMENT_STRESS'] = '1'
+        environment['TODO_MAC_RETIREMENT_COUNTER'] = f'http://127.0.0.1:{proxy.server_port}/counts/health'
+    selected = 'MacRetirementStressTests' if retirement_stress else 'productionRefreshCredentialReplacementRaceDoesNotAbort' if retirement_only else 'reusedProductionPoolSurvivesRestartBeforeTheFirstReadAndEachWrite' if restart_only else 'productionModelHoldsAtMostSixteenSocketsAfterThreeHundredRefreshes' if sockets_only else 'MacConnectionReuseGuard' if connections_only else 'productionModelCancelsIdleSubscribersAtEveryLifecycleBoundary' if subscribers_only else 'StreamIdleTests|StreamIdleTransportTests' if stream_only else 'ClientDiagnosticsTests|ClientDiagnosticsLiveTests|ClientDiagnosticsPanelTests'
     run([ROOT / 'scripts/swift-slot.sh', 'swift', 'test', '--configuration', configuration, '--no-parallel', '--disable-automatic-resolution', '--jobs', '2', '--package-path', 'apps/macos', '--filter', selected], 'swift', environment)
     artifact = ROOT / f'apps/macos/.build/{configuration}/TodoStateProofPackageTests.xctest/Contents/MacOS/TodoStateProofPackageTests'
     (EVIDENCE / 'swift-artifact.json').write_text(json.dumps(dict(sha256=hashlib.sha256(artifact.read_bytes()).hexdigest(), configuration=configuration), indent=2))
     if connections_only:
-        if sockets_only:
+        if retirement_stress:
+            proof = json.loads((EVIDENCE / 'retirement-stress.json').read_text())
+            late = json.loads((EVIDENCE / 'retired-client.json').read_text())
+            assert proof['iterations'] == 3000 and proof['writes_started'] == 3000 and proof['polls_started'] == 3000
+            assert proof['refreshes_started'] >= 3000 and proof['retired_calls_cancelled'] == 3000
+            assert proof['tasks'] == 178 and proof['canonical_rows_match'] and proof['final_writable']
+            assert proof['retired_server_health_delta'] == 0
+            assert proof['iterations_with_unfinished_requests'] == 3000 and proof['unexpected_scope_iterations'] == 0
+            assert late['rejected_retired_requests'] == 20 and late['retired_server_health_delta'] == 0
+            assert late['new_scope_server_health_delta'] == 1 and late['new_scope_recorded_requests'] == 1
+        elif retirement_only:
+            proof = json.loads((EVIDENCE / 'retirement-model-race.json').read_text())
+            assert proof['iterations'] == 200 and proof['tasks'] == 178 and proof['final_writable'] and not proof['crashed']
+        elif restart_only:
+            proof = json.loads((EVIDENCE / 'restart-transport.json').read_text())
+            assert proof['restarts'] == 3 and proof['first_get_succeeded']
+            assert proof['complete_history_delta'] == 1 and proof['complete_reported_success']
+            assert proof['new_tasks'] == 1 and proof['created_history_records'] == 1
+        elif sockets_only:
             proof = json.loads((EVIDENCE / 'sockets-after-300.json').read_text())
             assert proof['refreshes'] == 300 and proof['requests'] == 2400 and proof['sockets'] <= 16
         else:
@@ -141,8 +206,11 @@ try:
         result = dict(result='PASS', errors=0, refreshes=30, requests_recorded=120, tasks=178, keychain_called=False, app_launched=False, signed=False, pushed=False, native_input_proven=False)
 
 finally:
+    closing.set()
+    if restart_proxy is not None: restart_proxy.shutdown(); restart_proxy.server_close()
     if proxy is not None: proxy.shutdown(); proxy.server_close()
-    if server is not None: owned.stop(server)
+    with restart_lock:
+        if server is not None: owned.stop(server)
     shutil.rmtree(scratch)
     result['scratch_removed'] = not scratch.exists()
     result['owned_server_stopped'] = server is None or server.poll() is not None

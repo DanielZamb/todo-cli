@@ -18,7 +18,7 @@ extension TodoModel {
     guard canWrite, let draft = editor, conflict == nil else { return }
     busy = true
     editorError = nil
-    defer { busy = false }
+    defer { if discovery.credentialEpoch == credentialEpoch { busy = false } }
     do {
       var attachmentDraft = draft
       attachmentDraft.base = attachmentTask ?? draft.base
@@ -31,6 +31,7 @@ extension TodoModel {
       case .conflict(let latest):
         if let latest { editor = editor?.acceptingAttachmentChange(latest) }
         await refreshAfterWrite("Task changed")
+        guard isCurrentCredential(credentialEpoch), profile == draft.base.profile_id, editor?.id == draft.id else { return }
         editorError = "Task changed. Your draft is preserved. Retry the Attachment action."
       }
     } catch {

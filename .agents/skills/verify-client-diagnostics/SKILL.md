@@ -76,3 +76,9 @@ when coverage, journal formats or UI entry points change.
 documented in verify-mac-refresh/features/connections.md. They preserve the same
 scratch ownership and cleanup rules. A failing red probe still retains literal
 receipts and a failure result; never report it as a successful complete recipe.
+
+`--retirement-only`, `--retirement-stress` and `--restart-only` select the
+credential-lifetime and restarted-server controls in that feature map. The
+first shared-session implementation is blocked by a request-creation crash;
+the resource result cannot qualify it. Require the corrected lifetime and
+publication controls, full gates and independent review before installation.

@@ -117,6 +117,7 @@ struct DependencyDelete: Identifiable {
         initial = []
         firstOccurrenceInitial = []
         latestWarnings = []
+        pendingDependents.removeAll()
     }
 }
 
@@ -157,6 +158,7 @@ extension TodoModel {
         guard let request = dependencies.picker?.reloadRequest else { return }
         let epoch = discovery.credentialEpoch
         let run = dependencies.generation
+        let client = self.client
         let id = picker.id
         dependencies.picker?.loading = true
         do {
@@ -223,7 +225,7 @@ extension TodoModel {
         dependencies.picker?.failure = nil
         dependencies.picker?.warnings = []
         defer {
-            dependencies.pendingDependents.remove(dependent.id)
+            if discovery.credentialEpoch == epoch { dependencies.pendingDependents.remove(dependent.id) }
             if dependencies.picker?.id == picker.id { dependencies.picker?.pending.remove(candidate.id) }
         }
         do {

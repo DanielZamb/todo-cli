@@ -788,9 +788,15 @@ not a C4 optimization attempt and carries no claimed speedup.
 The [C4 measurement and attempt record](mac-refresh-hillclimb.md) fixes the
 owner interaction target, the qualified workload and the secondary work guards.
 
-## Candidate 4: connection ownership and truthful input phases
+## Candidate 4: blocked after correctness review
 
-Candidate 4 contains the kept credential-scope connection ownership change,
+The historical gate results below do not qualify candidate 4 for installation.
+Independent review and the worker's exact default-model regression test reproduce
+signal 6 when credential replacement invalidates a session while another request
+is creating its URLSession task. The ownership attempt is withdrawn pending a
+safe lifetime boundary and its own review. It carries no latency claim.
+
+Candidate 4 combined the credential-scope connection ownership attempt,
 the reviewed Diagnostics presentation corrections, and the recorder additions.
 Drag behavior is unchanged. Its purpose is to establish press, release, native
 highlight, SwiftUI callback and layout boundaries in the owner's next session.
@@ -841,6 +847,34 @@ an observed owner-session retention figure. The two-file 64 MiB cap is unchanged
 
 The primary native target remains median 20 ms and p99 300 ms per category. It
 is not met or qualified by these headless controls. One optimization attempt is
-kept, none reverted, out of a floor of six. Inspector callback-to-layout is next,
+withdrawn pending correctness, out of a floor of six. Inspector callback-to-layout is next,
 with a five-pair median target below 16 ms at 1,260 characters. ADR-0009 parity
 for Electron and the CLI remains owed by the separate cross-client unit.
+
+## Candidate 5: delivered without ownership
+
+The recorder-only head is `e3593e776758d2bc6dcc7d6175af0f84e26ecae8` on local
+branch `candidate/mac-c5`. It reverts ownership from candidate 4 and keeps the
+presentation, CPU/load, release and native selection phases. Its Transport.swift
+and TodoModel.swift match the installed candidate 3 byte for byte. The six-file
+product diff contains only Diagnostics code. The approved label reads
+"Released after" to identify the pointer hold time. Drag is unchanged.
+
+All gates pass on that exact clean head. State and contract pass 203 tests in
+29 suites; Release Diagnostics passes 37 tests in three suites, with 30
+refreshes, 120 requests, 178 Tasks and zero errors. Complete design passes 872
+renders and the unsigned Release build succeeds. An actual 300.039-second
+foreground idle makes zero requests, refreshes and reconnects while remaining
+writable. Subscriber counts are `[0, 1, 1, 1, 1, 1, 1, 0]`. Real HTTP SSE,
+the root check and document links pass. All 85 proof source hashes match.
+Receipts stay under `docs/evidence/mac-perf/c5/candidate-5/` locally.
+
+The captures qualify layout assertions. They are not a new pixel baseline until
+the capture scale is fixed and recorded. No native input, physical presentation
+or VoiceOver acceptance is claimed. The lifetime fix continues on the main
+implementation branch, with the async-path audit and 3,000-iteration stress
+required before a separate review. Candidate 5 stays pinned during that work.
+
+The [credential retirement correction](mac-session-retirement.md) records the
+crash, the admission boundary, the complete async caller audit and the qualified
+3,000-replacement workload. Its final gates and separate review remain pending.

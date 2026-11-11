@@ -24,6 +24,7 @@ final class ClientRequestMetrics: NSObject, URLSessionTaskDelegate, @unchecked S
     }
     static func reason(_ error: any Error) -> ClientDiagnosticReason {
         if let wrapped = error as? ClientError { return reason(wrapped.underlyingError) }
+        if error is CancellationError { return .cancelled }
         let code = (error as NSError).code
         if (error as NSError).domain == NSURLErrorDomain {
             if code == NSURLErrorTimedOut { return .timeout }
