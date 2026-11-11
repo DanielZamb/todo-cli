@@ -4,6 +4,7 @@ public enum ClientDiagnosticName: String, Codable, Sendable {
     case pollsAggregated = "request.polls.aggregated"
     case actionStarted = "ui.action.started", resultPublished = "model.published", layoutCommitted = "ui.layout.committed"
     case inputObserved = "ui.input.observed", selectionCommitted = "ui.selection.committed", inspectorCommitted = "ui.inspector.committed"
+    case inputReleased = "ui.input.released", nativeSelectionChanging = "ui.selection.nativeChanging", nativeSelectionCommitted = "ui.selection.nativeCommitted"
     case actionEnded = "ui.action.ended", refreshStarted = "refresh.started", refreshFinished = "refresh.finished"
     case requestStarted = "request.started", requestHeaders = "request.headers", requestFinished = "request.finished", decodeFinished = "decode.finished"
     case streamConnected = "stream.connected", streamDropped = "stream.dropped", availabilityChanged = "availability.changed", stall = "ui.stall", resourcesSampled = "resources.sampled"
@@ -347,6 +348,15 @@ public struct ClientDiagnosticPollSummary: Codable, Sendable, Identifiable {
     public let handlerP50MS: Double?
     public let handlerMaxMS: Double?
 }
+public struct ClientDiagnosticNativeSelectionNotifications: Codable, Sendable {
+    public enum Capability: String, Codable, Sendable { case observed, unavailable }
+    public let changing: Capability
+    public let committed: Capability
+    public init(changing: Bool, committed: Bool) {
+        self.changing = changing ? .observed : .unavailable
+        self.committed = committed ? .observed : .unavailable
+    }
+}
 public struct ClientDiagnosticEvent: Codable, Sendable, Identifiable {
     public let id: UUID
     public let run: UUID
@@ -375,6 +385,7 @@ public struct ClientDiagnosticEvent: Codable, Sendable, Identifiable {
     public var processCpuMS: Double?
     public var hostLoad1m: Double?
     public var inputMS: Double?
+    public var nativeSelectionNotifications: ClientDiagnosticNativeSelectionNotifications?
     public var availability: ClientDiagnosticAvailability?
     public var actionPhases: ClientDiagnosticActionPhases?
     public var phases: ClientDiagnosticRequestPhases?

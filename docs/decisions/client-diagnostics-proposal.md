@@ -137,3 +137,28 @@ storage, no session retention and recorder overhead. Create/update the subsystem
 verification skill, run the existing platform suites, and preserve the native
 HOLD. If headless work cannot reproduce the complaint, the coordinator must
 approve this Mac slice before product implementation; it precedes optimization.
+
+## Candidate 4 pointer and stall additions
+
+The Mac recorder keeps press-to-layout as the primary pointer measurement.
+`ui.input.released` carries the same action id, the native release timestamp
+and press-to-release duration, even when rendering completed first. Subtracting
+release time from layout time is a secondary comparison and may be negative.
+Historical receipts without a release cannot establish pointer dwell.
+
+The public Task table selection notifications become
+`ui.selection.nativeChanging` and `ui.selection.nativeCommitted`, displayed as
+"Row highlight started" and "Row highlight settled". They are separate from the
+SwiftUI callback's `ui.selection.committed`. Release and inspector records carry
+optional `nativeSelectionNotifications`, with `changing` and `committed` each
+`observed` or `unavailable` as of that boundary. An unavailable notification
+does not establish instantaneous highlight or a global framework capability.
+The next real installation must qualify whether the SwiftUI-backed table emits
+them. The monitor never replaces the table delegate or a gesture recognizer.
+
+Stalls carry optional `mainThreadCpuMS`, `processCpuMS` and `hostLoad1m`. The CPU
+values are deltas across the heartbeat gap, rather than lifetime counters.
+Missing values remain unknown. A high main-thread CPU delta supports app work;
+a low delta alone cannot distinguish scheduling starvation, blocking waits or
+run-loop tracking. Progress and delivered records share their opaque trace id.
+These Mac additions still owe ADR-0009 parity in the separate cross-client unit.

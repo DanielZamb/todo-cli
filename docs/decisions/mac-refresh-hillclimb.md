@@ -167,3 +167,32 @@ measurement remains unchanged. Four admission tests cover recent, rotated,
 unknown and future input. Candidate 4 still needs pointer release/native-table
 phases and its full gates before delivery. This recorder work is not a C4
 optimization attempt.
+
+## Candidate 4 pointer trace boundaries
+
+The approved trace adds pointer release and public native-table highlight
+notifications without changing drag or selection. The press remains the start
+of the budget. Release-to-result is also reported, and a result before release
+can have a negative secondary interval. The input association outlives a result
+that renders while the button is held. Native highlight is independent of the
+SwiftUI selection callback. Missing notifications are explicitly unavailable at
+release and inspector layout, not an invented zero.
+
+The red controls had five literal failures across three tests: missing release
+and native phases, release replacing the original press, and unknown mode after
+a recording restart. Weak native marker registrations now survive a recording
+restart while input and action state are cleared. Their lifetime follows their
+attached views. Old-scope release, callback and native notification records are
+excluded. Synthetic controls invoke the monitor and public notifications in an
+unordered native table. They do not qualify actual SwiftUI mouse delivery.
+
+The six installed pointer selections remain a small, historical receipt: press
+to result p50 222.9 ms, maximum 455.6 ms; selection callback to layout ranges
+71.7 to 284.3 ms. Host load and release timestamps are unknown for those six
+records, so no dwell or scheduling attribution is possible. Their callback to
+layout is nevertheless the next mechanism to measure on the owner-shaped
+fixture. Its target is a five-pair median below 16 ms for a 1,260-character
+description. The 225b512f/e69230f9/b520693e press-versus-release comparison remains
+unqualified because the old native delivery controls were insensitive. The
+coordinator's next installed trace must settle that question before any drag
+change.

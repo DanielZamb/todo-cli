@@ -45,3 +45,24 @@ the heartbeat gap, shared trace ids for progress and delivery, unknown counters,
 and inactive suppression. A real Mach-thread/process sampler control compares
 sleep with JSON encoding and measures sample cost. A low CPU delta does not by
 itself prove starvation. Historical records without these fields remain unknown.
+
+## Pointer and native highlight phases
+
+The press remains the primary input timestamp. A release records
+`ui.input.released` with that same opaque action id and the release's native
+input time. Keep the association if layout finishes while the button is held.
+A command handler invoked on release must still inherit its press. A second
+release, a foreign window and an old recording scope must not append a record.
+
+Observe only the public `NSTableView` selection notifications from the Task
+table associated with the current input. They produce
+`ui.selection.nativeChanging` and `ui.selection.nativeCommitted`. The direct
+notification test proves correlation and exclusion, not that SwiftUI emits
+these notifications or that a physical click selects a Task. On release and
+inspector layout, `nativeSelectionNotifications` reports each notification as
+`observed` or `unavailable` at that boundary. Unavailable is unknown highlight
+time, never zero. The Recent activity disclosure uses the same plain labels.
+
+A native marker has the lifetime of its view, while actions and input receipts
+have the recording scope's lifetime. A recorder restart must preserve the
+window mode from a still-attached marker without carrying its old action.

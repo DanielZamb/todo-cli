@@ -29,7 +29,116 @@ private final class DiagnosticTickCounter: @unchecked Sendable {
 }
 @MainActor private final class DiagnosticActivity { var active = false }
 
+@MainActor private final class DiagnosticPointerFixture {
+    let table = NSTableView(frame: NSRect(x: 0, y: 0, width: 320, height: 140))
+    let window: NSWindow
+    private let rows = DiagnosticSelectionRows()
+    init(monitor: ClientDiagnosticsMonitor) {
+        table.addTableColumn(NSTableColumn(identifier: .init("task"))); table.dataSource = rows; table.headerView = nil; table.rowHeight = 28; table.reloadData()
+        window = NSWindow(contentRect: table.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false; window.contentView = table
+        let marker = ClientDiagnosticNativeView(frame: table.bounds); marker.monitor = monitor; marker.task = "synthetic-selection"; table.addSubview(marker); monitor.register(marker)
+        table.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
+    }
+    func mouse(_ type: NSEvent.EventType, row: Int, time: Double) throws -> NSEvent {
+        let point = table.convert(NSPoint(x: 70, y: table.rect(ofRow: row).midY), to: nil)
+        let event = try #require(NSEvent.mouseEvent(with: type, location: point, modifierFlags: [], timestamp: time, windowNumber: window.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: type == .leftMouseUp ? 0 : 1))
+        try #require(event.window === window)
+        return event
+    }
+    func close() { window.contentView = nil; window.close() }
+}
+
 @Suite(.serialized) struct ClientDiagnosticsTests {
+    @Test @MainActor func pointerReleaseAndPublicTableNotificationsKeepThePressActionAfterLayout() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: root); recorder.authorizeOwnerSession(true)
+        let source = NotificationCenter(), monitor = ClientDiagnosticsMonitor(recorder: recorder, notifications: source)
+        let fixture = DiagnosticPointerFixture(monitor: monitor); defer { monitor.stop(); fixture.close() }
+        monitor.start()
+        let down = ProcessInfo.processInfo.systemUptime - 0.2
+        monitor.input(try fixture.mouse(.leftMouseDown, row: 1, time: down))
+        let action = try #require(monitor.selectionAction)
+        source.post(name: NSTableView.selectionIsChangingNotification, object: fixture.table)
+        source.post(name: NSTableView.selectionDidChangeNotification, object: fixture.table)
+        monitor.selected("synthetic-selection")
+        recorder.resultPublished(action); recorder.layoutCommitted(action)
+        let foreign = try #require(NSEvent.mouseEvent(with: .leftMouseUp, location: .zero, modifierFlags: [], timestamp: down + 0.1, windowNumber: 0, context: nil, eventNumber: 1, clickCount: 1, pressure: 0))
+        monitor.input(foreign)
+        #expect((await recorder.snapshot()).recent.filter { $0.name.rawValue == "ui.input.released" }.isEmpty)
+        monitor.input(try fixture.mouse(.leftMouseUp, row: 1, time: down + 0.12))
+        monitor.input(try fixture.mouse(.leftMouseUp, row: 1, time: down + 0.12))
+        let records = (await recorder.snapshot()).recent
+        let released = try #require(records.first { $0.name.rawValue == "ui.input.released" })
+        #expect(records.filter { $0.name.rawValue == "ui.input.released" }.count == 1)
+        #expect(released.actionID == action && released.inputKind == .pointer)
+        #expect(abs(try #require(released.inputMS) - (down + 0.12) * 1000) < 0.001)
+        #expect(abs(try #require(released.durationMS) - 120) < 0.001)
+        #expect(records.filter { $0.name.rawValue == "ui.selection.nativeChanging" && $0.actionID == action }.count == 1)
+        #expect(records.filter { $0.name.rawValue == "ui.selection.nativeCommitted" && $0.actionID == action }.count == 1)
+        let input = try #require(records.first { $0.name == .inputObserved && $0.actionID == action })
+        #expect(abs(try #require(input.inputMS) - down * 1000) < 0.001)
+        let fields = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(released)) as? [String: Any])
+        let capability = try #require(fields["nativeSelectionNotifications"] as? [String: String])
+        #expect(capability == ["changing": "observed", "committed": "observed"])
+        #expect((await recorder.snapshot()).completedSelections == 1)
+        #expect(!fixture.window.isVisible)
+        await recorder.flush()
+        let exported = try #require(try await recorder.exportMetadata())
+        let document = try #require(JSONSerialization.jsonObject(with: exported) as? [String: Any])
+        let events = try #require(document["events"] as? [[String: Any]])
+        #expect(events.filter { $0["name"] as? String == "ui.input.released" }.count == 1)
+        #expect(events.filter { $0["name"] as? String == "ui.selection.nativeChanging" }.count == 1)
+        #expect(events.filter { $0["name"] as? String == "ui.selection.nativeCommitted" }.count == 1)
+        recorder.clear(); await recorder.flush()
+    }
+    @Test @MainActor func unavailableNativeNotificationsAreExplicitAndScopeChangesDiscardTheOldRelease() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: root); recorder.authorizeOwnerSession(true)
+        let source = NotificationCenter(), monitor = ClientDiagnosticsMonitor(recorder: recorder, notifications: source)
+        let fixture = DiagnosticPointerFixture(monitor: monitor); defer { monitor.stop(); fixture.close() }
+        monitor.start()
+        let down = ProcessInfo.processInfo.systemUptime - 0.2
+        monitor.input(try fixture.mouse(.leftMouseDown, row: 1, time: down))
+        source.post(name: NSTableView.selectionIsChangingNotification, object: NSTableView())
+        source.post(name: NSTableView.selectionDidChangeNotification, object: NSTableView())
+        monitor.selected("synthetic-selection")
+        monitor.input(try fixture.mouse(.leftMouseUp, row: 1, time: down + 0.1))
+        let records = (await recorder.snapshot()).recent
+        #expect(records.filter { $0.name.rawValue.hasPrefix("ui.selection.native") }.isEmpty)
+        let released = try #require(records.first { $0.name.rawValue == "ui.input.released" })
+        let fields = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(released)) as? [String: Any])
+        #expect(fields["nativeSelectionNotifications"] as? [String: String] == ["changing": "unavailable", "committed": "unavailable"])
+        monitor.input(try fixture.mouse(.leftMouseDown, row: 2, time: down + 0.11))
+        recorder.clear(); recorder.authorizeOwnerSession(true)
+        monitor.input(try fixture.mouse(.leftMouseUp, row: 2, time: down + 0.15))
+        source.post(name: NSTableView.selectionDidChangeNotification, object: fixture.table)
+        monitor.selected("synthetic-selection")
+        #expect((await recorder.snapshot()).recorded == 0)
+        let fresh = try #require(monitor.begin(.openSettings, surface: .settings))
+        let input = try #require((await recorder.snapshot()).recent.first { $0.name == .inputObserved && $0.actionID == fresh })
+        #expect(input.inputMS == nil && input.inputKind == .unknown)
+        recorder.clear(); await recorder.flush()
+    }
+    @Test @MainActor func aHandlerOnReleaseKeepsThePressAndAnExistingMarkerSurvivesRecordingRestart() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: root); recorder.authorizeOwnerSession(true)
+        let monitor = ClientDiagnosticsMonitor(recorder: recorder)
+        let fixture = DiagnosticPointerFixture(monitor: monitor); defer { monitor.stop(); fixture.close() }
+        let modeMarker = ClientDiagnosticNativeView(frame: fixture.table.bounds); modeMarker.mode = .compact; modeMarker.monitor = monitor
+        fixture.table.addSubview(modeMarker); monitor.register(modeMarker)
+        monitor.stop(); recorder.clear(); recorder.authorizeOwnerSession(true)
+        let down = ProcessInfo.processInfo.systemUptime - 0.2
+        monitor.input(try fixture.mouse(.leftMouseDown, row: 0, time: down))
+        monitor.input(try fixture.mouse(.leftMouseUp, row: 0, time: down + 0.1))
+        let action = try #require(monitor.begin(.openSettings, surface: .settings))
+        let records = (await recorder.snapshot()).recent
+        let input = try #require(records.first { $0.name == .inputObserved && $0.actionID == action })
+        #expect(input.mode == .compact)
+        #expect(abs(try #require(input.inputMS) - down * 1000) < 0.001)
+        #expect(records.filter { $0.name.rawValue == "ui.input.released" && $0.actionID == action }.count == 1)
+        recorder.clear(); await recorder.flush()
+    }
     @Test func stallGapsRetainCpuDeltasAndUnknownsWithoutInventingAClassification() throws {
         let busy = ClientHeartbeatProbe(); busy.setActivity(true)
         #expect(busy.request(1000, cpu: .init(mainThreadCpuMS: 100, processCpuMS: 200)))

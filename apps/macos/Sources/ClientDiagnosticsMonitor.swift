@@ -35,7 +35,8 @@ struct ClientDiagnosticInputReceipt {
     let observedAt: Double
     let kind: ClientDiagnosticInputKind
     var consumed = false
-    func isRecent(at now: Double) -> Bool { !consumed && time >= 0 && time <= observedAt && now >= observedAt && now - observedAt < 1000 }
+    var releasedAt: Double?
+    func isRecent(at now: Double) -> Bool { !consumed && time >= 0 && time <= observedAt && now >= (releasedAt ?? observedAt) && now - (releasedAt ?? observedAt) < 1000 }
 }
 
 @MainActor @Observable final class ClientDiagnosticsMonitor {
@@ -50,9 +51,11 @@ struct ClientDiagnosticInputReceipt {
     @ObservationIgnored private var observer: CFRunLoopObserver?
     @ObservationIgnored private var timer: (any DispatchSourceTimer)?
     @ObservationIgnored private var activityObservers: [NSObjectProtocol] = []
+    @ObservationIgnored private var tableObservers: [NSObjectProtocol] = []
     @ObservationIgnored private var probe = ClientHeartbeatProbe()
     private struct Pending {
         let category: ClientDiagnosticAction
+        let scope: Int
         var surface: ClientDiagnosticSurface
         var identity: String?
         var ready = false
@@ -66,7 +69,30 @@ struct ClientDiagnosticInputReceipt {
     @ObservationIgnored private var regions: [ObjectIdentifier: Region] = [:]
     @ObservationIgnored private var pending: [UUID: Pending] = [:]
     @ObservationIgnored private var lastInput: ClientDiagnosticInputReceipt?
+    @ObservationIgnored private var lastInputScope: Int?
     @ObservationIgnored private var selection: (id: UUID, task: String?)?
+    private struct PointerPress {
+        let time: Double
+        let window: Int
+        let scope: Int
+        var action: UUID?
+        var released: Double?
+        var recorded = false
+    }
+    private final class NativeSelectionTrace {
+        let action: UUID
+        let scope: Int
+        let kind: ClientDiagnosticInputKind
+        weak var table: NSTableView?
+        var changing = false
+        var committed = false
+        var capabilities: ClientDiagnosticNativeSelectionNotifications { .init(changing: changing, committed: committed) }
+        init(action: UUID, scope: Int, kind: ClientDiagnosticInputKind, table: NSTableView?) {
+            self.action = action; self.scope = scope; self.kind = kind; self.table = table
+        }
+    }
+    @ObservationIgnored private var pointer: PointerPress?
+    @ObservationIgnored private var nativeSelection: NativeSelectionTrace?
 
     init(recorder: ClientDiagnosticsRecorder, applicationActive: @escaping @MainActor @Sendable () -> Bool = { NSApplication.shared.isActive && !NSApplication.shared.isHidden }, notifications: NotificationCenter = .default, watchdogTick: (@Sendable () -> Void)? = nil) {
         self.recorder = recorder; self.applicationActive = applicationActive; self.notifications = notifications; self.watchdogTick = watchdogTick
@@ -74,13 +100,14 @@ struct ClientDiagnosticInputReceipt {
     isolated deinit {
         timer?.cancel()
         for token in activityObservers { notifications.removeObserver(token) }
+        for token in tableObservers { notifications.removeObserver(token) }
         if let eventMonitor { NSEvent.removeMonitor(eventMonitor) }
         if let observer { CFRunLoopRemoveObserver(CFRunLoopGetMain(), observer, .commonModes) }
     }
     func start() {
         guard recorder.isOwnerSession, observer == nil else { return }
         generation += 1
-        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseDragged, .keyDown]) { [weak self] event in
+        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp, .leftMouseDragged, .keyDown]) { [weak self] event in
             MainActor.assumeIsolated { self?.input(event) }
             return event
         }
@@ -118,6 +145,13 @@ struct ClientDiagnosticInputReceipt {
         activityObservers = [NSApplication.didBecomeActiveNotification, NSApplication.didResignActiveNotification, NSApplication.didHideNotification, NSApplication.didUnhideNotification].map { name in
             notifications.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in MainActor.assumeIsolated { self?.updateActivity() } }
         }
+        tableObservers = [NSTableView.selectionIsChangingNotification, NSTableView.selectionDidChangeNotification].map { name in
+            notifications.addObserver(forName: name, object: nil, queue: .main) { [weak self] notification in
+                let tableID = (notification.object as? NSTableView).map(ObjectIdentifier.init)
+                let changing = notification.name == NSTableView.selectionIsChangingNotification
+                MainActor.assumeIsolated { self?.nativeSelectionChanged(tableID: tableID, changing: changing) }
+            }
+        }
         source.resume()
     }
     private func updateActivity() {
@@ -128,9 +162,11 @@ struct ClientDiagnosticInputReceipt {
     func stop() {
         generation += 1; timer?.cancel(); timer = nil; probe = ClientHeartbeatProbe()
         for token in activityObservers { notifications.removeObserver(token) }; activityObservers.removeAll()
+        for token in tableObservers { notifications.removeObserver(token) }; tableObservers.removeAll()
         if let eventMonitor { NSEvent.removeMonitor(eventMonitor) }; eventMonitor = nil
         if let observer { CFRunLoopRemoveObserver(CFRunLoopGetMain(), observer, .commonModes) }; observer = nil
-        pending.removeAll(); selection = nil; lastInput = nil; regions.removeAll(); summary = .init()
+        pending.removeAll(); selection = nil; nativeSelection = nil; pointer = nil; lastInput = nil; lastInputScope = nil; summary = .init(); mode = .unknown
+        regions = regions.filter { $0.value.view != nil }
     }
     func register(_ view: ClientDiagnosticNativeView) {
         guard recorder.isEnabled else { return }
@@ -151,16 +187,28 @@ struct ClientDiagnosticInputReceipt {
     }
     func input(_ event: NSEvent) {
         guard recorder.isOwnerSession else { return }
+        if event.type == .leftMouseUp {
+            guard let press = pointer, press.scope == recorder.scopeToken, press.window == event.windowNumber, press.released == nil else { return }
+            let now = ProcessInfo.processInfo.systemUptime * 1000, released = event.timestamp * 1000
+            guard released >= press.time, released <= now else { return }
+            pointer?.released = released
+            lastInput?.releasedAt = now
+            recordRelease()
+            return
+        }
         if event.type == .leftMouseDragged {
             if let selected = selection { recorder.endAction(selected.id, outcome: .drag); pending.removeValue(forKey: selected.id); selection = nil }
             return
         }
         let kind: ClientDiagnosticInputKind = event.type == .keyDown ? .keyboard : .pointer
+        nativeSelection = nil; pointer = nil
         mode = regions.values.compactMap { region -> ClientDiagnosticMode? in
             guard let view = region.view, view.window === event.window else { return nil }
             return view.mode
         }.first ?? .unknown
         lastInput = ClientDiagnosticInputReceipt(time: event.timestamp * 1000, observedAt: ProcessInfo.processInfo.systemUptime * 1000, kind: kind)
+        lastInputScope = recorder.scopeToken
+        if event.type == .leftMouseDown { pointer = PointerPress(time: event.timestamp * 1000, window: event.windowNumber, scope: recorder.scopeToken) }
         regions = regions.filter { $0.value.view != nil }
         if event.type == .leftMouseDown {
             for region in regions.values {
@@ -175,7 +223,10 @@ struct ClientDiagnosticInputReceipt {
                     }
                 }
                 if let selected = selection { recorder.endAction(selected.id, outcome: .superseded); pending.removeValue(forKey: selected.id) }
-                if let id = begin(.taskSelection, surface: .inspector, identity: task, startHandler: false) { selection = (id, task) }
+                if let id = begin(.taskSelection, surface: .inspector, identity: task, startHandler: false) {
+                    selection = (id, task)
+                    nativeSelection = NativeSelectionTrace(action: id, scope: recorder.scopeToken, kind: .pointer, table: table(view))
+                }
                 if hasSurface(.inspector, identity: task) { selected(task) }
                 return
             }
@@ -191,25 +242,50 @@ struct ClientDiagnosticInputReceipt {
             }
             guard next >= 0 && next < table.numberOfRows else { return }
             if let selected = selection { recorder.endAction(selected.id, outcome: .superseded); pending.removeValue(forKey: selected.id) }
-            if let id = begin(.keyboardSelection, surface: .inspector, startHandler: false) { selection = (id, nil) }
+            if let id = begin(.keyboardSelection, surface: .inspector, startHandler: false) {
+                selection = (id, nil)
+                nativeSelection = NativeSelectionTrace(action: id, scope: recorder.scopeToken, kind: .keyboard, table: table)
+            }
         }
+    }
+    private func recordRelease() {
+        guard let press = pointer, let id = press.action, let released = press.released, !press.recorded, press.scope == recorder.scopeToken else { return }
+        var event = ClientDiagnosticEvent(name: .inputReleased, run: recorder.run)
+        event.actionID = id; event.traceID = id; event.inputKind = .pointer; event.mode = mode
+        event.inputMS = released; event.durationMS = released - press.time
+        if nativeSelection?.action == id { event.nativeSelectionNotifications = nativeSelection?.capabilities }
+        recorder.record(event, ifScope: press.scope); pointer?.recorded = true
+    }
+    private func nativeSelectionChanged(tableID: ObjectIdentifier?, changing: Bool) {
+        guard recorder.isOwnerSession, let trace = nativeSelection, trace.scope == recorder.scopeToken,
+              let table = trace.table, tableID == ObjectIdentifier(table),
+              pending[trace.action] != nil || (pointer?.action == trace.action && pointer?.released == nil) else { return }
+        let name: ClientDiagnosticName
+        if changing { trace.changing = true; name = .nativeSelectionChanging }
+        else { trace.committed = true; name = .nativeSelectionCommitted }
+        var event = ClientDiagnosticEvent(name: name, run: recorder.run)
+        event.actionID = trace.action; event.traceID = trace.action; event.inputKind = trace.kind; event.mode = mode
+        recorder.record(event, ifScope: trace.scope)
     }
     @discardableResult func begin(_ category: ClientDiagnosticAction, surface: ClientDiagnosticSurface = .main, identity: String? = nil, startHandler: Bool = true) -> UUID? {
         guard recorder.isOwnerSession else { return nil }
         for (id, item) in pending where item.category == category { recorder.endAction(id, outcome: .superseded); pending.removeValue(forKey: id) }
-        let input = lastInput.flatMap { value in value.isRecent(at: ProcessInfo.processInfo.systemUptime * 1000) ? value : nil }
+        let input = lastInput.flatMap { value in lastInputScope == recorder.scopeToken && value.isRecent(at: ProcessInfo.processInfo.systemUptime * 1000) ? value : nil }
         lastInput?.consumed = true
         guard let id = recorder.beginAction(category, inputMS: input?.time, mode: mode, inputKind: input?.kind ?? .unknown) else { return nil }
-        pending[id] = Pending(category: category, surface: surface, identity: identity)
+        pending[id] = Pending(category: category, scope: recorder.scopeToken, surface: surface, identity: identity)
+        if let input, input.kind == .pointer, pointer?.time == input.time, pointer?.scope == recorder.scopeToken, pointer?.action == nil {
+            pointer?.action = id; recordRelease()
+        }
         if startHandler { recorder.handlerStarted(id) }
         return id
     }
     func selected(_ task: String) {
-        if selection == nil, let input = lastInput, input.kind == .keyboard, input.isRecent(at: ProcessInfo.processInfo.systemUptime * 1000), let id = begin(.keyboardSelection, surface: .inspector, identity: task, startHandler: false) { selection = (id, task) }
-        guard let selected = selection, selected.task == nil || selected.task == task else { return }
+        if selection == nil, lastInputScope == recorder.scopeToken, let input = lastInput, input.kind == .keyboard, input.isRecent(at: ProcessInfo.processInfo.systemUptime * 1000), let id = begin(.keyboardSelection, surface: .inspector, identity: task, startHandler: false) { selection = (id, task) }
+        guard let selected = selection, pending[selected.id]?.scope == recorder.scopeToken, selected.task == nil || selected.task == task else { return }
         pending[selected.id]?.identity = task; selection?.task = task
         recorder.handlerStarted(selected.id)
-        var event = ClientDiagnosticEvent(name: .selectionCommitted, run: recorder.run); event.actionID = selected.id; recorder.record(event)
+        var event = ClientDiagnosticEvent(name: .selectionCommitted, run: recorder.run); event.actionID = selected.id; recorder.record(event, ifScope: pending[selected.id]?.scope)
         if hasSurface(.inspector, identity: task) { publish(selected.id) }
     }
     var selectionAction: UUID? { selection?.id }
@@ -268,8 +344,13 @@ struct ClientDiagnosticInputReceipt {
         guard recorder.isOwnerSession else { return }
         publishReadyActions()
         for (id, item) in pending where item.ready && item.validate?() != false {
+            guard item.scope == recorder.scopeToken else { continue }
             guard hasSurface(item.surface, identity: item.identity) else { continue }
-            if item.surface == .inspector { var event = ClientDiagnosticEvent(name: .inspectorCommitted, run: recorder.run); event.actionID = id; recorder.record(event) }
+            if item.surface == .inspector {
+                var event = ClientDiagnosticEvent(name: .inspectorCommitted, run: recorder.run); event.actionID = id
+                if nativeSelection?.action == id { event.nativeSelectionNotifications = nativeSelection?.capabilities }
+                recorder.record(event)
+            }
             recorder.layoutCommitted(id); pending.removeValue(forKey: id)
             if selection?.id == id { selection = nil }
         }

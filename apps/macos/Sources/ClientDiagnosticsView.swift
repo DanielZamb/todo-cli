@@ -115,6 +115,10 @@ struct ClientDiagnosticsView: View {
                             VStack(alignment: .leading) {
                                 Text(ClientDiagnosticDisplay.event(event.name))
                                 if let trigger = event.trigger, let label = ClientDiagnosticDisplay.environmentTrigger(trigger) { Text(label).foregroundStyle(.secondary) }
+                                if let capability = event.nativeSelectionNotifications {
+                                    if capability.changing == .unavailable { Text("Row highlight started: unavailable").foregroundStyle(.secondary) }
+                                    if capability.committed == .unavailable { Text("Row highlight settled: unavailable").foregroundStyle(.secondary) }
+                                }
                             }
                             Spacer(minLength: 8)
                             if let duration = event.durationMS { Text(ClientDiagnosticDisplay.age(duration)).monospacedDigit() }

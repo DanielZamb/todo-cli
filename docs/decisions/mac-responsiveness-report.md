@@ -787,3 +787,60 @@ not a C4 optimization attempt and carries no claimed speedup.
 
 The [C4 measurement and attempt record](mac-refresh-hillclimb.md) fixes the
 owner interaction target, the qualified workload and the secondary work guards.
+
+## Candidate 4: connection ownership and truthful input phases
+
+Candidate 4 contains the kept credential-scope connection ownership change,
+the reviewed Diagnostics presentation corrections, and the recorder additions.
+Drag behavior is unchanged. Its purpose is to establish press, release, native
+highlight, SwiftUI callback and layout boundaries in the owner's next session.
+The [candidate receipt](../evidence/mac-perf/mac-candidate-4-summary.json) preserves
+counts and the qualification limits.
+
+The press remains the primary start. `ui.input.released` carries that action's
+release timestamp and press-to-release duration, including when layout already
+finished. Public Task table notifications produce `ui.selection.nativeChanging`
+and `ui.selection.nativeCommitted`. Release and inspector events explicitly
+report each notification as observed or unavailable at that boundary. No
+notification is an unknown highlight time, not zero. Recent activity displays
+"Pointer released", "Row highlight started" and "Row highlight settled". The
+monitor observes notifications without replacing a delegate, recognizer or
+selection path. Only the matching pending action or held press is correlated.
+
+Stalls now include optional main-thread CPU, process CPU and one-minute host
+load. Progress and delivery share a trace id. A low CPU delta alone cannot
+identify starvation. Native view registrations survive a recording restart
+while input and action state are cleared. A literal control reproduces the old
+unknown mode after that restart, then retains Compact in the corrected code.
+Old-scope callbacks, releases and notification phases cannot enter a new scope.
+
+The three pointer controls fail with five literal issues before the change and
+pass afterwards. The full state/contract suite passes 206 tests in 30 suites;
+Release Diagnostics passes 37 in three suites, with 30 refreshes, 120 requests,
+178 Tasks and zero errors. Complete design passes 872 renders and the unsigned
+Release build succeeds. The actual 300.016-second idle proof makes zero
+requests, refreshes and reconnects while remaining writable. Subscriber counts
+are zero before connection, one at every switch/credential/deletion boundary,
+and zero after disconnect. Real HTTP SSE and the root check pass.
+
+The first SSE recipe attempt times out in scratch CLI login before opening a
+stream, at one-minute host load 38.3. Its failure and cleanup are retained. An
+identical fresh-evidence retry passes without changing a timeout or product
+source. The high load is contextual evidence, not proof of that timeout's cause.
+No artificial CPU workers ran. All 86 Diagnostics proof source hashes match.
+
+Four inspected captures are under
+`docs/evidence/mac-perf/c4/candidate-4/diagnostics/`: `client-full-light.png`,
+`client-full-dark.png`, `client-compact-light.png`, `client-compact-dark.png`.
+Each contains an over-budget row, an incomplete row and open disclosures. These
+are unordered renders, not physical input or accessibility acceptance. The
+synthetic generated writer hour is 2,564,891 bytes, or 26.16 hours per 64 MiB
+file, with 9,660 real generated requests and no journal failures or drops. The
+added native release/highlight phases are not replayed in that hour; it is not
+an observed owner-session retention figure. The two-file 64 MiB cap is unchanged.
+
+The primary native target remains median 20 ms and p99 300 ms per category. It
+is not met or qualified by these headless controls. One optimization attempt is
+kept, none reverted, out of a floor of six. Inspector callback-to-layout is next,
+with a five-pair median target below 16 ms at 1,260 characters. ADR-0009 parity
+for Electron and the CLI remains owed by the separate cross-client unit.
