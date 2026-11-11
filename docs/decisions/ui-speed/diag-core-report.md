@@ -1,6 +1,6 @@
 # DIAG-CORE delivery
 
-Branch: `feat/diag-core`. Product checkpoint: `a2dea2d6328298671796cc856738fd0e4e68469d`.
+Branch: `feat/diag-core`. Product checkpoint: `0a79f21048dcb28d4e3a15b2f743379c636a86e3`.
 Implementation and the required TypeScript/compiled proofs are complete.
 The remaining integration holds below are not relabelled as passes.
 
@@ -42,8 +42,11 @@ work; it is not a measured socket queue.
 
 U02 B, `9acec1966190114cfa1cb16fbc4f15761660a1e0`, adds one optional, version 1
 `profiler` object to owner GET /diagnostics and CLI decoding/output. New servers
-always emit it. Existing fields and meanings and ordinary CLI goldens remain.
-The final contract after failure-isolation counters is
+emit it unless the recorder snapshot fails. Existing fields and meanings and
+ordinary CLI goldens remain. That commit's contract is
+`cdb285bd2d3a9f3871444a8c61d2fed17ac2838481df0126b85e78fc28bafce6`.
+The contract beginning at `a2dea2d6328298671796cc856738fd0e4e68469d`, after
+failure-isolation counters, is
 `db2f9b18c488cbd43117afd82b011ed6d6f96efc4f0aeb77a37fd5695611788f`.
 Compatibility refusal logic remains unchanged. Server and both clients must ship
 together. The standard API generator ran through the shared Swift slot and its
@@ -126,8 +129,9 @@ No new ingestion endpoint is available.
 
 ## Verification and cost
 
-Evidence root: `docs/evidence/ui-speed/diag-core/`. Binaries were built from the
-product checkpoint and source hash
+Original delivery evidence root: `docs/evidence/ui-speed/diag-core/`. Those
+binaries and the cost measurement were built from checkpoint
+`a2dea2d6328298671796cc856738fd0e4e68469d` and source hash
 `b6c53acd7bd85f83cbe31c03d3bb3a2935bd987d118b5908269ca7c68f885bd4`.
 The cache helper emits build=dev; the retained source.json records the product SHA
 and source digest. The actual CLI version reports build=dev and contract db2f9b18.
@@ -262,3 +266,132 @@ API recipes, so it does not recompile the provisioning source. The Diagnostics
 recipe marks the unauthorized visual stage HOLD rather than running Swift.
 These are reusable verification changes, not new Todo CLI product capabilities.
 No Python workaround for a missing Todo CLI capability was introduced.
+
+## Correctness seat follow-up, DIAG-CORE-S1-1
+
+The seat's finding against ed85a6f9 was reproduced before editing product code.
+Its unchanged compiled real-HTTP probe returned an empty 500 with no Task when
+entry start threw. Handoff start, entry end and handoff end each returned an
+empty 500 after exactly one Task and TaskCreated entry committed. All four had
+recording_failures=0. Red build, exit 1, bodies and durable-state results remain
+in `docs/evidence/ui-speed/diag-core-s1/http-red.*`. A separate root-creation
+regression also failed first, retained in root-red.log and root-red.exit.
+
+`0a79f21048dcb28d4e3a15b2f743379c636a86e3` puts every adapter observation through
+observeDiagnostic. The helper catches recorder exceptions without retaining
+their text, increments recording_failures, and returns undefined. Failed starts
+increment started and lost_starts. Other failed observations increment
+dropped_events. Failed ends may also leave an active incomplete span, bounded
+by the existing active capacity. Counts describe conservative observation loss,
+including failures after partial recording. The helper never retries business
+work. No await, I/O or additional yield was added to request observation.
+The added synchronous work is the guard call and, on failure, WeakMap counter
+updates. No new overhead measurement is claimed for this correction.
+
+HTTP keeps the original response when entry/handoff recording, timing formatting
+or byte observation fails. Root creation falls back to running the original
+effect. Pure context provision replaces adapter calls to overridable run/withRoot
+methods. A failed owner profiler snapshot omits the already optional profiler
+object while retaining the existing Diagnostics read and authorization. The
+contract remains db2f9b18, with no generator or Swift work in this follow-up.
+
+### Recorder call-site audit
+
+| Location | Observations | Containment |
+| --- | --- | --- |
+| apps/server/src/server.ts, serverLayer | configure | observeDiagnostic; server startup continues |
+| apps/server/src/server.ts, diagnosticsMiddleware | root, entry start/end, response_handoff start/end, failure/cancellation finalizer, request counter, serverTiming, transport | Each call uses observeDiagnostic; span starts count loss, original response/body and error handling continue |
+| apps/server/src/sse.ts | stream/frame IDs, commitReceipt, delivery, awaitTransport | One guarded observation closure; the original event continues through the stream once |
+| apps/server/src/sse.ts | connect, disconnect, delivered, releaseStream | Each observation is guarded; connect falls back to null and teardown continues |
+| apps/server/src/scheduler.ts | root/job start/end, schedulerWake, sample | withDiagnosticRoot guards root and uses diagnosticSpan; wake/sample use observeDiagnostic; real jobs and the sleep remain outside observation closures |
+| apps/cli/src/main.ts, withStore | configure, root/command start/end | configure uses observeDiagnostic; withDiagnosticRoot falls back to the original use(store) effect and retains the existing CLI error/render pipeline |
+| packages/domain/src/auth/auth.ts | authentication/database spans, owner authorization | diagnosticSync uses guarded begin/finish; diagnosticOwnerAuthenticated guards authorize after the original credential checks |
+| packages/domain/src/store/store.ts | domain, writer_lock_wait, handler, database, projection | Existing diagnosticSync/diagnosticSpan/begin/finish calls now share observeDiagnostic; original operation executes once and its own error propagates |
+| packages/domain/src/store/projection.ts | selected database span | Existing diagnosticSync uses guarded begin/finish around the original statement |
+| packages/domain/src/task-filters.ts | search_evaluation | Existing diagnosticSpan uses guarded begin/finish and preserves evaluation and interruption |
+| packages/domain/src/store/diagnostics.ts, snapshot | profiler.snapshot | observeDiagnostic omits the optional object on recorder failure; original snapshot fields remain |
+| packages/domain/src/diagnostic-context.ts | start/end/authorize/root and internal transport-to-delivery call | Exported observation helpers guard adapter calls; internal recorder calls execute within those guards. Class run/withRoot only provide Effect context and are no longer called by production adapters |
+
+Recorder construction remains local initialization in Diagnostics. No adapter
+constructs a recorder in a request's business effect. The audit searched all
+production TypeScript callers; verification fault overrides intentionally throw
+and are confined to the compiled fixture executables. There is no production
+fault-injection environment flag.
+
+### Compiled controls
+
+The original seat probe now exits 0. At each of its four fault points the response
+is 200 with the complete durable Task body, exactly one committed TaskCreated
+entry and recording_failures=1. Green results remain in seat-green.json/log/exit.
+
+The reusable compiled controls in apps/server/scripts/verify-diagnostic-faults.ts
+pass 47 cases on the final product. Twelve HTTP cases cover configure, root,
+entry/handler/handoff start/end, owner authorization, Server-Timing and snapshot
+faults. Each successful create equals the durable Task and commits once. They
+compare complete normalized bodies and literal statuses 400, 401, 404 and 409
+with a nonthrowing run. Nine further real-HTTP cases retain the application's
+literal empty 500 response and zero Tasks when an application defect occurs.
+
+Seven SSE cases throw at root, commitReceipt, delivery, awaitTransport, transport
+and releaseStream. Each emits exactly one ready frame and the three durable
+operation IDs in order, without duplicates. Teardown waits for the actual release
+call. Four scheduler cases throw at root/job start/end while every real job step
+runs once, one snoozed Task wakes to open Version 2, and one ReminderFired entry
+commits. Fifteen compiled CLI cases cover configure/root/command start/end/owner
+authorization. Successful show and stale edit preserve complete normalized stdout,
+exact stderr and exits 0 and 4. Each throwing add returns exit 0 and its literal
+Task remains readable at Version 1 through the normal compiled CLI.
+
+Every injected fault must actually execute and count a failure and loss. The
+controls use scratch databases and real store/auth/server/stream/scheduler/CLI
+code, with recorder overrides only. Scheduler counters wrap and invoke the real
+jobs. The fixture CLI imports the real command root. Earlier harness failures
+are retained separately; a too-early stream cleanup assertion and a CLI response
+schema mismatch were corrected before the final run.
+
+Follow-up evidence root: `docs/evidence/ui-speed/diag-core-s1/`. The cached
+CLI/server/seed manifest records product 0a79f210 and source hash
+`374cbefd8acab10bb9631cc34509f7959abb61cad1b0ad0890b4b45dad878347`.
+The fault executables import the same product source. Binary hashes, source
+manifest and cleanup receipts remain with the evidence. Full command lines and
+exit receipts below use that root as `<evidence>` and `.scratch/bin` as `<cache>`.
+
+| Command | Actual exit | Evidence |
+| --- | ---: | --- |
+| `pnpm typecheck` and `bun packages/api/scripts/openapi.ts --check` | 0 | precommit-types.log, contract-check.log |
+| `TODO_CLI_BINARY=<cache>/todo TODO_SERVER_BINARY=<cache>/todo-server /usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check` | 0 | root-check.log, root-check.exit |
+| `pnpm --filter @todo/domain test diagnostic-context.test.ts diagnostic-event-types.test.ts` | 0 | domain-targeted.log, 6 tests |
+| `pnpm --filter @todo/server test diagnostics.test.ts` | 0 | server-targeted.log, 5 tests |
+| `<cache>/http-failure-probe-green` with scratch HOME | 0 | seat-green.json/log/exit |
+| `<cache>/verify-diagnostic-faults <evidence>/fault-controls-final` | 0 | fault-controls-final/result.json, 47 cases |
+| `TODO_DIAGNOSTICS_NO_SWIFT=1 .agents/skills/verify-diagnostics/scripts/verify.sh <evidence>/diagnostics` | 0 | diagnostics/result.json; terminal_pngs HOLD |
+| `TODO_SERVER_BINARY=<cache>/todo-server TODO_SEED_BINARY=<cache>/seed .agents/skills/verify-server-api/scripts/verify.sh <evidence>/server-api` | 0 | server-api/result.json |
+| `.agents/skills/verify-auth/scripts/verify.sh <evidence>/auth` | 0 | auth/result.json |
+| `TODO_SERVER_BINARY=<cache>/todo-server TODO_SEED_BINARY=<cache>/seed .agents/skills/verify-sse/scripts/verify.sh <evidence>/sse <cache>/todo` | 0 | sse/result.json |
+| `TODO_SERVER_BINARY=<cache>/todo-server .agents/skills/verify-scheduler/scripts/verify.sh <evidence>/scheduler` | 0 | scheduler/result.json; real isolated launchd, cleanup passed |
+| `TODO_CLI_BINARY=<cache>/todo TODO_SERVER_BINARY=<cache>/todo-server .agents/skills/verify-cli/scripts/verify.sh <evidence>/cli` | 0 | cli/commands.log, unchanged goldens and all 69 tests |
+| `bun apps/server/scripts/verify-diagnostic-joins.ts <evidence>/joins` | 0 | joins/result.json |
+
+The locked root check passes 401 domain, 69 CLI, 35 server and 168 Electron
+tests, with the same existing Electron skip. The compatibility-refusal cases
+and ordinary goldens remain green.
+
+The canonical disk guard ran before the locked check and compile batches.
+store.ts and projection.ts are byte-identical to ed85a6f9, as are auth.ts and
+task-filters.ts. Their store/projection SHA-256 values are respectively
+`8e77d3ebd77db5b51a1a0f99a17af7e2b157daa50f5110d68e62e4fa86972138` and
+`76fe3261698793601df4155f1d70b4e2c717fda18e40c971f5fa0d445d9aeb37`.
+No formal mapping or pin was renewed for this follow-up. The coordinator's
+conditional rerun of both formal commands was not triggered. Their prior full
+passes and the integration-owned mapping work above remain labelled as such.
+
+The unchanged quiet-machine overhead confirmation remains owed at integration.
+Removed 10 owned closed Bun compile temporaries, 886,608,640 logical bytes,
+after lsof checks; none was open or skipped. The final cleanup scan found zero
+more. Final observed free space is 41.2 GB, above the unchanged 30 GB floor.
+All owned proof servers, streams, scheduler LaunchAgent and CLI children finished
+or were stopped by their own finalizers. Matching cached binaries and the red
+baseline executable remain ignored for the seat's re-check.
+The held terminal PNG stage, generated Swift/client integration and the seat's
+independent re-check remain owed. No Swift, Todo.app, signing, Keychain,
+installation, push, merge or real Todo data access occurred in this follow-up.
