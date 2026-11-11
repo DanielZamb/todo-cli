@@ -16,6 +16,10 @@ import {
   DiagnosticStreamId,
   DiagnosticTraceId,
 } from "./client-diagnostics.ts";
+import {
+  diagnosticFailureCounts,
+  observeDiagnostic,
+} from "./diagnostic-guard.ts";
 
 const id = <S extends Schema.Top & { readonly DecodingServices: never }>(
   schema: S,
@@ -24,23 +28,6 @@ const id = <S extends Schema.Top & { readonly DecodingServices: never }>(
   Option.getOrElse(Schema.decodeUnknownOption(schema)(value), () =>
     Schema.decodeUnknownSync(schema)(randomUUID()),
   );
-const recordingFailures = new WeakMap<DiagnosticRecorder, number>();
-const failedStarts = new WeakMap<DiagnosticRecorder, number>();
-const failedEvents = new WeakMap<DiagnosticRecorder, number>();
-export function observeDiagnostic<A>(
-  recorder: DiagnosticRecorder,
-  observation: () => A,
-  loss: "start" | "event" = "event",
-): A | undefined {
-  try {
-    return observation();
-  } catch {
-    recordingFailures.set(recorder, (recordingFailures.get(recorder) ?? 0) + 1);
-    const losses = loss === "start" ? failedStarts : failedEvents;
-    losses.set(recorder, (losses.get(recorder) ?? 0) + 1);
-    return undefined;
-  }
-}
 type FinishedSpan = DiagnosticEventOf<"span.finished">;
 type ActiveSpan = DiagnosticEventOf<"span.started">;
 type Delivery = DiagnosticEventOf<"stream.delivery">;
@@ -370,17 +357,18 @@ export class DiagnosticRecorder {
       if (key.startsWith(request + ":")) this.pendingFrames.delete(key);
   }
   snapshot(): typeof DiagnosticProfiler.Type {
+    const failures = diagnosticFailureCounts(this);
     return {
       schema_version: 1,
       run_id: this.runId,
       enabled: this.enabled,
       capacity: this.capacity,
       active_capacity: this.activeCapacity,
-      started: this.started + (failedStarts.get(this) ?? 0),
+      started: this.started + failures.lost_starts,
       finished: this.finished,
-      lost_starts: this.lostStarts + (failedStarts.get(this) ?? 0),
-      dropped_events: this.droppedEvents + (failedEvents.get(this) ?? 0),
-      recording_failures: recordingFailures.get(this) ?? 0,
+      lost_starts: this.lostStarts + failures.lost_starts,
+      dropped_events: this.droppedEvents + failures.lost_events,
+      recording_failures: failures.total,
       active: [...this.active.values()],
       recent: [
         ...this.recent.slice(this.recentCursor),

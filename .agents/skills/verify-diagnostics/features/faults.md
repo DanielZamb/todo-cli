@@ -1,5 +1,25 @@
 # Recorder failure isolation
 
+The single synchronous guard is in packages/domain/src/diagnostic-guard.ts. It
+has no imports. Browser adapters import observeDiagnostic and
+diagnosticFailureCounts from `@todo/domain/diagnostic-guard`; both are also
+re-exported through `@todo/domain`. The dedicated entry avoids the root barrel's
+Node-based services. Any object can own counts. The reader returns a detached
+snapshot with total, lost_starts and lost_events, which the server maps to its
+existing recording_failures, lost_starts and dropped_events fields.
+
+Run the generic-owner, shared-counter and browser-import regression tests:
+
+```sh
+pnpm --filter @todo/domain test diagnostic-guard.test.ts diagnostic-guard-browser.test.ts diagnostic-context.test.ts diagnostic-event-types.test.ts diagnostic-labels.test.ts
+```
+
+The browser test builds the public entry for the browser and evaluates its ES
+module in an isolated JavaScript realm. Any external import fails, and process,
+Buffer, require, Bun and global must all be undefined in that realm. It requires
+a literal successful value and explicit counts after a throwing observation.
+Node's VM runs only the verification realm, never the production module.
+
 Use a new evidence directory and a same-source cached CLI. From the checkout
 root, after the main recipe builds the CLI/server/seed cache, run:
 

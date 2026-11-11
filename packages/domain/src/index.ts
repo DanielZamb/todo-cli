@@ -8,6 +8,7 @@ export * from "./dependency-commands.ts";
 export * from "./dependency-contract.ts";
 export * from "./dependency-rules.ts";
 export * from "./diagnostic-context.ts";
+export * from "./diagnostic-guard.ts";
 export * from "./diagnostics.ts";
 export * from "./discovery.ts";
 export * from "./entities.ts";

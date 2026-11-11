@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./diagnostic-guard": "./src/diagnostic-guard.ts",
     "./store": "./src/store/store.ts",
     "./import": "./src/import-tasks.ts",
     "./commands": "./src/commands.ts",

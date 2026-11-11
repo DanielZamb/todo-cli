@@ -352,6 +352,11 @@ Owner Diagnostics adds one optional versioned profiler object with counters,
 active spans, bounded recent spans, stream delivery records and explicit gaps.
 Adapter recorder calls use observeDiagnostic. A thrown observation increments
 recording_failures and loss counters while the original work continues once.
+The guard and shared per-object failure counts live in diagnostic-guard.ts,
+which imports neither Node nor Effect. Browser clients use the dedicated
+@todo/domain/diagnostic-guard entry. The root package also re-exports it;
+diagnostic-context.ts uses the same guard and maps its counts to the existing
+profiler fields.
 A failed profiler snapshot omits the optional object and preserves the existing
 owner Diagnostics body. Recorder failures retain no error text.
 A stream delivery joins commit observation to encoded bytes handed to the HTTP

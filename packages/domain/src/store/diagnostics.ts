@@ -4,10 +4,8 @@ import { join } from "node:path";
 import { Effect, Schema } from "effect";
 import type { AuthError } from "../auth/model.ts";
 import { CredentialInfo } from "../auth/model.ts";
-import {
-  DiagnosticRecorder,
-  observeDiagnostic,
-} from "../diagnostic-context.ts";
+import { DiagnosticRecorder } from "../diagnostic-context.ts";
+import { observeDiagnostic } from "../diagnostic-guard.ts";
 import {
   type DiagnosticClient,
   DiagnosticOperation,
