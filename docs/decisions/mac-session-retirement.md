@@ -78,6 +78,14 @@ the corrected counter reads the owned server's cumulative route-only log.
 The product code is identical between those two stress attempts.
 
 Complete state, contract, Diagnostics, design, unsigned-build, idle, subscriber,
-SSE, socket-bound and restart gates on the final committed head are still
-required. Independent correctness review remains required before installation.
+SSE, socket-bound and restart gates pass on
+`f7cf2a370afe57348fc1fde53d8eec4b68f8dd99`. State/contract passes 214 tests in
+32 suites and Release Diagnostics passes 37 in three suites. Design verifies
+872 captures. The real 300.061-second idle makes zero requests, refreshes and
+reconnects while remaining writable. Subscriber counts are
+`[0, 1, 1, 1, 1, 1, 1, 0]`; 300 refreshes make 2,400 requests and retain seven
+sockets. Three restarted-server GET/Complete/Create boundaries pass with one
+History entry per write. Root and document links pass. These are functional
+and resource results, not a UI latency improvement. Independent correctness
+review remains required before installation.
 The inspector and new All-tasks Profile-switch measurements resume afterwards.

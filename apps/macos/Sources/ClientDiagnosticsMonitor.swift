@@ -145,10 +145,11 @@ struct ClientDiagnosticInputReceipt {
         activityObservers = [NSApplication.didBecomeActiveNotification, NSApplication.didResignActiveNotification, NSApplication.didHideNotification, NSApplication.didUnhideNotification].map { name in
             notifications.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in MainActor.assumeIsolated { self?.updateActivity() } }
         }
-        tableObservers = [NSTableView.selectionIsChangingNotification, NSTableView.selectionDidChangeNotification].map { name in
+        tableObservers = [NSTableView.selectionIsChangingNotification, NSTableView.selectionDidChangeNotification,
+                          NSOutlineView.selectionIsChangingNotification, NSOutlineView.selectionDidChangeNotification].map { name in
             notifications.addObserver(forName: name, object: nil, queue: .main) { [weak self] notification in
                 let tableID = (notification.object as? NSTableView).map(ObjectIdentifier.init)
-                let changing = notification.name == NSTableView.selectionIsChangingNotification
+                let changing = notification.name == NSTableView.selectionIsChangingNotification || notification.name == NSOutlineView.selectionIsChangingNotification
                 MainActor.assumeIsolated { self?.nativeSelectionChanged(tableID: tableID, changing: changing) }
             }
         }

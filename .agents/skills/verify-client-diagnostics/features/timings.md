@@ -54,8 +54,8 @@ input time. Keep the association if layout finishes while the button is held.
 A command handler invoked on release must still inherit its press. A second
 release, a foreign window and an old recording scope must not append a record.
 
-Observe only the public `NSTableView` selection notifications from the Task
-table associated with the current input. They produce
+Observe the public `NSTableView` and `NSOutlineView` selection notifications
+from the Task table associated with the current input. They produce
 `ui.selection.nativeChanging` and `ui.selection.nativeCommitted`. The direct
 notification test proves correlation and exclusion, not that SwiftUI emits
 these notifications or that a physical click selects a Task. On release and
@@ -66,3 +66,11 @@ time, never zero. The Recent activity disclosure uses the same plain labels.
 A native marker has the lifetime of its view, while actions and input receipts
 have the recording scope's lifetime. A recorder restart must preserve the
 window mode from a still-attached marker without carrying its old action.
+
+The production RootView control hosts 178 synthetic Tasks in an unordered
+window. Its row marker reaches `SwiftUIOutlineListView`, an `NSOutlineView`.
+Programmatic native selection must produce exactly one native commit record.
+The old table-only subscription produced zero. The helper saves the row-marker
+ancestor classes and notification names without Task content. The standalone
+table/manual-post controls still prove correlation and exclusion, but cannot
+establish this production hierarchy or physical pointer delivery.

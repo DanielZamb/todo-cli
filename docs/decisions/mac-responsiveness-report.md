@@ -877,4 +877,23 @@ required before a separate review. Candidate 5 stays pinned during that work.
 
 The [credential retirement correction](mac-session-retirement.md) records the
 crash, the admission boundary, the complete async caller audit and the qualified
-3,000-replacement workload. Its final gates and separate review remain pending.
+3,000-replacement workload. All 14 gates pass on
+`f7cf2a370afe57348fc1fde53d8eec4b68f8dd99`; separate review remains pending.
+
+## Record the actual list's native notifications
+
+The installed candidate 5 reported native highlight notifications unavailable
+for every real selection. The new control hosts the production RootView with
+178 synthetic Tasks in an unordered window. The row marker's ancestor is
+`SwiftUIOutlineListView`, an NSOutlineView. The ancestor lookup works; the
+subscription used the wrong notification names. NSOutlineView publishes its
+own selection notifications, distinct from NSTableView's names.
+
+A native programmatic selection produces zero recorder commits before the
+fix and exactly one afterwards. Both public notification families are now
+observed and filtered to the current Task table and action. The previous
+standalone NSTableView test manually posted notifications and could not catch
+this mismatch. The Release Diagnostics proof passes 38 tests in four suites,
+including 30 refreshes, 120 requests, 178 Tasks and zero errors. No pointer,
+selection or drag gesture changed. This establishes the notification path,
+not physical input timing or the cause of the press-to-handler delay.

@@ -96,7 +96,7 @@ try:
     tasks = request('GET', '/profiles/work/tasks', credential=owner)
     shape = witness(tasks); assert shape['total'] == 178 and shape['descriptionChars'] == 222312 and shape['attachments'] == 108
     (EVIDENCE / 'fixture.json').write_text(json.dumps(shape, indent=2))
-    environment.update(TODO_CLIENT_DIAGNOSTICS_SERVER=f'http://127.0.0.1:{port}', TODO_CLIENT_DIAGNOSTICS_TOKEN=token, TODO_CLIENT_DIAGNOSTICS_EVIDENCE=str(EVIDENCE), TODO_CLIENT_DIAGNOSTICS_JOURNAL=str(scratch / 'journal'))
+    environment.update(TODO_CLIENT_DIAGNOSTICS_SERVER=f'http://127.0.0.1:{port}', TODO_CLIENT_DIAGNOSTICS_TOKEN=token, TODO_CLIENT_DIAGNOSTICS_EVIDENCE=str(EVIDENCE), TODO_CLIENT_DIAGNOSTICS_JOURNAL=str(scratch / 'journal'), TODO_MAC_NATIVE_HOOK_EVIDENCE=str(EVIDENCE / 'native-hook.json'))
     if stream_only or connections_only:
         if sockets_only: environment['TODO_MAC_SOCKET_PROBE'] = '1'
         if subscribers_only: environment['TODO_IDLE_SUBSCRIBERS'] = '1'
@@ -162,7 +162,7 @@ try:
     if retirement_stress:
         environment['TODO_MAC_RETIREMENT_STRESS'] = '1'
         environment['TODO_MAC_RETIREMENT_COUNTER'] = f'http://127.0.0.1:{proxy.server_port}/counts/health'
-    selected = 'MacRetirementStressTests' if retirement_stress else 'productionRefreshCredentialReplacementRaceDoesNotAbort' if retirement_only else 'reusedProductionPoolSurvivesRestartBeforeTheFirstReadAndEachWrite' if restart_only else 'productionModelHoldsAtMostSixteenSocketsAfterThreeHundredRefreshes' if sockets_only else 'MacConnectionReuseGuard' if connections_only else 'productionModelCancelsIdleSubscribersAtEveryLifecycleBoundary' if subscribers_only else 'StreamIdleTests|StreamIdleTransportTests' if stream_only else 'ClientDiagnosticsTests|ClientDiagnosticsLiveTests|ClientDiagnosticsPanelTests'
+    selected = 'MacRetirementStressTests' if retirement_stress else 'productionRefreshCredentialReplacementRaceDoesNotAbort' if retirement_only else 'reusedProductionPoolSurvivesRestartBeforeTheFirstReadAndEachWrite' if restart_only else 'productionModelHoldsAtMostSixteenSocketsAfterThreeHundredRefreshes' if sockets_only else 'MacConnectionReuseGuard' if connections_only else 'productionModelCancelsIdleSubscribersAtEveryLifecycleBoundary' if subscribers_only else 'StreamIdleTests|StreamIdleTransportTests' if stream_only else 'ClientDiagnosticsTests|ClientDiagnosticsLiveTests|ClientDiagnosticsPanelTests|ClientNativeSelectionHookTests'
     run([ROOT / 'scripts/swift-slot.sh', 'swift', 'test', '--configuration', configuration, '--no-parallel', '--disable-automatic-resolution', '--jobs', '2', '--package-path', 'apps/macos', '--filter', selected], 'swift', environment)
     artifact = ROOT / f'apps/macos/.build/{configuration}/TodoStateProofPackageTests.xctest/Contents/MacOS/TodoStateProofPackageTests'
     (EVIDENCE / 'swift-artifact.json').write_text(json.dumps(dict(sha256=hashlib.sha256(artifact.read_bytes()).hexdigest(), configuration=configuration), indent=2))
