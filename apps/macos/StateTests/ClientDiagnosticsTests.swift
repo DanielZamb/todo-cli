@@ -30,6 +30,63 @@ private final class DiagnosticTickCounter: @unchecked Sendable {
 @MainActor private final class DiagnosticActivity { var active = false }
 
 @Suite(.serialized) struct ClientDiagnosticsTests {
+    @Test func stallGapsRetainCpuDeltasAndUnknownsWithoutInventingAClassification() throws {
+        let busy = ClientHeartbeatProbe(); busy.setActivity(true)
+        #expect(busy.request(1000, cpu: .init(mainThreadCpuMS: 100, processCpuMS: 200)))
+        let progress = try #require(busy.currentGap(3000, cpu: .init(mainThreadCpuMS: 2000, processCpuMS: 2200)))
+        let finished = try #require(busy.delivered(3800, active: true, cpu: .init(mainThreadCpuMS: 2800, processCpuMS: 3400)))
+        #expect(finished.durationMS == 2800)
+        #expect(finished.cpu.mainThreadCpuMS == 2700)
+        #expect(finished.cpu.processCpuMS == 3200)
+        #expect(progress.traceID == finished.traceID)
+        #expect(busy.currentGap(4000, cpu: .init(mainThreadCpuMS: 2900, processCpuMS: 3500)) == nil)
+        let quiet = ClientHeartbeatProbe(); quiet.setActivity(true)
+        #expect(quiet.request(1000, cpu: .init(mainThreadCpuMS: 100, processCpuMS: 200)))
+        let lowCpu = try #require(quiet.delivered(3800, active: true, cpu: .init(mainThreadCpuMS: 150, processCpuMS: 260)))
+        let event = lowCpu.event(run: UUID(), hostLoad1m: 47)
+        #expect(event.durationMS == 2800 && event.mainThreadCpuMS == 50 && event.processCpuMS == 60 && event.hostLoad1m == 47)
+        let unavailable = ClientCpuReading(mainThreadCpuMS: nil, processCpuMS: 20).since(.init(mainThreadCpuMS: 1, processCpuMS: 30))
+        #expect(unavailable.mainThreadCpuMS == nil && unavailable.processCpuMS == nil)
+        quiet.setActivity(false)
+        #expect(quiet.request(5000, cpu: .init(mainThreadCpuMS: 150, processCpuMS: 260)))
+        #expect(quiet.delivered(8000, active: false, cpu: .init(mainThreadCpuMS: 160, processCpuMS: 270)) == nil)
+    }
+    @Test @MainActor func platformCpuSamplerSeparatesSleepFromEncodingWork() throws {
+        let sampler = ClientCpuSampler(), beforeSleep = sampler.read()
+        usleep(25_000)
+        let asleep = sampler.read().since(beforeSleep)
+        let beforeWork = sampler.read()
+        var bytes = 0
+        for value in 0..<2000 { bytes += try JSONSerialization.data(withJSONObject: ["sample": value, "numbers": [1, 2, 3, 4]]).count }
+        let worked = sampler.read().since(beforeWork)
+        let workedMain = try #require(worked.mainThreadCpuMS), asleepMain = try #require(asleep.mainThreadCpuMS)
+        #expect(bytes > 50_000)
+        #expect(workedMain > asleepMain)
+        #expect(try #require(worked.processCpuMS) > 0)
+        let started = ProcessInfo.processInfo.systemUptime
+        for _ in 0..<1000 { _ = sampler.read() }
+        let sampleMS = (ProcessInfo.processInfo.systemUptime - started) * 1000 / 1000
+        if let path = ProcessInfo.processInfo.environment["TODO_CLIENT_DIAGNOSTICS_EVIDENCE"] {
+            let data: [String: Any] = ["samples": 1000, "mean_sample_ms": sampleMS, "sleep_main_thread_cpu_ms": asleepMain, "encoding_main_thread_cpu_ms": workedMain, "encoding_process_cpu_ms": try #require(worked.processCpuMS), "host_load_1m": ClientCpuSampler.hostLoad1m().map { $0 as Any } ?? NSNull()]
+            try JSONSerialization.data(withJSONObject: data, options: [.prettyPrinted, .sortedKeys]).write(to: URL(fileURLWithPath: path).appendingPathComponent("stall-cpu-calibration.json"))
+        }
+    }
+    @Test func stallCPUAndLoadSurviveTheProductionJournalAndExport() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: root); recorder.authorizeOwnerSession(true)
+        let payload: [String: Any] = ["id": UUID().uuidString, "run": recorder.run.uuidString, "name": "ui.stall", "monotonicMS": 1000, "epochMS": 1000,
+            "durationMS": 2800, "mainThreadCpuMS": 2700, "processCpuMS": 3200, "hostLoad1m": 47]
+        let event = try JSONDecoder().decode(ClientDiagnosticEvent.self, from: JSONSerialization.data(withJSONObject: payload))
+        recorder.record(event); await recorder.flush()
+        let exported = try #require(try await recorder.exportMetadata())
+        let document = try #require(JSONSerialization.jsonObject(with: exported) as? [String: Any])
+        let records = try #require(document["events"] as? [[String: Any]])
+        let stall = try #require(records.first { $0["name"] as? String == "ui.stall" })
+        #expect(stall["mainThreadCpuMS"] as? Double == 2700)
+        #expect(stall["processCpuMS"] as? Double == 3200)
+        #expect(stall["hostLoad1m"] as? Double == 47)
+        recorder.clear(); await recorder.flush()
+    }
     @Test func routinePollsAreAggregatedButFailuresAndSlowRepliesKeepTheirPhases() async throws {
         let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
         let clock = DiagnosticTestClock(), recorder = ClientDiagnosticsRecorder(journalDirectory: root, clock: { clock.read() })

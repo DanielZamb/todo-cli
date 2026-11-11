@@ -6,25 +6,28 @@ import TodoAPI
 
 enum ClientDiagnosticSurface: Hashable { case main, inspector, quickAdd, dependencyPicker, dependencies, batch, importPreview, settings, diagnostics }
 
-private final class ClientHeartbeatProbe: @unchecked Sendable {
+final class ClientHeartbeatProbe: @unchecked Sendable {
     private let lock = NSLock()
-    private var pending: Double?
+    private var pending: (at: Double, cpu: ClientCpuReading, traceID: UUID)?
     private var active = false
     private var lastRequest = 0.0
     private var lastResources = 0.0
     func setActivity(_ value: Bool) { lock.withLock { active = value; pending = nil; lastRequest = 0; lastResources = 0 } }
     func isActive() -> Bool { lock.withLock { active } }
-    func request(_ now: Double) -> Bool {
+    func request(_ now: Double, cpu: ClientCpuReading) -> Bool {
         lock.withLock {
             guard pending == nil, now - lastRequest >= (active ? 16 : 1000) else { return false }
-            pending = now; lastRequest = now; return true
+            pending = (now, cpu, UUID()); lastRequest = now; return true
         }
     }
-    func delivered(_ now: Double, active: Bool) -> Double? {
-        lock.withLock { let gap = pending.map { now - $0 }; pending = nil; self.active = active; return active ? gap : nil }
+    func delivered(_ now: Double, active: Bool, cpu: ClientCpuReading) -> ClientStallObservation? {
+        lock.withLock { let gap = observation(now, cpu: cpu); pending = nil; self.active = active; return active ? gap : nil }
     }
     func resourcesDue(_ now: Double) -> Bool { lock.withLock { guard now - lastResources >= 1000 else { return false }; lastResources = now; return true } }
-    func currentGap(_ now: Double) -> Double? { lock.withLock { active ? pending.map { now - $0 } : nil } }
+    func currentGap(_ now: Double, cpu: ClientCpuReading) -> ClientStallObservation? { lock.withLock { active ? observation(now, cpu: cpu) : nil } }
+    private func observation(_ now: Double, cpu: ClientCpuReading) -> ClientStallObservation? {
+        pending.map { .init(traceID: $0.traceID, durationMS: now - $0.at, cpu: cpu.since($0.cpu)) }
+    }
 }
 
 struct ClientDiagnosticInputReceipt {
@@ -86,20 +89,20 @@ struct ClientDiagnosticInputReceipt {
         }
         if let observer { CFRunLoopAddObserver(CFRunLoopGetMain(), observer, .commonModes) }
         let source = DispatchSource.makeTimerSource(queue: DispatchQueue(label: "local.todo.client-diagnostics-watchdog", qos: .utility))
-        let recorder = recorder, probe = probe, run = generation, scope = recorder.scopeToken, tick = watchdogTick, activity = applicationActive
+        let recorder = recorder, probe = probe, run = generation, scope = recorder.scopeToken, tick = watchdogTick, activity = applicationActive, cpu = ClientCpuSampler()
         source.setEventHandler { @Sendable [weak self] in
             tick?()
             let now = ProcessInfo.processInfo.systemUptime * 1000
-            if probe.request(now) {
+            if probe.request(now, cpu: cpu.read()) {
                 DispatchQueue.main.async {
-                    if let gap = probe.delivered(ProcessInfo.processInfo.systemUptime * 1000, active: activity()), gap > 100 {
-                        var event = ClientDiagnosticEvent(name: .stall, run: recorder.run); event.durationMS = gap; recorder.record(event, ifScope: scope)
+                    if let gap = probe.delivered(ProcessInfo.processInfo.systemUptime * 1000, active: activity(), cpu: cpu.read()), gap.durationMS > 100 {
+                        recorder.record(gap.event(run: recorder.run, hostLoad1m: ClientCpuSampler.hostLoad1m()), ifScope: scope)
                     }
                 }
             }
             guard probe.resourcesDue(now) else { return }
-            if let gap = probe.currentGap(now), gap > 100 {
-                var event = ClientDiagnosticEvent(name: .stall, run: recorder.run); event.durationMS = gap; recorder.record(event, ifScope: scope)
+            if let gap = probe.currentGap(now, cpu: cpu.read()), gap.durationMS > 100 {
+                recorder.record(gap.event(run: recorder.run, hostLoad1m: ClientCpuSampler.hostLoad1m()), ifScope: scope)
             }
             var event = ClientDiagnosticEvent(name: .resourcesSampled, run: recorder.run)
             event.applicationActive = probe.isActive()

@@ -20,6 +20,7 @@ import tempfile
 import threading
 import time
 from fixture import OWNER, owner_items, finish_owner_fixture
+from owner_activity import wait_for_owner_idle
 
 ROOT = Path(__file__).resolve().parents[3]
 SOURCE = Path(__file__).with_name('Measurement.swift')
@@ -510,6 +511,7 @@ for iteration in range(args.iteration_offset, args.iteration_offset + args.runs)
             proxy.daemon_threads = True
             threading.Thread(target=proxy.serve_forever, daemon=True).start()
             url = f'http://127.0.0.1:{proxy.server_port}'
+            if args.cpu_workers: wait_for_owner_idle(folder / 'cpu-worker-admission.json')
             for _ in range(args.cpu_workers):
                 processes.append(subprocess.Popen([sys.executable, '-c', 'while True: pass'], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
             if args.cpu_workers: time.sleep(1)

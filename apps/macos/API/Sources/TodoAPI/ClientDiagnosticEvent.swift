@@ -371,6 +371,9 @@ public struct ClientDiagnosticEvent: Codable, Sendable, Identifiable {
     public var status: Int?
     public var requestCount: Int?
     public var durationMS: Double?
+    public var mainThreadCpuMS: Double?
+    public var processCpuMS: Double?
+    public var hostLoad1m: Double?
     public var inputMS: Double?
     public var availability: ClientDiagnosticAvailability?
     public var actionPhases: ClientDiagnosticActionPhases?

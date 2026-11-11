@@ -36,3 +36,12 @@ row to match, then checks Up at the first row, Down at the last, Return and a
 pointer on the selected row. None starts a selection action. Moving Down and
 clicking a different row are positive controls. These direct handler calls do
 not establish actual SwiftUI input delivery or visible selection.
+
+## Stall CPU evidence
+
+Require the optional `mainThreadCpuMS`, `processCpuMS` and `hostLoad1m` fields
+to survive the production journal and export. Check literal CPU deltas across
+the heartbeat gap, shared trace ids for progress and delivery, unknown counters,
+and inactive suppression. A real Mach-thread/process sampler control compares
+sleep with JSON encoding and measures sample cost. A low CPU delta does not by
+itself prove starvation. Historical records without these fields remain unknown.

@@ -137,5 +137,33 @@ five-minute idle and real HTTP SSE proofs pass. Proof source hashes match the
 candidate. This is one kept mechanism, zero reverted, and five more attempts
 are still required. Native input latency remains unqualified after this change.
 The next work is the coordinator's requested stall CPU/load data and pointer
-phase measurement, followed by replay coalescing. Drag behavior stays unchanged
-until the coordinator's design decision.
+phase measurement, followed by inspector layout. Drag behavior stays unchanged
+until the trace establishes whether selection waits for release.
+
+## Recorder follow-up: CPU evidence for a stalled heartbeat
+
+Each stall now carries optional `mainThreadCpuMS`, `processCpuMS` and
+`hostLoad1m`. CPU values are deltas across the same heartbeat gap, measured with
+the captured main-thread Mach port and process `getrusage`. Missing or regressed
+counters remain unknown. Progress and delivered records share a trace id. A low
+CPU delta alone does not establish starvation: a synchronous wait or run-loop
+tracking can also produce it. Historical installed-session stalls have no such
+CPU fields, so they cannot be classified retrospectively.
+
+The failing export control dropped all three fields. The new Release proof
+preserves literal 2,700 ms main-thread CPU, 3,200 ms process CPU and load 47.
+A real calibration records 0.013 ms main-thread CPU during a 25 ms sleep and
+3.949 ms during 2,000 JSON encodes. One thousand CPU samples average 0.00069 ms
+each at host load 7.54. This is a probe-cost control, not a UI latency result.
+The complete Diagnostics proof passes with 30 refreshes, 120 recorded requests,
+178 canonical Tasks and zero errors. Five alternating enabled/disabled pairs
+have refresh medians 150.8/151.0 ms and overlapping ranges; layout medians are
+179.8/179.7 ms with overlapping ranges. No measurable overhead change is claimed.
+
+Artificial CPU-worker cells now require a metadata-only admission receipt:
+no observed Todo input in the previous 60 seconds. An unreadable active-app
+journal waits. The existing count series used zero artificial workers; its
+measurement remains unchanged. Four admission tests cover recent, rotated,
+unknown and future input. Candidate 4 still needs pointer release/native-table
+phases and its full gates before delivery. This recorder work is not a C4
+optimization attempt.
