@@ -6,6 +6,43 @@ exception before Swift error handling can run. Both the independent correctness
 seat and the worker reproduced signal 6 through the default production model.
 Candidate 5 removes ownership and was installed separately.
 
+The later lifetime head `f7cf2a37` is also blocked by MAC-C1-S1-06. A failed
+sign-out advances the credential epoch before the credential changes. An older
+Diagnostics poll then declines to clear `diagnosticsLoading`, preventing all
+future polls. Its earlier green gates did not cover this transition. The seat's
+unchanged regression fails locally at its `!after` assertion. The following
+correction and its new gates are required before installation.
+
+## Failed transition cleanup audit
+
+A failed transition must retain the current credential epoch. Closing Discovery
+has its own generation and dialog invalidation; it does not require retiring
+unrelated requests. Only installing a credential or committing signed-out state
+ends that ownership. Epochs remain monotonic; a failed attempt never rolls one
+back to resurrect a stale request.
+
+| State or Task | Failed sign-out | Failed sign-in or restore | Actual credential replacement |
+| --- | --- | --- | --- |
+| `busy`, including writes, import, Snapshot actions and Discovery Show | The sign-out cleanup releases its own busy state and reconnects the still-signed-in model, including Task cancellation. A cancelled sign-out whose server revocation already succeeded still completes the local sign-out. A busy write prevents sign-out or sign-in from starting. | The originating defer releases busy. Sign-in and restore update their captured epoch after their own successful credential installation. | `replaceCredential` releases the previous busy owner; old defers cannot release new work. |
+| `diagnosticsLoading` | The previous poll retains its epoch and clears the flag even when the disconnected generation rejects its result. | A failure before replacement leaves the poll's epoch unchanged. Restore starts only when signed out. | `replaceCredential` resets the flag. |
+| Attachment and batch-edit target loading | The same draft and epoch still own completion. | A failed attempt before replacement retains ownership. | `replaceCredential` clears both loading flags; old publication remains rejected by epoch and draft identity. |
+| Dependency graph, picker, batch and Delete preview loading | The same epoch and request identity still own completion. | A failed attempt before replacement retains ownership. | `dependencies.reset()` removes the old graph and dialogs and advances their generations. |
+| Dependency toggle pending set and picker pending rows | The same epoch releases the dependent marker; picker id releases the row marker. | A failed attempt before replacement retains ownership. | `dependencies.reset()` empties both sets. Old completion cannot remove a new marker. |
+| Dependency batch and Delete confirmation pending | Their existing dialog-id cleanup releases the old marker. | Their existing dialog-id cleanup releases the old marker. | Dependency reset removes the old dialogs. |
+| Series loading and traversal | The Series request generation still owns its defer. | A failed attempt before replacement leaves that generation unchanged. | Series generation advances and `replaceCredential` clears `seriesLoading`; old results remain rejected. |
+| Catalog loading, search phase, search debounce and environmental refresh Task | Disconnect cancels the stream and debounce and invalidates the search request generation. Failed sign-out starts the normal reconnect, which obtains a current catalog or reports Offline. A superseded query never blocks a later retry. | A failed attempt before replacement does not invalidate the catalog. Restore has no connected foreground catalog. | Disconnect invalidates request generations and cancels the stream, debounce and environmental Task. Later connection establishes the new catalog. |
+| Quick-add parse, import preview, History and draft intent markers | Parse/import/History retain their own generation; Discovery closes its dialog and invalidates Show intents separately. | A failure before replacement leaves credential ownership unchanged. | Their existing credential, generation, Profile and editor/draft guards reject old publication. |
+| Restore's `restored` and `canRestore` | Not used by sign-out. | A cancelled restore must restore retry eligibility, as a transport failure already does. A superseded restore must not modify the replacement's state. | Cleanup belongs to the epoch adopted after loading the credential. |
+
+There is no separate credential-refresh operation in this client. Profile
+switches and failed Profile deletion do not advance the credential epoch.
+Snapshot restore also retains the credential; its busy cleanup uses that epoch.
+Successful sign-in/restore credential installation followed by a failed Profile
+read is an actual replacement, rather than rollback to the old epoch. The busy
+defer adopts the installed epoch before that read. Vault failures before
+installation retain the original ownership. These boundaries are distinct from
+transport cancellation and from retiring a real credential scope.
+
 ## Close admission before invalidation
 
 [ScopedTransport](../../apps/macos/API/Sources/TodoAPI/ScopedTransport.swift)

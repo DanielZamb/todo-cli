@@ -176,6 +176,11 @@ final class TodoModel {
         credential = value
         busy = false
         diagnosticsLoading = false
+        // Their completions are rejected by the new epoch or Series generation,
+        // so the replacement releases their loading state here.
+        seriesLoading = false
+        attachmentBatch?.loading = false
+        batchEdit?.loading = false
     }
     private var streamTask: Task<Void, Never>?
     private var restored = false
@@ -313,7 +318,13 @@ final class TodoModel {
                 connect()
             }
         } catch {
-            guard isCurrentCredential(credentialEpoch) else { return }
+            guard discovery.credentialEpoch == credentialEpoch else { return }
+            if Task.isCancelled {
+                // A cancelled restore retains its epoch, so it restores retry
+                // eligibility just as a transport failure does.
+                if !signedIn { restored = false; canRestore = true }
+                return
+            }
             if failure(error)?.status == 401 { expireSession(credentialEpoch: credentialEpoch) }
             else if error is VaultError { message = describe(error) }
             else {
@@ -356,14 +367,19 @@ final class TodoModel {
 
     func signOut() async {
         guard !busy else { return }
-        discovery.credentialChanged()
+        // Sign-out keeps the credential epoch until the server has revoked the
+        // credential. Closing Discovery and the stream retires their own work;
+        // every other pending read still owns its cleanup if sign-out fails.
+        closeDiscovery()
         disconnect()
         let credentialEpoch = discovery.credentialEpoch
         busy = true
         defer { if discovery.credentialEpoch == credentialEpoch { busy = false } }
         do {
             _ = try await client.credentials_period_signOut()
-            guard isCurrentCredential(credentialEpoch) else { return }
+            // The server has revoked the credential, so cancellation must not
+            // leave the model signed in with it.
+            guard discovery.credentialEpoch == credentialEpoch else { return }
             try vault.delete()
             disconnect()
             replaceCredential("")
@@ -380,9 +396,11 @@ final class TodoModel {
             newTitle = ""
             message = nil
         } catch {
-            guard isCurrentCredential(credentialEpoch) else { return }
-            message = describe(error)
-            handleAuthorization(error, credentialEpoch: credentialEpoch)
+            guard discovery.credentialEpoch == credentialEpoch else { return }
+            if !Task.isCancelled {
+                message = describe(error)
+                handleAuthorization(error, credentialEpoch: credentialEpoch)
+            }
             if signedIn { connect() }
         }
     }
