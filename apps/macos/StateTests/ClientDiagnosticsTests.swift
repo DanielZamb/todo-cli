@@ -6,6 +6,7 @@ import Testing
 import TodoAPI
 import HTTPTypes
 import OpenAPIRuntime
+import Observation
 @testable import TodoState
 
 private final class DiagnosticTestClock: @unchecked Sendable {
@@ -690,6 +691,41 @@ private final class DiagnosticTickCounter: @unchecked Sendable {
 }
 
 @MainActor @Suite struct ClientDiagnosticsPanelTests {
+    private func accessibilityLabels(_ element: Any, depth: Int = 0) -> [String] {
+        guard depth < 40, let element = element as? any NSAccessibilityProtocol else { return [] }
+        return [element.accessibilityLabel()].compactMap { $0 } + (element.accessibilityChildren() ?? []).flatMap { accessibilityLabels($0, depth: depth + 1) }
+    }
+    @Test func localSummaryDoesNotInvalidateTheOtherDiagnosticsSections() {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("todo-s01-verify-panel-observation-" + UUID().uuidString)
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: directory)
+        recorder.authorizeOwnerSession(true)
+        let model = TodoModel(configuration: .init(server: URL(string: "http://127.0.0.1:1")!, initialProfile: "work", vaultService: "never-used-observation-control"), clientDiagnostics: recorder)
+        let view = DiagnosticsContent(model: model, compact: false, initiallyExpanded: [])
+        let changes = DiagnosticTickCounter()
+        withObservationTracking { _ = view.body } onChange: { changes.tick() }
+        model.clientDiagnosticsUI.summary.recorded = 1
+        #expect(changes.read() == 0)
+        model.diagnosticsLoading = true
+        #expect(changes.read() == 1)
+    }
+    @Test func incompleteInteractionsAreNotCountedTwiceInTheSummary() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("todo-s01-verify-panel-summary-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let clock = DiagnosticTestClock()
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: directory, clock: { clock.read() })
+        recorder.authorizeOwnerSession(true)
+        let slow = recorder.beginAction(.complete, inputMS: 1000, mode: .full, inputKind: .pointer)
+        recorder.handlerStarted(slow); recorder.resultPublished(slow)
+        clock.set(1340); recorder.layoutCommitted(slow)
+        let pending = recorder.beginAction(.search, inputMS: 1340, mode: .full, inputKind: .keyboard)
+        recorder.handlerStarted(pending)
+        clock.set(14_000)
+        let summary = await recorder.snapshot()
+        #expect(ClientDiagnosticDisplay.sectionSummary(summary) == "1 over budget · 1 incomplete")
+        #expect(ClientDiagnosticDisplay.sortedActions(summary.actions).map(\.action) == [.search, .complete])
+        #expect(summary.actions.first { $0.action == .search }?.p99MS == nil)
+        await recorder.flush()
+    }
     @Test func labelsNeverExposeRegistryIds() {
         for category in ClientDiagnosticAction.allCases {
             let label = ClientDiagnosticDisplay.action(category)
@@ -708,6 +744,9 @@ private final class DiagnosticTickCounter: @unchecked Sendable {
         #expect(ClientDiagnosticDisplay.age(1000) == "1.0 s")
         #expect(ClientDiagnosticDisplay.age(12_300) == "12.3 s")
         #expect(ClientDiagnosticDisplay.age(120_000) == "2.0 min")
+        #expect(ClientDiagnosticDisplay.requestOperation("tasks.list") == "Read Tasks")
+        #expect(ClientDiagnosticDisplay.requestOperation("diagnostics.snapshot") == "Read Diagnostics")
+        #expect(ClientDiagnosticDisplay.requestOperation("new.unmapped") == "Server request")
     }
     @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_CLIENT_DIAGNOSTICS_EVIDENCE"] != nil && ProcessInfo.processInfo.environment["TODO_CLIENT_DIAGNOSTICS_SERVER"] != nil))
     func fullAndCompactLocalPanelRenderWithoutAnAppOrSheet() async throws {
@@ -746,7 +785,7 @@ private final class DiagnosticTickCounter: @unchecked Sendable {
         resource.resources = .init(descriptors: 64, sockets: 8, softLimit: 2560, hardLimit: UInt64.max, samplerDescriptors: 1, sampleMS: 0.2); recorder.record(resource)
         let fixture = await recorder.snapshot()
         model.clientDiagnosticsUI.summary = fixture
-        #expect(ClientDiagnosticDisplay.sectionSummary(fixture) == "2 over budget · 1 incomplete")
+        #expect(ClientDiagnosticDisplay.sectionSummary(fixture) == "1 over budget · 1 incomplete")
         let complete = try #require(fixture.actions.first { $0.action == .complete })
         #expect(ClientDiagnosticDisplay.accessibility(complete).contains("Median 340.0 milliseconds"))
         #expect(ClientDiagnosticDisplay.accessibility(complete).contains("p99 340.0 milliseconds"))
@@ -765,6 +804,11 @@ private final class DiagnosticTickCounter: @unchecked Sendable {
                 window.title = "Diagnostics"; window.appearance = appearance; window.isReleasedWhenClosed = false; window.contentView = view
                 view.layoutSubtreeIfNeeded()
                 try await Task.sleep(for: .milliseconds(150)); view.layoutSubtreeIfNeeded()
+                let labels = accessibilityLabels(view)
+                let accessibility: [String: Any] = ["export_controls": labels.filter { $0 == "Export client metadata…" }.count,
+                    "complete_row_label_count": labels.filter { $0 == ClientDiagnosticDisplay.accessibility(complete) }.count,
+                    "total_labels": labels.count, "visible": window.isVisible]
+                try JSONSerialization.data(withJSONObject: accessibility, options: [.prettyPrinted, .sortedKeys]).write(to: output.appendingPathComponent("client-" + (compact ? "compact" : "full") + (dark ? "-dark-ax.json" : "-light-ax.json")))
                 let bitmap = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
                 view.cacheDisplay(in: view.bounds, to: bitmap)
                 let data = try #require(bitmap.representation(using: .png, properties: [:]))

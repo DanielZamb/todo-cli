@@ -2,12 +2,67 @@ import Foundation
 import TodoAPI
 
 enum ClientDiagnosticDisplay {
-    static func pollOperation(_ operation: String) -> String {
-        switch operation { case "system.health": "Check server health"; case "diagnostics.snapshot": "Read Diagnostics"; default: "Background requests" }
+    static func requestOperation(_ operation: String) -> String {
+        switch operation {
+        case "system.health": "Check server health"
+        case "signIn.signIn": "Sign in"
+        case "credentials.signOut": "Sign out"
+        case "credentials.issueToken": "Create an Access Token"
+        case "credentials.listTokens": "Read Access Tokens"
+        case "credentials.revokeToken": "Revoke an Access Token"
+        case "tasks.list": "Read Tasks"
+        case "tasks.create": "Add a Task"
+        case "tasks.show": "Read a Task"
+        case "tasks.edit": "Save a Task"
+        case "tasks.delete": "Delete a Task"
+        case "tasks.transition": "Change Task status"
+        case "tasks.move": "Move a Task"
+        case "tasks.copy": "Copy a Task"
+        case "tasks.revert": "Revert a change"
+        case "tasks.depend": "Add a Dependency"
+        case "tasks.undepend": "Delete a Dependency"
+        case "tasks.batchDepend": "Change Dependencies"
+        case "tasks.graph": "Read Dependencies"
+        case "tasks.batchEdit": "Edit Tasks"
+        case "tasks.importTasks": "Import Tasks"
+        case "tasks.createSeries": "Create Series"
+        case "tasks.editSeries": "Save Series"
+        case "tasks.skipOccurrence": "Skip Occurrence"
+        case "tasks.attachMany", "tasks.attach", "tasks.uploadAttachment": "Attach to a Task"
+        case "tasks.detach": "Detach an Attachment"
+        case "tasks.labelAttachment": "Label Attachment"
+        case "tasks.attachmentImage": "Read an Attachment image"
+        case "changes.stream": "Follow live changes"
+        case "reads.lookup": "Find Task"
+        case "reads.deleteProfile": "Delete Profile"
+        case "reads.profiles": "Read Profiles"
+        case "reads.projects": "Read Projects"
+        case "reads.tags": "Read Tags"
+        case "reads.view": "Read a planning view"
+        case "reads.history": "Read History"
+        case "reads.quickAdd": "Parse quick add"
+        case "diagnostics.snapshot": "Read Diagnostics"
+        case "snapshots.list": "List Snapshots"
+        case "snapshots.create": "Create Snapshot"
+        case "snapshots.show": "Read Snapshot"
+        case "snapshots.restore": "Restore Snapshot"
+        case "snapshots.prune": "Prune Snapshots"
+        default: "Server request"
+        }
     }
-    static func overBudget(_ row: ClientDiagnosticActionSummary) -> Bool { (row.p50MS ?? 0) > 20 || (row.p99MS ?? 0) > 300 || row.incompleteCount > 0 }
+    static func overBudget(_ row: ClientDiagnosticActionSummary) -> Bool { (row.p50MS ?? 0) > 20 || (row.p99MS ?? 0) > 300 }
     static func sectionSummary(_ snapshot: ClientDiagnosticSummary) -> String {
-        "\(snapshot.actions.filter(overBudget).count) over budget · \(snapshot.actions.reduce(0) { $0 + $1.incompleteCount }) incomplete"
+        "\(snapshot.actions.filter { $0.incompleteCount == 0 && overBudget($0) }.count) over budget · \(snapshot.actions.reduce(0) { $0 + $1.incompleteCount }) incomplete"
+    }
+    static func sortedActions(_ rows: [ClientDiagnosticActionSummary]) -> [ClientDiagnosticActionSummary] {
+        rows.sorted {
+            let left = $0.incompleteCount > 0 ? 2 : overBudget($0) ? 1 : 0
+            let right = $1.incompleteCount > 0 ? 2 : overBudget($1) ? 1 : 0
+            if left != right { return left > right }
+            if left == 2, $0.oldestIncompleteMS != $1.oldestIncompleteMS { return $0.oldestIncompleteMS > $1.oldestIncompleteMS }
+            if left > 0, $0.p99MS != $1.p99MS { return ($0.p99MS ?? .infinity) > ($1.p99MS ?? .infinity) }
+            return action($0.action) < action($1.action)
+        }
     }
     static func age(_ milliseconds: Double) -> String {
         if milliseconds < 1000 { return String(format: "%.0f ms", milliseconds) }

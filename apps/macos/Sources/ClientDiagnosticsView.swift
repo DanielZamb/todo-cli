@@ -25,11 +25,7 @@ struct ClientDiagnosticsView: View {
         ClientDiagnosticDisplay.overBudget(row)
     }
     private var rows: [ClientDiagnosticActionSummary] {
-        snapshot.actions.sorted {
-            if overBudget($0) != overBudget($1) { return overBudget($0) }
-            if overBudget($0), $0.p99MS != $1.p99MS { return ($0.p99MS ?? 0) > ($1.p99MS ?? 0) }
-            return ClientDiagnosticDisplay.action($0.action) < ClientDiagnosticDisplay.action($1.action)
-        }
+        ClientDiagnosticDisplay.sortedActions(snapshot.actions)
     }
     private func milliseconds(_ value: Double?) -> String { value.map { String(format: "%.1f", $0) } ?? "Unknown" }
     var body: some View {
@@ -43,8 +39,8 @@ struct ClientDiagnosticsView: View {
                                 GridRow { Text("p50 (ms)"); Text(milliseconds(row.p50MS)); Text("p99 (ms)"); Text(milliseconds(row.p99MS)) }
                                 GridRow { Text("p90 (ms)"); Text(milliseconds(row.p90MS)); Text("Max (ms)"); Text(milliseconds(row.maxMS)) }
                             }.monospacedDigit()
-                            total("Completed", row.count); total("Incomplete", row.incompleteCount); total("Unverified input", row.unprovenCount)
-                            if row.incompleteCount > 0 { pair("Oldest incomplete", ClientDiagnosticDisplay.age(row.oldestIncompleteMS)) }
+                            total("Completed", row.count); total("Incomplete this session", row.incompleteCount); total("Unverified input", row.unprovenCount)
+                            if row.incompleteCount > 0 { pair("Longest incomplete wait", ClientDiagnosticDisplay.age(row.oldestIncompleteMS)) }
                         }.padding(8).frame(maxWidth: .infinity, alignment: .leading).diagnosticsBounds("client-card-\(row.id)").background(.quaternary.opacity(0.3), in: .rect(cornerRadius: 8))
                             .accessibilityElement(children: .ignore).accessibilityLabel(ClientDiagnosticDisplay.accessibility(row))
                     }
@@ -58,7 +54,7 @@ struct ClientDiagnosticsView: View {
                     }.monospacedDigit()
                 }
                 Text("Target: median 20 ms, p99 300 ms. Percentiles cover the last 512 verified completions per row. Timings end after layout. Screen presentation is not measured.").foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).diagnosticsBounds("client-target")
-                Text("Always live").foregroundStyle(.secondary)
+                Text("Incomplete, superseded and unverified totals cover this recording session. Incomplete wait is the longest pending or ended wait.").foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 total("Refreshes", snapshot.refreshes)
                 total("Requests", snapshot.requests)
                 total("Dropped records", snapshot.dropped)
@@ -75,7 +71,7 @@ struct ClientDiagnosticsView: View {
                     DisclosureGroup("Background requests", isExpanded: disclosure("Background requests")) {
                         ForEach(snapshot.polls) { poll in
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(ClientDiagnosticDisplay.pollOperation(poll.operation)).fontWeight(.medium)
+                                Text(ClientDiagnosticDisplay.requestOperation(poll.operation)).fontWeight(.medium)
                                 total("Requests", poll.count); total("Failures", poll.failures)
                                 pair("p50 (ms)", milliseconds(poll.p50MS)); pair("Max (ms)", milliseconds(poll.maxMS))
                                 pair("Server handler p50 (ms)", milliseconds(poll.handlerP50MS))
@@ -101,6 +97,8 @@ struct ClientDiagnosticsView: View {
                     if snapshot.recentRequests.isEmpty { Text("No requests yet.").foregroundStyle(.secondary) }
                     ForEach(snapshot.recentRequests.reversed()) { event in
                         VStack(alignment: .leading, spacing: 4) {
+                            Text(ClientDiagnosticDisplay.requestOperation(event.operation ?? "")).fontWeight(.medium)
+                            if let status = event.status { pair("HTTP status", "\(status)") }
                             pair("Request (ms)", milliseconds(event.durationMS))
                             pair("Connect (ms)", milliseconds(event.phases?.connectMS))
                             pair("First byte (ms)", milliseconds(event.phases?.firstByteMS))
@@ -119,7 +117,7 @@ struct ClientDiagnosticsView: View {
                                 if let trigger = event.trigger, let label = ClientDiagnosticDisplay.environmentTrigger(trigger) { Text(label).foregroundStyle(.secondary) }
                             }
                             Spacer(minLength: 8)
-                            if let duration = event.durationMS { Text("\(milliseconds(duration)) ms").monospacedDigit() }
+                            if let duration = event.durationMS { Text(ClientDiagnosticDisplay.age(duration)).monospacedDigit() }
                         }
                     }
                 }
@@ -148,8 +146,9 @@ struct ClientDiagnosticsView: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(ClientDiagnosticDisplay.action(row.action)).fontWeight(.medium)
             Text("\(ClientDiagnosticDisplay.input(row.inputKind)) · \(ClientDiagnosticDisplay.mode(row.mode))").foregroundStyle(.secondary)
-            if overBudget(row) { Text(row.incompleteCount > 0 ? "Incomplete" : "Over budget").foregroundStyle(.red) }
-            if !compact && row.incompleteCount > 0 { Text("Oldest incomplete: \(ClientDiagnosticDisplay.age(row.oldestIncompleteMS))").foregroundStyle(.secondary) }
+            if row.incompleteCount > 0 { Text("Incomplete").foregroundStyle(.red) }
+            else if overBudget(row) { Text("Over budget").foregroundStyle(.red) }
+            if !compact && row.incompleteCount > 0 { Text("Longest incomplete wait: \(ClientDiagnosticDisplay.age(row.oldestIncompleteMS))").foregroundStyle(.secondary) }
             if !compact && row.unprovenCount > 0 { Text("\(row.unprovenCount) with unverified input").foregroundStyle(.secondary) }
             if row.supersededCount > 0 { Text("\(row.supersededCount) superseded").foregroundStyle(.secondary) }
         }.frame(maxWidth: .infinity, alignment: .leading)

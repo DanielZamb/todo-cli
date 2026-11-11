@@ -731,3 +731,55 @@ credential replacement and selected Profile deletion, then return to zero at
 the signed-out network boundary. No view file changed, so the coordinator did
 not require another complete design run. These receipts do not qualify native
 input or the owner's interaction percentiles.
+
+
+## Post-install Diagnostics display correction
+
+After candidate 3 was installed, the local table's literal summary control
+reproduced the double count. One slow completed row and one pending row now
+show `1 over budget · 1 incomplete`. Incomplete rows sort first, including
+unknown p99 values; slow completed rows follow in descending p99 order.
+Incomplete totals explicitly cover this recording session. The displayed wait
+is the longest pending or ended wait, rather than a continuously growing age
+for an action that already ended.
+
+This client uses the common section layout, with Always live attached to its
+heading. A child section observes the one-second local summary. The observation
+control measures zero parent-body invalidations after a local summary change,
+then one after its server-loading positive control. Request timings show plain
+operation labels and HTTP status. Recent activity shows `12.3 s` rather than
+`12300.0 ms`. Recording, refresh, availability and stream semantics are unchanged.
+
+The Release Diagnostics proof passes 31 tests in three suites; the state and
+contract proof passes 197 in 29 suites. The complete design proof passes 872
+renders. The first root check timed out in the unchanged Electron diagnostic
+sampling test and interrupted the server idle SSE test during workspace failure.
+Both isolated cases and the identical full root rerun pass without changing
+timeouts or test settings. No TypeScript or server files changed.
+The [small display receipt](../evidence/mac-perf/client-diagnostics-display-summary.json)
+contains the counts and capture hashes. Full and Compact, light and dark captures
+with every disclosure open are in ignored local evidence at
+`docs/evidence/mac-perf/c4/diagnostics-display/client-{full,compact}-{light,dark}.png`.
+All four have been inspected; Compact has no sideways overflow.
+
+The unordered accessibility tree returned zero labels, including zero for its
+export-button positive control. It cannot decide whether the full Grid repeats
+a row label. That suspected issue remains for a real-app accessibility pass;
+the Grid's existing accessibility implementation is unchanged. Native pointer
+selection, dragging, VoiceOver and physical presentation remain unqualified by
+this worker.
+
+The failed quiet-refresh path already exposes Retry in the Task list. The
+state proof `aReadStartedAfterTheSignalSatisfiesItAndFailureDoesNotLoop` keeps
+writes enabled, proves no retry loop, and recovers on activation. No foreground
+timer or activation-policy change was added. A morning interaction can be
+classified by overlap with an activation refresh using its distinct trigger,
+run id and monotonic start/finish timestamps; overlap does not prove causation.
+
+The unchanged production-writer proof measures 2,593,747 bytes per synthetic
+active hour with open-Diagnostics polling, or 25.87 hours in one 64 MiB file.
+This is a real generated-request encoding replay with synthetic clocks and
+interaction metadata, not an observed owner day or a native latency result.
+ADR-0009 parity in Electron and the CLI is owed by the separate cross-client
+unit; this Mac slice does not establish that parity. This review correction is
+not a C4 optimization attempt and carries no claimed speedup.

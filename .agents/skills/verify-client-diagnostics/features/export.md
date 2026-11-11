@@ -27,6 +27,18 @@ structure by default. This client is labelled Always live when server polling
 is Paused. The three disclosures use independent small rings and have explicit
 empty states.
 
+Require the literal summary `1 over budget · 1 incomplete` for one slow
+completion and one pending action. Pending interactions with unknown latency
+sort before slow completions. Request timings use plain operation labels and
+Recent activity uses seconds beyond one second. Incomplete totals and wait
+durations explicitly cover the current recording session.
+
+The observation control changes the local summary and requires zero parent
+Diagnostics body invalidations, then changes server loading state and requires
+one. For accessibility, collect the unordered tree and an export-button
+positive control. A tree with zero control labels cannot decide whether a row
+label repeats. Leave that question for the real-app accessibility check.
+
 ## Gotchas
 
 Local summary reads must not poll the server or refresh Tasks. The signed app's
