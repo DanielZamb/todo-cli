@@ -105,6 +105,10 @@ The domain's verification skills cover replay, recurrence edge cases and expiry.
 
 ## Evidence
 
+For responsiveness investigations, [Scratch latency](features/performance.md)
+compares immutable server revisions with realistic data, concurrent reads and
+owned CPU load. It complements the behavior drive; it does not replace it.
+
 The selected directory retains `commands.log`, `server.log`, `listener.txt`,
 `actions.json`, `database.sql` and `result.json`. The transcript records the
 actual compiled build and server invocation. Actions pair curl inputs with

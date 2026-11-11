@@ -392,3 +392,12 @@ searches and cleared queries remove only their search notice. Mutation refusals,
 Conflict/Reload and batch reports survive. The controlled-transport regression
 and offscreen captures use production TodoModel and the generated client. Native
 key dispatch and VoiceOver remain held.
+
+## Responsiveness during HOLD
+
+Use [Responsiveness](features/responsiveness.md) for the three-revision, 180-Task
+scratch measurement. It records replay amplification, own writes and their echo,
+bursts, main-loop awake stretches, loading/busy time, decode time and offscreen
+layout separately. It does not launch Todo.app, access Keychain, sign or change
+product code. The separate scratch row runner requires explicit current
+authorization before displaying a window or posting pointer events.
