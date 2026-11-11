@@ -93,7 +93,7 @@ class RequestRing {
 }
 
 export class Diagnostics {
-  readonly profiler = new DiagnosticRecorder();
+  profiler = new DiagnosticRecorder();
   private readonly started = Date.now();
   private readonly monotonicStart = performance.now();
   private readonly requests = new RequestRing(2048);
@@ -306,6 +306,7 @@ export class Diagnostics {
         )
         .get(instant(now - 60000))?.count ?? 0;
     return Schema.decodeUnknownSync(DiagnosticsSnapshot)({
+      profiler: this.profiler.snapshot(),
       generated_at: instant(now),
       poll_interval_ms: 1000,
       runtime: {

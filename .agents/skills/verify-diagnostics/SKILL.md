@@ -163,3 +163,11 @@ pnpm --filter @todo/domain test client-diagnostics.test.ts
 The schema commands use only scratch HOME and do not open the real database.
 Unknown event/version/content decode returns an explicit reason without keeping
 the unknown payload. Unknown capabilities map to unknown, never zero.
+
+## Joined request proof
+
+Read [request and stream joins](features/joins.md). After the main recipe,
+run `bun apps/server/scripts/verify-diagnostic-joins.ts <absolute-new-evidence-directory>`.
+It uses matching cached binaries with a private temporary HOME and database.
+The recipe also documents the separately labelled busy-host overhead comparison.
+The existing quiet collection-cost recipe and its ceiling remain unchanged.

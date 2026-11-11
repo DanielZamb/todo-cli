@@ -412,6 +412,7 @@ export const serverLayer = (options: {
           });
       const diagnostics = store.diagnostics;
       const profiler = options.profiler ?? diagnostics.profiler;
+      diagnostics.profiler = profiler;
       profiler.configure({
         enabled: process.env.TODO_DIAGNOSTICS_RECORDING !== "0",
         build_id: BUILD_ID,

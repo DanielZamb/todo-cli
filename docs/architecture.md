@@ -337,3 +337,22 @@ position. Query another Task for its sets.
 Reachability and Ready-set membership are computed outside node assembly, so
 the serialized report has O(n+m) content plus the requested root's sets.
 Shared ranking energy and unknown-energy tie behavior are unchanged.
+
+## Interaction Diagnostics
+
+The shared Diagnostics vocabulary and inventory live in client-diagnostics.ts
+and interaction-categories.ts. diagnostic-labels.ts supplies common display
+words. diagnostic-context.ts owns bounded scalar spans and an Effect context;
+request, command and scheduler boundaries establish roots without changing
+business-rule arguments. Server requests accept random recording ids and echo
+X-Todo-Request. Owner Session responses add numeric Server-Timing. No diagnostic
+record is written to the Task database.
+
+Owner Diagnostics adds one optional versioned profiler object with counters,
+active spans, bounded recent spans, stream delivery records and explicit gaps.
+A stream delivery joins commit observation to encoded bytes handed to the HTTP
+adapter. It does not prove receipt. Bun dispatch before middleware, socket flush,
+body completion and the remaining internal attribution stay unobserved. The
+[Proposed ADR-0020](adr/0020-diagnostics-follow-an-action-to-its-rendered-result.md)
+separates this implemented vocabulary and joining path from proposed durable
+journals and client ingestion. Those storage/API proposals remain unimplemented.

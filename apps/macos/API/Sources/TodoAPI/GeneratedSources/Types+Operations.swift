@@ -41575,8 +41575,1995 @@ public enum Operations {
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json`.
                     public struct jsonPayload: Codable, Hashable, Sendable {
-                        private var _explicitNullKeys: Set<String> = []
+                            private var _explicitNullKeys: Set<String> = []
 
+                        /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler`.
+                        public struct profilerPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/schema_version`.
+                            public var schema_version: Swift.Double
+                            /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/run_id`.
+                            public var run_id: Swift.String
+                            /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/enabled`.
+                            public var enabled: Swift.Bool
+                            /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/capacity`.
+                            public var capacity: Swift.Int
+                            /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/active_capacity`.
+                            public var active_capacity: Swift.Int
+                            /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/started`.
+                            public var started: Swift.Int
+                            /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/finished`.
+                            public var finished: Swift.Int
+                            /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/lost_starts`.
+                            public var lost_starts: Swift.Int
+                            /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/dropped_events`.
+                            public var dropped_events: Swift.Int
+                            /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload`.
+                            public struct activePayloadPayload: Codable, Hashable, Sendable {
+                                private var _explicitNullKeys: Set<String> = []
+
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/schema_version`.
+                                public var schema_version: Swift.Double
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/run_id`.
+                                public var run_id: Swift.String
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/process_role`.
+                                @frozen public enum process_rolePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case server = "server"
+                                    case cli = "cli"
+                                    case scheduler = "scheduler"
+                                    case electron_period_main = "electron.main"
+                                    case electron_period_renderer = "electron.renderer"
+                                    case macos = "macos"
+                                    case unknown = "unknown"
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/process_role`.
+                                public var process_role: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.process_rolePayload
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/build_id`.
+                                public var build_id: Swift.String
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/contract_id`.
+                                public var contract_id: Swift.String
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/mode`.
+                                @frozen public enum modePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case full = "full"
+                                    case compact = "compact"
+                                    case terminal = "terminal"
+                                    case headless = "headless"
+                                    case unknown = "unknown"
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/mode`.
+                                public var mode: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.modePayload
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/input_kind`.
+                                @frozen public enum input_kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case pointer = "pointer"
+                                    case keyboard = "keyboard"
+                                    case menu = "menu"
+                                    case accessibility = "accessibility"
+                                    case notification = "notification"
+                                    case command = "command"
+                                    case background = "background"
+                                    case unknown = "unknown"
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/input_kind`.
+                                public var input_kind: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.input_kindPayload
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/workload`.
+                                @frozen public enum workloadPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case cold = "cold"
+                                    case warm = "warm"
+                                    case empty = "empty"
+                                    case error = "error"
+                                    case refusal = "refusal"
+                                    case large = "large"
+                                    case diagnostics_open = "diagnostics_open"
+                                    case diagnostics_closed = "diagnostics_closed"
+                                    case catch_up = "catch_up"
+                                    case unknown = "unknown"
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/workload`.
+                                public var workload: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.workloadPayload
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/category`.
+                                public var category: Components.Schemas.DiagnosticCategory
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/request_id`.
+                                public var request_id: Swift.String?
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/refresh_id`.
+                                public var refresh_id: Swift.String?
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/sequence`.
+                                public var sequence: Swift.Int
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/monotonic_ms`.
+                                public var monotonic_ms: Swift.Double
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/clock_unit`.
+                                @frozen public enum clock_unitPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case ms = "ms"
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/clock_unit`.
+                                public var clock_unit: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.clock_unitPayload
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/wall_anchor_ms`.
+                                public var wall_anchor_ms: Swift.Double?
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/trace_id`.
+                                public var trace_id: Swift.String
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/span_id`.
+                                public var span_id: Swift.String
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/parent_span_id`.
+                                public var parent_span_id: Swift.String?
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/action_id`.
+                                public var action_id: Swift.String?
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/metadata`.
+                                public struct metadataPayload: Codable, Hashable, Sendable {
+                                    private var _explicitNullKeys: Set<String> = []
+
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/metadata/operation`.
+                                    @frozen public enum operationPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case health = "health"
+                                        case diagnostics = "diagnostics"
+                                        case auth = "auth"
+                                        case profiles = "profiles"
+                                        case tasks_period_list = "tasks.list"
+                                        case tasks_period_show = "tasks.show"
+                                        case tasks_period_write = "tasks.write"
+                                        case history = "history"
+                                        case graph = "graph"
+                                        case search = "search"
+                                        case stream = "stream"
+                                        case snapshots = "snapshots"
+                                        case attachments = "attachments"
+                                        case discovery = "discovery"
+                                        case other = "other"
+                                        case unmatched = "unmatched"
+                                    }
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/metadata/operation`.
+                                    public var operation: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.metadataPayload.operationPayload?
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/metadata/statement`.
+                                    @frozen public enum statementPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case auth_period_credential = "auth.credential"
+                                        case store_period_read = "store.read"
+                                        case store_period_write = "store.write"
+                                        case store_period_begin = "store.begin"
+                                        case store_period_commit = "store.commit"
+                                        case store_period_rollback = "store.rollback"
+                                        case store_period_projection = "store.projection"
+                                        case store_period_graph = "store.graph"
+                                        case stream_period_tail = "stream.tail"
+                                        case scheduler_period_due = "scheduler.due"
+                                        case unknown = "unknown"
+                                    }
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/metadata/statement`.
+                                    public var statement: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.metadataPayload.statementPayload?
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/metadata/rows`.
+                                    public var rows: Swift.Int?
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/metadata/bytes`.
+                                    public var bytes: Swift.Int?
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/metadata/work_units`.
+                                    public var work_units: Swift.Double?
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/metadata/cache`.
+                                    @frozen public enum cachePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case hit = "hit"
+                                        case miss = "miss"
+                                        case bypass = "bypass"
+                                        case unknown = "unknown"
+                                    }
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/metadata/cache`.
+                                    public var cache: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.metadataPayload.cachePayload?
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/metadata/error`.
+                                    @frozen public enum errorPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case unauthorized = "unauthorized"
+                                        case forbidden = "forbidden"
+                                        case conflict = "conflict"
+                                        case validation = "validation"
+                                        case not_found = "not_found"
+                                        case _internal = "internal"
+                                        case aborted = "aborted"
+                                        case unknown = "unknown"
+                                    }
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/metadata/error`.
+                                    public var error: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.metadataPayload.errorPayload?
+                                    /// Creates a new `metadataPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - operation:
+                                    ///   - statement:
+                                    ///   - rows:
+                                    ///   - bytes:
+                                    ///   - work_units:
+                                    ///   - cache:
+                                    ///   - error:
+                                    public init(
+                                        operation: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.metadataPayload.operationPayload? = nil,
+                                        statement: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.metadataPayload.statementPayload? = nil,
+                                        rows: Swift.Int? = nil,
+                                        bytes: Swift.Int? = nil,
+                                        work_units: Swift.Double? = nil,
+                                        cache: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.metadataPayload.cachePayload? = nil,
+                                        error: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.metadataPayload.errorPayload? = nil
+                                    ) {
+                                        self.operation = operation
+                                        self.statement = statement
+                                        self.rows = rows
+                                        self.bytes = bytes
+                                        self.work_units = work_units
+                                        self.cache = cache
+                                        self.error = error
+                                    }
+                                    public enum CodingKeys: String, CodingKey {
+                                        case operation
+                                        case statement
+                                        case rows
+                                        case bytes
+                                        case work_units
+                                        case cache
+                                        case error
+                                    }
+                                    public init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                        self.operation = try container.decodeIfPresent(
+                                            Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.metadataPayload.operationPayload.self,
+                                            forKey: .operation
+                                        )
+                                        self.statement = try container.decodeIfPresent(
+                                            Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.metadataPayload.statementPayload.self,
+                                            forKey: .statement
+                                        )
+                                        self.rows = try container.decodeIfPresent(
+                                            Swift.Int.self,
+                                            forKey: .rows
+                                        )
+                                        self.bytes = try container.decodeIfPresent(
+                                            Swift.Int.self,
+                                            forKey: .bytes
+                                        )
+                                        self.work_units = try container.decodeIfPresent(
+                                            Swift.Double.self,
+                                            forKey: .work_units
+                                        )
+                                        self.cache = try container.decodeIfPresent(
+                                            Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.metadataPayload.cachePayload.self,
+                                            forKey: .cache
+                                        )
+                                        self.error = try container.decodeIfPresent(
+                                            Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.metadataPayload.errorPayload.self,
+                                            forKey: .error
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "operation",
+                                            "statement",
+                                            "rows",
+                                            "bytes",
+                                            "work_units",
+                                            "cache",
+                                            "error"
+                                        ])
+                                    }
+
+                                    public func encode(to encoder: any Swift.Encoder) throws {
+                                        var container = encoder.container(keyedBy: CodingKeys.self)
+                                        if self.operation == nil && _explicitNullKeys.contains(CodingKeys.operation.stringValue) {
+                                            try container.encodeNil(forKey: .operation)
+                                        } else {
+                                            try container.encodeIfPresent(self.operation, forKey: .operation)
+                                        }
+                                        if self.statement == nil && _explicitNullKeys.contains(CodingKeys.statement.stringValue) {
+                                            try container.encodeNil(forKey: .statement)
+                                        } else {
+                                            try container.encodeIfPresent(self.statement, forKey: .statement)
+                                        }
+                                        if self.rows == nil && _explicitNullKeys.contains(CodingKeys.rows.stringValue) {
+                                            try container.encodeNil(forKey: .rows)
+                                        } else {
+                                            try container.encodeIfPresent(self.rows, forKey: .rows)
+                                        }
+                                        if self.bytes == nil && _explicitNullKeys.contains(CodingKeys.bytes.stringValue) {
+                                            try container.encodeNil(forKey: .bytes)
+                                        } else {
+                                            try container.encodeIfPresent(self.bytes, forKey: .bytes)
+                                        }
+                                        if self.work_units == nil && _explicitNullKeys.contains(CodingKeys.work_units.stringValue) {
+                                            try container.encodeNil(forKey: .work_units)
+                                        } else {
+                                            try container.encodeIfPresent(self.work_units, forKey: .work_units)
+                                        }
+                                        if self.cache == nil && _explicitNullKeys.contains(CodingKeys.cache.stringValue) {
+                                            try container.encodeNil(forKey: .cache)
+                                        } else {
+                                            try container.encodeIfPresent(self.cache, forKey: .cache)
+                                        }
+                                        if self.error == nil && _explicitNullKeys.contains(CodingKeys.error.stringValue) {
+                                            try container.encodeNil(forKey: .error)
+                                        } else {
+                                            try container.encodeIfPresent(self.error, forKey: .error)
+                                        }
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/metadata`.
+                                public var metadata: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.metadataPayload?
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/name`.
+                                @frozen public enum namePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case span_period_started = "span.started"
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/name`.
+                                public var name: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.namePayload
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/stage`.
+                                @frozen public enum stagePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case entry = "entry"
+                                    case authentication = "authentication"
+                                    case writer_lock_wait = "writer_lock_wait"
+                                    case handler = "handler"
+                                    case domain = "domain"
+                                    case database = "database"
+                                    case projection = "projection"
+                                    case graph = "graph"
+                                    case search_preparation = "search_preparation"
+                                    case search_evaluation = "search_evaluation"
+                                    case search_meter = "search_meter"
+                                    case encoding = "encoding"
+                                    case response_handoff = "response_handoff"
+                                    case body_completion = "body_completion"
+                                    case worker_queue = "worker_queue"
+                                    case command = "command"
+                                    case job = "job"
+                                    case stdout = "stdout"
+                                    case ipc = "ipc"
+                                    case decode = "decode"
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload/stage`.
+                                public var stage: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.stagePayload
+                                /// Creates a new `activePayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - schema_version:
+                                ///   - run_id:
+                                ///   - process_role:
+                                ///   - build_id:
+                                ///   - contract_id:
+                                ///   - mode:
+                                ///   - input_kind:
+                                ///   - workload:
+                                ///   - category:
+                                ///   - request_id:
+                                ///   - refresh_id:
+                                ///   - sequence:
+                                ///   - monotonic_ms:
+                                ///   - clock_unit:
+                                ///   - wall_anchor_ms:
+                                ///   - trace_id:
+                                ///   - span_id:
+                                ///   - parent_span_id:
+                                ///   - action_id:
+                                ///   - metadata:
+                                ///   - name:
+                                ///   - stage:
+                                public init(
+                                    schema_version: Swift.Double,
+                                    run_id: Swift.String,
+                                    process_role: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.process_rolePayload,
+                                    build_id: Swift.String,
+                                    contract_id: Swift.String,
+                                    mode: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.modePayload,
+                                    input_kind: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.input_kindPayload,
+                                    workload: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.workloadPayload,
+                                    category: Components.Schemas.DiagnosticCategory,
+                                    request_id: Swift.String? = nil,
+                                    refresh_id: Swift.String? = nil,
+                                    sequence: Swift.Int,
+                                    monotonic_ms: Swift.Double,
+                                    clock_unit: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.clock_unitPayload,
+                                    wall_anchor_ms: Swift.Double? = nil,
+                                    trace_id: Swift.String,
+                                    span_id: Swift.String,
+                                    parent_span_id: Swift.String? = nil,
+                                    action_id: Swift.String? = nil,
+                                    metadata: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.metadataPayload? = nil,
+                                    name: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.namePayload,
+                                    stage: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.stagePayload
+                                ) {
+                                    self.schema_version = schema_version
+                                    self.run_id = run_id
+                                    self.process_role = process_role
+                                    self.build_id = build_id
+                                    self.contract_id = contract_id
+                                    self.mode = mode
+                                    self.input_kind = input_kind
+                                    self.workload = workload
+                                    self.category = category
+                                    self.request_id = request_id
+                                    self.refresh_id = refresh_id
+                                    self.sequence = sequence
+                                    self.monotonic_ms = monotonic_ms
+                                    self.clock_unit = clock_unit
+                                    self.wall_anchor_ms = wall_anchor_ms
+                                    self.trace_id = trace_id
+                                    self.span_id = span_id
+                                    self.parent_span_id = parent_span_id
+                                    self.action_id = action_id
+                                    self.metadata = metadata
+                                    self.name = name
+                                    self.stage = stage
+                                }
+                                public enum CodingKeys: String, CodingKey {
+                                    case schema_version
+                                    case run_id
+                                    case process_role
+                                    case build_id
+                                    case contract_id
+                                    case mode
+                                    case input_kind
+                                    case workload
+                                    case category
+                                    case request_id
+                                    case refresh_id
+                                    case sequence
+                                    case monotonic_ms
+                                    case clock_unit
+                                    case wall_anchor_ms
+                                    case trace_id
+                                    case span_id
+                                    case parent_span_id
+                                    case action_id
+                                    case metadata
+                                    case name
+                                    case stage
+                                }
+                                public init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.schema_version = try container.decode(
+                                        Swift.Double.self,
+                                        forKey: .schema_version
+                                    )
+                                    self.run_id = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .run_id
+                                    )
+                                    self.process_role = try container.decode(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.process_rolePayload.self,
+                                        forKey: .process_role
+                                    )
+                                    self.build_id = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .build_id
+                                    )
+                                    self.contract_id = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .contract_id
+                                    )
+                                    self.mode = try container.decode(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.modePayload.self,
+                                        forKey: .mode
+                                    )
+                                    self.input_kind = try container.decode(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.input_kindPayload.self,
+                                        forKey: .input_kind
+                                    )
+                                    self.workload = try container.decode(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.workloadPayload.self,
+                                        forKey: .workload
+                                    )
+                                    self.category = try container.decode(
+                                        Components.Schemas.DiagnosticCategory.self,
+                                        forKey: .category
+                                    )
+                                    self.request_id = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .request_id
+                                    )
+                                    self.refresh_id = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .refresh_id
+                                    )
+                                    self.sequence = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .sequence
+                                    )
+                                    self.monotonic_ms = try container.decode(
+                                        Swift.Double.self,
+                                        forKey: .monotonic_ms
+                                    )
+                                    self.clock_unit = try container.decode(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.clock_unitPayload.self,
+                                        forKey: .clock_unit
+                                    )
+                                    self.wall_anchor_ms = try container.decodeIfPresent(
+                                        Swift.Double.self,
+                                        forKey: .wall_anchor_ms
+                                    )
+                                    self.trace_id = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .trace_id
+                                    )
+                                    self.span_id = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .span_id
+                                    )
+                                    self.parent_span_id = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .parent_span_id
+                                    )
+                                    self.action_id = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .action_id
+                                    )
+                                    self.metadata = try container.decodeIfPresent(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.metadataPayload.self,
+                                        forKey: .metadata
+                                    )
+                                    self.name = try container.decode(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.namePayload.self,
+                                        forKey: .name
+                                    )
+                                    self.stage = try container.decode(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload.stagePayload.self,
+                                        forKey: .stage
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "schema_version",
+                                        "run_id",
+                                        "process_role",
+                                        "build_id",
+                                        "contract_id",
+                                        "mode",
+                                        "input_kind",
+                                        "workload",
+                                        "category",
+                                        "request_id",
+                                        "refresh_id",
+                                        "sequence",
+                                        "monotonic_ms",
+                                        "clock_unit",
+                                        "wall_anchor_ms",
+                                        "trace_id",
+                                        "span_id",
+                                        "parent_span_id",
+                                        "action_id",
+                                        "metadata",
+                                        "name",
+                                        "stage"
+                                    ])
+                                }
+
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    var container = encoder.container(keyedBy: CodingKeys.self)
+                                    try container.encode(self.schema_version, forKey: .schema_version)
+                                    try container.encode(self.run_id, forKey: .run_id)
+                                    try container.encode(self.process_role, forKey: .process_role)
+                                    try container.encode(self.build_id, forKey: .build_id)
+                                    try container.encode(self.contract_id, forKey: .contract_id)
+                                    try container.encode(self.mode, forKey: .mode)
+                                    try container.encode(self.input_kind, forKey: .input_kind)
+                                    try container.encode(self.workload, forKey: .workload)
+                                    try container.encode(self.category, forKey: .category)
+                                    if self.request_id == nil && _explicitNullKeys.contains(CodingKeys.request_id.stringValue) {
+                                        try container.encodeNil(forKey: .request_id)
+                                    } else {
+                                        try container.encodeIfPresent(self.request_id, forKey: .request_id)
+                                    }
+                                    if self.refresh_id == nil && _explicitNullKeys.contains(CodingKeys.refresh_id.stringValue) {
+                                        try container.encodeNil(forKey: .refresh_id)
+                                    } else {
+                                        try container.encodeIfPresent(self.refresh_id, forKey: .refresh_id)
+                                    }
+                                    try container.encode(self.sequence, forKey: .sequence)
+                                    try container.encode(self.monotonic_ms, forKey: .monotonic_ms)
+                                    try container.encode(self.clock_unit, forKey: .clock_unit)
+                                    if self.wall_anchor_ms == nil && _explicitNullKeys.contains(CodingKeys.wall_anchor_ms.stringValue) {
+                                        try container.encodeNil(forKey: .wall_anchor_ms)
+                                    } else {
+                                        try container.encodeIfPresent(self.wall_anchor_ms, forKey: .wall_anchor_ms)
+                                    }
+                                    try container.encode(self.trace_id, forKey: .trace_id)
+                                    try container.encode(self.span_id, forKey: .span_id)
+                                    if self.parent_span_id == nil && _explicitNullKeys.contains(CodingKeys.parent_span_id.stringValue) {
+                                        try container.encodeNil(forKey: .parent_span_id)
+                                    } else {
+                                        try container.encodeIfPresent(self.parent_span_id, forKey: .parent_span_id)
+                                    }
+                                    if self.action_id == nil && _explicitNullKeys.contains(CodingKeys.action_id.stringValue) {
+                                        try container.encodeNil(forKey: .action_id)
+                                    } else {
+                                        try container.encodeIfPresent(self.action_id, forKey: .action_id)
+                                    }
+                                    if self.metadata == nil && _explicitNullKeys.contains(CodingKeys.metadata.stringValue) {
+                                        try container.encodeNil(forKey: .metadata)
+                                    } else {
+                                        try container.encodeIfPresent(self.metadata, forKey: .metadata)
+                                    }
+                                    try container.encode(self.name, forKey: .name)
+                                    try container.encode(self.stage, forKey: .stage)
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/active`.
+                            public typealias activePayload = [Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayloadPayload]
+                            /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/active`.
+                            public var active: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayload
+                            /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload`.
+                            public struct recentPayloadPayload: Codable, Hashable, Sendable {
+                                private var _explicitNullKeys: Set<String> = []
+
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/schema_version`.
+                                public var schema_version: Swift.Double
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/run_id`.
+                                public var run_id: Swift.String
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/process_role`.
+                                @frozen public enum process_rolePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case server = "server"
+                                    case cli = "cli"
+                                    case scheduler = "scheduler"
+                                    case electron_period_main = "electron.main"
+                                    case electron_period_renderer = "electron.renderer"
+                                    case macos = "macos"
+                                    case unknown = "unknown"
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/process_role`.
+                                public var process_role: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.process_rolePayload
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/build_id`.
+                                public var build_id: Swift.String
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/contract_id`.
+                                public var contract_id: Swift.String
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/mode`.
+                                @frozen public enum modePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case full = "full"
+                                    case compact = "compact"
+                                    case terminal = "terminal"
+                                    case headless = "headless"
+                                    case unknown = "unknown"
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/mode`.
+                                public var mode: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.modePayload
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/input_kind`.
+                                @frozen public enum input_kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case pointer = "pointer"
+                                    case keyboard = "keyboard"
+                                    case menu = "menu"
+                                    case accessibility = "accessibility"
+                                    case notification = "notification"
+                                    case command = "command"
+                                    case background = "background"
+                                    case unknown = "unknown"
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/input_kind`.
+                                public var input_kind: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.input_kindPayload
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/workload`.
+                                @frozen public enum workloadPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case cold = "cold"
+                                    case warm = "warm"
+                                    case empty = "empty"
+                                    case error = "error"
+                                    case refusal = "refusal"
+                                    case large = "large"
+                                    case diagnostics_open = "diagnostics_open"
+                                    case diagnostics_closed = "diagnostics_closed"
+                                    case catch_up = "catch_up"
+                                    case unknown = "unknown"
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/workload`.
+                                public var workload: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.workloadPayload
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/category`.
+                                public var category: Components.Schemas.DiagnosticCategory
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/request_id`.
+                                public var request_id: Swift.String?
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/refresh_id`.
+                                public var refresh_id: Swift.String?
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/sequence`.
+                                public var sequence: Swift.Int
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/monotonic_ms`.
+                                public var monotonic_ms: Swift.Double
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/clock_unit`.
+                                @frozen public enum clock_unitPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case ms = "ms"
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/clock_unit`.
+                                public var clock_unit: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.clock_unitPayload
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/wall_anchor_ms`.
+                                public var wall_anchor_ms: Swift.Double?
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/trace_id`.
+                                public var trace_id: Swift.String
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/span_id`.
+                                public var span_id: Swift.String
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/parent_span_id`.
+                                public var parent_span_id: Swift.String?
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/action_id`.
+                                public var action_id: Swift.String?
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/metadata`.
+                                public struct metadataPayload: Codable, Hashable, Sendable {
+                                    private var _explicitNullKeys: Set<String> = []
+
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/metadata/operation`.
+                                    @frozen public enum operationPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case health = "health"
+                                        case diagnostics = "diagnostics"
+                                        case auth = "auth"
+                                        case profiles = "profiles"
+                                        case tasks_period_list = "tasks.list"
+                                        case tasks_period_show = "tasks.show"
+                                        case tasks_period_write = "tasks.write"
+                                        case history = "history"
+                                        case graph = "graph"
+                                        case search = "search"
+                                        case stream = "stream"
+                                        case snapshots = "snapshots"
+                                        case attachments = "attachments"
+                                        case discovery = "discovery"
+                                        case other = "other"
+                                        case unmatched = "unmatched"
+                                    }
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/metadata/operation`.
+                                    public var operation: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.metadataPayload.operationPayload?
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/metadata/statement`.
+                                    @frozen public enum statementPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case auth_period_credential = "auth.credential"
+                                        case store_period_read = "store.read"
+                                        case store_period_write = "store.write"
+                                        case store_period_begin = "store.begin"
+                                        case store_period_commit = "store.commit"
+                                        case store_period_rollback = "store.rollback"
+                                        case store_period_projection = "store.projection"
+                                        case store_period_graph = "store.graph"
+                                        case stream_period_tail = "stream.tail"
+                                        case scheduler_period_due = "scheduler.due"
+                                        case unknown = "unknown"
+                                    }
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/metadata/statement`.
+                                    public var statement: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.metadataPayload.statementPayload?
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/metadata/rows`.
+                                    public var rows: Swift.Int?
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/metadata/bytes`.
+                                    public var bytes: Swift.Int?
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/metadata/work_units`.
+                                    public var work_units: Swift.Double?
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/metadata/cache`.
+                                    @frozen public enum cachePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case hit = "hit"
+                                        case miss = "miss"
+                                        case bypass = "bypass"
+                                        case unknown = "unknown"
+                                    }
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/metadata/cache`.
+                                    public var cache: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.metadataPayload.cachePayload?
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/metadata/error`.
+                                    @frozen public enum errorPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case unauthorized = "unauthorized"
+                                        case forbidden = "forbidden"
+                                        case conflict = "conflict"
+                                        case validation = "validation"
+                                        case not_found = "not_found"
+                                        case _internal = "internal"
+                                        case aborted = "aborted"
+                                        case unknown = "unknown"
+                                    }
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/metadata/error`.
+                                    public var error: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.metadataPayload.errorPayload?
+                                    /// Creates a new `metadataPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - operation:
+                                    ///   - statement:
+                                    ///   - rows:
+                                    ///   - bytes:
+                                    ///   - work_units:
+                                    ///   - cache:
+                                    ///   - error:
+                                    public init(
+                                        operation: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.metadataPayload.operationPayload? = nil,
+                                        statement: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.metadataPayload.statementPayload? = nil,
+                                        rows: Swift.Int? = nil,
+                                        bytes: Swift.Int? = nil,
+                                        work_units: Swift.Double? = nil,
+                                        cache: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.metadataPayload.cachePayload? = nil,
+                                        error: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.metadataPayload.errorPayload? = nil
+                                    ) {
+                                        self.operation = operation
+                                        self.statement = statement
+                                        self.rows = rows
+                                        self.bytes = bytes
+                                        self.work_units = work_units
+                                        self.cache = cache
+                                        self.error = error
+                                    }
+                                    public enum CodingKeys: String, CodingKey {
+                                        case operation
+                                        case statement
+                                        case rows
+                                        case bytes
+                                        case work_units
+                                        case cache
+                                        case error
+                                    }
+                                    public init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                        self.operation = try container.decodeIfPresent(
+                                            Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.metadataPayload.operationPayload.self,
+                                            forKey: .operation
+                                        )
+                                        self.statement = try container.decodeIfPresent(
+                                            Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.metadataPayload.statementPayload.self,
+                                            forKey: .statement
+                                        )
+                                        self.rows = try container.decodeIfPresent(
+                                            Swift.Int.self,
+                                            forKey: .rows
+                                        )
+                                        self.bytes = try container.decodeIfPresent(
+                                            Swift.Int.self,
+                                            forKey: .bytes
+                                        )
+                                        self.work_units = try container.decodeIfPresent(
+                                            Swift.Double.self,
+                                            forKey: .work_units
+                                        )
+                                        self.cache = try container.decodeIfPresent(
+                                            Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.metadataPayload.cachePayload.self,
+                                            forKey: .cache
+                                        )
+                                        self.error = try container.decodeIfPresent(
+                                            Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.metadataPayload.errorPayload.self,
+                                            forKey: .error
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "operation",
+                                            "statement",
+                                            "rows",
+                                            "bytes",
+                                            "work_units",
+                                            "cache",
+                                            "error"
+                                        ])
+                                    }
+
+                                    public func encode(to encoder: any Swift.Encoder) throws {
+                                        var container = encoder.container(keyedBy: CodingKeys.self)
+                                        if self.operation == nil && _explicitNullKeys.contains(CodingKeys.operation.stringValue) {
+                                            try container.encodeNil(forKey: .operation)
+                                        } else {
+                                            try container.encodeIfPresent(self.operation, forKey: .operation)
+                                        }
+                                        if self.statement == nil && _explicitNullKeys.contains(CodingKeys.statement.stringValue) {
+                                            try container.encodeNil(forKey: .statement)
+                                        } else {
+                                            try container.encodeIfPresent(self.statement, forKey: .statement)
+                                        }
+                                        if self.rows == nil && _explicitNullKeys.contains(CodingKeys.rows.stringValue) {
+                                            try container.encodeNil(forKey: .rows)
+                                        } else {
+                                            try container.encodeIfPresent(self.rows, forKey: .rows)
+                                        }
+                                        if self.bytes == nil && _explicitNullKeys.contains(CodingKeys.bytes.stringValue) {
+                                            try container.encodeNil(forKey: .bytes)
+                                        } else {
+                                            try container.encodeIfPresent(self.bytes, forKey: .bytes)
+                                        }
+                                        if self.work_units == nil && _explicitNullKeys.contains(CodingKeys.work_units.stringValue) {
+                                            try container.encodeNil(forKey: .work_units)
+                                        } else {
+                                            try container.encodeIfPresent(self.work_units, forKey: .work_units)
+                                        }
+                                        if self.cache == nil && _explicitNullKeys.contains(CodingKeys.cache.stringValue) {
+                                            try container.encodeNil(forKey: .cache)
+                                        } else {
+                                            try container.encodeIfPresent(self.cache, forKey: .cache)
+                                        }
+                                        if self.error == nil && _explicitNullKeys.contains(CodingKeys.error.stringValue) {
+                                            try container.encodeNil(forKey: .error)
+                                        } else {
+                                            try container.encodeIfPresent(self.error, forKey: .error)
+                                        }
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/metadata`.
+                                public var metadata: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.metadataPayload?
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/name`.
+                                @frozen public enum namePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case span_period_finished = "span.finished"
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/name`.
+                                public var name: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.namePayload
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/stage`.
+                                @frozen public enum stagePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case entry = "entry"
+                                    case authentication = "authentication"
+                                    case writer_lock_wait = "writer_lock_wait"
+                                    case handler = "handler"
+                                    case domain = "domain"
+                                    case database = "database"
+                                    case projection = "projection"
+                                    case graph = "graph"
+                                    case search_preparation = "search_preparation"
+                                    case search_evaluation = "search_evaluation"
+                                    case search_meter = "search_meter"
+                                    case encoding = "encoding"
+                                    case response_handoff = "response_handoff"
+                                    case body_completion = "body_completion"
+                                    case worker_queue = "worker_queue"
+                                    case command = "command"
+                                    case job = "job"
+                                    case stdout = "stdout"
+                                    case ipc = "ipc"
+                                    case decode = "decode"
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/stage`.
+                                public var stage: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.stagePayload
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/duration_ms`.
+                                public var duration_ms: Swift.Double
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/outcome`.
+                                @frozen public enum outcomePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case completed = "completed"
+                                    case pending = "pending"
+                                    case superseded = "superseded"
+                                    case refused = "refused"
+                                    case conflicted = "conflicted"
+                                    case failed = "failed"
+                                    case cancelled = "cancelled"
+                                    case unavailable = "unavailable"
+                                    case crashed = "crashed"
+                                    case timed_out = "timed_out"
+                                    case lost = "lost"
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recentPayload/outcome`.
+                                public var outcome: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.outcomePayload
+                                /// Creates a new `recentPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - schema_version:
+                                ///   - run_id:
+                                ///   - process_role:
+                                ///   - build_id:
+                                ///   - contract_id:
+                                ///   - mode:
+                                ///   - input_kind:
+                                ///   - workload:
+                                ///   - category:
+                                ///   - request_id:
+                                ///   - refresh_id:
+                                ///   - sequence:
+                                ///   - monotonic_ms:
+                                ///   - clock_unit:
+                                ///   - wall_anchor_ms:
+                                ///   - trace_id:
+                                ///   - span_id:
+                                ///   - parent_span_id:
+                                ///   - action_id:
+                                ///   - metadata:
+                                ///   - name:
+                                ///   - stage:
+                                ///   - duration_ms:
+                                ///   - outcome:
+                                public init(
+                                    schema_version: Swift.Double,
+                                    run_id: Swift.String,
+                                    process_role: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.process_rolePayload,
+                                    build_id: Swift.String,
+                                    contract_id: Swift.String,
+                                    mode: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.modePayload,
+                                    input_kind: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.input_kindPayload,
+                                    workload: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.workloadPayload,
+                                    category: Components.Schemas.DiagnosticCategory,
+                                    request_id: Swift.String? = nil,
+                                    refresh_id: Swift.String? = nil,
+                                    sequence: Swift.Int,
+                                    monotonic_ms: Swift.Double,
+                                    clock_unit: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.clock_unitPayload,
+                                    wall_anchor_ms: Swift.Double? = nil,
+                                    trace_id: Swift.String,
+                                    span_id: Swift.String,
+                                    parent_span_id: Swift.String? = nil,
+                                    action_id: Swift.String? = nil,
+                                    metadata: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.metadataPayload? = nil,
+                                    name: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.namePayload,
+                                    stage: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.stagePayload,
+                                    duration_ms: Swift.Double,
+                                    outcome: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.outcomePayload
+                                ) {
+                                    self.schema_version = schema_version
+                                    self.run_id = run_id
+                                    self.process_role = process_role
+                                    self.build_id = build_id
+                                    self.contract_id = contract_id
+                                    self.mode = mode
+                                    self.input_kind = input_kind
+                                    self.workload = workload
+                                    self.category = category
+                                    self.request_id = request_id
+                                    self.refresh_id = refresh_id
+                                    self.sequence = sequence
+                                    self.monotonic_ms = monotonic_ms
+                                    self.clock_unit = clock_unit
+                                    self.wall_anchor_ms = wall_anchor_ms
+                                    self.trace_id = trace_id
+                                    self.span_id = span_id
+                                    self.parent_span_id = parent_span_id
+                                    self.action_id = action_id
+                                    self.metadata = metadata
+                                    self.name = name
+                                    self.stage = stage
+                                    self.duration_ms = duration_ms
+                                    self.outcome = outcome
+                                }
+                                public enum CodingKeys: String, CodingKey {
+                                    case schema_version
+                                    case run_id
+                                    case process_role
+                                    case build_id
+                                    case contract_id
+                                    case mode
+                                    case input_kind
+                                    case workload
+                                    case category
+                                    case request_id
+                                    case refresh_id
+                                    case sequence
+                                    case monotonic_ms
+                                    case clock_unit
+                                    case wall_anchor_ms
+                                    case trace_id
+                                    case span_id
+                                    case parent_span_id
+                                    case action_id
+                                    case metadata
+                                    case name
+                                    case stage
+                                    case duration_ms
+                                    case outcome
+                                }
+                                public init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.schema_version = try container.decode(
+                                        Swift.Double.self,
+                                        forKey: .schema_version
+                                    )
+                                    self.run_id = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .run_id
+                                    )
+                                    self.process_role = try container.decode(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.process_rolePayload.self,
+                                        forKey: .process_role
+                                    )
+                                    self.build_id = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .build_id
+                                    )
+                                    self.contract_id = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .contract_id
+                                    )
+                                    self.mode = try container.decode(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.modePayload.self,
+                                        forKey: .mode
+                                    )
+                                    self.input_kind = try container.decode(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.input_kindPayload.self,
+                                        forKey: .input_kind
+                                    )
+                                    self.workload = try container.decode(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.workloadPayload.self,
+                                        forKey: .workload
+                                    )
+                                    self.category = try container.decode(
+                                        Components.Schemas.DiagnosticCategory.self,
+                                        forKey: .category
+                                    )
+                                    self.request_id = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .request_id
+                                    )
+                                    self.refresh_id = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .refresh_id
+                                    )
+                                    self.sequence = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .sequence
+                                    )
+                                    self.monotonic_ms = try container.decode(
+                                        Swift.Double.self,
+                                        forKey: .monotonic_ms
+                                    )
+                                    self.clock_unit = try container.decode(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.clock_unitPayload.self,
+                                        forKey: .clock_unit
+                                    )
+                                    self.wall_anchor_ms = try container.decodeIfPresent(
+                                        Swift.Double.self,
+                                        forKey: .wall_anchor_ms
+                                    )
+                                    self.trace_id = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .trace_id
+                                    )
+                                    self.span_id = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .span_id
+                                    )
+                                    self.parent_span_id = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .parent_span_id
+                                    )
+                                    self.action_id = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .action_id
+                                    )
+                                    self.metadata = try container.decodeIfPresent(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.metadataPayload.self,
+                                        forKey: .metadata
+                                    )
+                                    self.name = try container.decode(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.namePayload.self,
+                                        forKey: .name
+                                    )
+                                    self.stage = try container.decode(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.stagePayload.self,
+                                        forKey: .stage
+                                    )
+                                    self.duration_ms = try container.decode(
+                                        Swift.Double.self,
+                                        forKey: .duration_ms
+                                    )
+                                    self.outcome = try container.decode(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload.outcomePayload.self,
+                                        forKey: .outcome
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "schema_version",
+                                        "run_id",
+                                        "process_role",
+                                        "build_id",
+                                        "contract_id",
+                                        "mode",
+                                        "input_kind",
+                                        "workload",
+                                        "category",
+                                        "request_id",
+                                        "refresh_id",
+                                        "sequence",
+                                        "monotonic_ms",
+                                        "clock_unit",
+                                        "wall_anchor_ms",
+                                        "trace_id",
+                                        "span_id",
+                                        "parent_span_id",
+                                        "action_id",
+                                        "metadata",
+                                        "name",
+                                        "stage",
+                                        "duration_ms",
+                                        "outcome"
+                                    ])
+                                }
+
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    var container = encoder.container(keyedBy: CodingKeys.self)
+                                    try container.encode(self.schema_version, forKey: .schema_version)
+                                    try container.encode(self.run_id, forKey: .run_id)
+                                    try container.encode(self.process_role, forKey: .process_role)
+                                    try container.encode(self.build_id, forKey: .build_id)
+                                    try container.encode(self.contract_id, forKey: .contract_id)
+                                    try container.encode(self.mode, forKey: .mode)
+                                    try container.encode(self.input_kind, forKey: .input_kind)
+                                    try container.encode(self.workload, forKey: .workload)
+                                    try container.encode(self.category, forKey: .category)
+                                    if self.request_id == nil && _explicitNullKeys.contains(CodingKeys.request_id.stringValue) {
+                                        try container.encodeNil(forKey: .request_id)
+                                    } else {
+                                        try container.encodeIfPresent(self.request_id, forKey: .request_id)
+                                    }
+                                    if self.refresh_id == nil && _explicitNullKeys.contains(CodingKeys.refresh_id.stringValue) {
+                                        try container.encodeNil(forKey: .refresh_id)
+                                    } else {
+                                        try container.encodeIfPresent(self.refresh_id, forKey: .refresh_id)
+                                    }
+                                    try container.encode(self.sequence, forKey: .sequence)
+                                    try container.encode(self.monotonic_ms, forKey: .monotonic_ms)
+                                    try container.encode(self.clock_unit, forKey: .clock_unit)
+                                    if self.wall_anchor_ms == nil && _explicitNullKeys.contains(CodingKeys.wall_anchor_ms.stringValue) {
+                                        try container.encodeNil(forKey: .wall_anchor_ms)
+                                    } else {
+                                        try container.encodeIfPresent(self.wall_anchor_ms, forKey: .wall_anchor_ms)
+                                    }
+                                    try container.encode(self.trace_id, forKey: .trace_id)
+                                    try container.encode(self.span_id, forKey: .span_id)
+                                    if self.parent_span_id == nil && _explicitNullKeys.contains(CodingKeys.parent_span_id.stringValue) {
+                                        try container.encodeNil(forKey: .parent_span_id)
+                                    } else {
+                                        try container.encodeIfPresent(self.parent_span_id, forKey: .parent_span_id)
+                                    }
+                                    if self.action_id == nil && _explicitNullKeys.contains(CodingKeys.action_id.stringValue) {
+                                        try container.encodeNil(forKey: .action_id)
+                                    } else {
+                                        try container.encodeIfPresent(self.action_id, forKey: .action_id)
+                                    }
+                                    if self.metadata == nil && _explicitNullKeys.contains(CodingKeys.metadata.stringValue) {
+                                        try container.encodeNil(forKey: .metadata)
+                                    } else {
+                                        try container.encodeIfPresent(self.metadata, forKey: .metadata)
+                                    }
+                                    try container.encode(self.name, forKey: .name)
+                                    try container.encode(self.stage, forKey: .stage)
+                                    try container.encode(self.duration_ms, forKey: .duration_ms)
+                                    try container.encode(self.outcome, forKey: .outcome)
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recent`.
+                            public typealias recentPayload = [Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayloadPayload]
+                            /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recent`.
+                            public var recent: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayload
+                            /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload`.
+                            public struct deliveriesPayloadPayload: Codable, Hashable, Sendable {
+                                private var _explicitNullKeys: Set<String> = []
+
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/schema_version`.
+                                public var schema_version: Swift.Double
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/run_id`.
+                                public var run_id: Swift.String
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/process_role`.
+                                @frozen public enum process_rolePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case server = "server"
+                                    case cli = "cli"
+                                    case scheduler = "scheduler"
+                                    case electron_period_main = "electron.main"
+                                    case electron_period_renderer = "electron.renderer"
+                                    case macos = "macos"
+                                    case unknown = "unknown"
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/process_role`.
+                                public var process_role: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.process_rolePayload
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/build_id`.
+                                public var build_id: Swift.String
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/contract_id`.
+                                public var contract_id: Swift.String
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/mode`.
+                                @frozen public enum modePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case full = "full"
+                                    case compact = "compact"
+                                    case terminal = "terminal"
+                                    case headless = "headless"
+                                    case unknown = "unknown"
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/mode`.
+                                public var mode: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.modePayload
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/input_kind`.
+                                @frozen public enum input_kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case pointer = "pointer"
+                                    case keyboard = "keyboard"
+                                    case menu = "menu"
+                                    case accessibility = "accessibility"
+                                    case notification = "notification"
+                                    case command = "command"
+                                    case background = "background"
+                                    case unknown = "unknown"
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/input_kind`.
+                                public var input_kind: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.input_kindPayload
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/workload`.
+                                @frozen public enum workloadPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case cold = "cold"
+                                    case warm = "warm"
+                                    case empty = "empty"
+                                    case error = "error"
+                                    case refusal = "refusal"
+                                    case large = "large"
+                                    case diagnostics_open = "diagnostics_open"
+                                    case diagnostics_closed = "diagnostics_closed"
+                                    case catch_up = "catch_up"
+                                    case unknown = "unknown"
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/workload`.
+                                public var workload: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.workloadPayload
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/category`.
+                                public var category: Components.Schemas.DiagnosticCategory
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/request_id`.
+                                public var request_id: Swift.String?
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/refresh_id`.
+                                public var refresh_id: Swift.String?
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/sequence`.
+                                public var sequence: Swift.Int
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/monotonic_ms`.
+                                public var monotonic_ms: Swift.Double
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/clock_unit`.
+                                @frozen public enum clock_unitPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case ms = "ms"
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/clock_unit`.
+                                public var clock_unit: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.clock_unitPayload
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/wall_anchor_ms`.
+                                public var wall_anchor_ms: Swift.Double?
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/trace_id`.
+                                public var trace_id: Swift.String
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/span_id`.
+                                public var span_id: Swift.String
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/parent_span_id`.
+                                public var parent_span_id: Swift.String?
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/action_id`.
+                                public var action_id: Swift.String?
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/metadata`.
+                                public struct metadataPayload: Codable, Hashable, Sendable {
+                                    private var _explicitNullKeys: Set<String> = []
+
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/metadata/operation`.
+                                    @frozen public enum operationPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case health = "health"
+                                        case diagnostics = "diagnostics"
+                                        case auth = "auth"
+                                        case profiles = "profiles"
+                                        case tasks_period_list = "tasks.list"
+                                        case tasks_period_show = "tasks.show"
+                                        case tasks_period_write = "tasks.write"
+                                        case history = "history"
+                                        case graph = "graph"
+                                        case search = "search"
+                                        case stream = "stream"
+                                        case snapshots = "snapshots"
+                                        case attachments = "attachments"
+                                        case discovery = "discovery"
+                                        case other = "other"
+                                        case unmatched = "unmatched"
+                                    }
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/metadata/operation`.
+                                    public var operation: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.metadataPayload.operationPayload?
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/metadata/statement`.
+                                    @frozen public enum statementPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case auth_period_credential = "auth.credential"
+                                        case store_period_read = "store.read"
+                                        case store_period_write = "store.write"
+                                        case store_period_begin = "store.begin"
+                                        case store_period_commit = "store.commit"
+                                        case store_period_rollback = "store.rollback"
+                                        case store_period_projection = "store.projection"
+                                        case store_period_graph = "store.graph"
+                                        case stream_period_tail = "stream.tail"
+                                        case scheduler_period_due = "scheduler.due"
+                                        case unknown = "unknown"
+                                    }
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/metadata/statement`.
+                                    public var statement: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.metadataPayload.statementPayload?
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/metadata/rows`.
+                                    public var rows: Swift.Int?
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/metadata/bytes`.
+                                    public var bytes: Swift.Int?
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/metadata/work_units`.
+                                    public var work_units: Swift.Double?
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/metadata/cache`.
+                                    @frozen public enum cachePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case hit = "hit"
+                                        case miss = "miss"
+                                        case bypass = "bypass"
+                                        case unknown = "unknown"
+                                    }
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/metadata/cache`.
+                                    public var cache: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.metadataPayload.cachePayload?
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/metadata/error`.
+                                    @frozen public enum errorPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case unauthorized = "unauthorized"
+                                        case forbidden = "forbidden"
+                                        case conflict = "conflict"
+                                        case validation = "validation"
+                                        case not_found = "not_found"
+                                        case _internal = "internal"
+                                        case aborted = "aborted"
+                                        case unknown = "unknown"
+                                    }
+                                    /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/metadata/error`.
+                                    public var error: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.metadataPayload.errorPayload?
+                                    /// Creates a new `metadataPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - operation:
+                                    ///   - statement:
+                                    ///   - rows:
+                                    ///   - bytes:
+                                    ///   - work_units:
+                                    ///   - cache:
+                                    ///   - error:
+                                    public init(
+                                        operation: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.metadataPayload.operationPayload? = nil,
+                                        statement: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.metadataPayload.statementPayload? = nil,
+                                        rows: Swift.Int? = nil,
+                                        bytes: Swift.Int? = nil,
+                                        work_units: Swift.Double? = nil,
+                                        cache: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.metadataPayload.cachePayload? = nil,
+                                        error: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.metadataPayload.errorPayload? = nil
+                                    ) {
+                                        self.operation = operation
+                                        self.statement = statement
+                                        self.rows = rows
+                                        self.bytes = bytes
+                                        self.work_units = work_units
+                                        self.cache = cache
+                                        self.error = error
+                                    }
+                                    public enum CodingKeys: String, CodingKey {
+                                        case operation
+                                        case statement
+                                        case rows
+                                        case bytes
+                                        case work_units
+                                        case cache
+                                        case error
+                                    }
+                                    public init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                        self.operation = try container.decodeIfPresent(
+                                            Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.metadataPayload.operationPayload.self,
+                                            forKey: .operation
+                                        )
+                                        self.statement = try container.decodeIfPresent(
+                                            Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.metadataPayload.statementPayload.self,
+                                            forKey: .statement
+                                        )
+                                        self.rows = try container.decodeIfPresent(
+                                            Swift.Int.self,
+                                            forKey: .rows
+                                        )
+                                        self.bytes = try container.decodeIfPresent(
+                                            Swift.Int.self,
+                                            forKey: .bytes
+                                        )
+                                        self.work_units = try container.decodeIfPresent(
+                                            Swift.Double.self,
+                                            forKey: .work_units
+                                        )
+                                        self.cache = try container.decodeIfPresent(
+                                            Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.metadataPayload.cachePayload.self,
+                                            forKey: .cache
+                                        )
+                                        self.error = try container.decodeIfPresent(
+                                            Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.metadataPayload.errorPayload.self,
+                                            forKey: .error
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "operation",
+                                            "statement",
+                                            "rows",
+                                            "bytes",
+                                            "work_units",
+                                            "cache",
+                                            "error"
+                                        ])
+                                    }
+
+                                    public func encode(to encoder: any Swift.Encoder) throws {
+                                        var container = encoder.container(keyedBy: CodingKeys.self)
+                                        if self.operation == nil && _explicitNullKeys.contains(CodingKeys.operation.stringValue) {
+                                            try container.encodeNil(forKey: .operation)
+                                        } else {
+                                            try container.encodeIfPresent(self.operation, forKey: .operation)
+                                        }
+                                        if self.statement == nil && _explicitNullKeys.contains(CodingKeys.statement.stringValue) {
+                                            try container.encodeNil(forKey: .statement)
+                                        } else {
+                                            try container.encodeIfPresent(self.statement, forKey: .statement)
+                                        }
+                                        if self.rows == nil && _explicitNullKeys.contains(CodingKeys.rows.stringValue) {
+                                            try container.encodeNil(forKey: .rows)
+                                        } else {
+                                            try container.encodeIfPresent(self.rows, forKey: .rows)
+                                        }
+                                        if self.bytes == nil && _explicitNullKeys.contains(CodingKeys.bytes.stringValue) {
+                                            try container.encodeNil(forKey: .bytes)
+                                        } else {
+                                            try container.encodeIfPresent(self.bytes, forKey: .bytes)
+                                        }
+                                        if self.work_units == nil && _explicitNullKeys.contains(CodingKeys.work_units.stringValue) {
+                                            try container.encodeNil(forKey: .work_units)
+                                        } else {
+                                            try container.encodeIfPresent(self.work_units, forKey: .work_units)
+                                        }
+                                        if self.cache == nil && _explicitNullKeys.contains(CodingKeys.cache.stringValue) {
+                                            try container.encodeNil(forKey: .cache)
+                                        } else {
+                                            try container.encodeIfPresent(self.cache, forKey: .cache)
+                                        }
+                                        if self.error == nil && _explicitNullKeys.contains(CodingKeys.error.stringValue) {
+                                            try container.encodeNil(forKey: .error)
+                                        } else {
+                                            try container.encodeIfPresent(self.error, forKey: .error)
+                                        }
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/metadata`.
+                                public var metadata: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.metadataPayload?
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/name`.
+                                @frozen public enum namePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case stream_period_delivery = "stream.delivery"
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/name`.
+                                public var name: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.namePayload
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/stream_id`.
+                                public var stream_id: Swift.String
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/frame_id`.
+                                public var frame_id: Swift.String
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/commit_receipt`.
+                                public var commit_receipt: Swift.String
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/stage`.
+                                @frozen public enum stagePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case commit_seen = "commit_seen"
+                                    case transport_handoff = "transport_handoff"
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/stage`.
+                                public var stage: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.stagePayload
+                                /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveriesPayload/bytes`.
+                                public var bytes: Swift.Int?
+                                /// Creates a new `deliveriesPayloadPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - schema_version:
+                                ///   - run_id:
+                                ///   - process_role:
+                                ///   - build_id:
+                                ///   - contract_id:
+                                ///   - mode:
+                                ///   - input_kind:
+                                ///   - workload:
+                                ///   - category:
+                                ///   - request_id:
+                                ///   - refresh_id:
+                                ///   - sequence:
+                                ///   - monotonic_ms:
+                                ///   - clock_unit:
+                                ///   - wall_anchor_ms:
+                                ///   - trace_id:
+                                ///   - span_id:
+                                ///   - parent_span_id:
+                                ///   - action_id:
+                                ///   - metadata:
+                                ///   - name:
+                                ///   - stream_id:
+                                ///   - frame_id:
+                                ///   - commit_receipt:
+                                ///   - stage:
+                                ///   - bytes:
+                                public init(
+                                    schema_version: Swift.Double,
+                                    run_id: Swift.String,
+                                    process_role: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.process_rolePayload,
+                                    build_id: Swift.String,
+                                    contract_id: Swift.String,
+                                    mode: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.modePayload,
+                                    input_kind: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.input_kindPayload,
+                                    workload: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.workloadPayload,
+                                    category: Components.Schemas.DiagnosticCategory,
+                                    request_id: Swift.String? = nil,
+                                    refresh_id: Swift.String? = nil,
+                                    sequence: Swift.Int,
+                                    monotonic_ms: Swift.Double,
+                                    clock_unit: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.clock_unitPayload,
+                                    wall_anchor_ms: Swift.Double? = nil,
+                                    trace_id: Swift.String,
+                                    span_id: Swift.String,
+                                    parent_span_id: Swift.String? = nil,
+                                    action_id: Swift.String? = nil,
+                                    metadata: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.metadataPayload? = nil,
+                                    name: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.namePayload,
+                                    stream_id: Swift.String,
+                                    frame_id: Swift.String,
+                                    commit_receipt: Swift.String,
+                                    stage: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.stagePayload,
+                                    bytes: Swift.Int? = nil
+                                ) {
+                                    self.schema_version = schema_version
+                                    self.run_id = run_id
+                                    self.process_role = process_role
+                                    self.build_id = build_id
+                                    self.contract_id = contract_id
+                                    self.mode = mode
+                                    self.input_kind = input_kind
+                                    self.workload = workload
+                                    self.category = category
+                                    self.request_id = request_id
+                                    self.refresh_id = refresh_id
+                                    self.sequence = sequence
+                                    self.monotonic_ms = monotonic_ms
+                                    self.clock_unit = clock_unit
+                                    self.wall_anchor_ms = wall_anchor_ms
+                                    self.trace_id = trace_id
+                                    self.span_id = span_id
+                                    self.parent_span_id = parent_span_id
+                                    self.action_id = action_id
+                                    self.metadata = metadata
+                                    self.name = name
+                                    self.stream_id = stream_id
+                                    self.frame_id = frame_id
+                                    self.commit_receipt = commit_receipt
+                                    self.stage = stage
+                                    self.bytes = bytes
+                                }
+                                public enum CodingKeys: String, CodingKey {
+                                    case schema_version
+                                    case run_id
+                                    case process_role
+                                    case build_id
+                                    case contract_id
+                                    case mode
+                                    case input_kind
+                                    case workload
+                                    case category
+                                    case request_id
+                                    case refresh_id
+                                    case sequence
+                                    case monotonic_ms
+                                    case clock_unit
+                                    case wall_anchor_ms
+                                    case trace_id
+                                    case span_id
+                                    case parent_span_id
+                                    case action_id
+                                    case metadata
+                                    case name
+                                    case stream_id
+                                    case frame_id
+                                    case commit_receipt
+                                    case stage
+                                    case bytes
+                                }
+                                public init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.schema_version = try container.decode(
+                                        Swift.Double.self,
+                                        forKey: .schema_version
+                                    )
+                                    self.run_id = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .run_id
+                                    )
+                                    self.process_role = try container.decode(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.process_rolePayload.self,
+                                        forKey: .process_role
+                                    )
+                                    self.build_id = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .build_id
+                                    )
+                                    self.contract_id = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .contract_id
+                                    )
+                                    self.mode = try container.decode(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.modePayload.self,
+                                        forKey: .mode
+                                    )
+                                    self.input_kind = try container.decode(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.input_kindPayload.self,
+                                        forKey: .input_kind
+                                    )
+                                    self.workload = try container.decode(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.workloadPayload.self,
+                                        forKey: .workload
+                                    )
+                                    self.category = try container.decode(
+                                        Components.Schemas.DiagnosticCategory.self,
+                                        forKey: .category
+                                    )
+                                    self.request_id = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .request_id
+                                    )
+                                    self.refresh_id = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .refresh_id
+                                    )
+                                    self.sequence = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .sequence
+                                    )
+                                    self.monotonic_ms = try container.decode(
+                                        Swift.Double.self,
+                                        forKey: .monotonic_ms
+                                    )
+                                    self.clock_unit = try container.decode(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.clock_unitPayload.self,
+                                        forKey: .clock_unit
+                                    )
+                                    self.wall_anchor_ms = try container.decodeIfPresent(
+                                        Swift.Double.self,
+                                        forKey: .wall_anchor_ms
+                                    )
+                                    self.trace_id = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .trace_id
+                                    )
+                                    self.span_id = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .span_id
+                                    )
+                                    self.parent_span_id = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .parent_span_id
+                                    )
+                                    self.action_id = try container.decodeIfPresent(
+                                        Swift.String.self,
+                                        forKey: .action_id
+                                    )
+                                    self.metadata = try container.decodeIfPresent(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.metadataPayload.self,
+                                        forKey: .metadata
+                                    )
+                                    self.name = try container.decode(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.namePayload.self,
+                                        forKey: .name
+                                    )
+                                    self.stream_id = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .stream_id
+                                    )
+                                    self.frame_id = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .frame_id
+                                    )
+                                    self.commit_receipt = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .commit_receipt
+                                    )
+                                    self.stage = try container.decode(
+                                        Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload.stagePayload.self,
+                                        forKey: .stage
+                                    )
+                                    self.bytes = try container.decodeIfPresent(
+                                        Swift.Int.self,
+                                        forKey: .bytes
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "schema_version",
+                                        "run_id",
+                                        "process_role",
+                                        "build_id",
+                                        "contract_id",
+                                        "mode",
+                                        "input_kind",
+                                        "workload",
+                                        "category",
+                                        "request_id",
+                                        "refresh_id",
+                                        "sequence",
+                                        "monotonic_ms",
+                                        "clock_unit",
+                                        "wall_anchor_ms",
+                                        "trace_id",
+                                        "span_id",
+                                        "parent_span_id",
+                                        "action_id",
+                                        "metadata",
+                                        "name",
+                                        "stream_id",
+                                        "frame_id",
+                                        "commit_receipt",
+                                        "stage",
+                                        "bytes"
+                                    ])
+                                }
+
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    var container = encoder.container(keyedBy: CodingKeys.self)
+                                    try container.encode(self.schema_version, forKey: .schema_version)
+                                    try container.encode(self.run_id, forKey: .run_id)
+                                    try container.encode(self.process_role, forKey: .process_role)
+                                    try container.encode(self.build_id, forKey: .build_id)
+                                    try container.encode(self.contract_id, forKey: .contract_id)
+                                    try container.encode(self.mode, forKey: .mode)
+                                    try container.encode(self.input_kind, forKey: .input_kind)
+                                    try container.encode(self.workload, forKey: .workload)
+                                    try container.encode(self.category, forKey: .category)
+                                    if self.request_id == nil && _explicitNullKeys.contains(CodingKeys.request_id.stringValue) {
+                                        try container.encodeNil(forKey: .request_id)
+                                    } else {
+                                        try container.encodeIfPresent(self.request_id, forKey: .request_id)
+                                    }
+                                    if self.refresh_id == nil && _explicitNullKeys.contains(CodingKeys.refresh_id.stringValue) {
+                                        try container.encodeNil(forKey: .refresh_id)
+                                    } else {
+                                        try container.encodeIfPresent(self.refresh_id, forKey: .refresh_id)
+                                    }
+                                    try container.encode(self.sequence, forKey: .sequence)
+                                    try container.encode(self.monotonic_ms, forKey: .monotonic_ms)
+                                    try container.encode(self.clock_unit, forKey: .clock_unit)
+                                    if self.wall_anchor_ms == nil && _explicitNullKeys.contains(CodingKeys.wall_anchor_ms.stringValue) {
+                                        try container.encodeNil(forKey: .wall_anchor_ms)
+                                    } else {
+                                        try container.encodeIfPresent(self.wall_anchor_ms, forKey: .wall_anchor_ms)
+                                    }
+                                    try container.encode(self.trace_id, forKey: .trace_id)
+                                    try container.encode(self.span_id, forKey: .span_id)
+                                    if self.parent_span_id == nil && _explicitNullKeys.contains(CodingKeys.parent_span_id.stringValue) {
+                                        try container.encodeNil(forKey: .parent_span_id)
+                                    } else {
+                                        try container.encodeIfPresent(self.parent_span_id, forKey: .parent_span_id)
+                                    }
+                                    if self.action_id == nil && _explicitNullKeys.contains(CodingKeys.action_id.stringValue) {
+                                        try container.encodeNil(forKey: .action_id)
+                                    } else {
+                                        try container.encodeIfPresent(self.action_id, forKey: .action_id)
+                                    }
+                                    if self.metadata == nil && _explicitNullKeys.contains(CodingKeys.metadata.stringValue) {
+                                        try container.encodeNil(forKey: .metadata)
+                                    } else {
+                                        try container.encodeIfPresent(self.metadata, forKey: .metadata)
+                                    }
+                                    try container.encode(self.name, forKey: .name)
+                                    try container.encode(self.stream_id, forKey: .stream_id)
+                                    try container.encode(self.frame_id, forKey: .frame_id)
+                                    try container.encode(self.commit_receipt, forKey: .commit_receipt)
+                                    try container.encode(self.stage, forKey: .stage)
+                                    if self.bytes == nil && _explicitNullKeys.contains(CodingKeys.bytes.stringValue) {
+                                        try container.encodeNil(forKey: .bytes)
+                                    } else {
+                                        try container.encodeIfPresent(self.bytes, forKey: .bytes)
+                                    }
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveries`.
+                            public typealias deliveriesPayload = [Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayloadPayload]
+                            /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/deliveries`.
+                            public var deliveries: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayload
+                            /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/unobservedPayload`.
+                            @frozen public enum unobservedPayloadPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case socket_accept_to_entry = "socket_accept_to_entry"
+                                case worker_queue = "worker_queue"
+                                case socket_handoff = "socket_handoff"
+                                case body_completion = "body_completion"
+                                case client_receipt = "client_receipt"
+                                case cross_process_commit = "cross_process_commit"
+                                case encoding = "encoding"
+                                case database_other = "database_other"
+                                case graph_computation = "graph_computation"
+                                case search_preparation = "search_preparation"
+                                case search_meter = "search_meter"
+                                case command_startup = "command_startup"
+                                case stdout_drain = "stdout_drain"
+                            }
+                            /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/unobserved`.
+                            public typealias unobservedPayload = [Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.unobservedPayloadPayload]
+                            /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/unobserved`.
+                            public var unobserved: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.unobservedPayload
+                            /// Creates a new `profilerPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - schema_version:
+                            ///   - run_id:
+                            ///   - enabled:
+                            ///   - capacity:
+                            ///   - active_capacity:
+                            ///   - started:
+                            ///   - finished:
+                            ///   - lost_starts:
+                            ///   - dropped_events:
+                            ///   - active:
+                            ///   - recent:
+                            ///   - deliveries:
+                            ///   - unobserved:
+                            public init(
+                                schema_version: Swift.Double,
+                                run_id: Swift.String,
+                                enabled: Swift.Bool,
+                                capacity: Swift.Int,
+                                active_capacity: Swift.Int,
+                                started: Swift.Int,
+                                finished: Swift.Int,
+                                lost_starts: Swift.Int,
+                                dropped_events: Swift.Int,
+                                active: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayload,
+                                recent: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayload,
+                                deliveries: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayload,
+                                unobserved: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.unobservedPayload
+                            ) {
+                                self.schema_version = schema_version
+                                self.run_id = run_id
+                                self.enabled = enabled
+                                self.capacity = capacity
+                                self.active_capacity = active_capacity
+                                self.started = started
+                                self.finished = finished
+                                self.lost_starts = lost_starts
+                                self.dropped_events = dropped_events
+                                self.active = active
+                                self.recent = recent
+                                self.deliveries = deliveries
+                                self.unobserved = unobserved
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case schema_version
+                                case run_id
+                                case enabled
+                                case capacity
+                                case active_capacity
+                                case started
+                                case finished
+                                case lost_starts
+                                case dropped_events
+                                case active
+                                case recent
+                                case deliveries
+                                case unobserved
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.schema_version = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .schema_version
+                                )
+                                self.run_id = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .run_id
+                                )
+                                self.enabled = try container.decode(
+                                    Swift.Bool.self,
+                                    forKey: .enabled
+                                )
+                                self.capacity = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .capacity
+                                )
+                                self.active_capacity = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .active_capacity
+                                )
+                                self.started = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .started
+                                )
+                                self.finished = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .finished
+                                )
+                                self.lost_starts = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .lost_starts
+                                )
+                                self.dropped_events = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .dropped_events
+                                )
+                                self.active = try container.decode(
+                                    Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayload.self,
+                                    forKey: .active
+                                )
+                                self.recent = try container.decode(
+                                    Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayload.self,
+                                    forKey: .recent
+                                )
+                                self.deliveries = try container.decode(
+                                    Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayload.self,
+                                    forKey: .deliveries
+                                )
+                                self.unobserved = try container.decode(
+                                    Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.unobservedPayload.self,
+                                    forKey: .unobserved
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "schema_version",
+                                    "run_id",
+                                    "enabled",
+                                    "capacity",
+                                    "active_capacity",
+                                    "started",
+                                    "finished",
+                                    "lost_starts",
+                                    "dropped_events",
+                                    "active",
+                                    "recent",
+                                    "deliveries",
+                                    "unobserved"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.schema_version, forKey: .schema_version)
+                                try container.encode(self.run_id, forKey: .run_id)
+                                try container.encode(self.enabled, forKey: .enabled)
+                                try container.encode(self.capacity, forKey: .capacity)
+                                try container.encode(self.active_capacity, forKey: .active_capacity)
+                                try container.encode(self.started, forKey: .started)
+                                try container.encode(self.finished, forKey: .finished)
+                                try container.encode(self.lost_starts, forKey: .lost_starts)
+                                try container.encode(self.dropped_events, forKey: .dropped_events)
+                                try container.encode(self.active, forKey: .active)
+                                try container.encode(self.recent, forKey: .recent)
+                                try container.encode(self.deliveries, forKey: .deliveries)
+                                try container.encode(self.unobserved, forKey: .unobserved)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler`.
+                        public var profiler: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload?
                         /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/generated_at`.
                         public var generated_at: Swift.String
                         /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/poll_interval_ms`.
@@ -43049,6 +45036,7 @@ public enum Operations {
                         /// Creates a new `jsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - profiler:
                         ///   - generated_at:
                         ///   - poll_interval_ms:
                         ///   - runtime:
@@ -43062,6 +45050,7 @@ public enum Operations {
                         ///   - latency:
                         ///   - scheduler:
                         public init(
+                            profiler: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload? = nil,
                             generated_at: Swift.String,
                             poll_interval_ms: Swift.Double,
                             runtime: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.runtimePayload,
@@ -43075,6 +45064,7 @@ public enum Operations {
                             latency: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.latencyPayload,
                             scheduler: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.schedulerPayload
                         ) {
+                            self.profiler = profiler
                             self.generated_at = generated_at
                             self.poll_interval_ms = poll_interval_ms
                             self.runtime = runtime
@@ -43089,6 +45079,7 @@ public enum Operations {
                             self.scheduler = scheduler
                         }
                         public enum CodingKeys: String, CodingKey {
+                            case profiler
                             case generated_at
                             case poll_interval_ms
                             case runtime
@@ -43104,7 +45095,11 @@ public enum Operations {
                         }
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
-                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.profiler = try container.decodeIfPresent(
+                                Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.self,
+                                forKey: .profiler
+                            )
                             self.generated_at = try container.decode(
                                 Swift.String.self,
                                 forKey: .generated_at
@@ -43154,6 +45149,7 @@ public enum Operations {
                                 forKey: .scheduler
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "profiler",
                                 "generated_at",
                                 "poll_interval_ms",
                                 "runtime",
@@ -43169,22 +45165,27 @@ public enum Operations {
                             ])
                         }
 
-                        public func encode(to encoder: any Swift.Encoder) throws {
-                            var container = encoder.container(keyedBy: CodingKeys.self)
-                            try container.encode(self.generated_at, forKey: .generated_at)
-                            try container.encode(self.poll_interval_ms, forKey: .poll_interval_ms)
-                            try container.encode(self.runtime, forKey: .runtime)
-                            try container.encode(self.profiles, forKey: .profiles)
-                            try container.encode(self.deleted_profiles, forKey: .deleted_profiles)
-                            try container.encode(self.storage, forKey: .storage)
-                            try container.encode(self.operations, forKey: .operations)
-                            try container.encode(self.clients, forKey: .clients)
-                            try container.encode(self.credentials, forKey: .credentials)
-                            try container.encode(self.errors, forKey: .errors)
-                            try container.encode(self.latency, forKey: .latency)
-                            try container.encode(self.scheduler, forKey: .scheduler)
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                if self.profiler == nil && _explicitNullKeys.contains(CodingKeys.profiler.stringValue) {
+                                    try container.encodeNil(forKey: .profiler)
+                                } else {
+                                    try container.encodeIfPresent(self.profiler, forKey: .profiler)
+                                }
+                                try container.encode(self.generated_at, forKey: .generated_at)
+                                try container.encode(self.poll_interval_ms, forKey: .poll_interval_ms)
+                                try container.encode(self.runtime, forKey: .runtime)
+                                try container.encode(self.profiles, forKey: .profiles)
+                                try container.encode(self.deleted_profiles, forKey: .deleted_profiles)
+                                try container.encode(self.storage, forKey: .storage)
+                                try container.encode(self.operations, forKey: .operations)
+                                try container.encode(self.clients, forKey: .clients)
+                                try container.encode(self.credentials, forKey: .credentials)
+                                try container.encode(self.errors, forKey: .errors)
+                                try container.encode(self.latency, forKey: .latency)
+                                try container.encode(self.scheduler, forKey: .scheduler)
+                            }
                         }
-                    }
                     /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/application\/json`.
                     case json(Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload)
                     /// The associated value of the enum case if `self` is `.json`.

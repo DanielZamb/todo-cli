@@ -4380,6 +4380,2922 @@ extension Components {
                 try container.encode(self.message, forKey: .message)
             }
         }
+        /// - Remark: Generated from `#/components/schemas/DiagnosticCategory`.
+        public struct DiagnosticCategory: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1`.
+            public struct Value1Payload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value1`.
+                public struct Value1Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value1/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I01 = "I01"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value1/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value1Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value1/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case signIn = "signIn"
+                        case restoreSession = "restoreSession"
+                        case retrySession = "retrySession"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value1/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value1Payload.subtypePayload
+                    /// Creates a new `Value1Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value1Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value1Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value1Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value1Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value1`.
+                public var value1: Components.Schemas.DiagnosticCategory.Value1Payload.Value1Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value2`.
+                public struct Value2Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value2/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I02 = "I02"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value2/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value2Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value2/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case signOut = "signOut"
+                        case sessionExpiry = "sessionExpiry"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value2/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value2Payload.subtypePayload
+                    /// Creates a new `Value2Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value2Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value2Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value2Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value2Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value2`.
+                public var value2: Components.Schemas.DiagnosticCategory.Value1Payload.Value2Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value3`.
+                public struct Value3Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value3/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I03 = "I03"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value3/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value3Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value3/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case profileSwitch = "profileSwitch"
+                        case discoveryShow = "discoveryShow"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value3/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value3Payload.subtypePayload
+                    /// Creates a new `Value3Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value3Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value3Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value3Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value3Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value3`.
+                public var value3: Components.Schemas.DiagnosticCategory.Value1Payload.Value3Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value4`.
+                public struct Value4Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value4/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I04 = "I04"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value4/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value4Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value4/subtype`.
+                    public struct subtypePayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value4/subtype/value1`.
+                        @frozen public enum Value1Payload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case viewSwitch = "viewSwitch"
+                        }
+                        /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value4/subtype/value1`.
+                        public var value1: Components.Schemas.DiagnosticCategory.Value1Payload.Value4Payload.subtypePayload.Value1Payload?
+                        /// Creates a new `subtypePayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - value1:
+                        public init(value1: Components.Schemas.DiagnosticCategory.Value1Payload.Value4Payload.subtypePayload.Value1Payload? = nil) {
+                            self.value1 = value1
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self.value1 = try decoder.decodeFromSingleValueContainer()
+                            } catch {
+                                errors.append(error)
+                            }
+                            try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                [
+                                    self.value1
+                                ],
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
+                            )
+                        }
+                        public func encode(to encoder: any Swift.Encoder) throws {
+                            try encoder.encodeFirstNonNilValueToSingleValueContainer([
+                                self.value1
+                            ])
+                        }
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value4/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value4Payload.subtypePayload
+                    /// Creates a new `Value4Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value4Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value4Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value4Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value4Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value4`.
+                public var value4: Components.Schemas.DiagnosticCategory.Value1Payload.Value4Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value5`.
+                public struct Value5Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value5/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I05 = "I05"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value5/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value5Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value5/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case filters = "filters"
+                        case openFilters = "openFilters"
+                        case applyFilters = "applyFilters"
+                        case cancelFilters = "cancelFilters"
+                        case clearFilters = "clearFilters"
+                        case order = "order"
+                        case projectFilter = "projectFilter"
+                        case tagFilter = "tagFilter"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value5/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value5Payload.subtypePayload
+                    /// Creates a new `Value5Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value5Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value5Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value5Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value5Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value5`.
+                public var value5: Components.Schemas.DiagnosticCategory.Value1Payload.Value5Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value6`.
+                public struct Value6Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value6/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I06 = "I06"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value6/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value6Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value6/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case search = "search"
+                        case searchEcho = "searchEcho"
+                        case pasteSearch = "pasteSearch"
+                        case clearSearch = "clearSearch"
+                        case focusSearch = "focusSearch"
+                        case retrySearch = "retrySearch"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value6/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value6Payload.subtypePayload
+                    /// Creates a new `Value6Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value6Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value6Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value6Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value6Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value6`.
+                public var value6: Components.Schemas.DiagnosticCategory.Value1Payload.Value6Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value7`.
+                public struct Value7Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value7/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I07 = "I07"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value7/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value7Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value7/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case task_period_selection_period_pointer = "task.selection.pointer"
+                        case task_period_selection_period_keyboard = "task.selection.keyboard"
+                        case openInspector = "openInspector"
+                        case closeInspector = "closeInspector"
+                        case compactBack = "compactBack"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value7/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value7Payload.subtypePayload
+                    /// Creates a new `Value7Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value7Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value7Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value7Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value7Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value7`.
+                public var value7: Components.Schemas.DiagnosticCategory.Value1Payload.Value7Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value8`.
+                public struct Value8Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value8/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I08 = "I08"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value8/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value8Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value8/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case scrollFrame = "scrollFrame"
+                        case scrollSettled = "scrollSettled"
+                        case resizeFrame = "resizeFrame"
+                        case resizeSettled = "resizeSettled"
+                        case moveDivider = "moveDivider"
+                        case toggleCompact = "toggleCompact"
+                        case toggleGroup = "toggleGroup"
+                        case toggleMetadata = "toggleMetadata"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value8/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value8Payload.subtypePayload
+                    /// Creates a new `Value8Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value8Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value8Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value8Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value8Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value8`.
+                public var value8: Components.Schemas.DiagnosticCategory.Value1Payload.Value8Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value9`.
+                public struct Value9Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value9/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I09 = "I09"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value9/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value9Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value9/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case editTitle = "editTitle"
+                        case editDescription = "editDescription"
+                        case editPriority = "editPriority"
+                        case editProject = "editProject"
+                        case editTags = "editTags"
+                        case editDates = "editDates"
+                        case editEnergy = "editEnergy"
+                        case editEstimate = "editEstimate"
+                        case editSource = "editSource"
+                        case editExternalId = "editExternalId"
+                        case newProject = "newProject"
+                        case newTag = "newTag"
+                        case dateChooser = "dateChooser"
+                        case copyTaskId = "copyTaskId"
+                        case cancelDraft = "cancelDraft"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value9/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value9Payload.subtypePayload
+                    /// Creates a new `Value9Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value9Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value9Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value9Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value9Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value9`.
+                public var value9: Components.Schemas.DiagnosticCategory.Value1Payload.Value9Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value10`.
+                public struct Value10Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value10/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I10 = "I10"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value10/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value10Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value10/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case draftNavigate = "draftNavigate"
+                        case draftSave = "draftSave"
+                        case draftDiscard = "draftDiscard"
+                        case draftCancel = "draftCancel"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value10/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value10Payload.subtypePayload
+                    /// Creates a new `Value10Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value10Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value10Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value10Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value10Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value10`.
+                public var value10: Components.Schemas.DiagnosticCategory.Value1Payload.Value10Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value11`.
+                public struct Value11Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value11/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I11 = "I11"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value11/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value11Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value11/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case quickAdd = "quickAdd"
+                        case sheetAdd = "sheetAdd"
+                        case openQuickAdd = "openQuickAdd"
+                        case closeQuickAdd = "closeQuickAdd"
+                        case editQuickAdd = "editQuickAdd"
+                        case parseQuickAdd = "parseQuickAdd"
+                        case removeChip = "removeChip"
+                        case adjustQuickAdd = "adjustQuickAdd"
+                        case addAndEdit = "addAndEdit"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value11/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value11Payload.subtypePayload
+                    /// Creates a new `Value11Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value11Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value11Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value11Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value11Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value11`.
+                public var value11: Components.Schemas.DiagnosticCategory.Value1Payload.Value11Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value12`.
+                public struct Value12Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value12/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I12 = "I12"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value12/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value12Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value12/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case save = "save"
+                        case taskTransition = "taskTransition"
+                        case complete = "complete"
+                        case cancel = "cancel"
+                        case reopen = "reopen"
+                        case snooze = "snooze"
+                        case saveDates = "saveDates"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value12/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value12Payload.subtypePayload
+                    /// Creates a new `Value12Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value12Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value12Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value12Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value12Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value12`.
+                public var value12: Components.Schemas.DiagnosticCategory.Value1Payload.Value12Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value13`.
+                public struct Value13Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value13/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I13 = "I13"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value13/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value13Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value13/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case openMove = "openMove"
+                        case openCopy = "openCopy"
+                        case transferDestination = "transferDestination"
+                        case previewTransfer = "previewTransfer"
+                        case confirmMove = "confirmMove"
+                        case confirmCopy = "confirmCopy"
+                        case openTransferredTask = "openTransferredTask"
+                        case dismissTransfer = "dismissTransfer"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value13/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value13Payload.subtypePayload
+                    /// Creates a new `Value13Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value13Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value13Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value13Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value13Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value13`.
+                public var value13: Components.Schemas.DiagnosticCategory.Value1Payload.Value13Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value14`.
+                public struct Value14Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value14/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I14 = "I14"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value14/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value14Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value14/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case delete = "delete"
+                        case openDelete = "openDelete"
+                        case reviewDelete = "reviewDelete"
+                        case cancelDelete = "cancelDelete"
+                        case purge = "purge"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value14/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value14Payload.subtypePayload
+                    /// Creates a new `Value14Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value14Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value14Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value14Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value14Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value14`.
+                public var value14: Components.Schemas.DiagnosticCategory.Value1Payload.Value14Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value15`.
+                public struct Value15Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value15/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I15 = "I15"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value15/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value15Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value15/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case openHistory = "openHistory"
+                        case retryHistory = "retryHistory"
+                        case expandHistory = "expandHistory"
+                        case revert = "revert"
+                        case revertRefusal = "revertRefusal"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value15/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value15Payload.subtypePayload
+                    /// Creates a new `Value15Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value15Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value15Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value15Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value15Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value15`.
+                public var value15: Components.Schemas.DiagnosticCategory.Value1Payload.Value15Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value16`.
+                public struct Value16Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value16/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I16 = "I16"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value16/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value16Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value16/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case openLatest = "openLatest"
+                        case resolveField = "resolveField"
+                        case saveResolution = "saveResolution"
+                        case retryAction = "retryAction"
+                        case cancelConflict = "cancelConflict"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value16/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value16Payload.subtypePayload
+                    /// Creates a new `Value16Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value16Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value16Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value16Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value16Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value16`.
+                public var value16: Components.Schemas.DiagnosticCategory.Value1Payload.Value16Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value17`.
+                public struct Value17Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value17/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I17 = "I17"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value17/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value17Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value17/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case openSeries = "openSeries"
+                        case editRule = "editRule"
+                        case editWeekdays = "editWeekdays"
+                        case editTimeZone = "editTimeZone"
+                        case editExclusions = "editExclusions"
+                        case initialDependencies = "initialDependencies"
+                        case createSeries = "createSeries"
+                        case saveSeries = "saveSeries"
+                        case skipOccurrence = "skipOccurrence"
+                        case closeSeries = "closeSeries"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value17/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value17Payload.subtypePayload
+                    /// Creates a new `Value17Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value17Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value17Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value17Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value17Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value17`.
+                public var value17: Components.Schemas.DiagnosticCategory.Value1Payload.Value17Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value18`.
+                public struct Value18Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value18/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I18 = "I18"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value18/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value18Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value18/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case attachFile = "attachFile"
+                        case attachLink = "attachLink"
+                        case pasteImage = "pasteImage"
+                        case dropImage = "dropImage"
+                        case labelAttachment = "labelAttachment"
+                        case detach = "detach"
+                        case previewAttachments = "previewAttachments"
+                        case applyAttachments = "applyAttachments"
+                        case openAttachment = "openAttachment"
+                        case revealAttachment = "revealAttachment"
+                        case previewImage = "previewImage"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value18/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value18Payload.subtypePayload
+                    /// Creates a new `Value18Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value18Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value18Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value18Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value18Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value18`.
+                public var value18: Components.Schemas.DiagnosticCategory.Value1Payload.Value18Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value19`.
+                public struct Value19Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value19/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I19 = "I19"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value19/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value19Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value19/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case openBatch = "openBatch"
+                        case chooseBatchTasks = "chooseBatchTasks"
+                        case editBatchChange = "editBatchChange"
+                        case batchPreview = "batchPreview"
+                        case applyBatch = "applyBatch"
+                        case reloadBatch = "reloadBatch"
+                        case cancelBatch = "cancelBatch"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value19/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value19Payload.subtypePayload
+                    /// Creates a new `Value19Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value19Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value19Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value19Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value19Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value19`.
+                public var value19: Components.Schemas.DiagnosticCategory.Value1Payload.Value19Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value20`.
+                public struct Value20Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value20/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I20 = "I20"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value20/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value20Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value20/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case openImport = "openImport"
+                        case chooseImport = "chooseImport"
+                        case editImport = "editImport"
+                        case importPreview = "importPreview"
+                        case applyImport = "applyImport"
+                        case inspectImport = "inspectImport"
+                        case retryImport = "retryImport"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value20/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value20Payload.subtypePayload
+                    /// Creates a new `Value20Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value20Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value20Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value20Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value20Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value20`.
+                public var value20: Components.Schemas.DiagnosticCategory.Value1Payload.Value20Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value21`.
+                public struct Value21Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value21/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I21 = "I21"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value21/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value21Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value21/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case openDependencyPicker = "openDependencyPicker"
+                        case toggleDependency = "toggleDependency"
+                        case openDependencies = "openDependencies"
+                        case dependencySearch = "dependencySearch"
+                        case dependencyPrefix = "dependencyPrefix"
+                        case initialEdge = "initialEdge"
+                        case closeDependencyPicker = "closeDependencyPicker"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value21/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value21Payload.subtypePayload
+                    /// Creates a new `Value21Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value21Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value21Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value21Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value21Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value21`.
+                public var value21: Components.Schemas.DiagnosticCategory.Value1Payload.Value21Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value22`.
+                public struct Value22Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value22/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I22 = "I22"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value22/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value22Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value22/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case dependencyDrag = "dependencyDrag"
+                        case dependencyDrop = "dependencyDrop"
+                        case reviewDependency = "reviewDependency"
+                        case cancelDependency = "cancelDependency"
+                        case confirmDependency = "confirmDependency"
+                        case previewDependencyBatch = "previewDependencyBatch"
+                        case applyDependencyBatch = "applyDependencyBatch"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value22/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value22Payload.subtypePayload
+                    /// Creates a new `Value22Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value22Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value22Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value22Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value22Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value22`.
+                public var value22: Components.Schemas.DiagnosticCategory.Value1Payload.Value22Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value23`.
+                public struct Value23Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value23/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I23 = "I23"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value23/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value23Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value23/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case showDependencyDiagram = "showDependencyDiagram"
+                        case graphSelect = "graphSelect"
+                        case graphMenu = "graphMenu"
+                        case graphExpand = "graphExpand"
+                        case graphGroup = "graphGroup"
+                        case graphPan = "graphPan"
+                        case graphZoom = "graphZoom"
+                        case graphReset = "graphReset"
+                        case retryGraph = "retryGraph"
+                        case closeGraph = "closeGraph"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value23/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value23Payload.subtypePayload
+                    /// Creates a new `Value23Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value23Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value23Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value23Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value23Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value23`.
+                public var value23: Components.Schemas.DiagnosticCategory.Value1Payload.Value23Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value24`.
+                public struct Value24Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value24/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I24 = "I24"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value24/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value24Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value24/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case openDiscovery = "openDiscovery"
+                        case expandDiscovery = "expandDiscovery"
+                        case copyDiscovery = "copyDiscovery"
+                        case editLookup = "editLookup"
+                        case findTask = "findTask"
+                        case retryLookup = "retryLookup"
+                        case showDiscoveredTask = "showDiscoveredTask"
+                        case closeDiscovery = "closeDiscovery"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value24/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value24Payload.subtypePayload
+                    /// Creates a new `Value24Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value24Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value24Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value24Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value24Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value24`.
+                public var value24: Components.Schemas.DiagnosticCategory.Value1Payload.Value24Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value25`.
+                public struct Value25Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value25/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I25 = "I25"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value25/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value25Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value25/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case deleteProfile = "deleteProfile"
+                        case confirmDeleteProfileTasks = "confirmDeleteProfileTasks"
+                        case cancelDeleteProfile = "cancelDeleteProfile"
+                        case retryDeleteProfile = "retryDeleteProfile"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value25/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value25Payload.subtypePayload
+                    /// Creates a new `Value25Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value25Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value25Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value25Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value25Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value25`.
+                public var value25: Components.Schemas.DiagnosticCategory.Value1Payload.Value25Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value26`.
+                public struct Value26Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value26/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I26 = "I26"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value26/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value26Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value26/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case listSnapshots = "listSnapshots"
+                        case retrySnapshots = "retrySnapshots"
+                        case createSnapshot = "createSnapshot"
+                        case showSnapshot = "showSnapshot"
+                        case previewRestore = "previewRestore"
+                        case restoreSnapshot = "restoreSnapshot"
+                        case cancelRestore = "cancelRestore"
+                        case pruneSnapshots = "pruneSnapshots"
+                        case revealSnapshot = "revealSnapshot"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value26/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value26Payload.subtypePayload
+                    /// Creates a new `Value26Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value26Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value26Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value26Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value26Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value26`.
+                public var value26: Components.Schemas.DiagnosticCategory.Value1Payload.Value26Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value27`.
+                public struct Value27Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value27/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I27 = "I27"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value27/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value27Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value27/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case openDiagnostics = "openDiagnostics"
+                        case closeDiagnostics = "closeDiagnostics"
+                        case diagnosticsPane = "diagnosticsPane"
+                        case diagnosticsRow = "diagnosticsRow"
+                        case pauseDiagnostics = "pauseDiagnostics"
+                        case resumeDiagnostics = "resumeDiagnostics"
+                        case followDiagnostics = "followDiagnostics"
+                        case exportRecording = "exportRecording"
+                        case compareRecordings = "compareRecordings"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value27/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value27Payload.subtypePayload
+                    /// Creates a new `Value27Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value27Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value27Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value27Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value27Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value27`.
+                public var value27: Components.Schemas.DiagnosticCategory.Value1Payload.Value27Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value28`.
+                public struct Value28Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value28/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I28 = "I28"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value28/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value28Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value28/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case openSettings = "openSettings"
+                        case closeSettings = "closeSettings"
+                        case theme = "theme"
+                        case serverURL = "serverURL"
+                        case defaultProfile = "defaultProfile"
+                        case notificationPermission = "notificationPermission"
+                        case testNotification = "testNotification"
+                        case openNotification = "openNotification"
+                        case checkCompatibility = "checkCompatibility"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value28/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value28Payload.subtypePayload
+                    /// Creates a new `Value28Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value28Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value28Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value28Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value28Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value28`.
+                public var value28: Components.Schemas.DiagnosticCategory.Value1Payload.Value28Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value29`.
+                public struct Value29Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value29/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I29 = "I29"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value29/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value29Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value29/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case serverStatus = "serverStatus"
+                        case installServer = "installServer"
+                        case updateServer = "updateServer"
+                        case repairServer = "repairServer"
+                        case restartServer = "restartServer"
+                        case uninstallServer = "uninstallServer"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value29/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value29Payload.subtypePayload
+                    /// Creates a new `Value29Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value29Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value29Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value29Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value29Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value29`.
+                public var value29: Components.Schemas.DiagnosticCategory.Value1Payload.Value29Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value30`.
+                public struct Value30Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value30/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case I30 = "I30"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value30/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value30Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value30/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case reconnect = "reconnect"
+                        case retryLoad = "retryLoad"
+                        case serverMismatch = "serverMismatch"
+                        case offlineView = "offlineView"
+                        case disabledWriteIntent = "disabledWriteIntent"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value30/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value30Payload.subtypePayload
+                    /// Creates a new `Value30Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value30Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value30Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value30Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value30Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value30`.
+                public var value30: Components.Schemas.DiagnosticCategory.Value1Payload.Value30Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value31`.
+                public struct Value31Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value31/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case C01 = "C01"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value31/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value31Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value31/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case _init = "init"
+                        case login = "login"
+                        case logout = "logout"
+                        case whoami = "whoami"
+                        case reset_hyphen_passphrase = "reset-passphrase"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value31/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value31Payload.subtypePayload
+                    /// Creates a new `Value31Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value31Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value31Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value31Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value31Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value31`.
+                public var value31: Components.Schemas.DiagnosticCategory.Value1Payload.Value31Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value32`.
+                public struct Value32Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value32/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case C02 = "C02"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value32/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value32Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value32/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case list = "list"
+                        case show = "show"
+                        case history = "history"
+                        case review_period_daily = "review.daily"
+                        case review_period_weekly = "review.weekly"
+                        case graph = "graph"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value32/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value32Payload.subtypePayload
+                    /// Creates a new `Value32Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value32Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value32Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value32Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value32Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value32`.
+                public var value32: Components.Schemas.DiagnosticCategory.Value1Payload.Value32Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value33`.
+                public struct Value33Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value33/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case C03 = "C03"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value33/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value33Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value33/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case add = "add"
+                        case edit = "edit"
+                        case done = "done"
+                        case cancel = "cancel"
+                        case reopen = "reopen"
+                        case rm = "rm"
+                        case purge = "purge"
+                        case revert = "revert"
+                        case move = "move"
+                        case copy = "copy"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value33/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value33Payload.subtypePayload
+                    /// Creates a new `Value33Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value33Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value33Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value33Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value33Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value33`.
+                public var value33: Components.Schemas.DiagnosticCategory.Value1Payload.Value33Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value34`.
+                public struct Value34Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value34/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case C04 = "C04"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value34/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value34Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value34/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case attach = "attach"
+                        case detach = "detach"
+                        case label_hyphen_attachment = "label-attachment"
+                        case attach_hyphen_many = "attach-many"
+                        case batch_hyphen_edit = "batch-edit"
+                        case depend = "depend"
+                        case undepend = "undepend"
+                        case batch_hyphen_depend = "batch-depend"
+                        case _import = "import"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value34/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value34Payload.subtypePayload
+                    /// Creates a new `Value34Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value34Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value34Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value34Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value34Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value34`.
+                public var value34: Components.Schemas.DiagnosticCategory.Value1Payload.Value34Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value35`.
+                public struct Value35Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value35/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case C05 = "C05"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value35/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value35Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value35/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case profile_period_list = "profile.list"
+                        case profile_period_delete = "profile.delete"
+                        case lookup = "lookup"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value35/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value35Payload.subtypePayload
+                    /// Creates a new `Value35Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value35Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value35Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value35Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value35Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value35`.
+                public var value35: Components.Schemas.DiagnosticCategory.Value1Payload.Value35Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value36`.
+                public struct Value36Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value36/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case C06 = "C06"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value36/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value36Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value36/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case snapshot_period_create = "snapshot.create"
+                        case snapshot_period_list = "snapshot.list"
+                        case snapshot_period_show = "snapshot.show"
+                        case snapshot_period_restore = "snapshot.restore"
+                        case snapshot_period_prune = "snapshot.prune"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value36/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value36Payload.subtypePayload
+                    /// Creates a new `Value36Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value36Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value36Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value36Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value36Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value36`.
+                public var value36: Components.Schemas.DiagnosticCategory.Value1Payload.Value36Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value37`.
+                public struct Value37Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value37/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case C07 = "C07"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value37/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value37Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value37/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case parse = "parse"
+                        case export = "export"
+                        case sync_period_obsidian = "sync.obsidian"
+                        case config_period_show = "config.show"
+                        case config_period_get = "config.get"
+                        case config_period_set = "config.set"
+                        case schema = "schema"
+                        case man = "man"
+                        case help = "help"
+                        case version = "version"
+                        case completion = "completion"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value37/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value37Payload.subtypePayload
+                    /// Creates a new `Value37Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value37Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value37Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value37Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value37Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value37`.
+                public var value37: Components.Schemas.DiagnosticCategory.Value1Payload.Value37Payload?
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value38`.
+                public struct Value38Payload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value38/inventory_id`.
+                    @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case C08 = "C08"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value38/inventory_id`.
+                    public var inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value38Payload.inventory_idPayload
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value38/subtype`.
+                    @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case diagnostics = "diagnostics"
+                        case diagnostics_period_follow = "diagnostics.follow"
+                        case top = "top"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value38/subtype`.
+                    public var subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value38Payload.subtypePayload
+                    /// Creates a new `Value38Payload`.
+                    ///
+                    /// - Parameters:
+                    ///   - inventory_id:
+                    ///   - subtype:
+                    public init(
+                        inventory_id: Components.Schemas.DiagnosticCategory.Value1Payload.Value38Payload.inventory_idPayload,
+                        subtype: Components.Schemas.DiagnosticCategory.Value1Payload.Value38Payload.subtypePayload
+                    ) {
+                        self.inventory_id = inventory_id
+                        self.subtype = subtype
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case inventory_id
+                        case subtype
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.inventory_id = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value38Payload.inventory_idPayload.self,
+                            forKey: .inventory_id
+                        )
+                        self.subtype = try container.decode(
+                            Components.Schemas.DiagnosticCategory.Value1Payload.Value38Payload.subtypePayload.self,
+                            forKey: .subtype
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "inventory_id",
+                            "subtype"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.inventory_id, forKey: .inventory_id)
+                        try container.encode(self.subtype, forKey: .subtype)
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1/value38`.
+                public var value38: Components.Schemas.DiagnosticCategory.Value1Payload.Value38Payload?
+                /// Creates a new `Value1Payload`.
+                ///
+                /// - Parameters:
+                ///   - value1:
+                ///   - value2:
+                ///   - value3:
+                ///   - value4:
+                ///   - value5:
+                ///   - value6:
+                ///   - value7:
+                ///   - value8:
+                ///   - value9:
+                ///   - value10:
+                ///   - value11:
+                ///   - value12:
+                ///   - value13:
+                ///   - value14:
+                ///   - value15:
+                ///   - value16:
+                ///   - value17:
+                ///   - value18:
+                ///   - value19:
+                ///   - value20:
+                ///   - value21:
+                ///   - value22:
+                ///   - value23:
+                ///   - value24:
+                ///   - value25:
+                ///   - value26:
+                ///   - value27:
+                ///   - value28:
+                ///   - value29:
+                ///   - value30:
+                ///   - value31:
+                ///   - value32:
+                ///   - value33:
+                ///   - value34:
+                ///   - value35:
+                ///   - value36:
+                ///   - value37:
+                ///   - value38:
+                public init(
+                    value1: Components.Schemas.DiagnosticCategory.Value1Payload.Value1Payload? = nil,
+                    value2: Components.Schemas.DiagnosticCategory.Value1Payload.Value2Payload? = nil,
+                    value3: Components.Schemas.DiagnosticCategory.Value1Payload.Value3Payload? = nil,
+                    value4: Components.Schemas.DiagnosticCategory.Value1Payload.Value4Payload? = nil,
+                    value5: Components.Schemas.DiagnosticCategory.Value1Payload.Value5Payload? = nil,
+                    value6: Components.Schemas.DiagnosticCategory.Value1Payload.Value6Payload? = nil,
+                    value7: Components.Schemas.DiagnosticCategory.Value1Payload.Value7Payload? = nil,
+                    value8: Components.Schemas.DiagnosticCategory.Value1Payload.Value8Payload? = nil,
+                    value9: Components.Schemas.DiagnosticCategory.Value1Payload.Value9Payload? = nil,
+                    value10: Components.Schemas.DiagnosticCategory.Value1Payload.Value10Payload? = nil,
+                    value11: Components.Schemas.DiagnosticCategory.Value1Payload.Value11Payload? = nil,
+                    value12: Components.Schemas.DiagnosticCategory.Value1Payload.Value12Payload? = nil,
+                    value13: Components.Schemas.DiagnosticCategory.Value1Payload.Value13Payload? = nil,
+                    value14: Components.Schemas.DiagnosticCategory.Value1Payload.Value14Payload? = nil,
+                    value15: Components.Schemas.DiagnosticCategory.Value1Payload.Value15Payload? = nil,
+                    value16: Components.Schemas.DiagnosticCategory.Value1Payload.Value16Payload? = nil,
+                    value17: Components.Schemas.DiagnosticCategory.Value1Payload.Value17Payload? = nil,
+                    value18: Components.Schemas.DiagnosticCategory.Value1Payload.Value18Payload? = nil,
+                    value19: Components.Schemas.DiagnosticCategory.Value1Payload.Value19Payload? = nil,
+                    value20: Components.Schemas.DiagnosticCategory.Value1Payload.Value20Payload? = nil,
+                    value21: Components.Schemas.DiagnosticCategory.Value1Payload.Value21Payload? = nil,
+                    value22: Components.Schemas.DiagnosticCategory.Value1Payload.Value22Payload? = nil,
+                    value23: Components.Schemas.DiagnosticCategory.Value1Payload.Value23Payload? = nil,
+                    value24: Components.Schemas.DiagnosticCategory.Value1Payload.Value24Payload? = nil,
+                    value25: Components.Schemas.DiagnosticCategory.Value1Payload.Value25Payload? = nil,
+                    value26: Components.Schemas.DiagnosticCategory.Value1Payload.Value26Payload? = nil,
+                    value27: Components.Schemas.DiagnosticCategory.Value1Payload.Value27Payload? = nil,
+                    value28: Components.Schemas.DiagnosticCategory.Value1Payload.Value28Payload? = nil,
+                    value29: Components.Schemas.DiagnosticCategory.Value1Payload.Value29Payload? = nil,
+                    value30: Components.Schemas.DiagnosticCategory.Value1Payload.Value30Payload? = nil,
+                    value31: Components.Schemas.DiagnosticCategory.Value1Payload.Value31Payload? = nil,
+                    value32: Components.Schemas.DiagnosticCategory.Value1Payload.Value32Payload? = nil,
+                    value33: Components.Schemas.DiagnosticCategory.Value1Payload.Value33Payload? = nil,
+                    value34: Components.Schemas.DiagnosticCategory.Value1Payload.Value34Payload? = nil,
+                    value35: Components.Schemas.DiagnosticCategory.Value1Payload.Value35Payload? = nil,
+                    value36: Components.Schemas.DiagnosticCategory.Value1Payload.Value36Payload? = nil,
+                    value37: Components.Schemas.DiagnosticCategory.Value1Payload.Value37Payload? = nil,
+                    value38: Components.Schemas.DiagnosticCategory.Value1Payload.Value38Payload? = nil
+                ) {
+                    self.value1 = value1
+                    self.value2 = value2
+                    self.value3 = value3
+                    self.value4 = value4
+                    self.value5 = value5
+                    self.value6 = value6
+                    self.value7 = value7
+                    self.value8 = value8
+                    self.value9 = value9
+                    self.value10 = value10
+                    self.value11 = value11
+                    self.value12 = value12
+                    self.value13 = value13
+                    self.value14 = value14
+                    self.value15 = value15
+                    self.value16 = value16
+                    self.value17 = value17
+                    self.value18 = value18
+                    self.value19 = value19
+                    self.value20 = value20
+                    self.value21 = value21
+                    self.value22 = value22
+                    self.value23 = value23
+                    self.value24 = value24
+                    self.value25 = value25
+                    self.value26 = value26
+                    self.value27 = value27
+                    self.value28 = value28
+                    self.value29 = value29
+                    self.value30 = value30
+                    self.value31 = value31
+                    self.value32 = value32
+                    self.value33 = value33
+                    self.value34 = value34
+                    self.value35 = value35
+                    self.value36 = value36
+                    self.value37 = value37
+                    self.value38 = value38
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    var errors: [any Swift.Error] = []
+                    do {
+                        self.value1 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value2 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value3 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value4 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value5 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value6 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value7 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value8 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value9 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value10 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value11 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value12 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value13 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value14 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value15 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value16 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value17 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value18 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value19 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value20 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value21 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value22 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value23 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value24 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value25 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value26 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value27 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value28 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value29 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value30 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value31 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value32 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value33 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value34 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value35 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value36 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value37 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    do {
+                        self.value38 = try .init(from: decoder)
+                    } catch {
+                        errors.append(error)
+                    }
+                    try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                        [
+                            self.value1,
+                            self.value2,
+                            self.value3,
+                            self.value4,
+                            self.value5,
+                            self.value6,
+                            self.value7,
+                            self.value8,
+                            self.value9,
+                            self.value10,
+                            self.value11,
+                            self.value12,
+                            self.value13,
+                            self.value14,
+                            self.value15,
+                            self.value16,
+                            self.value17,
+                            self.value18,
+                            self.value19,
+                            self.value20,
+                            self.value21,
+                            self.value22,
+                            self.value23,
+                            self.value24,
+                            self.value25,
+                            self.value26,
+                            self.value27,
+                            self.value28,
+                            self.value29,
+                            self.value30,
+                            self.value31,
+                            self.value32,
+                            self.value33,
+                            self.value34,
+                            self.value35,
+                            self.value36,
+                            self.value37,
+                            self.value38
+                        ],
+                        type: Self.self,
+                        codingPath: decoder.codingPath,
+                        errors: errors
+                    )
+                }
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    try self.value1?.encode(to: encoder)
+                    try self.value2?.encode(to: encoder)
+                    try self.value3?.encode(to: encoder)
+                    try self.value4?.encode(to: encoder)
+                    try self.value5?.encode(to: encoder)
+                    try self.value6?.encode(to: encoder)
+                    try self.value7?.encode(to: encoder)
+                    try self.value8?.encode(to: encoder)
+                    try self.value9?.encode(to: encoder)
+                    try self.value10?.encode(to: encoder)
+                    try self.value11?.encode(to: encoder)
+                    try self.value12?.encode(to: encoder)
+                    try self.value13?.encode(to: encoder)
+                    try self.value14?.encode(to: encoder)
+                    try self.value15?.encode(to: encoder)
+                    try self.value16?.encode(to: encoder)
+                    try self.value17?.encode(to: encoder)
+                    try self.value18?.encode(to: encoder)
+                    try self.value19?.encode(to: encoder)
+                    try self.value20?.encode(to: encoder)
+                    try self.value21?.encode(to: encoder)
+                    try self.value22?.encode(to: encoder)
+                    try self.value23?.encode(to: encoder)
+                    try self.value24?.encode(to: encoder)
+                    try self.value25?.encode(to: encoder)
+                    try self.value26?.encode(to: encoder)
+                    try self.value27?.encode(to: encoder)
+                    try self.value28?.encode(to: encoder)
+                    try self.value29?.encode(to: encoder)
+                    try self.value30?.encode(to: encoder)
+                    try self.value31?.encode(to: encoder)
+                    try self.value32?.encode(to: encoder)
+                    try self.value33?.encode(to: encoder)
+                    try self.value34?.encode(to: encoder)
+                    try self.value35?.encode(to: encoder)
+                    try self.value36?.encode(to: encoder)
+                    try self.value37?.encode(to: encoder)
+                    try self.value38?.encode(to: encoder)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value1`.
+            public var value1: Components.Schemas.DiagnosticCategory.Value1Payload?
+            /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value2`.
+            public struct Value2Payload: Codable, Hashable, Sendable {
+                private var _explicitNullKeys: Set<String> = []
+
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value2/inventory_id`.
+                @frozen public enum inventory_idPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case unknown = "unknown"
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value2/inventory_id`.
+                public var inventory_id: Components.Schemas.DiagnosticCategory.Value2Payload.inventory_idPayload
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value2/subtype`.
+                @frozen public enum subtypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case unknown = "unknown"
+                }
+                /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value2/subtype`.
+                public var subtype: Components.Schemas.DiagnosticCategory.Value2Payload.subtypePayload
+                /// Creates a new `Value2Payload`.
+                ///
+                /// - Parameters:
+                ///   - inventory_id:
+                ///   - subtype:
+                public init(
+                    inventory_id: Components.Schemas.DiagnosticCategory.Value2Payload.inventory_idPayload,
+                    subtype: Components.Schemas.DiagnosticCategory.Value2Payload.subtypePayload
+                ) {
+                    self.inventory_id = inventory_id
+                    self.subtype = subtype
+                }
+                public enum CodingKeys: String, CodingKey {
+                    case inventory_id
+                    case subtype
+                }
+                public init(from decoder: any Swift.Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                    self.inventory_id = try container.decode(
+                        Components.Schemas.DiagnosticCategory.Value2Payload.inventory_idPayload.self,
+                        forKey: .inventory_id
+                    )
+                    self.subtype = try container.decode(
+                        Components.Schemas.DiagnosticCategory.Value2Payload.subtypePayload.self,
+                        forKey: .subtype
+                    )
+                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                        "inventory_id",
+                        "subtype"
+                    ])
+                }
+
+                public func encode(to encoder: any Swift.Encoder) throws {
+                    var container = encoder.container(keyedBy: CodingKeys.self)
+                    try container.encode(self.inventory_id, forKey: .inventory_id)
+                    try container.encode(self.subtype, forKey: .subtype)
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/DiagnosticCategory/value2`.
+            public var value2: Components.Schemas.DiagnosticCategory.Value2Payload?
+            /// Creates a new `DiagnosticCategory`.
+            ///
+            /// - Parameters:
+            ///   - value1:
+            ///   - value2:
+            public init(
+                value1: Components.Schemas.DiagnosticCategory.Value1Payload? = nil,
+                value2: Components.Schemas.DiagnosticCategory.Value2Payload? = nil
+            ) {
+                self.value1 = value1
+                self.value2 = value2
+            }
+            public init(from decoder: any Swift.Decoder) throws {
+                var errors: [any Swift.Error] = []
+                do {
+                    self.value1 = try .init(from: decoder)
+                } catch {
+                    errors.append(error)
+                }
+                do {
+                    self.value2 = try .init(from: decoder)
+                } catch {
+                    errors.append(error)
+                }
+                try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                    [
+                        self.value1,
+                        self.value2
+                    ],
+                    type: Self.self,
+                    codingPath: decoder.codingPath,
+                    errors: errors
+                )
+            }
+            public func encode(to encoder: any Swift.Encoder) throws {
+                try self.value1?.encode(to: encoder)
+                try self.value2?.encode(to: encoder)
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/StoredDependencyError`.
         public struct StoredDependencyError: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/StoredDependencyError/value1`.

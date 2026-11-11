@@ -197,7 +197,7 @@ export const DiagnosticCategory = Schema.Union([
     inventory_id: Schema.Literal("unknown"),
     subtype: Schema.Literal("unknown"),
   }),
-]);
+]).annotate({ identifier: "DiagnosticCategory" });
 export const DiagnosticEnvelope = Schema.Struct({
   schema_version: Schema.Literal(1),
   ...identity,

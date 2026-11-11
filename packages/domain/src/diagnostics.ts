@@ -1,5 +1,6 @@
 import { Schema } from "effect";
 import { CredentialInfo } from "./auth/model.ts";
+import { DiagnosticProfiler } from "./diagnostic-context.ts";
 
 import { TaskMutationKind } from "./events.ts";
 import { ProfileId } from "./ids.ts";
@@ -47,6 +48,7 @@ export const DiagnosticError = Schema.Struct({
   route: Schema.String,
 });
 export const DiagnosticsSnapshot = Schema.Struct({
+  profiler: Schema.optionalKey(DiagnosticProfiler),
   generated_at: Instant,
   poll_interval_ms: Schema.Literal(1000),
   runtime: Schema.Struct({

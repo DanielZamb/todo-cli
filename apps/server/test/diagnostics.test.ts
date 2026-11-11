@@ -208,3 +208,20 @@ it.effect(
       }),
     ),
 );
+
+it.effect("adds one versioned profiler object only to owner Diagnostics", () =>
+  Effect.scoped(
+    Effect.gen(function* () {
+      const { get, session, token } = yield* fixture;
+      const owner = yield* get(session.credential);
+      const body = yield* Effect.promise(() => owner.json());
+      expect(body.profiler.schema_version).toBe(1);
+      expect(body.profiler.capacity).toBe(2048);
+      expect(body.profiler.unobserved).toContain("socket_accept_to_entry");
+      const agent = yield* get(token.credential);
+      expect(agent.headers.get("server-timing")).toBe(null);
+      const refused = yield* Effect.promise(() => agent.text());
+      expect(refused).not.toContain("profiler");
+    }),
+  ),
+);
