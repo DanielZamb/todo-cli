@@ -13,9 +13,7 @@ public struct ClientRequestCorrelation: ClientMiddleware {
         request.headerFields[HTTPField.Name("X-Todo-Request")!] = id.uuidString.lowercased()
         request.headerFields[HTTPField.Name("X-Todo-Action")!] = action.uuidString.lowercased()
         return try await ClientDiagnosticContext.$traceID.withValue(trace) {
-            try await ClientDiagnosticContext.$actionID.withValue(action) {
-                try await ClientDiagnosticContext.$requestID.withValue(id) { try await next(request, body, baseURL) }
-            }
+            try await ClientDiagnosticContext.$requestID.withValue(id) { try await next(request, body, baseURL) }
         }
     }
 }

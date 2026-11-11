@@ -42,6 +42,23 @@ retention evidence, not an observed owner day.
 
 ## Gotchas
 
+Direct recorder calls do not prove request classification. The generated-client
+drive must traverse the production correlation middleware, transport and
+URLSession metrics callback. Require two background health and Diagnostics
+polls to aggregate, while an interaction's request keeps its phases. The
+opaque Action header must not create a semantic interaction context.
+
+Fill both small journal files, then send 100 healthy background requests
+without a periodic flag through that client. Require the literal count of
+each seeded interaction, refresh, stream, availability and stall class to
+remain two. A failed request must keep all three phases above the routine
+write threshold. Periodic classification is not a retention safety boundary.
+
+Measure the open-Diagnostics byte rate through real generated requests and
+model refreshes. State the synthetic clock and interaction workload, the
+actual request counts and writer bytes. A direct-recorder replay alone cannot
+qualify the production retention estimate.
+
 Do not run cleanup against the real application data directory. Stored metadata
 from an earlier owner run is not an authenticated export until the current owner
 Session is validated. Never read request URLs or bodies into event fields.

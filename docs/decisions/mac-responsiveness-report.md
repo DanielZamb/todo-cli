@@ -612,6 +612,12 @@ in-window captures follow with the retention and panel corrections.
 
 ## Review correction: retention, polling and the live panel
 
+Candidate 2 was held before installation. Its retention replay bypassed the
+correlation middleware, which supplied a synthetic action context to every
+request. The 25.61-hour open-Diagnostics figure below is a direct-recorder
+estimate and does not establish production retention. The generated-client
+correction and new measurement follow in the next section.
+
 The journal has two files of at most 64 MiB each, allocated as records arrive.
 The active watchdog ticks every 16 ms. Inactive or hidden applications tick
 once a second and report an inactive heartbeat instead of a stall. A real
@@ -668,3 +674,60 @@ Export contains the summary and the last 512 in-memory events. The two
 private journal files retain the longer session. ADR-0009 Electron and CLI
 parity remains owed by the separate cross-client unit. The remaining category
 cuts in the inventory still apply.
+
+## Candidate 3: production classification boundary
+
+The correlation middleware keeps all three required opaque UUID headers but
+preserves the caller's semantic action context. A generated header identifier
+does not turn a background request into an interaction. Explicit periodic
+health and Diagnostics calls can therefore reach the aggregate path.
+
+Journal priority also works without a periodic flag. Ordinary request and
+decode phases with no interaction are routine. Interaction, refresh, stream,
+availability and stall records are critical, as are failed requests and
+requests over 300 ms. Background request phases remain live in memory and
+are buffered for the journal until the finish determines their priority.
+Exceptional requests promote all their buffered phases together. Routine
+entries cannot rotate a file and are thinned above its three-quarter limit.
+The private pending queue carries priority independently of serialized data.
+
+The failing control uses the actual generated client, production middleware,
+transport and URLSession metrics. Two background polls and one interactive
+request produced nine literal classification issues before the fix. A second
+control seeded both 16 KiB files and sent 100 background health requests with
+the periodic flag absent. Each of five protected classes fell from two records
+to zero. No routine thinning occurred. That control produced seven issues.
+It proves the install blocker that the direct-recorder tests missed.
+
+Candidate 3 changes no refresh policy, session ownership, view body or HTTP
+contract. The remaining UI review findings are queued after installation.
+The generated-client green proof passes 29 tests in three suites. The same
+100-request flood preserves two records of every seeded critical class and
+thins 278 routine records. A further generated request with a scoped Token
+receives the expected 403 and retains exactly its three phases, including the
+buffered start and headers. Both background poll routes aggregate; the
+interaction request keeps its own phases.
+
+The new rate measurement sends 9,660 real generated HTTP requests. Production
+model refreshes account for 960 reads in 120 full refreshes. Health accounts
+for 5,580 polls and Diagnostics for 3,120. The clock, 241 completed interactions,
+300 superseded Searches and resource samples are synthetic. The background
+poll fixture reuses one generated Client; catalog reads use the production
+model's default factory. This measures encoded journal bytes through the real
+middleware and writer, not native UI latency or an observed owner hour.
+
+That replay writes 2,590,737 bytes per active hour, or 25.903 hours in one
+64 MiB file at that rate. Subsequent idle writes average 19,503 bytes an hour.
+The evening interaction survives twelve idle hours with zero dropped records
+or journal failures. The cap remains two 64 MiB files. More actions, material
+resource changes or slow requests can shorten retention.
+
+The final candidate gates pass on these unchanged product and test bytes:
+195 state and contract tests in 29 suites, the 29-test Release Diagnostics
+proof, the unsigned Release app build and the root check. The real five-minute
+idle proof makes zero requests, full refreshes or reconnects and stays writable.
+The Diagnostics-enabled subscriber counts remain one after ten switches,
+credential replacement and selected Profile deletion, then return to zero at
+the signed-out network boundary. No view file changed, so the coordinator did
+not require another complete design run. These receipts do not qualify native
+input or the owner's interaction percentiles.

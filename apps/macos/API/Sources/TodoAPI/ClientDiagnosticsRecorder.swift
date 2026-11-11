@@ -22,7 +22,8 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
     private var lastJournalResources: ClientDiagnosticResources?
     private var lastJournalActivity: Bool?
     private var applicationActive: Bool?
-    private var pending: [ClientDiagnosticEvent] = []
+    private struct JournalRecord: Sendable { let event: ClientDiagnosticEvent; let routine: Bool }
+    private var pending: [JournalRecord] = []
     private var draining = false
     private var epoch = 0
     private var dropped = 0
@@ -121,7 +122,7 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
             appendLocked(event)
         }
     }
-    private func appendLocked(_ event: ClientDiagnosticEvent, journal: Bool = true) {
+    private func appendLocked(_ event: ClientDiagnosticEvent, journal: Bool = true, critical: Bool = false) {
         guard authorized else { return }
         recorded += 1
         if event.name == .refreshStarted { refreshTotal += 1 }
@@ -135,15 +136,20 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
         if event.name != .resourcesSampled && event.name != .pollsAggregated { recentActivity.append(event); if recentActivity.count > 32 { recentActivity.removeFirst() } }
         guard journal else { return }
         if event.name == .resourcesSampled && !shouldJournalResource(event) { return }
-        if enqueueLocked(event), event.name == .resourcesSampled { lastResourceJournalAt = event.monotonicMS; lastJournalResources = event.resources; lastJournalActivity = event.applicationActive }
+        if enqueueLocked(event, critical: critical), event.name == .resourcesSampled { lastResourceJournalAt = event.monotonicMS; lastJournalResources = event.resources; lastJournalActivity = event.applicationActive }
     }
-    private static func routine(_ event: ClientDiagnosticEvent) -> Bool { event.name == .resourcesSampled || event.name == .pollsAggregated }
-    @discardableResult private func enqueueLocked(_ event: ClientDiagnosticEvent) -> Bool {
+    private static func routine(_ event: ClientDiagnosticEvent) -> Bool {
+        if event.name == .resourcesSampled || event.name == .pollsAggregated { return true }
+        guard event.name == .requestStarted || event.name == .requestHeaders || event.name == .requestFinished || event.name == .decodeFinished else { return false }
+        return event.actionID == nil && event.reason == nil && (event.status ?? 200) < 400 && (event.durationMS ?? 0) <= 300 && !(event.name == .requestFinished && event.status == nil)
+    }
+    @discardableResult private func enqueueLocked(_ event: ClientDiagnosticEvent, critical: Bool = false) -> Bool {
+        let routine = !critical && Self.routine(event)
         if pending.count == Self.historyLimit {
-            if !Self.routine(event), let index = pending.firstIndex(where: Self.routine) { pending.remove(at: index); routineRecordsThinned += 1 }
-            else { if Self.routine(event) { routineRecordsThinned += 1 } else { dropped += 1 }; return false }
+            if !routine, let index = pending.firstIndex(where: { $0.routine }) { pending.remove(at: index); routineRecordsThinned += 1 }
+            else { if routine { routineRecordsThinned += 1 } else { dropped += 1 }; return false }
         }
-        pending.append(event)
+        pending.append(.init(event: event, routine: routine))
         if !draining { draining = true; let scope = epoch; writer.async { [self] in drain(scope: scope) } }
         return true
     }
@@ -170,7 +176,7 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
     private func drain(scope: Int) {
         let encoder = JSONEncoder()
         while true {
-            let batch: (Int, [ClientDiagnosticEvent])? = lock.withLock {
+            let batch: (Int, [JournalRecord])? = lock.withLock {
                 guard epoch == scope else { return nil }
                 if !authorized { draining = false; return nil }
                 if pending.isEmpty { draining = false; return nil }
@@ -178,13 +184,14 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
                 return (epoch, batch)
             }
             guard let (batchEpoch, batch) = batch else { return }
-            for event in batch {
+            for entry in batch {
+                let event = entry.event
                 guard lock.withLock({ authorized && epoch == batchEpoch }) else { break }
                 do {
                     var line = try encoder.encode(event)
                     guard line.count <= 4096 else { lock.withLock { dropped += 1 }; continue }
                     line.append(10)
-                    let written = try appendJournal(line, routine: Self.routine(event))
+                    let written = try appendJournal(line, routine: entry.routine)
                     lock.withLock { if epoch == batchEpoch { if written { journalBytesWritten += line.count } else { routineRecordsThinned += 1 } } }
                 } catch { lock.withLock { if epoch == batchEpoch { journalFailures += 1 } } }
             }
@@ -327,7 +334,7 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
             if routine { record.inputKind = .background }
             requests[id] = Request(trace: ClientDiagnosticContext.traceID ?? id, operation: operation, refresh: refresh, action: action, started: clock(), routine: routine, start: record)
             if let refresh { refreshCounts[refresh, default: 0] += 1 }
-            appendLocked(record, journal: !routine)
+            appendLocked(record, journal: action != nil)
             return id
         }
     }
@@ -338,7 +345,7 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
             var record = event(.requestHeaders); record.requestID = id; record.traceID = request.trace; record.refreshID = request.refresh; record.actionID = request.action; record.operation = request.operation; record.status = status; record.serverHandlerMS = serverSpans?.handler; record.serverSpans = serverSpans; record.acceptedRequestID = acceptedRequestID; record.durationMS = clock() - request.started
             record.mode = request.start.mode; record.inputKind = request.start.inputKind
             requests[id]?.headers = record
-            appendLocked(record, journal: !request.routine)
+            appendLocked(record, journal: request.action != nil)
         }
     }
     public func requestFinished(_ id: UUID?, status: Int?, reason: ClientDiagnosticReason? = nil, phases: ClientDiagnosticRequestPhases? = nil) {
@@ -352,20 +359,22 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
             }
             var record = event(.requestFinished); record.requestID = id; record.traceID = request.trace; record.refreshID = request.refresh; record.actionID = request.action; record.operation = request.operation; record.status = status; record.reason = reason; record.phases = phases; record.durationMS = duration
             record.mode = request.start.mode; record.inputKind = request.start.inputKind
-            if request.routine && (polls[request.operation] != nil || polls.count < 16) {
+            let aggregate = request.routine && (polls[request.operation] != nil || polls.count < 16)
+            let failed = reason != nil || status == nil || (status ?? 0) >= 400
+            let exceptional = failed || duration > 300
+            if aggregate {
                 flushPollsDue(now)
                 if pollWindowStarted == nil { pollWindowStarted = now }
-                let failed = reason != nil || status == nil || (status ?? 0) >= 400
                 let handler = phases?.serverHandlerMS ?? request.headers?.serverHandlerMS
                 polls[request.operation, default: PollBucket()].add(duration: duration, failed: failed, handler: handler)
                 pendingPolls[request.operation, default: PollBucket()].add(duration: duration, failed: failed, handler: handler)
-                let exceptional = failed || duration > 300
-                if exceptional { enqueueLocked(request.start); if let headers = request.headers { enqueueLocked(headers) } }
-                appendLocked(record, journal: exceptional)
-            } else {
-                if request.routine { enqueueLocked(request.start); if let headers = request.headers { enqueueLocked(headers) } }
-                appendLocked(record)
             }
+            let journal = !aggregate || exceptional
+            if request.action == nil && journal {
+                enqueueLocked(request.start, critical: exceptional)
+                if let headers = request.headers { enqueueLocked(headers, critical: exceptional) }
+            }
+            appendLocked(record, journal: journal, critical: exceptional)
         }
     }
     public func availabilityChanged(_ value: ClientDiagnosticAvailability) {

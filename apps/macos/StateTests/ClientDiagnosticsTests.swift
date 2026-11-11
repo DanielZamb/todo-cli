@@ -778,3 +778,189 @@ private final class DiagnosticTickCounter: @unchecked Sendable {
         try? FileManager.default.removeItem(at: output.appendingPathComponent("panel-journal"))
     }
 }
+
+extension ClientDiagnosticsLiveTests {
+    private func pollingCredential(_ server: URL) async throws -> String {
+        try await todoClient(server: server, credential: "").signIn_period_signIn(body: .json(.init(passphrase: "scratch verification passphrase"))).ok.body.json.credential
+    }
+    private func generatedPoll(_ api: Client, recorder: ClientDiagnosticsRecorder, diagnostics: Bool = false, periodic: Bool = true) async throws {
+        let before = (await recorder.snapshot()).recentRequests.last?.requestID
+        try await ClientDiagnosticContext.$periodicPoll.withValue(periodic) { () async throws in
+            if diagnostics { _ = try await api.diagnostics_period_snapshot().ok.body.json }
+            else { _ = try await api.system_period_health().ok.body.json }
+        }
+        for _ in 0..<2000 {
+            if (await recorder.snapshot()).recentRequests.last?.requestID != before { return }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        Issue.record("Generated request did not receive its URLSession metrics finish")
+    }
+    private func journalRecords(_ directory: URL) throws -> [ClientDiagnosticEvent] {
+        try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "ndjson" }
+            .flatMap { try Data(contentsOf: $0).split(separator: 10).map { try JSONDecoder().decode(ClientDiagnosticEvent.self, from: Data($0)) } }
+    }
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_CLIENT_DIAGNOSTICS_SERVER"] != nil))
+    func generatedMiddlewareKeepsOpaqueHeadersSeparateFromInteractionIntent() async throws {
+        let server = try #require(ProcessInfo.processInfo.environment["TODO_CLIENT_DIAGNOSTICS_SERVER"].flatMap(URL.init(string:)))
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("todo-s01-verify-generated-polls-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let clock = DiagnosticTestClock(), recorder = ClientDiagnosticsRecorder(journalDirectory: directory, clock: { clock.read() })
+        let api = todoClient(server: server, credential: try await pollingCredential(server), diagnostics: recorder)
+        recorder.authorizeOwnerSession(true)
+        try await generatedPoll(api, recorder: recorder)
+        try await generatedPoll(api, recorder: recorder, diagnostics: true)
+        let action = try #require(recorder.beginAction(.complete, inputMS: clock.read()))
+        try await ClientDiagnosticContext.$actionID.withValue(action) { () async throws in
+            try await generatedPoll(api, recorder: recorder)
+        }
+        recorder.handlerStarted(action); recorder.resultPublished(action); recorder.layoutCommitted(action)
+        clock.set(62_000)
+        let snapshot = await recorder.snapshot(); await recorder.flush()
+        #expect(snapshot.requests == 3)
+        #expect(snapshot.polls.reduce(0) { $0 + $1.count } == 2)
+        #expect(snapshot.recentRequests.filter { $0.actionID == nil }.count == 2)
+        #expect(snapshot.recentRequests.filter { $0.actionID == action }.count == 1)
+        #expect(snapshot.recentRequests.allSatisfy { $0.traceID != nil && $0.requestID != nil })
+        let records = try journalRecords(directory)
+        #expect(records.filter { $0.name == .pollsAggregated }.count == 2)
+        for name in [ClientDiagnosticName.requestStarted, .requestHeaders, .requestFinished] {
+            #expect(records.filter { $0.name == name }.count == 1)
+            #expect(records.filter { $0.name == name }.allSatisfy { $0.actionID == action })
+        }
+        recorder.clear(); await recorder.flush()
+    }
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_CLIENT_DIAGNOSTICS_SERVER"] != nil))
+    func generatedBackgroundRequestsCannotRotateAwayCriticalRecordsWithoutAPeriodicFlag() async throws {
+        let server = try #require(ProcessInfo.processInfo.environment["TODO_CLIENT_DIAGNOSTICS_SERVER"].flatMap(URL.init(string:)))
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("todo-s01-verify-generated-flood-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let clock = DiagnosticTestClock(), recorder = ClientDiagnosticsRecorder(journalDirectory: directory, journalFileLimit: 16_384, clock: { clock.read() })
+        let api = todoClient(server: server, credential: try await pollingCredential(server), diagnostics: recorder)
+        recorder.authorizeOwnerSession(true)
+        func critical(_ serial: Int) async {
+            let action = recorder.beginAction(.taskSelection, inputMS: clock.read()); recorder.handlerStarted(action); recorder.resultPublished(action); recorder.layoutCommitted(action)
+            let refresh = recorder.refreshStarted(.manual); recorder.refreshFinished(refresh, outcome: .applied, durationMS: 1)
+            var stream = ClientDiagnosticEvent(name: .streamDropped, run: recorder.run); stream.reason = .cleanEnd; recorder.record(stream)
+            recorder.availabilityChanged(.init(loading: serial == 1, busy: false, canWrite: serial != 1, dataReady: true, reason: .ready))
+            var stall = ClientDiagnosticEvent(name: .stall, run: recorder.run); stall.durationMS = 150; recorder.record(stall)
+            await recorder.flush()
+        }
+        await critical(1)
+        for _ in 0..<200 {
+            if FileManager.default.fileExists(atPath: directory.appendingPathComponent("previous.ndjson").path) { break }
+            recorder.record(.init(name: .streamConnected, run: recorder.run, now: clock.read())); await recorder.flush()
+        }
+        #expect(FileManager.default.fileExists(atPath: directory.appendingPathComponent("previous.ndjson").path))
+        await critical(2)
+        let names: [ClientDiagnosticName] = [.layoutCommitted, .refreshFinished, .streamDropped, .availabilityChanged, .stall]
+        let before = try journalRecords(directory)
+        for name in names { #expect(before.filter { $0.name == name }.count == 2) }
+        for _ in 0..<100 { try await generatedPoll(api, recorder: recorder, periodic: false) }
+        await recorder.flush()
+        let after = try journalRecords(directory), summary = await recorder.snapshot()
+        for name in names { #expect(after.filter { $0.name == name }.count == 2) }
+        #expect(summary.requests == 100)
+        #expect(summary.recentRequests.allSatisfy { $0.actionID == nil })
+        #expect(summary.routineRecordsThinned > 0)
+        #expect(summary.dropped == 0)
+        let priorRequest = summary.recentRequests.last?.requestID
+        let denied = todoClient(server: server, credential: try #require(ProcessInfo.processInfo.environment["TODO_CLIENT_DIAGNOSTICS_TOKEN"]), diagnostics: recorder)
+        do {
+            _ = try await denied.diagnostics_period_snapshot().ok.body.json
+            Issue.record("A scoped Token must be refused by Diagnostics")
+        } catch {}
+        for _ in 0..<2000 {
+            if (await recorder.snapshot()).recentRequests.last?.requestID != priorRequest { break }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        let failure = try #require((await recorder.snapshot()).recentRequests.last)
+        #expect(failure.status == 403 && failure.actionID == nil)
+        await recorder.flush()
+        let failedPhases = try journalRecords(directory).filter { $0.requestID == failure.requestID }
+        #expect(failedPhases.filter { $0.name == .requestStarted }.count == 1)
+        #expect(failedPhases.filter { $0.name == .requestHeaders }.count == 1)
+        #expect(failedPhases.filter { $0.name == .requestFinished }.count == 1)
+        if let path = ProcessInfo.processInfo.environment["TODO_CLIENT_DIAGNOSTICS_EVIDENCE"] {
+            let receipt: [String: Any] = ["failed_request_phases": failedPhases.count, "requests": 100, "periodic_flag": false, "before": Dictionary(uniqueKeysWithValues: names.map { name in (name.rawValue, before.filter { $0.name == name }.count) }), "after": Dictionary(uniqueKeysWithValues: names.map { name in (name.rawValue, after.filter { $0.name == name }.count) }), "thinned": summary.routineRecordsThinned]
+            try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]).write(to: URL(fileURLWithPath: path).appendingPathComponent("generated-flood.json"))
+        }
+        recorder.clear(); await recorder.flush()
+    }
+}
+
+extension ClientDiagnosticsLiveTests {
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_CLIENT_DIAGNOSTICS_SERVER"] != nil))
+    func generatedClientAndModelWriterRetainAnOpenDiagnosticsHour() async throws {
+        let env = ProcessInfo.processInfo.environment
+        let server = try #require(env["TODO_CLIENT_DIAGNOSTICS_SERVER"].flatMap(URL.init(string:)))
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("todo-s01-verify-generated-hour-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let clock = DiagnosticTestClock(), recorder = ClientDiagnosticsRecorder(journalDirectory: directory, clock: { clock.read() })
+        let credential = try await pollingCredential(server)
+        let api = todoClient(server: server, credential: credential, diagnostics: recorder)
+        let model = TodoModel(configuration: .init(server: server, initialProfile: "work", vaultService: "never-used-generated-hour"), clientDiagnostics: recorder, catalogNotifications: NotificationCenter(), wakeNotifications: NotificationCenter())
+        model.selectedView = "all"; model.replaceCredential(credential); model.signedIn = true; model.connection = .live
+        model.clientDiagnosticsUI.stop()
+        defer { model.signedIn = false; model.replaceCredential("") }
+        func finish(_ action: UUID?) { recorder.handlerStarted(action); recorder.resultPublished(action); recorder.layoutCommitted(action) }
+        let evening = try #require(recorder.beginAction(.openInspector, inputMS: clock.read())); finish(evening)
+        await recorder.flush()
+        let startBytes = (await recorder.snapshot()).journalBytesWritten
+        func resource() {
+            var value = ClientDiagnosticEvent(name: .resourcesSampled, run: recorder.run, now: clock.read())
+            value.applicationActive = true
+            value.resources = .init(descriptors: 64, sockets: 8, softLimit: 2560, hardLimit: UInt64.max, samplerDescriptors: 1, sampleMS: 0.2)
+            recorder.record(value)
+        }
+        func refresh() async throws {
+            let prior = Set((await recorder.snapshot()).recentRequests.compactMap(\.requestID))
+            await model.refreshAfterWrite("Retention workload")
+            #expect(model.tasks.count == 178 && model.appliedSearchSnapshot?.rows.count == 178)
+            for _ in 0..<2000 {
+                if Set((await recorder.snapshot()).recentRequests.compactMap(\.requestID)).subtracting(prior).count >= 8 { return }
+                try await Task.sleep(for: .milliseconds(5))
+            }
+            Issue.record("A model catalog refresh did not finish its eight generated requests")
+        }
+        for second in 0..<3600 {
+            clock.set(1000 + Double(second) * 1000); resource()
+            if second.isMultiple(of: 60) {
+                var search: UUID?
+                for _ in 0..<6 {
+                    if let search { recorder.endAction(search, outcome: .superseded) }
+                    search = recorder.beginAction(.search, inputMS: clock.read()); recorder.handlerStarted(search)
+                }
+                recorder.resultPublished(search); recorder.layoutCommitted(search)
+                for _ in 0..<2 { finish(recorder.beginAction(.taskSelection, inputMS: clock.read())) }
+                let complete = recorder.beginAction(.complete, inputMS: clock.read()); recorder.handlerStarted(complete)
+                try await ClientDiagnosticContext.$actionID.withValue(complete) { () async throws in try await refresh() }
+                try await refresh()
+                recorder.resultPublished(complete); recorder.layoutCommitted(complete)
+                for _ in 0..<93 { try await generatedPoll(api, recorder: recorder) }
+                for _ in 0..<52 { try await generatedPoll(api, recorder: recorder, diagnostics: true) }
+            }
+            if second.isMultiple(of: 64) { await recorder.flush() }
+        }
+        clock.set(3_661_000); _ = await recorder.snapshot(); await recorder.flush()
+        let active = await recorder.snapshot(), activeBytes = active.journalBytesWritten - startBytes
+        #expect(active.refreshes == 120 && active.requests == 9660)
+        #expect(active.polls.first { $0.operation == "system.health" }?.count == 5580)
+        #expect(active.polls.first { $0.operation == "diagnostics.snapshot" }?.count == 3120)
+        #expect(active.actions.reduce(0) { $0 + $1.count } == 241)
+        #expect(active.actions.reduce(0) { $0 + $1.supersededCount } == 300)
+        #expect(activeBytes > 0 && activeBytes <= ClientDiagnosticsRecorder.journalFileLimit)
+        for second in 0..<43_200 {
+            clock.set(3_662_000 + Double(second) * 1000); resource()
+            if second.isMultiple(of: 64) { await recorder.flush() }
+        }
+        await recorder.flush()
+        let final = await recorder.snapshot(), records = try journalRecords(directory)
+        #expect(records.contains { $0.actionID == evening && $0.name == .layoutCommitted })
+        #expect(final.dropped == 0 && final.journalFailures == 0)
+        if let path = env["TODO_CLIENT_DIAGNOSTICS_EVIDENCE"] {
+            let receipt: [String: Any] = ["workload": "real generated HTTP and model refreshes with synthetic interaction metadata and clock; not an observed owner hour or UI latency", "active_hour_bytes": activeBytes, "idle_hour_bytes": Double(final.journalBytesWritten - active.journalBytesWritten) / 12, "requests": active.requests, "refreshes": active.refreshes, "health_polls": 5580, "diagnostics_polls": 3120, "hours_per_file": Double(ClientDiagnosticsRecorder.journalFileLimit) / Double(activeBytes), "evening_interaction_preserved": true, "dropped": final.dropped, "journal_failures": final.journalFailures]
+            try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]).write(to: URL(fileURLWithPath: path).appendingPathComponent("generated-journal-hour.json"))
+        }
+    }
+}
