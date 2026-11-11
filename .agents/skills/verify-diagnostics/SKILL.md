@@ -100,6 +100,11 @@ metadata; human renderers add the (deleted) suffix without exposing Task content
 
 ## Collection cost
 
+For first-use reads, history scaling, /profiles fan-out, guarded CPU pressure
+and serial service, use the separate [cold read measurement](features/cold-path.md).
+It records ambient conditions and holds quiet/pressure cells when their gates
+are unmet. It does not change the collection-cost recipe or its ceiling below.
+
 Run only after the coordinator's quiet-host approval. The driver aborts when
 one-minute host load exceeds 4. It compares five alternating rounds per side,
 with 100 literal Tasks and zero tolerated failures. It profiles in a separate

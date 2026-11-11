@@ -6,3 +6,4 @@
 - [Request and stream joins](joins.md)
 - [Recorder failure isolation](faults.md)
 - [Polled payload budget](payload.md)
+- [Cold read path measurement](cold-path.md)
