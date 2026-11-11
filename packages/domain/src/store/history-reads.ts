@@ -68,10 +68,22 @@ export const committedHistory = (
   profile: ProfileId,
   after: number,
 ) =>
-  decode(
-    db
-      .query<{ event: string }, [string, number]>(
-        "SELECT * FROM op_log WHERE profile=? AND outcome='committed' AND seq>? ORDER BY seq",
-      )
-      .all(profile, after),
-  );
+  db
+    .transaction(() => ({
+      cursor: Math.max(
+        after,
+        db
+          .query<{ seq: number }, []>(
+            "SELECT coalesce(max(seq),0) AS seq FROM op_log",
+          )
+          .get()?.seq ?? 0,
+      ),
+      entries: decode(
+        db
+          .query<{ event: string }, [string, number]>(
+            "SELECT * FROM op_log WHERE profile=? AND outcome='committed' AND seq>? ORDER BY seq",
+          )
+          .all(profile, after),
+      ),
+    }))
+    .deferred();

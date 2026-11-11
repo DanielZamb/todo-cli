@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { DiagnosticsSnapshot } from "@todo/domain";
 import { Schema } from "effect";
 
 const Fixture = Schema.Struct({
@@ -19,6 +20,7 @@ const Fixture = Schema.Struct({
   credential: Schema.String,
   credentials: Schema.optionalKey(Schema.Array(Schema.String)),
   all_tasks: Schema.optionalKey(Schema.Boolean),
+  attachment_root: Schema.optionalKey(Schema.String),
 });
 const [before, after, manifest, output] = process.argv.slice(2);
 assert.ok(
@@ -47,7 +49,8 @@ async function sample(
       ...process.env,
       HOME: join(scratch, "home"),
       TODO_DB: path,
-      TODO_ATTACHMENT_ROOT: join(scratch, "attachments"),
+      TODO_ATTACHMENT_ROOT:
+        fixture.attachment_root ?? join(scratch, "attachments"),
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -87,9 +90,43 @@ async function sample(
       "/snapshots",
       "/snapshots/00000000-0000-4000-8000-000000000000",
     ];
+    const streamProfile =
+      profiles.find((p) => p.id === "work")?.id ??
+      profiles.find((p) => p.id === "p0")?.id ??
+      profiles[0]?.id;
+    assert.ok(streamProfile);
+    const cursor = Math.max(
+      0,
+      (db
+        .query<{ seq: number }, []>(
+          "SELECT coalesce(max(seq),0) AS seq FROM op_log",
+        )
+        .get()?.seq ?? 0) - 3,
+    );
+    const streamOperations =
+      db
+        .query<{ count: number }, [string, number]>(
+          "SELECT count(*) AS count FROM op_log WHERE profile=? AND outcome='committed' AND seq>?",
+        )
+        .get(streamProfile, cursor)?.count ?? 0;
+    routes.push(`/profiles/${streamProfile}/events`);
+    for (const image of db
+      .query<
+        { profile: string; task: string; attachment: string },
+        []
+      >(`SELECT t.profile_id AS profile,t.id AS task,json_extract(a.value,'$.id') AS attachment
+      FROM tasks t,json_each(t.payload,'$.attachments') a WHERE json_extract(a.value,'$.kind')='image'`)
+      .all())
+      routes.push(
+        `/profiles/${image.profile}/tasks/${image.task}/attachments/${image.attachment}/image`,
+      );
     for (const profile of [...profiles.map((p) => p.id), "missing"]) {
       const prefix = `/profiles/${encodeURIComponent(profile)}`;
-      routes.push(`${prefix}/projects`, `${prefix}/tags`);
+      routes.push(
+        `${prefix}/projects`,
+        `${prefix}/tags`,
+        `${prefix}/quick-add/parse`,
+      );
       for (const query of [
         "",
         "?status=all",
@@ -122,29 +159,101 @@ async function sample(
     }
     db.close();
     const replies = [];
-    for (const credential of [
+    for (const [credentialIndex, credential] of [
       ...(fixture.credentials ?? [fixture.credential]),
       "invalid",
       undefined,
-    ])
+    ].entries())
       for (const route of routes) {
-        const response = await fetch(base + route, {
+        const response: Response = await fetch(base + route, {
+          signal: AbortSignal.timeout(30_000),
+          ...(route.endsWith("/quick-add/parse")
+            ? {
+                method: "POST",
+                body: JSON.stringify({
+                  text: "Prepare #focus p1",
+                  now: "2026-11-11T12:00:00Z",
+                  time_zone: "UTC",
+                }),
+              }
+            : {}),
           headers:
             credential === undefined
               ? {}
-              : { Authorization: `Bearer ${credential}` },
+              : {
+                  Authorization: `Bearer ${credential}`,
+                  "Content-Type": "application/json",
+                  ...(route.endsWith("/events")
+                    ? { "Last-Event-ID": String(cursor) }
+                    : {}),
+                },
         });
+        let bytes: Buffer;
+        if (route.endsWith("/events") && response.status === 200) {
+          const reader: ReadableStreamDefaultReader<Uint8Array> | undefined =
+            response.body?.getReader();
+          assert.ok(reader);
+          bytes = Buffer.alloc(0);
+          try {
+            while (
+              !bytes.toString("utf8").includes("event: ready") ||
+              (bytes.toString("utf8").match(/event: operation/g)?.length ?? 0) <
+                streamOperations
+            ) {
+              const chunk: Awaited<
+                ReturnType<ReadableStreamDefaultReader<Uint8Array>["read"]>
+              > = await reader.read();
+              assert.equal(
+                chunk.done,
+                false,
+                route + JSON.stringify(bytes.toString("utf8").slice(0, 2000)),
+              );
+              bytes = Buffer.concat([bytes, Buffer.from(chunk.value ?? [])]);
+            }
+          } finally {
+            await reader.cancel();
+          }
+        } else bytes = Buffer.from(await response.arrayBuffer());
+        if (
+          route === "/snapshots" &&
+          credentialIndex === 0 &&
+          response.status === 200
+        ) {
+          const snapshots = Schema.decodeUnknownSync(
+            Schema.Struct({
+              snapshots: Schema.Array(Schema.Struct({ id: Schema.String })),
+            }),
+          )(JSON.parse(bytes.toString("utf8"))).snapshots;
+          for (const snapshot of snapshots)
+            routes.push(`/snapshots/${snapshot.id}`);
+        }
         replies.push({
           route,
           credential:
-            credential === fixture.credential
-              ? "valid"
-              : (credential ?? "missing"),
+            credential === undefined
+              ? "missing"
+              : `credential-${credentialIndex}`,
           status: response.status,
-          text: await response.text(),
+          bytes: bytes.toString("base64"),
         });
       }
-    return replies;
+    const diagnostics = await fetch(base + "/diagnostics", {
+      headers: { Authorization: `Bearer ${fixture.credential}` },
+    });
+    assert.equal(diagnostics.status, 200);
+    const credentialUses = Schema.decodeUnknownSync(
+      Schema.Struct({ credentials: DiagnosticsSnapshot.fields.credentials }),
+    )(await diagnostics.json()).credentials;
+    const audit = new Database(path, { readonly: true });
+    try {
+      const authentication = audit
+        .query(`SELECT seq,actor,profile,entity_version,event,from_version,to_version,outcome,reason
+        FROM op_log WHERE json_extract(event,'$.kind') IN ('AuthChanged','AuthAttemptRejected') ORDER BY seq`)
+        .all();
+      return { replies, authentication, credentialUses };
+    } finally {
+      audit.close();
+    }
   } finally {
     if (child.exitCode === null && child.signalCode === null) {
       const ended = new Promise((done) => child.once("exit", done));
@@ -169,12 +278,12 @@ for (const fixture of fixtures) {
     JSON.stringify({ before: oldReplies, after: newReplies }),
   );
   assert.deepEqual(newReplies, oldReplies, fixture.id);
-  results.push({ fixture: fixture.id, responses: oldReplies.length });
+  results.push({ fixture: fixture.id, responses: oldReplies.replies.length });
   writeFileSync(
     join(evidence, "result.json"),
     JSON.stringify(results, null, 2),
   );
   process.stdout.write(
-    `${fixture.id}: ${oldReplies.length} byte-identical replies\n`,
+    `${fixture.id}: ${oldReplies.replies.length} byte-identical replies and equal auth History/last-use\n`,
   );
 }

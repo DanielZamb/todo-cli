@@ -31,6 +31,10 @@ replace(
   'resolve(".scratch/bin/todo-server")',
   'resolve(".scratch/bin/read-timing-" + process.env.READ_CONTROL_VARIANT)',
 );
+replace(
+  '          TODO_DIAGNOSTICS_RECORDING: "1",',
+  '          TODO_DIAGNOSTICS_RECORDING: "1",\n          READ_CONTROL_REAL_TIME: "1",',
+);
 const detailStart = driver.indexOf("    const detail = await fetch(");
 const detailEnd = driver.indexOf("    let parallel:", detailStart);
 assert.ok(detailStart > 0 && detailEnd > detailStart);

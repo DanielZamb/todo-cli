@@ -113,6 +113,21 @@ it.effect(
                   task_id: Schema.decodeUnknownSync(TaskId)("\u0000blocker"),
                 })).map((entry) => entry.event.kind),
               ).toEqual(["TaskAttemptRejected"]);
+              yield* Effect.exit(
+                store.auth.authenticate({
+                  ...request,
+                  credential: "invalid",
+                  access: "read",
+                }),
+              );
+              expect(yield* store.committedHistory(work.id, 0)).toMatchObject({
+                cursor: 5,
+                entries: [{ seq: 3, event: { kind: "TaskCreated" } }],
+              });
+              expect(yield* store.committedHistory(work.id, 9)).toEqual({
+                cursor: 9,
+                entries: [],
+              });
             }),
           (store) => Effect.orDie(store.close()),
         ),

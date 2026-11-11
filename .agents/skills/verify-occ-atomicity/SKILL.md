@@ -5,6 +5,19 @@ description: Formally check the operation store's Task compare-and-swap and atom
 
 # Verify Task compare-and-swap atomicity
 
+## Server projection read mapping
+
+Product `7a90388d246e6c03f975d82c164c3e589cf15c7d` adds Profile-filtered graph
+SELECTs and a committed Profile History query outside the mapped store methods.
+The constructor, transaction, historySync, validation, append, rejection,
+checkpoint and replay bodies are byte-identical to the pinned base. Their lines
+moved. All other covered files, model, config, fixtures and invariants are unchanged.
+The source comparison is retained under `docs/evidence/ui-speed/server-reads/`.
+Both real-code sensitivity variants fail their behavioral enumeration with exit 1,
+restore exact source bytes, and the restored one-command check exits 0. The receipt
+is `docs/evidence/fv01/sensitivity-yGZ6Q3/result.json`. The pin renewal records only
+this mapping and line movement; it does not extend AtomicCAS to graph reads.
+
 Property: A Task change commits only against the current Task at the next Version, and its History entry and new value become durable together.
 
 Harm: A break can overwrite another client's work or make replay recover a different Task than the owner saw.

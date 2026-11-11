@@ -61,12 +61,10 @@ export const changesLayer = (store: OperationStore) =>
                     },
                   ] as const;
                 }
-                const entries = yield* translate(
+                const { entries, cursor } = yield* translate(
                   store.committedHistory(params.profile, state.cursor),
                 );
-                let cursor = state.cursor;
                 for (const entry of entries) {
-                  cursor = entry.seq;
                   if (
                     entry.outcome === "committed" &&
                     entry.profile === params.profile

@@ -11,9 +11,13 @@ description: Verify the Todo local authenticated HttpApi through curl against a 
 fixed Date and Effect wall clocks. Compile it before a read-path change and keep
 that binary only in ignored scratch storage. Compile the candidate separately.
 `read-control.ts <before> <after> <fixture-manifest> <evidence-directory>` compares
-raw statuses and body strings over Task lists, Show, graph, all planning views,
+raw statuses and base64-encoded body bytes over Task lists, Show, graph, all planning views,
 Projects, Tags, Task History, Profile discovery, lookup, credential lists,
-health, OpenAPI, Snapshot lists and missing Snapshot/image reads. It uses real
+health, OpenAPI, Snapshot list/Show, quick-add parsing, managed image bytes and
+SSE catch-up. It also
+compares auth History fields and credential last-use values. SQLite's physical
+recording timestamps naturally differ between processes; event timestamps are fixed.
+It uses real
 HTTP and private copies of every manifest checkpoint. It preserves one scratch
 Snapshot directory across each pair so file identities and paths match.
 Diagnostics' process measurements require their own recipe and cannot have

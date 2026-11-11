@@ -266,6 +266,27 @@ try {
     }),
   );
   await run(store.scheduled.runDue());
+  const imageTask = (await run(store.tasks())).find(
+    (task) => task.id === inbox.id,
+  );
+  assert.ok(imageTask);
+  assert.equal(
+    (
+      await run(
+        new AttachmentCommands(store).upload(
+          { ...request, task_id: inbox.id },
+          {
+            from_version: imageTask.row_version,
+            name: "pixel.png",
+            label: "Pixel",
+            mime_type: "image/png",
+            data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j+XcAAAAASUVORK5CYII=",
+          },
+        ),
+      )
+    ).outcome,
+    "committed",
+  );
   await run(
     createSeries(store, request, {
       task: {
@@ -310,6 +331,7 @@ try {
         credential,
         credentials,
         all_tasks: true,
+        attachment_root: join(root, "attachments"),
       },
     ]),
   );

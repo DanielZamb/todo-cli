@@ -173,6 +173,11 @@ CLI show/edit and HTTP GET/PATCH on fresh scratch databases. Each request must
 leave exactly one rejected auth History row for default, with read for show and
 mutate for edit, and keep the Task at Version 1. Profile selection calls the
 shared auth.resolveProfile with the operation's action before any Task pre-read.
+The expired HTTP fixture retains its expired credential row with a scratch-only
+delete guard. This tests expiry rather than a scheduler cleanup race that removes
+the credential before authentication. A forced cleanup interval reproduced the
+original invalid_credential result on the unchanged baseline; the retained-row
+fixture keeps the strict expired assertion and passes the same interval.
 The error-list test also requires a scoped credential to receive the same generic
 Profile-not-found response for a spaced foreign name and the absent name No Such.
 Neither case may expose another Profile's name or Task data.
