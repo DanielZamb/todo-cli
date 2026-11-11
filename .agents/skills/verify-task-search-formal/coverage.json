@@ -1,6 +1,6 @@
 {
-  "sourceCommit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
-  "status": "Reviewed integrated DAG clients and contract metadata, with current matcher controls and preserved full/query catalog debt. Complete bounded command and client drives follow.",
+  "sourceCommit": "f0156fb70ac5f161240d519353ab9d7ec592eb81",
+  "status": "Manual Mac C2/C3 working-tree review on parent f0156fb7. File hashes identify the reviewed bytes. Healthy unchanged-cursor/generation reconnect is an allowed stutter; Error recovery and catalog debt retain their mapped transitions. Native timeout and model controls are green; complete bounded sensitivity follows. Independent candidate review remains coordinator-owned.",
   "files": [
     {
       "path": "apps/electron/src/renderer.tsx",
@@ -67,9 +67,13 @@
         "catalogStale",
         "readSearchRows",
         "readSearchPlanning",
-        "readSearchCatalog"
+        "readSearchCatalog",
+        "performRefresh(generation:scope:)",
+        "appliedCatalogGeneration",
+        "appliedCatalogCursor",
+        "healthy ready predicate and quiet end retry"
       ],
-      "sha256": "e32b6f0ca0d53408aeb7624eabc52f55fc38f203c15fb7c18c6c0a2b82c33203"
+      "sha256": "3e37afc1f288dd7b86bd171058d04a8186030472b8a5527432c4f9ca003a5a0c"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -91,7 +95,7 @@
         "taskContent",
         "searchField"
       ],
-      "sha256": "1abf621b6a576f217ea92d74353650c956a7bd255ea06f5b61e539066130bc43"
+      "sha256": "6942fe51d6c26253067c9c2a8c8d3d95f7af2210a53a81d9b0be7d3b20dd92d1"
     },
     {
       "path": "apps/macos/Sources/TaskSnapshot.swift",

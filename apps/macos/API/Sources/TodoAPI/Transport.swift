@@ -45,21 +45,23 @@ public struct OutdatedServer: Error, Sendable {
 }
 
 public func todoClient(server: URL, credential: String) -> Client {
-    let configuration = URLSessionConfiguration.default
-    configuration.timeoutIntervalForRequest = 60
-    configuration.timeoutIntervalForResource = 86_400
-    configuration.urlCache = nil
-    return Client(serverURL: server, transport: URLSessionTransport(configuration: .init(session: URLSession(configuration: configuration))), middlewares: [BearerMiddleware(credential: credential), ClientRequestCorrelation()])
+    todoClient(server: server, credential: credential, diagnostics: .disabled, requestTimeout: 60)
 }
 
 public func todoClient(server: URL, credential: String, diagnostics: ClientDiagnosticsRecorder) -> Client {
-    guard diagnostics.isEnabled else { return todoClient(server: server, credential: credential) }
+    todoClient(server: server, credential: credential, diagnostics: diagnostics, requestTimeout: 60)
+}
+
+func todoClient(server: URL, credential: String, diagnostics: ClientDiagnosticsRecorder, requestTimeout: TimeInterval) -> Client {
     let configuration = URLSessionConfiguration.default
-    configuration.timeoutIntervalForRequest = 60
+    configuration.timeoutIntervalForRequest = requestTimeout
     configuration.timeoutIntervalForResource = 86_400
     configuration.urlCache = nil
-    let session = URLSession(configuration: configuration, delegate: ClientRequestMetrics(diagnostics), delegateQueue: nil)
-    let transport = DiagnosticTransport(transport: URLSessionTransport(configuration: .init(session: session)), recorder: diagnostics)
+    let session = diagnostics.isEnabled
+        ? URLSession(configuration: configuration, delegate: ClientRequestMetrics(diagnostics), delegateQueue: nil)
+        : URLSession(configuration: configuration)
+    let base = StreamTransport(ordinary: URLSessionTransport(configuration: .init(session: session)), diagnostics: diagnostics)
+    let transport: any ClientTransport = diagnostics.isEnabled ? DiagnosticTransport(transport: base, recorder: diagnostics) : base
     return Client(serverURL: server, transport: transport, middlewares: [BearerMiddleware(credential: credential), ClientRequestCorrelation()])
 }
 

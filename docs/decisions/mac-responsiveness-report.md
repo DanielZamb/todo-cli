@@ -521,3 +521,29 @@ removing await did not fix it. Explicit async scopes passed, as did the separate
 optimized test of the actual synchronous UI handler. No toolchain root cause
 is claimed. A Compact intrinsic-size assertion first failed; the constrained
 capture and final assertion passed, and both final captures were inspected.
+
+## C3 and install candidate 1
+
+The [idle-stream report](stream-idle-report.md) records the timeout cause,
+failing controls, quiet resume rule and automatic discovery recovery. The
+release production model stayed writable on the synthetic 178-Task Profile
+for five real idle minutes, with zero reconnects, full refreshes or requests.
+The native short-timeout control received the next committed operation on
+the original stream while an ordinary delayed request still timed out.
+
+The full Mac design suite passed with 872 expected PNGs and actual render
+exit 0. The complete state and generated-contract selection passed 174 tests
+in 29 suites. The root check, real compiled HTTP SSE recipe and renewed
+search formal controls passed. The unsigned app build and real generated
+History union check complete the candidate receipts. These gates do not
+establish native pointer delivery, a physical rendered frame or the owner's
+interaction percentiles. Those remain the coordinator's installed-app gate.
+
+The journal keeps inventory ids and event names in metadata and export. The
+This client view uses the exact shared display words from registry commit
+1142e00f, places its per-category timing table first, marks and sorts
+over-budget or incomplete rows first, puts milliseconds in the headers and
+uses vertical cards in Compact. ADR-0009 Electron and CLI parity is owed by
+the separate cross-client unit. The explicit category coverage gaps above
+remain; this candidate does not qualify every interaction against the
+20 ms median and 300 ms p99 objective.

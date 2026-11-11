@@ -52,6 +52,8 @@ final class TodoModel {
     var searchText = ""
     var searchPhase = TaskSearchPhase.idle
     var appliedSearchSnapshot: TaskSearchSnapshot?
+    @ObservationIgnored private var appliedCatalogGeneration: String?
+    @ObservationIgnored private var appliedCatalogCursor: String?
     private var catalogReady = false
     private var catalogStale = true
     var searchError: TaskSearchFailure?
@@ -411,7 +413,12 @@ final class TodoModel {
         loading = true
         lastSequence = UserDefaults.standard.string(forKey: cursorKey) ?? UserDefaults.standard.string(forKey: restoreCursorKey)
         let run = generation
-        streamTask = Task { await ClientDiagnosticContext.$actionID.withValue(nil) { await followChanges(generation: run) } }
+        let action = ClientDiagnosticContext.actionID
+        streamTask = Task {
+            await ClientDiagnosticContext.$actionID.withValue(nil) {
+                await ClientDiagnosticContext.$inputKind.withValue(.background) { await followChanges(generation: run, openingAction: action) }
+            }
+        }
     }
 
     private func disconnect() {
@@ -485,6 +492,8 @@ final class TodoModel {
             taskLoadError = nil
             searchError = nil
             searchPhase = .showing
+            appliedCatalogGeneration = restoreGeneration
+            appliedCatalogCursor = lastSequence
             return .applied
         } catch {
             guard isCurrentCredential(credentialEpoch) else { return .superseded }
@@ -592,13 +601,19 @@ final class TodoModel {
         }
     }
 
-    private func followChanges(generation run: Int) async {
+    private func followChanges(generation run: Int, openingAction initialAction: UUID?) async {
         let credentialEpoch = discovery.credentialEpoch
-        var attempt = 0
+        var attempt = 0, quietEnds = 0
+        var openingAction = initialAction
         while !Task.isCancelled && generation == run {
+            var sawReady = false
+            let openedAt = ProcessInfo.processInfo.systemUptime
             do {
-                guard try await checkServerContract(), generation == run, !Task.isCancelled else { loading = false; return }
-                let response = try await client.changes_period_stream(path: .init(profile: profile), headers: .init(last_hyphen_event_hyphen_id: lastSequence, x_hyphen_todo_hyphen_client: .swiftui, x_hyphen_todo_hyphen_generation: restoreGeneration))
+                let healthy = try await ClientDiagnosticContext.$actionID.withValue(openingAction) { try await checkServerContract() }
+                guard healthy, generation == run, !Task.isCancelled else { loading = false; return }
+                let response = try await ClientDiagnosticContext.$actionID.withValue(openingAction) {
+                    try await client.changes_period_stream(path: .init(profile: profile), headers: .init(last_hyphen_event_hyphen_id: lastSequence, x_hyphen_todo_hyphen_client: .swiftui, x_hyphen_todo_hyphen_generation: restoreGeneration))
+                }
                 guard generation == run, !Task.isCancelled else { return }
                 var streamConnected = ClientDiagnosticEvent(name: .streamConnected, run: clientDiagnostics.run)
                 streamConnected.reason = .ready
@@ -610,12 +625,18 @@ final class TodoModel {
                     for event in try parser.append(chunk) {
                         guard generation == run, !Task.isCancelled else { return }
                         if event.name == "ready" {
-                            catalogStale = true
-                            _ = await refresh(generation: run, trigger: .streamReady)
+                            let recovering = connection != .live
+                            let healthySnapshot = catalogReady && !catalogStale && appliedCatalogGeneration == restoreGeneration && appliedCatalogCursor == lastSequence
+                                && appliedSearchSnapshot?.appliedIdentity == requestedIdentity && searchError == nil && taskLoadError == nil && searchPhase == .showing && !loading
+                            if !healthySnapshot {
+                                _ = await ClientDiagnosticContext.$actionID.withValue(openingAction) { await refresh(generation: run, trigger: .streamReady) }
+                            }
                             guard generation == run, !Task.isCancelled else { return }
-                            connection = .live
-                            await refreshDependencyReads()
-                            message = nil
+                            if connection != .live { connection = .live }
+                            if !healthySnapshot || recovering { await refreshDependencyReads(); message = nil }
+                            if discovery.phase == .offline { await requestDiscovery(retry: true) }
+                            sawReady = true
+                            openingAction = nil
                             attempt = 0
                         } else if event.name == "reload" {
                             let reload = try JSONDecoder().decode(SnapshotReload.self, from: Data(event.data.utf8))
@@ -656,6 +677,7 @@ final class TodoModel {
                             _ = await refresh(generation: run)
                             await loadSnapshots()
                         } else if event.name == "operation" {
+                            quietEnds = 0
                             let wire = try JSONDecoder().decode(Components.Schemas.CommittedOperation.self, from: Data(event.data.utf8))
                             let operation = try decode(CommittedOperation.self, wire)
                             guard operation.outcome == "committed", operation.profile == profile,
@@ -666,7 +688,7 @@ final class TodoModel {
                                 return
                             }
                             catalogStale = true
-                            _ = await refresh(generation: run, trigger: .streamOperation)
+                            let applied = await refresh(generation: run, trigger: .streamOperation)
                             guard generation == run, !Task.isCancelled else { return }
                             await refreshDependencyReads(erased: operation.event.kind == "TaskPurged" || operation.event.original_kind == "TaskPurged")
                             if operation.event.kind == "ReminderFired" {
@@ -674,6 +696,7 @@ final class TodoModel {
                             }
                             guard generation == run, !Task.isCancelled else { return }
                             lastSequence = id
+                            if applied == .applied { appliedCatalogCursor = id }
                             UserDefaults.standard.set(id, forKey: cursorKey)
                         } else if event.name == "effect/http-api/stream/failure" {
                             if event.data.contains("Unauthorized") { expireSession(credentialEpoch: credentialEpoch); return }
@@ -691,11 +714,21 @@ final class TodoModel {
             guard isCurrentCredential(credentialEpoch) else { return }
             message = describe(error) }
                 }
+                let cause: ClientDiagnosticReason
+                if case .closed? = error as? StreamError { cause = .cleanEnd } else { cause = ClientDiagnosticReason(error: error) }
                 var streamDrop = ClientDiagnosticEvent(name: .streamDropped, run: clientDiagnostics.run)
-                streamDrop.reason = ClientDiagnosticReason(error: error)
+                streamDrop.reason = cause
                 clientDiagnostics.record(streamDrop)
+                if sawReady && (cause == .cleanEnd || cause == .timeout || cause == .transport) {
+                    reconnectCount += 1
+                    if ProcessInfo.processInfo.systemUptime - openedAt > 1 { quietEnds = 0 }
+                    quietEnds += 1
+                    if quietEnds > 1 {
+                        do { try await Task.sleep(for: .seconds(min(8, quietEnds - 1))) } catch { return }
+                    }
+                    continue
+                }
                 connection = .offline
-                catalogStale = true
                 loading = false
                 message = describe(error)
                 attempt += 1

@@ -149,3 +149,11 @@ and cross-Profile id-prefix lookup matrix, credential no-leak properties, WAL
 snapshot tests and auth-failure rollback proof. Run its single command after
 changing these reads or their CLI/HTTP contracts. Existing Profile-scoped SSE
 and Task search behavior retain their current recipes.
+
+## Mac client idle and quiet recovery
+
+The [idle feature map](features/idle.md#driving-the-mac-transport-and-model-headlessly)
+includes the native URLSession short-timeout control, production-model five-minute
+idle observation and quiet-EOF state controls. Run it after changing the Mac
+stream policy or reconnect state. Keep the real HTTP resume/auth drive above;
+the headless Mac cases complement it and do not replace it.

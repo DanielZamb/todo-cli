@@ -35,7 +35,7 @@ final class ClientRequestMetrics: NSObject, URLSessionTaskDelegate, @unchecked S
 }
 
 struct DiagnosticTransport: ClientTransport {
-    let transport: URLSessionTransport
+    let transport: any ClientTransport
     let recorder: ClientDiagnosticsRecorder
     func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
         let id = recorder.requestStarted(operation: operationID)

@@ -395,3 +395,33 @@ Unfiltered catalog reads remain unfiltered. Explicit dialog filters still win.
 Catalog obligation, generation, complete identity and publication are unchanged.
 The source review does not replace the compiled sidebar, padded Tag, full/query
 and catalog-debt regressions, or the final finite model and real matcher checks.
+
+## Mac quiet reconnect review, 2026-11-11
+
+C2 wraps refresh measurement around `performRefresh`; the synchronous guarded
+publication and full/query promotion remain in that function. Native action
+wrappers preserve their existing mutations and async operations. They do not
+change identity, generation guards, error rollback or the catalog obligation.
+
+C3 maps a healthy reconnect to an allowed visible-state stutter. The concrete
+predicate requires an applied catalog, no catalog debt, Showing, the current
+complete identity, matching applied cursor and restore generation, no retained
+search/load error and no loading state. The applied cursor advances only after
+an applied operation refresh. A mismatched cursor or restore generation forces
+a new full read. These server cursor/restore dimensions remain outside the
+bounded response-order model, as Snapshot reload already did.
+
+`SSEReconnect` continues to implement Recovery in Error, including
+`search_too_broad`. The healthy stutter has no owed catalog and cannot erase an
+obligation. `SSEOp`, full/query promotion, superseded response guards and error
+rollback are unchanged. TaskSearch.tla therefore stays byte-identical. This is
+a reviewed abstraction mapping, not a mechanical refinement.
+
+`StreamIdleTests` checks unchanged availability/draft/dialog/picker/graph state
+and zero new reads after healthy EOF, failed-reconnect Offline plus directory
+and lookup recovery, cursor/generation drift, repeated-end backoff and both
+retained search error kinds. `StreamIdleTransportTests` supplies a native
+URLSession timeout control and a five-minute compiled-server idle observation.
+The complete bounded command and its broken controls must pass after renewing
+the two changed Mac source hashes. No independent review is claimed by this
+worker; the coordinator owns the candidate review seats.

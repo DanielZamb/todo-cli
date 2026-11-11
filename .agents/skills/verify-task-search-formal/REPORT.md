@@ -460,3 +460,20 @@ pass in `matcher-ogr9wb`. Both safety graphs, conditional liveness, expected
 broken controls, restoration and source-hash checks passed. TLA+ is unchanged.
 Client literal tests and the compiled drives check both applied-context lines;
 the finite model does not evaluate their display text or pixels.
+
+
+## Mac quiet reconnect renewal, 2026-11-11
+
+C2 adds local measurements around the existing guarded publication. C3 makes a
+healthy reconnect an allowed stutter and retains Recovery in Error. The reviewed
+mapping documents the concrete identity/cursor/restore-generation gate and its
+limits. Only TodoModel.swift and AppViews.swift hashes changed. TaskSearch.tla
+stayed byte-identical. The review is against the working tree on parent f0156fb7;
+the hashes identify the bytes. Independent review remains coordinator-owned.
+
+The complete command passed in `check-Kos6K7`. The full safety graph exhausted
+its queue with 3,053,160 distinct states. All other normal stages, matcher
+properties and deliberate behavioral controls passed with their expected exits,
+and the restored graph ended with 44,922 distinct states and an empty queue.
+The compiled Mac state/native timeout controls and real HTTP SSE drive complement
+these bounds. No pixel, CPU-time or unbounded-concurrency claim follows.
