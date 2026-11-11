@@ -1,7 +1,8 @@
 # DIAG-CORE delivery
 
-Branch: `feat/diag-core`. Product checkpoint: `6267813e42947d73569daacd9cde3b70b9bb0da1`.
-Implementation and the required TypeScript/compiled proofs are complete.
+Branch: `feat/diag-core`. Product checkpoint: `d9637e72543e56b757ff0400fbe868cbeb12e9bc`.
+Scoped TypeScript/compiled proofs pass. The labelled supplementary root run
+passes; the plain root check remains an integration hold.
 The remaining integration holds below are not relabelled as passes.
 
 ## Implementation
@@ -762,3 +763,230 @@ none was open or skipped. Matching binaries remain ignored in the cache. Cleanup
 receipts and hashes remain with the evidence. Every owned scratch server, stream,
 CLI child and generator command completed or was stopped by its own finalizer.
 The final report commit changes only this report, after the verified product.
+
+## S1-9: prefer important recent observations within the byte budget
+
+The follow-up starts at 68b2a064. Runtime fix
+`d9637e72543e56b757ff0400fbe868cbeb12e9bc` corrects admission before both
+row and byte limits. The new domain file `diagnostic-admission.ts` owns only
+pure importance/recency ranking and the existing 20 ms slow threshold. It has
+no imports. `diagnostic-budget.ts` owns byte accounting; the recorder uses the
+same ranking before its smaller detail window, so a failed span cannot be
+removed before byte admission gets to see it. HTTP adapters, authorization,
+recorder guards, store transactions and projection code are unchanged.
+
+The original seat probe was copied into an owned scratch directory and run
+under Bun, then independently compiled and run against the old production
+collector before changing production code. Both exited 1 at the literal
+newest-sample assertion. The checked-in regression also failed first. Evidence
+is in docs/evidence/ui-speed/admission-red: result.json, default.json,
+detail.json, bun.log, compiled.log and domain-test.log. The inputs are synthetic
+observations at the production collector boundary, not measured request times.
+The probe source remains at .scratch/diag-admission/newest-latency.ts.
+
+| Same 60 observations, default and detail | Before | After |
+| --- | --- | --- |
+| Retained / omitted | 40 / 20 | 40 / 20 |
+| Newest failed sample, 10000.123456789011 ms | Absent | Present, first |
+| Oldest success, 1.12345678901234 ms | Present | Absent |
+| Oldest retained observation | 1.12345678901234 ms | 1.3234567890123399 ms |
+| Route p99 | 10000.123456789011 ms | Same |
+| Latest error label | internal_error | Same |
+
+The independently compiled corrected probe exits 0. Its bodies, results and
+exit receipt are in docs/evidence/ui-speed/admission-green. The regression also
+places a fast failed request (19 ms) and refusal (17 ms) before 58 newer ordinary
+successes. Both important requests survive; old ordinary samples do not.
+A cohort of 60 slow requests with 16-digit durations exceeds the latency byte
+quota even without ordinary samples. Exactly the newest 41 survive, from
+1000000000000059 through 1000000000000019 ms, in descending observation order;
+1000000000000018 is absent. Both omission keys are exactly 19. Every cohort
+checks the complete default/detail byte caps, 49,152 and 65,536.
+
+### Admission and omission audit
+
+Priority is slow (duration at least 20 ms) or a non-completed/HTTP error outcome,
+then newest within each priority. HTTP status remains available internally until
+numeric latency samples are projected, so a fast failure or refusal does not
+lose priority. Candidates are ranked before row limits, not after truncation.
+Selection takes a prefix that fits; it stops at the first unadmittable row.
+Older ordinary rows therefore cannot occupy space left by an omitted important
+row. Output observations are sorted newest first after selection, including when
+an older important row outranks a newer ordinary row for admission.
+
+`profiler.omitted[key]` still counts all omitted candidates. The matching
+`key.important` counts omitted important candidates, including recorder detail
+preselection. These are numeric entries in the existing record schema, not new
+schema fields. Counts refer to each retained source window, except slow labels,
+whose total also includes eviction from their eight-item queue. Ring eviction
+remains visible in the existing dropped-event counters. Fixed histograms and
+aggregate counters retain all observed work.
+
+| Bounded list | Admission, output and count rule |
+| --- | --- |
+| latency.samples | Most recent 60 observations from the existing 300-second/2048-request ring. Slow or status >= 400 first, then newest index; output newest first. latency and latency.important count exact byte omissions. |
+| profiler.detail.recent | Full retained ring, up to 2048, before priority selection of 32. Slow or any non-completed outcome first, then newest finish sequence. Byte admission uses the same rule. Both omission counts include preselection and byte loss. |
+| profiler.detail.active | Every active span is unfinished and important. Newest start sequence first before the four-row limit and byte quota. Both counts include all active starts in the retained map, including preselection loss. |
+| profiler.detail.deliveries | No outcome or duration is available on a delivery observation. Newest sequence first before its separate 16-row cap and byte quota. Total retained-ring count minus returned rows is exact; important omission is zero. |
+| profiler.slow | Only slow or non-completed observations enter the eight-label queue. Newest completion first. Both counts include queue eviction and byte loss. |
+| errors | Every error/refusal label is important. Newest error id first, at most 12 and subject to bytes. Both counts include the retained 100-error window minus displayed rows. |
+| operations.recent | Rejected operations before committed ones, then newest durable sequence; output newest first. Both counts cover the existing 100-operation query window minus admitted rows. |
+| operations.samples | Throughput samples have no outcome. Newest first within the existing 60-sample window; exact byte omissions, zero important omissions. |
+| clients | All connected clients are active observations and important. Newest connection id first. Both counts cover the existing 512-client map minus admitted rows. |
+| latency.routes | Aggregate rows prioritize any slow or failed request in the route window, then the route's latest observation. Output follows latest observation. Both counts cover bounded route candidates, including the existing other-routes aggregate. Quantiles/counts are unchanged. |
+| profiler.stages / categories | Aggregate rows prioritize unfinished, non-completed or slow/overflow p99 work. Stable key order within each priority, and stable key order on output. Both counts cover rows omitted by the unchanged quotas. These are summaries, not event chronology. |
+| credentials | Inventory metadata, ordered by latest observed use or creation within the existing bounded SQL candidate set. Exact total omissions include SQL truncation; important omissions are zero. |
+| profiles / deleted_profiles / storage.entities / storage.tables | Inventories have no event chronology or outcome. Stable existing name/id order. Full aggregate counts and SQL truncation omissions remain; important omissions are zero. |
+| histogram boundaries/counts, outcome order, unobserved | Fixed schema/registry lists, retained whole, no admission or omissions. |
+
+The detail test first creates failed and refused spans, then 64 ordinary spans.
+Both important spans survive preselection and 34 ordinary spans are omitted.
+It then adds 60 slow spans: the newest 32 survive, with 94 total and 30 important
+recent-span omissions. Eight active starts return the newest four with four
+important omissions. Twenty delivery observations return byte-admitted values
+19 through 12, newest first, with 12 omissions. The eight slow labels have
+literal durations 1059 through 1052, with 54 important label omissions including
+queue rotation. Assertions include both encoded byte budgets.
+
+### Contract, compiled controls and integration
+
+The contract id does not change. Old and new are both
+`57724665f2589fdec09d845635a9e2b87914a84569056085f89fe5700fa5cb64`.
+`bun packages/api/scripts/openapi.ts --check` exits 0. Schema declarations and
+all pinned identities are unchanged. No Swift generator, build, test or app ran.
+The terminal PNG render is still owed by a unit that holds the Swift slot.
+Time-series consumers now receive observations newest first; a chart that puts
+newest at the right can reverse its displayed series once. Summary units,
+quantiles, totals, privacy and owner-only authorization do not change.
+
+The frozen runtime manifest in docs/evidence/ui-speed/admission-source.json is
+product d9637e72, source hash
+`23ebf3f58c3bd9ed324e6b7d86df776233d0168462bff0382626aee963ad3d76`.
+admission-binary-hashes.txt identifies the compiled CLI, server, seed, fault CLI,
+fault driver and red/green collector probes. The final report and terminal
+verification correction do not change these runtime sources or binaries.
+
+The terminal recipe initially inferred its starting health count from whichever
+routes were visible in the scrolled pane. Recency ordering can put health off
+screen until the new health request moves it. The corrected recipe obtains
+that starting count with compiled `todo diagnostics --format json`, then still
+requires exactly one added health request to appear in the live terminal. Its
+final top-health-baseline.json records previous 1 and expected 2. No deadline or
+output assertion was relaxed. The recipe's expectation changed because route
+ordering changed, not because the count changed. This uses an existing CLI
+capability.
+
+Here `<evidence>` means docs/evidence/ui-speed and `<cache>` means .scratch/bin.
+All compiled recipes use fresh scratch data and the runtime binaries above.
+
+| Command | Exit | Receipt |
+| --- | ---: | --- |
+| `bun .scratch/diag-admission/newest-latency.ts` on old production | 1 | admission-red/bun.log and result.json |
+| `<cache>/diag-admission-red` on old production | 1 | admission-red/compiled.log and result.json |
+| `pnpm --filter @todo/domain test diagnostic-budget.test.ts` before fix | 1 | admission-red/domain-test.log |
+| `<cache>/diag-admission-green` | 0 | admission-green/compiled.exit and result.json |
+| `pnpm typecheck` | 0 | admission-types.log |
+| `pnpm --filter @todo/domain test` | 0 | admission-domain-final.log, 409 tests |
+| `pnpm --filter @todo/server test` | 0 | admission-server.log, 36 tests |
+| `pnpm lint` | 0 | admission-lint.log |
+| `bun packages/api/scripts/openapi.ts --check` | 0 | admission-contract.log and locked check |
+| `TODO_DIAGNOSTICS_NO_SWIFT=1 .agents/skills/verify-diagnostics/scripts/verify.sh <evidence>/admission-diagnostics-final` | 0 | admission-diagnostics-final-run.exit and result.json; terminal PNG HOLD |
+| `TODO_SERVER_BINARY=<cache>/todo-server TODO_SEED_BINARY=<cache>/seed .agents/skills/verify-server-api/scripts/verify.sh <evidence>/admission-server-api` | 0 | admission-server-api-run.exit and result.json |
+| `.agents/skills/verify-auth/scripts/verify.sh <evidence>/admission-auth` | 0 | admission-auth-run.exit and result.json |
+| `<cache>/verify-diagnostic-faults <evidence>/admission-faults-retry` | 0 | admission-faults-retry-run.exit and result.json, 47 cases |
+| `bun apps/server/scripts/verify-diagnostic-payload-budget.ts <evidence>/admission-stress` | 0 | admission-stress-run.exit and result.json |
+| Plain order-27 root command, with matching CLI/server binary environment | 1, 1 | admission-root-check.log/exit and admission-root-check-retry.log/exit; failures listed below |
+| `pnpm --filter @todo/domain test image-write.test.ts auth.test.ts commands.test.ts profile-resolution.test.ts security-review.test.ts discovery.test.ts profiles.test.ts import.test.ts` | 0 | admission-root-timeout-controls.log/exit, 135 tests |
+| Supplementary: `VITEST_MAX_WORKERS=2 TODO_CLI_BINARY=<cache>/todo TODO_SERVER_BINARY=<cache>/todo-server /usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check` | 1, then 0 | admission-root-check-workers2.log/exit and admission-root-check-workers2-retry.log/exit |
+| `pnpm --filter @todo/cli test auth-history.test.ts` | 0 | admission-cli-auth-control.log/exit, 12 tests |
+
+The stress drive retains all 918 operation frames from 306 operations through
+three stream clients, without duplicates. It records 1836 delivery observations
+and returns eight byte-admitted delivery rows. Across its checkpoint and CLI
+reads, the largest default pretty body is 16,129 bytes and the largest detail is
+53,966 bytes, below 49,152 and 65,536. Ordinary spawnSync buffers remain unchanged.
+These are payload bounds, not a latency benchmark or overhead claim.
+
+Failures were retained. The first broad domain run exposed floating-point
+subtraction in the new synthetic-duration fixture; the test now supplies an
+exact zero entry anchor and integer end times. Production clocks are unchanged.
+The first compiled Diagnostics run returned a null CLI child status; the next
+run reached the terminal baseline assumption described above. The first fault
+drive similarly returned a null child status at configure:show, before retrying
+the identical binary to all 47 passing controls. CLI child deadlines remain
+15 seconds. The first locked root run had six 5000 ms timeouts in existing auth,
+Revert, discovery, Profile and import tests. No timeout was raised or test
+removed. The earlier standalone complete domain suite had already passed all
+409 tests. The second plain root run also failed, with shifting test timeouts
+and a null image-write subprocess status. All affected files then passed the
+separate 135-test control. No causal or performance conclusion is drawn from
+the load observations below.
+
+The first plain run started its domain stage at 13:50:00 local time and exited
+after that stage, with six failures. Its nearest retained uptime observation,
+at 13:51 after exit, was one-minute load 10.68. No start/end load readings were
+taken for that run. Failing tests were:
+
+- auth.test.ts: keeps fixed Session expiry and rejects exact Session and default Token expiry
+- commands.test.ts: Revert of a redacted completion returns task_purged for its surviving Occurrence
+- profile-resolution.test.ts: lookup enrichment retains the supplied operation's rejection action
+- discovery.test.ts: includes all statuses and excludes Deleted Tasks without removing their Projects
+- profiles.test.ts: a stale Move or Move Revert cannot enter a deleted Profile
+- import.test.ts: Import preserves Attachments when an update omits them
+
+The second plain run started its domain stage at 13:52:53 and exited after that
+stage. Its nearest retained uptime observation, at 13:54 after exit, was
+one-minute load 11.59. No start/end readings were taken. Failing tests were:
+
+- image-write.test.ts: removes a partial copied image after a real filesystem write failure, child status null instead of 0
+- auth.test.ts: stores Argon2id and hashed secrets, returns secrets only at issue, and persists across reopen
+- commands.test.ts: keeps unfiltered command reads synchronous for transactional callers
+- profile-resolution.test.ts: lookup enrichment retains the supplied operation's rejection action
+- security-review.test.ts: SOL-1: a sign-in verified against the old hash gets no Session once a reset replaced it, 30000 ms timeout
+- discovery.test.ts: returns every visible status, literal prefixes, sorted directory and empty Profiles
+- profiles.test.ts: competing clients reuse one name as exactly one new Profile
+- import.test.ts: persists an external id and rejects duplicates in the same Profile
+
+Other timed-out cases used their unchanged 5000 ms limit. The capped run is
+supplementary, approved by the coordinator on this basis. VITEST_MAX_WORKERS=2
+only limits test-file concurrency; all test cases, deadlines, assertions and
+the tracked root recipe remain unchanged. The nearest reading before its
+launch was one-minute load 9.90 at 13:54, followed by 8.85 during the run at
+13:55. The plain order-27 root check is owed again at integration with the
+other units idle; the correctness seat will also rerun it on the final head.
+
+The first supplementary run passed all 409 domain tests, then hit the previously
+reported CLI expiry-cleanup race in auth-history.test.ts, records one
+selected-Profile rejection for expired http edit. Actual rejection detail was
+invalid_credential, expected expired; all other 69 CLI tests passed. Its nearest
+retained exit-time load reading was 9.72 at 13:56. The unchanged 12-test file
+then passed separately. That failure is retained too. No test or production
+authentication behavior was changed to obtain a pass.
+
+The second supplementary run passed 409 domain, 70 CLI, 36 server and 168
+Electron tests, with the existing opt-in Electron skip. The nearest reading
+before this rerun was 9.72 at 13:56; during the run it was 8.36 at 13:57 and
+after completion it was 7.28 at 13:57. These readings and their relation to each
+run are preserved in admission-load-observations.json; they are not continuous
+or exact boundary load samples. The unmodified plain check remains owed at
+integration despite this supplementary pass.
+
+The protected store.ts and projection.ts are byte-identical to 68b2a064. No
+formal source mapping or pin was renewed. No Task database mutation logic,
+HTTP failure handling or recorder guard changed. The 47 controls include the
+original compiled real-HTTP fault probe. No children were launched under the
+single-worker brief. The local comment audit found no new comments or lint/type
+suppressions; the no-comments skill's delegation step remains overridden by that
+brief, as in the prior delivery. ADR-0020 and the existing payload verification
+skill now state the priority, newest-first and important-omission rules.
+
+Quiet-machine overhead confirmation under the unchanged benchmark ceiling is
+still owed at integration. This correction makes no new overhead claim.
+
+Final cleanup removed seven owned closed Bun compile temporaries after lsof
+checks, freeing 620,626,048 logical bytes and 620,634,112 allocated bytes. None
+was open or skipped. The canonical disk guard then reported 99.3 GB free.
+admission-cleanup.json retains the per-file receipt. All seven retained proof
+binaries still match admission-binary-hashes.txt after the root checks. No
+foreign process or file was stopped or deleted. Only the owned scratch recipes
+ran; their finalizers stopped their child processes and removed scratch data.
