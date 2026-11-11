@@ -330,7 +330,7 @@ export class TaskCommands {
     return Effect.suspend(() => {
       const read = this.store.searchWords.read(request.profile);
       return Effect.gen({ self: this }, function* () {
-        const view = yield* this.store.auth.read(request);
+        const view = yield* this.store.auth.metadata(request);
         const graph = yield* this.store.graph(request.profile);
         const tasks = graph.tasks.filter((task) => task.deleted_at === null);
         const context =

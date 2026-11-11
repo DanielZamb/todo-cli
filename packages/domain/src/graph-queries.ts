@@ -134,7 +134,7 @@ export const readGraph = (
   generated_at: Instant,
 ) =>
   Effect.gen(function* () {
-    yield* store.auth.read(request);
+    yield* store.auth.authorizeRead(request);
     return queryGraph(
       yield* store.graph(request.profile),
       request.task_id,

@@ -11,7 +11,7 @@ import { Effect, Option, Schema } from "effect";
 import { eraseTaskAttachments } from "../attachment-store.ts";
 import { validAttachmentLocation } from "../attachments.ts";
 import { Authentication } from "../auth/auth.ts";
-import { DependencyError, RejectionDetails } from "../dependencies.ts";
+import { DependencyError, Edge, RejectionDetails } from "../dependencies.ts";
 import {
   Profile,
   Project,
@@ -42,6 +42,7 @@ import {
 } from "../recurrence.ts";
 import { TaskSearchCache } from "../task-search-cache.ts";
 import { Instant } from "../time.ts";
+import { ClientProjection } from "./client-projection.ts";
 import { incidentRemoval, putEdge, readEdges } from "./dependencies.ts";
 import {
   DependencyRefusal,
@@ -49,6 +50,7 @@ import {
 } from "./dependency-validation.ts";
 import { Diagnostics } from "./diagnostics.ts";
 import { StoreError } from "./error.ts";
+import { committedHistory } from "./history-reads.ts";
 import { redactTaskHistory } from "./purge.ts";
 import { ScheduledWork } from "./scheduled-work.ts";
 import { searchCacheEvents } from "./search-cache-events.ts";
@@ -550,8 +552,14 @@ export class OperationStore {
   readonly graph = (profile: ProfileId) =>
     attempt(() =>
       this.db.transaction(() => ({
-        tasks: readTasks(this.db).filter((task) => task.profile_id === profile),
-        edges: readEdges(this.db).filter((edge) => edge.profile_id === profile),
+        tasks: new ClientProjection(this.db).tasks(profile),
+        edges: Schema.decodeUnknownSync(Schema.Array(Edge))(
+          this.db
+            .query(
+              "SELECT * FROM task_dependencies WHERE profile_id=? ORDER BY profile_id,dependent_id,blocker_id",
+            )
+            .all(profile),
+        ),
       }))(),
     );
 
@@ -591,6 +599,9 @@ export class OperationStore {
     });
 
   readonly history = (after = 0) => attempt(() => this.historySync(after));
+
+  readonly committedHistory = (profile: ProfileId, after: number) =>
+    attempt(() => committedHistory(this.db, profile, after));
 
   readonly searchCacheEvents = (cursor?: {
     readonly seq: number;

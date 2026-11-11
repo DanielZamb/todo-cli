@@ -195,6 +195,21 @@ a search retry timer. See [ADR-0015](adr/0015-search-text-retention-and-recovery
 
 ## Agent discovery contract
 
+HTTP Task reads load Profile-filtered projection rows. Task lists authenticate
+and load metadata, then read the Profile's Tasks and Dependencies in one SQLite
+read transaction. Planning views use a Profile catalog without History or Series.
+Project and Tag counts use grouped projection queries. Profile counts use one
+grouped query for the credential's authorized, active Profiles inside the existing
+immediate authorization transaction. Directory counts share its existing deferred
+read snapshot. Projection guards, generated Task columns, Version validation and
+atomic event/projection writes remain authoritative. Reads do not replay the log.
+
+Task History selects relevant event rows in SQL before decoding OpLogEntry.
+SSE catch-up selects only committed rows for its Profile and cursor. Full History
+reads remain available to commands that need them, Revert, replay and recovery.
+The ordinary HTTP authorization transaction remains immediate. No transaction
+mode changes accompany these projection queries.
+
 The approved [agent discovery contract](decisions/agent-discovery-phase-0.md)
 adds a Profile-to-Project directory and explicit read-only Task prefix lookup.
 `Discovery.directory` and `Discovery.lookup` call the existing authentication

@@ -3,13 +3,16 @@ import { createHash, randomBytes } from "node:crypto";
 import { Cause, Clock, Effect, Exit, Schema } from "effect";
 import type { Profile } from "../entities.ts";
 import { type AppendResult, type AuthAction, Event } from "../events.ts";
+import type { TaskId } from "../ids.ts";
 import { ActorId, ProfileId, Sequence } from "../ids.ts";
 import type {
   DeleteProfile,
   ProfileDeletionResult,
 } from "../profile-commands.ts";
 import type { FinishTask, StartSeries } from "../recurrence.ts";
+import { ClientProjection } from "../store/client-projection.ts";
 import { StoreError } from "../store/error.ts";
+import { taskHistory } from "../store/history-reads.ts";
 import { changes, metadata } from "../store/projection.ts";
 import { Instant } from "../time.ts";
 
@@ -108,11 +111,14 @@ type ReadBoundary = {
 };
 
 export class Authentication<Read> {
+  private readonly projection: ClientProjection;
   constructor(
     private readonly db: Database,
     private readonly transaction: <A>(run: () => A) => A,
     private readonly ports: Ports<Read>,
-  ) {}
+  ) {
+    this.projection = new ClientProjection(db);
+  }
 
   private signInQueue: Promise<unknown> = Promise.resolve();
   private waitingSignIns = 0;
@@ -716,7 +722,10 @@ export class Authentication<Read> {
 
   readonly readSnapshot = <A>(
     operation: (
-      reads: Pick<Authentication<Read>, "profiles" | "read">,
+      reads: Pick<
+        Authentication<Read>,
+        "profiles" | "catalog" | "profileSummaries" | "metadata"
+      >,
     ) => Effect.Effect<A, AuthError | StoreError>,
   ) =>
     Effect.contextWith<never, A, AuthError | StoreError, never>((context) =>
@@ -731,7 +740,20 @@ export class Authentication<Read> {
           const result = Effect.runSyncExitWith(context)(
             operation({
               profiles: (input) => this.profilesWithin(input, boundary),
-              read: (input) => this.readWithin(input, boundary),
+              catalog: (input) =>
+                this.projectionWithin(
+                  input,
+                  () => this.projection.catalog(input.profile),
+                  boundary,
+                ),
+              metadata: (input) =>
+                this.projectionWithin(
+                  input,
+                  () => this.projection.metadata(input.profile),
+                  boundary,
+                ),
+              profileSummaries: (input) =>
+                this.profileSummariesWithin(input, boundary, false),
             }),
           );
           if (Exit.isFailure(result)) throw Cause.squash(result.cause);
@@ -762,6 +784,76 @@ export class Authentication<Read> {
     );
 
   readonly read = (input: AccessRequest) => this.readWithin(input);
+
+  readonly catalog = (input: AccessRequest) =>
+    this.projectionWithin(input, () => this.projection.catalog(input.profile));
+
+  readonly metadata = (input: AccessRequest) =>
+    this.projectionWithin(input, () => this.projection.metadata(input.profile));
+
+  readonly authorizeRead = (input: AccessRequest) =>
+    this.projectionWithin(input, () => undefined);
+
+  readonly taskHistory = (
+    input: AccessRequest & { readonly task_id: TaskId },
+  ) =>
+    this.projectionWithin(input, () =>
+      taskHistory(this.db, input.profile, input.task_id),
+    );
+
+  readonly projects = (input: AccessRequest) =>
+    this.projectionWithin(input, () => this.projection.projects(input.profile));
+
+  readonly tags = (input: AccessRequest) =>
+    this.projectionWithin(input, () => this.projection.tags(input.profile));
+
+  readonly profileSummaries = (input: { readonly credential: string }) =>
+    this.profileSummariesWithin(input);
+
+  private profileSummariesWithin = (
+    input: { readonly credential: string },
+    boundary?: ReadBoundary,
+    checkProfiles = true,
+  ) =>
+    Effect.gen({ self: this }, function* () {
+      const clock = yield* Clock.Clock;
+      let selected: ProfileId | null = null;
+      return yield* this.perform(
+        "read",
+        new ResolvedProfileRejection(() => selected),
+        (time) => {
+          const credential = this.requireCredential(input, time, "profiles");
+          const profiles = this.authorizedProfiles(credential);
+          for (const profile of checkProfiles ? profiles : []) {
+            selected = profile.id;
+            this.requireCredential(
+              input,
+              clock.currentTimeMillisUnsafe(),
+              "read",
+              profile.id,
+            );
+          }
+          return this.projection.profiles(credential.profile);
+        },
+        boundary,
+      );
+    });
+
+  private projectionWithin = <A>(
+    input: AccessRequest,
+    read: () => A,
+    boundary?: ReadBoundary,
+  ) =>
+    this.perform(
+      "read",
+      input.profile,
+      (time) => {
+        const request = parse(AccessRequest, input);
+        this.requireCredential(request, time, "read", request.profile);
+        return read();
+      },
+      boundary,
+    );
 
   private readWithin = (input: AccessRequest, boundary?: ReadBoundary) =>
     this.perform(

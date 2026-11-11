@@ -5,6 +5,37 @@ description: Verify the Todo local authenticated HttpApi through curl against a 
 
 # Verify the server API
 
+## Projection read differential control
+
+`apps/server/scripts/read-control-server.ts` is a verification-only server with
+fixed Date and Effect wall clocks. Compile it before a read-path change and keep
+that binary only in ignored scratch storage. Compile the candidate separately.
+`read-control.ts <before> <after> <fixture-manifest> <evidence-directory>` compares
+raw statuses and body strings over Task lists, Show, graph, all planning views,
+Projects, Tags, Task History, Profile discovery, lookup, credential lists,
+health, OpenAPI, Snapshot lists and missing Snapshot/image reads. It uses real
+HTTP and private copies of every manifest checkpoint. It preserves one scratch
+Snapshot directory across each pair so file identities and paths match.
+Diagnostics' process measurements require their own recipe and cannot have
+byte-identical memory, uptime and latency values across processes.
+
+`bun apps/server/scripts/read-fixture.ts <new-checkout-scratch-directory>` creates
+the reusable lifecycle fixture with Series, Occurrences, Dependencies, metadata,
+Attachments, scoped/unscoped Tokens, Profile deletion, Move, Copy, Delete, Purge,
+Revert and older v1 events. Its private fixtures.json feeds the differential.
+Keep manifests and credentials ignored. The domain regression
+`pnpm --filter @todo/domain test client-projection.test.ts` requires literal
+responses without decoding History and one decode per returned History row.
+
+`build-read-control.ts before|after <output>` builds a verification-only timing
+observer over exact baseline or candidate source. It adds handler timing,
+request correlation and decoded-operation count headers without modifying the
+API schema or product source. `prepare-read-benchmark.ts <cold-path-checkout>`
+copies the cold-path report's scratch checkpoints and creates an ignored paired
+ambient adapter of its driver. It retains response/count assertions, alternates
+before/after per pair and requires zero unneeded operation decodes after the fix.
+It omits newer Diagnostics stage assertions unavailable in the unchanged contract.
+
 Created with `create-verification-skill`.
 Read the [feature map](features/README.md) before choosing coverage.
 
