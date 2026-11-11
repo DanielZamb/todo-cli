@@ -783,3 +783,7 @@ interaction metadata, not an observed owner day or a native latency result.
 ADR-0009 parity in Electron and the CLI is owed by the separate cross-client
 unit; this Mac slice does not establish that parity. This review correction is
 not a C4 optimization attempt and carries no claimed speedup.
+
+
+The [C4 measurement and attempt record](mac-refresh-hillclimb.md) fixes the
+owner interaction target, the qualified workload and the secondary work guards.

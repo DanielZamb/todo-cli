@@ -28,7 +28,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('evidence', type=Path)
 parser.add_argument('--runs', type=int, default=5)
 parser.add_argument('--prepare-only', action='store_true')
-parser.add_argument('--ref', action='append', choices=['225b512f', 'origin/main', 'e69230f9'])
+parser.add_argument('--ref', action='append')
+parser.add_argument('--working-tree', action='store_true')
+parser.add_argument('--climb', action='store_true')
+parser.add_argument('--climb-backlogs', type=int, nargs='+', choices=[0, 50, 300], default=[0, 50, 300])
 parser.add_argument('--root-window', action='store_true')
 parser.add_argument('--diagnostics', action='store_true')
 parser.add_argument('--compare-diagnostics', action='store_true')
@@ -81,12 +84,18 @@ def run(argv, name, env=None, cwd=ROOT, input=None):
         raise RuntimeError(f'{name} exited {result.returncode}')
     return (evidence / (name + '.log')).read_text()
 
-refs = {ref: run(['git', 'rev-parse', ref], 'ref-' + ref.replace('/', '-')).strip() for ref in ['225b512f', 'origin/main', 'e69230f9']}
-if args.ref: refs = {ref: sha for ref, sha in refs.items() if ref in args.ref}
+selected_refs = args.ref or ([] if args.working_tree else ['225b512f', 'origin/main', 'e69230f9'])
+refs = {ref: run(['git', 'rev-parse', '--verify', ref + '^{commit}'], 'ref-' + str(index)).strip() for index, ref in enumerate(selected_refs)}
+if args.working_tree:
+    refs['working-tree'] = run(['git', 'rev-parse', 'HEAD'], 'working-parent').strip()
+    (evidence / 'working-tree.diff').write_bytes(subprocess.check_output(['git', 'diff', '--binary', 'HEAD', '--', 'apps/macos/Sources', 'apps/macos/API/Sources'], cwd=ROOT))
 (evidence / 'revisions.json').write_text(json.dumps(refs, indent=2))
+labels = {ref: str(index) + '-' + sha[:8] if args.climb else sha[:8] for index, (ref, sha) in enumerate(refs.items())}
 packages = {}
 for ref, sha in refs.items():
-    package = ROOT / '.scratch/mac-perf' / sha / 'apps/macos'
+    cache_name = ('climb-working-tree' if ref == 'working-tree' else 'climb-' + sha) if args.climb else ('working-tree' if ref == 'working-tree' else sha)
+    package = ROOT / '.scratch/mac-perf' / cache_name / 'apps/macos'
+    label = labels[ref]
     package.mkdir(parents=True, exist_ok=True)
     archive = subprocess.check_output(['git', 'archive', sha, 'apps/macos'], cwd=ROOT)
     with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
@@ -94,11 +103,24 @@ for ref, sha in refs.items():
             if member.isfile():
                 destination = package.parents[1] / member.name
                 data = tar.extractfile(member).read()
+                local = ROOT / member.name
+                if ref == 'working-tree' and ('/Sources/' in member.name) and local.is_file(): data = local.read_bytes()
                 if not destination.exists() or destination.read_bytes() != data:
                     destination.parent.mkdir(parents=True, exist_ok=True)
                     destination.write_bytes(data)
+    if ref == 'working-tree':
+        for source_root in ['Sources', 'API/Sources']:
+            current = ROOT / 'apps/macos' / source_root
+            for local in current.rglob('*'):
+                if local.is_file():
+                    destination = package / source_root / local.relative_to(current)
+                    data = local.read_bytes()
+                    if not destination.exists() or destination.read_bytes() != data:
+                        destination.parent.mkdir(parents=True, exist_ok=True); destination.write_bytes(data)
+            for cached in (package / source_root).rglob('*.swift'):
+                if cached.name not in ['PerfTrace.swift', 'PerfConnectionTrace.swift'] and not (current / cached.relative_to(package / source_root)).exists(): cached.unlink()
     pins = {str(p.relative_to(package)): hashlib.sha256(p.read_bytes()).hexdigest() for p in package.rglob('Package.resolved') if '.build' not in p.parts}
-    (evidence / ('sources-' + sha[:8] + '.json')).write_text(json.dumps({str(p.relative_to(package)): hashlib.sha256(p.read_bytes()).hexdigest() for p in (package / 'Sources').glob('*.swift')}, indent=2))
+    (evidence / ('sources-' + label + '.json')).write_text(json.dumps({str(p.relative_to(package)): hashlib.sha256(p.read_bytes()).hexdigest() for source_root in ['Sources', 'API/Sources'] for p in (package / source_root).rglob('*.swift') if p.name not in ['PerfTrace.swift', 'PerfConnectionTrace.swift']}, indent=2))
     (package / 'Perf').mkdir(exist_ok=True)
     fixture = SOURCE.read_text()
     connection_file=package/'API/Sources/TodoAPI/PerfConnectionTrace.swift'
@@ -116,6 +138,33 @@ for ref, sha in refs.items():
         transport_file.write_text(transport)
     else:
         connection_file.unlink(missing_ok=True)
+    if args.climb:
+        fixture = fixture.replace('for index in 0..<10 {', 'for index in 0..<1 {')
+        fixture = fixture.replace('for backlog in [0, 50, 300] {', 'for backlog in ' + str(args.climb_backlogs) + ' {')
+        old_model = 'model = TodoModel(configuration: .init(server: server, initialProfile: "work", vaultService: "unused-mac-perf"), clientFactory: { url, _ in measurementClient(server: url, credential: credential) })'
+        assert fixture.count(old_model) == 1
+        diagnostics_argument = ', clientDiagnostics: ClientDiagnosticsRecorder(journalDirectory: URL(fileURLWithPath: env["HOME"]!).appendingPathComponent("client-journal"))' if (package / 'API/Sources/TodoAPI/ClientDiagnosticsRecorder.swift').exists() else ''
+        fixture = fixture.replace(old_model, 'model = TodoModel(configuration: .init(server: server, initialProfile: "work", vaultService: "unused-mac-perf")' + diagnostics_argument + ')\n            model.replaceCredential(credential)')
+        begin = fixture.index('        try await step("profile-switch")')
+        end = fixture.index('        model.editor = nil', begin)
+        fixture = fixture[:begin] + fixture[end:]
+        fixture = fixture.replace('            try await action()', '''            try await action()
+            let actionFinishedMS = Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000
+            try await wait { PerfTrace.shared.snapshot().allSatisfy { $0["endMS"] != nil } && !model.searchPending }
+            try await Task.sleep(for: .seconds(1))
+            try await wait { PerfTrace.shared.snapshot().allSatisfy { $0["endMS"] != nil } && !model.searchPending }''')
+        fixture = fixture.replace('"step": name, "elapsedMS": elapsed,', '"step": name, "elapsedMS": elapsed, "actionFinishedMS": actionFinishedMS,')
+        fixture = fixture.replace('            for window in windows { window.close() }', '''            if model.appliedSearchSnapshot != nil {
+                let canonical = try JSONDecoder().decode([TaskSnapshot].self, from: await control("catalog/" + model.profile))
+                try #require(model.tasks == canonical, "Catalog differs from the authoritative server response")
+                try #require(model.appliedSearchSnapshot?.rows == canonical, "All-tasks rows are not current")
+            }
+            for window in windows { window.close() }''')
+        fixture = fixture.replace('            var toLive = 0.0', '            var toLive = 0.0, toCurrent = 0.0')
+        fixture = fixture.replace('                if backlog > 0 { try await wait { (Int64(model.lastSequence', r'''                if backlog > 0 { try await wait { model.tasks.contains { $0.title == "Backlog \(backlog) \(backlog - 1)" } } }
+                toCurrent = Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000
+                if backlog > 0 { try await wait { (Int64(model.lastSequence''')
+        fixture = fixture.replace('rows[rows.count - 1]["switchToLiveMS"] = toLive', 'rows[rows.count - 1]["switchToLiveMS"] = toLive; rows[rows.count - 1]["switchToCurrentMS"] = toCurrent')
     if args.connection_probe:
         pass
     elif args.inspector_layout:
@@ -160,7 +209,7 @@ for ref, sha in refs.items():
             view_file.write_text(views)
     elif args.root_window or args.diagnostics or args.compare_diagnostics or args.personal_tasks != 180 or args.owner_fixture:
         from root_fixture import decorate
-        fixture = decorate(fixture, args.root_window)
+        fixture = decorate(fixture, args.root_window, climb=args.climb)
     dependency_steps = '''
         var pickerLayouts: [Double] = []
         try await step("dependency-picker") {
@@ -180,8 +229,8 @@ for ref, sha in refs.items():
     model_file = package / 'Sources/TodoModel.swift'
     model_source = model_file.read_text()
     original_model_source = model_source
-    begin = model_source.index('    private func refresh(')
-    end = model_source.index('    private func readSearchRows' if '    private func readSearchRows' in model_source else '    private func followChanges', begin)
+    begin = model_source.index('    private func readSearchCatalog(' if args.climb else '    private func refresh(')
+    end = model_source.index('\n    private func ', begin + 5)
     function = model_source[begin:end]
     opening = function.index('{')
     closing = function.rindex('}')
@@ -219,8 +268,8 @@ let package = Package(name: "MacPerf", platforms: [.macOS(.v26)], dependencies: 
         value=manifest.read_text().replace('targets: [', 'targets: [\n    .target(name: "PerfDescriptors", path: "PerfC", publicHeadersPath: "include", linkerSettings: [.linkedLibrary("proc")]),')
         value=value.replace('.testTarget(name: "MacPerfTests", dependencies: ["TodoState",', '.testTarget(name: "MacPerfTests", dependencies: ["TodoState", "PerfDescriptors",')
         manifest.write_text(value)
-    packages[sha] = package
-    run(['sh', ROOT / 'scripts/disk-guard.sh'], 'disk-' + sha[:8])
+    packages[ref] = package
+    run(['sh', ROOT / 'scripts/disk-guard.sh'], 'disk-' + label)
     build_hash = hashlib.sha256()
     for path in sorted([*package.glob('Sources/*.swift'), *package.glob('Perf/*.swift'), *package.glob('API/Sources/TodoAPI/*.swift'), *package.glob('API/Sources/TodoAPI/GeneratedSources/*.swift'), package / 'Package.swift', package / 'API/Package.swift']):
         build_hash.update(str(path.relative_to(package)).encode()); build_hash.update(path.read_bytes())
@@ -231,14 +280,14 @@ let package = Package(name: "MacPerf", platforms: [.macOS(.v26)], dependencies: 
     cache = package / 'perf-build.json'
     reused = json.loads(cache.read_text()) if cache.exists() else None
     if reused and reused['hash'] == build_hash.hexdigest():
-        (evidence / ('reused-build-' + sha[:8] + '.json')).write_text(json.dumps(reused, indent=2))
+        (evidence / ('reused-build-' + label + '.json')).write_text(json.dumps(reused, indent=2))
     else:
-        run([ROOT / 'scripts/swift-slot.sh', 'swift', 'build', '--configuration', 'release', '--package-path', package, '--disable-automatic-resolution', '--build-tests', '--jobs', '2'], 'build-' + sha[:8])
+        run([ROOT / 'scripts/swift-slot.sh', 'swift', 'build', '--configuration', 'release', '--package-path', package, '--disable-automatic-resolution', '--build-tests', '--jobs', '2'], 'build-' + label)
         cache.write_text(json.dumps(dict(hash=build_hash.hexdigest(), evidence=str(evidence), command=commands[-1]), indent=2))
     assert pins == {str(p.relative_to(package)): hashlib.sha256(p.read_bytes()).hexdigest() for p in package.rglob('Package.resolved') if '.build' not in p.parts}, 'pins changed'
     artifacts = [p for p in [package / '.build/release/MacPerfPackageTests.xctest/Contents/MacOS/MacPerfPackageTests', package / '.build/release/MacPerfPackageTests'] if p.is_file()]
     assert artifacts, 'compiled unhosted measurement binary missing'
-    (evidence / ('artifact-' + sha[:8] + '.json')).write_text(json.dumps({str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in artifacts}, indent=2))
+    (evidence / ('artifact-' + label + '.json')).write_text(json.dumps({str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in artifacts}, indent=2))
 if args.prepare_only:
     raise SystemExit(0)
 
@@ -254,12 +303,13 @@ for iteration in range(args.iteration_offset, args.iteration_offset + args.runs)
     order = [(ref, sha, diagnostics, delay) for ref, sha in refs.items() for diagnostics in modes for delay in delays]
     if iteration % 2: order.reverse()
     for ref, sha, diagnostics, delay in order:
-        name = f'{iteration}-' + (('open-' if diagnostics else 'closed-') if args.compare_diagnostics else '') + (f'delay{delay}-' if args.compare_delays else '') + sha[:8]
+        name = f'{iteration}-' + (('open-' if diagnostics else 'closed-') if args.compare_diagnostics else '') + (f'delay{delay}-' if args.compare_delays else '') + labels[ref]
         while args.max_start_load > 0 and os.getloadavg()[0] > args.max_start_load:
             (evidence / 'load-gate.json').write_text(json.dumps(dict(load=os.getloadavg(), at=time.time(), waiting=True, nextRun=name)))
             time.sleep(5)
         folder = evidence / name
         folder.mkdir(exist_ok=False)
+        (folder / 'variant.json').write_text(json.dumps(dict(ref=ref, commit=sha, label=labels[ref], working_tree=ref == 'working-tree'), indent=2))
         (folder / 'host.json').write_text(json.dumps(dict(load=os.getloadavg(), at=time.time(), cores=os.cpu_count())))
         scratch = Path(tempfile.mkdtemp(prefix='todo-s01-verify-mac-perf-'))
         home = scratch / 'home'
@@ -319,8 +369,8 @@ for iteration in range(args.iteration_offset, args.iteration_offset + args.runs)
             with sqlite3.connect(scratch / 'scratch.db') as db:
                 cursor = str(db.execute('select max(seq) from op_log').fetchone()[0])
             (folder / 'workload.json').write_text(json.dumps(dict(tasks={'work': OWNER['work']['total'] if args.owner_fixture else 180, 'personal': args.personal_tasks}, ownerFixture=args.owner_fixture, initialHistory=int(cursor), rootWindow=args.root_window or args.slow_actions, diagnostics=diagnostics, activeLayout=args.active_layout, slowActions=args.slow_actions, replyDelayMS=delay, cpuWorkers=args.cpu_workers), indent=2))
-            contract = re.search(r'"([0-9a-f]{64})"', (packages[sha] / 'API/Sources/TodoAPI/ContractIdentity.swift').read_text())[1]
-            legacy = not (packages[sha] / 'Sources/Dependencies.swift').exists()
+            contract = re.search(r'"([0-9a-f]{64})"', (packages[ref] / 'API/Sources/TodoAPI/ContractIdentity.swift').read_text())[1]
+            legacy = not (packages[ref] / 'Sources/Dependencies.swift').exists()
             def compatible(value):
                 if isinstance(value, list): return [compatible(item) for item in value]
                 if isinstance(value, dict):
@@ -346,6 +396,8 @@ for iteration in range(args.iteration_offset, args.iteration_offset + args.runs)
                         action = self.path[len('/__perf/'):]
                         value = None
                         if action.startswith('start/'): counts.clear(); events.clear()
+                        elif action.startswith('catalog/'):
+                            value = request('GET', '/profiles/' + action.split('/')[-1] + '/tasks', credential=credential)
                         elif action.startswith('description/'):
                             characters=int(action.split('/')[-1]);target=request('GET','/profiles/work/tasks',credential=credential)[0]
                             description=('Description with ordinary words. ' * ((characters+32)//33))[:characters]
@@ -400,6 +452,7 @@ for iteration in range(args.iteration_offset, args.iteration_offset + args.runs)
                     if response.getheader('Cache-Control'):
                         self.send_header('Cache-Control', response.getheader('Cache-Control'))
                     if self.path.endswith('/events'):
+                        if args.climb: response.fp.raw._sock.settimeout(None)
                         stream_log = folder / f'stream-{time.time_ns()}.txt'
                         stream_log.write_text(str(response.status) + '\n' + str(response.headers) + '\n')
                         self.send_header('Connection','close'); self.end_headers()
@@ -450,14 +503,17 @@ for iteration in range(args.iteration_offset, args.iteration_offset + args.runs)
                         record['bytes'] = len(data)
                         record['elapsedMS'] = (time.monotonic() - record['started']) * 1000
                     upstream.close()
-            proxy = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+            class ClimbProxy(http.server.ThreadingHTTPServer):
+                request_queue_size = 1024
+            proxy = (ClimbProxy if args.climb else http.server.ThreadingHTTPServer)(('127.0.0.1', 0), Handler)
+            (folder / 'proxy.json').write_text(json.dumps(dict(accept_backlog=proxy.request_queue_size, request_accounting='Client only; controller truth reads excluded'), indent=2))
             proxy.daemon_threads = True
             threading.Thread(target=proxy.serve_forever, daemon=True).start()
             url = f'http://127.0.0.1:{proxy.server_port}'
             for _ in range(args.cpu_workers):
                 processes.append(subprocess.Popen([sys.executable, '-c', 'while True: pass'], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
             if args.cpu_workers: time.sleep(1)
-            run([ROOT / 'scripts/swift-slot.sh', 'swift', 'test', '--configuration', 'release', '--package-path', packages[sha], '--disable-automatic-resolution', '--skip-build', '--filter', 'MacPerformanceMeasurement'], 'session-' + name, dict(env, MAC_PERF_SERVER=url, MAC_PERF_OUTPUT=str(folder / 'measurement.json'), MAC_PERF_PERSONAL_TASKS=str(args.personal_tasks), MAC_PERF_DIAGNOSTICS='1' if diagnostics else '0', MAC_PERF_ACTIVE_LAYOUT=args.active_layout, MAC_PERF_REPLY_DELAY_MS=str(delay), MAC_PERF_WORK_TASKS=str(OWNER['work']['total'] if args.owner_fixture else 180), MAC_PERF_WORK_TAGS=str(OWNER['work']['tags'] if args.owner_fixture else 70), MAC_PERF_WORK_PROJECTS=str(OWNER['work']['projects'] if args.owner_fixture else 12), MAC_PERF_COMPLETE_TITLE='Measurement Task 020' if args.owner_fixture else ('Measurement Task 100' if args.slow_actions else '')))
+            run([ROOT / 'scripts/swift-slot.sh', 'swift', 'test', '--configuration', 'release', '--package-path', packages[ref], '--disable-automatic-resolution', '--skip-build', '--filter', 'MacPerformanceMeasurement'], 'session-' + name, dict(env, MAC_PERF_SERVER=url, MAC_PERF_OUTPUT=str(folder / 'measurement.json'), MAC_PERF_PERSONAL_TASKS=str(args.personal_tasks), MAC_PERF_DIAGNOSTICS='1' if diagnostics else '0', MAC_PERF_ACTIVE_LAYOUT=args.active_layout, MAC_PERF_REPLY_DELAY_MS=str(delay), MAC_PERF_WORK_TASKS=str(OWNER['work']['total'] if args.owner_fixture else 180), MAC_PERF_WORK_TAGS=str(OWNER['work']['tags'] if args.owner_fixture else 70), MAC_PERF_WORK_PROJECTS=str(OWNER['work']['projects'] if args.owner_fixture else 12), MAC_PERF_COMPLETE_TITLE='Measurement Task 020' if args.owner_fixture else ('Measurement Task 100' if args.slow_actions else '')))
             proxy.shutdown(); proxy.server_close()
         finally:
             for process in processes:
@@ -473,6 +529,9 @@ for iteration in range(args.iteration_offset, args.iteration_offset + args.runs)
 
 if args.inspector_layout:
     print(json.dumps(dict(errors=0, sessions=sum(command['log'].startswith('session-') for command in commands))))
+    raise SystemExit(0)
+if args.climb:
+    print(run([sys.executable, SOURCE.with_name('climb_summary.py'), evidence], 'climb-summary'), end='')
     raise SystemExit(0)
 summary_text = run([sys.executable, SOURCE.with_name('summarize.py'), evidence], 'summary')
 print(summary_text, end='')

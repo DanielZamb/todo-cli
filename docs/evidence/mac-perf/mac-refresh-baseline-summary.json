@@ -1,0 +1,1037 @@
+{
+  "baseline_commit": "b520693e0fc924e91410a5c670157ac034e6492a",
+  "errors": 0,
+  "native_input_qualified": false,
+  "compiled_source_control": {
+    "equal": true,
+    "files_per_side": 65
+  },
+  "work_per_cell": {
+    "operations": 372,
+    "full_catalog_reads": 378,
+    "requests": 3035
+  },
+  "command": ".agents/skills/verify-mac-refresh/scripts/verify.sh <fresh-evidence> <baseline-commit>",
+  "primary_target": {
+    "p50_ms": 20,
+    "p99_ms": 300,
+    "every_interaction_category": true,
+    "incomplete_actions_counted": true
+  },
+  "secondary_targets": {
+    "requests_at_most": 304,
+    "reads_per_backlog_switch_at_most": 2,
+    "reads_per_burst_at_most": 3,
+    "reads_per_complete_with_echo": 1,
+    "reads_per_quiet_reconnect": 0,
+    "sockets_after_300_refreshes_at_most": 16,
+    "fresh_full_layout_median_ms_at_most": 200,
+    "mechanism_attempt_floor": 6
+  },
+  "mechanism_attempts": 0,
+  "variants": {
+    "b520693e": {
+      "runs": 5,
+      "requests": {
+        "median": 3035,
+        "minimum": 3035,
+        "maximum": 3035
+      },
+      "catalog_reads": {
+        "median": 378,
+        "minimum": 378,
+        "maximum": 378
+      },
+      "count_vectors": [
+        [
+          3035,
+          378,
+          372
+        ],
+        [
+          3035,
+          378,
+          372
+        ],
+        [
+          3035,
+          378,
+          372
+        ],
+        [
+          3035,
+          378,
+          372
+        ],
+        [
+          3035,
+          378,
+          372
+        ]
+      ],
+      "worst_actor_gap_ms": {
+        "median": 157.054875,
+        "minimum": 153.499125,
+        "maximum": 219.196959
+      },
+      "actions": {
+        "first-load": {
+          "catalog_reads": {
+            "median": 1,
+            "minimum": 1,
+            "maximum": 1
+          },
+          "requests": {
+            "median": 8,
+            "minimum": 8,
+            "maximum": 8
+          },
+          "model_action_ms": {
+            "median": 204.640709,
+            "minimum": 179.364292,
+            "maximum": 226.084667
+          },
+          "settled_ms": {
+            "median": 1237.287084,
+            "minimum": 1213.083417,
+            "maximum": 1257.22925
+          },
+          "busy_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "not_writable_ms": {
+            "median": 1237.2748330000002,
+            "minimum": 1213.0611669999996,
+            "maximum": 1257.2155839999996
+          },
+          "loading_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "fresh_full_layout_ms": {
+            "median": 189.877125,
+            "minimum": 180.152042,
+            "maximum": 213.271917
+          }
+        },
+        "stream-ready": {
+          "catalog_reads": {
+            "median": 1,
+            "minimum": 1,
+            "maximum": 1
+          },
+          "requests": {
+            "median": 10,
+            "minimum": 10,
+            "maximum": 10
+          },
+          "model_action_ms": {
+            "median": 301.193875,
+            "minimum": 273.891709,
+            "maximum": 338.975083
+          },
+          "settled_ms": {
+            "median": 1333.347375,
+            "minimum": 1307.653792,
+            "maximum": 1369.886208
+          },
+          "busy_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "not_writable_ms": {
+            "median": 301.18891700000006,
+            "minimum": 273.88820799999996,
+            "maximum": 338.97312500000004
+          },
+          "loading_ms": {
+            "median": 263.3555,
+            "minimum": 240.85050000000004,
+            "maximum": 290.31266700000003
+          },
+          "fresh_full_layout_ms": {
+            "median": 179.400125,
+            "minimum": 164.501958,
+            "maximum": 190.509667
+          }
+        },
+        "cli-operation-0": {
+          "catalog_reads": {
+            "median": 1,
+            "minimum": 1,
+            "maximum": 1
+          },
+          "requests": {
+            "median": 8,
+            "minimum": 8,
+            "maximum": 8
+          },
+          "model_action_ms": {
+            "median": 440.276042,
+            "minimum": 417.844541,
+            "maximum": 478.2525
+          },
+          "settled_ms": {
+            "median": 1472.712875,
+            "minimum": 1450.034416,
+            "maximum": 1510.723417
+          },
+          "busy_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "not_writable_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "loading_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "fresh_full_layout_ms": {
+            "median": 179.347917,
+            "minimum": 167.062667,
+            "maximum": 210.384166
+          }
+        },
+        "profile-switch-backlog-0": {
+          "catalog_reads": {
+            "median": 1,
+            "minimum": 1,
+            "maximum": 1
+          },
+          "requests": {
+            "median": 10,
+            "minimum": 10,
+            "maximum": 10
+          },
+          "model_action_ms": {
+            "median": 398.378958,
+            "minimum": 394.907083,
+            "maximum": 478.531167
+          },
+          "settled_ms": {
+            "median": 1431.104167,
+            "minimum": 1425.692,
+            "maximum": 1509.885542
+          },
+          "busy_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "not_writable_ms": {
+            "median": 325.77208300000007,
+            "minimum": 323.37687500000004,
+            "maximum": 382.6129159999999
+          },
+          "loading_ms": {
+            "median": 325.77208300000007,
+            "minimum": 323.37687500000004,
+            "maximum": 382.6129159999999
+          },
+          "fresh_full_layout_ms": {
+            "median": 164.858625,
+            "minimum": 160.943375,
+            "maximum": 174.742584
+          },
+          "switch_to_live_ms": {
+            "median": 398.378667,
+            "minimum": 394.90675,
+            "maximum": 478.530791
+          },
+          "switch_to_current_ms": {
+            "median": 398.378667,
+            "minimum": 394.906875,
+            "maximum": 478.530833
+          },
+          "replay_drain_ms": {
+            "median": 398.378958,
+            "minimum": 394.907083,
+            "maximum": 478.531167
+          }
+        },
+        "profile-switch-backlog-50": {
+          "catalog_reads": {
+            "median": 51,
+            "minimum": 51,
+            "maximum": 51
+          },
+          "requests": {
+            "median": 410,
+            "minimum": 410,
+            "maximum": 410
+          },
+          "model_action_ms": {
+            "median": 10940.983375,
+            "minimum": 10916.025083,
+            "maximum": 12511.531917
+          },
+          "settled_ms": {
+            "median": 11971.50625,
+            "minimum": 11950.477916,
+            "maximum": 13544.543833
+          },
+          "busy_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "not_writable_ms": {
+            "median": 322.26987499999996,
+            "minimum": 305.417125,
+            "maximum": 327.89799999999997
+          },
+          "loading_ms": {
+            "median": 322.26987499999996,
+            "minimum": 305.417125,
+            "maximum": 327.89799999999997
+          },
+          "fresh_full_layout_ms": {
+            "median": 165.118625,
+            "minimum": 154.992625,
+            "maximum": 294.043875
+          },
+          "switch_to_live_ms": {
+            "median": 401.381584,
+            "minimum": 386.230709,
+            "maximum": 414.892625
+          },
+          "switch_to_current_ms": {
+            "median": 401.3855,
+            "minimum": 386.234667,
+            "maximum": 414.896958
+          },
+          "replay_drain_ms": {
+            "median": 10940.983375,
+            "minimum": 10916.025083,
+            "maximum": 12511.531917
+          }
+        },
+        "profile-switch-backlog-300": {
+          "catalog_reads": {
+            "median": 301,
+            "minimum": 301,
+            "maximum": 301
+          },
+          "requests": {
+            "median": 2410,
+            "minimum": 2410,
+            "maximum": 2410
+          },
+          "model_action_ms": {
+            "median": 74678.211417,
+            "minimum": 72527.1985,
+            "maximum": 79869.671833
+          },
+          "settled_ms": {
+            "median": 75711.741958,
+            "minimum": 73558.345958,
+            "maximum": 80902.054375
+          },
+          "busy_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "not_writable_ms": {
+            "median": 374.474875,
+            "minimum": 365.57562499999995,
+            "maximum": 470.955542
+          },
+          "loading_ms": {
+            "median": 374.474875,
+            "minimum": 365.57562499999995,
+            "maximum": 470.955542
+          },
+          "fresh_full_layout_ms": {
+            "median": 164.932667,
+            "minimum": 144.932,
+            "maximum": 178.713792
+          },
+          "switch_to_live_ms": {
+            "median": 456.01375,
+            "minimum": 444.472792,
+            "maximum": 577.267417
+          },
+          "switch_to_current_ms": {
+            "median": 456.018042,
+            "minimum": 444.476542,
+            "maximum": 577.272167
+          },
+          "replay_drain_ms": {
+            "median": 74678.211417,
+            "minimum": 72527.1985,
+            "maximum": 79869.671833
+          }
+        },
+        "own-complete-with-echo": {
+          "catalog_reads": {
+            "median": 2,
+            "minimum": 2,
+            "maximum": 2
+          },
+          "requests": {
+            "median": 17,
+            "minimum": 17,
+            "maximum": 17
+          },
+          "model_action_ms": {
+            "median": 519.142625,
+            "minimum": 500.924084,
+            "maximum": 543.419125
+          },
+          "settled_ms": {
+            "median": 1551.433625,
+            "minimum": 1532.973,
+            "maximum": 1575.701875
+          },
+          "busy_ms": {
+            "median": 280.4996249999999,
+            "minimum": 271.51162500000004,
+            "maximum": 298.91033400000003
+          },
+          "not_writable_ms": {
+            "median": 280.4996249999999,
+            "minimum": 271.51162500000004,
+            "maximum": 298.91033400000003
+          },
+          "loading_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "fresh_full_layout_ms": {
+            "median": 164.161417,
+            "minimum": 146.516375,
+            "maximum": 167.207042
+          }
+        },
+        "burst-20-cli": {
+          "catalog_reads": {
+            "median": 20,
+            "minimum": 20,
+            "maximum": 20
+          },
+          "requests": {
+            "median": 160,
+            "minimum": 160,
+            "maximum": 160
+          },
+          "model_action_ms": {
+            "median": 7194.860625,
+            "minimum": 6801.393333,
+            "maximum": 8992.92625
+          },
+          "settled_ms": {
+            "median": 8225.947209,
+            "minimum": 7832.224583,
+            "maximum": 10026.496667
+          },
+          "busy_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "not_writable_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "loading_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "fresh_full_layout_ms": {
+            "median": 172.103959,
+            "minimum": 158.60125,
+            "maximum": 218.106875
+          }
+        },
+        "idle-end-reconnect": {
+          "catalog_reads": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "requests": {
+            "median": 2,
+            "minimum": 2,
+            "maximum": 2
+          },
+          "model_action_ms": {
+            "median": 72.110083,
+            "minimum": 18.214625,
+            "maximum": 90.168292
+          },
+          "settled_ms": {
+            "median": 1106.88375,
+            "minimum": 1049.243667,
+            "maximum": 1120.797042
+          },
+          "busy_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "not_writable_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "loading_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "fresh_full_layout_ms": {
+            "median": 179.9405,
+            "minimum": 163.670917,
+            "maximum": 226.891292
+          }
+        }
+      },
+      "active_load": [
+        {
+          "median": 5.811767578125,
+          "minimum": 5.1640625,
+          "maximum": 9.37451171875
+        },
+        {
+          "median": 19.2890625,
+          "minimum": 9.876953125,
+          "maximum": 47.4169921875
+        },
+        {
+          "median": 4.298828125,
+          "minimum": 3.23291015625,
+          "maximum": 5.8837890625
+        },
+        {
+          "median": 7.4970703125,
+          "minimum": 4.79931640625,
+          "maximum": 13.22314453125
+        },
+        {
+          "median": 2.8369140625,
+          "minimum": 2.44580078125,
+          "maximum": 3.4208984375
+        }
+      ]
+    },
+    "working-tree": {
+      "runs": 5,
+      "requests": {
+        "median": 3035,
+        "minimum": 3035,
+        "maximum": 3035
+      },
+      "catalog_reads": {
+        "median": 378,
+        "minimum": 378,
+        "maximum": 378
+      },
+      "count_vectors": [
+        [
+          3035,
+          378,
+          372
+        ],
+        [
+          3035,
+          378,
+          372
+        ],
+        [
+          3035,
+          378,
+          372
+        ],
+        [
+          3035,
+          378,
+          372
+        ],
+        [
+          3035,
+          378,
+          372
+        ]
+      ],
+      "worst_actor_gap_ms": {
+        "median": 175.960375,
+        "minimum": 147.987375,
+        "maximum": 190.709416
+      },
+      "actions": {
+        "first-load": {
+          "catalog_reads": {
+            "median": 1,
+            "minimum": 1,
+            "maximum": 1
+          },
+          "requests": {
+            "median": 8,
+            "minimum": 8,
+            "maximum": 8
+          },
+          "model_action_ms": {
+            "median": 184.474542,
+            "minimum": 174.355209,
+            "maximum": 218.72825
+          },
+          "settled_ms": {
+            "median": 1218.428292,
+            "minimum": 1208.675875,
+            "maximum": 1251.172084
+          },
+          "busy_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "not_writable_ms": {
+            "median": 1218.414792,
+            "minimum": 1208.6640829999994,
+            "maximum": 1251.1609159999994
+          },
+          "loading_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "fresh_full_layout_ms": {
+            "median": 184.153959,
+            "minimum": 166.279,
+            "maximum": 237.03475
+          }
+        },
+        "stream-ready": {
+          "catalog_reads": {
+            "median": 1,
+            "minimum": 1,
+            "maximum": 1
+          },
+          "requests": {
+            "median": 10,
+            "minimum": 10,
+            "maximum": 10
+          },
+          "model_action_ms": {
+            "median": 301.800459,
+            "minimum": 282.453958,
+            "maximum": 307.534458
+          },
+          "settled_ms": {
+            "median": 1334.114292,
+            "minimum": 1316.207375,
+            "maximum": 1341.027542
+          },
+          "busy_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "not_writable_ms": {
+            "median": 301.79829199999995,
+            "minimum": 282.46475,
+            "maximum": 307.53120800000005
+          },
+          "loading_ms": {
+            "median": 252.51179199999999,
+            "minimum": 241.88266699999994,
+            "maximum": 269.5269160000001
+          },
+          "fresh_full_layout_ms": {
+            "median": 182.831792,
+            "minimum": 176.906916,
+            "maximum": 189.627
+          }
+        },
+        "cli-operation-0": {
+          "catalog_reads": {
+            "median": 1,
+            "minimum": 1,
+            "maximum": 1
+          },
+          "requests": {
+            "median": 8,
+            "minimum": 8,
+            "maximum": 8
+          },
+          "model_action_ms": {
+            "median": 454.808458,
+            "minimum": 406.766167,
+            "maximum": 467.829958
+          },
+          "settled_ms": {
+            "median": 1488.2465,
+            "minimum": 1438.863542,
+            "maximum": 1500.627416
+          },
+          "busy_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "not_writable_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "loading_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "fresh_full_layout_ms": {
+            "median": 200.208,
+            "minimum": 179.953583,
+            "maximum": 212.736167
+          }
+        },
+        "profile-switch-backlog-0": {
+          "catalog_reads": {
+            "median": 1,
+            "minimum": 1,
+            "maximum": 1
+          },
+          "requests": {
+            "median": 10,
+            "minimum": 10,
+            "maximum": 10
+          },
+          "model_action_ms": {
+            "median": 405.950625,
+            "minimum": 390.27225,
+            "maximum": 459.267042
+          },
+          "settled_ms": {
+            "median": 1437.338875,
+            "minimum": 1422.578375,
+            "maximum": 1490.792375
+          },
+          "busy_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "not_writable_ms": {
+            "median": 327.12837500000006,
+            "minimum": 316.677916,
+            "maximum": 377.43274999999994
+          },
+          "loading_ms": {
+            "median": 327.12837500000006,
+            "minimum": 316.677916,
+            "maximum": 377.43274999999994
+          },
+          "fresh_full_layout_ms": {
+            "median": 162.43475,
+            "minimum": 152.091125,
+            "maximum": 207.208125
+          },
+          "switch_to_live_ms": {
+            "median": 405.950292,
+            "minimum": 390.272,
+            "maximum": 459.2665
+          },
+          "switch_to_current_ms": {
+            "median": 405.950417,
+            "minimum": 390.272042,
+            "maximum": 459.266542
+          },
+          "replay_drain_ms": {
+            "median": 405.950625,
+            "minimum": 390.27225,
+            "maximum": 459.267042
+          }
+        },
+        "profile-switch-backlog-50": {
+          "catalog_reads": {
+            "median": 51,
+            "minimum": 51,
+            "maximum": 51
+          },
+          "requests": {
+            "median": 410,
+            "minimum": 410,
+            "maximum": 410
+          },
+          "model_action_ms": {
+            "median": 10841.748541,
+            "minimum": 10182.351625,
+            "maximum": 11416.47725
+          },
+          "settled_ms": {
+            "median": 11873.133041,
+            "minimum": 11215.600417,
+            "maximum": 12450.160833
+          },
+          "busy_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "not_writable_ms": {
+            "median": 324.49137500000006,
+            "minimum": 303.127167,
+            "maximum": 377.91479100000004
+          },
+          "loading_ms": {
+            "median": 324.49137500000006,
+            "minimum": 303.127167,
+            "maximum": 377.91479100000004
+          },
+          "fresh_full_layout_ms": {
+            "median": 160.829208,
+            "minimum": 146.152708,
+            "maximum": 172.871583
+          },
+          "switch_to_live_ms": {
+            "median": 408.968709,
+            "minimum": 381.856708,
+            "maximum": 463.048458
+          },
+          "switch_to_current_ms": {
+            "median": 408.9725,
+            "minimum": 381.861333,
+            "maximum": 463.052792
+          },
+          "replay_drain_ms": {
+            "median": 10841.748541,
+            "minimum": 10182.351625,
+            "maximum": 11416.47725
+          }
+        },
+        "profile-switch-backlog-300": {
+          "catalog_reads": {
+            "median": 301,
+            "minimum": 301,
+            "maximum": 301
+          },
+          "requests": {
+            "median": 2410,
+            "minimum": 2410,
+            "maximum": 2410
+          },
+          "model_action_ms": {
+            "median": 72804.428792,
+            "minimum": 66425.96525,
+            "maximum": 74666.0975
+          },
+          "settled_ms": {
+            "median": 73836.269625,
+            "minimum": 67459.502584,
+            "maximum": 75699.52975
+          },
+          "busy_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "not_writable_ms": {
+            "median": 361.25058299999995,
+            "minimum": 331.0009580000001,
+            "maximum": 369.190375
+          },
+          "loading_ms": {
+            "median": 361.25058299999995,
+            "minimum": 331.0009580000001,
+            "maximum": 369.190375
+          },
+          "fresh_full_layout_ms": {
+            "median": 158.784667,
+            "minimum": 148.078416,
+            "maximum": 170.773375
+          },
+          "switch_to_live_ms": {
+            "median": 448.0745,
+            "minimum": 407.557291,
+            "maximum": 450.446458
+          },
+          "switch_to_current_ms": {
+            "median": 448.0785,
+            "minimum": 407.561333,
+            "maximum": 450.450375
+          },
+          "replay_drain_ms": {
+            "median": 72804.428792,
+            "minimum": 66425.96525,
+            "maximum": 74666.0975
+          }
+        },
+        "own-complete-with-echo": {
+          "catalog_reads": {
+            "median": 2,
+            "minimum": 2,
+            "maximum": 2
+          },
+          "requests": {
+            "median": 17,
+            "minimum": 17,
+            "maximum": 17
+          },
+          "model_action_ms": {
+            "median": 509.902875,
+            "minimum": 469.930209,
+            "maximum": 610.463334
+          },
+          "settled_ms": {
+            "median": 1544.022542,
+            "minimum": 1503.319375,
+            "maximum": 1641.833584
+          },
+          "busy_ms": {
+            "median": 298.353458,
+            "minimum": 270.2324170000001,
+            "maximum": 434.6688339999999
+          },
+          "not_writable_ms": {
+            "median": 298.353458,
+            "minimum": 270.2324170000001,
+            "maximum": 434.6688339999999
+          },
+          "loading_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "fresh_full_layout_ms": {
+            "median": 161.332834,
+            "minimum": 146.656875,
+            "maximum": 185.783083
+          }
+        },
+        "burst-20-cli": {
+          "catalog_reads": {
+            "median": 20,
+            "minimum": 20,
+            "maximum": 20
+          },
+          "requests": {
+            "median": 160,
+            "minimum": 160,
+            "maximum": 160
+          },
+          "model_action_ms": {
+            "median": 7035.483375,
+            "minimum": 6352.17425,
+            "maximum": 7113.104667
+          },
+          "settled_ms": {
+            "median": 8068.289916,
+            "minimum": 7384.38075,
+            "maximum": 8147.020958
+          },
+          "busy_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "not_writable_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "loading_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "fresh_full_layout_ms": {
+            "median": 170.300542,
+            "minimum": 148.826542,
+            "maximum": 181.518292
+          }
+        },
+        "idle-end-reconnect": {
+          "catalog_reads": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "requests": {
+            "median": 2,
+            "minimum": 2,
+            "maximum": 2
+          },
+          "model_action_ms": {
+            "median": 52.678458,
+            "minimum": 12.8225,
+            "maximum": 104.002917
+          },
+          "settled_ms": {
+            "median": 1084.539291,
+            "minimum": 1043.3555,
+            "maximum": 1138.323334
+          },
+          "busy_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "not_writable_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "loading_ms": {
+            "median": 0,
+            "minimum": 0,
+            "maximum": 0
+          },
+          "fresh_full_layout_ms": {
+            "median": 197.745042,
+            "minimum": 174.402,
+            "maximum": 207.806458
+          }
+        }
+      },
+      "active_load": [
+        {
+          "median": 4.25341796875,
+          "minimum": 3.7001953125,
+          "maximum": 6.0322265625
+        },
+        {
+          "median": 3.44287109375,
+          "minimum": 2.7412109375,
+          "maximum": 4.44287109375
+        },
+        {
+          "median": 3.2099609375,
+          "minimum": 2.97705078125,
+          "maximum": 3.59326171875
+        },
+        {
+          "median": 8.66259765625,
+          "minimum": 4.744140625,
+          "maximum": 19.87548828125
+        },
+        {
+          "median": 20.0654296875,
+          "minimum": 9.30322265625,
+          "maximum": 41.74169921875
+        }
+      ]
+    }
+  },
+  "harness_sha256": {
+    "apps/macos/PerfMeasurement/run.py": "ccbb1d22db56276b3149d465f278e3d1ef820311d4650694d064f6f91711781f",
+    "apps/macos/PerfMeasurement/root_fixture.py": "02c9387ab9ec05821deb25c1c96600efa296cb0ba1a6c0c9699e1fc0fe3162bc",
+    "apps/macos/PerfMeasurement/climb_summary.py": "fff845c53b6fa979062af6c45ff206cffce74c3bad991f7215333e9b509f32f7",
+    "apps/macos/PerfMeasurement/Measurement.swift": "3b4fb3ebc6d77d1eb9003dcfea24175de9d3e5173c1e61bd4bc9a1d4e909227e",
+    "apps/macos/PerfMeasurement/Trace.swift": "b4446c2e064d01e14655e4f34c5d5afe00237228911aba949e18ca074ce09499",
+    "apps/macos/PerfMeasurement/fixture.py": "05b8cfb6cd68dada66a472d1f487c3fda6d4c372ec0b8b2fbba25b628f9cecc1"
+  },
+  "qualification_note": "The paired run used identical compiled drivers. Pre-freeze analysis corrections exclude a generated warm-cache file from source manifests, include API sources, distinguish setup/lock-wait load from active request-interval load, and clarify selected-step accounting. They change no measured driver behavior."
+}

@@ -1,4 +1,4 @@
-def decorate(source, root_window):
+def decorate(source, root_window, climb=False):
     def replace_once(old, new):
         nonlocal source
         assert source.count(old) == 1, old
@@ -17,7 +17,7 @@ def decorate(source, root_window):
             diagnosticsWindow?.close()
         }
 ''')
-    replace_once('model.tasks.count == 180 } }', 'model.tasks.count == personalTaskCount } }')
+    if not climb: replace_once('model.tasks.count == 180 } }', 'model.tasks.count == personalTaskCount } }')
     replace_once('model.tasks.count == 180 && model.tags.count == 70 && model.projects.count == 12', 'model.tasks.count == workTaskCount && model.tags.count == workTagCount && model.projects.count == workProjectCount')
     replace_once('$0.title == "Measurement Task 100"', '$0.title == completionTitle')
     replace_once('            let full = layout(false)', '''            let full = layout(false)
@@ -55,14 +55,15 @@ def decorate(source, root_window):
             let host = controller.view''')
         replace_once('            window.contentView = host', '            window.contentViewController = controller')
         source = source.replace('for window in windows { window.close() }', 'for window in windows { window.contentViewController = nil; window.close() }')
-        begin = source.index('        try await step("open-task")')
-        end = source.index('        model.editor = nil', begin)
-        source = source[:begin] + '''        try await step("open-task") {
+        if not climb:
+            begin = source.index('        try await step("open-task")')
+            end = source.index('        model.editor = nil', begin)
+            source = source[:begin] + '''        try await step("open-task") {
             model.beginEditing(model.tasks[0])
             try #require(model.editor != nil)
         }
         try await step("dependency-picker-unavailable") {}
         try await step("dependencies-view-unavailable") {}
 ''' + source[end:]
-        replace_once('        model.editor = nil', '        try await step("close-task") { model.editor = nil }')
+            replace_once('        model.editor = nil', '        try await step("close-task") { model.editor = nil }')
     return source
