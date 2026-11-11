@@ -149,3 +149,17 @@ and referenced files. attachment_store_bytes counts regular files under the
 managed attachment root, skipping symbolic links. The compiled HTTP, Electron
 and Swift drives upload a 67-byte PNG, require one additional Attachment and
 67 additional store bytes, and reject its private label from diagnostics.
+
+## Shared interaction schemas
+
+Read [the vocabulary recipe](features/vocabulary.md). After the main compiled
+proof has built same-source binaries, run:
+
+```sh
+bun .agents/skills/verify-diagnostics/scripts/verify-vocabulary.ts "$PWD/docs/evidence/ui-speed/vocabulary-new"
+pnpm --filter @todo/domain test client-diagnostics.test.ts
+```
+
+The schema commands use only scratch HOME and do not open the real database.
+Unknown event/version/content decode returns an explicit reason without keeping
+the unknown payload. Unknown capabilities map to unknown, never zero.

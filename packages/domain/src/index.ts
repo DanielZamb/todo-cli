@@ -1,6 +1,7 @@
 export * from "./attachments.ts";
 export * from "./auth/model.ts";
 export * from "./batch-edit.ts";
+export * from "./client-diagnostics.ts";
 export * from "./client-reads.ts";
 export * from "./dependencies.ts";
 export * from "./dependency-commands.ts";
@@ -19,6 +20,7 @@ export * from "./graph-order.ts";
 export * from "./graph-queries.ts";
 export * from "./ids.ts";
 export * from "./import.ts";
+export * from "./interaction-categories.ts";
 export * from "./limits.ts";
 export * from "./profile-commands.ts";
 export * from "./quick-add.ts";
