@@ -104,9 +104,10 @@ poll rate was not reproduced.
 | e69230f9 | 383 [269, 511] | 392 [243, 437] |
 
 Host one-minute load at session starts ranged from 13 to 286. This is the
-owner-authorized busy-machine case, with uncontrolled unrelated work. The ranges
-overlap and the limiter varies. Do not interpret the medians as a proven client
-regression or a performance win. The longest observed gap in this completed
+owner-authorized busy-machine case, with uncontrolled unrelated work. Closed old/current ranges separate by 36 ms, while Diagnostics-open ranges
+overlap. Current closed sessions show a smaller headless difference. The host
+loads differ and the limiter varies, so these medians do not establish which
+client change caused it. No performance win is claimed. The longest observed gap in this completed
 series was 1.083 seconds, not 15 seconds. No visible input was delivered here.
 
 For closed Diagnostics, each cell below is the median of three sessions. The
