@@ -148,17 +148,19 @@ try {
       if (task.title === "Purged") {
         const before = (await run(store.tasks())).find((t) => t.id === task.id);
         assert.ok(before);
-        await run(
+        const purged = await run(
           store.auth.append({
             ...request,
             event: {
               kind: "TaskPurged",
               entity_version: 1,
               occurred_at: at,
+              task_id: task.id,
               before,
             },
           }),
         );
+        assert.equal(purged.outcome, "committed");
       }
     }
     if (task.title === "Copy and Move") {
@@ -317,11 +319,72 @@ try {
   await run(
     store.auth.deleteProfile({
       credential,
+      profile,
+      options: { with_tasks: false, dry_run: false },
+    }),
+  );
+  await run(
+    Effect.exit(
+      store.auth.authenticate({
+        ...request,
+        credential: "invalid",
+        access: "read",
+      }),
+    ),
+  );
+  await run(
+    store.auth.deleteProfile({
+      credential,
       profile: Schema.decodeUnknownSync(ProfileId)("deleted"),
       options: { with_tasks: true, dry_run: false },
     }),
   );
+  const snapshot = await run(
+    store.snapshots.create("read differential fixture"),
+  );
+  await run(store.snapshots.restore(snapshot.id, { dryRun: false }));
   await run(store.takeSnapshot());
+  const history = await run(store.history());
+  const kinds = new Set<string>(
+    history.flatMap((entry) =>
+      entry.event.kind === "TaskHistoryRedacted"
+        ? [entry.event.kind, entry.event.original_kind]
+        : [entry.event.kind],
+    ),
+  );
+  for (const kind of [
+    "TaskCreated",
+    "TaskEdited",
+    "TaskCompleted",
+    "TaskCancelled",
+    "TaskReopened",
+    "TaskDeleted",
+    "TaskPurged",
+    "TaskReverted",
+    "TaskMovedIn",
+    "TaskMovedOut",
+    "AttachmentAdded",
+    "AttachmentRemoved",
+    "DependencyAdded",
+    "DependencyRemoved",
+    "TaskHistoryRedacted",
+    "TaskAttemptRejected",
+    "AuthChanged",
+    "AuthAttemptRejected",
+    "ReminderFired",
+    "ProfileDeleted",
+    "ProfileDeletionRejected",
+    "DatabaseRestored",
+  ])
+    assert.ok(kinds.has(kind), `Fixture must contain ${kind}`);
+  assert.equal(
+    history.filter((entry) => entry.outcome === "rejected").length,
+    3,
+  );
+  assert.equal(
+    (await run(store.tasks())).some((task) => task.title === "Purged"),
+    false,
+  );
   writeFileSync(
     join(root, "fixtures.json"),
     JSON.stringify([
@@ -332,6 +395,9 @@ try {
         credentials,
         all_tasks: true,
         attachment_root: join(root, "attachments"),
+        extra_tasks: created
+          .filter((task) => task.title === "Purged")
+          .map(({ id, profile_id }) => ({ id, profile_id })),
       },
     ]),
   );

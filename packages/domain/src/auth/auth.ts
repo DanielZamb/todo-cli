@@ -743,13 +743,13 @@ export class Authentication<Read> {
               catalog: (input) =>
                 this.projectionWithin(
                   input,
-                  () => this.projection.catalog(input.profile),
+                  (profile) => this.projection.catalog(profile),
                   boundary,
                 ),
               metadata: (input) =>
                 this.projectionWithin(
                   input,
-                  () => this.projection.metadata(input.profile),
+                  (profile) => this.projection.metadata(profile),
                   boundary,
                 ),
               profileSummaries: (input) =>
@@ -786,10 +786,12 @@ export class Authentication<Read> {
   readonly read = (input: AccessRequest) => this.readWithin(input);
 
   readonly catalog = (input: AccessRequest) =>
-    this.projectionWithin(input, () => this.projection.catalog(input.profile));
+    this.projectionWithin(input, (profile) => this.projection.catalog(profile));
 
   readonly metadata = (input: AccessRequest) =>
-    this.projectionWithin(input, () => this.projection.metadata(input.profile));
+    this.projectionWithin(input, (profile) =>
+      this.projection.metadata(profile),
+    );
 
   readonly authorizeRead = (input: AccessRequest) =>
     this.projectionWithin(input, () => undefined);
@@ -797,15 +799,17 @@ export class Authentication<Read> {
   readonly taskHistory = (
     input: AccessRequest & { readonly task_id: TaskId },
   ) =>
-    this.projectionWithin(input, () =>
-      taskHistory(this.db, input.profile, input.task_id),
+    this.projectionWithin(input, (profile) =>
+      taskHistory(this.db, profile, input.task_id),
     );
 
   readonly projects = (input: AccessRequest) =>
-    this.projectionWithin(input, () => this.projection.projects(input.profile));
+    this.projectionWithin(input, (profile) =>
+      this.projection.projects(profile),
+    );
 
   readonly tags = (input: AccessRequest) =>
-    this.projectionWithin(input, () => this.projection.tags(input.profile));
+    this.projectionWithin(input, (profile) => this.projection.tags(profile));
 
   readonly profileSummaries = (input: { readonly credential: string }) =>
     this.profileSummariesWithin(input);
@@ -841,7 +845,7 @@ export class Authentication<Read> {
 
   private projectionWithin = <A>(
     input: AccessRequest,
-    read: () => A,
+    read: (profile: ProfileId) => A,
     boundary?: ReadBoundary,
   ) =>
     this.perform(
@@ -849,8 +853,9 @@ export class Authentication<Read> {
       input.profile,
       (time) => {
         const request = parse(AccessRequest, input);
-        this.requireCredential(request, time, "read", request.profile);
-        return read();
+        const profile = request.profile;
+        this.requireCredential(request, time, "read", profile);
+        return read(profile);
       },
       boundary,
     );

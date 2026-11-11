@@ -2,7 +2,14 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, it } from "@effect/vitest";
-import { ClientReads, Discovery, readGraph, TaskId } from "@todo/domain";
+import {
+  ClientReads,
+  Discovery,
+  ProfileId,
+  readGraph,
+  Task,
+  TaskId,
+} from "@todo/domain";
 import { openStore, TaskCommands } from "@todo/domain/store";
 import { Effect, Schema } from "effect";
 import { TestClock } from "effect/testing";
@@ -128,6 +135,84 @@ it.effect(
                 cursor: 9,
                 entries: [],
               });
+            }),
+          (store) => Effect.orDie(store.close()),
+        ),
+      (directory) =>
+        Effect.sync(() => rmSync(directory, { recursive: true, force: true })),
+    ),
+);
+
+it.effect(
+  "projection queries use the Profile authorized before a request mutation",
+  () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() => mkdtempSync(join(tmpdir(), "todo-projection-scope-"))),
+      (directory) =>
+        Effect.acquireUseRelease(
+          openStore({ path: join(directory, "scratch.db") }),
+          (store) =>
+            Effect.gen(function* () {
+              yield* TestClock.setTime(Date.parse(time));
+              const other = {
+                ...work,
+                id: Schema.decodeUnknownSync(ProfileId)("other"),
+                name: "Other",
+              };
+              yield* store.putProfile(work);
+              yield* store.putProfile(other);
+              yield* store.auth.setupOwner("projection scope scratch");
+              const { credential } = yield* store.auth.signIn(
+                "projection scope scratch",
+              );
+              yield* store.append({ actor, profile: work.id, event: created });
+              yield* store.append({
+                actor,
+                profile: other.id,
+                event: {
+                  ...created,
+                  task: Schema.decodeUnknownSync(Task)({
+                    ...taskInput,
+                    id: "task-secret",
+                    profile_id: other.id,
+                    title: "Other secret",
+                  }),
+                },
+              });
+              const token = yield* store.auth.issueToken({
+                credential,
+                token: {
+                  name: "scoped-reader",
+                  profile: work.id,
+                  scope: "read-only",
+                },
+              });
+              const request = {
+                credential: token.credential,
+                profile: work.id,
+              };
+              const used = store.diagnostics.credentialUsed.bind(
+                store.diagnostics,
+              );
+              Object.defineProperty(store.diagnostics, "credentialUsed", {
+                configurable: true,
+                value: (...args: Parameters<typeof used>) => {
+                  used(...args);
+                  request.profile = other.id;
+                },
+              });
+              try {
+                expect(
+                  (yield* store.auth.catalog(request)).tasks.map(
+                    (task) => task.id,
+                  ),
+                ).toEqual(["task-1"]);
+                expect(request.profile).toBe(other.id);
+              } finally {
+                Object.defineProperty(store.diagnostics, "credentialUsed", {
+                  value: used,
+                });
+              }
             }),
           (store) => Effect.orDie(store.close()),
         ),

@@ -21,6 +21,11 @@ const Fixture = Schema.Struct({
   credentials: Schema.optionalKey(Schema.Array(Schema.String)),
   all_tasks: Schema.optionalKey(Schema.Boolean),
   attachment_root: Schema.optionalKey(Schema.String),
+  extra_tasks: Schema.optionalKey(
+    Schema.Array(
+      Schema.Struct({ id: Schema.String, profile_id: Schema.String }),
+    ),
+  ),
 });
 const [before, after, manifest, output] = process.argv.slice(2);
 assert.ok(
@@ -74,11 +79,14 @@ async function sample(
     const profiles = db
       .query<{ id: string }, []>("SELECT id FROM profiles ORDER BY id")
       .all();
-    const tasks = db
-      .query<{ id: string; profile_id: string }, []>(
-        "SELECT id,profile_id FROM tasks ORDER BY id",
-      )
-      .all();
+    const tasks = [
+      ...db
+        .query<{ id: string; profile_id: string }, []>(
+          "SELECT id,profile_id FROM tasks ORDER BY id",
+        )
+        .all(),
+      ...(fixture.extra_tasks ?? []),
+    ];
     const routes = [
       "/health",
       "/openapi.json",
@@ -95,14 +103,22 @@ async function sample(
       profiles.find((p) => p.id === "p0")?.id ??
       profiles[0]?.id;
     assert.ok(streamProfile);
-    const cursor = Math.max(
-      0,
-      (db
-        .query<{ seq: number }, []>(
-          "SELECT coalesce(max(seq),0) AS seq FROM op_log",
+    const generation =
+      db
+        .query<{ generation: string }, []>(
+          "SELECT json_extract(event,'$.generation') AS generation FROM op_log WHERE json_extract(event,'$.kind')='DatabaseRestored' ORDER BY seq DESC LIMIT 1",
         )
-        .get()?.seq ?? 0) - 3,
-    );
+        .get()?.generation ?? "initial";
+    const cursor = fixture.all_tasks
+      ? 0
+      : Math.max(
+          0,
+          (db
+            .query<{ seq: number }, []>(
+              "SELECT coalesce(max(seq),0) AS seq FROM op_log",
+            )
+            .get()?.seq ?? 0) - 3,
+        );
     const streamOperations =
       db
         .query<{ count: number }, [string, number]>(
@@ -184,7 +200,10 @@ async function sample(
                   Authorization: `Bearer ${credential}`,
                   "Content-Type": "application/json",
                   ...(route.endsWith("/events")
-                    ? { "Last-Event-ID": String(cursor) }
+                    ? {
+                        "Last-Event-ID": String(cursor),
+                        "X-Todo-Generation": generation,
+                      }
                     : {}),
                 },
         });
