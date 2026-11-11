@@ -494,5 +494,6 @@ export {
   diagnosticEventLabels,
   diagnosticInputLabels,
   diagnosticModeLabels,
+  diagnosticRefreshTriggerLabels,
   diagnosticSubtypeLabels,
 } from "./diagnostic-labels.ts";

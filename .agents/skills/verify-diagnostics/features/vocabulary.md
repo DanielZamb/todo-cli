@@ -17,7 +17,11 @@ Run `bun apps/server/scripts/scratch-diagnostics.ts build`, then
 `bun .agents/skills/verify-diagnostics/scripts/verify-vocabulary.ts <absolute-evidence-directory>`.
 The helper uses the cached compiled CLI with a scratch HOME and asserts the
 published schemas, 38 inventory categories, literal quantiles and incomplete
-start denominators. Evidence survives cleanup and no server is started.
+start denominators. It also requires the exact refresh-trigger enum from the
+compiled `diagnostics event` schema, including dayChange, clockChange, wake and
+activation. clockChange includes a time-zone change. The shared
+diagnosticRefreshTriggerLabels export supplies plain display words for all 15
+causes. Evidence survives cleanup and no server is started.
 Run `pnpm --filter @todo/domain test client-diagnostics.test.ts` for every event,
 forbidden content, invalid joins, outcome and mode isolation.
 

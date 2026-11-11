@@ -5,11 +5,12 @@ import {
   diagnosticEventLabels,
   diagnosticInputLabels,
   diagnosticModeLabels,
+  diagnosticRefreshTriggerLabels,
   diagnosticSubtypeLabels,
   interactionCategories,
 } from "../src/interaction-categories.ts";
 
-it("provides plain display text for every category, subtype and event", () => {
+it("provides plain display text for every category, subtype, event and refresh trigger", () => {
   for (const category of interactionCategories) {
     expect(diagnosticCategoryLabels[category.id].trim().length).toBeGreaterThan(
       0,
@@ -17,16 +18,23 @@ it("provides plain display text for every category, subtype and event", () => {
     for (const subtype of category.subtypes)
       expect(diagnosticSubtypeLabels[subtype].trim().length).toBeGreaterThan(0);
   }
-  for (const event of DiagnosticEvent.members)
+  for (const event of DiagnosticEvent.members) {
     expect(
       diagnosticEventLabels[event.fields.name.literal].trim().length,
     ).toBeGreaterThan(0);
+    if ("trigger" in event.fields)
+      for (const trigger of event.fields.trigger.literals)
+        expect(
+          diagnosticRefreshTriggerLabels[trigger].trim().length,
+        ).toBeGreaterThan(0);
+  }
   for (const label of [
     ...Object.values(diagnosticCategoryLabels),
     ...Object.values(diagnosticSubtypeLabels),
     ...Object.values(diagnosticEventLabels),
     ...Object.values(diagnosticModeLabels),
     ...Object.values(diagnosticInputLabels),
+    ...Object.values(diagnosticRefreshTriggerLabels),
   ]) {
     expect(label).not.toMatch(/\b[IC]\d{2}\b|[a-z]\.[a-z]|[a-z][A-Z]|_/u);
   }
@@ -43,4 +51,21 @@ it("provides plain display text for every category, subtype and event", () => {
     compact: "Compact",
   });
   expect(diagnosticEventLabels["ui.layout.committed"]).toBe("Layout committed");
+  expect(diagnosticRefreshTriggerLabels).toEqual({
+    startup: "App started",
+    profileSwitch: "Profile switched",
+    viewChange: "View changed",
+    filterChange: "Filter changed",
+    search: "Search",
+    ownWrite: "Own change",
+    streamOperation: "Change from the server",
+    streamReady: "Connection ready",
+    reconnect: "Reconnected",
+    manual: "Manual",
+    dayChange: "Day changed",
+    clockChange: "Clock or time zone changed",
+    wake: "Woke from sleep",
+    activation: "App became active",
+    unknown: "Unknown",
+  });
 });

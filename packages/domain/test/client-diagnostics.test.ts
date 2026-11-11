@@ -232,6 +232,26 @@ describe("shared Diagnostics vocabulary", () => {
       }),
     ).toThrow();
   });
+  it("decodes lifecycle refresh causes without treating them as unknown records", () => {
+    for (const trigger of ["dayChange", "clockChange", "wake", "activation"]) {
+      expect(
+        decodeDiagnosticEvent({
+          ...envelope,
+          name: "refresh.started",
+          refresh_id: scope.run_id,
+          trigger,
+        }),
+      ).toEqual({
+        kind: "known",
+        event: {
+          ...envelope,
+          name: "refresh.started",
+          refresh_id: scope.run_id,
+          trigger,
+        },
+      });
+    }
+  });
   it("makes unknown variants and capabilities explicit without retaining their content", () => {
     expect(
       decodeDiagnosticEvent({

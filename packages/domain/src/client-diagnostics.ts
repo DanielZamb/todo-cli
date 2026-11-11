@@ -1,3 +1,4 @@
+// Shared event schemas and frozen-run summaries define one versioned vocabulary.
 import { Option, Schema } from "effect";
 import { InteractionCategory } from "./interaction-categories.ts";
 
@@ -225,6 +226,10 @@ const trigger = Schema.Literals([
   "streamReady",
   "reconnect",
   "manual",
+  "dayChange",
+  "clockChange",
+  "wake",
+  "activation",
   "unknown",
 ]);
 const action = { action_id: DiagnosticActionId };

@@ -56,7 +56,7 @@ const examples = [
   { name: "ui.selection.committed", action_id, generation: 1 },
   { name: "ui.inspector.committed", action_id, generation: 1 },
   { name: "ui.stall", duration_ms: 1, expected_cadence_ms: 16 },
-  { name: "refresh.started", refresh_id, trigger: "manual" },
+  { name: "refresh.started", refresh_id, trigger: "dayChange" },
   {
     name: "refresh.finished",
     refresh_id,
@@ -206,4 +206,47 @@ it("constructs and narrows every public variant with required payload overrides"
     stage: "ipc",
     request_id,
   });
+});
+
+it("constructs and narrows every refresh trigger without widening the payload", () => {
+  const triggers = [
+    "startup",
+    "profileSwitch",
+    "viewChange",
+    "filterChange",
+    "search",
+    "ownWrite",
+    "streamOperation",
+    "streamReady",
+    "reconnect",
+    "manual",
+    "dayChange",
+    "clockChange",
+    "wake",
+    "activation",
+    "unknown",
+  ] as const satisfies ReadonlyArray<
+    DiagnosticPayloads["refresh.started"]["trigger"]
+  >;
+  expectTypeOf<
+    DiagnosticPayloads["refresh.started"]["trigger"]
+  >().toEqualTypeOf<(typeof triggers)[number]>();
+  for (const trigger of triggers) {
+    const event = makeDiagnosticEvent({
+      ...base,
+      name: "refresh.started",
+      refresh_id,
+      trigger,
+    });
+    if (event.name === "refresh.started") {
+      expectTypeOf(event.trigger).toEqualTypeOf<(typeof triggers)[number]>();
+      expectTypeOf(event.refresh_id).toEqualTypeOf<typeof refresh_id>();
+      expect(Schema.decodeUnknownSync(DiagnosticEvent)(event)).toEqual(event);
+    }
+  }
+  expectTypeOf<{
+    name: "refresh.started";
+    refresh_id: typeof refresh_id;
+    trigger: "timeZoneChange";
+  }>().not.toExtend<Parameters<typeof makeDiagnosticEvent>[0]>();
 });

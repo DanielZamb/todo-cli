@@ -1,6 +1,7 @@
 import type {
   DiagnosticEnvelope,
   DiagnosticEvent,
+  DiagnosticEventOf,
 } from "./client-diagnostics.ts";
 import type { InteractionCategory } from "./interaction-categories.ts";
 
@@ -336,6 +337,24 @@ export const diagnosticInputLabels = {
   background: "background",
   unknown: "unknown input",
 } satisfies Record<typeof DiagnosticEnvelope.Type.input_kind, string>;
+
+export const diagnosticRefreshTriggerLabels = {
+  startup: "App started",
+  profileSwitch: "Profile switched",
+  viewChange: "View changed",
+  filterChange: "Filter changed",
+  search: "Search",
+  ownWrite: "Own change",
+  streamOperation: "Change from the server",
+  streamReady: "Connection ready",
+  reconnect: "Reconnected",
+  manual: "Manual",
+  dayChange: "Day changed",
+  clockChange: "Clock or time zone changed",
+  wake: "Woke from sleep",
+  activation: "App became active",
+  unknown: "Unknown",
+} satisfies Record<DiagnosticEventOf<"refresh.started">["trigger"], string>;
 
 export const diagnosticModeLabels = {
   full: "full window",
