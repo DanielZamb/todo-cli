@@ -58,3 +58,10 @@ write provenance. Full SQL, graph computation, matcher preparation/meter and
 CLI launch/stdout attribution belong to later units. The profiler lists each
 gap explicitly. JSON byte size is not heap allocation size. Detailed ring
 eviction is counted separately from lost starts and aggregate counters.
+
+Set `TODO_DIAGNOSTICS_NO_SWIFT=1` on the main Diagnostics recipe for source-only
+workers. The terminal PNG stage is explicitly HOLD and owed to a unit with the
+Swift slot; the data, CLI and PTY assertions still execute. Recorder failure
+isolation is a scratch write case in diagnostic-context.test.ts: independently
+throwing start/end methods cannot fail or roll back a Task creation, and the
+versioned profiler counts recording_failures without retaining error text.

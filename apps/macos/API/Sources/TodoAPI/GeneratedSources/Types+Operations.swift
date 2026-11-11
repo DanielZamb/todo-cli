@@ -41599,6 +41599,8 @@ public enum Operations {
                             public var lost_starts: Swift.Int
                             /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/dropped_events`.
                             public var dropped_events: Swift.Int
+                            /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/recording_failures`.
+                            public var recording_failures: Swift.Int
                             /// - Remark: Generated from `#/paths/diagnostics/GET/responses/200/content/json/profiler/activePayload`.
                             public struct activePayloadPayload: Codable, Hashable, Sendable {
                                 private var _explicitNullKeys: Set<String> = []
@@ -43425,6 +43427,7 @@ public enum Operations {
                             ///   - finished:
                             ///   - lost_starts:
                             ///   - dropped_events:
+                            ///   - recording_failures:
                             ///   - active:
                             ///   - recent:
                             ///   - deliveries:
@@ -43439,6 +43442,7 @@ public enum Operations {
                                 finished: Swift.Int,
                                 lost_starts: Swift.Int,
                                 dropped_events: Swift.Int,
+                                recording_failures: Swift.Int,
                                 active: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayload,
                                 recent: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.recentPayload,
                                 deliveries: Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.deliveriesPayload,
@@ -43453,6 +43457,7 @@ public enum Operations {
                                 self.finished = finished
                                 self.lost_starts = lost_starts
                                 self.dropped_events = dropped_events
+                                self.recording_failures = recording_failures
                                 self.active = active
                                 self.recent = recent
                                 self.deliveries = deliveries
@@ -43468,6 +43473,7 @@ public enum Operations {
                                 case finished
                                 case lost_starts
                                 case dropped_events
+                                case recording_failures
                                 case active
                                 case recent
                                 case deliveries
@@ -43512,6 +43518,10 @@ public enum Operations {
                                     Swift.Int.self,
                                     forKey: .dropped_events
                                 )
+                                self.recording_failures = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .recording_failures
+                                )
                                 self.active = try container.decode(
                                     Operations.diagnostics_period_snapshot.Output.Ok.Body.jsonPayload.profilerPayload.activePayload.self,
                                     forKey: .active
@@ -43538,6 +43548,7 @@ public enum Operations {
                                     "finished",
                                     "lost_starts",
                                     "dropped_events",
+                                    "recording_failures",
                                     "active",
                                     "recent",
                                     "deliveries",
@@ -43556,6 +43567,7 @@ public enum Operations {
                                 try container.encode(self.finished, forKey: .finished)
                                 try container.encode(self.lost_starts, forKey: .lost_starts)
                                 try container.encode(self.dropped_events, forKey: .dropped_events)
+                                try container.encode(self.recording_failures, forKey: .recording_failures)
                                 try container.encode(self.active, forKey: .active)
                                 try container.encode(self.recent, forKey: .recent)
                                 try container.encode(self.deliveries, forKey: .deliveries)

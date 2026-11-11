@@ -112,3 +112,84 @@ it.effect(
       );
     }),
 );
+
+it.effect(
+  "keeps recorder failures from failing or rolling back an accepted Task write",
+  () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const { mkdtempSync, rmSync } = yield* Effect.promise(
+          () => import("node:fs"),
+        );
+        const { tmpdir } = yield* Effect.promise(() => import("node:os"));
+        const { join } = yield* Effect.promise(() => import("node:path"));
+        const { openStore, TaskCommands } = yield* Effect.promise(
+          () => import("../src/store/store.ts"),
+        );
+        const { Profile } = yield* Effect.promise(
+          () => import("../src/entities.ts"),
+        );
+        const { CreateTask } = yield* Effect.promise(
+          () => import("../src/task-commands.ts"),
+        );
+        const { ProfileId } = yield* Effect.promise(
+          () => import("../src/ids.ts"),
+        );
+        const { Schema } = yield* Effect.promise(() => import("effect"));
+        const directory = yield* Effect.acquireRelease(
+          Effect.sync(() => mkdtempSync(join(tmpdir(), "todo-diag-failure-"))),
+          (path) =>
+            Effect.sync(() => rmSync(path, { recursive: true, force: true })),
+        );
+        const store = yield* Effect.acquireRelease(
+          openStore({ path: join(directory, "scratch.db") }),
+          (store) => Effect.orDie(store.close()),
+        );
+        yield* store.auth.setupOwner("recorder failure fixture");
+        const session = yield* store.auth.signIn("recorder failure fixture");
+        const profile = Schema.decodeUnknownSync(ProfileId)("work");
+        yield* store.putProfile(
+          Schema.decodeUnknownSync(Profile)({
+            id: profile,
+            name: "Work",
+            created_at: "2026-11-11T00:00:00Z",
+            updated_at: "2026-11-11T00:00:00Z",
+          }),
+        );
+        class BrokenRecorder extends DiagnosticRecorder {
+          constructor(private readonly failure: "start" | "end") {
+            super();
+          }
+          override start(...args: Parameters<DiagnosticRecorder["start"]>) {
+            if (this.failure === "start")
+              throw new Error("private recorder failure");
+            return super.start(...args);
+          }
+          override end(...args: Parameters<DiagnosticRecorder["end"]>) {
+            if (this.failure === "end")
+              throw new Error("private recorder failure");
+            return super.end(...args);
+          }
+        }
+        for (const failure of ["start", "end"] as const) {
+          const recorder = new BrokenRecorder(failure);
+          const result = yield* recorder.withRoot(
+            recorder.root({}),
+            new TaskCommands(store).create(
+              { credential: session.credential, profile },
+              Schema.decodeUnknownSync(CreateTask)({
+                title: `Kept after ${failure} failure`,
+              }),
+            ),
+            "command",
+          );
+          expect(result.outcome).toBe("committed");
+          expect(recorder.snapshot().recording_failures).toBeGreaterThan(0);
+        }
+        expect((yield* store.tasks()).map((x) => x.title).sort()).toEqual([
+          "Kept after end failure",
+          "Kept after start failure",
+        ]);
+      }),
+    ),
+);

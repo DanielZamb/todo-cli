@@ -13,9 +13,10 @@ import { validAttachmentLocation } from "../attachments.ts";
 import { Authentication } from "../auth/auth.ts";
 import { DependencyError, RejectionDetails } from "../dependencies.ts";
 import {
-  diagnosticContext,
+  beginDiagnosticSpan,
   diagnosticSpan,
   diagnosticSync,
+  finishDiagnosticSpan,
 } from "../diagnostic-context.ts";
 import {
   Profile,
@@ -302,15 +303,14 @@ export class OperationStore {
   }
 
   private transaction<A>(run: () => A): A {
-    const scope = diagnosticContext();
-    const waiting = scope?.recorder.start(scope.envelope, "writer_lock_wait");
+    const waiting = beginDiagnosticSpan("writer_lock_wait");
     let entered = false;
     let result: A;
     try {
       result = this.db
         .transaction(() => {
           entered = true;
-          scope?.recorder.end(waiting, "completed");
+          finishDiagnosticSpan(waiting, "completed");
           const writing = this.writing;
           this.writing = true;
           try {
@@ -321,7 +321,7 @@ export class OperationStore {
         })
         .immediate();
     } finally {
-      if (!entered) scope?.recorder.end(waiting, "failed");
+      if (!entered) finishDiagnosticSpan(waiting, "failed");
     }
     if (!this.writing && this.attachmentCleanupRequested) {
       this.attachmentCleanupRequested = false;
@@ -1158,7 +1158,9 @@ export class OperationStore {
         });
         diagnosticSync(
           "projection",
-          () => applyEvent(this.db, event, input.profile),
+          () => {
+            applyEvent(this.db, event, input.profile);
+          },
           { statement: "store.projection" },
         );
         if (event.kind === "TaskPurged") {

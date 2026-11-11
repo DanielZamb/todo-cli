@@ -171,3 +171,9 @@ run `bun apps/server/scripts/verify-diagnostic-joins.ts <absolute-new-evidence-d
 It uses matching cached binaries with a private temporary HOME and database.
 The recipe also documents the separately labelled busy-host overhead comparison.
 The existing quiet collection-cost recipe and its ceiling remain unchanged.
+
+For a worker prohibited from running Swift, set `TODO_DIAGNOSTICS_NO_SWIFT=1`
+on the main recipe. HTTP, JSON/NDJSON, CLI, PTY text and storage assertions still
+run. The helper writes terminal-png-hold.json and result.json explicitly marks
+terminal_pngs HOLD. The terminal PNG render is owed by a unit that holds the
+Swift slot. This option does not relax a required visual gate for a UI unit.

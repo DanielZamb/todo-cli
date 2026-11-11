@@ -372,16 +372,28 @@ try {
     { env, encoding: "utf8", timeout: 90000 },
   );
   assert.equal(pty.status, 0, pty.stderr);
-  const png = spawnSync(
-    "./scripts/swift-slot.sh",
-    [
-      "swift",
-      ".agents/skills/verify-diagnostics/scripts/render-top.swift",
-      evidence,
-    ],
-    { env, encoding: "utf8", timeout: 900000 },
-  );
-  assert.equal(png.status, 0, png.stderr);
+  const terminalPngHeld = process.env.TODO_DIAGNOSTICS_NO_SWIFT === "1";
+  if (terminalPngHeld)
+    writeFileSync(
+      join(evidence, "terminal-png-hold.json"),
+      JSON.stringify({
+        status: "HOLD",
+        reason:
+          "Swift terminal PNG rendering requires a unit holding the Swift slot",
+      }),
+    );
+  else {
+    const png = spawnSync(
+      "./scripts/swift-slot.sh",
+      [
+        "swift",
+        ".agents/skills/verify-diagnostics/scripts/render-top.swift",
+        evidence,
+      ],
+      { env, encoding: "utf8", timeout: 900000 },
+    );
+    assert.equal(png.status, 0, png.stderr);
+  }
   const schema: unknown = JSON.parse(cli(["schema", "diagnostics"]));
   assert.ok(schema && typeof schema === "object" && "properties" in schema);
   let ndjson = "";
@@ -487,6 +499,7 @@ try {
       {
         result: "PASS",
         compiled: true,
+        terminal_pngs: terminalPngHeld ? "HOLD" : "PASS",
         transport: "curl",
         operations: snapshot.operations,
         clients: snapshot.clients,

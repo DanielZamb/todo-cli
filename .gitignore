@@ -54,6 +54,7 @@ xcuserdata/
 .env.*
 !.env.example
 /.*.bun-build
+**/.*.bun-build
 *.p12
 *.pfx
 *.key

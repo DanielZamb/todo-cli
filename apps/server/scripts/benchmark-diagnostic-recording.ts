@@ -184,7 +184,7 @@ try {
     quiet_confirmation:
       "A quiet-machine confirmation under the unchanged ceiling is owed at integration.",
     source: JSON.parse(
-      readFileSync(resolve(".scratch/bin/build.json"), "utf8"),
+      readFileSync(resolve(".scratch/bin/source.json"), "utf8"),
     ),
   };
   writeFileSync(join(evidence, "result.json"), JSON.stringify(result, null, 2));

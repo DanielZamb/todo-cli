@@ -24,6 +24,7 @@ const id = <S extends Schema.Top & { readonly DecodingServices: never }>(
   Option.getOrElse(Schema.decodeUnknownOption(schema)(value), () =>
     Schema.decodeUnknownSync(schema)(randomUUID()),
   );
+const recordingFailures = new WeakMap<DiagnosticRecorder, number>();
 type FinishedSpan = DiagnosticEventOf<"span.finished">;
 type ActiveSpan = DiagnosticEventOf<"span.started">;
 type Delivery = DiagnosticEventOf<"stream.delivery">;
@@ -49,6 +50,7 @@ export const DiagnosticProfiler = Schema.Struct({
   finished: DiagnosticCount,
   lost_starts: DiagnosticCount,
   dropped_events: DiagnosticCount,
+  recording_failures: DiagnosticCount,
   active: Schema.Array(
     Schema.Struct({
       ...DiagnosticEnvelope.fields,
@@ -362,6 +364,7 @@ export class DiagnosticRecorder {
       finished: this.finished,
       lost_starts: this.lostStarts,
       dropped_events: this.droppedEvents,
+      recording_failures: recordingFailures.get(this) ?? 0,
       active: [...this.active.values()],
       recent: [
         ...this.recent.slice(this.recentCursor),
@@ -389,20 +392,60 @@ export class DiagnosticRecorder {
     };
   }
 }
+type Timing = {
+  readonly recorder: DiagnosticRecorder;
+  readonly start: ActiveSpan | undefined;
+  readonly envelope: typeof DiagnosticEnvelope.Type;
+};
+export function beginDiagnosticSpan(
+  stage: typeof DiagnosticStage.Type,
+  metadata?: typeof DiagnosticMetadata.Type,
+): Timing | undefined {
+  let recorder: DiagnosticRecorder | undefined;
+  try {
+    const scope = current();
+    if (!scope?.recorder.enabled) return undefined;
+    recorder = scope.recorder;
+    return {
+      recorder,
+      start: recorder.start(scope.envelope, stage, metadata),
+      envelope: scope.envelope,
+    };
+  } catch {
+    if (recorder)
+      recordingFailures.set(
+        recorder,
+        (recordingFailures.get(recorder) ?? 0) + 1,
+      );
+    return undefined;
+  }
+}
+export function finishDiagnosticSpan(
+  timing: Timing | undefined,
+  outcome: "completed" | "refused" | "conflicted" | "failed" | "cancelled",
+) {
+  if (!timing) return;
+  try {
+    timing.recorder.end(timing.start, outcome);
+  } catch {
+    recordingFailures.set(
+      timing.recorder,
+      (recordingFailures.get(timing.recorder) ?? 0) + 1,
+    );
+  }
+}
 export function diagnosticSync<A>(
   stage: typeof DiagnosticStage.Type,
   operation: () => A,
   metadata?: typeof DiagnosticMetadata.Type,
 ): A {
-  const scope = current();
-  if (!scope?.recorder.enabled) return operation();
-  const start = scope.recorder.start(scope.envelope, stage, metadata);
+  const timing = beginDiagnosticSpan(stage, metadata);
   try {
     const value = operation();
-    scope.recorder.end(start, "completed");
+    finishDiagnosticSpan(timing, "completed");
     return value;
   } catch (error) {
-    scope.recorder.end(start, "failed");
+    finishDiagnosticSpan(timing, "failed");
     throw error;
   }
 }
@@ -411,18 +454,17 @@ export function diagnosticSpan<A, E, R>(
   effect: Effect.Effect<A, E, R>,
 ): Effect.Effect<A, E, R> {
   return Effect.suspend(() => {
-    const scope = current();
-    if (!scope?.recorder.enabled) return effect;
-    const start = scope.recorder.start(scope.envelope, stage);
+    const timing = beginDiagnosticSpan(stage);
+    if (!timing) return effect;
     return effect.pipe(
       Effect.provideService(CurrentDiagnostic, {
-        recorder: scope.recorder,
-        envelope: start ?? scope.envelope,
+        recorder: timing.recorder,
+        envelope: timing.start ?? timing.envelope,
       }),
       Effect.onExit((exit) =>
         Effect.sync(() =>
-          scope.recorder.end(
-            start,
+          finishDiagnosticSpan(
+            timing,
             Exit.isSuccess(exit)
               ? "completed"
               : Exit.hasInterrupts(exit)
@@ -435,8 +477,15 @@ export function diagnosticSpan<A, E, R>(
   });
 }
 export const diagnosticContext = current;
-
 export const diagnosticOwnerAuthenticated = () => {
   const scope = current();
-  if (scope) scope.recorder.authorize(scope.envelope);
+  if (!scope) return;
+  try {
+    scope.recorder.authorize(scope.envelope);
+  } catch {
+    recordingFailures.set(
+      scope.recorder,
+      (recordingFailures.get(scope.recorder) ?? 0) + 1,
+    );
+  }
 };
