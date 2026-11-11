@@ -66,7 +66,7 @@ invariant and a state trace. A parser failure cannot satisfy sensitivity.
 | CurrentDialogProvenance | A reply from a closed or previous dialog appears in the current dialog. |
 | LatestPublication | An obsolete success or error changes discovery state. The independent observation records whether the pre-publication guard actually held. |
 | AppliedIsCurrent | Visible rows belong to an earlier submission or edited prefix. This reads the snapshot and current state independently of publicationOK. |
-| ClosedIsEmpty | Closing discovery leaves visible discovery rows. |
+| ClosedIsEmpty | Closing discovery, including at sign-out start, leaves visible discovery rows. |
 | SignedOutIsEmpty | Sign-out leaves visible discovery rows or an opened Task. |
 | ShowIsAuthorized | Show accepts an obsolete row, loses its captured source on Close, or opens a Task after credential invalidation. |
 
@@ -117,6 +117,15 @@ modeled. ResponseOK and ResponseError discard obsolete replies without changing
 visible state. A current failure keeps the submitted prefix and enables Retry.
 Retry issues that exact identity. Close and SignOut clear rows immediately.
 
+Sign-out has three steps. SignOutStart closes discovery and clears rows, but
+keeps credential provenance: the credential is still installed until the
+server revokes it. SignOutFail models a failed or cancelled sign-out; it
+changes nothing, so the still-current credential keeps owning its pending
+replies, and the cleared dialog generation alone rejects them. SignOut is the
+committed sign-out after revocation, or Session expiry, and is the only step
+besides CredentialChanged that ends credential provenance. No credential
+change starts while a sign-out is in flight.
+
 Show models the accepted existing draft-protection decision. Cancel is a visible
 stutter. It requires the current authorized applied lookup snapshot, captures
 its source, then closes and clears discovery. showCandidate represents an old
@@ -138,8 +147,8 @@ is made.
 
 The command generates isolated configs that break credential, dialog, latest
 submission, error publication, Close clearing, sign-out clearing, prefix edit
-clearing, Show acceptance, Show source capture and post-Close Show credential
-checks. It checks each intended invariant separately so one observation cannot
+clearing, sign-out start clearing, Show acceptance, Show source capture and
+post-Close Show credential checks. It checks each intended invariant separately so one observation cannot
 hide a semantic failure. It then exhausts the original full safety graph again.
 It never edits the tracked model or product files.
 

@@ -158,8 +158,9 @@ and invalidates more aggressively than the model's optional Editing state.
 Renderer request invalidates on signIn/signOut, signedIn notices invalidate,
 and endAuthentication handles signedOut replies/notices, clears discovery and
 editor/list state. A reload notice also invalidates discovery. Model SignOut is
-the accepted authentication-invalidating event; native Session persistence and
-server-side sign-out completion are outside it.
+the committed authentication-invalidating event. SignOutStart and SignOutFail
+model the request window and a failed or cancelled sign-out. Native Session
+persistence and the server's revocation itself are outside the model.
 
 `show` checks the *same object* is the current applied snapshot, that it is a
 lookup reply and that it contains the exact match object. It captures Profile/id
@@ -270,8 +271,15 @@ replaceCredential calls discovery.credentialChanged, disconnects, increments
 importGeneration, parseGeneration, historyGeneration and seriesGeneration,
 clears structured errors, then installs the credential. disconnect increments
 the Profile lifecycle generation and invalidates search. signedIn=false also
-invalidates discovery. signOut invalidates before its network await and uses
-its captured epoch before deleting the vault or clearing state afterward.
+invalidates discovery. signOut calls closeDiscovery and disconnect before its
+network await (model SignOutStart) and keeps the credential epoch. Only after
+the server confirms revocation, and only while its captured epoch is current,
+does it delete the vault, call replaceCredential("") and set signedIn=false
+(model SignOut). This completes even if the Task was cancelled after the
+reply. A failed or cancelled request (model SignOutFail) changes no epoch and
+reconnects the still-signed-in model; a 401 reply goes through expireSession
+(model SignOut). Restore and signIn cannot start during sign-out because it
+holds busy.
 restore and signIn re-capture after installing their new credential and check
 before final publication.
 
@@ -341,3 +349,11 @@ for L1's final integration. That checkpoint made no future-SEC coverage claim.
 The final merged review and single renewal are recorded at the top of this map
 and in verify-task-search-formal. AtomicCAS closure at 81c remains parent-owned.
 Final same-SHA E seats remain parent-owned after actual frozen checks.
+
+## Reconnect retry from Offline
+
+When the stream's ready event follows an Offline period, followChanges calls
+requestDiscovery(retry: true) if the discovery phase is Offline. It issues the
+same requestedIdentity through the same generation, dialog and credential
+guards as Retry. For publication, model Retry covers it, with the Offline
+phase treated as the model's Error phase.
