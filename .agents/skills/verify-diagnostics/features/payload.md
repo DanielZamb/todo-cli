@@ -14,6 +14,15 @@ scaffolding has a reserved budget. A schema predicate also rejects excess size.
 Legacy Profile, client, credential, operation, error and route lists are bounded
 samples, with omitted counts. Aggregate storage and operation totals remain full.
 
+Observation admission prioritizes slow (at least 20 ms), failed or refused work,
+then newest within each priority, before row or byte caps. Retained observations
+display newest first. An unadmitted important row blocks older ordinary rows.
+The same policy applies before the recorder limits its detail sample. Omission
+keys ending in `.important` count dropped important observations exactly. Slow
+labels also count eviction from their eight-item queue. Inventory and aggregate
+rows have no observation timestamp; their deterministic policies are documented
+in ADR-0020 and the DIAG-CORE report.
+
 Owner-only GET /diagnostics?detail=true explicitly requests a bounded detail
 sample, at most 65,536 pretty JSON bytes. Constant run_id, build_id and contract_id
 appear once above its rows. Detail has separate caps of 32 recent spans, four
@@ -49,3 +58,13 @@ client observations plus long multibyte Profile metadata. It checks complete
 encoded responses, histogram counts and omission accounting. All inputs use
 scratch databases and public store writes. The normal no-Swift Diagnostics,
 server API, auth and 47 recorder-fault recipes remain required.
+
+The admission regression feeds 59 distinct fast durations followed by a failed
+10,000 ms request through the production collector. Both bodies must include
+the failed request, omit the oldest fast samples, display newest first and
+reconcile omissions. Another cohort puts 60 slow samples over the byte quota:
+the newest 41 survive and 19 omitted important samples are visible. Fast failed
+and refused requests must outrank newer ordinary successes. The detail control
+puts failed/refused spans before 64 successes, then overflows the important-span,
+active, label and delivery lists and asserts literal retained values and counts.
+Every cohort asserts the 49,152/65,536 byte bounds.

@@ -47,7 +47,7 @@ describe("bounded diagnostics", () => {
             },
           ]);
           expect(snapshot.latency.samples).toEqual(
-            Array.from({ length: 60 }, (_, i) => 2141 + i),
+            Array.from({ length: 60 }, (_, i) => 2200 - i),
           );
           expect(snapshot.errors.length).toBe(12);
           expect(snapshot.profiler?.omitted.errors).toBe(88);

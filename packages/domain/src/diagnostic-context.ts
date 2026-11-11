@@ -15,6 +15,10 @@ import {
   DiagnosticTraceId,
 } from "./client-diagnostics.ts";
 import {
+  importantDiagnosticDuration,
+  rankDiagnosticItems,
+} from "./diagnostic-admission.ts";
+import {
   diagnosticFailureCounts,
   observeDiagnostic,
 } from "./diagnostic-guard.ts";
@@ -94,6 +98,7 @@ export class DiagnosticRecorder {
   private readonly deliveries: Delivery[] = [];
   private readonly summaries = new DiagnosticSummaries();
   private readonly slow: Array<typeof SlowSpan.Type> = [];
+  private slowCount = 0;
   private recentCursor = 0;
   private deliveryCursor = 0;
   constructor(
@@ -228,7 +233,13 @@ export class DiagnosticRecorder {
       Math.max(0, end - start.monotonic_ms),
       outcome,
     );
-    if (end - start.monotonic_ms >= 20 || outcome !== "completed") {
+    if (
+      importantDiagnosticDuration(
+        end - start.monotonic_ms,
+        outcome !== "completed",
+      )
+    ) {
+      this.slowCount++;
       this.slow.push({
         stage: start.stage,
         duration_ms: Math.max(0, end - start.monotonic_ms),
@@ -341,6 +352,11 @@ export class DiagnosticRecorder {
   }
   snapshot(detail = false): typeof DiagnosticProfiler.Type {
     const failures = diagnosticFailureCounts(this);
+    const omitted: Record<string, number> = {
+      slow: this.slowCount - this.slow.length,
+      "slow.important": this.slowCount - this.slow.length,
+    };
+    const sample = detail ? this.sample(omitted) : undefined;
     return {
       schema_version: 2,
       run_id: this.runId,
@@ -356,8 +372,8 @@ export class DiagnosticRecorder {
       ...this.summaries.snapshot(),
       slow: [...this.slow],
       budget_bytes: detail ? 65536 : 49152,
-      omitted: {},
-      ...(detail ? { detail: this.sample() } : {}),
+      omitted,
+      ...(sample ? { detail: sample } : {}),
       unobserved: this.unobserved(),
     };
   }
@@ -378,12 +394,33 @@ export class DiagnosticRecorder {
       "stdout_drain",
     ];
   }
-  private sample(): typeof DiagnosticProfilerSample.Type {
+  private sample(
+    omitted: Record<string, number>,
+  ): typeof DiagnosticProfilerSample.Type {
     const value = this.details();
     const current = (row: typeof DiagnosticEnvelope.Type) =>
       row.run_id === this.runId &&
       row.build_id === this.buildId &&
       row.contract_id === this.contractId;
+    const select = <A extends typeof DiagnosticEnvelope.Type>(
+      key: string,
+      rows: readonly A[],
+      limit: number,
+      important: (row: A) => boolean,
+    ) => {
+      const ranked = rankDiagnosticItems(
+        rows,
+        important,
+        (row) => row.sequence,
+      );
+      const selected = ranked
+        .filter((row) => current(row.value))
+        .slice(0, limit);
+      omitted[`${key}.important`] =
+        ranked.filter((row) => row.important).length -
+        selected.filter((row) => row.important).length;
+      return selected.map((row) => withoutRun(row.value));
+    };
     return {
       schema_version: 1,
       run_id: this.runId,
@@ -392,12 +429,19 @@ export class DiagnosticRecorder {
       total_active: value.active.length,
       total_recent: value.recent.length,
       total_deliveries: value.deliveries.length,
-      active: value.active.filter(current).slice(0, 4).map(withoutRun),
-      recent: value.recent.filter(current).slice(-32).map(withoutRun),
-      deliveries: value.deliveries
-        .filter(current)
-        .slice(-diagnosticDeliverySampleCapacity)
-        .map(withoutRun),
+      active: select("detail.active", value.active, 4, () => true),
+      recent: select("detail.recent", value.recent, 32, (row) =>
+        importantDiagnosticDuration(
+          row.duration_ms,
+          row.outcome !== "completed",
+        ),
+      ),
+      deliveries: select(
+        "detail.deliveries",
+        value.deliveries,
+        diagnosticDeliverySampleCapacity,
+        () => false,
+      ),
     };
   }
   details(): typeof DiagnosticProfilerDetail.Type {

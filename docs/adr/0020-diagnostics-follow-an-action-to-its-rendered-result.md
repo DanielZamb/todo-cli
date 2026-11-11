@@ -60,6 +60,22 @@ Unfinished starts remain counted. Existing per-route quantiles retain the raw
 with omission counts in profiler.omitted. UTF-8 admission budgets cover complete
 rows without changing their ids or display words. Aggregate totals are retained.
 
+Admission ranks slow observations (at least 20 ms), failed or refused outcomes
+ahead of ordinary observations, then prefers the newest in each group. It does
+this before both row and byte limits, including the recorder's detail sample.
+Admission stops at the first row that cannot fit, so older ordinary rows cannot
+displace an omitted important row. Retained observations are displayed newest
+first. All active spans are unfinished and important. Deliveries and throughput
+samples have no outcome; the newest win. Span summary rows prioritize
+unfinished, failed or slow work, with stable key order within each group. Route
+summaries prioritize routes with any slow or failed request in their window,
+then the route's latest request.
+Inventory rows retain stable name/id order; credentials prefer recent use.
+Alongside each total omission count, the corresponding `.important` key counts
+omitted important rows, including ones removed before byte admission. Slow-label
+omissions also count eviction from their eight-item queue. Fixed histograms and
+aggregate counters are never sampled.
+
 Detailed active spans, recent spans and stream delivery events are excluded from
 the polled body. The same owner-only route accepts the declared detail=true
 query for an explicit bounded sample, at most 65,536 bytes including pretty JSON.

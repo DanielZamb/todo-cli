@@ -289,6 +289,10 @@ export class Diagnostics {
     const since = performance.now() - 300000;
     const samples = this.requests.values(since);
     const grouped = new Map<string, number[]>();
+    const routePriority = new Map<
+      string,
+      { important: boolean; order: number }
+    >();
     for (const sample of samples) {
       const route =
         grouped.has(sample.route) || grouped.size < 64
@@ -297,6 +301,13 @@ export class Diagnostics {
       const durations = grouped.get(route) ?? [];
       durations.push(sample.duration);
       grouped.set(route, durations);
+      routePriority.set(route, {
+        important:
+          (routePriority.get(route)?.important ?? false) ||
+          sample.duration >= 20 ||
+          sample.status >= 400,
+        order: sample.time,
+      });
     }
     const routes = [...grouped]
       .sort(([a], [b]) => a.localeCompare(b))
@@ -352,93 +363,100 @@ export class Diagnostics {
       };
     }
     return Schema.decodeUnknownSync(DiagnosticsSnapshot)(
-      boundDiagnostics({
-        ...(profiler ? { profiler } : {}),
-        generated_at: instant(now),
-        poll_interval_ms: 1000,
-        runtime: {
-          version: "0.1.0",
-          started_at: instant(this.started),
-          uptime_seconds: (now - this.started) / 1000,
-          memory_bytes: process.memoryUsage.rss(),
+      boundDiagnostics(
+        {
+          ...(profiler ? { profiler } : {}),
+          generated_at: instant(now),
+          poll_interval_ms: 1000,
+          runtime: {
+            version: "0.1.0",
+            started_at: instant(this.started),
+            uptime_seconds: (now - this.started) / 1000,
+            memory_bytes: process.memoryUsage.rss(),
+          },
+          profiles: Schema.decodeUnknownSync(
+            DiagnosticsSnapshot.fields.profiles,
+          )(profiles),
+          deleted_profiles: Schema.decodeUnknownSync(
+            DiagnosticsSnapshot.fields.deleted_profiles,
+          )(deletedProfiles),
+          storage: {
+            database_bytes: bytes(this.path),
+            wal_bytes: bytes(`${this.path}-wal`),
+            snapshot_bytes:
+              snapshotBytes +
+              snapshots.snapshots.reduce(
+                (total, value) => total + value.size,
+                0,
+              ),
+            last_snapshot: Schema.decodeUnknownSync(
+              DiagnosticsSnapshot.fields.storage.fields.last_snapshot,
+            )(snapshots.snapshots[0] ?? null),
+            restore_generation: this.restoreGeneration ?? "initial",
+            attachments:
+              this.db
+                .query<{ count: number }, []>(
+                  "SELECT count(*) AS count FROM tasks, json_each(tasks.payload, '$.attachments')",
+                )
+                .get()?.count ?? 0,
+            attachment_store_bytes: directoryBytes(this.attachmentRoot),
+            external_id_tasks:
+              this.db
+                .query<{ count: number }, []>(
+                  "SELECT count(*) AS count FROM tasks WHERE external_id IS NOT NULL",
+                )
+                .get()?.count ?? 0,
+            tables,
+            entities: Schema.decodeUnknownSync(
+              DiagnosticsSnapshot.fields.storage.fields.entities,
+            )(entities),
+          },
+          operations: {
+            total: counts?.total ?? 0,
+            committed: counts?.committed ?? 0,
+            rejected: counts?.rejected ?? 0,
+            window_seconds: 60,
+            per_second: rate / 60,
+            samples: this.throughput.values(),
+            recent: operations,
+          },
+          clients: [...this.clients.values()],
+          credentials,
+          errors: this.errors
+            .values(since)
+            .reverse()
+            .map((value) => ({
+              id: value.id,
+              route: value.route,
+              time: instant(this.started + value.time - this.monotonicStart),
+              code:
+                value.status === 409
+                  ? "conflict"
+                  : value.status === 401
+                    ? "unauthorized"
+                    : value.status === 403
+                      ? "forbidden"
+                      : value.status === 404
+                        ? "not_found"
+                        : value.status < 500
+                          ? "invalid_request"
+                          : "internal_error",
+            })),
+          latency: {
+            window_seconds: 300,
+            capacity: 2048,
+            routes,
+            samples: samples.slice(-60).map((value) => value.duration),
+          },
+          scheduler: {
+            next_wake_at:
+              this.nextWake === null ? null : instant(this.nextWake),
+            pending_reminders: pending,
+            last_reminder_fired: lastReminder,
+          },
         },
-        profiles: Schema.decodeUnknownSync(DiagnosticsSnapshot.fields.profiles)(
-          profiles,
-        ),
-        deleted_profiles: Schema.decodeUnknownSync(
-          DiagnosticsSnapshot.fields.deleted_profiles,
-        )(deletedProfiles),
-        storage: {
-          database_bytes: bytes(this.path),
-          wal_bytes: bytes(`${this.path}-wal`),
-          snapshot_bytes:
-            snapshotBytes +
-            snapshots.snapshots.reduce((total, value) => total + value.size, 0),
-          last_snapshot: Schema.decodeUnknownSync(
-            DiagnosticsSnapshot.fields.storage.fields.last_snapshot,
-          )(snapshots.snapshots[0] ?? null),
-          restore_generation: this.restoreGeneration ?? "initial",
-          attachments:
-            this.db
-              .query<{ count: number }, []>(
-                "SELECT count(*) AS count FROM tasks, json_each(tasks.payload, '$.attachments')",
-              )
-              .get()?.count ?? 0,
-          attachment_store_bytes: directoryBytes(this.attachmentRoot),
-          external_id_tasks:
-            this.db
-              .query<{ count: number }, []>(
-                "SELECT count(*) AS count FROM tasks WHERE external_id IS NOT NULL",
-              )
-              .get()?.count ?? 0,
-          tables,
-          entities: Schema.decodeUnknownSync(
-            DiagnosticsSnapshot.fields.storage.fields.entities,
-          )(entities),
-        },
-        operations: {
-          total: counts?.total ?? 0,
-          committed: counts?.committed ?? 0,
-          rejected: counts?.rejected ?? 0,
-          window_seconds: 60,
-          per_second: rate / 60,
-          samples: this.throughput.values(),
-          recent: operations,
-        },
-        clients: [...this.clients.values()],
-        credentials,
-        errors: this.errors
-          .values(since)
-          .reverse()
-          .map((value) => ({
-            id: value.id,
-            route: value.route,
-            time: instant(this.started + value.time - this.monotonicStart),
-            code:
-              value.status === 409
-                ? "conflict"
-                : value.status === 401
-                  ? "unauthorized"
-                  : value.status === 403
-                    ? "forbidden"
-                    : value.status === 404
-                      ? "not_found"
-                      : value.status < 500
-                        ? "invalid_request"
-                        : "internal_error",
-          })),
-        latency: {
-          window_seconds: 300,
-          capacity: 2048,
-          routes,
-          samples: samples.slice(-60).map((value) => value.duration),
-        },
-        scheduler: {
-          next_wake_at: this.nextWake === null ? null : instant(this.nextWake),
-          pending_reminders: pending,
-          last_reminder_fired: lastReminder,
-        },
-      }),
+        { latency: samples.slice(-60), routes: routePriority },
+      ),
     );
   }
 }
