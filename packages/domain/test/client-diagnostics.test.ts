@@ -1,9 +1,12 @@
 import { describe, expect, it } from "@effect/vitest";
 import { Schema } from "effect";
+import { expectTypeOf } from "vitest";
 import {
   DiagnosticEvent,
+  type DiagnosticEventOf,
   DiagnosticMetadata,
   DiagnosticObservation,
+  type DiagnosticPayloads,
   decodeDiagnosticEvent,
   RenderStage,
   summarizeInteractions,
@@ -367,4 +370,31 @@ it("never counts a failed outcome as a correct deadline result even if a produce
       }),
     ])[0]?.by_20_ms,
   ).toBe(0);
+});
+
+it("exports payload fields as a discriminated TypeScript union", () => {
+  const base = Schema.decodeUnknownSync(DiagnosticEvent)({
+    ...envelope,
+    name: "ui.action.started",
+    action_id: scope.run_id,
+  });
+  const started: typeof DiagnosticEvent.Type = {
+    ...base,
+    name: "span.started",
+    stage: "ipc",
+  };
+  if (started.name === "span.started") expect(started.stage).toBe("ipc");
+});
+
+it("checks variant-specific keys without accepting another variant's fields", () => {
+  expectTypeOf<DiagnosticEventOf<"span.started">>().toHaveProperty("stage");
+  expectTypeOf<DiagnosticEventOf<"request.started">>().toHaveProperty(
+    "request_id",
+  );
+  expectTypeOf<"request_id">().not.toExtend<
+    keyof DiagnosticEventOf<"span.started">
+  >();
+  expectTypeOf<DiagnosticPayloads["span.started"]["stage"]>().toEqualTypeOf<
+    typeof import("../src/client-diagnostics.ts").DiagnosticStage.Type
+  >();
 });

@@ -222,10 +222,12 @@ const request = { request_id: DiagnosticRequestId };
 const refresh = { refresh_id: DiagnosticRefreshId };
 const generation = { generation: DiagnosticCount };
 const stream = { stream_id: DiagnosticStreamId };
+const event = <const Fields extends Schema.Struct.Fields>(fields: Fields) =>
+  Schema.Struct({ ...DiagnosticEnvelope.fields, ...fields });
 const payloads = [
-  Schema.Struct({ name: Schema.Literal("ui.input.observed"), ...action }),
-  Schema.Struct({ name: Schema.Literal("ui.action.started"), ...action }),
-  Schema.Struct({
+  event({ name: Schema.Literal("ui.input.observed"), ...action }),
+  event({ name: Schema.Literal("ui.action.started"), ...action }),
+  event({
     name: Schema.Literal("ui.result.committed"),
     ...action,
     ...duration,
@@ -233,56 +235,56 @@ const payloads = [
     render_stage: RenderStage,
     correct: Schema.Boolean,
   }),
-  Schema.Struct({
+  event({
     name: Schema.Literal("ui.action.ended"),
     ...action,
     ...duration,
     outcome: DiagnosticOutcome,
   }),
-  Schema.Struct({
+  event({
     name: Schema.Literal("model.published"),
     ...generation,
     visible_rows: DiagnosticCount,
     total_rows: DiagnosticCount,
   }),
-  Schema.Struct({
+  event({
     name: Schema.Literal("ui.layout.finished"),
     ...generation,
     ...duration,
   }),
-  Schema.Struct({
+  event({
     name: Schema.Literal("ui.layout.committed"),
     ...generation,
     ...duration,
   }),
-  Schema.Struct({
+  event({
     name: Schema.Literal("ui.selection.committed"),
     ...action,
     ...generation,
   }),
-  Schema.Struct({
+  event({
     name: Schema.Literal("ui.inspector.committed"),
     ...action,
     ...generation,
   }),
-  Schema.Struct({
+  event({
     name: Schema.Literal("ui.stall"),
     ...duration,
     expected_cadence_ms: DiagnosticMetric,
   }),
-  Schema.Struct({
+  event({
     name: Schema.Literal("refresh.started"),
     ...refresh,
     trigger,
   }),
-  Schema.Struct({
+  event({
     name: Schema.Literal("refresh.finished"),
     ...refresh,
     ...duration,
     outcome: DiagnosticOutcome,
     request_count: DiagnosticCount,
   }),
-  Schema.Struct({
+  event({
     name: Schema.Literal("request.started"),
     ...request,
     method: Schema.Literals([
@@ -296,36 +298,36 @@ const payloads = [
     ]),
     operation: DiagnosticRouteOperation,
   }),
-  Schema.Struct({
+  event({
     name: Schema.Literal("request.headers"),
     ...request,
     ...duration,
     status: DiagnosticCount,
   }),
-  Schema.Struct({
+  event({
     name: Schema.Literal("request.finished"),
     ...request,
     ...duration,
     outcome: DiagnosticOutcome,
   }),
-  Schema.Struct({
+  event({
     name: Schema.Literal("decode.finished"),
     ...request,
     ...duration,
   }),
-  Schema.Struct({
+  event({
     name: Schema.Literal("server.handled"),
     ...request,
     ...duration,
     status: DiagnosticCount,
   }),
-  Schema.Struct({ name: Schema.Literal("stream.connected"), ...stream }),
-  Schema.Struct({
+  event({ name: Schema.Literal("stream.connected"), ...stream }),
+  event({
     name: Schema.Literal("stream.dropped"),
     ...stream,
     reason: DiagnosticReason,
   }),
-  Schema.Struct({
+  event({
     name: Schema.Literal("stream.delivery"),
     ...stream,
     frame_id: DiagnosticFrameId,
@@ -333,17 +335,17 @@ const payloads = [
     stage: Schema.Literals(["commit_seen", "transport_handoff"]),
     bytes: DiagnosticCount,
   }),
-  Schema.Struct({
+  event({
     name: Schema.Literal("span.started"),
     stage: DiagnosticStage,
   }),
-  Schema.Struct({
+  event({
     name: Schema.Literal("span.finished"),
     stage: DiagnosticStage,
     ...duration,
     outcome: DiagnosticOutcome,
   }),
-  Schema.Struct({
+  event({
     name: Schema.Literal("resources.sampled"),
     capability: DiagnosticCapability,
     reason: DiagnosticReason,
@@ -353,7 +355,7 @@ const payloads = [
     hard_limit: Schema.optionalKey(DiagnosticCount),
     sample_ms: Schema.optionalKey(DiagnosticMetric),
   }),
-  Schema.Struct({
+  event({
     name: Schema.Literal("availability.changed"),
     loading: Schema.Boolean,
     busy: Schema.Boolean,
@@ -361,22 +363,32 @@ const payloads = [
     write_allowed: Schema.Boolean,
     reason: DiagnosticReason,
   }),
-  Schema.Struct({
+  event({
     name: Schema.Literal("recording.loss"),
     lost_starts: DiagnosticCount,
     dropped_events: DiagnosticCount,
   }),
-  Schema.Struct({
+  event({
     name: Schema.Literal("process.terminated"),
     reason: Schema.Literals(["clean", "crashed", "unknown"]),
   }),
-];
-export const DiagnosticEvent = Schema.Union(
-  payloads.map((payload) =>
-    Schema.Struct({ ...DiagnosticEnvelope.fields, ...payload.fields }),
-  ),
-);
+] as const;
+export const DiagnosticEvent = Schema.Union(payloads);
 export type DiagnosticEvent = typeof DiagnosticEvent.Type;
+export type DiagnosticEventOf<Name extends DiagnosticEvent["name"]> = Extract<
+  DiagnosticEvent,
+  { readonly name: Name }
+>;
+export type DiagnosticPayloads = {
+  readonly [Name in DiagnosticEvent["name"]]: Omit<
+    DiagnosticEventOf<Name>,
+    keyof typeof DiagnosticEnvelope.Type
+  >;
+};
+export const makeDiagnosticEvent = (value: DiagnosticEvent): DiagnosticEvent =>
+  Schema.decodeUnknownSync(DiagnosticEvent, { onExcessProperty: "error" })(
+    value,
+  );
 export const UnknownDiagnosticRecord = Schema.Struct({
   kind: Schema.Literal("unknown"),
   reason: Schema.Literals([
