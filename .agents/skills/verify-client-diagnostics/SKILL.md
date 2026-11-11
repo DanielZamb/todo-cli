@@ -71,3 +71,8 @@ Keychain-backed sign-out and actual UI input/rendering remain coordinator gates.
 checkout-local Claude skill link points here; fresh Claude discovery is not
 claimed without a separate authorized worker. Use maintain-verification-skill
 when coverage, journal formats or UI entry points change.
+
+`--connections-only` and `--sockets-only` select the direct-HTTP model probes
+documented in verify-mac-refresh/features/connections.md. They preserve the same
+scratch ownership and cleanup rules. A failing red probe still retains literal
+receipts and a failure result; never report it as a successful complete recipe.

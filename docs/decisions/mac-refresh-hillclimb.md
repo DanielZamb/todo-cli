@@ -96,3 +96,46 @@ regression gates, then is kept or reverted in full. The coordinator's run store
 holds `decision.tsv` outside Git. The Diagnostics review correction and this
 measurement preparation are not optimization attempts. The count is zero at
 this baseline. No HTTP contract change starts without its ADR.
+
+
+## C4-01: own the ordinary connection pool
+
+Kept. The model owns one ordinary Client and URLSession per credential scope,
+with explicit invalidation on replacement and teardown. Injected fixture
+factories keep their existing behavior. Event streams retain their separate
+per-connection cancellation owner. Standalone authentication helpers retain
+their existing fresh-client behavior; this is a model-scope pool, not a global
+cache of credentials or responses.
+
+The failing direct control made 16 requests through two model refreshes and
+opened 16 new connections with zero reuse. Credential replacement let a delayed
+ordinary request finish. After the change the same work opens six connections
+and reuses ten; replacement cancels the in-flight request and the new scope
+opens fresh connections. The correctly initialized 300-refresh baseline holds
+2,401 TCP sockets and 2,408 descriptors after 2,400 requests. The candidate holds
+seven sockets and 14 descriptors, with the same work: 99.7 percent fewer held
+sockets. Both start with a soft limit of 256 before the first transport request;
+CFNetwork raises it to 2,560. A pilot that lowered the limit after startup is
+explicitly excluded as a fixture error.
+
+Five alternating pairs all consume 372 operations, make 378 catalog reads and
+3,035 selected requests, and match canonical server rows with zero errors.
+Request reduction is zero. Complete busy-time median is 274.3 ms
+[259.7, 356.3] before and 273.1 ms [270.2, 313.8] after. Actor-gap medians are
+145.4 ms [140.5, 240.0] and 170.6 ms [140.0, 242.0]. First full-layout medians
+are 177.3 ms [170.2, 217.0] and 182.3 ms [172.9, 188.6]. Ranges overlap; no
+latency improvement is claimed. The burst's model-action median rises from
+6.74 to 7.63 seconds with overlapping ranges; that interval includes CLI
+producer time. It is retained as a timing caveat, rather than hidden by the
+resource result. The [small attempt receipt](../evidence/mac-perf/mac-refresh-01-summary.json)
+keeps current-row ranges and host loads too.
+
+The state/contract gate passes 200 tests in 30 suites. Release Diagnostics passes
+31 in three suites; subscriber counts remain zero before connection, one after
+each switch/credential/deletion boundary, and zero after disconnect. The actual
+five-minute idle and real HTTP SSE proofs pass. Proof source hashes match the
+candidate. This is one kept mechanism, zero reverted, and five more attempts
+are still required. Native input latency remains unqualified after this change.
+The next work is the coordinator's requested stall CPU/load data and pointer
+phase measurement, followed by replay coalescing. Drag behavior stays unchanged
+until the coordinator's design decision.

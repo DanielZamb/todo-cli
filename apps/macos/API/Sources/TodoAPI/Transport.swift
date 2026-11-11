@@ -53,13 +53,33 @@ public func todoClient(server: URL, credential: String, diagnostics: ClientDiagn
 }
 
 func todoClient(server: URL, credential: String, diagnostics: ClientDiagnosticsRecorder, requestTimeout: TimeInterval) -> Client {
+    makeTodoClient(server: server, credential: credential, diagnostics: diagnostics, session: makeTodoSession(diagnostics: diagnostics, requestTimeout: requestTimeout))
+}
+
+public final class TodoClientSession: Sendable {
+    public let client: Client
+    private let session: URLSession
+
+    public init(server: URL, credential: String, diagnostics: ClientDiagnosticsRecorder = .disabled) {
+        let session = makeTodoSession(diagnostics: diagnostics, requestTimeout: 60)
+        self.session = session
+        client = makeTodoClient(server: server, credential: credential, diagnostics: diagnostics, session: session)
+    }
+    public func invalidate() { session.invalidateAndCancel() }
+    deinit { invalidate() }
+}
+
+private func makeTodoSession(diagnostics: ClientDiagnosticsRecorder, requestTimeout: TimeInterval) -> URLSession {
     let configuration = URLSessionConfiguration.default
     configuration.timeoutIntervalForRequest = requestTimeout
     configuration.timeoutIntervalForResource = 86_400
     configuration.urlCache = nil
-    let session = diagnostics.isEnabled
+    return diagnostics.isEnabled
         ? URLSession(configuration: configuration, delegate: ClientRequestMetrics(diagnostics), delegateQueue: nil)
         : URLSession(configuration: configuration)
+}
+
+private func makeTodoClient(server: URL, credential: String, diagnostics: ClientDiagnosticsRecorder, session: URLSession) -> Client {
     let base = StreamTransport(ordinary: URLSessionTransport(configuration: .init(session: session)), diagnostics: diagnostics)
     let transport: any ClientTransport = diagnostics.isEnabled ? DiagnosticTransport(transport: base, recorder: diagnostics) : base
     return Client(serverURL: server, transport: transport, middlewares: [BearerMiddleware(credential: credential), ClientRequestCorrelation()])

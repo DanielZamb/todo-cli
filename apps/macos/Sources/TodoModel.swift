@@ -159,7 +159,10 @@ final class TodoModel {
     var restoreGeneration = "initial"
     var restoreReloadCount = 0
     private var credential = ""
+    @ObservationIgnored private var clientSession: TodoClientSession?
     func replaceCredential(_ value: String) {
+        clientSession?.invalidate()
+        clientSession = nil
         clientDiagnosticsUI.stop()
         if !credential.isEmpty { clientDiagnostics.clear() } else { clientDiagnostics.authorizeOwnerSession(false) }
         discovery.credentialChanged()
@@ -178,7 +181,13 @@ final class TodoModel {
     private var refreshGeneration = 0
     private var vault: SessionVault { SessionVault(service: configuration.vaultService, account: configuration.server.absoluteString) }
     private let clientFactory: ((URL, String) -> Client)?
-    var client: Client { clientFactory?(configuration.server, credential) ?? todoClient(server: configuration.server, credential: credential, diagnostics: clientDiagnostics) }
+    var client: Client {
+        if let clientFactory { return clientFactory(configuration.server, credential) }
+        if let clientSession { return clientSession.client }
+        let session = TodoClientSession(server: configuration.server, credential: credential, diagnostics: clientDiagnostics)
+        clientSession = session
+        return session.client
+    }
     private var cursorKey: String { "cursor.\(configuration.vaultService).\(configuration.server.absoluteString).\(profile)" }
     private var restoreCursorKey: String { "restore-cursor.\(configuration.server.absoluteString)" }
     var canWrite: Bool { signedIn && connection == .live && !busy && outdatedServerBuild == nil }

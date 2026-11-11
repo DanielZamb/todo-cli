@@ -16,6 +16,8 @@ import time
 ROOT = Path(__file__).resolve().parents[4]
 EVIDENCE = Path(sys.argv[1]).resolve()
 subscribers_only = '--subscribers-only' in sys.argv[2:]
+sockets_only = '--sockets-only' in sys.argv[2:]
+connections_only = '--connections-only' in sys.argv[2:] or sockets_only
 stream_only = '--stream-only' in sys.argv[2:] or subscribers_only
 configuration = 'debug' if '--debug' in sys.argv[2:] else 'release'
 EVIDENCE.mkdir(parents=True, exist_ok=False)
@@ -89,7 +91,8 @@ try:
     shape = witness(tasks); assert shape['total'] == 178 and shape['descriptionChars'] == 222312 and shape['attachments'] == 108
     (EVIDENCE / 'fixture.json').write_text(json.dumps(shape, indent=2))
     environment.update(TODO_CLIENT_DIAGNOSTICS_SERVER=f'http://127.0.0.1:{port}', TODO_CLIENT_DIAGNOSTICS_TOKEN=token, TODO_CLIENT_DIAGNOSTICS_EVIDENCE=str(EVIDENCE), TODO_CLIENT_DIAGNOSTICS_JOURNAL=str(scratch / 'journal'))
-    if stream_only:
+    if stream_only or connections_only:
+        if sockets_only: environment['TODO_MAC_SOCKET_PROBE'] = '1'
         if subscribers_only: environment['TODO_IDLE_SUBSCRIBERS'] = '1'
         diagnostics = request('GET', '/diagnostics', credential=owner)
         environment['TODO_IDLE_START_CURSOR'] = str(max(row['seq'] for row in diagnostics['operations']['recent']))
@@ -112,11 +115,21 @@ try:
         threading.Thread(target=proxy.serve_forever, daemon=True).start()
         environment.update(TODO_IDLE_NATIVE_SERVER=f'http://127.0.0.1:{port}', TODO_IDLE_DELAYED_SERVER=f'http://127.0.0.1:{proxy.server_port}')
     (EVIDENCE / 'host.json').write_text(json.dumps(dict(load=os.getloadavg(), cores=os.cpu_count(), at=time.time())))
-    selected = 'productionModelCancelsIdleSubscribersAtEveryLifecycleBoundary' if subscribers_only else 'StreamIdleTests|StreamIdleTransportTests' if stream_only else 'ClientDiagnosticsTests|ClientDiagnosticsLiveTests|ClientDiagnosticsPanelTests'
+    selected = 'productionModelHoldsAtMostSixteenSocketsAfterThreeHundredRefreshes' if sockets_only else 'MacConnectionReuseGuard' if connections_only else 'productionModelCancelsIdleSubscribersAtEveryLifecycleBoundary' if subscribers_only else 'StreamIdleTests|StreamIdleTransportTests' if stream_only else 'ClientDiagnosticsTests|ClientDiagnosticsLiveTests|ClientDiagnosticsPanelTests'
     run([ROOT / 'scripts/swift-slot.sh', 'swift', 'test', '--configuration', configuration, '--no-parallel', '--disable-automatic-resolution', '--jobs', '2', '--package-path', 'apps/macos', '--filter', selected], 'swift', environment)
     artifact = ROOT / f'apps/macos/.build/{configuration}/TodoStateProofPackageTests.xctest/Contents/MacOS/TodoStateProofPackageTests'
     (EVIDENCE / 'swift-artifact.json').write_text(json.dumps(dict(sha256=hashlib.sha256(artifact.read_bytes()).hexdigest(), configuration=configuration), indent=2))
-    if stream_only:
+    if connections_only:
+        if sockets_only:
+            proof = json.loads((EVIDENCE / 'sockets-after-300.json').read_text())
+            assert proof['refreshes'] == 300 and proof['requests'] == 2400 and proof['sockets'] <= 16
+        else:
+            proof = json.loads((EVIDENCE / 'connections-after-two.json').read_text())
+            assert proof['refreshes'] == 2 and proof['requests'] == 16 and proof['reused_connections'] >= 8
+            assert proof['credential_scope_requests'] == 8 and proof['credential_scope_new_connections'] >= 1
+            assert json.loads((EVIDENCE / 'credential-request-cancel.json').read_text())['cancelled']
+        result = dict(result='PASS', errors=0, production_transport=proof, keychain_called=False, app_launched=False, signed=False, pushed=False)
+    elif stream_only:
         native = json.loads((EVIDENCE / ('stream-subscribers.json' if subscribers_only else 'stream-native.json')).read_text())
         if subscribers_only: assert native['counts'] == [0, 1, 1, 1, 1, 1, 1, 0]
         else: assert native['stream_survived_idle'] and native['ordinary_timeout_observed'] and native['operations_received'] == 1
