@@ -354,3 +354,28 @@ native Task-row click A/B and the requested three-Profile rapid-switch sequence.
 passed check. No subagents, independent reviews or threads were launched by this
 worker under the single-worker ruling. The canonical decision log stays in the
 run store outside the tree. Phase 0 approval must precede product edits.
+
+## C1 implementation, selection hypothesis
+
+After Phase0 acceptance, DependencyDragModifier uses the List row-specific
+`itemProvider` instead of a content-level `onDrag`. The provider payload,
+canWrite guard and drop handling are unchanged. This is a candidate remedy for
+the owner's unselectable Task rows. Actual click selection is proven only by
+the coordinator's pending real-app pass; no headless click proof is claimed.
+
+The new DependencyRowProviderTests first failed with two literal assertions
+on the original content gesture, exit1. They then passed with the existing
+Dependency state and drag copy tests, 15 tests, exit0. The complete state and
+generated-contract suite passed152 tests in24 suites, exit0. The full
+`verify-design.py` run with all selectors unset passed all872 PNGs, exit0,
+through scripts/swift-slot.sh. Its receipt explicitly reports no app launch,
+signing or Keychain. Bulk images stay in the ignored `.scratch/proofs/`
+directory, outside the compact report evidence.
+
+Commands were `scripts/swift-slot.sh swift test --package-path apps/macos
+--scratch-path apps/macos/DerivedData/StateProof --disable-automatic-resolution
+--jobs 2 --filter DependencyRowProviderTests` for the initial failure; the
+focused green filter added DependencyStateTests and DependencyDragCopyTests.
+The full state filter was `WriteStateTests|GeneratedContractTests`, with
+`--skip-build`. Design used `scripts/swift-slot.sh
+apps/macos/scripts/verify-design.py .scratch/proofs/mac-c1-design`.

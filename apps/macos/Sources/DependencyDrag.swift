@@ -46,7 +46,7 @@ struct DependencyDragModifier: ViewModifier {
     let task: TaskSnapshot
     func body(content: Content) -> some View {
         content
-            .onDrag {
+            .itemProvider {
                 guard model.canWrite else { return NSItemProvider() }
                 let source = DependencyDragSource(profile: task.profile_id, task: task.id)
                 model.dependencies.dragSource = source
