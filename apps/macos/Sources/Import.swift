@@ -161,7 +161,7 @@ struct ImportView: View {
                         }.padding(.trailing, 8)
                     }.scrollIndicators(.visible)
                         .frame(minHeight: compact ? 224 : 240, maxHeight: compact ? 224 : .infinity).clipped()
-                        .importFrame(.viewport).reportErrorBounds("viewport").accessibilityIdentifier("import-preview-table")
+                        .importFrame(.viewport).reportErrorBounds("viewport").background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .importPreview)).accessibilityIdentifier("import-preview-table")
                 }
             } else {
                 VStack(alignment: .leading, spacing: 12) {
@@ -196,12 +196,12 @@ struct ImportView: View {
                             .keyboardShortcut(.cancelAction).disabled(model.busy).importFrame(.cancel)
                     }
                     if model.importReport == nil {
-                        Button { Task { await model.previewImport() } } label: { Text(model.busy ? "Previewing…" : "Preview changes").frame(minHeight: 28) }
+                        Button { model.clientDiagnosticsUI.perform(.importPreview, surface: .importPreview) { await model.previewImport() } } label: { Text(model.busy ? "Previewing…" : "Preview changes").frame(minHeight: 28) }
                             .buttonStyle(.borderedProminent).disabled(model.importDocument == nil || !model.canWrite)
                             .keyboardShortcut(.defaultAction).accessibilityIdentifier("import-preview").importFrame(.primary)
                     } else if let report = model.importReport, report.dry_run {
                         let changes = report.totals.created + report.totals.updated
-                        Button { Task { await model.applyImport() } } label: { Text(model.busy ? "Applying…" : "Apply \(changes) \(changes == 1 ? "change" : "changes")").frame(minHeight: 28) }
+                        Button { model.clientDiagnosticsUI.perform(.applyImport, surface: .importPreview) { await model.applyImport() } } label: { Text(model.busy ? "Applying…" : "Apply \(changes) \(changes == 1 ? "change" : "changes")").frame(minHeight: 28) }
                             .buttonStyle(.borderedProminent).disabled(!model.canWrite || changes == 0)
                             .keyboardShortcut(.defaultAction).accessibilityIdentifier("import-apply").importFrame(.primary)
                     }
@@ -209,6 +209,7 @@ struct ImportView: View {
             }.fixedSize(horizontal: false, vertical: true).importFrame(.footer)
         }.padding(compact ? 12 : 24)
             .frame(width: compact ? 393 : 720, height: compact ? 426 : 620)
+            .background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .importPreview))
             .coordinateSpace(name: "import-layout")
             .fileImporter(isPresented: $choosingFile, allowedContentTypes: [.json, .plainText, .data]) { result in
                 do {

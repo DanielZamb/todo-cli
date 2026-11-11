@@ -122,7 +122,7 @@ struct DependencyPickerView: View {
                                     TaskRow(task: task, canWrite: false, compact: compact, projectName: model.projects.first { $0.id == task.project_id }?.name, tagNames: task.tagNames(from: model.tags), showsCompletion: false, relation: true, complete: {}).opacity(0.5)
                                 }.accessibilityIdentifier("dependency-pending-\(task.id)").accessibilityLabel(task.title).accessibilityValue("Updating").focusable().focused($focusedCandidate, equals: task.id)
                             } else {
-                            Toggle(isOn: Binding(get: { picker.checked(task.id) }, set: { _ in Task { await model.toggleDependency(task) } })) {
+                            Toggle(isOn: Binding(get: { picker.checked(task.id) }, set: { _ in model.clientDiagnosticsUI.perform(.toggleDependency, surface: .dependencyPicker) { await model.toggleDependency(task) } })) {
                                 VStack(alignment: .leading, spacing: 0) {
                                     TaskRow(task: task, canWrite: false, compact: compact, projectName: model.projects.first { $0.id == task.project_id }?.name, tagNames: task.tagNames(from: model.tags), showsCompletion: false, relation: true, complete: {})
                                 }
@@ -145,6 +145,7 @@ struct DependencyPickerView: View {
                     Button("Close") { model.closeDependencyPicker() }.keyboardShortcut(.cancelAction).accessibilityIdentifier("dependency-picker-close")
                 }.compactBounds("dependency-actions")
             }.padding(16).frame(width: compact ? 393 : 560, height: compact ? 426 : 600)
+                .background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .dependencyPicker))
                 .accessibilityIdentifier("dependency-picker")
                 .task { searchFocused = true }
                 .onKeyPress(.downArrow) { moveCandidate(1, picker: picker) }
@@ -219,7 +220,7 @@ struct DependencyDeleteView: View {
             .keyboardShortcut(.cancelAction).keyboardShortcut(.defaultAction).disabled(model.dependencies.deletion?.pending == true).accessibilityIdentifier("dependency-delete-cancel")
     }
     private func confirm(_ deletion: DependencyDelete) -> some View {
-        Button(role: .destructive) { Task { await model.confirmDependencyDelete() } } label: {
+        Button(role: .destructive) { model.clientDiagnosticsUI.perform(.delete) { await model.confirmDependencyDelete() } } label: {
             Text(deletion.pending ? "Deleting…" : deletion.action).foregroundStyle(Color(nsColor: .systemRed)).frame(maxWidth: deletion.edges.isEmpty ? nil : .infinity)
         }
             .tint(Color(nsColor: .systemRed)).foregroundStyle(Color(nsColor: .systemRed)).disabled(!model.canWrite || deletion.loading || deletion.pending || deletion.fingerprint == nil || deletion.acceptedFromVersion == nil)

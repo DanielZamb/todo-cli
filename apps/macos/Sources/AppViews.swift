@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import TodoAPI
 
 struct RootView: View {
     @Bindable var model: TodoModel
@@ -20,10 +21,11 @@ struct RootView: View {
             minWidth: compactMode ? TaskWindowSizing.compactSize.width : 900,
             minHeight: compactMode ? TaskWindowSizing.compactSize.height : 640)
         .background(TaskWindowSizing(compact: compactMode))
+        .background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .main, mode: compactMode ? .compact : .full))
         .toolbar {
             ToolbarItem {
                 Button {
-                    compactMode.toggle()
+                    model.clientDiagnosticsUI.performSync(.toggleCompact) { compactMode.toggle() }
                 } label: {
                     Label(
                         compactMode ? "Expand window" : "Compact mode",
@@ -192,7 +194,11 @@ struct TaskListView: View {
     var compactMode = false
     var referenceDate: Date? = nil
     @FocusState private var searchFocused: Bool
-    private var searchBinding: Binding<String> { Binding(get: { model.searchText }, set: { model.setSearchText($0) }) }
+    private var searchBinding: Binding<String> {
+        Binding(get: { model.searchText }, set: { value in
+            model.clientDiagnosticsUI.deferred(.search, predicate: { model.appliedSearchSnapshot?.appliedIdentity == model.requestedIdentity && !model.searchPending }) { model.setSearchText(value) }
+        })
+    }
     @State private var selection: String?
     @State private var showingTaskFilters = false
     @Environment(\.defaultMinListRowHeight) private var minimumRowHeight
@@ -206,6 +212,9 @@ struct TaskListView: View {
             },
             set: { value in
                 guard !model.busy else { return }
+                let category: ClientDiagnosticAction
+                switch value { case .project: category = .projectFilter; case .tag: category = .tagFilter; default: category = .viewSwitch }
+                model.clientDiagnosticsUI.deferred(category, predicate: { model.appliedSearchSnapshot?.appliedIdentity == model.requestedIdentity && !model.searchPending }) {
                 switch value {
                 case .view(let name): model.selectView(name)
                 case .project(let id):
@@ -215,6 +224,7 @@ struct TaskListView: View {
                     model.selectView("all")
                     model.selectedTag = id
                 case nil: break
+                }
                 }
             })
     }
@@ -269,7 +279,9 @@ struct TaskListView: View {
         .sheet(item: $model.batchEdit) { _ in BatchEditView(model: model, compact: compactMode).interactiveDismissDisabled(model.busy) }
         .sheet(isPresented: $model.showingImport) { ImportView(model: model, compact: compactMode).interactiveDismissDisabled(model.busy) }
         .sheet(isPresented: $showingTaskFilters) {
-            TaskFilterView(draft: model.taskFilters, compact: compactMode, planning: model.selectedView != "all", apply: model.applyTaskFilters, close: { showingTaskFilters = false })
+            TaskFilterView(draft: model.taskFilters, compact: compactMode, planning: model.selectedView != "all", apply: { filters in
+                model.clientDiagnosticsUI.deferred(filters.order != model.taskFilters.order ? .order : .applyFilters, predicate: { model.appliedSearchSnapshot?.appliedIdentity == model.requestedIdentity && !model.searchPending }) { model.applyTaskFilters(filters) }
+            }, close: { showingTaskFilters = false })
         }
         .sheet(item: Binding(get: { model.dependencies.batch }, set: { model.dependencies.batch = $0 })) { _ in DependencyBatchView(model: model, compact: compactMode) }
         .sheet(isPresented: Binding(get: { model.dependencies.graph != nil }, set: { if !$0 { model.closeDependencyGraph() } })) {
@@ -316,15 +328,15 @@ struct TaskListView: View {
                         if model.searchPending { ProgressView().controlSize(.small).accessibilityLabel("Searching") }
                     }
                     ToolbarItem {
-                        Button("Edit Tasks…") { Task { await model.beginBatchEdit() } }.disabled(!model.canWrite).accessibilityIdentifier("batch-edit-tasks")
+                        Button("Edit Tasks…") { model.clientDiagnosticsUI.perform(.openBatch, surface: .batch) { await model.beginBatchEdit() } }.disabled(!model.canWrite).accessibilityIdentifier("batch-edit-tasks")
                     }
                     ToolbarItem {
-                        Button("Import…") { model.resetImport(); model.showingImport = true }
+                        Button("Import…") { model.clientDiagnosticsUI.performSync(.openImport, surface: .importPreview) { model.resetImport(); model.showingImport = true } }
                             .disabled(!model.canWrite).accessibilityIdentifier("import-tasks")
                     }
                     ToolbarItem {
                         Button {
-                            model.quickAdd = true
+                            model.clientDiagnosticsUI.performSync(.openQuickAdd, surface: .quickAdd) { model.quickAdd = true }
                         } label: {
                             Label("Add task", systemImage: "plus").frame(width: 28, height: 28)
                         }
@@ -367,7 +379,7 @@ struct TaskListView: View {
                     compactNavigation
                     Spacer(minLength: 0)
                     if !model.quickAdd && !visibleTasks.isEmpty && model.connection != .offline && model.taskLoadError == nil {
-                        Button { model.quickAdd = true } label: {
+                        Button { model.clientDiagnosticsUI.performSync(.openQuickAdd, surface: .quickAdd) { model.quickAdd = true } } label: {
                             Label("Add task", systemImage: "plus")
                         }.labelStyle(.iconOnly).buttonStyle(.borderedProminent).controlSize(.large)
                             .frame(minWidth: 28, minHeight: 28).contentShape(Rectangle())
@@ -455,7 +467,7 @@ struct TaskListView: View {
         }
     }
     private func requestProfile(_ profile: String) {
-        Task { await model.navigate(.profile(profile)) }
+        model.clientDiagnosticsUI.perform(.profileSwitch, ready: { model.profile == profile && model.connection == .live && !model.loading }) { _ = await model.navigate(.profile(profile)) }
     }
     var sidebar: some View {
         VStack(spacing: 0) {
@@ -604,14 +616,14 @@ struct TaskListView: View {
                     }
                 } else if compactMode {
                     compactState(model.searchText.isEmpty ? "No tasks yet." : "No matching tasks.", action: model.searchText.isEmpty ? "Add task" : "Clear search") {
-                        if model.searchText.isEmpty { model.quickAdd = true } else { model.setSearchText("") }
+                        if model.searchText.isEmpty { model.clientDiagnosticsUI.performSync(.openQuickAdd, surface: .quickAdd) { model.quickAdd = true } } else { model.setSearchText("") }
                     }
                 } else { ContentUnavailableView {
                     Label(model.searchText.isEmpty ? "No tasks yet" : "No matching tasks", systemImage: "checkmark.circle")
                 } description: {
                     Text(model.searchText.isEmpty ? "Add a task in \(model.profileName)." : "Try different words.")
                 } actions: {
-                    if model.searchText.isEmpty { Button("Add task") { model.quickAdd = true }.disabled(!model.canWrite) }
+                    if model.searchText.isEmpty { Button("Add task") { model.clientDiagnosticsUI.performSync(.openQuickAdd, surface: .quickAdd) { model.quickAdd = true } }.disabled(!model.canWrite) }
                 } }
             } else {
                 List(selection: $selection) {
@@ -644,9 +656,12 @@ struct TaskListView: View {
                     .environment(\.defaultMinListRowHeight, compactMode ? 4 : minimumRowHeight)
                     .modifier(WholeTaskRows(enabled: compactMode && model.selectedView == "all"))
                     .onChange(of: selection) { old, id in
+                        if let id { model.clientDiagnosticsUI.selected(id) }
                         if let task = visibleTasks.first(where: { $0.id == id }), model.editor?.id != id {
                             Task {
-                                if !(await model.navigate(.edit(task))) { selection = model.editor?.id ?? old }
+                                await ClientDiagnosticContext.$actionID.withValue(model.clientDiagnosticsUI.selectionAction) {
+                                    if !(await model.navigate(.edit(task))) { selection = model.editor?.id ?? old }
+                                }
                             }
                         }
                     }
@@ -659,7 +674,7 @@ struct TaskListView: View {
                     .onDeleteCommand { if model.canWrite, let task = selectedTask { Task { await model.openDependencyDelete(task) } } }
                 if visibleTasks.isEmpty {
                     Button(hasFilters ? "Clear filters" : model.searchText.isEmpty ? "Add task" : "Clear search") {
-                        if hasFilters { clearFilters() } else if model.searchText.isEmpty { model.quickAdd = true } else { model.setSearchText("") }
+                        if hasFilters { clearFilters() } else if model.searchText.isEmpty { model.clientDiagnosticsUI.performSync(.openQuickAdd, surface: .quickAdd) { model.quickAdd = true } } else { model.setSearchText("") }
                     }.buttonStyle(.borderedProminent).controlSize(.large).disabled(!model.canWrite && !hasFilters && model.searchText.isEmpty)
                         .frame(minHeight: 28).padding(12).compactBounds("state-action")
                 }
@@ -695,8 +710,10 @@ struct TaskListView: View {
         }.padding(24).frame(maxWidth: .infinity, maxHeight: .infinity).compactBounds("state")
     }
     private func closeInspector() {
-        model.editor = nil
-        model.conflict = nil
+        model.clientDiagnosticsUI.performSync(.closeInspector) {
+            model.editor = nil
+            model.conflict = nil
+        }
     }
     private func openSelection() -> KeyPress.Result {
         guard !model.busy, let task = selectedTask else { return .ignored }
@@ -706,7 +723,10 @@ struct TaskListView: View {
     private func sidebarRow(_ title: String, icon: String, count: Int, tint: Color = .primary) -> some View {
         Label(title, systemImage: icon).foregroundStyle(tint).badge(count == 0 ? nil : Text(String(count)).foregroundStyle(.secondary))
     }
-    private func transition(_ task: TaskSnapshot, action: String) { Task { await model.transition(task, action: action) } }
+    private func transition(_ task: TaskSnapshot, action: String) {
+        let category: ClientDiagnosticAction = action == "complete" ? .complete : action == "cancel" ? .cancel : action == "reopen" ? .reopen : .taskTransition
+        model.clientDiagnosticsUI.perform(category) { await model.transition(task, action: action) }
+    }
     private func row(_ task: TaskSnapshot, overdue: Bool = false) -> some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             TaskRow(
@@ -719,6 +739,7 @@ struct TaskListView: View {
                 complete: { transition(task, action: task.status == "open" ? "complete" : "reopen") }
             )
         }
+        .background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, task: task.id))
         .modifier(DependencyDragModifier(model: model, task: task))
         .listRowInsets(compactMode ? EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4) : nil)
         .listRowSeparator(compactMode ? .hidden : .automatic)
@@ -874,8 +895,8 @@ struct CompactRowMetadata: View {
 struct CompactUtilityActions: View {
     @Bindable var model: TodoModel
     var body: some View {
-        Button("Edit Tasks…") { Task { await model.beginBatchEdit() } }.controlSize(.large).frame(minHeight: 28).disabled(!model.canWrite).accessibilityIdentifier("compact-batch-edit-tasks")
-        Button("Import…") { model.resetImport(); model.showingImport = true }
+        Button("Edit Tasks…") { model.clientDiagnosticsUI.perform(.openBatch, surface: .batch) { await model.beginBatchEdit() } }.controlSize(.large).frame(minHeight: 28).disabled(!model.canWrite).accessibilityIdentifier("compact-batch-edit-tasks")
+        Button("Import…") { model.clientDiagnosticsUI.performSync(.openImport, surface: .importPreview) { model.resetImport(); model.showingImport = true } }
             .controlSize(.large).frame(minHeight: 28).disabled(!model.canWrite).accessibilityIdentifier("compact-import-tasks")
         SettingsLink { Text("Settings…").frame(minHeight: 28) }.controlSize(.large)
     }
@@ -892,6 +913,7 @@ struct QuickAddView: View {
     @Environment(\.openWindow) private var openWindow
     var body: some View {
         content
+            .background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .quickAdd))
             .defaultFocus($focused, true)
             .task(id: model.profile + "\u{0}" + model.newTitle) { await model.parseDraft() }
             .onExitCommand { if floating { model.quickAdd = false } else { dismiss() } }
@@ -997,7 +1019,7 @@ struct QuickAddView: View {
         }
     }
     private func add(edit: Bool) {
-        Task {
+        model.clientDiagnosticsUI.perform(floating ? .quickAdd : .sheetAdd) {
             if await model.create(openEditor: edit) {
                 if !floating { dismiss() }
                 if edit { openWindow(id: "tasks") }

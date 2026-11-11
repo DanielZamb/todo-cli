@@ -10,7 +10,7 @@ struct TodoApp: App {
     init() {
         let configuration = ClientConfiguration.load()
         configureVerificationKeychain()
-        _model = State(initialValue: TodoModel(configuration: configuration))
+        _model = State(initialValue: TodoModel(configuration: configuration, clientDiagnostics: .init()))
     }
 
     var body: some Scene {

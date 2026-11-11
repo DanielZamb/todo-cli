@@ -173,11 +173,11 @@ struct BatchEditView: View {
           if hasConflicts(draft) { reloadButton(draft).buttonStyle(.borderedProminent) }
           else { reloadButton(draft).buttonStyle(.bordered) }
           Spacer(minLength: 0)
-          Button("Preview") { Task { await model.applyBatchEdit(dryRun: true) } }.disabled(disabled(draft))
+          Button("Preview") { model.clientDiagnosticsUI.perform(.batchPreview, surface: .batch) { await model.applyBatchEdit(dryRun: true) } }.disabled(disabled(draft))
           if hasConflicts(draft) { applyButton(draft).buttonStyle(.bordered) }
           else { applyButton(draft).buttonStyle(.borderedProminent) }
         }.controlSize(.large)
-      }.padding(12).frame(minWidth: 340, idealWidth: 360, maxWidth: 480, minHeight: 340, idealHeight: compact ? 390 : 502, maxHeight: compact ? 402 : 600).accessibilityIdentifier("batch-edit")
+      }.padding(12).frame(minWidth: 340, idealWidth: 360, maxWidth: 480, minHeight: 340, idealHeight: compact ? 390 : 502, maxHeight: compact ? 402 : 600).background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .batch)).accessibilityIdentifier("batch-edit")
     }
   }
   private func hasConflicts(_ draft: BatchEditDraft) -> Bool { draft.report?.items.contains { $0.error?.code == "occ_conflict" } ?? false }
@@ -185,7 +185,7 @@ struct BatchEditView: View {
     Button(hasConflicts(draft) ? "Reload Tasks" : "Reload") { Task { await model.reloadBatchEditTargets() } }.accessibilityLabel("Reload Tasks").disabled(model.busy || draft.loading)
   }
   private func applyButton(_ draft: BatchEditDraft) -> some View {
-    Button("Apply to \(draft.selected.count)") { Task { await model.applyBatchEdit(dryRun: false) } }.disabled(disabled(draft) || draft.report?.dry_run != true || !((draft.report?.items.contains { $0.outcome == "updated" }) ?? false))
+    Button("Apply to \(draft.selected.count)") { model.clientDiagnosticsUI.perform(.applyBatch, surface: .batch) { await model.applyBatchEdit(dryRun: false) } }.disabled(disabled(draft) || draft.report?.dry_run != true || !((draft.report?.items.contains { $0.outcome == "updated" }) ?? false))
   }
   private var value: Binding<String> { Binding(get: { model.batchEdit?.value ?? "" }, set: { model.batchEdit?.value = $0; model.batchEdit?.report = nil }) }
   private func disabled(_ draft: BatchEditDraft) -> Bool { model.busy || draft.loading || !model.canWrite || !draft.valid || draft.selected.isEmpty }

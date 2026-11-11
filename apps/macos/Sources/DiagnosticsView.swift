@@ -18,6 +18,7 @@ struct DiagnosticsView: View {
     var initiallyExpanded: Set<String> = []
     var body: some View {
         GeometryReader { geometry in DiagnosticsContent(model: model, compact: geometry.size.width < 700, initiallyExpanded: initiallyExpanded) }
+            .background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .diagnostics))
             .coordinateSpace(name: "diagnostics")
             .frame(minWidth: 360, minHeight: 380)
             .accessibilityIdentifier("diagnostics-window")
@@ -45,6 +46,7 @@ private struct DiagnosticsContent: View {
         ScrollView {
             VStack(alignment: .leading, spacing: compact ? 8 : 16) {
                 heading
+                if model.clientDiagnostics.isOwnerSession { ClientDiagnosticsView(model: model, compact: compact) }
                 if let error = model.diagnosticsError { Label(error, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.red).accessibilityIdentifier("diagnostics-error") }
                 if let snapshot = model.diagnostics {
                     summary(snapshot)

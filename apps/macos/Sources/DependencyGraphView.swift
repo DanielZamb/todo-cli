@@ -19,6 +19,9 @@ struct DependencyGraphView: View {
         _detailsExpanded = State(initialValue: initialDetails)
         _shownExpanded = State(initialValue: initialShown)
     }
+    private var diagramBinding: Binding<Bool> {
+        Binding(get: { diagram }, set: { value in model.clientDiagnosticsUI.performSync(.showDependencyDiagram, surface: .dependencies) { diagram = value } })
+    }
     private var showsDiagram: Bool { (!compact || diagram) && model.dependencies.graph?.renderError == nil }
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -28,7 +31,7 @@ struct DependencyGraphView: View {
                     Text(report.nodes.first { $0.task.id == graph.root }?.task.title ?? graph.root)
                         .font(.subheadline.weight(.semibold)).lineLimit(2).help(report.nodes.first { $0.task.id == graph.root }?.task.title ?? graph.root)
                     if compact {
-                        Picker("View", selection: $diagram) {
+                        Picker("View", selection: diagramBinding) {
                             Text("List").tag(false).accessibilityIdentifier("dependency-graph-list-mode")
                             Text("Diagram").tag(true).accessibilityIdentifier("dependency-graph-diagram")
                         }.pickerStyle(.segmented).compactBounds("dependency-graph-view-toggle")
@@ -91,6 +94,7 @@ struct DependencyGraphView: View {
                 }.compactBounds("dependency-graph-actions")
             }
         }.padding(16).frame(width: compact ? 393 : 1000, height: compact ? 426 : 680)
+            .background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .dependencies))
             .accessibilityIdentifier("dependency-graph")
             .task { focused = model.dependencies.graph?.focused.map { .init(task: $0, section: .shown) } }
             .onChange(of: focused) { _, row in if let row { model.dependencies.graph?.focused = row.task } }

@@ -32,13 +32,16 @@
 		741E48FF95CB541BA4A757ACE91D5E03 /* NativeBehaviorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7596F0AF16C93BA118FC6C0E6652F4B /* NativeBehaviorTests.swift */; };
 		75A7480B08F48E65C8F1D4A9FBA909E7 /* EventStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = 034008F0420555A7EACE84D46693EBDF /* EventStream.swift */; };
 		7C772B28BECA5F5D2F82747666AC2E1B /* DiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F87740980C0991D376E7B434E711E0 /* DiagnosticsView.swift */; };
+		7D7B10319C22EAAA9D110805 /* ClientProcessResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = E26B9D84321E5E1D6D227D50 /* ClientProcessResources.swift */; };
 		7FA4F7D6BE794F03F565E95890108BA0 /* SeriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0820D3E590C89556E5921135F9AF4030 /* SeriesView.swift */; };
 		85856CEB0E296C456566289632DAAE86 /* ServerSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A8FD48AEF5B98B53B9239981F4FC72B /* ServerSettingsView.swift */; };
+		881D1FC670A45293D4FE7DE5 /* ClientDiagnosticDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 303F7B5EB4C46F7A6615C617 /* ClientDiagnosticDisplay.swift */; };
 		89CDC56516928CABAB6A344638768C05 /* BatchEdit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61141AA1892F4CA05BC4DC827D99F426 /* BatchEdit.swift */; };
 		89F0E244A4400F750A7B7197EA62B760 /* DependencyDrag.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8E4E91A5545EE8AE19E90DB72057E83 /* DependencyDrag.swift */; };
 		8B756699934BEFB682480F5D4687F3C3 /* AppViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AD2344E0B9DE470910BB5DADBF895B /* AppViews.swift */; };
 		8C58510385D749D59CFC94831E6EB09E /* DependencyBatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = C56FD2413AE2995B4E2F05A88FB95491 /* DependencyBatch.swift */; };
 		A2A9A9BB59BEAE3206E318BD3D794F1F /* NotificationPermission.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FCD627BCBAC49E1CA94FFD2BD4842D5 /* NotificationPermission.swift */; };
+		A7DDC4979305B95BECF2D623 /* ClientDiagnosticsMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC19D6FD3E021225C2585AE /* ClientDiagnosticsMonitor.swift */; };
 		A814B286BB2C976A7F35787CB8AFD0BC /* ServerLifecycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB9C2FAD374036DD48FD3CBC4F147539 /* ServerLifecycle.swift */; };
 		AA40FA2BE36F5BD9F59767CCCB0B8C42 /* GeneratedContractTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 804E761C298B50723CF8254E9A6F24E6 /* GeneratedContractTests.swift */; };
 		ABFF0D7ED9AC6A4D57E0DAADEFFCBFE5 /* DependencyProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9B9FF487F13F57196837145648CA26F /* DependencyProtocol.swift */; };
@@ -48,6 +51,7 @@
 		B9F295170B9255A7061CFC6813A92A89 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D73150C9782356FF510519F7D5D799C6 /* Cocoa.framework */; };
 		BA4E9731B2C9EABBEE881FC0547F9E89 /* DependencyViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44E171B400569AAB806D8984570163D5 /* DependencyViews.swift */; };
 		BE59F986BEC64C43864BE2FBDDB7BA68 /* AttachmentsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1CB5DF91ED452AF014F73BF3E3067F6 /* AttachmentsSection.swift */; };
+		C52CB2D4078E04CC8DAD375D /* ClientDiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5493BCC163C70715E7F9C215 /* ClientDiagnosticsView.swift */; };
 		C8514003E57AD9EFB63153BAA5989133 /* EditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C1F3F51B684DAC13F1D3574437C8CF3 /* EditorView.swift */; };
 		CD0C6091DB10C4B98E12EC9CEE5AAF7F /* TaskFilters.swift in Sources */ = {isa = PBXBuildFile; fileRef = 312526AE6FB3E54F9F45F74780A3FDAD /* TaskFilters.swift */; };
 		D349C017C564C7123CBF9E38F6756FF4 /* DependencyGraphState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2319ACEC0BD8B874DDC88F0C512960FC /* DependencyGraphState.swift */; };
@@ -83,9 +87,11 @@
 		036A2A629FAB117EDA6FB5398BFBB393 /* Import.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Import.swift; sourceTree = "<group>"; };
 		07EDB40B05EBF1797941ED38F4B38B79 /* Recurrence.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Recurrence.swift; sourceTree = "<group>"; };
 		0820D3E590C89556E5921135F9AF4030 /* SeriesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SeriesView.swift; sourceTree = "<group>"; };
+		1AC19D6FD3E021225C2585AE /* ClientDiagnosticsMonitor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClientDiagnosticsMonitor.swift; sourceTree = "<group>"; };
 		1BFAE391AF653D337B02A6C12752D106 /* Dependencies.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Dependencies.swift; sourceTree = "<group>"; };
 		2319ACEC0BD8B874DDC88F0C512960FC /* DependencyGraphState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DependencyGraphState.swift; sourceTree = "<group>"; };
 		2B7F00BE7F9AB9E29E3DC0143D606792 /* AttachmentBatch.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AttachmentBatch.swift; sourceTree = "<group>"; };
+		303F7B5EB4C46F7A6615C617 /* ClientDiagnosticDisplay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClientDiagnosticDisplay.swift; sourceTree = "<group>"; };
 		312526AE6FB3E54F9F45F74780A3FDAD /* TaskFilters.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TaskFilters.swift; sourceTree = "<group>"; };
 		36973625D9AFEE41CAD73979FF8D34BA /* Todo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Todo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3FCD627BCBAC49E1CA94FFD2BD4842D5 /* NotificationPermission.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NotificationPermission.swift; sourceTree = "<group>"; };
@@ -94,6 +100,7 @@
 		4720B4630B6E75B2B1B2E29A247ADB86 /* TodoModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TodoModel.swift; sourceTree = "<group>"; };
 		532473248734E2D6AA3E57074DB8CB51 /* DiscoveryView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DiscoveryView.swift; sourceTree = "<group>"; };
 		53E7106D56967EF7E03CEFB4E0B0B674 /* ConflictMerge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConflictMerge.swift; sourceTree = "<group>"; };
+		5493BCC163C70715E7F9C215 /* ClientDiagnosticsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClientDiagnosticsView.swift; sourceTree = "<group>"; };
 		56F87740980C0991D376E7B434E711E0 /* DiagnosticsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DiagnosticsView.swift; sourceTree = "<group>"; };
 		5957C279B10FD9FEC122167484BDFDD1 /* Discovery.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Discovery.swift; sourceTree = "<group>"; };
 		61141AA1892F4CA05BC4DC827D99F426 /* BatchEdit.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BatchEdit.swift; sourceTree = "<group>"; };
@@ -127,6 +134,7 @@
 		D9976504653D0A58E8B74775BEC7FE8B /* Reminders.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Reminders.swift; sourceTree = "<group>"; };
 		DF902DF926925C3354C1B054D73DF9BD /* TodoApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TodoApp.swift; sourceTree = "<group>"; };
 		E1CB5DF91ED452AF014F73BF3E3067F6 /* AttachmentsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AttachmentsSection.swift; sourceTree = "<group>"; };
+		E26B9D84321E5E1D6D227D50 /* ClientProcessResources.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClientProcessResources.swift; sourceTree = "<group>"; };
 		E7C968B555C15CBF843FA4FA0DCE279D /* MenuBarFlowTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MenuBarFlowTests.swift; sourceTree = "<group>"; };
 		EC11DA9CB9B0E91246920E0754D0A550 /* SettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		F9B9FF487F13F57196837145648CA26F /* DependencyProtocol.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DependencyProtocol.swift; sourceTree = "<group>"; };
@@ -228,6 +236,10 @@
 				DF902DF926925C3354C1B054D73DF9BD /* TodoApp.swift */,
 				6F49F2E762D9A949FEEF92749E7D35C1 /* TodoColors.swift */,
 				4720B4630B6E75B2B1B2E29A247ADB86 /* TodoModel.swift */,
+				303F7B5EB4C46F7A6615C617 /* ClientDiagnosticDisplay.swift */,
+				1AC19D6FD3E021225C2585AE /* ClientDiagnosticsMonitor.swift */,
+				5493BCC163C70715E7F9C215 /* ClientDiagnosticsView.swift */,
+				E26B9D84321E5E1D6D227D50 /* ClientProcessResources.swift */,
 			);
 			name = Sources;
 			path = Sources;
@@ -501,6 +513,10 @@
 				547B15F0E560516DF880961F599BBD03 /* TodoApp.swift in Sources */,
 				2F412D023E1562C1FC3982C440C8EF2A /* TodoColors.swift in Sources */,
 				B9A10404B92FFA6E94872D0C9541313E /* TodoModel.swift in Sources */,
+				881D1FC670A45293D4FE7DE5 /* ClientDiagnosticDisplay.swift in Sources */,
+				A7DDC4979305B95BECF2D623 /* ClientDiagnosticsMonitor.swift in Sources */,
+				C52CB2D4078E04CC8DAD375D /* ClientDiagnosticsView.swift in Sources */,
+				7D7B10319C22EAAA9D110805 /* ClientProcessResources.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

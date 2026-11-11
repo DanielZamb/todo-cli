@@ -1,9 +1,10 @@
 # Client UI Diagnostics proposal
 
 This is the shared design requested in owner Task f714c177. It accompanies the
-Mac responsiveness Phase 0 investigation. Product implementation belongs to the
-coordinator's separate unit. No telemetry endpoint or shipped behavior is
-introduced by this proposal.
+Mac responsiveness Phase 0 investigation. The Mac C2 base is implemented in this branch. Electron and CLI parity under
+ADR-0009 is owed by the coordinator's separate cross-client unit. No telemetry
+endpoint is introduced. The implementation inventory and its candidate1 gaps
+are in [the Mac report](mac-responsiveness-report.md#c2-implementation-and-measurement-inventory).
 
 ## What the person should be able to distinguish
 

@@ -33,6 +33,7 @@ struct SettingsView: View {
                 page(tab).tabItem { Label(tab.rawValue, systemImage: tab.symbol) }.tag(tab)
             }
         }.frame(width: compact ? 393 : 600, height: compact ? 426 : 460)
+            .background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .settings))
             .preferredColorScheme(model.configuration.resolvedColorScheme(storedAppearance: appearance))
             .task(id: selectedTab) {
                 if selectedTab == .notifications { await model.reminders.refreshAuthorization() }

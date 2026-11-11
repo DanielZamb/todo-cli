@@ -84,11 +84,22 @@ final class TodoModel {
     var dependencyErrorContexts: [ClientErrorPosition: DependencyActionContext] = [:]
     let discovery = DiscoveryState()
     let dependencies = DependencyState()
-    var signedIn = false { didSet { if !signedIn { discovery.credentialChanged(); dependencies.reset() } } }
+    @ObservationIgnored let clientDiagnostics: ClientDiagnosticsRecorder
+    @ObservationIgnored lazy var clientDiagnosticsUI = ClientDiagnosticsMonitor(recorder: clientDiagnostics)
+    var signedIn = false { didSet {
+        if signedIn {
+            clientDiagnostics.authorizeOwnerSession(credential.hasPrefix("ses_"))
+            clientDiagnosticsUI.start()
+        } else {
+            discovery.credentialChanged(); dependencies.reset()
+            clientDiagnosticsUI.stop(); clientDiagnostics.clear()
+        }
+        reportClientAvailability()
+    } }
     var canRestore = false
-    var busy = false
-    var loading = false
-    var connection = Connection.connecting { didSet { if connection == .offline { discoveryWentOffline(); dependenciesWentOffline() } } }
+    var busy = false { didSet { reportClientAvailability() } }
+    var loading = false { didSet { reportClientAvailability() } }
+    var connection = Connection.connecting { didSet { if connection == .offline { discoveryWentOffline(); dependenciesWentOffline() }; reportClientAvailability() } }
     var outdatedServerBuild: String?
     var message: String?
     var taskLoadError: String?
@@ -121,6 +132,8 @@ final class TodoModel {
     var restoreReloadCount = 0
     private var credential = ""
     func replaceCredential(_ value: String) {
+        clientDiagnosticsUI.stop()
+        if !credential.isEmpty { clientDiagnostics.clear() } else { clientDiagnostics.authorizeOwnerSession(false) }
         discovery.credentialChanged()
         dependencies.reset()
         disconnect()
@@ -136,19 +149,26 @@ final class TodoModel {
     private var generation = 0
     private var refreshGeneration = 0
     private var vault: SessionVault { SessionVault(service: configuration.vaultService, account: configuration.server.absoluteString) }
-    private let clientFactory: (URL, String) -> Client
-    var client: Client { clientFactory(configuration.server, credential) }
+    private let clientFactory: ((URL, String) -> Client)?
+    var client: Client { clientFactory?(configuration.server, credential) ?? todoClient(server: configuration.server, credential: credential, diagnostics: clientDiagnostics) }
     private var cursorKey: String { "cursor.\(configuration.vaultService).\(configuration.server.absoluteString).\(profile)" }
     private var restoreCursorKey: String { "restore-cursor.\(configuration.server.absoluteString)" }
     var canWrite: Bool { signedIn && connection == .live && !busy && outdatedServerBuild == nil }
 
-    init(configuration: ClientConfiguration, clientFactory: @escaping (URL, String) -> Client = todoClient) {
+    init(configuration: ClientConfiguration, clientFactory: ((URL, String) -> Client)? = nil, clientDiagnostics: ClientDiagnosticsRecorder = .disabled) {
+        self.clientDiagnostics = clientDiagnostics
         self.configuration = configuration
         self.clientFactory = clientFactory
         profile = configuration.initialProfile
         if UserDefaults.standard.string(forKey: restoreCursorKey) != nil {
             restoreGeneration = UserDefaults.standard.string(forKey: "restore-generation.\(configuration.server.absoluteString)") ?? "initial"
         }
+    }
+
+    private func reportClientAvailability() {
+        guard clientDiagnostics.isOwnerSession else { return }
+        let reason: ClientDiagnosticReason = !signedIn ? .signedOut : outdatedServerBuild != nil ? .outdatedServer : connection == .offline ? .offline : busy ? .write : loading ? (appliedSearchSnapshot == nil ? .initialLoad : .query) : .ready
+        clientDiagnostics.availabilityChanged(.init(loading: loading, busy: busy, canWrite: canWrite, dataReady: appliedSearchSnapshot != nil, reason: reason))
     }
 
     func resetImport() {
@@ -391,7 +411,7 @@ final class TodoModel {
         loading = true
         lastSequence = UserDefaults.standard.string(forKey: cursorKey) ?? UserDefaults.standard.string(forKey: restoreCursorKey)
         let run = generation
-        streamTask = Task { await followChanges(generation: run) }
+        streamTask = Task { await ClientDiagnosticContext.$actionID.withValue(nil) { await followChanges(generation: run) } }
     }
 
     private func disconnect() {
@@ -401,7 +421,17 @@ final class TodoModel {
         invalidateSearch()
     }
 
-    private func refresh(generation run: Int, scope: TaskSearchRefreshScope = .full) async -> TaskSearchRefreshOutcome {
+    private func refresh(generation run: Int, scope: TaskSearchRefreshScope = .full, trigger: ClientDiagnosticTrigger = .manual) async -> TaskSearchRefreshOutcome {
+        let id = clientDiagnostics.refreshStarted(trigger)
+        let start = ProcessInfo.processInfo.systemUptime
+        let result = await ClientDiagnosticContext.$refreshID.withValue(id) { await performRefresh(generation: run, scope: scope) }
+        let outcome: ClientDiagnosticOutcome = result == .applied ? .applied : result == .failed ? .failed : .superseded
+        clientDiagnostics.refreshFinished(id, outcome: outcome, durationMS: (ProcessInfo.processInfo.systemUptime - start) * 1000)
+        reportClientAvailability(); clientDiagnosticsUI.publishReadyActions()
+        return result
+    }
+
+    private func performRefresh(generation run: Int, scope: TaskSearchRefreshScope) async -> TaskSearchRefreshOutcome {
         let credentialEpoch = discovery.credentialEpoch
         guard outdatedServerBuild == nil, generation == run, !Task.isCancelled else { return .superseded }
         if scope == .full { catalogStale = true }
@@ -490,7 +520,10 @@ final class TodoModel {
                 query.tag = name
             }
         }
-        return try await client.tasks_period_list(path: .init(profile: identity.profile), query: query).ok.body.json.map(TaskSnapshot.decode)
+        let wire = try await client.tasks_period_list(path: .init(profile: identity.profile), query: query).ok.body.json
+        let started = ProcessInfo.processInfo.systemUptime
+        defer { recordClientDecode(started) }
+        return try wire.map(TaskSnapshot.decode)
     }
 
     private func readSearchPlanning(profile: String, view: String) async throws -> PlanningResult? {
@@ -544,7 +577,7 @@ final class TodoModel {
 
     @discardableResult
     func retrySearch() async -> TaskSearchRefreshOutcome {
-        await refresh(generation: generation, scope: .query)
+        await refresh(generation: generation, scope: .query, trigger: .search)
     }
 
     func copyTaskID(_ id: String, pasteboard: NSPasteboard = .general) {
@@ -567,6 +600,9 @@ final class TodoModel {
                 guard try await checkServerContract(), generation == run, !Task.isCancelled else { loading = false; return }
                 let response = try await client.changes_period_stream(path: .init(profile: profile), headers: .init(last_hyphen_event_hyphen_id: lastSequence, x_hyphen_todo_hyphen_client: .swiftui, x_hyphen_todo_hyphen_generation: restoreGeneration))
                 guard generation == run, !Task.isCancelled else { return }
+                var streamConnected = ClientDiagnosticEvent(name: .streamConnected, run: clientDiagnostics.run)
+                streamConnected.reason = .ready
+                clientDiagnostics.record(streamConnected)
                 resumeSequence = lastSequence
                 let body = try response.ok.body.text_event_hyphen_stream
                 var parser = EventStreamDecoder()
@@ -575,7 +611,7 @@ final class TodoModel {
                         guard generation == run, !Task.isCancelled else { return }
                         if event.name == "ready" {
                             catalogStale = true
-                            _ = await refresh(generation: run)
+                            _ = await refresh(generation: run, trigger: .streamReady)
                             guard generation == run, !Task.isCancelled else { return }
                             connection = .live
                             await refreshDependencyReads()
@@ -630,7 +666,7 @@ final class TodoModel {
                                 return
                             }
                             catalogStale = true
-                            _ = await refresh(generation: run)
+                            _ = await refresh(generation: run, trigger: .streamOperation)
                             guard generation == run, !Task.isCancelled else { return }
                             await refreshDependencyReads(erased: operation.event.kind == "TaskPurged" || operation.event.original_kind == "TaskPurged")
                             if operation.event.kind == "ReminderFired" {
@@ -655,6 +691,9 @@ final class TodoModel {
             guard isCurrentCredential(credentialEpoch) else { return }
             message = describe(error) }
                 }
+                var streamDrop = ClientDiagnosticEvent(name: .streamDropped, run: clientDiagnostics.run)
+                streamDrop.reason = ClientDiagnosticReason(error: error)
+                clientDiagnostics.record(streamDrop)
                 connection = .offline
                 catalogStale = true
                 loading = false
@@ -876,6 +915,7 @@ final class TodoModel {
         historyError = nil
         showingHistory = false
         editor = TaskDraft(task)
+        clientDiagnosticsUI.inspectorPublished(task.id)
     }
 
     func resolveConflict() async {
@@ -1168,7 +1208,7 @@ final class TodoModel {
 
     func refreshAfterWrite(_ accepted: String) async {
         catalogStale = true
-        switch await refresh(generation: generation) {
+        switch await refresh(generation: generation, trigger: .ownWrite) {
         case .applied:
             message = nil
         case .failed:
@@ -1211,7 +1251,7 @@ final class TodoModel {
         loading = true
         searchPhase = .requesting
         let run = generation
-        Task { await refresh(generation: run, scope: .query) }
+        Task { await refresh(generation: run, scope: .query, trigger: .filterChange) }
     }
 
     func parseDraft() async {
@@ -1284,7 +1324,15 @@ final class TodoModel {
     }
 
     func decode<Value: Decodable, Wire: Encodable>(_ type: Value.Type, _ wire: Wire) throws -> Value {
-        try JSONDecoder().decode(type, from: JSONEncoder().encode(wire))
+        let started = ProcessInfo.processInfo.systemUptime
+        defer { recordClientDecode(started) }
+        return try JSONDecoder().decode(type, from: JSONEncoder().encode(wire))
+    }
+    private func recordClientDecode(_ started: Double) {
+        var event = ClientDiagnosticEvent(name: .decodeFinished, run: clientDiagnostics.run)
+        event.actionID = ClientDiagnosticContext.actionID; event.refreshID = ClientDiagnosticContext.refreshID
+        event.durationMS = (ProcessInfo.processInfo.systemUptime - started) * 1000
+        clientDiagnostics.record(event)
     }
 
     func loadSnapshots() async {

@@ -347,13 +347,13 @@ It includes both input dispatch and selection commit, operation latency
 histograms, pending/error counts, availability intervals, refresh causes and
 request/connection timings. The coordinator owns the broader cross-client build.
 
-Remaining controls are explicitly unfinished: the extra two Root passes, the
-full fixed-delay matrix, old/new server with native task-metric connection
-phases under added CPU load, the threaded 37-second wait attribution and a sensitive
-native Task-row click A/B and the requested three-Profile rapid-switch sequence. Their absence limits attribution; none is silently a
-passed check. No subagents, independent reviews or threads were launched by this
+The coordinator dropped the two extra Root passes and the fixed-delay matrix.
+The three-Profile rapid-switch count control remains pending. Native Task-row
+click A/B remains a coordinator gate. Native connection phases under added load
+and the threaded37-second attribution are deferred to C2 evidence unless cheap
+to repeat. None is silently a passed check. No subagents, independent reviews or threads were launched by this
 worker under the single-worker ruling. The canonical decision log stays in the
-run store outside the tree. Phase 0 approval must precede product edits.
+run store outside the tree. Phase0 was accepted before C1 product edits.
 
 ## C1 implementation, selection hypothesis
 
@@ -379,3 +379,145 @@ focused green filter added DependencyStateTests and DependencyDragCopyTests.
 The full state filter was `WriteStateTests|GeneratedContractTests`, with
 `--skip-build`. Design used `scripts/swift-slot.sh
 apps/macos/scripts/verify-design.py .scratch/proofs/mac-c1-design`.
+
+## C2 implementation and measurement inventory
+
+The owner's target is input to committed and laid-out result, median at most
+20 ms and p99 at most 300 ms for each interaction category. Completed samples
+and incomplete actions stay separate. The request-count target remains a
+secondary guard and removes a demonstrated source of server queueing. No
+optimization or refresh scheduling change is included in C2.
+
+The Mac recorder is enabled only after an authenticated owner Session. Tests
+inject a private journal directory; ordinary headless fixtures default to a
+disabled recorder. The application uses its own Application Support directory,
+`~/Library/Application Support/Todo/Diagnostics/`. A utility queue writes
+`current.ndjson` and `previous.ndjson`, each at most 1 MiB, with 0700 directory
+and 0600 file permissions. The recent-event and pending-writer queues each hold
+at most 512 records. Oversized records, queue overflow and I/O failures are
+counted. Active actions are bounded at 256 and outstanding requests at 1024.
+Each category/mode/input stratum retains its last 512 verified completions.
+The finite shared registry bounds the number of strata. Nothing is uploaded.
+Sign-out state and credential replacement clear the local journal and memory.
+A generation guard rejects delayed work from the previous owner scope.
+
+Metadata contains random action, trace, request and refresh ids, closed category
+pairs, generated operation names, status codes, durations and numeric resources.
+It contains no Task/Profile ids or names, content, typed text, coordinates, key
+codes, URLs, paths, bearer credentials or response bodies. Native identities
+used to validate selection stay only in weak view registrations and pending
+closures. They are never serialized. The journal survives termination, subject
+to its asynchronous writer; it is not a durable transaction log.
+
+The transport sends the approved X-Todo-Trace, X-Todo-Request and X-Todo-Action
+UUIDv4 headers. URLSessionTaskMetrics records fetch-to-request, DNS, connect,
+send, first byte, transfer, bytes and connection reuse. Server-Timing retains
+all six named todo-* spans when present and the accepted request id. A missing
+server span stays unknown. The e69230f9 server has no Server-Timing support.
+The difference between client wait and handler span alone does not identify a
+queue. Model Task conversion is timed separately. Generated HTTP decoder CPU
+has no dedicated callback in this slice and remains unknown. Main-thread
+heartbeat delay and request wall time are not CPU time.
+
+Native event receipt starts row selection before the SwiftUI selection handler.
+A swallowed click remains incomplete and its age is sampled off the main actor.
+The selection commit and matching inspector identity are separate events.
+Publication is followed by a main-run-loop commit opportunity, after ordinary
+layout work, only with a visible matching native view and no pending ancestor
+layout. The recorder does not force layout or claim physical presentation.
+A missing native input receipt is counted as unverified and does not enter the
+input-latency percentiles. Headless results do not qualify the final click gate.
+The heartbeat has one pending main-queue ping, 16 ms while active and 1 s while
+inactive. Resources are sampled on the utility queue at 1 Hz, with sampling
+cost, its own descriptor, TCP sockets and getrlimit observed at runtime.
+
+The table uses the exact shared display labels from diag-core 1142e00. Registry
+ids and event names stay in export/journal only. Over-budget or incomplete rows
+are listed first and marked with words and colour. Compact uses vertical cards.
+Request details distinguish unknown phases. Each total has its own row.
+
+The following inventory records candidate 1 coverage rather than claiming every
+shared subtype is complete. The source registry carries all 202 Mac subtypes.
+The coordinator's U04 join can consume the same ids without a second recorder.
+ADR-0009 parity for Electron and CLI is owed by the separate cross-client unit;
+this Mac slice is not complete cross-client delivery.
+
+| Category | Start | End and candidate 1 coverage |
+| --- | --- | --- |
+| I01 Sign in | Not wired | Omitted; owner gating is covered. |
+| I02 Sign out | Not wired | No action timing. State clear is covered. |
+| I03 Profile | Picker handler plus native input | Winning Profile, live state, applied rows and main layout. Protected navigation that stays in a draft dialog remains incomplete. |
+| I04 View | Sidebar binding | Winning identity published and main layout. |
+| I05 Filters, order, Project and Tag | Apply/sidebar binding | Winning identity published and main layout. Individual draft-filter changes and Cancel omitted. |
+| I06 Search | Text binding | Winning identity published and main layout. Superseded keystrokes stay incomplete. Focus, paste distinction and Retry omitted. |
+| I07 Selection/inspector | Native row pointer/keyboard receipt, explicit Close | Selection and matching inspector identity after layout, or main layout after Close. Menu opening omitted. |
+| I08 Window | Compact toolbar action | Main layout opportunity. Scroll, resize and divider omitted. |
+| I09 Draft fields | Title/description binding | Native editor contains expected text and matching inspector layout. Other fields omitted. |
+| I10 Draft navigation | Not wired | Omitted. |
+| I11 Add | Add submit or quick-add toolbar action | Refreshed main layout or opened quick-add layout. Typing/chips and menu-bar opening omitted. |
+| I12 Save/status | Save/Complete/Cancel/Reopen handler | Operation returns and main/inspector layout. No Snooze control exists in the current Mac UI. |
+| I13 Transfer | Not wired | Omitted. |
+| I14 Delete | Confirmation handler | Updated main layout. Review, Cancel and Purge omitted. |
+| I15 History | Not wired | Omitted. |
+| I16 Conflict | Not wired | Omitted. |
+| I17 Series | Not wired | Omitted. |
+| I18 Attachments | Not wired | Omitted. |
+| I19 Batch | Open/Preview/Apply handler | Batch layout after operation returns. Fields/selection omitted. |
+| I20 Import | Open/Preview/Apply handler | Import layout after operation returns. File/editor changes omitted. |
+| I21 Dependencies | Open picker/toggle/View Dependencies | Picker or Dependencies layout after operation returns. Search/direction omitted. |
+| I22 Drag/drop | Native drag reclassification | A drag does not complete selection. Drag/drop result timing omitted. |
+| I23 Diagram | List/Diagram binding | Native Dependencies container layout. Web diagram presentation unknown. |
+| I24 Discovery | Not wired | Omitted. |
+| I25 Profile deletion | Not wired | Omitted. |
+| I26 Snapshots | Not wired | Omitted. |
+| I27 Diagnostics | Native view attachment and recent input | Visible panel layout. Missing input stays unverified. Other controls omitted. |
+| I28 Settings | Native view attachment and recent input | Visible Settings layout. Missing input stays unverified. Changes omitted. |
+| I29 Server lifecycle | Not wired | Omitted. |
+| I30 Recovery | Stream/model/request events | No user-action latency. Causes, availability and requests recorded. |
+
+Task Delete confirmation is also wired to the common action recorder. It ends
+at the updated main layout. A refusal is visible through request status and the
+resulting error UI; the generic layout outcome describes layout application,
+not proof that the server accepted a write.
+
+Candidate1 deliberately cuts the categories listed above to get the diagnostic
+pipeline into the owner's next install. The owner's all-category objective is
+not met. Remaining native coverage and a real input/inspector pass are required.
+
+
+The final C2 helper run passed14 tests in three suites, exit0. It issued30 full
+refreshes against the178-Task owner-shaped fixture;15 enabled refreshes recorded
+exactly120 requests. The fixture has222,312 description characters and108
+Attachments. It proved Access Token denial, real URLSession request phases,
+metadata exclusion of every synthetic Task id and credential, runtime resource
+sampling, rotation, clear races, queued-input retention, optimized synchronous
+UI context and full/Compact panel capture. It left no owned server or scratch
+HOME. It did not call Keychain, sign or launch Todo.app.
+
+Five alternating release cells per side measured three full model refreshes per
+cell. Disabled median163.7 ms, range143.7 to173.2 ms; enabled179.0 ms, range160.9
+to185.9 ms. Fresh full-list layout median191.8 ms, range189.3 to302.1 ms disabled,
+and192.9 ms, range187.6 to199.3 ms enabled. Load was6.00 to6.17. The ranges overlap;
+these runs do not establish an overhead difference or a performance win.
+Disabled collection creates no native input markers. The layout comparison
+includes the marker cost when enabled. This is not the owner's click SLO and
+is not comparable with Phase0's different fixture as an optimization result.
+See the [small receipt](../evidence/mac-perf/client-diagnostics-summary.json).
+
+The repeatable proof command is `.agents/skills/verify-client-diagnostics/scripts/verify.py
+<new-evidence-directory>`. It runs `scripts/swift-slot.sh swift test
+--configuration release --no-parallel --disable-automatic-resolution --jobs 2
+--package-path apps/macos --filter
+'ClientDiagnosticsTests|ClientDiagnosticsLiveTests|ClientDiagnosticsPanelTests'`.
+The complete state/design/unsigned-build/root gates follow with C3 before the
+candidate SHA. The new [verification skill](../../.agents/skills/verify-client-diagnostics/SKILL.md)
+is proven through this helper. Fresh Claude discovery and an independent
+comment review were not run under the explicit single-worker rule.
+
+Failed proof attempts are retained. A utility callback inherited MainActor and
+trapped; making that callback sendable fixed the real production boundary.
+An optimized test's synchronous TaskLocal scope aborted at swift_task_dealloc;
+removing await did not fix it. Explicit async scopes passed, as did the separate
+optimized test of the actual synchronous UI handler. No toolchain root cause
+is claimed. A Compact intrinsic-size assertion first failed; the constrained
+capture and final assertion passed, and both final captures were inspected.

@@ -49,7 +49,18 @@ public func todoClient(server: URL, credential: String) -> Client {
     configuration.timeoutIntervalForRequest = 60
     configuration.timeoutIntervalForResource = 86_400
     configuration.urlCache = nil
-    return Client(serverURL: server, transport: URLSessionTransport(configuration: .init(session: URLSession(configuration: configuration))), middlewares: [BearerMiddleware(credential: credential)])
+    return Client(serverURL: server, transport: URLSessionTransport(configuration: .init(session: URLSession(configuration: configuration))), middlewares: [BearerMiddleware(credential: credential), ClientRequestCorrelation()])
+}
+
+public func todoClient(server: URL, credential: String, diagnostics: ClientDiagnosticsRecorder) -> Client {
+    guard diagnostics.isEnabled else { return todoClient(server: server, credential: credential) }
+    let configuration = URLSessionConfiguration.default
+    configuration.timeoutIntervalForRequest = 60
+    configuration.timeoutIntervalForResource = 86_400
+    configuration.urlCache = nil
+    let session = URLSession(configuration: configuration, delegate: ClientRequestMetrics(diagnostics), delegateQueue: nil)
+    let transport = DiagnosticTransport(transport: URLSessionTransport(configuration: .init(session: session)), recorder: diagnostics)
+    return Client(serverURL: server, transport: transport, middlewares: [BearerMiddleware(credential: credential), ClientRequestCorrelation()])
 }
 
 public struct FailureDetails: Codable, Sendable {
