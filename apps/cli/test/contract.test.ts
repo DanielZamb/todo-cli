@@ -1122,6 +1122,7 @@ it("locks login after 10 wrong passphrases and requires the macOS password to re
 });
 
 it("rejects polling detailed Diagnostics before reading a Session or contacting a server", () => {
+  expect(run(["--help"]).code).toBe(0);
   const result = run([
     "diagnostics",
     "--detail",
@@ -1132,7 +1133,8 @@ it("rejects polling detailed Diagnostics before reading a Session or contacting 
     "json",
   ]);
   expect(result.code).toBe(2);
-  expect(JSON.parse(result.out)).toMatchObject({
+  expect(result.out).toBe("");
+  expect(JSON.parse(result.err)).toMatchObject({
     code: "invalid_args",
     message:
       "--detail is a one-shot sample and cannot be combined with --follow",
