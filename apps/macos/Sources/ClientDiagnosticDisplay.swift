@@ -307,7 +307,7 @@ enum ClientDiagnosticDisplay {
         case .resultPublished: "Model published"
         case .layoutCommitted: "Layout committed"
         case .inputObserved: "Input observed"
-        case .inputReleased: "Pointer released"
+        case .inputReleased: "Released after"
         case .nativeSelectionChanging: "Row highlight started"
         case .nativeSelectionCommitted: "Row highlight settled"
         case .selectionCommitted: "Selection committed"
