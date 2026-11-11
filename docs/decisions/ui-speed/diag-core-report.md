@@ -1,8 +1,7 @@
 # DIAG-CORE delivery
 
-Branch: `feat/diag-core`. Product checkpoint: `d9637e72543e56b757ff0400fbe868cbeb12e9bc`.
-Scoped TypeScript/compiled proofs pass. The labelled supplementary root run
-passes; the plain root check remains an integration hold.
+Branch: `feat/diag-core`. Product checkpoint: `52bf38cef3b08d39ce80ea085b08ad34ebdc9366`.
+Scoped TypeScript/compiled proofs and the current plain order-27 root check pass.
 The remaining integration holds below are not relabelled as passes.
 
 ## Implementation
@@ -990,3 +989,123 @@ admission-cleanup.json retains the per-file receipt. All seven retained proof
 binaries still match admission-binary-hashes.txt after the root checks. No
 foreign process or file was stopped or deleted. Only the owned scratch recipes
 ran; their finalizers stopped their child processes and removed scratch data.
+
+## S1-11: plot terminal samples in chronological order
+
+The follow-up starts at d2b66ace. Runtime fix
+`52bf38cef3b08d39ce80ea085b08ad34ebdc9366` changes exactly the two chart consumers
+in apps/cli/src/top.ts. Each passes a reversed copy of its newest-first samples
+to spark: Operations and Latency now place the oldest admitted value at the
+left and the newest at the right. Server admission, stored observations,
+request counters, span counters and quantiles are unchanged. No domain runtime
+file, schema or HTTP adapter changed.
+
+The seat's production-collector/renderer probe was copied to an owned scratch
+file, compiled and executed before changing production code. It feeds 1, 4 and
+8 ms observations through the actual scratch store collector, requires server
+samples [8, 4, 1], and calls the same topPanes function as todo top. The old
+compiled probe exited 1: actual line █▄▁, expected literal line ▁▄█. Receipts
+are terminal-direction-red/result.json, compiled.log/exit and compile.log under
+docs/evidence/ui-speed. The source remains at .scratch/diag-terminal/red.ts.
+The first renderer test run also exited 1, with four failures and four passes:
+both rising-series and both 60-sample plots had reversed direction, while both
+empty and both single-value plots already passed.
+
+The corrected compiled probe exits 0 with the same server samples [8, 4, 1] and
+literal line ▁▄█. Its result and exit are in terminal-direction-green. The new
+apps/cli/test/top.test.ts exercises the production topPanes renderer for both
+Operations and Latency with these literal expectations:
+
+- Input [8, 4, 1] plots ▁▄█.
+- Empty input plots Collecting samples….
+- One sample [8] plots █.
+- The 60-sample input [60, 59, ..., 1] plots the exact 60-glyph rising line in
+  the test, starting with eight ▁ glyphs and ending with eight ▇ glyphs and █.
+
+All input sample arrays are frozen. An in-place reverse would throw. Assertions
+also require the original newest-first samples and literal counters to remain
+unchanged. Two further JSON/NDJSON controls render first, then serialize through
+diagnosticsOutput and decode with the production DiagnosticsSnapshot schema.
+Both retain [8, 4, 1], total 3 and committed 3. All ten focused controls pass.
+The existing Diagnostics verification skill's panel recipe now requires these
+direction and non-mutation controls alongside its compiled CLI/PTY proof.
+ADR-0020 now distinguishes returned newest-first lists from chronological
+chart presentation, which reverses a copy at the consumer.
+
+### Consumer audit
+
+| Consumer | Observed rule and action |
+| --- | --- |
+| apps/cli/src/top.ts, Operations and Latency | The only CLI chronological chart consumers. Both now reverse a copy exactly once at the call to spark. |
+| topPanes recent operation/error rows | Recent-first metadata lists, not time-axis plots. They retain input order. Profile filters only remove rows; they do not reorder or mutate them. |
+| apps/cli/src/diagnostics.ts, diagnosticsOutput | JSON uses encodeResponse; NDJSON compacts that same encoded snapshot. Neither interprets sample order. Both preserve newest-first values, tested after rendering. Markdown/table output prints totals and per-route quantiles, not sample plots. No change. |
+| apps/cli/src/main.ts, diagnostics/follow/top | Follow serializes snapshots once per second; non-TTY or JSON top falls back to diagnosticsOutput. Only the TTY path calls runTop/topPanes. No other chronological transform. No change. |
+| apps/cli/test/golden and cli.test.ts | All five enumerated golden files concern review/export. There is no dedicated Diagnostics golden in this checkout. Existing golden files and expected bytes remain unchanged; the compiled CLI suite checks all five. Diagnostics/top schemas and JSON response discovery are covered by contract.test.ts. |
+| verify-diagnostics.ts / capture-top.py | CLI JSON and follow NDJSON are schema-decoded, counts are asserted, and restored throughput samples must be empty. The PTY control reads its health baseline through the compiled CLI, then asserts an exact count increment and pane/resize/Profile/quit behavior. It does not turn sample order into a time axis. No recipe assertion, timeout or baseline count changed for S1-11. The new renderer tests provide the direction check that the PTY proof did not contain. |
+| Current feat/diag-electron, read-only | Observed OperationsSparkline and LatencySparkline wrappers reverse a copy of newestFirst before passing values to Sparkline. Both were already fixed by that unit, as the third review states. No Electron file was edited in this branch. The older Electron copy carried by this core branch is not that unit's integration head. |
+| Mac consumer | Read-only search locates DiagnosticsSparkline calls for both sample lists. No Swift command or change was made. The Mac app's corresponding consumer correction and verification remain owed at integration; this report does not claim them. |
+
+The contract is unchanged. Old and new are both
+`57724665f2589fdec09d845635a9e2b87914a84569056085f89fe5700fa5cb64`.
+The contract check exits 0. JSON keys, schemas, default/follow serialization and
+server admission code are unchanged. No Swift generation, build, test or app,
+push, merge, installation, signing, Keychain or real Todo database access ran.
+No children were launched under the single-worker brief.
+
+### S1-11 proof receipts
+
+Here `<evidence>` means docs/evidence/ui-speed and `<cache>` means .scratch/bin.
+The matching compiled runtime manifest is product 52bf38ce, source hash
+`43add62661b44cdc492f14d934d0f7cfc679e95b2a709aa42a83545c6a363e68`.
+terminal-direction-source.json and terminal-direction-binary-hashes.txt retain
+its provenance. The later report commit does not change runtime sources.
+
+| Command | Actual exit | Receipt |
+| --- | ---: | --- |
+| `<cache>/diag-terminal-red` on old production | 1 | terminal-direction-red/compiled.log/exit and result.json |
+| `pnpm --filter @todo/cli test top.test.ts` before fix | 1 | terminal-direction-red/tests.log/exit, four failed and four passed |
+| `<cache>/diag-terminal-green` | 0 | terminal-direction-green/compiled.log/exit and result.json |
+| `pnpm --filter @todo/cli test top.test.ts` after fix | 0 | terminal-direction-focused.log/exit, 10 tests |
+| `pnpm --filter @todo/domain test` | 0 | terminal-direction-domain.log/exit, 409 tests |
+| `pnpm typecheck` | 0 | terminal-direction-types.log/exit |
+| `bun packages/api/scripts/openapi.ts --check` | 0 | terminal-direction-contract.log/exit |
+| `TODO_CLI_BINARY=<cache>/todo TODO_SERVER_BINARY=<cache>/todo-server .agents/skills/verify-cli/scripts/verify.sh <evidence>/terminal-direction-cli` | 0 | terminal-direction-cli-run.log/exit, 80 full CLI-suite tests and all five unchanged goldens |
+| `TODO_DIAGNOSTICS_NO_SWIFT=1 .agents/skills/verify-diagnostics/scripts/verify.sh <evidence>/terminal-direction-diagnostics` | 0 | terminal-direction-diagnostics-run.log/exit and result.json, compiled CLI/HTTP/PTY; terminal PNG HOLD |
+| `pnpm --filter @todo/electron test guarded-run.test.ts` | 0 | terminal-direction-guarded-control.log/exit, five unchanged tests |
+| `TODO_CLI_BINARY=<cache>/todo TODO_SERVER_BINARY=<cache>/todo-server pnpm --filter @todo/cli test auth-history.test.ts` | 0 | terminal-direction-auth-control.log/exit, 12 unchanged tests |
+| Disk guard then `/usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check` with matching cached CLI/server environment | 1, 1, then 0 | terminal-direction-root.log/exit, terminal-direction-root-retry.log/exit and terminal-direction-root-final.log/exit |
+
+The root command uses no test-worker cap and changes no timeout or assertion.
+The first run passed all 409 domain tests, then the unchanged Electron test
+preserves literal argv and exit through direct fake delegates timed out at its
+5000 ms limit. Its other 167 Electron tests passed, with the existing skip.
+Recorded one-minute load was 7.41 before the command and 11.99 after exit.
+The isolated five-case guarded-run.test.ts control then passed unchanged; the
+same uncapped, locked root command was retried. The failed run and passing
+control are retained. The standalone compiled CLI proof already passed all
+80 tests and all five golden hashes before either root result is considered.
+The second root run passed 409 domain, 36 server and 168 Electron tests, then
+auth-history.test.ts, records one selected-Profile rejection for expired http
+show, expected detail expired but received invalid_credential. The other 79 CLI
+tests passed. This is the previously recorded expiry-cleanup race; no auth
+production or test code changed in this correction. Start/end one-minute load
+was 8.79/6.56. The unchanged isolated 12-test file then passed. The third run
+again uses the exact same uncapped locked command and cached runtime binaries.
+The third root run exits 0: 409 domain, 80 CLI, 36 server and 168 Electron tests
+pass, with the existing opt-in Electron skip. Start/end one-minute load was
+9.15/7.66. VITEST_MAX_WORKERS is unset. No supplementary capped run was used for
+this correction. Full start/end load and disk-guard receipts are preserved next
+to each root log.
+The terminal PNG render remains owed by a unit holding the Swift slot, as the
+no-Swift recipe explicitly records. The Mac chart consumer remains separately
+owed at integration. No new overhead measurement or performance claim is made.
+
+Final cleanup removed five owned closed Bun compile temporaries after lsof
+checks, freeing 443,304,320 logical bytes and 443,310,080 allocated bytes. None
+was open or skipped; the disk guard then reported 66.4 GB free. The per-file
+receipt is terminal-direction-cleanup.json. All five retained proof binaries
+still match terminal-direction-binary-hashes.txt after the root checks.
+Scratch recipe finalizers stopped their own children and removed their data.
+The local comment audit found no new comments or suppressions; the single-worker
+brief continues to override the no-comments skill's delegation step. No foreign
+file or process was changed, stopped or deleted.

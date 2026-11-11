@@ -64,9 +64,10 @@ Admission ranks slow observations (at least 20 ms), failed or refused outcomes
 ahead of ordinary observations, then prefers the newest in each group. It does
 this before both row and byte limits, including the recorder's detail sample.
 Admission stops at the first row that cannot fit, so older ordinary rows cannot
-displace an omitted important row. Retained observations are displayed newest
-first. All active spans are unfinished and important. Deliveries and throughput
-samples have no outcome; the newest win. Span summary rows prioritize
+displace an omitted important row. Returned observation lists are newest first.
+Chronological charts reverse a copy, with the oldest value at the left and the
+newest at the right. All active spans are unfinished and important. Deliveries
+and throughput samples have no outcome; the newest win. Span summary rows prioritize
 unfinished, failed or slow work, with stable key order within each group. Route
 summaries prioritize routes with any slow or failed request in their window,
 then the route's latest request.
