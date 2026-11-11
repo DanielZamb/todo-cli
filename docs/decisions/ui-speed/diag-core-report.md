@@ -1,6 +1,6 @@
 # DIAG-CORE delivery
 
-Branch: `feat/diag-core`. Product checkpoint: `d973918e8319784ffc8269dfccd5e4458bc30715`.
+Branch: `feat/diag-core`. Product checkpoint: `6267813e42947d73569daacd9cde3b70b9bb0da1`.
 Implementation and the required TypeScript/compiled proofs are complete.
 The remaining integration holds below are not relabelled as passes.
 
@@ -554,3 +554,211 @@ Fresh same-source binaries remain cached. Free space observed after cleanup was
 36.2 GB and after verification setup was 35.2 GB, above the 30 GB soft floor.
 No performance claim is added. Existing terminal PNG, quiet-machine and client
 integration holds remain with their owning units.
+
+## Polled payload correction
+
+The default complete Diagnostics body and ordinary CLI JSON now have a hard
+49,152-byte UTF-8 budget, including pretty indentation and the final newline.
+Compact HTTP JSON is smaller. Both growing profiler lists, recent spans and
+stream deliveries, are absent from the polled body. The default profiler is
+version 2. It contains cumulative counters, active count, a fixed 11-bucket
+histogram, per-stage and per-inventory-category span summaries, explicit gaps,
+omission counts and at most eight latest slow or failed span labels.
+
+Detailed data requires owner-only GET /diagnostics?detail=true or one-shot
+`todo diagnostics --detail`. Its separate complete-body cap is 65,536 pretty
+JSON bytes. `--detail --follow` is rejected before reading a Session or making
+a request; follow errors keep stderr and snapshot-only stdout behavior. Detail
+hoists run_id, build_id and contract_id into its sample header. None of its rows
+repeats those fields. It has independent maximums of 32 recent spans, four active
+spans and 16 deliveries. Available/omitted counts describe the retained rings;
+the existing cumulative counters separately account for ring displacement.
+
+Runtime change `2c147ad91f8f0db9139ea6455305355de69e9e0a` is followed by a test-only
+correction in `6267813e42947d73569daacd9cde3b70b9bb0da1`. Runtime source is identical
+between those two commits. The latter corrects my new flag test to assert the
+existing stderr error stream and initializes the normal first-run notice before
+parsing that stream. It does not change the runtime's output or error behavior.
+
+### Measurement before changing collection
+
+Evidence root: `docs/evidence/ui-speed/diag-core-payload/`. The measurement drove
+the compiled server/CLI from the df513876 runtime line before changing it, then
+retained a failing 48 KiB assertion in before.log and before.exit, actual exit 1.
+before/measurements.json retains all raw values and per-field byte counts. Its
+initial result file describes completed measurement collection; the separate
+size assertion and exit receipt are the red budget result.
+
+Each checkpoint has five owner polls. N below counts only the list workload;
+the five measurement polls per checkpoint, bootstrap sign-in and scheduler work
+are additional. The separate replay creates 306 literal Tasks and replays all
+306 operations through one live stream client. Sizes are UTF-8 ranges across
+those five polls. Handler values are Server-Timing todo-handler, middleware
+entry through response handoff, reported as median and observed range in ms.
+
+| Before workload | HTTP body bytes | Profiler bytes | Pretty JSON bytes | Handler median, range ms |
+| --- | --- | --- | --- | --- |
+| 0 list requests | [18,411, 45,289] | [15,963, 42,645] | [25,500, 61,970] | 1.171, [1.015, 2.772] |
+| 100 | [796,748, 823,479] | [792,864, 819,602] | [1,082,553, 1,118,784] | 4.932, [4.764, 6.180] |
+| 1,000 | [1,531,728, 1,531,838] | [1,527,861, 1,527,941] | [2,079,597, 2,079,800] | 7.750, [7.534, 10.891] |
+| 10,000 | [1,535,881, 1,535,985] | [1,532,120, 1,532,195] | [2,083,727, 2,083,864] | 8.039, [7.850, 10.289] |
+| 306-operation replay, one client | [1,917,495, 1,944,356] | [1,903,252, 1,929,994] | [2,584,885, 2,621,310] | 11.964, [11.293, 17.504] |
+
+The growing fields were recent and deliveries. At the fifth poll after 100 list
+requests, recent held 1,100 spans and 817,766 bytes. At 1,000 it reached its
+2,048-row cap, 1,526,031 bytes. At 10,000 it was still 2,048 rows, 1,530,280 bytes.
+The replay held 1,901 recent spans, 1,407,232 bytes, plus 612 delivery records,
+520,928 bytes. Active stayed at two rows, about 1,343 bytes, and unobserved stayed
+233 bytes. Scalar counters added only digits. Ordinary Diagnostics polls
+themselves added about 6.7 KB of spans per read before the ring filled.
+
+The Electron unit's independent owner-shaped breakdown was read without editing
+its worktree and copied to electron-recipe-size.json. It measured 1,027,295 HTTP
+bytes, 1,390,753 CLI bytes and a 1,019,782-byte profiler, including 1,277 recent
+spans at 998,324 bytes. Its later reported replay reached 2,166,086 body bytes,
+with 2,048 recent spans at 1,604,599 bytes and 612 deliveries at 544,525 bytes.
+Those are a different fixture, consistent with the two growing lists. Forwarded
+client/handler timing observations were single samples, not a performance verdict.
+
+### Construction and semantics
+
+The new domain files are diagnostic-summary.ts and diagnostic-budget.ts. The
+first owns the pure profiler wire schemas and fixed-dimension aggregation.
+diagnostic-context.ts keeps the process-local recorder and context. Span starts
+and completions update bounded stage/category accumulators as events occur;
+normal reads never copy or serialize the 2,048-row detail rings. Histogram
+quantiles are explicitly bucket upper bounds, with null for overflow above
+5,000 ms or no completions. Unfinished spans remain in the counts, outcomes are
+separate, and unit=span prevents calling these UI interaction measurements.
+U01's exact raw frozen interaction nearest-rank functions are unchanged.
+
+The budget module admits whole rows by their actual UTF-8 pretty JSON cost,
+including their nesting indentation. It reserves 8 KiB for empty objects and
+scalar fields and gives priority to span summaries before metadata samples.
+Each array also has a section quota. A whole-snapshot schema predicate enforces
+the final cap on both server and CLI encoding. Opt-in detail uses the remaining
+64 KiB allowance, its section quotas and the independent delivery-row cap.
+Ids and human labels are retained intact or the complete row is omitted.
+
+Existing metadata arrays are now explicitly bounded samples, including Profiles,
+credentials, clients, recent operation labels, errors and route summaries.
+profiler.omitted includes byte/sample omissions and rows outside SQL metadata
+query limits. Storage/operation aggregate totals and the 300-second/2,048-sample
+raw route quantiles retain their meanings. Route grouping is one bounded map
+pass rather than one full scan per distinct route. The credential-use memo
+checks its bounded keys independently of the displayed credential sample, so
+sampling does not erase last-use observations. Last Snapshot is projected to its
+original five allowed fields before budget admission. The compiled recipe caught
+and retained an intermediate test failure where admission measured the full
+manifest instead; diagnostics-fixed proves the corrected metadata projection.
+
+No store.ts, projection.ts, auth.ts, matcher, ordering, atomicity or transaction
+content changed. No formal pin was renewed. Recorder calls still use the one
+shared failure-contained guard. Owner authorization, refusal behavior and
+accepted trace headers remain in place. Explicit detail was chosen over a new
+profiler endpoint because a small, bounded join sample can use the existing
+owner route without introducing ingestion, journals or a new storage lifecycle.
+
+### After correction and stress proof
+
+The frozen runtime measurement is after-final/measurements.json, actual exit 0.
+It repeats the same list/replay workloads and five polls per checkpoint.
+
+| After workload | HTTP body bytes | Profiler bytes | Pretty JSON bytes | Handler median, range ms |
+| --- | --- | --- | --- | --- |
+| 0 list requests | [4,587, 4,782] | [2,132, 2,135] | [7,973, 8,260] | 1.488, [1.177, 4.275] |
+| 100 | [5,830, 5,831] | [2,406, 2,406] | [9,912, 9,913] | 1.061, [0.983, 1.355] |
+| 1,000 | [5,852, 5,854] | [2,439, 2,439] | [9,927, 9,929] | 1.150, [0.991, 1.479] |
+| 10,000 | [5,663, 5,786] | [2,470, 2,470] | [9,622, 9,809] | 1.463, [1.206, 1.826] |
+| 306-operation replay, one client | [6,652, 6,772] | [2,277, 2,277] | [11,148, 11,332] | 3.308, [2.941, 5.809] |
+
+The bytes are a bounded-output result. Handler times are busy-host observations,
+not a quiet-host speedup claim. Boundary one-minute load is retained for each
+measurement; the final run observed 6.66 to 6.80. The existing quiet-machine
+overhead confirmation remains owed at integration. Existing database/storage
+collection costs are separate from this response-size correction.
+
+The compiled stress drive makes 10,000 real mixed requests, 2,000 distinct unknown
+paths, fresh trace/request ids and 200 stream clients, at most 32 live together.
+It asserts both complete byte budgets every 1,000 requests. Then 306 operations
+are replayed through three clients, all 918 frames checked without duplicates.
+The detail source retained 1,836 delivery records and exported eight. Default
+body/pretty JSON were 9,632/15,605 bytes after that replay; opt-in detail was
+35,945/53,960. The normal compiled CLI, using spawnSync's unchanged default
+buffer, emitted 15,625 default bytes and 53,946 detail bytes. Both stayed within
+their budgets; no maxBuffer increase masks the issue. stress-verified/result.json
+retains the complete controls and omission counts.
+
+The domain test also drives 10,000 distinct route/trace/client observations and
+long multibyte Profile metadata, exercising every registered category and stage.
+It requires the complete encoded caps and all 10,000 starts/finishes in the
+histogram and returned category/stage summaries. The replay independently proves
+the delivery cap and hoisted identities. The joins proof continues to match
+client-sent ids and Server-Timing against an explicit bounded detail sample.
+
+### Contract and integration
+
+The old contract was
+`db2f9b18c488cbd43117afd82b011ed6d6f96efc4f0aeb77a37fd5695611788f`.
+The final contract is
+`57724665f2589fdec09d845635a9e2b87914a84569056085f89fe5700fa5cb64`.
+The TypeScript identity and OpenAPI document are regenerated. CLI and Electron
+consume that shared identity; the Electron SDK call now passes the declared
+query object. Historical reports retain their historical ids. Compatibility
+refusal logic is unchanged and its tests remain required.
+
+The only Swift command was the authorized
+`scripts/swift-slot.sh apps/macos/scripts/generate-api.sh`, run twice, exit 0 each.
+The second generation incorporates the coordinator's later detail identity/cap
+requirements. The final contract check exits 0 against the generated Swift and
+TypeScript identities. No manual Swift edit, app build/test, app launch, signing,
+Keychain, installation, real Todo data, push or merge was performed.
+
+Integration must merge this contract with both clients, use default polling
+without detail=true, render summary unit/bucket semantics and omission counts,
+and reserve detail for explicit one-shot inspection. Mac compilation and client
+presentation remain with their owning units. The held terminal PNG stage and
+other previously stated integration work remain owed.
+
+### Final verification receipts
+
+Here `<evidence>` is docs/evidence/ui-speed/diag-core-payload and `<cache>` is
+.scratch/bin. The frozen runtime binary manifest is product 2c147ad9, source hash
+`b04f15eb603366033abd04da6a708c08989371d4523e926ee829a4f8e1429a80`.
+The test-corrected final check manifest is product 6267813e, source hash
+`abb88588d278d18a947bef824ad2e5962c4de3777795e93a037af42e74764196`.
+All five compiled CLI/server/seed/fault executables are byte-identical between
+the runtime proofs and final check, as recorded in binary-receipt.json. The
+production source diff between these commits is empty.
+
+| Command | Actual exit | Evidence |
+| --- | ---: | --- |
+| `bun apps/server/scripts/measure-diagnostic-payload.ts <evidence>/before --assert-budget` on the old compiled runtime | 1 | before.log/exit, before/measurements.json |
+| `pnpm typecheck` | 0 | types-last.log/exit |
+| `pnpm --filter @todo/domain test` | 0 | domain-final-2.log/exit, 407 tests |
+| `bun packages/api/scripts/openapi.ts --check` | 0 | contract-final-check.log and final locked check |
+| `scripts/swift-slot.sh apps/macos/scripts/generate-api.sh` | 0, twice | generate-api.log/exit, generate-api-final.log/exit |
+| `TODO_DIAGNOSTICS_NO_SWIFT=1 .agents/skills/verify-diagnostics/scripts/verify.sh <evidence>/diagnostics-fixed` | 0 | diagnostics-fixed/result.json, terminal PNG HOLD |
+| `TODO_SERVER_BINARY=<cache>/todo-server TODO_SEED_BINARY=<cache>/seed .agents/skills/verify-server-api/scripts/verify.sh <evidence>/server-api-final` | 0 | server-api-final/result.json |
+| `.agents/skills/verify-auth/scripts/verify.sh <evidence>/auth-final` | 0 | auth-final/result.json |
+| `<cache>/verify-diagnostic-faults <evidence>/fault-controls-final` | 0 | fault-controls-final/result.json, all 47 cases |
+| `bun apps/server/scripts/verify-diagnostic-payload-budget.ts <evidence>/stress-verified` | 0 | stress-verified/result.json |
+| `bun apps/server/scripts/measure-diagnostic-payload.ts <evidence>/after-final --assert-budget` | 0 | after-final/result.json |
+| `bun apps/server/scripts/verify-diagnostic-joins.ts <evidence>/joins` | 0 | joins/result.json |
+| `TODO_CLI_BINARY=<cache>/todo TODO_SERVER_BINARY=<cache>/todo-server /usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check` | 1, 1, then 0 | root-check.log/exit, root-check-retry.log/exit, root-check-final.log/exit |
+
+The first root attempt hit the unchanged guarded-run.test.ts direct-delegate
+case's five-second timeout. Its isolated five-case run passed without changing
+the test or timeout. The second root run exposed my new flag test's stdout
+assertion; follow errors correctly used stderr. That assertion was corrected
+in 6267813e and its isolated case passed. The final locked root run passed 407
+domain, 70 CLI, 36 server and 168 Electron tests, with the existing Electron skip.
+Compatibility refusal and ordinary CLI goldens remain green. All intermediate
+failure evidence was retained rather than reported as a pass.
+
+The canonical disk guard preceded compilation and locked checks. Cleanup removed
+16 owned closed Bun temporaries, 1,418,573,824 logical bytes, after lsof checks;
+none was open or skipped. Matching binaries remain ignored in the cache. Cleanup
+receipts and hashes remain with the evidence. Every owned scratch server, stream,
+CLI child and generator command completed or was stopped by its own finalizer.
+The final report commit changes only this report, after the verified product.
