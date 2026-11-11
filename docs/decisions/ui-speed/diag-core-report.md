@@ -1,6 +1,6 @@
 # DIAG-CORE delivery
 
-Branch: `feat/diag-core`. Product checkpoint: `b6ca6d0b3aafa1560fd1d4a795aae52bbd88a680`.
+Branch: `feat/diag-core`. Product checkpoint: `d973918e8319784ffc8269dfccd5e4458bc30715`.
 Implementation and the required TypeScript/compiled proofs are complete.
 The remaining integration holds below are not relabelled as passes.
 
@@ -472,3 +472,85 @@ The final observed free space is 31.5 GB, above the 30 GB soft floor. Every owne
 proof server and stream finished through its normal cleanup, and the final
 compile-temporary scan found no further files. The final report commit changes
 only this report; the binary manifest remains tied to the product commit above.
+
+## Browser-safe guard extraction
+
+Product `d973918e8319784ffc8269dfccd5e4458bc30715` moves the existing guard and
+its three WeakMaps into the new packages/domain/src/diagnostic-guard.ts. This
+module has zero imports and requires neither Node nor Effect. observeDiagnostic
+is generic over any object owner. diagnosticFailureCounts(owner) returns a
+detached readonly snapshot with total, lost_starts and lost_events. No recorder
+class or recorder fields are required, and no error text is retained.
+
+Both functions are re-exported through @todo/domain. Browser adapters should
+use the direct `@todo/domain/diagnostic-guard` entry, which avoids the root
+barrel's Node-dependent services. The guard call signature otherwise retains
+the observation closure and optional start/event loss classification. Keep
+business work outside the observation closure; this guard contains synchronous
+recorder failures.
+
+diagnostic-context.ts imports this single implementation and reads the same
+per-owner ledger when building a profiler snapshot. Its existing fields still
+add lost_starts to started/lost_starts, lost_events to dropped_events, and total
+to recording_failures. store/diagnostics.ts imports the shared guard directly.
+Server, stream, scheduler and CLI root imports now resolve to that same module;
+auth and store timing wrappers delegate through diagnostic-context.ts as before.
+There is one observeDiagnostic definition in production TypeScript. The shared
+entry and root entry are the same function and counter reader in the tests.
+No call boundary, business effect, statement order or retry behavior changed.
+store.ts, projection.ts, auth.ts and task-filters.ts are unchanged, and no formal
+mapping was renewed.
+
+The browser regression first failed because the dedicated package entry did not
+exist. It now bundles that public entry for the browser and evaluates the ES
+module in an isolated realm with process, Buffer, require, Bun and global all
+undefined. Any external module import fails. The test requires the literal value
+37 and {total:1, lost_starts:1, lost_events:0} after a thrown start. A separate
+test uses plain object owners, proves independent ledgers and detached reads,
+and requires exact total/start/event counts of 3/1/2. Context, type-level variant
+and label tests remain green.
+
+The HTTP contract id is unchanged:
+`db2f9b18c488cbd43117afd82b011ed6d6f96efc4f0aeb77a37fd5695611788f`.
+The contract check exits 0. There is no HTTP schema or generated client change,
+and no Swift command ran. The extraction commit was sent immediately to the
+coordinator for the Electron worker while the complete proofs ran.
+
+Evidence root: `docs/evidence/ui-speed/diag-core-browser-guard/`. All six
+executables were compiled from the product above, source hash
+`247bddec98ccec0ae1a396344e9b6d68667d2ef6dfec80b153439e899355ca1f`.
+Here `<evidence>` is that root and `<cache>` is `.scratch/bin`.
+
+| Command | Actual exit | Evidence |
+| --- | ---: | --- |
+| Browser regression before extraction | 1 | browser-red.log/exit |
+| `pnpm --filter @todo/domain typecheck` | 0 | targeted-types.log |
+| `pnpm --filter @todo/domain test diagnostic-guard.test.ts diagnostic-guard-browser.test.ts diagnostic-context.test.ts diagnostic-event-types.test.ts diagnostic-labels.test.ts` | 0 | targeted-green.log/exit, 10 tests |
+| `bun packages/api/scripts/openapi.ts --check` | 0 | contract-check.log/exit |
+| `<cache>/verify-diagnostic-faults <evidence>/fault-controls` | 0 | fault-controls/result.json, all existing 47 cases |
+| `HOME=<scratch-home> <cache>/http-failure-probe-green` | 0 | seat-probe.json/log/exit; unchanged seat probe source |
+| `TODO_DIAGNOSTICS_NO_SWIFT=1 .agents/skills/verify-diagnostics/scripts/verify.sh <evidence>/diagnostics` | 0 | diagnostics/result.json; terminal_pngs HOLD |
+
+The compiled HTTP probe preserves 200 and one Task/TaskCreated commit at each of
+the four fault points, with recording_failures=1. The 47 controls retain their
+literal HTTP bodies/statuses, stream order, scheduler jobs and CLI output/exits.
+
+The full check ran as
+`TODO_CLI_BINARY=<cache>/todo TODO_SERVER_BINARY=<cache>/todo-server /usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check`
+and exited 0 on its first run, retained in root-check.log/exit. It passed 405
+domain, 69 CLI, 35 server and 168 Electron tests, with the existing Electron
+skip. Typechecking, contract identity, label/variant checks and goldens passed.
+
+Before compiling, cleanup retired seven superseded executables and 14 files
+from the uncited old final-diagnostics evidence, freeing 636,678,144 allocated
+bytes, 636,628,258 logical bytes. No pre-existing closed Bun temporaries were
+present. All cited logs, red/green results, source fixtures and binary hashes
+remain. In particular, the old retained red executable was retired after the
+accepted review; its cited proof and hash receipts remain. After rebuilding,
+six closed Bun temporaries were removed, freeing another 531,972,096 allocated
+bytes, 531,965,184 logical bytes. Every file passed an lsof check and none was
+open or skipped. cleanup.jsonl and binary-receipt.json retain the receipts.
+Fresh same-source binaries remain cached. Free space observed after cleanup was
+36.2 GB and after verification setup was 35.2 GB, above the 30 GB soft floor.
+No performance claim is added. Existing terminal PNG, quiet-machine and client
+integration holds remain with their owning units.
