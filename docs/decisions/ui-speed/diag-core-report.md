@@ -1,6 +1,6 @@
 # DIAG-CORE delivery
 
-Branch: `feat/diag-core`. Product checkpoint: `0a79f21048dcb28d4e3a15b2f743379c636a86e3`.
+Branch: `feat/diag-core`. Product checkpoint: `b6ca6d0b3aafa1560fd1d4a795aae52bbd88a680`.
 Implementation and the required TypeScript/compiled proofs are complete.
 The remaining integration holds below are not relabelled as passes.
 
@@ -395,3 +395,80 @@ baseline executable remain ignored for the seat's re-check.
 The held terminal PNG stage, generated Swift/client integration and the seat's
 independent re-check remain owed. No Swift, Todo.app, signing, Keychain,
 installation, push, merge or real Todo data access occurred in this follow-up.
+
+## Refresh causes follow-up
+
+The correction review of bd5bf6f8 passed with no findings, and the coordinator
+accepted that branch as the second seat. The independent re-check hold above is
+resolved. The coordinator assigned the refresh-cause delta to the next integration
+review rather than a separate seat.
+
+Product `b6ca6d0b3aafa1560fd1d4a795aae52bbd88a680` adds dayChange, clockChange,
+wake and activation to refresh.started.trigger. clockChange also covers a
+time-zone change. diagnosticRefreshTriggerLabels in diagnostic-labels.ts supplies
+the requested plain labels for all 15 values and is exported through
+interaction-categories.ts and @todo/domain. The new labels are "Day changed",
+"Clock or time zone changed", "Woke from sleep" and "App became active".
+Event names, schema version and all previous trigger values remain unchanged.
+No domain file was added.
+
+The HTTP contract id does not change. Both before and after this delta it is
+`db2f9b18c488cbd43117afd82b011ed6d6f96efc4f0aeb77a37fd5695611788f`.
+refresh.started is published by the standalone `todo schema 'diagnostics event'`
+input schema. The HTTP profiler's active/recent records are spans, and its
+delivery records do not contain the refresh trigger enum. The contract check
+exits 0 without regeneration; packages/api, the profiler, Diagnostics body schema
+and generated Swift sources are byte-identical to bd5bf6f8. No pins changed and
+no Swift command was needed or run.
+
+The runtime test first failed because dayChange decoded as invalid_record. The
+old compiled CLI also failed the new published-schema assertion, which requires
+the exact 15-value enum. Both red results are retained. The type-level test still
+constructs and narrows every event variant and now constructs every refresh
+trigger, checks the exact trigger union and rejects a separate timeZoneChange
+value. Label coverage walks the actual trigger literals, requires nonempty
+plain words with no identifiers, and compares the entire map with literal
+expected labels. The compiled vocabulary recipe now guards the published enum.
+
+Evidence root: `docs/evidence/ui-speed/diag-core-refresh-causes/`. The cached
+CLI/server/seed binaries were built once from the product above, source hash
+`e1edec9a3c28fb3c79adfbfb1dd869ff729cbb35bfe6c63a11275968d3730e59`.
+Here `<evidence>` is that root and `<cache>` is `.scratch/bin`.
+
+| Command | Actual exit | Evidence |
+| --- | ---: | --- |
+| `pnpm --filter @todo/domain test client-diagnostics.test.ts` before the enum change | 1 | domain-red.log/exit |
+| `bun .agents/skills/verify-diagnostics/scripts/verify-vocabulary.ts <evidence>/compiled-schema-red` against the old CLI | 1 | compiled-schema-red.log/exit, schema retained |
+| `pnpm --filter @todo/domain typecheck` and `pnpm --filter @todo/domain test client-diagnostics.test.ts diagnostic-event-types.test.ts diagnostic-labels.test.ts` | 0 | targeted-green.log/exit, 13 tests; full typecheck also in root log |
+| `pnpm --filter @todo/domain test` | 0 | domain-green.log/exit, 403 tests |
+| `bun packages/api/scripts/openapi.ts --check` | 0 | contract-check.log/exit; unchanged db2f9b18 contract |
+| `bun .agents/skills/verify-diagnostics/scripts/verify-vocabulary.ts <evidence>/compiled-vocabulary` | 0 | compiled-vocabulary/result.json and published schemas |
+| `TODO_DIAGNOSTICS_NO_SWIFT=1 .agents/skills/verify-diagnostics/scripts/verify.sh <evidence>/diagnostics` | 0 | diagnostics/result.json; terminal_pngs HOLD |
+| `TODO_CLI_BINARY=<cache>/todo TODO_SERVER_BINARY=<cache>/todo-server /usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check`, first run | 1 | root-check.log/exit; auth-history expired HTTP edit detail mismatch |
+| `TODO_CLI_BINARY=<cache>/todo TODO_SERVER_BINARY=<cache>/todo-server TODO_CLI_EVIDENCE=<evidence>/auth-history-isolated pnpm --filter @todo/cli test auth-history.test.ts` | 0 | auth-history-isolated.log/exit, 12 tests and retained actions |
+| `TODO_CLI_BINARY=<cache>/todo TODO_SERVER_BINARY=<cache>/todo-server /usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check`, unchanged-source retry | 0 | root-check-retry.log/exit |
+
+The first root run passed typechecking and all domain/server/Electron suites,
+then failed one CLI auth-history assertion. It expected rejection detail expired
+and observed invalid_credential. The fixture expires a Session directly in its
+scratch database while the real server scheduler can delete expired credentials.
+That deletion can explain the observed detail; the fixture, scheduler and auth code
+are unchanged from bd5bf6f8. The isolated auth-history file subsequently passed
+all 12 cases on the same cached binaries. The first failure remains retained;
+no auth or fixture behavior was changed to make this vocabulary delta pass.
+The locked root retry passed 403 domain, 69 CLI, 35 server and 168 Electron
+tests, with the existing Electron skip. Typechecking, contract and golden checks
+passed. Integration should retain the initial intermittent auth-test result.
+
+The canonical disk guard ran before compilation and the locked root check.
+Removed three owned closed Bun compile temporaries, 265,982,592 logical bytes,
+after lsof checks; none was open or skipped. Cleanup and binary receipts remain
+local with the evidence. The held terminal PNG render is still owed by a unit
+holding the Swift slot. Quiet-machine overhead confirmation and client
+integration remain owed as already stated; this vocabulary-only delta makes no
+new performance claim. No Task database, runtime control flow, formal mapping,
+authorization or compatibility-refusal behavior changed.
+The final observed free space is 31.5 GB, above the 30 GB soft floor. Every owned
+proof server and stream finished through its normal cleanup, and the final
+compile-temporary scan found no further files. The final report commit changes
+only this report; the binary manifest remains tied to the product commit above.
