@@ -43,6 +43,7 @@ parser.add_argument('--cpu-workers', type=int, default=0)
 parser.add_argument('--iteration-offset', type=int, default=0)
 parser.add_argument('--owner-fixture', action='store_true')
 parser.add_argument('--connection-probe', action='store_true')
+parser.add_argument('--inspector-layout', action='store_true')
 args = parser.parse_args()
 os.umask(0o077)
 if args.owner_fixture: args.personal_tasks=OWNER['personal']['total']
@@ -117,6 +118,8 @@ for ref, sha in refs.items():
         connection_file.unlink(missing_ok=True)
     if args.connection_probe:
         pass
+    elif args.inspector_layout:
+        fixture = fixture.split('@MainActor struct MacPerformanceMeasurement')[0] + SOURCE.with_name('InspectorMeasurement.swift').read_text()
     elif args.slow_actions:
         fixture = fixture.split('@MainActor struct MacPerformanceMeasurement')[0] + SOURCE.with_name('SlowActions.swift').read_text()
         modern = 'func setSearchText' in (package / 'Sources/TodoModel.swift').read_text()
@@ -327,6 +330,7 @@ for iteration in range(args.iteration_offset, args.iteration_offset + args.runs)
             counts = []
             events = []
             close_generation = [0]
+            inspector_edit_serial = [0]
             reply_delay_ms = [0]
             streams = []
             class Handler(http.server.BaseHTTPRequestHandler):
@@ -342,9 +346,20 @@ for iteration in range(args.iteration_offset, args.iteration_offset + args.runs)
                         action = self.path[len('/__perf/'):]
                         value = None
                         if action.startswith('start/'): counts.clear(); events.clear()
+                        elif action.startswith('description/'):
+                            characters=int(action.split('/')[-1]);target=request('GET','/profiles/work/tasks',credential=credential)[0]
+                            description=('Description with ordinary words. ' * ((characters+32)//33))[:characters]
+                            description=(description+' ' * characters)[:characters]
+                            request('PATCH',f"/profiles/work/tasks/{target['id']}",{'from_version':target['row_version'],'changes':{'description':description}},credential)
+                            with sqlite3.connect(scratch/'scratch.db') as db: latest=db.execute('select max(seq) from op_log').fetchone()[0]
+                            value=dict(task=target['id'],cursor=str(latest))
                         elif action.startswith('edit/'):
                             i = int(action.split('/')[-1]); task = tasks[10 + i]
-                            run([binaries['cli'], 'edit', task['id'], '--expected-version', str(task['row_version']), '--title', f'Live edit {i}', '--profile', 'work', '--format', 'json'], f'edit-{name}-{i}', env)
+                            title = f'Live edit {i}'
+                            if args.inspector_layout:
+                                task=next(t for t in request('GET','/profiles/work/tasks',credential=credential) if t['id']==task['id'])
+                                inspector_edit_serial[0]+=1;title+=f' inspector {inspector_edit_serial[0]}'
+                            run([binaries['cli'], 'edit', task['id'], '--expected-version', str(task['row_version']), '--title', title, '--profile', 'work', '--format', 'json'], f'edit-{name}-{i}', env)
                         elif action == 'close-stream':
                             close_generation[0] += 1
                             for stream in list(streams):
@@ -456,6 +471,9 @@ for iteration in range(args.iteration_offset, args.iteration_offset + args.runs)
             (folder / 'cleanup.json').write_text(json.dumps(dict(processes=[dict(pid=p.pid, exit=p.returncode) for p in processes], scratchRemoved=not scratch.exists(), retainedScratch=str(scratch) if unsafe else None)))
             if 'log' in locals(): log.close()
 
+if args.inspector_layout:
+    print(json.dumps(dict(errors=0, sessions=sum(command['log'].startswith('session-') for command in commands))))
+    raise SystemExit(0)
 summary_text = run([sys.executable, SOURCE.with_name('summarize.py'), evidence], 'summary')
 print(summary_text, end='')
 print((evidence / 'work.json').read_text())
