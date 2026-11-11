@@ -488,3 +488,11 @@ export type InteractionCategory = typeof InteractionCategory.Type;
 export const InventoryId = Schema.Literals(
   interactionCategories.map((x) => x.id),
 );
+
+export {
+  diagnosticCategoryLabels,
+  diagnosticEventLabels,
+  diagnosticInputLabels,
+  diagnosticModeLabels,
+  diagnosticSubtypeLabels,
+} from "./diagnostic-labels.ts";
