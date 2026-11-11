@@ -392,7 +392,7 @@ The Mac recorder is enabled only after an authenticated owner Session. Tests
 inject a private journal directory; ordinary headless fixtures default to a
 disabled recorder. The application uses its own Application Support directory,
 `~/Library/Application Support/Todo/Diagnostics/`. A utility queue writes
-`current.ndjson` and `previous.ndjson`, each at most 1 MiB, with 0700 directory
+`current.ndjson` and `previous.ndjson`, each at most 64 MiB, with 0700 directory
 and 0600 file permissions. The recent-event and pending-writer queues each hold
 at most 512 records. Oversized records, queue overflow and I/O failures are
 counted. Active actions are bounded at 256 and outstanding requests at 1024.
@@ -400,6 +400,40 @@ Each category/mode/input stratum retains its last 512 verified completions.
 The finite shared registry bounds the number of strata. Nothing is uploaded.
 Sign-out state and credential replacement clear the local journal and memory.
 A generation guard rejects delayed work from the previous owner scope.
+
+The first candidate used two 1 MiB files. Review showed that routine polling
+and unchanged resource samples could evict an evening's interactions overnight.
+The revised policy records resources every second in memory, and journals them
+on a material change or once per minute. Material means a descriptor or socket
+delta of at least 16, a limit change, a sampling availability change or an
+application activity change. The actual watchdog timer uses 16 ms only while
+active, and 1 second while inactive or hidden. Inactive periods are identified
+by the optional applicationActive field and do not create stall measurements.
+
+Explicit periodic requests with no initiating interaction remain in live
+request counters and timing rings. The journal stores one aggregate per minute
+per generated route identity: count, failures, p50, maximum and known handler
+spans. Each aggregate states its sample count; samples are bounded at 512 per
+route and route identities at 16. Failed polls and replies over 300 ms retain
+their individual start, headers and finish. Interaction-linked requests always
+retain individual records. Diagnostics polling and non-interactive stream
+health checks carry the periodic marker; ordinary catalog reads do not.
+
+Resource samples and poll aggregates cannot trigger file rotation. They are
+thinned at three quarters of the current file's bound, leaving space for
+interaction, refresh, stream, availability and stall records. A full pending
+queue admits critical evidence by removing a routine record first. Thinning
+has its own counter. The small-file control preserves literal counts for all
+five critical families before and after routine traffic fills the file.
+
+The cap is 128 MiB total and is not preallocated. At rotation, one full file is
+the conservative retained capacity. The rate proof replays synthetic metadata
+for an active hour, including a separate case with the owner's observed 93
+health and 52 Diagnostics polls per minute, followed by twelve idle hours.
+It measures encoded bytes and retained records, not a real owner day or UI
+latency. Final rates and the resulting conservative retention appear in the
+candidate receipt. Export contains the bounded in-memory events and summaries;
+the rotating files retain the longer history on this Mac.
 
 Metadata contains random action, trace, request and refresh ids, closed category
 pairs, generated operation names, status codes, durations and numeric resources.
@@ -575,3 +609,62 @@ method; the corrected fixture's positive controls passed in the failing run.
 A misplaced summary field caused an intermediate compile failure and was
 corrected before the green proof. The complete candidate gates and richer
 in-window captures follow with the retention and panel corrections.
+
+## Review correction: retention, polling and the live panel
+
+The journal has two files of at most 64 MiB each, allocated as records arrive.
+The active watchdog ticks every 16 ms. Inactive or hidden applications tick
+once a second and report an inactive heartbeat instead of a stall. A real
+1.2-second timer observation counted 76 active ticks, two inactive ticks and
+two hidden ticks. Resource readings remain in memory each second. The writer
+keeps one a minute, or a change of at least 16 descriptors or sockets, a changed
+limit, sampling availability or application activity. `applicationActive` is
+optional in resource records and the summary.
+
+Explicit timer-driven health and Diagnostics polls with no initiating action
+remain visible in memory. The journal keeps one aggregate a minute per route,
+with count, failures, sample count, p50, maximum and known handler timings.
+An individual failure or request over 300 ms keeps its request phases.
+An interaction's request cannot be hidden by a poll marker. Resource samples
+and poll aggregates cannot cause rotation. They are thinned above three
+quarters of a file's limit and are evicted first from a full pending queue.
+The literal priority test preserves two, then twelve records of each critical
+kind while routine records are thinned: interaction layout, refresh finish,
+stream drop, availability and stall. Routine traffic creates no previous file.
+
+The production encoder and writer replayed one synthetic active hour, then
+twelve idle hours. The active hour contains 241 completed actions, 300
+superseded Searches and 120 refreshes. With Diagnostics closed, 960 requests
+write 2,565,472 bytes. With Diagnostics open at 93 health and 52 Diagnostics
+polls per minute, 9,660 requests write 2,619,996 bytes. One 64 MiB file holds
+26.16 and 25.61 hours at those respective rates. Idle writes about 18 KB an
+hour. Both replays preserve the evening interaction and drop zero records.
+These are replay estimates, not measured owner sessions or UI timings. A day
+with more actions or exceptional polls can retain less. The bound stays fixed.
+The [review receipt](../evidence/mac-perf/client-diagnostics-review-summary.json)
+keeps the work counts, rates and alternating timing samples.
+
+The final Release Diagnostics proof runs 30 full refreshes on 178 Tasks and
+records 120 requests with zero errors. Five alternating cells per side, three
+refreshes per cell, measured disabled median 158.1 ms, range 146.8 to 194.1 ms,
+and enabled median 164.6 ms, range 150.4 to 207.3 ms. Fresh full-list layout
+medians were 182.2 ms disabled and 179.5 ms enabled, with ranges 173.0 to
+285.6 ms and 177.3 to 215.3 ms. Load was 8.49 to 8.97. The overlapping ranges
+make the overhead comparison inconclusive. This does not establish the
+owner's input-to-result objective or a C4 optimization.
+
+The local panel uses the existing Diagnostics section helper, collapses by
+default in Compact and says "Always live" when the server table is paused.
+Over-budget rows sort by p99, worst first. Each row has one accessibility
+label containing its column names. Ages and the longest stall use seconds
+above one second and minutes beyond two minutes. Separate rings retain the
+last 16 committed interactions, 16 finished requests and 32 non-resource
+events, with explicit empty states. The four inspected captures show full
+and Compact, light and dark, inside the production Diagnostics content with
+an over-budget row, an incomplete Search and every local disclosure open.
+They are unordered-window captures and do not prove native input delivery.
+
+Export contains the summary and the last 512 in-memory events. The two
+private journal files retain the longer session. ADR-0009 Electron and CLI
+parity remains owed by the separate cross-client unit. The remaining category
+cuts in the inventory still apply.

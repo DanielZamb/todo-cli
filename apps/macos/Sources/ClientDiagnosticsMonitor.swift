@@ -12,6 +12,8 @@ private final class ClientHeartbeatProbe: @unchecked Sendable {
     private var active = false
     private var lastRequest = 0.0
     private var lastResources = 0.0
+    func setActivity(_ value: Bool) { lock.withLock { active = value; pending = nil; lastRequest = 0; lastResources = 0 } }
+    func isActive() -> Bool { lock.withLock { active } }
     func request(_ now: Double) -> Bool {
         lock.withLock {
             guard pending == nil, now - lastRequest >= (active ? 16 : 1000) else { return false }
@@ -35,12 +37,16 @@ struct ClientDiagnosticInputReceipt {
 
 @MainActor @Observable final class ClientDiagnosticsMonitor {
     @ObservationIgnored let recorder: ClientDiagnosticsRecorder
+    @ObservationIgnored private let applicationActive: @MainActor @Sendable () -> Bool
+    @ObservationIgnored private let notifications: NotificationCenter
+    @ObservationIgnored private let watchdogTick: (@Sendable () -> Void)?
     var summary = ClientDiagnosticSummary()
     @ObservationIgnored private var generation = 0
     @ObservationIgnored private var mode = ClientDiagnosticMode.unknown
     @ObservationIgnored private var eventMonitor: Any?
     @ObservationIgnored private var observer: CFRunLoopObserver?
     @ObservationIgnored private var timer: (any DispatchSourceTimer)?
+    @ObservationIgnored private var activityObservers: [NSObjectProtocol] = []
     @ObservationIgnored private var probe = ClientHeartbeatProbe()
     private struct Pending {
         let category: ClientDiagnosticAction
@@ -59,9 +65,12 @@ struct ClientDiagnosticInputReceipt {
     @ObservationIgnored private var lastInput: ClientDiagnosticInputReceipt?
     @ObservationIgnored private var selection: (id: UUID, task: String?)?
 
-    init(recorder: ClientDiagnosticsRecorder) { self.recorder = recorder }
+    init(recorder: ClientDiagnosticsRecorder, applicationActive: @escaping @MainActor @Sendable () -> Bool = { NSApplication.shared.isActive && !NSApplication.shared.isHidden }, notifications: NotificationCenter = .default, watchdogTick: (@Sendable () -> Void)? = nil) {
+        self.recorder = recorder; self.applicationActive = applicationActive; self.notifications = notifications; self.watchdogTick = watchdogTick
+    }
     isolated deinit {
         timer?.cancel()
+        for token in activityObservers { notifications.removeObserver(token) }
         if let eventMonitor { NSEvent.removeMonitor(eventMonitor) }
         if let observer { CFRunLoopRemoveObserver(CFRunLoopGetMain(), observer, .commonModes) }
     }
@@ -77,13 +86,13 @@ struct ClientDiagnosticInputReceipt {
         }
         if let observer { CFRunLoopAddObserver(CFRunLoopGetMain(), observer, .commonModes) }
         let source = DispatchSource.makeTimerSource(queue: DispatchQueue(label: "local.todo.client-diagnostics-watchdog", qos: .utility))
-        let recorder = recorder, probe = probe, run = generation, scope = recorder.scopeToken
-        source.schedule(deadline: .now(), repeating: .milliseconds(16), leeway: .milliseconds(2))
+        let recorder = recorder, probe = probe, run = generation, scope = recorder.scopeToken, tick = watchdogTick, activity = applicationActive
         source.setEventHandler { @Sendable [weak self] in
+            tick?()
             let now = ProcessInfo.processInfo.systemUptime * 1000
             if probe.request(now) {
                 DispatchQueue.main.async {
-                    if let gap = probe.delivered(ProcessInfo.processInfo.systemUptime * 1000, active: NSApplication.shared.isActive), gap > 100 {
+                    if let gap = probe.delivered(ProcessInfo.processInfo.systemUptime * 1000, active: activity()), gap > 100 {
                         var event = ClientDiagnosticEvent(name: .stall, run: recorder.run); event.durationMS = gap; recorder.record(event, ifScope: scope)
                     }
                 }
@@ -93,6 +102,7 @@ struct ClientDiagnosticInputReceipt {
                 var event = ClientDiagnosticEvent(name: .stall, run: recorder.run); event.durationMS = gap; recorder.record(event, ifScope: scope)
             }
             var event = ClientDiagnosticEvent(name: .resourcesSampled, run: recorder.run)
+            event.applicationActive = probe.isActive()
             event.resources = ClientProcessResources.read(); event.incomplete = recorder.incompleteSnapshot(); recorder.record(event, ifScope: scope)
             Task { @MainActor [weak self] in
                 let snapshot = await recorder.snapshot()
@@ -100,10 +110,21 @@ struct ClientDiagnosticInputReceipt {
                 summary = snapshot
             }
         }
-        timer = source; source.resume()
+        timer = source
+        updateActivity()
+        activityObservers = [NSApplication.didBecomeActiveNotification, NSApplication.didResignActiveNotification, NSApplication.didHideNotification, NSApplication.didUnhideNotification].map { name in
+            notifications.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in MainActor.assumeIsolated { self?.updateActivity() } }
+        }
+        source.resume()
+    }
+    private func updateActivity() {
+        let active = applicationActive()
+        probe.setActivity(active)
+        timer?.schedule(deadline: .now(), repeating: .milliseconds(active ? 16 : 1000), leeway: .milliseconds(active ? 2 : 100))
     }
     func stop() {
         generation += 1; timer?.cancel(); timer = nil; probe = ClientHeartbeatProbe()
+        for token in activityObservers { notifications.removeObserver(token) }; activityObservers.removeAll()
         if let eventMonitor { NSEvent.removeMonitor(eventMonitor) }; eventMonitor = nil
         if let observer { CFRunLoopRemoveObserver(CFRunLoopGetMain(), observer, .commonModes) }; observer = nil
         pending.removeAll(); selection = nil; lastInput = nil; regions.removeAll(); summary = .init()

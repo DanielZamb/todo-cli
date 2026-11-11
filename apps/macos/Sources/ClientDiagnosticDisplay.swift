@@ -1,6 +1,24 @@
+import Foundation
 import TodoAPI
 
 enum ClientDiagnosticDisplay {
+    static func pollOperation(_ operation: String) -> String {
+        switch operation { case "system.health": "Check server health"; case "diagnostics.snapshot": "Read Diagnostics"; default: "Background requests" }
+    }
+    static func overBudget(_ row: ClientDiagnosticActionSummary) -> Bool { (row.p50MS ?? 0) > 20 || (row.p99MS ?? 0) > 300 || row.incompleteCount > 0 }
+    static func sectionSummary(_ snapshot: ClientDiagnosticSummary) -> String {
+        "\(snapshot.actions.filter(overBudget).count) over budget · \(snapshot.actions.reduce(0) { $0 + $1.incompleteCount }) incomplete"
+    }
+    static func age(_ milliseconds: Double) -> String {
+        if milliseconds < 1000 { return String(format: "%.0f ms", milliseconds) }
+        if milliseconds < 120_000 { return String(format: "%.1f s", milliseconds / 1000) }
+        return String(format: "%.1f min", milliseconds / 60_000)
+    }
+    static func accessibility(_ row: ClientDiagnosticActionSummary) -> String {
+        func metric(_ value: Double?) -> String { value.map { String(format: "%.1f milliseconds", $0) } ?? "not measured" }
+        let status = row.incompleteCount > 0 ? "Incomplete. " : overBudget(row) ? "Over budget. " : ""
+        return "\(action(row.action)), \(input(row.inputKind)), \(mode(row.mode)). \(status)Median \(metric(row.p50MS)), p90 \(metric(row.p90MS)), p99 \(metric(row.p99MS)), maximum \(metric(row.maxMS)). \(row.count) completed, \(row.supersededCount) superseded, \(row.incompleteCount) incomplete, \(row.unprovenCount) with unverified input."
+    }
     static func action(_ value: ClientDiagnosticAction) -> String {
         switch value {
         case .signIn: "Sign in"
@@ -248,6 +266,7 @@ enum ClientDiagnosticDisplay {
         case .availabilityChanged: "Availability changed"
         case .stall: "Main thread stalled"
         case .resourcesSampled: "Resources sampled"
+        case .pollsAggregated: "Background requests summarized"
         }
     }
     static func environmentTrigger(_ value: ClientDiagnosticTrigger) -> String? {

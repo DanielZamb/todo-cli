@@ -112,6 +112,14 @@ under 1 ms synchronous recording per action, and under 0.5% idle CPU. These are
 acceptance targets, not measured costs. Measure enabled/disabled overhead on
 the same completed workload and publish drops, memory and sampling cost.
 
+The coordinator's implementation ruling supersedes that first-slice disk
+budget: two rotating files of 64 MiB each, no preallocation, routine poll
+aggregates once per minute, and resource records only on material change or
+once per minute. Routine records cannot rotate out critical evidence. The
+verification reports ordinary and open-Diagnostics replay bytes per hour and
+the conservative retention of one full file rather than assuming the cap alone
+proves a day's retention.
+
 ## Smallest first slice
 
 The smallest Mac slice would have recorded this incident without changing the

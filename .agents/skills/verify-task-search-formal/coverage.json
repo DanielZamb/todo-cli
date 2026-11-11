@@ -1,6 +1,6 @@
 {
-  "sourceCommit": "baa794d8cc83c15ae26b704d5c261ad7602eac64",
-  "status": "Manual C3b working-tree source review on parent baa794d8. Environmental signals enter the existing full-refresh transitions at the same search identity; the catalog revision prevents an older in-flight read from clearing newer debt. Quiet unchanged-cursor/generation reconnect remains an allowed stutter. Native and state controls identify concrete behavior; independent candidate review remains coordinator-owned.",
+  "sourceCommit": "9d071074c2dc4dad6eca999f1203713872a99aef",
+  "status": "Manual revised-candidate working-tree review on parent 9d071074. C3b environmental catalog debt and guards retain their mapped transitions. Non-interactive health checks carry a local recording marker only; publication, requested identity and HTTP behavior are unchanged. Hashes identify reviewed bytes. Independent candidate review remains coordinator-owned.",
   "files": [
     {
       "path": "apps/electron/src/renderer.tsx",
@@ -77,7 +77,7 @@
         "catalogSignalRevision and full-read debt",
         "lastCatalogReadAt and activation age"
       ],
-      "sha256": "86535e5a31c7cfd8dffd943ce2aa0a39b823d169cb18791727404749758c729b"
+      "sha256": "6feeee8a2c1d68d990ae6eb3eb7fae581206662a236eb1f6a11526867fb52210"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",

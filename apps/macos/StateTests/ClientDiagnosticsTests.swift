@@ -20,7 +20,257 @@ private final class DiagnosticTestClock: @unchecked Sendable {
     func tableView(_ tableView: NSTableView, objectValueFor tableColumn: NSTableColumn?, row: Int) -> Any? { "Synthetic Task \(row)" }
 }
 
+private final class DiagnosticTickCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = 0
+    func tick() { lock.withLock { value += 1 } }
+    func read() -> Int { lock.withLock { value } }
+}
+@MainActor private final class DiagnosticActivity { var active = false }
+
 @Suite(.serialized) struct ClientDiagnosticsTests {
+    @Test func routinePollsAreAggregatedButFailuresAndSlowRepliesKeepTheirPhases() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let clock = DiagnosticTestClock(), recorder = ClientDiagnosticsRecorder(journalDirectory: root, clock: { clock.read() })
+        recorder.authorizeOwnerSession(true)
+        await ClientDiagnosticContext.$periodicPoll.withValue(true) { () async in
+            for (operation, duration, status, handler) in [("system.health", 10.0, 200, 2.0), ("system.health", 20.0, 200, 4.0), ("diagnostics.snapshot", 15.0, 200, 3.0), ("system.health", 5.0, 503, 1.0), ("system.health", 400.0, 200, 80.0)] {
+                let request = recorder.requestStarted(operation: operation)
+                clock.set(clock.read() + duration)
+                recorder.requestHeaders(request, status: status, serverSpans: ClientServerTiming.spans("todo-handler;dur=\(handler)"))
+                recorder.requestFinished(request, status: status)
+            }
+        }
+        clock.set(62_000)
+        let summary = await recorder.snapshot(); await recorder.flush()
+        let files = try FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)
+        let records = try files.flatMap { try Data(contentsOf: $0).split(separator: 10).map { try JSONDecoder().decode(ClientDiagnosticEvent.self, from: Data($0)) } }
+        #expect(summary.requests == 5)
+        #expect(summary.recentRequests.count == 5)
+        #expect(records.filter { $0.name == .pollsAggregated }.count == 2)
+        #expect(records.filter { $0.name == .requestStarted }.count == 2)
+        #expect(records.filter { $0.name == .requestHeaders }.count == 2)
+        #expect(records.filter { $0.name == .requestFinished }.count == 2)
+        let health = try #require(summary.polls.first { $0.operation == "system.health" })
+        #expect(health.routeTemplate == "/health")
+        #expect(health.count == 4 && health.failures == 1)
+        #expect(health.p50MS == 10 && health.maxMS == 400)
+        #expect(health.handlerCount == 4 && health.handlerP50MS == 2 && health.handlerMaxMS == 80)
+        recorder.clear(); await recorder.flush()
+    }
+    @Test func routineRecordsCannotRotateOutCriticalEvidence() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: root, journalFileLimit: 32768); recorder.authorizeOwnerSession(true)
+        var serial = 0
+        func critical(_ count: Int) async {
+            for _ in 0..<count {
+                serial += 1
+                let action = recorder.beginAction(.search, inputMS: 1); recorder.handlerStarted(action); recorder.resultPublished(action); recorder.layoutCommitted(action)
+                let refresh = recorder.refreshStarted(.manual); recorder.refreshFinished(refresh, outcome: .applied, durationMS: 1)
+                var stream = ClientDiagnosticEvent(name: .streamDropped, run: recorder.run); stream.reason = .cleanEnd; recorder.record(stream)
+                recorder.availabilityChanged(.init(loading: serial.isMultiple(of: 2), busy: false, canWrite: !serial.isMultiple(of: 2), dataReady: true, reason: .ready))
+                var stall = ClientDiagnosticEvent(name: .stall, run: recorder.run); stall.durationMS = Double(serial); recorder.record(stall)
+                await recorder.flush()
+            }
+        }
+        func storedCounts() throws -> [String: Int] {
+            let records = try FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil).flatMap { try Data(contentsOf: $0).split(separator: 10).map { try JSONDecoder().decode(ClientDiagnosticEvent.self, from: Data($0)) } }
+            return Dictionary(grouping: records, by: { $0.name.rawValue }).mapValues(\.count)
+        }
+        await critical(2)
+        for index in 0..<256 {
+            var sample = ClientDiagnosticEvent(name: .resourcesSampled, run: recorder.run, now: Double(index))
+            sample.resources = .init(descriptors: 64 + index * 16, sockets: index * 16, softLimit: 2560, hardLimit: UInt64.max, samplerDescriptors: 1, sampleMS: 0.2)
+            recorder.record(sample); await recorder.flush()
+        }
+        let first = try storedCounts()
+        for name in ["ui.layout.committed", "refresh.finished", "stream.dropped", "availability.changed", "ui.stall"] { #expect(first[name] == 2) }
+        #expect(try FileManager.default.contentsOfDirectory(atPath: root.path) == ["current.ndjson"])
+        await critical(10)
+        let final = try storedCounts()
+        for name in ["ui.layout.committed", "refresh.finished", "stream.dropped", "availability.changed", "ui.stall"] { #expect(final[name] == 12) }
+        #expect((await recorder.snapshot()).routineRecordsThinned > 0)
+        recorder.clear(); await recorder.flush()
+    }
+    @Test func aPollMarkerCannotHideARequestStartedByAnInteraction() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: root); recorder.authorizeOwnerSession(true)
+        let action = recorder.beginAction(.openDiagnostics, inputMS: 1)
+        await ClientDiagnosticContext.$periodicPoll.withValue(true) { () async in
+            await ClientDiagnosticContext.$actionID.withValue(action) { () async in
+                let request = recorder.requestStarted(operation: "system.health"); recorder.requestHeaders(request, status: 200); recorder.requestFinished(request, status: 200)
+            }
+        }
+        await recorder.flush()
+        let records = try Data(contentsOf: root.appendingPathComponent("current.ndjson")).split(separator: 10).map { try JSONDecoder().decode(ClientDiagnosticEvent.self, from: Data($0)) }
+        #expect(records.filter { $0.requestID != nil }.count == 3)
+        #expect((await recorder.snapshot()).polls.isEmpty)
+        recorder.clear(); await recorder.flush()
+    }
+    @Test func anUnobservedHandlerDoesNotClaimAnIncompleteInput() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: root); recorder.authorizeOwnerSession(true)
+        let action = recorder.beginAction(.openDiagnostics); recorder.handlerStarted(action)
+        let pending = try #require((await recorder.snapshot()).actions.first)
+        #expect(pending.unprovenCount == 1)
+        #expect(pending.incompleteCount == 0)
+        #expect(recorder.incompleteSnapshot().isEmpty)
+        recorder.endAction(action, outcome: .failed)
+        let ended = try #require((await recorder.snapshot()).actions.first)
+        #expect(ended.unprovenCount == 1)
+        #expect(ended.incompleteCount == 0)
+        recorder.clear(); await recorder.flush()
+    }
+    @Test @MainActor func anInactiveOrHiddenWatchdogHasOneSecondTicks() async throws {
+        _ = NSApplication.shared
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: root); recorder.authorizeOwnerSession(true)
+        let activity = DiagnosticActivity(), source = NotificationCenter(), ticks = DiagnosticTickCounter()
+        let monitor = ClientDiagnosticsMonitor(recorder: recorder, applicationActive: { activity.active }, notifications: source, watchdogTick: { ticks.tick() })
+        monitor.start(); defer { monitor.stop() }
+        let idleStart = ticks.read()
+        try await Task.sleep(for: .milliseconds(1200))
+        let inactive = ticks.read() - idleStart
+        #expect((await recorder.snapshot()).recent.filter { $0.name == .stall }.isEmpty)
+        activity.active = true; source.post(name: NSApplication.didBecomeActiveNotification, object: nil)
+        let activeStart = ticks.read()
+        try await Task.sleep(for: .milliseconds(1200))
+        let active = ticks.read() - activeStart
+        let beforeHiddenStalls = (await recorder.snapshot()).recent.filter { $0.name == .stall }.count
+        activity.active = false; source.post(name: NSApplication.didHideNotification, object: nil)
+        let hiddenStart = ticks.read()
+        try await Task.sleep(for: .milliseconds(1200))
+        let hidden = ticks.read() - hiddenStart
+        #expect(inactive <= 3)
+        #expect(active >= 10)
+        #expect(hidden <= 3)
+        let snapshot = await recorder.snapshot()
+        #expect(snapshot.applicationActive == false)
+        #expect(snapshot.recent.filter { $0.name == .stall }.count == beforeHiddenStalls)
+        monitor.stop(); recorder.clear(); await recorder.flush()
+        if let path = ProcessInfo.processInfo.environment["TODO_CLIENT_DIAGNOSTICS_EVIDENCE"] {
+            try JSONSerialization.data(withJSONObject: ["window_ms": 1200, "inactive_ticks": inactive, "active_ticks": active, "hidden_ticks": hidden], options: [.prettyPrinted, .sortedKeys]).write(to: URL(fileURLWithPath: path).appendingPathComponent("watchdog-rate.json"))
+        }
+    }
+    @Test func unchangedResourceSamplesStayInMemoryAndJournalAtMostOnceAMinute() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let clock = DiagnosticTestClock(), recorder = ClientDiagnosticsRecorder(journalDirectory: root, clock: { clock.read() })
+        recorder.authorizeOwnerSession(true)
+        func sample(_ descriptors: Int = 64, soft: UInt64 = 2560) {
+            var event = ClientDiagnosticEvent(name: .resourcesSampled, run: recorder.run, now: clock.read())
+            event.resources = .init(descriptors: descriptors, sockets: 8, softLimit: soft, hardLimit: UInt64.max, samplerDescriptors: 1, sampleMS: 0.2)
+            recorder.record(event)
+        }
+        for second in 0..<3600 {
+            clock.set(1000 + Double(second) * 1000); sample()
+            if second.isMultiple(of: 64) { await recorder.flush() }
+        }
+        await recorder.flush()
+        func lines() throws -> Int {
+            try FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil).filter { $0.pathExtension == "ndjson" }.reduce(0) { try $0 + Data(contentsOf: $1).split(separator: 10).count }
+        }
+        let idle = await recorder.snapshot()
+        #expect(try lines() == 60)
+        #expect(idle.dropped == 0)
+        clock.set(3_600_500); sample(65); await recorder.flush()
+        #expect(try lines() == 60)
+        #expect((await recorder.snapshot()).resources?.descriptors == 65)
+        clock.set(3_600_600); sample(80); await recorder.flush()
+        #expect(try lines() == 61)
+        clock.set(3_600_700); sample(80, soft: 4608); await recorder.flush()
+        #expect(try lines() == 62)
+        if let path = ProcessInfo.processInfo.environment["TODO_CLIENT_DIAGNOSTICS_EVIDENCE"] {
+            try JSONSerialization.data(withJSONObject: ["simulated_seconds": 3600, "samples": 3600, "journal_bytes_per_idle_hour": idle.journalBytesWritten, "dropped": idle.dropped], options: [.prettyPrinted, .sortedKeys]).write(to: URL(fileURLWithPath: path).appendingPathComponent("idle-journal-rate.json"))
+        }
+        recorder.clear(); await recorder.flush()
+    }
+    @Test(arguments: [false, true]) func anOrdinaryMetadataHourAndTwelveIdleHoursRetainTheEveningInteraction(_ diagnosticsOpen: Bool) async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let clock = DiagnosticTestClock(), recorder = ClientDiagnosticsRecorder(journalDirectory: root, clock: { clock.read() })
+        recorder.authorizeOwnerSession(true)
+        let evening = try #require(recorder.beginAction(.openInspector, inputMS: clock.read(), mode: .full, inputKind: .pointer))
+        recorder.handlerStarted(evening); recorder.resultPublished(evening); recorder.layoutCommitted(evening)
+        await recorder.flush()
+        let initialBytes = (await recorder.snapshot()).journalBytesWritten
+        func resource() {
+            var event = ClientDiagnosticEvent(name: .resourcesSampled, run: recorder.run, now: clock.read())
+            event.resources = .init(descriptors: 64, sockets: 8, softLimit: 2560, hardLimit: UInt64.max, samplerDescriptors: 1, sampleMS: 0.2)
+            recorder.record(event)
+        }
+        func finish(_ id: UUID?) { recorder.handlerStarted(id); recorder.resultPublished(id); recorder.layoutCommitted(id) }
+        let phases = ClientDiagnosticRequestPhases(fetchToRequestMS: 0.1, dnsMS: nil, connectMS: 0.1, sendMS: 0.05, firstByteMS: 0.4, transferMS: 0.3, connectionReused: false, receivedBytes: 370_000, serverSpans: ClientServerTiming.spans("todo-handler;dur=0.2"))
+        func refresh(_ trigger: ClientDiagnosticTrigger) async {
+            let id = recorder.refreshStarted(trigger)
+            await ClientDiagnosticContext.$refreshID.withValue(id) { () async in
+                for operation in ["tasks.list", "reads.profiles", "reads.projects", "reads.tags", "reads.view", "reads.view", "reads.view", "reads.view"] {
+                    let request = recorder.requestStarted(operation: operation)
+                    clock.set(clock.read() + 1)
+                    recorder.requestHeaders(request, status: 200, serverSpans: ClientServerTiming.spans("todo-handler;dur=0.2"), acceptedRequestID: request)
+                    recorder.requestFinished(request, status: 200, phases: phases)
+                    var decode = ClientDiagnosticEvent(name: .decodeFinished, run: recorder.run, now: clock.read())
+                    decode.refreshID = id; decode.actionID = ClientDiagnosticContext.actionID; decode.durationMS = 0.3; recorder.record(decode)
+                }
+            }
+            recorder.refreshFinished(id, outcome: .applied, durationMS: 8)
+        }
+        for second in 0..<3600 {
+            let base = 1000 + Double(second) * 1000
+            clock.set(base); resource()
+            if second.isMultiple(of: 60) {
+                var search: UUID?
+                for index in 0..<6 {
+                    clock.set(base + Double(index))
+                    if let search { recorder.endAction(search, outcome: .superseded) }
+                    search = recorder.beginAction(.search, inputMS: clock.read(), mode: .full, inputKind: .keyboard); recorder.handlerStarted(search)
+                }
+                recorder.resultPublished(search); recorder.layoutCommitted(search)
+                for _ in 0..<2 { finish(recorder.beginAction(.taskSelection, inputMS: clock.read(), mode: .full, inputKind: .pointer)) }
+                let complete = recorder.beginAction(.complete, inputMS: clock.read(), mode: .full, inputKind: .pointer)
+                recorder.handlerStarted(complete)
+                await ClientDiagnosticContext.$actionID.withValue(complete) { () async in await refresh(.ownWrite) }
+                await refresh(.streamOperation)
+                recorder.resultPublished(complete); recorder.layoutCommitted(complete)
+                if diagnosticsOpen {
+                    for (index, operation) in (Array(repeating: "system.health", count: 93) + Array(repeating: "diagnostics.snapshot", count: 52)).enumerated() {
+                        await ClientDiagnosticContext.$periodicPoll.withValue(true) { () async in
+                            let request = recorder.requestStarted(operation: operation)
+                            clock.set(clock.read() + 1)
+                            recorder.requestHeaders(request, status: 200, serverSpans: ClientServerTiming.spans("todo-handler;dur=0.2"), acceptedRequestID: request)
+                            recorder.requestFinished(request, status: 200, phases: phases)
+                        }
+                        if index.isMultiple(of: 32) { await recorder.flush() }
+                    }
+                }
+            }
+            if second.isMultiple(of: 64) { await recorder.flush() }
+        }
+        await recorder.flush()
+        clock.set(3_661_000)
+        _ = await recorder.snapshot(); await recorder.flush()
+        let active = await recorder.snapshot(), activeBytes = active.journalBytesWritten - initialBytes
+        #expect(active.refreshes == 120)
+        #expect(active.requests == (diagnosticsOpen ? 9660 : 960))
+        #expect(active.actions.reduce(0) { $0 + $1.supersededCount } == 300)
+        #expect(active.actions.reduce(0) { $0 + $1.count } == 241)
+        #expect(active.actions.reduce(0) { $0 + $1.incompleteCount } == 0)
+        #expect(activeBytes * 24 <= ClientDiagnosticsRecorder.journalFileLimit)
+        for second in 0..<43_200 {
+            clock.set(3_662_000 + Double(second) * 1000); resource()
+            if second.isMultiple(of: 64) { await recorder.flush() }
+        }
+        await recorder.flush()
+        let final = await recorder.snapshot()
+        let journal = try FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil).filter { $0.pathExtension == "ndjson" }
+        let preserved = try journal.contains { String(decoding: try Data(contentsOf: $0), as: UTF8.self).contains(evening.uuidString) }
+        #expect(preserved)
+        #expect(final.dropped == 0)
+        #expect(final.journalFailures == 0)
+        if let path = ProcessInfo.processInfo.environment["TODO_CLIENT_DIAGNOSTICS_EVIDENCE"] {
+            let receipt: [String: Any] = ["workload": "synthetic metadata replay, not UI latency or an observed owner hour", "diagnostics_open": diagnosticsOpen, "health_polls_per_minute": diagnosticsOpen ? 93 : 0, "diagnostics_polls_per_minute": diagnosticsOpen ? 52 : 0, "active_seconds": 3600, "idle_seconds": 43_200, "active_hour_bytes": activeBytes, "idle_hour_bytes": Double(final.journalBytesWritten - active.journalBytesWritten) / 12, "refreshes": active.refreshes, "requests": active.requests, "completed_actions": 241, "superseded": 300, "evening_interaction_preserved": preserved, "journal_limit_per_file": ClientDiagnosticsRecorder.journalFileLimit, "dropped": final.dropped]
+            try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]).write(to: URL(fileURLWithPath: path).appendingPathComponent(diagnosticsOpen ? "journal-day-retention-open.json" : "journal-day-retention.json"))
+        }
+        recorder.clear(); await recorder.flush()
+    }
     @Test @MainActor func sixFindInputsHaveFiveSupersededAndOneCompletedWithNoIncomplete() async throws {
         let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
         let recorder = ClientDiagnosticsRecorder(journalDirectory: root)
@@ -40,6 +290,36 @@ private final class DiagnosticTestClock: @unchecked Sendable {
         #expect(row.oldestIncompleteMS == 0)
         #expect(summary.recent.filter { $0.name == .actionEnded && $0.outcome == .superseded }.count == 5)
         #expect(summary.recent.filter { $0.name == .layoutCommitted && $0.outcome == .applied }.count == 1)
+        recorder.clear(); await recorder.flush()
+    }
+    @Test func resourceSamplingDoesNotEvictInteractionAndRequestDisclosures() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let clock = DiagnosticTestClock(), recorder = ClientDiagnosticsRecorder(journalDirectory: root, clock: { clock.read() })
+        recorder.authorizeOwnerSession(true)
+        var actions: [UUID] = [], requests: [UUID] = []
+        for _ in 0..<20 {
+            let action = try #require(recorder.beginAction(.complete, inputMS: clock.read()))
+            actions.append(action); recorder.handlerStarted(action); recorder.resultPublished(action); recorder.layoutCommitted(action)
+            let request = try #require(recorder.requestStarted(operation: "tasks.list"))
+            requests.append(request); recorder.requestHeaders(request, status: 200); recorder.requestFinished(request, status: 200)
+            await recorder.flush()
+        }
+        for _ in 0..<40 { recorder.record(.init(name: .decodeFinished, run: recorder.run, now: clock.read())) }
+        for second in 0..<3600 {
+            clock.set(1000 + Double(second) * 1000)
+            var event = ClientDiagnosticEvent(name: .resourcesSampled, run: recorder.run, now: clock.read())
+            event.resources = .init(descriptors: 64, sockets: 8, softLimit: 2560, hardLimit: UInt64.max, samplerDescriptors: 1, sampleMS: 0.2)
+            recorder.record(event)
+        }
+        let result = await recorder.snapshot()
+        #expect(result.recentInteractions.map(\.actionID) == Array(actions[4..<20]).map(Optional.some))
+        #expect(result.recentRequests.map(\.requestID) == Array(requests[4..<20]).map(Optional.some))
+        #expect(result.recent.count == 32)
+        #expect(result.recent.allSatisfy { $0.name == .decodeFinished })
+        #expect(result.dropped == 0)
+        recorder.clear(); recorder.authorizeOwnerSession(true)
+        let clean = await recorder.snapshot()
+        #expect(clean.recent.isEmpty && clean.recentInteractions.isEmpty && clean.recentRequests.isEmpty)
         recorder.clear(); await recorder.flush()
     }
     @Test(arguments: ["refresh", "request", "layout", "ended", "callback"])
@@ -263,7 +543,7 @@ private final class DiagnosticTestClock: @unchecked Sendable {
     }
     @Test func journalRotatesWithinTwoMiBAndUsesPrivatePermissions() async throws {
         let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
-        let recorder = ClientDiagnosticsRecorder(journalDirectory: root.appendingPathComponent("journal"))
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: root.appendingPathComponent("journal"), journalFileLimit: 1_048_576)
         recorder.authorizeOwnerSession(true)
         for index in 0..<12000 {
             var event = ClientDiagnosticEvent(name: .stall, run: recorder.run)
@@ -420,14 +700,27 @@ private final class DiagnosticTestClock: @unchecked Sendable {
         #expect(ClientDiagnosticDisplay.action(.taskSelection) == "Select a Task")
         #expect(ClientDiagnosticDisplay.action(.editDescription) == "Type in the description")
         #expect(ClientDiagnosticDisplay.event(.layoutCommitted) == "Layout committed")
+        #expect(ClientDiagnosticDisplay.environmentTrigger(.dayChange) == "Day changed")
+        #expect(ClientDiagnosticDisplay.environmentTrigger(.clockChange) == "Clock or time zone changed")
+        #expect(ClientDiagnosticDisplay.environmentTrigger(.wake) == "Woke from sleep")
+        #expect(ClientDiagnosticDisplay.environmentTrigger(.activation) == "App became active")
+        #expect(ClientDiagnosticDisplay.age(999) == "999 ms")
+        #expect(ClientDiagnosticDisplay.age(1000) == "1.0 s")
+        #expect(ClientDiagnosticDisplay.age(12_300) == "12.3 s")
+        #expect(ClientDiagnosticDisplay.age(120_000) == "2.0 min")
     }
-    @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_CLIENT_DIAGNOSTICS_EVIDENCE"] != nil))
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_CLIENT_DIAGNOSTICS_EVIDENCE"] != nil && ProcessInfo.processInfo.environment["TODO_CLIENT_DIAGNOSTICS_SERVER"] != nil))
     func fullAndCompactLocalPanelRenderWithoutAnAppOrSheet() async throws {
-        let output = URL(fileURLWithPath: try #require(ProcessInfo.processInfo.environment["TODO_CLIENT_DIAGNOSTICS_EVIDENCE"]))
+        let environment = ProcessInfo.processInfo.environment
+        let output = URL(fileURLWithPath: try #require(environment["TODO_CLIENT_DIAGNOSTICS_EVIDENCE"]))
+        let server = try #require(environment["TODO_CLIENT_DIAGNOSTICS_SERVER"].flatMap(URL.init(string:)))
+        let credential = try await todoClient(server: server, credential: "").signIn_period_signIn(body: .json(.init(passphrase: "scratch verification passphrase"))).ok.body.json.credential
+        let serverSnapshot = try await todoClient(server: server, credential: credential).diagnostics_period_snapshot().ok.body.json
         let clock = DiagnosticTestClock()
         let recorder = ClientDiagnosticsRecorder(journalDirectory: output.appendingPathComponent("panel-journal"), clock: { clock.read() })
-        let model = TodoModel(configuration: .init(server: URL(string: "http://127.0.0.1:1")!, initialProfile: "work", vaultService: "never-used-panel"), clientDiagnostics: recorder)
-        model.replaceCredential("ses_synthetic-panel"); model.signedIn = true
+        let model = TodoModel(configuration: .init(server: server, initialProfile: "work", vaultService: "never-used-panel"), clientDiagnostics: recorder)
+        model.replaceCredential(credential); model.signedIn = true; model.clientDiagnosticsUI.stop()
+        model.diagnostics = serverSnapshot; model.diagnosticsLive = false
         for (category, duration) in [(ClientDiagnosticAction.taskSelection, 12.0), (.complete, 340.0)] {
             clock.set(1000)
             let id = recorder.beginAction(category, inputMS: 1000, mode: .full, inputKind: .pointer)
@@ -435,28 +728,51 @@ private final class DiagnosticTestClock: @unchecked Sendable {
             clock.set(1010); recorder.resultPublished(id)
             clock.set(1000 + duration); recorder.layoutCommitted(id)
         }
-        model.clientDiagnosticsUI.summary = await recorder.snapshot()
+        clock.set(2000)
+        let request = recorder.requestStarted(operation: "tasks.list")
+        recorder.requestHeaders(request, status: 200, serverSpans: ClientServerTiming.spans("todo-handler;dur=1.2"))
+        clock.set(2008)
+        recorder.requestFinished(request, status: 200, phases: .init(fetchToRequestMS: 0.2, dnsMS: nil, connectMS: 0.4, sendMS: 0.1, firstByteMS: 2, transferMS: 1, connectionReused: false, receivedBytes: 369398, serverSpans: ClientServerTiming.spans("todo-handler;dur=1.2")))
+        await ClientDiagnosticContext.$periodicPoll.withValue(true) { () async in
+            let poll = recorder.requestStarted(operation: "system.health")
+            clock.set(2011); recorder.requestHeaders(poll, status: 200); recorder.requestFinished(poll, status: 200)
+        }
+        clock.set(62000)
+        _ = await recorder.snapshot()
+        let pending = recorder.beginAction(.search, inputMS: 62000, mode: .full, inputKind: .keyboard); recorder.handlerStarted(pending)
+        clock.set(74300)
+        var stall = ClientDiagnosticEvent(name: .stall, run: recorder.run, now: clock.read()); stall.durationMS = 12300; recorder.record(stall)
+        var resource = ClientDiagnosticEvent(name: .resourcesSampled, run: recorder.run, now: clock.read()); resource.applicationActive = false
+        resource.resources = .init(descriptors: 64, sockets: 8, softLimit: 2560, hardLimit: UInt64.max, samplerDescriptors: 1, sampleMS: 0.2); recorder.record(resource)
+        let fixture = await recorder.snapshot()
+        model.clientDiagnosticsUI.summary = fixture
+        #expect(ClientDiagnosticDisplay.sectionSummary(fixture) == "2 over budget · 1 incomplete")
+        let complete = try #require(fixture.actions.first { $0.action == .complete })
+        #expect(ClientDiagnosticDisplay.accessibility(complete).contains("Median 340.0 milliseconds"))
+        #expect(ClientDiagnosticDisplay.accessibility(complete).contains("p99 340.0 milliseconds"))
         _ = NSApplication.shared
-        for compact in [true, false] {
-            let width: CGFloat = compact ? 393 : 1100
-            let appearance = try #require(NSAppearance(named: .aqua))
-            NSApplication.shared.appearance = appearance
-            let view = NSHostingView(rootView: ClientDiagnosticsView(model: model, compact: compact).padding(12).frame(width: width).environment(\.colorScheme, .light).background(Color(nsColor: .windowBackgroundColor)))
-            view.appearance = appearance
-            view.frame = NSRect(x: 0, y: 0, width: width, height: 1000)
-            let window = NSWindow(contentRect: view.frame, styleMask: [.borderless], backing: .buffered, defer: false)
-            window.appearance = appearance
-            window.contentView = view
-            view.layoutSubtreeIfNeeded()
-            try await Task.sleep(for: .milliseconds(120))
-            view.layoutSubtreeIfNeeded()
-            let bitmap = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
-            view.cacheDisplay(in: view.bounds, to: bitmap)
-            let data = try #require(bitmap.representation(using: .png, properties: [:]))
-            try data.write(to: output.appendingPathComponent(compact ? "client-compact.png" : "client-full.png"))
-            #expect(view.fittingSize.width <= width + 1)
-            #expect(!window.isVisible)
-            window.contentView = nil
+        let priorAppearance = NSApplication.shared.appearance
+        defer { NSApplication.shared.appearance = priorAppearance }
+        for dark in [false, true] {
+            for compact in [true, false] {
+                let width: CGFloat = compact ? 393 : 1100, height: CGFloat = compact ? 2300 : 1700
+                let appearance = try #require(NSAppearance(named: dark ? .darkAqua : .aqua))
+                NSApplication.shared.appearance = appearance
+                let root = DiagnosticsView(model: model, live: false, initiallyExpanded: ["This client", "Background requests", "Interaction phases", "Request timings", "Recent activity"])
+                let view = NSHostingView(rootView: root.frame(width: width, height: height).environment(\.colorScheme, dark ? .dark : .light).background(Color(nsColor: .windowBackgroundColor)))
+                view.appearance = appearance; view.frame = NSRect(x: 0, y: 0, width: width, height: height)
+                let window = NSWindow(contentRect: view.frame, styleMask: [.titled, .closable], backing: .buffered, defer: false)
+                window.title = "Diagnostics"; window.appearance = appearance; window.isReleasedWhenClosed = false; window.contentView = view
+                view.layoutSubtreeIfNeeded()
+                try await Task.sleep(for: .milliseconds(150)); view.layoutSubtreeIfNeeded()
+                let bitmap = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+                view.cacheDisplay(in: view.bounds, to: bitmap)
+                let data = try #require(bitmap.representation(using: .png, properties: [:]))
+                try data.write(to: output.appendingPathComponent("client-" + (compact ? "compact" : "full") + (dark ? "-dark.png" : "-light.png")))
+                #expect(view.fittingSize.width <= width + 1)
+                #expect(!window.isVisible && window.attachedSheet == nil)
+                window.contentView = nil; window.close()
+            }
         }
         model.signedIn = false; await recorder.flush()
         try? FileManager.default.removeItem(at: output.appendingPathComponent("panel-journal"))

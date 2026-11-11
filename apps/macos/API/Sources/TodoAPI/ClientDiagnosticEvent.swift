@@ -1,6 +1,7 @@
 import Foundation
 
 public enum ClientDiagnosticName: String, Codable, Sendable {
+    case pollsAggregated = "request.polls.aggregated"
     case actionStarted = "ui.action.started", resultPublished = "model.published", layoutCommitted = "ui.layout.committed"
     case inputObserved = "ui.input.observed", selectionCommitted = "ui.selection.committed", inspectorCommitted = "ui.inspector.committed"
     case actionEnded = "ui.action.ended", refreshStarted = "refresh.started", refreshFinished = "refresh.finished"
@@ -333,6 +334,19 @@ public struct ClientDiagnosticRequestPhases: Codable, Sendable {
         self.fetchToRequestMS = fetchToRequestMS; self.dnsMS = dnsMS; self.connectMS = connectMS; self.sendMS = sendMS; self.firstByteMS = firstByteMS; self.transferMS = transferMS; self.connectionReused = connectionReused; self.receivedBytes = receivedBytes; self.serverHandlerMS = serverSpans?.handler; self.serverSpans = serverSpans
     }
 }
+public struct ClientDiagnosticPollSummary: Codable, Sendable, Identifiable {
+    public var id: String { operation }
+    public let operation: String
+    public let routeTemplate: String
+    public let count: Int
+    public let failures: Int
+    public let sampleCount: Int
+    public let p50MS: Double?
+    public let maxMS: Double
+    public let handlerCount: Int
+    public let handlerP50MS: Double?
+    public let handlerMaxMS: Double?
+}
 public struct ClientDiagnosticEvent: Codable, Sendable, Identifiable {
     public let id: UUID
     public let run: UUID
@@ -362,6 +376,8 @@ public struct ClientDiagnosticEvent: Codable, Sendable, Identifiable {
     public var actionPhases: ClientDiagnosticActionPhases?
     public var phases: ClientDiagnosticRequestPhases?
     public var resources: ClientDiagnosticResources?
+    public var applicationActive: Bool?
+    public var polls: ClientDiagnosticPollSummary?
     public var incomplete: [ClientDiagnosticIncomplete]?
     public init(name: ClientDiagnosticName, run: UUID, now: Double = ProcessInfo.processInfo.systemUptime * 1000) {
         id = UUID(); self.run = run; monotonicMS = now; epochMS = Date().timeIntervalSince1970 * 1000; self.name = name
@@ -371,6 +387,7 @@ public struct ClientDiagnosticSummary: Codable, Sendable {
     public var recorded = 0
     public var dropped = 0
     public var journalFailures = 0
+    public var journalBytesWritten = 0
     public var refreshes = 0
     public var requests = 0
     public var completedSelections = 0
@@ -379,11 +396,17 @@ public struct ClientDiagnosticSummary: Codable, Sendable {
     public var selectionP99MS: Double?
     public var longestStallMS = 0.0
     public var resources: ClientDiagnosticResources?
+    public var applicationActive: Bool?
     public var actions: [ClientDiagnosticActionSummary] = []
     public var recent: [ClientDiagnosticEvent] = []
+    public var recentInteractions: [ClientDiagnosticEvent] = []
+    public var recentRequests: [ClientDiagnosticEvent] = []
+    public var polls: [ClientDiagnosticPollSummary] = []
+    public var routineRecordsThinned = 0
     public init() {}
 }
 public enum ClientDiagnosticContext {
+    @TaskLocal public static var periodicPoll = false
     @TaskLocal public static var mode: ClientDiagnosticMode = .unknown
     @TaskLocal public static var inputKind: ClientDiagnosticInputKind = .unknown
     @TaskLocal public static var traceID: UUID?

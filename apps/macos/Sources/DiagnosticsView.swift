@@ -25,7 +25,11 @@ struct DiagnosticsView: View {
             .task(id: "\(model.signedIn)-\(model.diagnosticsLive)") {
                 guard live, model.signedIn, model.diagnosticsLive else { return }
                 while !Task.isCancelled {
-                    await model.loadDiagnostics()
+                    await ClientDiagnosticContext.$actionID.withValue(nil) {
+                        await ClientDiagnosticContext.$inputKind.withValue(.background) {
+                            await ClientDiagnosticContext.$periodicPoll.withValue(true) { await model.loadDiagnostics() }
+                        }
+                    }
                     do { try await Task.sleep(for: .seconds(model.diagnosticsRetrySeconds)) } catch { return }
                 }
             }
@@ -37,16 +41,22 @@ private struct DiagnosticsContent: View {
     @State private var profile = ""
     @State private var expanded: Set<String> = []
     @State private var allRows: Set<String> = []
+    private let clientInitiallyExpanded: Set<String>
     init(model: TodoModel, compact: Bool, initiallyExpanded: Set<String>) {
         self.model = model
         self.compact = compact
         self._expanded = State(initialValue: initiallyExpanded)
+        self.clientInitiallyExpanded = initiallyExpanded
     }
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: compact ? 8 : 16) {
                 heading
-                if model.clientDiagnostics.isOwnerSession { ClientDiagnosticsView(model: model, compact: compact) }
+                if model.clientDiagnostics.isOwnerSession {
+                    section("This client", summary: ClientDiagnosticDisplay.sectionSummary(model.clientDiagnosticsUI.summary)) {
+                        ClientDiagnosticsView(model: model, compact: compact, initiallyExpanded: clientInitiallyExpanded)
+                    }
+                }
                 if let error = model.diagnosticsError { Label(error, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.red).accessibilityIdentifier("diagnostics-error") }
                 if let snapshot = model.diagnostics {
                     summary(snapshot)

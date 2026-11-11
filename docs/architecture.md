@@ -58,6 +58,16 @@ The contract for HTTP is one HttpApi definition
 that TypeScript API. macOS uses a Swift client generated from the OpenAPI
 document. There is no second protocol.
 
+The Mac client also keeps owner-only local UI and transport metadata under its
+own Application Support directory. A bounded background writer rotates two
+64 MiB files. Routine background polls are aggregated per route and resource
+records are coalesced; neither can rotate out critical interaction or recovery
+evidence. Sign-out clears the local recording scope. This metadata contains no
+Task content or credentials and is not sent to the server. See the
+[client Diagnostics proposal](decisions/client-diagnostics-proposal.md) and
+[Mac measurement report](decisions/mac-responsiveness-report.md). ADR-0009
+Electron and CLI parity is owned by the separate cross-client implementation.
+
 Every capability ships an agent command and a human UI
 ([ADR-0009](adr/0009-every-capability-is-native-to-agents-and-humans.md)). A
 feature that exists in only one of those is unfinished.

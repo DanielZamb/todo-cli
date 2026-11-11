@@ -675,7 +675,9 @@ final class TodoModel {
             var sawReady = false
             let openedAt = ProcessInfo.processInfo.systemUptime
             do {
-                let healthy = try await ClientDiagnosticContext.$actionID.withValue(openingAction) { try await checkServerContract() }
+                let healthy = try await ClientDiagnosticContext.$actionID.withValue(openingAction) {
+                    try await ClientDiagnosticContext.$periodicPoll.withValue(openingAction == nil) { try await checkServerContract() }
+                }
                 guard healthy, generation == run, !Task.isCancelled else { loading = false; return }
                 let response = try await ClientDiagnosticContext.$actionID.withValue(openingAction) {
                     try await client.changes_period_stream(path: .init(profile: profile), headers: .init(last_hyphen_event_hyphen_id: lastSequence, x_hyphen_todo_hyphen_client: .swiftui, x_hyphen_todo_hyphen_generation: restoreGeneration))

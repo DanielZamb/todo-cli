@@ -25,6 +25,21 @@ deliver an old-scope background callback. Each must leave the new journal at
 zero records and increment its dropped counter once. A stale finish cannot
 create a record just because its opaque id is well formed.
 
+Replay unchanged resources and explicit periodic requests with a controlled
+clock. Require one resource record per minute unless a material value changes,
+and one poll aggregate per minute per route. Failed and slow polls retain all
+individual phases; an interaction's requests are never treated as routine.
+Check exact aggregate counts/quantiles and zero unplanned drops. Fill a small
+configured file with routine records and require unchanged literal interaction,
+refresh, stream, availability and stall counts. Routine records must not rotate
+the file. Record intentional thinning separately from loss.
+
+The production bound is two files of 64 MiB. The small rotation control injects
+a smaller bound so it exercises real rotation without writing the production
+limit. The replay rate proof includes 93 health and 52 Diagnostics polls per
+minute and twelve subsequent idle hours. Report it as synthetic encoding and
+retention evidence, not an observed owner day.
+
 ## Gotchas
 
 Do not run cleanup against the real application data directory. Stored metadata

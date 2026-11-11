@@ -19,8 +19,17 @@ Preconditions: an owner-scoped recorder with synthetic events. Run verify.py.
 Require the local section and export identifier in offscreen Compact/full
 captures, parse the production export document and verify its phase/count fields.
 Revoke the owner scope and require the export to disappear or be refused.
+Capture the production Diagnostics window content in full and Compact, light
+and dark, with an over-budget row, an incomplete row and every local disclosure
+expanded. Check plain labels, column units, age formatting and whole-row
+accessibility labels. Compact uses the window's common collapsed section
+structure by default. This client is labelled Always live when server polling
+is Paused. The three disclosures use independent small rings and have explicit
+empty states.
 
 ## Gotchas
 
 Local summary reads must not poll the server or refresh Tasks. The signed app's
 system save dialog and actual click-to-inspector latency remain supervised proof.
+The JSON export covers bounded in-memory events and summaries. The private
+rotating journal files contain the longer retained history.
