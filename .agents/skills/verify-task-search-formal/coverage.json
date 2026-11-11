@@ -1,6 +1,6 @@
 {
-  "sourceCommit": "f0156fb70ac5f161240d519353ab9d7ec592eb81",
-  "status": "Manual Mac C2/C3 working-tree review on parent f0156fb7. File hashes identify the reviewed bytes. Healthy unchanged-cursor/generation reconnect is an allowed stutter; Error recovery and catalog debt retain their mapped transitions. Native timeout and model controls are green; complete bounded sensitivity follows. Independent candidate review remains coordinator-owned.",
+  "sourceCommit": "baa794d8cc83c15ae26b704d5c261ad7602eac64",
+  "status": "Manual C3b working-tree source review on parent baa794d8. Environmental signals enter the existing full-refresh transitions at the same search identity; the catalog revision prevents an older in-flight read from clearing newer debt. Quiet unchanged-cursor/generation reconnect remains an allowed stutter. Native and state controls identify concrete behavior; independent candidate review remains coordinator-owned.",
   "files": [
     {
       "path": "apps/electron/src/renderer.tsx",
@@ -71,9 +71,13 @@
         "performRefresh(generation:scope:)",
         "appliedCatalogGeneration",
         "appliedCatalogCursor",
-        "healthy ready predicate and quiet end retry"
+        "healthy ready predicate and quiet end retry",
+        "catalogEnvironmentChanged",
+        "scheduleEnvironmentRefresh",
+        "catalogSignalRevision and full-read debt",
+        "lastCatalogReadAt and activation age"
       ],
-      "sha256": "3e37afc1f288dd7b86bd171058d04a8186030472b8a5527432c4f9ca003a5a0c"
+      "sha256": "86535e5a31c7cfd8dffd943ce2aa0a39b823d169cb18791727404749758c729b"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",

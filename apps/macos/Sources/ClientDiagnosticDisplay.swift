@@ -250,4 +250,13 @@ enum ClientDiagnosticDisplay {
         case .resourcesSampled: "Resources sampled"
         }
     }
+    static func environmentTrigger(_ value: ClientDiagnosticTrigger) -> String? {
+        switch value {
+        case .dayChange: "Day changed"
+        case .clockChange: "Clock or time zone changed"
+        case .wake: "Woke from sleep"
+        case .activation: "App became active"
+        default: nil
+        }
+    }
 }

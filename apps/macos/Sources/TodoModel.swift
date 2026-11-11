@@ -4,6 +4,23 @@ import Observation
 import OpenAPIRuntime
 import TodoAPI
 
+private final class CatalogNotificationObservers: @unchecked Sendable {
+    private let observers: [(NotificationCenter, NSObjectProtocol)]
+    init(system: NotificationCenter, workspace: NotificationCenter, receive: @escaping @Sendable (ClientDiagnosticTrigger) -> Void) {
+        let sources: [(NotificationCenter, Notification.Name, ClientDiagnosticTrigger)] = [
+            (system, .NSCalendarDayChanged, .dayChange),
+            (system, .NSSystemClockDidChange, .clockChange),
+            (system, .NSSystemTimeZoneDidChange, .clockChange),
+            (system, NSApplication.didBecomeActiveNotification, .activation),
+            (workspace, NSWorkspace.didWakeNotification, .wake)
+        ]
+        observers = sources.map { center, name, trigger in
+            (center, center.addObserver(forName: name, object: nil, queue: nil) { _ in receive(trigger) })
+        }
+    }
+    deinit { for (center, token) in observers { center.removeObserver(token) } }
+}
+
 @MainActor
 @Observable
 final class TodoModel {
@@ -54,6 +71,15 @@ final class TodoModel {
     var appliedSearchSnapshot: TaskSearchSnapshot?
     @ObservationIgnored private var appliedCatalogGeneration: String?
     @ObservationIgnored private var appliedCatalogCursor: String?
+    @ObservationIgnored private let catalogNow: () -> Date
+    @ObservationIgnored private let catalogNotifications: NotificationCenter
+    @ObservationIgnored private let wakeNotifications: NotificationCenter
+    @ObservationIgnored private var catalogObservers: CatalogNotificationObservers?
+    @ObservationIgnored private var lastCatalogReadAt: Date?
+    @ObservationIgnored private var catalogSignalRevision = 0
+    @ObservationIgnored private var catalogReadsInFlight = 0
+    @ObservationIgnored private var pendingCatalogTrigger: ClientDiagnosticTrigger?
+    @ObservationIgnored private var environmentRefreshTask: Task<Void, Never>?
     private var catalogReady = false
     private var catalogStale = true
     var searchError: TaskSearchFailure?
@@ -99,9 +125,9 @@ final class TodoModel {
         reportClientAvailability()
     } }
     var canRestore = false
-    var busy = false { didSet { reportClientAvailability() } }
+    var busy = false { didSet { reportClientAvailability(); if !busy { scheduleEnvironmentRefresh() } } }
     var loading = false { didSet { reportClientAvailability() } }
-    var connection = Connection.connecting { didSet { if connection == .offline { discoveryWentOffline(); dependenciesWentOffline() }; reportClientAvailability() } }
+    var connection = Connection.connecting { didSet { if connection == .offline { discoveryWentOffline(); dependenciesWentOffline() }; reportClientAvailability(); if connection == .live { scheduleEnvironmentRefresh() } } }
     var outdatedServerBuild: String?
     var message: String?
     var taskLoadError: String?
@@ -157,13 +183,43 @@ final class TodoModel {
     private var restoreCursorKey: String { "restore-cursor.\(configuration.server.absoluteString)" }
     var canWrite: Bool { signedIn && connection == .live && !busy && outdatedServerBuild == nil }
 
-    init(configuration: ClientConfiguration, clientFactory: ((URL, String) -> Client)? = nil, clientDiagnostics: ClientDiagnosticsRecorder = .disabled) {
+    init(configuration: ClientConfiguration, clientFactory: ((URL, String) -> Client)? = nil, clientDiagnostics: ClientDiagnosticsRecorder = .disabled, catalogNow: @escaping () -> Date = Date.init, catalogNotifications: NotificationCenter = .default, wakeNotifications: NotificationCenter? = nil) {
         self.clientDiagnostics = clientDiagnostics
+        self.catalogNow = catalogNow
+        self.catalogNotifications = catalogNotifications
+        self.wakeNotifications = wakeNotifications ?? NSWorkspace.shared.notificationCenter
         self.configuration = configuration
         self.clientFactory = clientFactory
         profile = configuration.initialProfile
         if UserDefaults.standard.string(forKey: restoreCursorKey) != nil {
             restoreGeneration = UserDefaults.standard.string(forKey: "restore-generation.\(configuration.server.absoluteString)") ?? "initial"
+        }
+        catalogObservers = CatalogNotificationObservers(system: catalogNotifications, workspace: self.wakeNotifications) { [weak self] trigger in
+            Task { @MainActor [weak self] in self?.catalogEnvironmentChanged(trigger) }
+        }
+    }
+
+    private func catalogEnvironmentChanged(_ trigger: ClientDiagnosticTrigger) {
+        guard signedIn, outdatedServerBuild == nil else { return }
+        if trigger == .activation, let lastCatalogReadAt, catalogNow().timeIntervalSince(lastCatalogReadAt) <= 60 { return }
+        catalogSignalRevision += 1
+        catalogStale = true
+        if pendingCatalogTrigger == nil { pendingCatalogTrigger = trigger }
+        scheduleEnvironmentRefresh()
+    }
+
+    private func scheduleEnvironmentRefresh() {
+        guard pendingCatalogTrigger != nil, signedIn, connection == .live, !busy, catalogReadsInFlight == 0, environmentRefreshTask == nil else { return }
+        let run = generation
+        environmentRefreshTask = Task { [weak self] in
+            await Task.yield()
+            guard let self else { return }
+            defer {
+                if generation == run { environmentRefreshTask = nil; scheduleEnvironmentRefresh() }
+            }
+            guard generation == run, !Task.isCancelled, signedIn, connection == .live, !busy, catalogReadsInFlight == 0, let trigger = pendingCatalogTrigger else { return }
+            pendingCatalogTrigger = nil
+            _ = await refresh(generation: run, trigger: trigger)
         }
     }
 
@@ -423,6 +479,8 @@ final class TodoModel {
 
     private func disconnect() {
         generation += 1
+        environmentRefreshTask?.cancel()
+        environmentRefreshTask = nil
         streamTask?.cancel()
         streamTask = nil
         invalidateSearch()
@@ -447,12 +505,18 @@ final class TodoModel {
         let request = refreshGeneration
         let identity = requestedIdentity
         searchPhase = .requesting
+        var catalogRevision: Int?
+        defer {
+            if catalogRevision != nil { catalogReadsInFlight -= 1; scheduleEnvironmentRefresh() }
+        }
         do {
             let full = scope == .full || catalogStale || !catalogReady
             let catalog: TaskSearchCatalog?
             let filteredResponse: [TaskSnapshot]
             let currentPlanning: PlanningResult?
             if full {
+                catalogRevision = catalogSignalRevision
+                catalogReadsInFlight += 1
                 async let catalogRead = readSearchCatalog(identity)
                 async let matchingRead: [TaskSnapshot]? = identity.filters.isEmpty && identity.text.isEmpty && identity.project == nil && identity.tag == nil ? nil : readSearchRows(identity)
                 let (loaded, matching) = try await (catalogRead, matchingRead)
@@ -486,7 +550,9 @@ final class TodoModel {
                 viewCounts = catalog.views.mapValues { $0.groups.flatMap(\.tasks).filter { $0.status == "open" }.count }
                 viewCounts["all"] = catalog.tasks.filter { $0.status == "open" }.count
                 catalogReady = true
-                catalogStale = false
+                catalogStale = catalogRevision != catalogSignalRevision
+                lastCatalogReadAt = catalogNow()
+                if !catalogStale { pendingCatalogTrigger = nil }
             }
             loading = false
             taskLoadError = nil

@@ -89,7 +89,14 @@ struct ClientDiagnosticsView: View {
                 }
                 DisclosureGroup("Recent activity") {
                     ForEach(snapshot.recent.reversed()) { event in
-                        HStack { Text(ClientDiagnosticDisplay.event(event.name)); Spacer(minLength: 8); if let duration = event.durationMS { Text("\(milliseconds(duration)) ms").monospacedDigit() } }
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(ClientDiagnosticDisplay.event(event.name))
+                                if let trigger = event.trigger, let label = ClientDiagnosticDisplay.environmentTrigger(trigger) { Text(label).foregroundStyle(.secondary) }
+                            }
+                            Spacer(minLength: 8)
+                            if let duration = event.durationMS { Text("\(milliseconds(duration)) ms").monospacedDigit() }
+                        }
                     }
                 }
                 HStack {

@@ -9,6 +9,7 @@ public enum ClientDiagnosticName: String, Codable, Sendable {
 }
 public enum ClientDiagnosticTrigger: String, Codable, Sendable {
     case startup, profileSwitch, viewChange, filterChange, search, ownWrite, streamOperation, streamReady, reconnect, manual
+    case dayChange, clockChange, wake, activation
 }
 public enum ClientDiagnosticOutcome: String, Codable, Sendable { case applied, superseded, failed, cancelled, refused, drag }
 public enum ClientDiagnosticReason: String, Codable, Sendable {

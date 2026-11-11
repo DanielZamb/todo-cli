@@ -9,6 +9,48 @@ private actor IdleStreamObservation {
 }
 
 @MainActor @Suite(.serialized) struct StreamIdleTransportTests {
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_IDLE_SUBSCRIBERS"] != nil))
+    func productionModelCancelsIdleSubscribersAtEveryLifecycleBoundary() async throws {
+        let env = ProcessInfo.processInfo.environment
+        let server = try #require(env["TODO_IDLE_NATIVE_SERVER"].flatMap(URL.init(string:)))
+        let output = URL(fileURLWithPath: try #require(env["TODO_CLIENT_DIAGNOSTICS_EVIDENCE"]))
+        let credential = try await todoClient(server: server, credential: "").signIn_period_signIn(body: .json(.init(passphrase: "scratch verification passphrase"))).ok.body.json.credential
+        let direct = todoClient(server: server, credential: credential)
+        let journal = URL(fileURLWithPath: try #require(env["TODO_CLIENT_DIAGNOSTICS_JOURNAL"]))
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: journal)
+        let model = TodoModel(configuration: .init(server: server, initialProfile: "work", vaultService: "never-used-subscribers-" + UUID().uuidString), clientDiagnostics: recorder)
+        let prefix = "cursor.\(model.configuration.vaultService).\(server.absoluteString)."
+        for profile in ["work", "personal"] { UserDefaults.standard.set(try #require(env["TODO_IDLE_START_CURSOR"]), forKey: prefix + profile) }
+        defer { for profile in ["work", "personal"] { UserDefaults.standard.removeObject(forKey: prefix + profile) }; model.signedIn = false; model.connect() }
+        model.restoreGeneration = try #require(env["TODO_IDLE_START_GENERATION"])
+        model.replaceCredential(credential); model.selectedView = "all"; model.signedIn = true
+        var counts = [Int]()
+        func count() async throws -> Int { try await direct.diagnostics_period_snapshot().ok.body.json.clients.count }
+        func live(_ profile: String) async throws {
+            for _ in 0..<2000 { if model.profile == profile && model.canWrite && !model.loading { return }; try await Task.sleep(for: .milliseconds(10)) }
+            throw URLError(.timedOut)
+        }
+        counts.append(try await count())
+        model.connect(); try await live("work"); counts.append(try await count())
+        model.changeProfile("personal"); try await live("personal")
+        try await Task.sleep(for: .seconds(3)); counts.append(try await count())
+        for index in 0..<9 { let profile = index.isMultiple(of: 2) ? "work" : "personal"; model.changeProfile(profile); try await live(profile) }
+        try await Task.sleep(for: .seconds(3)); counts.append(try await count())
+        _ = try await direct.tasks_period_create(path: .init(profile: "personal"), body: .json(.init(title: "Stream cancellation boundary")))
+        try await Task.sleep(for: .seconds(3)); counts.append(try await count())
+        let replacement = try await todoClient(server: server, credential: "").signIn_period_signIn(body: .json(.init(passphrase: "scratch verification passphrase"))).ok.body.json.credential
+        model.replaceCredential(replacement); model.connect(); try await live("work")
+        try await Task.sleep(for: .seconds(3)); counts.append(try await count())
+        model.changeProfile("personal"); try await live("personal")
+        _ = try await direct.reads_period_deleteProfile(path: .init(profile: "personal"), body: .json(.init(with_tasks: true, dry_run: false)))
+        try await live("work"); try await Task.sleep(for: .seconds(3)); counts.append(try await count())
+        model.signedIn = false; model.connect()
+        try await Task.sleep(for: .seconds(3)); counts.append(try await count())
+        let labels = ["before", "connected", "first_switch_after_3s", "ten_switches_after_3s", "old_profile_operation_after_3s", "credential_change_after_3s", "profile_deletion_after_3s", "signed_out_after_3s"]
+        let receipt: [String: Any] = ["labels": labels, "counts": counts, "diagnostics_enabled": true, "app_launched": false, "keychain_called": false, "sign_out_boundary": "signedIn false plus connect; SessionVault signOut not called"]
+        try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]).write(to: output.appendingPathComponent("stream-subscribers.json"))
+        #expect(counts == [0, 1, 1, 1, 1, 1, 1, 0])
+    }
     @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_IDLE_NATIVE_SERVER"] != nil))
     func nativeIdleStreamOutlivesOrdinaryTimeoutButOrdinaryReadsStillTimeOut() async throws {
         let environment = ProcessInfo.processInfo.environment

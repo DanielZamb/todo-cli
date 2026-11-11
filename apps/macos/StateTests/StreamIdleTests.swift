@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import HTTPTypes
 import OpenAPIRuntime
@@ -11,6 +12,15 @@ private actor IdleTransport: ClientTransport {
     private var continuation: AsyncThrowingStream<HTTPBody.ByteChunk, any Error>.Continuation?
     private var rejectNext = false
     private var readFailure: String?
+    private var changedCalendar = false
+    private var externalProfile = false
+    private var holdCatalog = false
+    private var heldCatalog: CheckedContinuation<Void, Never>?
+    private(set) var catalogHeld = false
+    func changeCalendar() { changedCalendar = true }
+    func createExternalProfile() { externalProfile = true }
+    func holdNextCatalog() { holdCatalog = true }
+    func releaseCatalog() { heldCatalog?.resume(); heldCatalog = nil; catalogHeld = false }
     private(set) var streamCalls = 0
     private(set) var readCalls = 0
     private(set) var cursors: [String?] = []
@@ -32,10 +42,20 @@ private actor IdleTransport: ClientTransport {
             if failure == "transport" { throw URLError(.timedOut) }
             return json(#"{"message":"Narrow the search","code":"search_too_broad","exit_code":2,"exit_meaning":"validation or usage"}"#, status: 400)
         }
-        if operationID == "tasks.list" { return json("[" + idleTask + "]") }
+        if operationID == "tasks.list" {
+            let response = json("[" + idleTask + "]")
+            if holdCatalog { holdCatalog = false; catalogHeld = true; await withCheckedContinuation { heldCatalog = $0 } }
+            return response
+        }
         if operationID == "reads.lookup" { return json(#"[{"profile":{"id":"work","name":"Work"},"task_id":"00000000-0000-4000-8000-000000000017","title":"Needle task","project":null}]"#) }
-        if operationID == "reads.profiles" { return json(#"[{"id":"work","name":"Work","created_at":"2026-10-27T00:00:00Z","updated_at":"2026-10-27T00:00:00Z","open_task_count":1,"inbox_task_count":1,"visible_task_count":1,"projects":[]}]"#) }
-        if operationID == "reads.view" { return json(#"{"name":"today","now":"2026-11-11T12:00:00Z","groups":[]}"#) }
+        if operationID == "reads.profiles" {
+            let extra = externalProfile ? #",{"id":"personal","name":"Created elsewhere","created_at":"2026-10-27T00:00:00Z","updated_at":"2026-10-27T00:00:00Z","open_task_count":2,"inbox_task_count":2,"visible_task_count":2,"projects":[]}"# : ""
+            return json(#"[{"id":"work","name":"Work","created_at":"2026-10-27T00:00:00Z","updated_at":"2026-10-27T00:00:00Z","open_task_count":1,"inbox_task_count":1,"visible_task_count":1,"projects":[]}\#(extra)]"#)
+        }
+        if operationID == "reads.view" {
+            let groups = changedCalendar ? #"[{"name":"Due today","tasks":[\#(idleTask)]}]"# : "[]"
+            return json(#"{"name":"today","now":"2026-11-11T12:00:00Z","groups":\#(groups)}"#)
+        }
         if operationID == "reads.projects" || operationID == "reads.tags" { return json("[]") }
         throw URLError(.unsupportedURL)
     }
@@ -43,14 +63,15 @@ private actor IdleTransport: ClientTransport {
 }
 
 @MainActor @Suite(.serialized) struct StreamIdleTests {
+    private final class Clock { var now = Date(timeIntervalSince1970: 1_800_000_000) }
     private func wait(line: Int = #line, _ predicate: () async -> Bool) async throws {
         for _ in 0..<600 { if await predicate() { return }; try await Task.sleep(for: .milliseconds(10)) }
         throw WaitFailure.timeout(line)
     }
     private enum WaitFailure: Error { case timeout(Int) }
-    private func model(_ transport: IdleTransport, recorder: ClientDiagnosticsRecorder = .disabled) -> TodoModel {
+    private func model(_ transport: IdleTransport, recorder: ClientDiagnosticsRecorder = .disabled, clock: Clock? = nil, notifications: NotificationCenter = NotificationCenter()) -> TodoModel {
         let url = URL(string: "http://127.0.0.1:1/idle-proof-\(UUID())")!
-        let model = TodoModel(configuration: .init(server: url, initialProfile: "work", vaultService: "never-used-idle-\(UUID())"), clientFactory: { url, credential in Client(serverURL: url, transport: transport, middlewares: [BearerMiddleware(credential: credential)]) }, clientDiagnostics: recorder)
+        let model = TodoModel(configuration: .init(server: url, initialProfile: "work", vaultService: "never-used-idle-\(UUID())"), clientFactory: { url, credential in Client(serverURL: url, transport: transport, middlewares: [BearerMiddleware(credential: credential)]) }, clientDiagnostics: recorder, catalogNow: { clock?.now ?? Date() }, catalogNotifications: notifications, wakeNotifications: notifications)
         model.replaceCredential("ses_synthetic-idle"); model.selectedView = "all"; model.signedIn = true
         return model
     }
@@ -62,6 +83,9 @@ private actor IdleTransport: ClientTransport {
         #expect(rows.map(\.title) == ["Needle task"])
         #expect(try await client.reads_period_profiles().ok.body.json.count == 1)
         #expect(try await client.reads_period_view(path: .init(profile: "work", view: .today)).ok.body.json.groups.count == 0)
+        await transport.changeCalendar(); await transport.createExternalProfile()
+        #expect(try await client.reads_period_view(path: .init(profile: "work", view: .today)).ok.body.json.groups.count == 1)
+        #expect(try await client.reads_period_profiles().ok.body.json.count == 2)
         let body = try await client.changes_period_stream(path: .init(profile: "work")).ok.body.text_event_hyphen_stream
         for try await chunk in body { var parser = EventStreamDecoder(); #expect(try parser.append(chunk).first?.name == "ready"); break }
     }
@@ -172,5 +196,120 @@ private actor IdleTransport: ClientTransport {
             #expect(model.appliedSearchSnapshot?.rows.map(\.title) == ["Needle task"])
             model.signedIn = false; model.connect()
         }
+    }
+    @Test(arguments: ["day", "clock", "zone", "wake"])
+    func calendarSignalsRefreshWithoutReconnectOrLostState(_ signal: String) async throws {
+        let transport = IdleTransport(), clock = Clock(), notifications = NotificationCenter()
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("todo-s01-verify-calendar-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: root)
+        let model = model(transport, recorder: recorder, clock: clock, notifications: notifications)
+        defer { model.signedIn = false; model.connect() }
+        model.connect(); try await wait { model.canWrite && model.viewCounts["today"] == 0 }
+        model.beginEditing(try #require(model.tasks.first)); model.editor?.title = "Keep this draft"
+        model.quickAdd = true; model.showingImport = true
+        let before = await transport.readCalls, start = ProcessInfo.processInfo.systemUptime * 1000
+        clock.now.addTimeInterval(86_400); await transport.changeCalendar()
+        let name: Notification.Name = signal == "day" ? .NSCalendarDayChanged : signal == "clock" ? .NSSystemClockDidChange : signal == "zone" ? .NSSystemTimeZoneDidChange : NSWorkspace.didWakeNotification
+        notifications.post(name: name, object: nil)
+        try await Task.sleep(for: .milliseconds(150))
+        #expect(await transport.readCalls == before + 8)
+        #expect(model.viewCounts["today"] == 1)
+        #expect(await transport.streamCalls == 1)
+        #expect(model.editor?.title == "Keep this draft")
+        #expect(model.quickAdd && model.showingImport && model.canWrite && !model.loading && !model.busy)
+        let events = (await recorder.snapshot()).recent.filter { $0.monotonicMS >= start }
+        #expect(!events.contains { $0.availability?.canWrite == false })
+        #expect(events.filter { $0.name == .refreshStarted }.map { $0.trigger?.rawValue } == [signal == "day" ? "dayChange" : signal == "wake" ? "wake" : "clockChange"])
+        model.signedIn = false; model.connect(); await recorder.flush()
+    }
+    @Test func activationOnlyRefreshesACatalogOlderThanSixtySeconds() async throws {
+        let transport = IdleTransport(), clock = Clock(), notifications = NotificationCenter()
+        let model = model(transport, clock: clock, notifications: notifications)
+        defer { model.signedIn = false; model.connect() }
+        model.connect(); try await wait { model.canWrite }
+        let before = await transport.readCalls
+        for seconds in [0.0, 59.0, 1.0] {
+            clock.now.addTimeInterval(seconds); notifications.post(name: NSApplication.didBecomeActiveNotification, object: nil)
+            try await Task.sleep(for: .milliseconds(30))
+        }
+        #expect(await transport.readCalls == before)
+        clock.now.addTimeInterval(0.001); await transport.changeCalendar()
+        await transport.createExternalProfile()
+        for _ in 0..<5 { notifications.post(name: NSApplication.didBecomeActiveNotification, object: nil) }
+        try await Task.sleep(for: .milliseconds(150))
+        #expect(await transport.readCalls == before + 8)
+        #expect(model.viewCounts["today"] == 1)
+        #expect(model.profiles.map(\.name) == ["Work", "Created elsewhere"])
+        #expect(model.canWrite && !model.loading && !model.busy)
+        notifications.post(name: NSApplication.didBecomeActiveNotification, object: nil)
+        try await Task.sleep(for: .milliseconds(30))
+        #expect(await transport.readCalls == before + 8)
+        #expect(await transport.streamCalls == 1)
+    }
+    @Test func simultaneousCalendarAndWakeSignalsCoalesceAndOfflineRecoveryReadsOnce() async throws {
+        let transport = IdleTransport(), clock = Clock(), notifications = NotificationCenter()
+        let model = model(transport, clock: clock, notifications: notifications)
+        defer { model.signedIn = false; model.connect() }
+        model.connect(); try await wait { model.canWrite }
+        let before = await transport.readCalls
+        for name in [Notification.Name.NSCalendarDayChanged, .NSSystemClockDidChange, .NSSystemTimeZoneDidChange, NSWorkspace.didWakeNotification] { notifications.post(name: name, object: nil) }
+        try await Task.sleep(for: .milliseconds(150))
+        #expect(await transport.readCalls == before + 8)
+        await transport.end(rejectReconnect: true)
+        try await wait { model.connection == .offline }
+        let down = await transport.readCalls
+        clock.now.addTimeInterval(86_400); await transport.changeCalendar()
+        notifications.post(name: .NSCalendarDayChanged, object: nil)
+        notifications.post(name: NSWorkspace.didWakeNotification, object: nil)
+        try await wait { model.canWrite && model.viewCounts["today"] == 1 }
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(await transport.readCalls == down + 8)
+    }
+    @Test func aReadStartedBeforeTheClockSignalLeavesExactlyOneNewReadOwed() async throws {
+        let transport = IdleTransport(), notifications = NotificationCenter()
+        let model = model(transport, notifications: notifications)
+        defer { model.signedIn = false; model.connect(); Task { await transport.releaseCatalog() } }
+        model.connect(); try await wait { model.canWrite }
+        let before = await transport.readCalls
+        await transport.holdNextCatalog()
+        let reading = Task { await model.refreshAfterWrite("Keep this notice") }
+        defer { reading.cancel() }
+        try await wait { await transport.catalogHeld }
+        await transport.changeCalendar()
+        for _ in 0..<3 { notifications.post(name: .NSSystemClockDidChange, object: nil) }
+        try await Task.sleep(for: .milliseconds(30))
+        #expect(await transport.readCalls == before + 8)
+        await transport.releaseCatalog(); await reading.value
+        try await wait { model.viewCounts["today"] == 1 && model.searchPhase == .showing }
+        try await Task.sleep(for: .milliseconds(30))
+        #expect(await transport.readCalls == before + 16)
+        #expect(await transport.streamCalls == 1)
+        #expect(model.canWrite && !model.loading && !model.busy)
+    }
+    @Test func aReadStartedAfterTheSignalSatisfiesItAndFailureDoesNotLoop() async throws {
+        let transport = IdleTransport(), clock = Clock(), notifications = NotificationCenter()
+        let model = model(transport, clock: clock, notifications: notifications)
+        defer { model.signedIn = false; model.connect() }
+        model.connect(); try await wait { model.canWrite }
+        let before = await transport.readCalls
+        model.busy = true
+        notifications.post(name: .NSCalendarDayChanged, object: nil)
+        try await Task.sleep(for: .milliseconds(30))
+        await model.refreshAfterWrite("Accepted"); model.busy = false
+        try await Task.sleep(for: .milliseconds(30))
+        #expect(await transport.readCalls == before + 8)
+        await transport.failRead("transport")
+        notifications.post(name: .NSSystemClockDidChange, object: nil)
+        try await wait { model.searchPhase == .error }
+        let failed = await transport.readCalls
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(await transport.readCalls == failed)
+        #expect(model.canWrite && !model.loading && !model.busy)
+        clock.now.addTimeInterval(61)
+        notifications.post(name: NSApplication.didBecomeActiveNotification, object: nil)
+        try await wait { model.searchPhase == .showing }
+        #expect(await transport.readCalls == failed + 8)
+        #expect(await transport.streamCalls == 1)
     }
 }

@@ -15,7 +15,8 @@ import time
 
 ROOT = Path(__file__).resolve().parents[4]
 EVIDENCE = Path(sys.argv[1]).resolve()
-stream_only = '--stream-only' in sys.argv[2:]
+subscribers_only = '--subscribers-only' in sys.argv[2:]
+stream_only = '--stream-only' in sys.argv[2:] or subscribers_only
 configuration = 'debug' if '--debug' in sys.argv[2:] else 'release'
 EVIDENCE.mkdir(parents=True, exist_ok=False)
 os.umask(0o077)
@@ -89,11 +90,12 @@ try:
     (EVIDENCE / 'fixture.json').write_text(json.dumps(shape, indent=2))
     environment.update(TODO_CLIENT_DIAGNOSTICS_SERVER=f'http://127.0.0.1:{port}', TODO_CLIENT_DIAGNOSTICS_TOKEN=token, TODO_CLIENT_DIAGNOSTICS_EVIDENCE=str(EVIDENCE), TODO_CLIENT_DIAGNOSTICS_JOURNAL=str(scratch / 'journal'))
     if stream_only:
+        if subscribers_only: environment['TODO_IDLE_SUBSCRIBERS'] = '1'
+        diagnostics = request('GET', '/diagnostics', credential=owner)
+        environment['TODO_IDLE_START_CURSOR'] = str(max(row['seq'] for row in diagnostics['operations']['recent']))
+        environment['TODO_IDLE_START_GENERATION'] = diagnostics['storage']['restore_generation']
         if '--long-idle' in sys.argv[2:]:
-            diagnostics = request('GET', '/diagnostics', credential=owner)
             environment['TODO_IDLE_LONG_MS'] = '300000'
-            environment['TODO_IDLE_START_CURSOR'] = str(max(row['seq'] for row in diagnostics['operations']['recent']))
-            environment['TODO_IDLE_START_GENERATION'] = diagnostics['storage']['restore_generation']
         class DelayedHealth(http.server.BaseHTTPRequestHandler):
             def log_message(self, *_): pass
             def do_GET(self):
@@ -110,12 +112,14 @@ try:
         threading.Thread(target=proxy.serve_forever, daemon=True).start()
         environment.update(TODO_IDLE_NATIVE_SERVER=f'http://127.0.0.1:{port}', TODO_IDLE_DELAYED_SERVER=f'http://127.0.0.1:{proxy.server_port}')
     (EVIDENCE / 'host.json').write_text(json.dumps(dict(load=os.getloadavg(), cores=os.cpu_count(), at=time.time())))
-    run([ROOT / 'scripts/swift-slot.sh', 'swift', 'test', '--configuration', configuration, '--no-parallel', '--disable-automatic-resolution', '--jobs', '2', '--package-path', 'apps/macos', '--filter', 'StreamIdleTests|StreamIdleTransportTests' if stream_only else 'ClientDiagnosticsTests|ClientDiagnosticsLiveTests|ClientDiagnosticsPanelTests'], 'swift', environment)
+    selected = 'productionModelCancelsIdleSubscribersAtEveryLifecycleBoundary' if subscribers_only else 'StreamIdleTests|StreamIdleTransportTests' if stream_only else 'ClientDiagnosticsTests|ClientDiagnosticsLiveTests|ClientDiagnosticsPanelTests'
+    run([ROOT / 'scripts/swift-slot.sh', 'swift', 'test', '--configuration', configuration, '--no-parallel', '--disable-automatic-resolution', '--jobs', '2', '--package-path', 'apps/macos', '--filter', selected], 'swift', environment)
     artifact = ROOT / f'apps/macos/.build/{configuration}/TodoStateProofPackageTests.xctest/Contents/MacOS/TodoStateProofPackageTests'
     (EVIDENCE / 'swift-artifact.json').write_text(json.dumps(dict(sha256=hashlib.sha256(artifact.read_bytes()).hexdigest(), configuration=configuration), indent=2))
     if stream_only:
-        native = json.loads((EVIDENCE / 'stream-native.json').read_text())
-        assert native['stream_survived_idle'] and native['ordinary_timeout_observed'] and native['operations_received'] == 1
+        native = json.loads((EVIDENCE / ('stream-subscribers.json' if subscribers_only else 'stream-native.json')).read_text())
+        if subscribers_only: assert native['counts'] == [0, 1, 1, 1, 1, 1, 1, 0]
+        else: assert native['stream_survived_idle'] and native['ordinary_timeout_observed'] and native['operations_received'] == 1
         result = dict(result='PASS', errors=0, native=native, keychain_called=False, app_launched=False, signed=False, pushed=False)
     else:
         live = json.loads((EVIDENCE / 'live.json').read_text())

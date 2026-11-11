@@ -51,3 +51,24 @@ and request phases are metadata only. Pure model controls cover quiet EOF,
 failed reconnect, recovery of directory and lookup, stale search recovery,
 cursor/generation drift and bounded repeated-end backoff. Native selection and
 on-screen dialog presentation remain the coordinator's real-app gate.
+
+The Mac state controls inject both the catalog clock and private system/wake
+notification sources. Day, clock, time-zone and wake signals must refresh the
+time-dependent views once without reconnecting or disabling writes. Simultaneous
+signals coalesce; Offline signals are satisfied by reconnect. Activation at 60
+seconds must make no read, while activation after 60 seconds refreshes once.
+No timer is installed. A failed environmental read must not form a retry loop.
+Keep the actual five-minute no-signal idle drive green.
+
+Run the production-model subscriber lifecycle control on a fresh scratch server:
+
+```sh
+.agents/skills/verify-client-diagnostics/scripts/verify.py docs/evidence/mac-subscribers-new --subscribers-only
+```
+
+Require server-side subscriber counts 0 before connection, 1 after the first
+switch, 1 after ten switches, 1 after an operation on the abandoned Profile,
+1 after credential replacement, 1 after deleting the selected Profile and 0
+after the signed-out/disconnect boundary. Each lifecycle sample waits three
+seconds. The control uses the Diagnostics-enabled production transport and
+never invokes SessionVault. The pre-fix control accumulated 11 subscribers.

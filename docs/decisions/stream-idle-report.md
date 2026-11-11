@@ -94,3 +94,75 @@ The command receipts keep their hashes and exits. No package pin changed.
 The three tracked Mac performance JSON summaries total 30,457 bytes. Bulk
 compiler output, failed controls and native receipts are retained locally in
 the run store. The complete design capture remains in checkout-local scratch.
+
+## C3b: refresh data that changes without a local operation
+
+Quiet stream recovery removes the accidental minute-by-minute catalog poll.
+The server's Today, Overdue and Scheduled results depend on its current time,
+and this Profile's stream cannot report changes in other Profiles. A healthy
+stream alone therefore does not establish that those catalog reads stay fresh.
+
+The Mac observes NSCalendarDayChanged, NSSystemClockDidChange,
+NSSystemTimeZoneDidChange and NSWorkspace.didWakeNotification. Each requests
+one quiet catalog refresh. Simultaneous notifications share a pending refresh;
+a running full catalog read can satisfy it if that read started after the
+signal. An older in-flight read leaves one new read owed. While disconnected,
+the signal marks the catalog stale and the ordinary reconnect satisfies it.
+These paths do not reconnect, set busy or loading, change availability, clear
+a notice, or reset an editor, picker or sheet. A failed refresh does not start
+an automatic retry loop.
+
+NSApplication.didBecomeActive requests one quiet refresh only when the last
+successful catalog read is older than 60 seconds. Repeated activation signals
+share that refresh. This is an event policy, with no timer and no periodic
+foreground reads. Diagnostics records dayChange, clockChange, wake and
+activation as refresh triggers. Time-zone changes use clockChange. The display
+words are "Day changed", "Clock or time zone changed", "Woke from sleep" and
+"App became active".
+
+A Profile created, renamed or deleted elsewhere can remain stale for the
+entire time this app stays frontmost and idle. It refreshes at the next stale
+activation, local operation, Profile switch or calendar/clock/wake signal.
+Opening the Profile picker alone does not refresh it. SwiftUI's current Picker
+has no existing opening callback to extend in one line; adding a pointer hook
+would risk interfering with native selection. The coordinator explicitly
+accepted this remaining staleness for this candidate.
+
+The injected-clock/private-notification-source failing control produced 17
+issues in nine test functions before the fix. All four calendar/clock/zone/wake
+cases kept the old Today count, stale activation made no read, and an Offline
+day change failed to recover the new result. Existing quiet-reconnect controls
+remained green. The verification also checks coalescing and preserved drafts
+and open state. Native scroll position and physical sheet presentation remain
+the coordinator's real-app gate.
+
+The final state control passes 11 test functions, including a read that began
+before the signal, a signal satisfied by an already-planned full read, and a
+failed environmental read that does not retry itself. An intermediate fixture
+used the invalid planning-group name "Today". It now uses "Due today", and the
+generated-client control validates both changed planning and Profile replies.
+That failed fixture result is retained separately from product failures.
+
+C3b also fixes cancellation after stream response headers. The pinned
+swift-openapi-urlsession cancellation handler covered the header wait, while an
+idle response-body consumer could stop without cancelling the network task.
+The compiled scratch server counted subscribers as follows:
+
+| Boundary | Before fix | After fix |
+| --- | ---: | ---: |
+| Before connection | 0 | 0 |
+| Connected | 1 | 1 |
+| First idle switch, after 3 seconds | 2 | 1 |
+| Ten switches, after 3 seconds | 11 | 1 |
+| Operation on the abandoned Profile, after 3 seconds | 6 | 1 |
+| Credential replacement, after 3 seconds | 7 | 1 |
+| Selected Profile deletion, after 3 seconds | 8 | 1 |
+| Signed-out network boundary, after 3 seconds | 8 | 0 |
+
+The fix owns one URLSession per stream connection through the response-body
+sequence. Cancellation while awaiting the next chunk, EOF, an error or disposal
+invalidates and cancels that session. It does not wait for another event. The
+green native drive also passed with the production Diagnostics-enabled transport.
+The sign-out control sets signedIn false and disconnects. It does not call the
+Keychain-backed SessionVault sign-out. The metadata-only counts and source hashes
+are in the [C3b receipt](../evidence/mac-perf/stream-lifecycle-summary.json).

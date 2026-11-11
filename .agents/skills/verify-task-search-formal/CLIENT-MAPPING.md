@@ -425,3 +425,15 @@ URLSession timeout control and a five-minute compiled-server idle observation.
 The complete bounded command and its broken controls must pass after renewing
 the two changed Mac source hashes. No independent review is claimed by this
 worker; the coordinator owns the candidate review seats.
+### C3b environmental catalog reads
+
+Calendar, clock/time-zone and wake notifications and stale activation enter
+the existing full-refresh transition with the current requested identity.
+They retain the text, filters and publication guard. The catalog signal revision
+prevents a full read started before a signal from clearing newer catalog debt.
+A read started after the signal can satisfy it. A disconnected signal leaves
+the same debt for ready recovery. There is no timer or automatic retry after
+an environmental read fails. These external causes are not new model inputs;
+their search effect maps to ordinary FullRefresh. Notification delivery, dates,
+resource ownership and native stream cancellation remain outside the finite
+search model and have separate compiled state/network controls.
