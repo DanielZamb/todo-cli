@@ -128,8 +128,8 @@ it.effect(
           fetch(`${base}/diagnostics/profiler/runs`, { headers }),
         );
         expect(recordings.status).toBe(400);
-        expect(yield* Effect.promise(() => recordings.json())).toMatchObject({
-          code: "invalid_args",
+        expect(yield* Effect.promise(() => recordings.json())).toEqual({
+          _tag: "BadRequest",
           message:
             "Recording admission metadata is unavailable; no complete summary can be shown.",
           exit_code: 2,
