@@ -335,6 +335,7 @@ enum ClientDiagnosticDisplay {
         case .stall: "Main thread stalled"
         case .resourcesSampled: "Resources sampled"
         case .pollsAggregated: "Background requests summarized"
+        case .observed: "Screen activity"
         }
     }
     static func environmentTrigger(_ value: ClientDiagnosticTrigger) -> String? {

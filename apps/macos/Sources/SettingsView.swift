@@ -112,6 +112,7 @@ struct SettingsView: View {
                         }.accessibilityIdentifier("check-notifications")
                     }
                     TimelineView(.periodic(from: .now, by: 60)) { context in
+                        let _ = ClientObservedActivity.timelineTick()
                         Text(state.lastTest?.description(now: context.date) ?? "Not tested yet")
                             .font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("notification-receipt")
                     }

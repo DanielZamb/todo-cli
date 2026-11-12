@@ -52,6 +52,7 @@ struct EditorView: View {
                                                 Text(entry.label).fontWeight(.semibold)
                                                 Spacer()
                                                 TimelineView(.periodic(from: .now, by: 60)) { context in
+                                                    let _ = ClientObservedActivity.timelineTick()
                                                     Text(entry.relativeTime(now: context.date)).foregroundStyle(Color.secondary)
                                                 }.help(entry.localTime())
                                             }

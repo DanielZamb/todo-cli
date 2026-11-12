@@ -726,6 +726,7 @@ struct TaskListView: View {
     }
     private func row(_ task: TaskSnapshot, overdue: Bool = false) -> some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
+            let _ = ClientObservedActivity.timelineTick()
             TaskRow(
                 task: task, now: referenceDate ?? context.date, canWrite: model.canWrite, overdue: overdue, compact: compactMode,
                 projectName: model.projects.first { $0.id == task.project_id }?.name,
