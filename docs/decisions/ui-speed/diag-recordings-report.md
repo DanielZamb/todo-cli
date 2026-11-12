@@ -1,13 +1,11 @@
 # Private Diagnostics recordings
 
-The latest correction replaces the two-authority journal with one manifest per
-run, under the coordinator's C5/C6/C7 ruling. Missing or corrupt manifests mean
-absence; blobs never reconstruct runs. Segments publish before one manifest
-rename, and bounded split exports preserve every acknowledged event. The
-contract remains 55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8.
-The final section and its generated lifecycle table are the current design and
-receipts. Earlier sections are historical, including their superseded
-checkpoint/snapshot descriptions.
+The current implementation replaces the unshipped file journal with a separate
+SQLite database in a worker thread. The SQLite replacement section at the end
+of this report contains the current design and receipts. Earlier sections and
+the manifest lifecycle table are historical, including their PASS claims for
+superseded implementations. The contract remains
+55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8.
 
 U06 and U07a implement the accepted recording policy in ADR-0020. Recording
 files are separate from the Task database. Owner-authenticated loopback HTTP
@@ -1422,3 +1420,306 @@ The final guarded reading is 33.3 GB free. An earlier delivery reading was 30.0 
 no further build was started there, and the next df reading returned above 33 GB.
 All owned fixture processes have exited, and their helpers removed scratch data.
 Raw receipts remain local and ignored. No evidence or binary is tracked.
+
+## SQLite replacement after the fourth correction review
+
+The coordinator ruled that SQLite should replace the remaining file bookkeeping.
+The seat's C8, C9 and C10 probes were reproduced first against 11536f6c. Their
+unchanged sources, source hashes and raw red results are retained under
+`docs/evidence/ui-speed/recordings-sqlite` and
+`.scratch/recordings-correction4-s1/evidence`. The earlier root timeout is a
+reported failure of that head, not a passing receipt for this one.
+
+### Authority and request isolation
+
+`recording-database.ts` opens the private database and declares SQL constraints.
+`recordings-sqlite.ts` implements transactions, range reads and bounded DELETEs.
+`recordings.ts` owns the bounded worker RPC. The package's existing
+`@todo/domain/diagnostic-recordings` subpath points to the new adapter.
+The five file-store modules and the tests/recipes specific to their machinery
+are deleted. There is no migration, admission checkpoint, manifest, segment
+file, independent event index, reconstruction, writer lease or unlink loop.
+
+The database is `diagnostic-recordings/recordings.db`, separate from todo.db.
+It is never attached to the Task database. The directory is 0700 and the main,
+WAL and shared-memory files are 0600. Symlinks, hard-linked files and databases
+containing another subsystem's tables are refused. Task store.ts and
+projection.ts remain byte-identical to the starting head. Task Snapshot,
+restore, Purge and export continue to operate solely on their existing data.
+
+WAL, synchronous FULL and a 1 ms busy timeout apply on every worker connection.
+All recording SQL, filesystem access, hashing and reducers run in that worker.
+The Task request thread performs bounded allowlist/schema validation, JSON
+encoding, structured cloning and RPC queue admission. It never waits
+synchronously for recording locks, pruning or recovery. Recording endpoint
+responses await the worker asynchronously; Task readiness does not await its
+startup. The queue remains 1 MiB / 1024 batches, reserved before any await.
+A rejected queue or failed transaction is counted as dropped, with the existing
+safe retain-and-retry response. This does not claim zero main-thread cost.
+
+### Transaction and identity rules
+
+| Operation or failure | Committed truth and retry |
+| --- | --- |
+| Ingest/import before BEGIN, after BEGIN or before COMMIT | No submitted facts or imported mark are visible. Retry admits the batch normally. |
+| Ingest/import after COMMIT, acknowledgement lost | Run, facts and mark are visible together. Exact retry is a no-op. |
+| Whole-batch conflict | Roll back its savepoint, count all unadmitted facts and commit the run's incomplete mark before returning HTTP 400. Non-conflicting facts can be retried unchanged under a new batch id. |
+| Failure to commit a conflict mark | Roll back the entire transaction and return the reviewed storage failure. Producer retains the whole batch. |
+| Expiry or eviction before COMMIT | Facts, marks, counters and identity rows retain their previous state. |
+| Expiry or eviction after COMMIT | DELETEs, counted losses and incomplete marks become visible together. Repeating the DELETE is harmless. |
+| Export/compare during another writer | A WAL read transaction observes one committed snapshot of facts and admission state. |
+| Restart | SQLite recovers committed transactions. No application reconstruction creates a run. |
+
+The primary event identity is (run, producer, sequence). Content fingerprints
+separate identical retries from conflicting facts. Producer batch identity is
+(run, batch), with its original whole-batch fingerprint. Public export cursors
+have a separate unique column; using one as an unrelated producer batch id
+cannot alias another identity. Foreign keys and JSON association checks prevent
+cross-run reassignment. Retained rows alone own identity, so deletion releases
+it through the same transaction. A run's admission state survives complete
+fact eviction and masks both deadline fractions with null, as before.
+
+### Fixed bounds and expiry
+
+Limits remain 32 MiB per app, 256 MiB total, seven days, 4096 retained producer
+batches and 5120 runs. Transactional SQL sums enforce app and total usage.
+Event charges round 2 * encoded bytes + 4096 upward to a KiB; each run charges
+4096 and each retained batch 512. A reserve of up to 1 MiB per quota leaves
+engine replacement space. Charges intentionally exceed payload bytes and cover
+index/page overhead. A physical database page ceiling leaves 16 MiB below the
+total limit; WAL checkpoints and journal_size_limit bound the WAL separately.
+A pre-commit physical guard reserves the main file, existing WAL, a whole
+database of possible new WAL frames and overhead. With cache_spill=OFF there
+are no pre-commit spills, including during a dry run. If a reader pins the WAL,
+an over-budget transaction rolls back, counts a drop and makes one bounded
+checkpoint attempt; an explicit retry succeeds after the reader releases. The
+2 MiB control initially grew to 21,221,376 bytes with a pinned reader; its red
+receipt is retained, and the guarded version stays within 2 MiB. This is why
+max_page_count and journal_size_limit alone are insufficient. The latter applies
+at WAL reset, as documented by [SQLite](https://www.sqlite.org/pragma.html#pragma_journal_size_limit).
+Physical allocation is also checked by the real producer recipe.
+
+Each incoming transaction accepts at most 128 events / 131072 encoded bytes.
+It prunes at most 128 expired events, removes at most 256 expired identities
+matching the input batch/keys, and evicts at most 512 old events. A bounded
+sweep removes at most 128 events and 128 empty expired runs. Oldest retained
+batches go first; incoming facts cannot evict themselves and then receive a
+stored receipt. A batch that cannot fit rolls back and is counted as dropped.
+Run and batch metadata are charged even when facts are absent.
+
+A one-second unreferenced tick checks a monotonic minute deadline. Successful
+sweeps drain bounded chunks; automatic retries after failure wait at least
+60000 ms. Wall-clock jumps affect retention, not that delay. Reads exclude
+expired facts even when deletion fails and mark any partially retained run
+incomplete. No seven-day timer exists to preserve accidentally.
+
+Exports are ordered range reads, at most 128 events, with the maximum admission
+mark reserved before page admission. Every transfer page is below 131072 bytes.
+Large accepted batches can span pages without changing order or duplicating
+facts. Their ingestion remains one atomic transaction, and retry fingerprints
+cover the original batch rather than any export page.
+
+Expiry admission also removes that input's expired identities before evaluating
+retained duplicates. The regression queues 100 old runs ahead of a retry; the
+acknowledged three facts must still export immediately. Cursor age uses the same
+logical retention boundary even before a bounded sweep reaches its row.
+
+### Behavioral witnesses
+
+| Reviewed rule | Current control |
+| --- | --- |
+| C1 and C2 | Whole-batch refusal, null fractions, restart/import/export and two-run reducers retain their literal behavioral assertions. |
+| C3 and acknowledgement races | Transaction kills before/after BEGIN and COMMIT, marked import, failure/retry and exact duplicate controls. |
+| C4 and C5 | SQL DELETE is idempotent; no unrelated file unlink or repair path exists. Expiry/eviction controls check healthy peers. |
+| Corrected C6 | There is no per-run authority file to lose or rebuild. Only committed database rows create a run. An unavailable recordings database fails closed without touching Tasks. |
+| Corrected C7 | The real 95-event / 131004-byte HTTP witness retrieves all acknowledged events across bounded pages before and after restart. |
+| C8 | SQL foreign keys and association checks reject a run claiming a peer's facts; both peer summaries remain intact. The old private-manifest mutation probe is historical. |
+| C9 | A persistent DELETE failure across a clock jump produces minute-spaced retry counts while Task writes continue. The old private timer probe is historical. |
+| C10 | The unchanged real-HTTP alias/expiry/retry witness passes; 80 alias/eviction controls retain exactly three event rows. No manual event index exists. |
+| Continuous admission | 1001 admissions through the worker retain a bounded batch under the unchanged default 5000 ms test timeout. |
+
+The retired file probes are not reported as unchanged passing SQL tests. Their
+public HTTP/CLI expectations remain the compatibility oracle; private filesystem
+fault inputs are replaced with SQLite constraints, aborting triggers, locks and
+real volume exhaustion. No mock database establishes atomicity.
+### Root checks and fixture parity
+
+The exact standing-order command was run after its disk guard, without an
+environment override, timeout change or assertion relaxation. The first two
+attempts exited 1 on `keeps a 1001-admission worker path within its unchanged
+default timeout`, at 5002 ms. Boundary one-minute loads are retained in
+load-root-start/end and load-root2-start/end. The isolated three-event version
+passed in 3060.723292 ms. These are raw failures, not passing receipts.
+
+The original continuous fixture at 11536f6c has one event per admission and a
+12288-byte app quota. My first port accidentally used three events, comparison
+metadata and a 49152-byte quota. The root fixture now uses the original one-event
+payload, 1001 admissions, the original quota and the unchanged 5000 ms timeout.
+The SQL pruning change also replaces repeated row decoding/deletion with one
+set update and DELETE; counts use the engine's actual changes. All 18 SQL
+controls still pass. The stronger three-event serial case is retained as a
+compiled control, and retrieves all 3003 acknowledged facts in 3452.647833 ms
+with boundary loads 4.0195 and 3.9375.
+
+The third exact root run exits 0: 444 domain, 38 server, 80 CLI and 168 Electron
+tests pass, with the existing one Electron skip. `root3.log` and `root3.exit`
+retain the entire command output. The standalone original-payload control also
+passes in the normal timeout. No worker ceiling or supplementary capped run
+replaces this result.
+
+### Frozen-binary cost and startup
+
+All recording transactions and private-file operations are in the worker. The
+largest observed 128-event transaction at the full-store fixture was
+19.739 ms, above the 2 ms limit for synchronous work on the Task thread.
+The main HTTP path retains bounded JSON/schema validation and structured-clone
+work. The pending encoded queue is at most 1 MiB / 1024 batches. The worker has
+an 8 MiB suggested SQLite page cache and a 256-sample timing ring; disabled
+spilling can retain additional dirty transaction pages. JavaScript/native
+allocation counts were not measured. Encoded bytes are not heap bytes.
+
+The busy-host comparison uses one frozen server/CLI source hash,
+`2a87603e297512b5f72934d84610b9e00b390d5445505346f4b72798bb071124`.
+The executable was compiled from the dirty working tree based on 11536f6c;
+`source-frozen.json` records both identities. Every pair uses the same binary.
+Each challenge has ten alternating pairs, 20 checked Task reads and writes per
+cell, 15 initial Tasks and three warmup reads. All 2000 timed reads and 2000
+writes return their literal expected results, with no tolerated Task failures.
+The ingestion flood has 32 independent run/sequence producers and rotates
+submission order. Full-store cells start with at least 30 MiB of charged facts.
+Expiry advances only the scratch recording clock, leaving Task/auth clocks
+unchanged, and measures bounded demand/background sweeps.
+
+The generator submits ingestion before each Task write, reads after that write,
+and then awaits the producer barrier. This is a burst-before-write challenge;
+it does not establish an intrinsic read/write difference or maximum throughput.
+Client timings include body decode and pre-handler waiting. Server CPU includes
+all threads at the coarse ps TIME resolution; it does not isolate main-thread
+validation from worker CPU. The server dominates driver CPU under the flood.
+One-minute load is recorded at both boundaries of every cell. No imposed CPU
+pressure or owned test suite runs alongside this comparison.
+
+Values below are milliseconds. Each p50 uses nearest rank among 20 requests;
+the displayed median across ten cells averages the middle two values, with the
+full cell range in brackets. Pair differences are enabled minus disabled.
+Read changes are inconclusive against pair-to-pair variation, including the
+small all-positive eviction sample. Write increases remain positive in every
+pair and exceed their pair spread in this challenge. These are measured costs,
+not a claim of no overhead. The flood accepts 2445 batches and explicitly drops
+3955 of 6400; its latency is not reported as if all recordings were retained.
+Clients must keep the refused batches for retry. Ordinary 16/128-event cells
+have no dropped batches. The unchanged quiet collection-cost recipe and ceiling
+remain untouched. A quiet-machine confirmation under the unchanged ceiling is
+owed at integration.
+
+| Challenge | Read p50 without / with | Write p50 without / with | Accepted / dropped batches |
+| --- | --- | --- | --- |
+| 16 events | 0.952 [0.758, 0.986] / 1.099 [0.797, 1.230] | 0.960 [0.774, 1.029] / 1.644 [1.370, 1.779] | 200 / 0 |
+| 128 events | 0.787 [0.705, 1.134] / 0.914 [0.793, 1.070] | 0.778 [0.699, 1.147] / 2.196 [2.022, 2.762] | 200 / 0 |
+| 32 producers | 0.940 [0.746, 1.448] / 1.030 [0.788, 1.230] | 0.937 [0.674, 1.309] / 14.107 [10.969, 18.215] | 2445 / 3955 |
+| Expiry | 0.882 [0.787, 1.081] / 0.861 [0.783, 1.161] | 0.892 [0.776, 1.126] / 1.401 [1.356, 1.660] | 0 / 0 |
+| Eviction | 0.817 [0.725, 0.922] / 0.945 [0.912, 1.041] | 0.807 [0.718, 0.926] / 2.220 [2.096, 2.502] | 200 / 0 |
+
+| Challenge | Read paired differences, pairs 1 through 10, ms | Write paired differences, ms |
+| --- | --- | --- |
+| 16 events | -0.014, -0.008, 0.472, 0.150, 0.078, 0.243, 0.136, 0.212, 0.143, 0.110 | 0.596, 0.615, 1.004, 0.800, 0.654, 0.774, 0.552, 0.749, 0.635, 0.618 |
+| 128 events | 0.081, -0.240, 0.178, -0.006, 0.346, 0.282, 0.128, 0.018, 0.106, 0.196 | 1.733, 1.062, 1.632, 1.243, 1.556, 1.685, 1.363, 1.350, 1.288, 1.366 |
+| 32 producers | 0.024, 0.061, 0.031, -0.020, 0.293, -0.033, -0.235, 0.081, -0.400, -0.074 | 10.911, 10.638, 10.808, 10.211, 13.644, 16.927, 15.681, 15.184, 14.886, 12.792 |
+| Expiry | 0.196, 0.053, -0.043, -0.116, 0.025, -0.044, 0.020, -0.003, 0.070, -0.086 | 0.578, 0.534, 0.603, 0.428, 0.564, 0.442, 0.591, 0.618, 0.560, 0.518 |
+| Eviction | 0.151, 0.316, 0.098, 0.098, 0.103, 0.153, 0.179, 0.173, 0.247, 0.013 | 1.272, 1.781, 1.404, 1.331, 1.380, 1.574, 1.426, 1.492, 1.615, 1.208 |
+
+| Challenge | Server CPU without / with, ms | Driver CPU with, ms | Boundary one-minute load range |
+| --- | --- | --- | --- |
+| 16 events | 120.000 [100.000, 130.000] / 220.000 [180.000, 240.000] | 17.855 [14.372, 28.492] | 3.715 to 5.308 |
+| 128 events | 100.000 [80.000, 120.000] / 380.000 [350.000, 430.000] | 20.509 [16.371, 50.456] | 4.708 to 5.523 |
+| 32 producers | 110.000 [90.000, 160.000] / 5515.000 [4170.000, 6140.000] | 479.796 [353.867, 547.924] | 4.446 to 5.086 |
+| Expiry | 105.000 [100.000, 130.000] / 210.000 [190.000, 270.000] | 8.599 [6.010, 13.076] | 4.929 to 5.961 |
+| Eviction | 100.000 [90.000, 110.000] / 520.000 [510.000, 580.000] | 22.828 [20.946, 28.559] | 4.836 to 5.718 |
+
+All raw per-request values, boundary loads and receipts are in
+`cost-frozen/raw.json`. `comparison.html` renders their paired ranges. The two
+partial earlier runs, `cost` and `cost-final`, were intentionally stopped before
+finalization and exited 70. Their raw cells and stop reasons are retained; they
+do not support the final cost claim.
+
+There is no migration of the seat's old file fixture. The equivalent maximum
+reference-count SQL fixture holds 4096 one-event batches. Five alternating
+empty/full opens, using warm filesystem caches, measure empty 0.521 ms
+[0.505, 3.359] and full 7.980 ms
+[7.789, 8.187]. This is a different storage fixture
+from the seat's 3.4 s reconstruction / 0.1 s light measurement. It establishes
+that SQL opening has no application event reconstruction. With the recordings
+writer deliberately locked, the compiled server is ready at 103.304 ms
+and serves the literal Task read at 110.019 ms, while a recording query
+remains pending. Releasing the lock completes that query at 156.289 ms.
+
+The persistent expiry-failure control records 2 attempts over 64 seconds,
+60319.054 ms apart, and 64 successful Task writes.
+The counted storage failure is visible. Repair followed by explicit admission
+expires exactly three old facts. This proves a bounded retry schedule and Task
+responsiveness, not zero overhead. A genuinely full 10 MiB volume returns the
+safe ingestion 500 while Task creation and the real scheduler commit exactly
+two TaskCreated entries and one ReminderFired entry.
+
+### Commands and real exits
+
+Here `E=$PWD/docs/evidence/ui-speed/recordings-sqlite`,
+`P=.agents/skills/verify-ui-profiler/scripts`, and `C=.scratch/bin`.
+Every row has its log and .exit receipt beneath E. Evidence is local and ignored.
+
+| Command | Exit / evidence |
+| --- | --- |
+| Original compiled C8, C9, C10 witnesses against 11536f6c | 1 each, red-c8.log, red-c9.log, red-c10.log |
+| pnpm --filter @todo/domain test | 0, 444 tests in root3; domain-final also 0 |
+| pnpm --filter @todo/server test | 0, 38 tests, server-final and root3 |
+| pnpm typecheck | 0, types-delivery and root3 |
+| bun --bun node_modules/typescript/bin/tsc -p .agents/skills/verify-ui-profiler/tsconfig.json | 0, helper-types-final6 |
+| bun packages/api/scripts/openapi.ts --check | 0, contract-frozen and root3 |
+| sh scripts/disk-guard.sh | 0 before each root run, disk-root / disk-root2 / disk-root3 |
+| /usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check | 1, 1, then 0; root / root2 / root3 |
+| bun apps/server/scripts/scratch-diagnostics.ts build | 0, build-frozen |
+| TODO_PROFILER_STRESS=1 bun "$P/verify.ts" "$E/producer-frozen" | 0, 700 batches plus client-shaped HTTP/CLI import/export/compare |
+| bun "$P/completeness.ts" "$E/completeness-frozen" | 0, durable whole refusal, null fractions, retry, rotation, eviction and import |
+| bun "$P/corrections.ts" "$E/corrections-frozen" | 0, HTTP/CLI safe refusal reasons and identities |
+| bun "$P/admission-fault.ts" "$E/fault-frozen" | 0, failed mark commit gives HTTP 500 / CLI 1, Task exactly once |
+| bun build --compile "$P/sqlite-crash.ts" --outfile "$C/sqlite-crash"; "$C/sqlite-crash" "$E/crash-frozen" | 0 each, 20 transaction-boundary SIGKILL cases |
+| bun build --compile "$P/sqlite-continuous.ts" --outfile "$C/sqlite-continuous"; "$C/sqlite-continuous" "$E/continuous-frozen" | 0 each, 1001 batches / 3003 retrieved facts |
+| bun "$P/sqlite-writers.ts" "$E/writers-frozen" | 0, two compiled servers, 32 simultaneous exact retries, three stored facts |
+| bun build --compile "$P/sqlite-clock-server.ts" --outfile "$C/sqlite-clock-server" | 0, clock-frozen |
+| bun "$P/sqlite-expiry.ts" "$E/expiry-frozen" | 0, minute backoff and healthy Task writes |
+| bun "$P/sqlite-wire.ts" "$E/wire-frozen" | 0, corrected C7, all 95 facts across bounded pages after restart |
+| "$P/sqlite-full.sh" "$E/full-volume-frozen" | 0, actual ENOSPC and scheduler |
+| bun "$P/sqlite-startup.ts" "$E/startup-frozen" | 0, 4096-batch startup and Task readiness during locked recording opening |
+| bun "$P/sqlite-identity.ts" "$E/identity-frozen" | 0, reusable C10 HTTP witness with unchanged assertions |
+| bun .scratch/recordings-correction4-s1/identity-http.ts | 0, original HTTP source, c10-frozen; only its clock-server import is relocated |
+| bun .scratch/recordings-correction4-s1/http-probes.ts | 0, seat-http-frozen; credential/content matrix, dry run and Task DB/WAL byte identity |
+| bun .scratch/recordings-correction4-s1/restore-probe.ts | 0, seat-restore-frozen; Snapshot/Purge/restore leave recording files byte-identical |
+| bun build --compile "$P/sqlite-auth-server.ts" --outfile "$C/sqlite-auth-server"; bun "$P/sqlite-auth.ts" "$E/revoked-frozen"; bun "$P/sqlite-auth.ts" "$E/revoked-read-frozen" read | 0 each, revocation during asynchronous error returns 401 |
+| TODO_DIAGNOSTICS_NO_SWIFT=1 .agents/skills/verify-diagnostics/scripts/verify.sh "$E/diagnostics-frozen" | 0; terminal PNG is explicit HOLD |
+| .agents/skills/verify-server-api/scripts/verify.sh "$E/api-frozen" | 0 |
+| .agents/skills/verify-auth/scripts/verify.sh "$E/auth-frozen" | 0 |
+| TODO_CLI_BINARY="$PWD/.scratch/bin/todo" .agents/skills/verify-cli/scripts/verify.sh "$E/cli-final" | 0; CLI source is unchanged by the later SQL-only pruning reduction, and root3 reruns all 80 CLI tests |
+| bun build --compile apps/server/scripts/diagnostic-fault-cli.ts --outfile "$C/diagnostic-fault-cli"; bun build --compile apps/server/scripts/verify-diagnostic-faults.ts --outfile "$C/verify-diagnostic-faults"; "$C/verify-diagnostic-faults" "$E/recorder-faults-frozen" | 0 each, all 47 fault controls |
+| bun apps/server/scripts/verify-diagnostic-payload-budget.ts "$E/payload-frozen" | 0, 10000 requests, 200 clients and the 49152/65536 byte caps |
+| TODO_RECORDING_COST_REQUESTS=20 /usr/bin/lockf -k /tmp/todo-ui-profiler-benchmark.lock bun "$P/sqlite-cost.ts" "$E/cost-frozen" | 0, all 100 cells |
+| bun "$P/sqlite-report.ts" "$E/cost-frozen" | 0, cost-report-final; tables, summary and HTML use the raw values |
+
+The contract is unchanged. Old and new are both
+`55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8`.
+No TypeScript pin, OpenAPI artifact, golden or generated Swift file changed.
+No Swift command, native app, Keychain, installation, real HOME/database or push
+was used in this correction. Mac/client native integration and terminal PNG
+rendering remain owed to the appropriate integration unit.
+
+Task store.ts and projection.ts hashes are identical to 11536f6c, recorded in
+`task-source-immutability.json`. No formal pin is renewed; those mapped Task
+transaction inputs did not change, so the formal commands were not rerun for
+this recording-store replacement.
+
+Cleanup removed 30 owned closed Bun temporary files, checked with lsof before
+each unlink: 2659860480 allocated bytes, about 2.66 GB, plus the two stopped
+owned scratch fixtures. Both cleanup receipts retain individual paths/sizes.
+Final df records 127.3 GB free; concurrent units also changed disk use, so that
+volume delta is not attributed to this cleanup. Reusable sources and every
+cited red/green receipt remain. All owned fixture processes and the temporary
+full-volume mount are stopped/removed.

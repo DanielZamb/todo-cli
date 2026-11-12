@@ -11,7 +11,7 @@ server stopped. Electron and macOS never open the database. They call the local
 HttpApi and subscribe to SSE. The server is a loopback gateway that runs the
 same domain package.
 
-![Runtime: the todo and todo-server processes, desktop clients, launchd, and the SQLite file](diagrams/runtime.png)
+![Runtime: the todo and todo-server processes, desktop clients, launchd, and the Task database](diagrams/runtime.png)
 
 `@todo/domain` is the only writer. Guard triggers reject direct edits to
 projection tables. That is [ADR-0001](adr/0001-port-to-effect-with-shared-domain.md)
@@ -371,43 +371,33 @@ body completion and the remaining internal attribution stay unobserved. The
 accepts always-on metadata recording in each app and owner-only loopback
 ingestion. The private recording store is a sibling diagnostic-recordings
 directory beside the configured database, outside todo.db and database Snapshots.
-It has 0700 directories, 0600 atomic segments, 32 MiB per app, seven-day retention,
-a 256 MiB total ceiling, 4096 segments, a 1 MiB pending queue and 1024 pending
-batches. At most 5120 retained/pending run manifests and 655360 event references
-are kept, independently of queue idleness. Producer-sequence fingerprints
-refuse contradictory payloads; exact retained duplicates are no-ops. Oldest segments
-expire first with visible event/loss counts, including idle-time expiration.
-Failed expiry retries wait at least a minute, without rearming on other activity. A private empty SQLite lease
-serializes journal ownership across processes without storing recordings in
-SQLite; process death releases the lease. No Task write depends on this store.
+It has 0700 directories, 0600 database/WAL files, 32 MiB per app, seven-day
+retention, a 256 MiB total ceiling, 4096 retained batches, a 1 MiB pending queue
+and 1024 pending batches. At most 5120 runs exist independently of queue idleness.
 The explicit HttpApi profiler group accepts strict 128 KiB / 128-event batches;
-run list/show, one-batch export pages and comparable-build reports back the CLI
+run list/show, bounded export pages and comparable-build reports back the CLI
 diagnostics runs/show/export/import/compare commands. Import has a dry run;
 NDJSON export traverses pages. Client UI/local journal integration and clock
 calibration/presentation proof remain later units. Run-local Profile ordinals
 and scalar selection/release context contain no Profile identity or Task content.
 
 Recording admission completeness is separate from event retention. Versioned
-run.admission metadata is persisted in private per-run files before a whole-batch
-conflict refusal is acknowledged. These files survive data eviction, are charged
-to their app quota, and expire after seven days only when no data for that run
-remains. The combined active/marked run limit is 5120; repeated writes coalesce
-per run. Marked summaries withhold all-start fractions and complete comparisons.
-Exports/imports carry the mark even without events. Mixed-run event reducers
-partition their action, clock, crash and gap state by run; clients reducing export
-raw events must preserve the run admission context.
+run.admission metadata and events commit in one transaction. A whole-batch
+conflict refusal commits its content-free mark before responding. Marked
+summaries withhold all-start fractions and complete comparisons. Exports/imports
+carry the mark even without events. Mixed-run event reducers partition action,
+clock, crash and gap state by run; clients reducing raw export events preserve
+the run admission context.
 
-The run's sole authority is one checksummed manifest containing its definition,
-admission state, per-run losses and immutable segment references with byte sizes,
-event counts and checksums. Missing or corrupt manifests mean absent runs; blobs
-never reconstruct a run. Missing or corrupt named blobs mark the run incomplete.
-Segments publish first, then one flushed atomic manifest replacement publishes
-all splits together. Each export page adds the manifest's current mark, within
-the unchanged 128 KiB transfer bound. An original-batch fingerprint spans splits.
-Manifests have a 256 KiB cap, charged with one replacement allowance. A full
-manifest rotates only its own oldest references with counted loss and uncertainty.
-All removal passes one idempotent ENOENT-success boundary; failed garbage stays
-charged. Recovery yields between files and runs in the background. Task readiness
-and requests do not await it; recording queries do. There is no separate admission
-checkpoint or per-segment mark snapshot. See the generated lifecycle table in
-[the recordings report](decisions/ui-speed/diag-recordings-report.md).
+Recordings now use a separate recordings.db SQLite database, never attached to
+the Task database. SQL constraints own run/producer/sequence identity and content
+fingerprints. A run, its facts and admission state change atomically. WAL and a
+1 ms busy timeout serialize independent server workers; failures give explicit
+retain-and-retry results. All recording SQL, private files and reducers run in a
+worker thread. The server does bounded decoding and RPC admission only. Startup
+and Task work do not await recording recovery. Ordered WAL-snapshot range reads
+produce export pages under 128 KiB with their admission mark. Transactional SQL
+sums enforce the fixed app/total caps and oldest-first deletion. Fixed-cadence
+bounded DELETE sweeps replace file expiry/repair/index machinery. No manifest,
+checkpoint, segment file or independent event index remains. See the current
+section of [the report](decisions/ui-speed/diag-recordings-report.md).

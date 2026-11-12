@@ -1,47 +1,16 @@
-## Sub-features
+# SQLite bounds and failure isolation
 
-Owner-only metadata ingestion; run list/show, bounded export, dry-run import and
-comparable-build reports. Private storage has byte, age, segment and queue caps.
+One recordings.db, with engine-managed WAL/shared-memory files, lives in a 0700
+private directory and uses 0600 files. SQL keys, foreign keys, checks and atomic
+transactions replace every file index and manifest. The app cap remains 32 MiB,
+the total 256 MiB, retention seven days. Conservative SQL row charges include
+payload, indexes and page allowance. Quotas use SQL sums inside the write
+transaction; deletion and its loss mark commit together. SQLite page limits
+provide a second total guard. The main thread queues at most 1 MiB / 1024 batches.
 
-## How to get to it (user POV)
-
-Use todo diagnostics runs/show/export/import/compare with a local --server URL
-and an owner Session. Discover each response with todo schema. Apps use the
-same HttpApi profiler group; their native recording UI is a later unit.
-
-## Driving it with compiled CLI and HTTP
-
-Run the parent skill's verify.ts, targeted fault/bounds tests and cost command.
-A real selection-shaped producer must read back 2 starts, one pending, p50 8 ms
-and fraction 0.5. Privacy probes must return no injected content. A different
-environment is refused for comparison; retry preserves the original event count.
-
-## Gotchas
-
-The internal queue admits work without synchronous I/O. The HTTP acknowledgement
-awaits persistence asynchronously; retain local batches until a stored receipt. Explicit export cursors can expire under oldest-first
-rotation. Losses, clock discontinuities and restart uncertainty invalidate a
-complete-performance claim. Normal Diagnostics polling never reads this journal.
-
-The private identity maps are independently bounded by 4096 retained plus 1024
-pending batches, at most 5120 manifests and 655360 event references. The continuous
-admission test retains one segment and one pending write through 1001 runs,
-with at most two manifests/event identities. Failed expiry has a 60000 ms minimum
-retry and other status writes cannot shorten or postpone that timer.
-
-The combined retained/pending/marked run set is at most 5120 identities. A sole
-manifest holds definition, mark, loss counters and segment descriptors. Its
-256 KiB cap and charged replacement are included in quotas. Full manifests evict
-only their own oldest references, count the evicted events and retain uncertainty.
-The 4096 global segment cap and app/total byte caps still apply independently.
-Pending commands do not create a run. Repeated refusals coalesce to one job.
-
-Missing or corrupt manifests mean absence, never reconstruction. Named missing
-or corrupt segments persist an incomplete run before query output. Failed file
-removals stay charged and block growth; ENOENT succeeds. Startup removes orphans
-without learning run identity from them. The generated model and compiled SIGKILL
-controls enumerate lifecycle mutation points and file-state subsets. The generated drive reopens all 14537 file/clock combinations in real
-directories, checks charges and retries every image twice. The smaller unit
-reopen test covers the 64 two-segment/manifest combinations as well.
-Pending duplicates cannot acknowledge a failed shared write. Split batches publish
-all segment references in one manifest and remain idempotent after lost receipts.
+Expiry uses bounded DELETE transactions, with a fixed minute cadence and a
+minimum minute automatic retry after failure. Export is an ordered snapshot
+range, at most 131072 bytes per page. There is no producer/cursor key alias.
+A run/producer/sequence conflict refuses the whole batch and commits its mark.
+The producer retains a batch after any failed acknowledgement. The behavioral,
+constraint, crash, flood and full-store controls are in the parent skill.

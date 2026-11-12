@@ -1,209 +1,107 @@
 ---
 name: verify-ui-profiler
-description: Verify private metadata recording ingestion, bounded storage, owner-only runs, import, export and comparison through compiled Todo HTTP and CLI on scratch data.
+description: Verify private SQLite recording ingestion, bounded worker storage, owner-only runs, import, export and comparison through compiled Todo HTTP and CLI on scratch data.
 ---
 
 # Verify shared recordings
 
-Created through create-verification-skill. Read [the feature map](features/README.md).
-This unit proves the shared server and CLI, not native app capture or presentation.
+Read [the feature map](features/README.md). The current storage decision is a
+separate SQLite database in a worker, outside the Task database. The earlier
+manifest recipes are historical and removed. No Swift, native app or Keychain
+is used. Every helper creates its own scratch HOME and Task database and stops
+only its own server. Evidence remains ignored and survives failures.
 
-## Launch
-
-From the checkout root, use a new evidence directory:
+## Launch and drive
 
 ```sh
 sh scripts/disk-guard.sh
 bun apps/server/scripts/scratch-diagnostics.ts build
-bun .agents/skills/verify-ui-profiler/scripts/verify.ts "$PWD/docs/evidence/ui-speed/recordings-new"
+TODO_PROFILER_STRESS=1 bun .agents/skills/verify-ui-profiler/scripts/verify.ts "$PWD/docs/evidence/ui-speed/recordings-sql-new"
+bun .agents/skills/verify-ui-profiler/scripts/completeness.ts "$PWD/docs/evidence/ui-speed/recordings-complete-new"
+bun .agents/skills/verify-ui-profiler/scripts/corrections.ts "$PWD/docs/evidence/ui-speed/recordings-corrections-new"
+bun .agents/skills/verify-ui-profiler/scripts/admission-fault.ts "$PWD/docs/evidence/ui-speed/recordings-fault-new"
+bun .agents/skills/verify-ui-profiler/scripts/sqlite-wire.ts "$PWD/docs/evidence/ui-speed/recordings-wire-new"
 ```
 
-The helper uses matching cached compiled CLI/server binaries and a new scratch
-HOME/database, never an installed server or real ~/.todo-cli. It waits at least
-60 seconds for its owned loopback listener. The producer emits real shared
-metadata events over HTTP. No native app, Swift or Keychain is used.
+The real owner producer, CLI JSON/NDJSON, import preview/apply, refusal,
+comparison, permissions, allowlist and Task-isolation expectations are unchanged.
+The storage-failure input now uses an aborting SQL trigger: chmod on a directory
+does not prevent writes to SQLite's already-open WAL. HTTP/CLI expected results
+stay literal. A storage failure must not fail or duplicate Task creation.
 
-## Doctor
-
-Run `bun packages/api/scripts/openapi.ts --check` and `pnpm typecheck`.
-The ordinary Diagnostics compiled recipe proves matching health/contract ids.
-A zero process exit and result.json with PASS prove completion.
-
-## Drive
-
-Ingest a client-shaped release-timed selection with Profile ordinal and scalar
-context. Read it through CLI runs/show/export; require literal 2 starts, one
-pending action, 8 ms p50 and 0.5 fraction by 20 ms. Import the export in dry-run
-and apply modes; retry must not duplicate events. Compare different builds of
-the same scenario and refuse a different environment. Missing owner Sessions,
-Access Tokens, forwarded requests and forbidden content are refused.
-
-For filesystem retention, permissions, restart/orphan recovery, conflicting
-retries, clock discontinuities and disk faults, run:
+## Constraints and crash boundaries
 
 ```sh
-pnpm --filter @todo/domain test diagnostic-recording-corrections.test.ts diagnostic-recordings.test.ts diagnostic-recording-store.test.ts diagnostic-event-types.test.ts diagnostic-labels.test.ts
-pnpm --filter @todo/server test diagnostic-recordings.test.ts diagnostics.test.ts
+pnpm --filter @todo/domain test recordings-sqlite.test.ts recording-admission.test.ts recording-run-isolation.test.ts diagnostic-recording-store.test.ts diagnostic-recording-corrections.test.ts
+bun build --compile .agents/skills/verify-ui-profiler/scripts/sqlite-crash.ts --outfile .scratch/bin/sqlite-crash
+.scratch/bin/sqlite-crash "$PWD/docs/evidence/ui-speed/recordings-crash-new"
 ```
 
-The on-request cost comparison uses five counterbalanced alternating pairs and
-one compiled binary, 100 literal 15-Task reads per run, with or without a concurrent
-16-event producer batch. It imposes no CPU pressure and labels ambient host load:
+The real SQL controls cover C1 through C10's behavioral rules: whole refusal
+marks, null fractions, retry after failure, two-run reducers, cross-run association
+constraints, alias-safe public cursors, counted expiry/eviction, every transaction
+boundary and continuous admission under its unchanged five-second timeout.
+The compiled child is SIGKILLed before/after BEGIN and COMMIT for ingestion,
+marked import, refusal, expiry and eviction. Reopening must see the last committed transaction;
+retry and duplicate retry must converge without losing or doubling facts.
+There is no application repair/reconstruction oracle. No kernel-write or
+power-loss claim is made.
+
+Additional real controls, after building sqlite-clock-server:
 
 ```sh
-bun .agents/skills/verify-ui-profiler/scripts/benchmark.ts "$PWD/docs/evidence/ui-speed/recording-cost-new"
+bun --bun node_modules/typescript/bin/tsc -p .agents/skills/verify-ui-profiler/tsconfig.json
+bun build --compile .agents/skills/verify-ui-profiler/scripts/sqlite-continuous.ts --outfile .scratch/bin/sqlite-continuous
+.scratch/bin/sqlite-continuous "$PWD/docs/evidence/ui-speed/recordings-continuous-new"
+bun .agents/skills/verify-ui-profiler/scripts/sqlite-identity.ts "$PWD/docs/evidence/ui-speed/recordings-identity-new"
+bun .agents/skills/verify-ui-profiler/scripts/sqlite-writers.ts "$PWD/docs/evidence/ui-speed/recordings-writers-new"
+bun .agents/skills/verify-ui-profiler/scripts/sqlite-startup.ts "$PWD/docs/evidence/ui-speed/recordings-startup-new"
+bun .agents/skills/verify-ui-profiler/scripts/sqlite-expiry.ts "$PWD/docs/evidence/ui-speed/recordings-expiry-new"
+.agents/skills/verify-ui-profiler/scripts/sqlite-full.sh "$PWD/docs/evidence/ui-speed/recordings-full-new"
+bun build --compile .agents/skills/verify-ui-profiler/scripts/sqlite-auth-server.ts --outfile .scratch/bin/sqlite-auth-server
+bun .agents/skills/verify-ui-profiler/scripts/sqlite-auth.ts "$PWD/docs/evidence/ui-speed/recordings-revoked-new"
+bun .agents/skills/verify-ui-profiler/scripts/sqlite-auth.ts "$PWD/docs/evidence/ui-speed/recordings-revoked-read-new" read
 ```
 
-The tracked quiet collection-cost recipe and its ceiling remain untouched.
-Differences within pair variation are inconclusive. This is an ingestion-on/off
-comparison, not a claim about native app recorder overhead or physical paint.
+The original continuous fixture has one event per admission and its unchanged
+5000 ms timeout. The compiled stronger control admits three events per batch
+1001 times and retrieves all 3003 facts. The full-volume helper creates only an
+owned 10 MiB scratch HFS+ volume and removes it after the real ENOSPC / Task /
+scheduler assertions. The expiry helper takes about 65 seconds to prove the
+minute retry floor with a persistently failing SQL trigger.
 
-## Evidence
-
-The compiled drive retains actions.json and result.json with the literal summary.
-No bearer or Task content is exported into recording files. Performance raw.json
-retains every task/ingest latency, counts, bytes, boundary loads, driver CPU and
-server loss status; result.json retains each paired difference. Interrupted or
-failed evidence survives. Verification output is ignored by Git.
-
-## Cleanup
-
-The helper stops only its child server, awaits exit and removes only its scratch
-HOME/database/input files in finally. Evidence survives. Never kill by process
-name or contact the owner's server. After builds, remove only closed Bun compile
-temporaries from this checkout and record freed bytes.
-
-## Helpers
-
-verify.ts and benchmark.ts are invoked with Bun as above. The checkout-local
-.claude/skills/verify-ui-profiler link registers this skill; fresh Claude discovery
-is a separate integration receipt, not claimed by this command.
-
-## Recording correction controls
-
-Run the compiled boundary/import controls after building the same-source cache:
+## Cost
 
 ```sh
-bun .agents/skills/verify-ui-profiler/scripts/corrections.ts "$PWD/docs/evidence/ui-speed/recording-corrections-new"
+bun build --compile .agents/skills/verify-ui-profiler/scripts/sqlite-clock-server.ts --outfile .scratch/bin/sqlite-clock-server
+/usr/bin/lockf -k /tmp/todo-ui-profiler-benchmark.lock bun .agents/skills/verify-ui-profiler/scripts/sqlite-cost.ts "$PWD/docs/evidence/ui-speed/recordings-sql-cost-new"
 ```
 
-They require literal owner HTTP 400 / CLI exit 2 with an allowlisted reason,
-reject conflicting sequence data through import and dry run, preflight conflicts
-across the entire local file before any POST, withhold both deadline
-fractions as unknown, and prove a retained identical event is a no-op. The domain
-controls cover pending acknowledgements, legacy contradictory files, repeated
-action phases, every comparison condition, and 1,001 admissions without a drain.
-The quota control's second segment now uses a genuinely different event, since
-an identical event is a no-op; its byte/eviction assertions remain unchanged.
+Use TODO_RECORDING_COST_REQUESTS=20 for the bounded busy-host comparison; the
+default remains 100 checked reads and writes per cell. The flood has 32
+independent runs/sequences and rotates submission order. Record server CPU
+across all threads separately from driver CPU.
 
-For a permanent real unlink failure in the same event loop as Task reads:
+Ten alternating pairs each compare 16 events, 128 events, a 32-producer flood,
+full-store expiry and full-store eviction, with 100 checked Task reads and writes
+per cell. Record loads at both boundaries, all durations, producer outcomes,
+worker transaction samples, medians/ranges and paired differences. Anything
+inside pair variation is inconclusive. There is no imposed CPU pressure. The
+existing quiet collection-cost recipe and its ceiling remain unchanged; quiet
+integration confirmation is still owed. Transactions exceeding 2 ms belong in
+the worker, never on the Task request thread.
 
-```sh
-bun build --compile .agents/skills/verify-ui-profiler/scripts/expiry-server.ts --outfile .scratch/bin/expiry-fault-server
-bun .agents/skills/verify-ui-profiler/scripts/expiry-cost.ts "$PWD/docs/evidence/ui-speed/expiry-cost-new"
-```
+After the comparison, reduce its raw cells with
+`bun .agents/skills/verify-ui-profiler/scripts/sqlite-report.ts <evidence-directory>`.
+It emits medians/ranges, every paired difference, server/driver CPU and a
+self-contained HTML chart. Preserve source-frozen.json and the raw cells.
 
-The verification-only entry replaces its own scratch segment with a directory,
-then runs the real server. Five AB/BA pairs last 6.5 seconds per cell, long enough
-for two real failed timer attempts. It asserts all 15 Task titles, both load
-boundaries and two counted failures. No native app or CPU pressure is involved.
-A difference inside pair variation is inconclusive, never proof of zero cost.
-The fake-clock control additionally proves no retry for 59,999 ms, a retry at
-60,000 ms, normal scheduling after recovery and no reset by other journal work.
+## Doctor and cleanup
 
-## Admission completeness and mixed runs
-
-```sh
-pnpm --filter @todo/domain test recording-admission.test.ts recording-run-isolation.test.ts
-bun .agents/skills/verify-ui-profiler/scripts/completeness.ts "$PWD/docs/evidence/ui-speed/recording-completeness-new"
-bun .agents/skills/verify-ui-profiler/scripts/admission-fault.ts "$PWD/docs/evidence/ui-speed/recording-admission-fault-new"
-```
-
-The compiled recipe requires a durable whole-batch refusal mark, a valid 10000 ms
-retry, null deadline fractions, a complete-comparison refusal, JSON/NDJSON transfer,
-no-write dry run and monotonic import. Six hundred 128-event batches evict the old
-run's data while its mark remains exportable, including as a zero-event batch.
-It tries private content in every new admission object and checks file modes and
-allocated bytes. It also imports two runs with shared action/producer/sequence
-identities and checks their separate 8 ms and 400 ms summaries through the CLI.
-The unit controls cover clean termination plus restart, rotation, expiry,
-coalesced repeated refusals, all exported reducers and per-run uncertainty.
-The fault control makes only its private recording directory unwritable. HTTP
-returns 500 and the CLI exits 1 with the safe instruction to retain the entire
-batch, while one Task write still succeeds exactly once. After storage recovers,
-shutdown makes one bounded attempt to persist any outstanding mark. A failed
-attempt is counted and never becomes a retry loop.
-
-`bun .agents/skills/verify-ui-profiler/scripts/lease-liveness.ts` demonstrates
-the crash fixture's lifetime requirement with forced garbage collection. An
-idle child must retain its store until it is killed; an empty timer retains only
-the process. The two cases assert literal failed-open counts 0 and 1. The
-production lease code and crash-ownership assertions are unchanged.
-
-The earlier narrow witness's zero fractions after a refusal are superseded by
-null fractions: known starts can be counted, but the omitted facts make the
-all-start denominator unknown. The normal timer control follows published manifests; a failed unpublished
-command is not authority. Its data-file selector requires the full timestamp
-prefix, so numeric UUID manifest names cannot accidentally become the fixture. No retry-delay or byte-bound assertion is weakened.
-
-## Manifest authority and process recovery
-
-The sole authority is a version-2 checksummed run manifest. Its legacy filename
-ends in .admission.json; it is not a separate admission checkpoint. Immutable
-segments contain no mark. Missing/corrupt manifests mean absent runs, and
-unreferenced blobs are removed. Named missing/corrupt blobs mark their run
-incomplete before queries return. All unlinks share an ENOENT-success helper.
-
-Run the generated exhaustive model, real SIGKILL controls, pagination proof and
-capacity census with the same-source compiled cache:
-
-```sh
-pnpm --filter @todo/domain test recording-durability.test.ts recording-manifest.test.ts
-bun build --compile .agents/skills/verify-ui-profiler/scripts/manifest-model.ts --outfile .scratch/bin/manifest-model
-bun build --compile .agents/skills/verify-ui-profiler/scripts/manifest-crash.ts --outfile .scratch/bin/manifest-crash
-.scratch/bin/manifest-model "$PWD/docs/evidence/ui-speed/manifest-model-new"
-.scratch/bin/manifest-crash "$PWD/docs/evidence/ui-speed/manifest-crashes-new"
-bun .agents/skills/verify-ui-profiler/scripts/manifest-wire.ts "$PWD/docs/evidence/ui-speed/manifest-wire-new"
-bun .agents/skills/verify-ui-profiler/scripts/manifest-capacity.ts "$PWD/docs/evidence/ui-speed/manifest-capacity-new"
-```
-
-The model enumerates all missing, truncated and corrupt subsets of the run's
-files at every captured file boundary for ingest, refuse, import, export, rotate,
-evict, expire and restart. It uses the production inspection/projection functions
-and generates lifecycle.md from the executed rows. Every image is additionally
-reopened in a real scratch directory at its captured clock, with actual orphan
-cleanup, index/byte accounting, export and two import retries. Expect several
-minutes for the complete filesystem matrix. The unit cross product also
-reopens real scratch directories for all 64 states. The compiled crash helper
-kills its own child at every mutation boundary, including explicitly constructed
-empty, partial and flushed temporaries. It does not claim to interrupt a kernel
-write or prove power-loss durability. A second healthy run is checked throughout.
-The wire control retains all 95 events of a maximum-size admission across bounded
-pages, after restart, with the mark on each page. The capacity census rotates one
-run's references while asserting that a peer's authority stays byte-identical.
-
-durability.ts now drives sixteen real HTTP/CLI import controls with segment-first,
-manifest-last expectations. Pending data and temporaries are orphans until the
-manifest rename; a failed marked import leaves an absent run and a safe 500.
-durability-concurrency.ts drives the four held-write acknowledgement races through
-durability-server.ts. Its later-refusal barrier follows manifest publication.
-manifest-expiry.ts and manifest-identity.ts retain the earlier witnesses with
-private checkpoint inspection, early stored receipts and blob-reconstruction
-expectations replaced by the ruled manifest semantics. Raw seat sources and
-results remain unchanged in ignored evidence.
-
-For startup, run after other owned heavy verification jobs finish:
-
-```sh
-bun build --compile .agents/skills/verify-ui-profiler/scripts/manifest-startup-server.ts --outfile .scratch/bin/manifest-startup-server
-bun .agents/skills/verify-ui-profiler/scripts/manifest-startup.ts "$PWD/docs/evidence/ui-speed/manifest-startup-new"
-```
-
-Five counterbalanced pairs use light and full 4096-segment/5120-run stores and
-ten checked 15-Task reads per process. Loads, CPU and RSS are retained. A separate
-entry holds recovery's first manifest read and proves Task HTTP readiness before
-release. Recovery remains on the recording-query path, never Task readiness.
-The manifest-ready.ts control also starts an owner upload while recovery is
-held, serves a literal Task read, releases recovery and requires a stored receipt.
-This warm-file-cache observation is not a cold-disk, allocation or limiting-stage
-profile. Keep the existing quiet collection-cost recipe and its ceiling unchanged.
+Contract generation --check, domain/server tests, the 47 compiled recorder fault
+controls, verify-diagnostics with its explicit no-Swift option, verify-server-api,
+verify-auth and the exact locked root check remain required. Terminal PNGs are
+owed to a unit holding the Swift slot. Remove only closed owned compile
+temporaries after lsof checks. Never touch real ~/.todo-cli or another unit's
+processes, binaries or data. Keep every red receipt and report changed fixture
+inputs separately from unchanged HTTP/CLI assertions.

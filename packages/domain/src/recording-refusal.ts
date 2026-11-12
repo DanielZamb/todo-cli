@@ -1,6 +1,8 @@
 import { Schema } from "effect";
 
 export const recordingRefusals = {
+  admission_action_conflict:
+    "Recording action phases conflict. Whole batch refused; no events were admitted. The run is incomplete. Retry non-conflicting events unchanged with a new batch id and a new action id for each interaction.",
   admission_sequence_conflict:
     "Recording sequence conflicts. Whole batch refused; no events were admitted. The run is incomplete. Retry non-conflicting events unchanged with a new batch id.",
   admission_batch_conflict:

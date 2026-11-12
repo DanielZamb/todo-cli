@@ -128,6 +128,7 @@ export const recordingRoutes = (
           }),
         ),
         Effect.tap(() => owner),
+        Effect.tapError(() => owner),
       );
     return handlers
       .handleRaw("ingest", ({ request, query }) =>
@@ -164,37 +165,16 @@ export const recordingRoutes = (
           });
           yield* owner;
           const receipt = yield* Effect.tryPromise({
-            try: async () => {
-              try {
-                return recordings.ingest(batch, query.dry_run === "true");
-              } catch (error) {
-                await recordings.flush();
-                if (!recordings.admissionDurable(batch.run.run_id))
-                  throw admissionFailure();
-                throw error;
-              }
-            },
+            try: () => recordings.ingest(batch, query.dry_run === "true"),
             catch: (error) =>
-              error instanceof InternalError
-                ? error
-                : new BadRequest({
-                    message:
-                      error instanceof RecordingRefusal
-                        ? error.message
-                        : "Invalid recording metadata",
-                  }),
+              error instanceof RecordingRefusal &&
+              error.reason !== "metadata_unavailable"
+                ? new BadRequest({ message: error.message })
+                : admissionFailure(),
           }).pipe(Effect.tapError(() => owner));
-          if (query.dry_run === "true" || receipt.durability === "stored")
-            return receipt;
-          yield* Effect.promise(() => recordings.flush());
           yield* owner;
-          if (!recordings.admissionDurable(batch.run.run_id, receipt.admission))
-            return yield* Effect.fail(admissionFailure());
-          return recordings.settledReceipt(
-            receipt,
-            batch.batch_id,
-            batch.run.run_id,
-          );
+          if (!receipt.accepted) return yield* Effect.fail(admissionFailure());
+          return receipt;
         }),
       )
       .handleAll({

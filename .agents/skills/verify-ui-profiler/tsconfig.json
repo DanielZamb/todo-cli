@@ -2,8 +2,11 @@
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
     "types": ["bun", "node"],
-    "typeRoots": ["../../../packages/domain/node_modules/@types", "../../../node_modules/@types"],
+    "typeRoots": [
+      "../../../packages/domain/node_modules/@types",
+      "../../../node_modules/@types"
+    ],
     "skipLibCheck": true
   },
-  "include": ["scripts/*.ts"]
+  "include": ["scripts/sqlite*.ts", "scripts/admission-fault.ts"]
 }
