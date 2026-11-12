@@ -184,6 +184,8 @@ final class TodoModel {
     }
     private var streamTask: Task<Void, Never>?
     private var restored = false
+    /// A failed sign-out's notice, kept through the first ready event of the reconnect it starts.
+    private var signOutNotice: (run: Int, text: String)?
     private var generation = 0
     private var refreshGeneration = 0
     private var vault: SessionVault { SessionVault(service: configuration.vaultService, account: configuration.server.absoluteString) }
@@ -398,11 +400,16 @@ final class TodoModel {
             message = nil
         } catch {
             guard discovery.credentialEpoch == credentialEpoch else { return }
+            var notice: String?
             if !Task.isCancelled {
-                message = describe(error)
+                notice = describe(error)
+                message = notice
                 handleAuthorization(error, credentialEpoch: credentialEpoch)
             }
-            if signedIn { connect() }
+            if signedIn {
+                connect()
+                if let notice { signOutNotice = (generation, notice) }
+            }
         }
     }
 
@@ -746,6 +753,10 @@ final class TodoModel {
                                 guard generation == run, !Task.isCancelled else { return }
                                 message = nil
                             }
+                            if let notice = signOutNotice {
+                                signOutNotice = nil
+                                if notice.run == run { message = notice.text }
+                            }
                             if discovery.phase == .offline { await requestDiscovery(retry: true) }
                             sawReady = true
                             openingAction = nil
@@ -843,6 +854,7 @@ final class TodoModel {
                 }
                 connection = .offline
                 loading = false
+                signOutNotice = nil
                 message = describe(error)
                 attempt += 1
                 reconnectCount += 1
