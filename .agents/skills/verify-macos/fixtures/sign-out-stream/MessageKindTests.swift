@@ -368,10 +368,15 @@ private actor ScriptGate: ClientTransport {
     func aPickerFollowUpFailureShowsInThePicker() async throws {
         // Ruling 3: the failure shows where the person is looking, inside the picker, not in the
         // main window's banner under the sheet; closing the picker ends it with the picker.
+        // Candidate 8 ruling 1: the notice that offered "Create follow-up" stays, with its button,
+        // and the failure shows with it, saying what failed and that the person can try again.
         let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
         model.dependencies.picker = .init(profile: "work", root: task, direction: .dependsOn)
+        model.dependencies.picker?.failure = DependencyNotice(message: "ORIGINAL This Task blocks done Tasks.", followUp: task.id)
         _ = await newerFollowUpError(model, gate)
-        #expect(model.dependencies.picker?.failure?.message.contains("NEWER follow-up failed") == true, "in the picker: \(model.dependencies.picker?.failure?.message ?? "nil")")
+        let notice = String(describing: model.dependencies.picker?.failure)
+        #expect(model.dependencies.picker?.failure?.message == "ORIGINAL This Task blocks done Tasks." && model.dependencies.picker?.failure?.followUp == task.id, "the original notice and its follow-up stay: \(notice)")
+        #expect(notice.contains("Couldn't prepare the follow-up Task") && notice.contains("NEWER follow-up failed") && notice.contains("Try again"), "the failure is shown with it: \(notice)")
         #expect(model.message == nil, "not under the sheet: \(model.message ?? "")")
         model.closeDependencyPicker()
         #expect(model.message == nil)
@@ -384,6 +389,7 @@ private actor ScriptGate: ClientTransport {
         model.showingImport = true
         _ = await newerFollowUpError(model, gate)
         #expect(model.importFollowUpError?.contains("NEWER follow-up failed") == true, "in the Import report: \(model.importFollowUpError ?? "nil")")
+        #expect(model.importFollowUpError?.hasPrefix("Couldn't prepare the follow-up Task") == true && model.importFollowUpError?.contains("Try again") == true, "says what failed and that it can be tried again: \(model.importFollowUpError ?? "nil")")
         #expect(model.message == nil, "not under the sheet: \(model.message ?? "")")
         model.showingImport = false
         #expect(model.message == nil)
@@ -809,7 +815,10 @@ private actor ScriptGate: ClientTransport {
         if mode == 1 {
             // Ruling 2: the picker could be closed while its link was pending; its failure is handed to the main window, named.
             #expect(model.dependencies.picker == nil, "mode 1")
-            #expect(model.message?.hasPrefix("Couldn't add the Dependency on “\(candidate.title)”.") == true && String(describing: model.messageKind) == "Optional(TodoState.TodoModel.MessageKind.dependencyLink)", "the failure names what failed: \(model.message ?? "nil")")
+            // Candidate 8 ruling 2: both Tasks, dependent first; no pointer to the closed picker.
+            let rootTitle = model.tasks.first { $0.id == root.id }?.title ?? root.title
+            #expect(model.message?.hasPrefix("Couldn't make “\(rootTitle)” depend on “\(candidate.title)”.") == true && String(describing: model.messageKind) == "Optional(TodoState.TodoModel.MessageKind.dependencyLink)", "the failure names what failed: \(model.message ?? "nil")")
+            #expect(model.message?.contains("Choose another Task") == false)
         } else {
             #expect(model.dependencies.picker == nil && model.message == nil, "mode \(mode)")
         }
@@ -1368,6 +1377,24 @@ private actor ScriptGate: ClientTransport {
         await gate.release("tasks.depend"); await olderRun.value
         #expect(model.message != nil && model.message?.contains(older.title) == true, "the later failure names its own Task: \(model.message ?? "nil")")
         #expect(model.messageSequence == sequence + 1, "it replaced the hand-off by publishing, not by clearing")
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func aBlocksDirectionHandOffNamesTheDependentFirst() async throws {
+        // Candidate 8 ruling 2, Blocks direction: the candidate is the dependent.
+        let gate = ScriptGate(); let (model, vault, root) = try await live(gate)
+        let candidate = try await secondTask(model, gate, vault)
+        await model.openDependencyPicker(model.tasks.first { $0.id == root.id }!)
+        try await wait("picker loaded") { model.dependencies.picker?.loading == false && model.dependencies.picker?.candidates.contains { $0.id == candidate.id } == true }
+        model.dependencies.picker?.direction = .blocks
+        await gate.next("tasks.depend", .holdThenFail(503, "OLD closed-picker link failed"))
+        let toggle = Task { await model.toggleDependency(model.dependencies.picker!.candidates.first { $0.id == candidate.id }!) }
+        try await wait("depend held") { await gate.isHeld("tasks.depend") }
+        model.closeDependencyPicker()
+        await gate.release("tasks.depend"); await toggle.value
+        let rootTitle = model.tasks.first { $0.id == root.id }?.title ?? root.title
+        #expect(model.message?.hasPrefix("Couldn't make “\(candidate.title)” depend on “\(rootTitle)”.") == true, "Blocks: \(model.message ?? "nil")")
         await finish(model, gate, vault)
     }
 }

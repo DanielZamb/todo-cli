@@ -14,6 +14,9 @@ struct DependencyNotice {
     var recovery: String? = nil
     var followUp: String? = nil
     var failure: ServerFailure? = nil
+    /// A failed "Create follow-up" offered by this notice, shown with it (the notice and its
+    /// button stay, so the person can try again).
+    var followUpFailure: String? = nil
     static func countAdvice(_ count: Int) -> String {
         "This Task depends on \(count) Tasks. That's a lot for one Task. It might be a whole Project, or it might be clearer split under a few more parent Tasks."
     }

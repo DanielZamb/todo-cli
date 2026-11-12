@@ -263,6 +263,13 @@ final class TodoModel {
         mainMessages.clear(kinds, since: mark)
         if mainMessages.value == nil { messageSurface = nil }
     }
+    /// Whether the banner should announce message `sequence` now: once per message, not per appearance.
+    func takeAnnouncement(_ sequence: Int) -> Bool {
+        guard sequence > lastAnnouncedMessage else { return false }
+        lastAnnouncedMessage = sequence
+        return true
+    }
+    @ObservationIgnored private var lastAnnouncedMessage = 0
     /// The person dismissed the message numbered `sequence` (the one the banner showed). Like the
     /// other ends, it ends that message and nothing newer.
     func dismissMessage(_ sequence: Int) { if message != nil, messageSequence == sequence { message = nil } }

@@ -58,6 +58,10 @@ struct DependencyNoticeContent: View {
             }
             if let id = notice.followUp {
                 Button("Create follow-up") { Task { await model.createDependencyFollowUp(id) } }.accessibilityIdentifier("dependency-follow-up")
+                if let failed = notice.followUpFailure {
+                    Text(failed).font(.caption).foregroundStyle(TodoColors.color("destructive"))
+                        .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("dependency-follow-up-error")
+                }
             } else if let failure = notice.failure, failure.isTaskLookup {
                 Button("Find Task by id") { Task { await model.findTaskAfterLookupError(failure) } }
             }
@@ -264,12 +268,17 @@ extension TodoModel {
             guard isCurrentCredential(epoch), profile == selectedProfile else { return }
             guard surface.map(isShowing) ?? true else { return }
             // Shown where the person is looking: inside the sheet that offered the follow-up.
+            // Say what failed and that it can be tried again; the picker keeps the notice that
+            // offered the follow-up, with its button, and shows the failure with it (ruling 1).
+            let failed = "Couldn't prepare the follow-up Task: " + describe(error) + " Try again."
             switch owner {
             case .picker(let picker, let ticket):
-                let failureNotice = DependencyNotice(message: describe(error))
-                if dependencies.picker?.id == picker { dependencies.picker?.messages.fail(failureNotice, ticket) }
+                guard dependencies.picker?.id == picker else { break }
+                var notice = DependencyNotice(message: failed)
+                if var offered = dependencies.picker?.operationFailure, offered.followUp != nil { offered.followUpFailure = failed; notice = offered }
+                dependencies.picker?.messages.fail(notice, ticket)
             case .report(let ticket):
-                let failureText = describe(error, at: .importTasks)
+                let failureText = "Couldn't prepare the follow-up Task: " + describe(error, at: .importTasks) + " Try again."
                 importMessages.fail(failureText, ticket)
             case .main(let ticket): if isNewestMessage(ticket) { publishMessage(describe(error), kind: .dependencyFollowUp, surface: surface) }
             }

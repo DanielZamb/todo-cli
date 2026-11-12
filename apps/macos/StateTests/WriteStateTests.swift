@@ -1207,3 +1207,15 @@ func deleteNeverAcceptsPreviewOrForeignRepliesAsConfirmedSuccess(reply: String) 
     model.dismissMessage(model.messageSequence)
     #expect(model.message == nil && model.messageKind == nil, "dismissing the showing message ends it")
 }
+
+@Test @MainActor func aMessageIsAnnouncedOncePerSequenceNotPerAppearance() {
+    // Candidate 8 ruling 4: the banner reappearing (Compact editor back to the list, a window reopen)
+    // must not announce the same message again.
+    let model = TodoModel(configuration: .init(server: URL(string: "http://127.0.0.1:1")!, initialProfile: "work", vaultService: "unused-announce"), catalogNotifications: NotificationCenter(), wakeNotifications: NotificationCenter())
+    model.publishMessage("The Task changed. Close and reopen it before trying that action again.", kind: .transition)
+    let first = model.messageSequence
+    #expect(model.takeAnnouncement(first), "a new message is announced")
+    #expect(!model.takeAnnouncement(first), "the same message reappearing is not announced again")
+    model.publishMessage("Couldn't sign out. The server rejected this request (HTTP 503).", kind: .signOut)
+    #expect(model.takeAnnouncement(model.messageSequence), "a newer message is announced")
+}

@@ -167,7 +167,7 @@ extension TodoModel {
     /// this reload is still the newest of its picker.
     func reloadDependencyPicker() async {
         guard let ticket = await readDependencyPicker() else { return }
-        if dependencies.picker?.messages.isNewest(ticket) == true { dependencies.picker?.messages.clear([.reload, .link], since: ticket.mark) }
+        if dependencies.picker?.messages.isNewest(ticket) == true { dependencies.picker?.messages.clear([.reload, .link, .followUp], since: ticket.mark) }
     }
     /// Refreshes the picker's data for a link's read-back or a background refresh; clears nothing.
     func refreshDependencyPicker() async { _ = await readDependencyPicker() }
@@ -249,7 +249,7 @@ extension TodoModel {
         dependencies.pendingDependents.insert(dependent.id)
         dependencies.picker?.pending.insert(candidate.id)
         // The newest link action presents: it ends an earlier link or reload notice now.
-        dependencies.picker?.messages.clear([.link, .reload])
+        dependencies.picker?.messages.clear([.link, .reload, .followUp])
         guard let linkTicket = dependencies.picker?.messages.begin(.link) else { return }
         dependencies.picker?.warnings = []
         defer {
@@ -295,8 +295,10 @@ extension TodoModel {
             guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == picker.id else {
                 // The picker can be closed while a link is pending (Close and Escape are not gated):
                 // the newest link of that picker hands one named message to the main window, so the
-                // failure is not silent. A superseded link hands off nothing (S1-16).
-                handOff("Couldn't \(remove ? "remove" : "add") the Dependency on “\(candidate.title)”. " + notice.message, kind: .dependencyLink, from: linkTicket)
+                // failure is not silent. A superseded link hands off nothing (S1-16). Both Tasks, the
+                // dependent first, whatever the picker's direction (candidate 8 ruling 2).
+                let attempt = remove ? "stop “\(dependent.title)” depending on “\(blocker.title)”" : "make “\(dependent.title)” depend on “\(blocker.title)”"
+                handOff("Couldn't \(attempt). " + notice.message, kind: .dependencyLink, from: linkTicket)
                 return
             }
             if dependencies.picker?.messages.fail(notice, linkTicket) == true {
