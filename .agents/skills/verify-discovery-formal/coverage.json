@@ -5,7 +5,7 @@
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "896f44a522c2059deab7fce95a3c9bcf17e6853f",
+  "productionSyncCommit": "e484efc6ee83d7bc475831761d184a11190ece35",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -157,7 +157,7 @@
         "signOut start, failure and commit",
         "followChanges reconnect retry from Offline and sign-out notice"
       ],
-      "sha256": "c831e40778591eb9e762f705ccd661f2951aed16d148501a29b99dbed7b6a39f",
+      "sha256": "cc673221ba67c52266a00cfa8117d6d20e87f5a18d4dae0a0e871199ac12d248",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -167,7 +167,7 @@
         "TaskListView sheet/alert binding",
         "DraftNavigationActions target capture and explicit Cancel"
       ],
-      "sha256": "f165beb65fe6eb60ab7eb036d5c58319af68ced2cd7026d8fbb05abb59f913d6",
+      "sha256": "34cae6befddf20d965075d685322beb3a2778f10fbb575221955dddd89df8f54",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -193,7 +193,7 @@
       "functions": [
         "changeAttachment captured epoch and publication"
       ],
-      "sha256": "1f89b513ce7ce0d7858a6b4f849201a11ab6340825e53c963d5af2e2c0cedfed",
+      "sha256": "9df4f107b7a55c575ef686d4f7cfea2b997c3b62358dc745dc6b203c0719709f",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -202,7 +202,7 @@
         "reloadBatchEditTargets",
         "applyBatchEdit"
       ],
-      "sha256": "cfb66b139f0b8b163ecfe498f6e095d4063590ed5599df0be1ffbfc7afdf99c0",
+      "sha256": "c1dec82009160bc1da39bf6869beb4fcc3010d34213bc7f0088468f0972e0ddb",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -211,7 +211,7 @@
         "reloadAttachmentTargets",
         "applyAttachmentBatch"
       ],
-      "sha256": "842b82cf442cb3e67b2bba1d50486ba4fb5bea8bd53e25495329eeebdc83c105",
+      "sha256": "7cd4d4bf9594e4c18dc652f95540ff7d59389156da6e91c4b44de7a78c92bb45",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     }
   ],
@@ -225,7 +225,7 @@
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "16c59f74737043201861cebcfbf5f4dbdada154d",
+  "previousProductionSyncCommit": "896f44a522c2059deab7fce95a3c9bcf17e6853f",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -530,5 +530,37 @@
       }
     ],
     "review": "MAC-C1-S1-17: refreshAfterWrite takes a ReadBackOwner (main window or surface instance, each with a ticket) asked when it publishes; presents:/presenting: removed; create, Save and Delete choose the owner by branch before the read-back and ask the ticket after it; openSeries split into openSeries/loadSeries; reloadDependencyPicker split into reload/refresh; the editor write's transfer report and announcement check ticket and opening live; transition editor text only into an editor showing that Task. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed; requestDiscovery, showDiscoveryMatch and discovery.error are untouched (discovery stays outside the helper, see docs/decisions/mac-session-retirement.md)."
+  },
+  "candidate8Review": {
+    "product": "e484efc6ee83d7bc475831761d184a11190ece35",
+    "controls": "check-swift passed on e484efc6: docs/evidence/discovery-formal/swift-AWZXtt",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "c831e40778591eb9e762f705ccd661f2951aed16d148501a29b99dbed7b6a39f",
+        "to": "cc673221ba67c52266a00cfa8117d6d20e87f5a18d4dae0a0e871199ac12d248"
+      },
+      {
+        "path": "apps/macos/Sources/AppViews.swift",
+        "from": "f165beb65fe6eb60ab7eb036d5c58319af68ced2cd7026d8fbb05abb59f913d6",
+        "to": "34cae6befddf20d965075d685322beb3a2778f10fbb575221955dddd89df8f54"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentModel.swift",
+        "from": "1f89b513ce7ce0d7858a6b4f849201a11ab6340825e53c963d5af2e2c0cedfed",
+        "to": "9df4f107b7a55c575ef686d4f7cfea2b997c3b62358dc745dc6b203c0719709f"
+      },
+      {
+        "path": "apps/macos/Sources/BatchEdit.swift",
+        "from": "cfb66b139f0b8b163ecfe498f6e095d4063590ed5599df0be1ffbfc7afdf99c0",
+        "to": "c1dec82009160bc1da39bf6869beb4fcc3010d34213bc7f0088468f0972e0ddb"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentBatch.swift",
+        "from": "842b82cf442cb3e67b2bba1d50486ba4fb5bea8bd53e25495329eeebdc83c105",
+        "to": "7cd4d4bf9594e4c18dc652f95540ff7d59389156da6e91c4b44de7a78c92bb45"
+      }
+    ],
+    "review": "Candidate 8: write paths keep a committed write's read-back when a later step fails (S1-19) and handle a current 401 first in every failure path (S1-20), reading discovery.credentialEpoch as before and comparing it with isCurrentCredential; supersession is per target and same-kind link failures merge (D1, D2); the Find field is hidden, not cleared, while the Compact editor is shown (ruling 5); confirmations expire by sequence; rows count timeline ticks for stall observation. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed; requestDiscovery, showDiscoveryMatch and discovery.error are untouched (discovery stays outside the helper, see docs/decisions/mac-session-retirement.md)."
   }
 }

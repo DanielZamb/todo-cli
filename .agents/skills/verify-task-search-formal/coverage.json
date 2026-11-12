@@ -77,7 +77,7 @@
         "catalogSignalRevision and full-read debt",
         "lastCatalogReadAt and activation age"
       ],
-      "sha256": "c831e40778591eb9e762f705ccd661f2951aed16d148501a29b99dbed7b6a39f"
+      "sha256": "cc673221ba67c52266a00cfa8117d6d20e87f5a18d4dae0a0e871199ac12d248"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -99,7 +99,7 @@
         "taskContent",
         "searchField"
       ],
-      "sha256": "f165beb65fe6eb60ab7eb036d5c58319af68ced2cd7026d8fbb05abb59f913d6"
+      "sha256": "34cae6befddf20d965075d685322beb3a2778f10fbb575221955dddd89df8f54"
     },
     {
       "path": "apps/macos/Sources/TaskSnapshot.swift",
@@ -383,5 +383,22 @@
       }
     ],
     "review": "MAC-C1-S1-17: refreshAfterWrite takes a ReadBackOwner (main window or surface instance, each with a ticket) asked when it publishes; presents:/presenting: removed; create, Save and Delete choose the owner by branch before the read-back and ask the ticket after it; openSeries split into openSeries/loadSeries; reloadDependencyPicker split into reload/refresh; the editor write's transfer report and announcement check ticket and opening live; transition editor text only into an editor showing that Task. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged; searchError, taskLoadError and the picker and graph searchFailure stay outside the helper."
+  },
+  "candidate8Review": {
+    "product": "e484efc6ee83d7bc475831761d184a11190ece35",
+    "controls": "check-swift passed on e484efc6: docs/evidence/discovery-formal/swift-AWZXtt",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "c831e40778591eb9e762f705ccd661f2951aed16d148501a29b99dbed7b6a39f",
+        "to": "cc673221ba67c52266a00cfa8117d6d20e87f5a18d4dae0a0e871199ac12d248"
+      },
+      {
+        "path": "apps/macos/Sources/AppViews.swift",
+        "from": "f165beb65fe6eb60ab7eb036d5c58319af68ced2cd7026d8fbb05abb59f913d6",
+        "to": "34cae6befddf20d965075d685322beb3a2778f10fbb575221955dddd89df8f54"
+      }
+    ],
+    "review": "Candidate 8: write paths keep a committed write's read-back when a later step fails (S1-19) and handle a current 401 first in every failure path (S1-20), reading discovery.credentialEpoch as before and comparing it with isCurrentCredential; supersession is per target and same-kind link failures merge (D1, D2); the Find field is hidden, not cleared, while the Compact editor is shown (ruling 5); confirmations expire by sequence; rows count timeline ticks for stall observation. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged; searchError, taskLoadError and the picker and graph searchFailure stay outside the helper."
   }
 }
