@@ -99,11 +99,16 @@ finally {
     fs.writeFileSync(evidence + '/commands.json', JSON.stringify(commands, null, 2));
     const sentinel = scratch + '/held-sentinel';
     const heldFD = fs.openSync(sentinel, 'wx', 0o600);
-    let held;
-    try { held = run(['/usr/sbin/lsof', '-Fpcn', '+D', scratch], { env: tools, encoding: 'utf8' }); }
+    let held, directoryWhileHeld;
+    try {
+        held = run(['/usr/sbin/lsof', '-Fpcn', sentinel], { env: tools, encoding: 'utf8' });
+        directoryWhileHeld = run(['/usr/sbin/lsof', '-Fpcn', '+D', scratch], { env: tools, encoding: 'utf8' });
+    }
     finally { fs.closeSync(heldFD); }
     result.cleanupOpenControl = { exit: held.status, stdout: held.stdout, stderr: held.stderr, expectedPID: process.pid };
-    const observedOwnOpenFD = held.status === 0 && !held.stderr.trim() && held.stdout.includes('p' + process.pid + '\n') && held.stdout.includes('n' + sentinel + '\n');
+    result.cleanupDirectoryWhileOpen = { exit: directoryWhileHeld.status, stdout: directoryWhileHeld.stdout, stderr: directoryWhileHeld.stderr };
+    const includesOwnFD = value => !value.stderr.trim() && value.stdout.includes('p' + process.pid + '\n') && value.stdout.includes('n' + sentinel + '\n');
+    const observedOwnOpenFD = held.status === 0 && includesOwnFD(held) && [0, 1].includes(directoryWhileHeld.status) && includesOwnFD(directoryWhileHeld);
     const closed = run(['/usr/sbin/lsof', '-Fpcn', '+D', scratch], { env: tools, encoding: 'utf8' });
     result.cleanupProbe = { exit: closed.status, stdout: closed.stdout, stderr: closed.stderr };
     if (observedOwnOpenFD && closed.status === 1 && !closed.stdout.trim() && !closed.stderr.trim()) { fs.rmSync(scratch, { recursive: true }); result.scratchRemoved = true; }

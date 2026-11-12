@@ -236,8 +236,11 @@ were rate-limited; another demonstrated the C executable startup abort. Both
 failed receipts remain local and are excluded from qualification.
 
 The committed diagnostic adds an actual held-file positive control to the
-cleanup probe. Supported lsof -Fpcn +D must first report the intentionally held
-owned descriptor at exit 0, then return 1 with no output or error after close.
+cleanup probe. Supported lsof -Fpcn with the exact held file must report the owned descriptor
+at exit 0. The +D selector must independently include that descriptor while
+held; this Mac returns 1 with fields for a partial directory match. After close,
++D must return 1 with no output or error. A nonempty directory result never
+means closed, regardless of exit code.
 Any other result retains scratch and fails. The initial manual diagnostic root
 was retired with these supported arguments and empty output/error; its receipt
 is denial-bdc45efa-final/manual-scratch-retirement.json. Deleted historical
@@ -249,3 +252,13 @@ app sandbox preserves confinement. The proposed bootstrap must prove strict
 server confinement after runtime startup and reject retained outside descriptors
 before production server code or HTTP starts. If that cannot be proved, this
 unit remains blocked rather than relaxing file/network reach.
+
+The first committed diagnostic at 9bcad0bb correctly retained scratch because
+its newly added positive cleanup control assumed +D would return 0 when any
+file was open. This Mac returns 1 with the matching descriptor fields when
+other directory entries have no match. That failed receipt is retained at
+denial-committed/result.json, with lsof-selector-controls.json demonstrating
+the exact-file selector at 0 and directory selector at 1 with identical owned
+FD evidence. The revised control requires both selectors to identify the held
+FD and then requires the directory result to be empty after close. It never
+treats nonempty output or unsupported-option stderr as a closed directory.
