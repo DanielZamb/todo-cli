@@ -121,6 +121,26 @@ The rule, as ruled on 2026-11-11:
    (`replaceCredential` with a different value) or the Profile (any change of
    `profile`) changes.
 5. Nothing saves or restores a message. An older message never comes back.
+6. Every kind has a success that clears it in ordinary use (table below).
+7. A message raised by a sheet or dialog belongs to it. It ends when that
+   surface closes, unless the surface hands it to the main window on purpose.
+
+Rule 4 holds on every path that changes scope. Each of these ends any message:
+`replaceCredential` with a different credential, which covers sign-in,
+sign-in as another Profile, restore, sign-out and Session expiry; any change of
+`profile`, which covers a Profile switch, Discovery Show into another Profile,
+transfer, and leaving a Profile deleted elsewhere; and a Snapshot reload event,
+which ends the message before it resets the scope.
+
+| Surface | Messages it raises | Ends when |
+| --- | --- | --- |
+| Dependency picker | `dependencyFollowUp` from Create follow-up | The picker closes (`closeDependencyPicker`, including after a successful follow-up) |
+| Import sheet | `dependencyFollowUp` from its report's Create follow-up | `showingImport` becomes false (Done, Cancel, reset) |
+| Delete confirmation sheet | `delete` conflict for a Task not open in the editor | `closeDependencyDelete`, or the successful delete that closes it |
+| Discovery Look up | `discoveryShow` | Handed to the main window on purpose. The dialog closes before the request, and the error describes the Show the person sees there. |
+
+`createDependencyFollowUp` records the open surface: the picker if one is open,
+otherwise the Import sheet if it is shown, otherwise the main window.
 
 | Kind | Published by | Success that clears it | Reachable in ordinary use |
 | --- | --- | --- | --- |

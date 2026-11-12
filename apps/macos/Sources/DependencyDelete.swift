@@ -7,7 +7,7 @@ extension TodoModel {
         dependencies.deletion = .init(profile: profile, task: task)
         await reloadDependencyDelete()
     }
-    func closeDependencyDelete() { dependencies.deletion = nil }
+    func closeDependencyDelete() { dependencies.deletion = nil; endMessage(raisedBy: .deleteDialog) }
     func reloadDependencyDelete(changed: Bool = false) async {
         guard let deletion = dependencies.deletion else { return }
         let epoch = discovery.credentialEpoch

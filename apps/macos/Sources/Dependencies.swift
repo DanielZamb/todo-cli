@@ -142,6 +142,7 @@ extension TodoModel {
         dependencies.generation += 1
         dependencies.searchRequest += 1
         dependencies.picker = nil
+        endMessage(raisedBy: .dependencyPicker)
     }
     func setDependencyDirection(_ direction: DependencyDirection) async {
         guard dependencies.picker?.purpose == .edit || direction == .dependsOn else { return }

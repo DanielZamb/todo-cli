@@ -231,6 +231,8 @@ struct DependencyDeleteView: View {
 extension TodoModel {
     func createDependencyFollowUp(_ id: String) async {
         guard signedIn else { return }
+        // The follow-up is offered by the Dependency picker and by the Import report; its error belongs to whichever is open.
+        let surface: MessageSurface? = dependencies.picker != nil ? .dependencyPicker : showingImport ? .importSheet : nil
         let epoch = discovery.credentialEpoch
         let selectedProfile = profile
         let mark = messageMark
@@ -243,7 +245,7 @@ extension TodoModel {
             quickAdd = true
         } catch {
             guard isCurrentCredential(epoch), profile == selectedProfile else { return }
-            publishMessage(describe(error), kind: .dependencyFollowUp)
+            publishMessage(describe(error), kind: .dependencyFollowUp, surface: surface)
             handleAuthorization(error, credentialEpoch: epoch)
         }
     }

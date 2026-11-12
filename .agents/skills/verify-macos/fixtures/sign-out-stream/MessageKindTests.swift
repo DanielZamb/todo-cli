@@ -25,6 +25,7 @@ private actor ScriptGate: ClientTransport {
     func isHeld(_ operation: String) -> Bool { held[operation] != nil }
     func release(_ operation: String) { held.removeValue(forKey: operation)?.resume() }
     func ready() { streams.last?.yield(Array("event: ready\ndata: {}\n\n".utf8)[...]) }
+    func reload(seq: Int) { streams.last?.yield(Array("event: reload\ndata: {\"generation\":\"scratch-reload-\(seq)\",\"seq\":\(seq)}\n\n".utf8)[...]) }
     func endStream() { streams.last?.finish() }
     func failNextStream() { failingStreams += 1 }
     var streamCount: Int { streams.count }
@@ -351,6 +352,103 @@ private actor ScriptGate: ClientTransport {
         await gate.release("tasks.show")
         #expect(await show.value)
         #expect(model.message == newer)
+        await finish(model, gate, vault)
+    }
+    // MARK: surfaces (rule 7) and scope changes (rule 4)
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func closingThePickerEndsItsFollowUpError() async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        model.dependencies.picker = .init(profile: "work", root: task, direction: .dependsOn)
+        _ = await newerFollowUpError(model, gate)
+        try #require(model.message?.contains("NEWER follow-up failed") == true)
+        model.closeDependencyPicker()
+        #expect(model.message == nil)
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func closingImportEndsItsFollowUpError() async throws {
+        let gate = ScriptGate(); let (model, vault, _) = try await live(gate)
+        model.showingImport = true
+        _ = await newerFollowUpError(model, gate)
+        try #require(model.message?.contains("NEWER follow-up failed") == true)
+        model.showingImport = false
+        #expect(model.message == nil)
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func closingTheDeleteDialogEndsItsConflict() async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        try await deleteConflict(model, gate, task, vault)
+        model.closeDependencyDelete()
+        #expect(model.message == nil)
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func showErrorIsHandedToTheMainWindow() async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        let match = try await lookup(model, task)
+        await gate.next("tasks.show", .fail(404, "OLD show failed"))
+        _ = await model.showDiscoveryMatch(match)
+        #expect(model.discovery.dialog == nil)
+        #expect(model.message?.contains("OLD show failed") == true)
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func profileChangeEndsAMainWindowMessage() async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        await gate.next("tasks.transition", .fail(503, "OLD complete failed"))
+        await model.transition(task, action: "complete")
+        try #require(model.message != nil)
+        model.changeProfile("personal")
+        #expect(model.message == nil)
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func credentialReplacementEndsAMainWindowMessage() async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        await gate.next("tasks.transition", .fail(503, "OLD complete failed"))
+        await model.transition(task, action: "complete")
+        try #require(model.message != nil)
+        model.replaceCredential(try await owner())
+        #expect(model.message == nil)
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func snapshotReloadEndsAMainWindowMessage() async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        await gate.next("tasks.transition", .fail(503, "OLD complete failed"))
+        await model.transition(task, action: "complete")
+        try #require(model.message != nil)
+        let reloads = model.restoreReloadCount
+        await gate.reload(seq: Int(model.lastSequence ?? "0") ?? 0)
+        try await wait("reload") { model.restoreReloadCount > reloads }
+        #expect(model.message == nil)
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func profileDeletedElsewhereEndsAMainWindowMessage() async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        let before = await gate.streamCount
+        model.changeProfile("doomed")
+        try await ready(model, gate, streams: before + 1)
+        try #require(model.profile == "doomed")
+        await gate.next("tasks.transition", .fail(503, "OLD complete failed"))
+        await model.transition(task, action: "complete")
+        try #require(model.message != nil)
+        let credential = try #require(try vault.load())
+        _ = try await todoClient(server: url, credential: credential).reads_period_deleteProfile(path: .init(profile: "doomed"), body: .json(.init(with_tasks: true, dry_run: false)))
+        await gate.next("changes.stream", .fail(404, "Profile not found"))
+        await gate.endStream()
+        try await wait("left deleted Profile") { model.profile != "doomed" }
+        #expect(model.message == nil)
         await finish(model, gate, vault)
     }
 }

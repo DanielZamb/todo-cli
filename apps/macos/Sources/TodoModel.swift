@@ -49,7 +49,7 @@ final class TodoModel {
     var writeIntent: TaskWriteIntent?
     var batchEdit: BatchEditDraft?
     var attachmentBatch: AttachmentBatchDraft?
-    var showingImport = false
+    var showingImport = false { didSet { if !showingImport { endMessage(raisedBy: .importSheet) } } }
     var importDocument: ImportDocument?
     var importReport: ImportSummary?
     var importError: String?
@@ -137,17 +137,22 @@ final class TodoModel {
         /// What a successful restore or sign-in makes untrue.
         static let session: Set<MessageKind> = [.restore, .signIn, .sessionEnded, .connection]
     }
+    /// A sheet or dialog that raised the message. The message ends when that surface closes.
+    /// Discovery Show is not one: its dialog closes before the request, so its error belongs to the main window.
+    enum MessageSurface: Hashable { case dependencyPicker, importSheet, deleteDialog }
     /// The newest message. Each one has a kind and a sequence number that only grows.
     var message: String? { didSet {
-        if message == nil { messageKind = nil } else { messageSequence += 1; messageKind = pendingMessageKind }
-        pendingMessageKind = .general
+        if message == nil { messageKind = nil; messageSurface = nil } else { messageSequence += 1; messageKind = pendingMessageKind; messageSurface = pendingMessageSurface }
+        pendingMessageKind = .general; pendingMessageSurface = nil
     } }
     @ObservationIgnored private(set) var messageKind: MessageKind?
     @ObservationIgnored private(set) var messageSequence = 0
     @ObservationIgnored private var pendingMessageKind = MessageKind.general
+    @ObservationIgnored private(set) var messageSurface: MessageSurface?
+    @ObservationIgnored private var pendingMessageSurface: MessageSurface?
     /// Noted by an action when it starts; its success may clear only messages up to this mark.
     var messageMark: Int { messageSequence }
-    func publishMessage(_ text: String, kind: MessageKind) { pendingMessageKind = kind; message = text }
+    func publishMessage(_ text: String, kind: MessageKind, surface: MessageSurface? = nil) { pendingMessageKind = kind; pendingMessageSurface = surface; message = text }
     /// A success started at `mark` clears the current message only if it is one of `kinds`
     /// and already existed when the action started. A newer message always survives.
     func clearMessage(_ kinds: Set<MessageKind>, since mark: Int) {
@@ -156,6 +161,8 @@ final class TodoModel {
     }
     /// A credential or Profile change ends any message.
     func endMessage() { if message != nil { message = nil } }
+    /// A closed sheet or dialog ends the message it raised.
+    func endMessage(raisedBy surface: MessageSurface) { if message != nil, messageSurface == surface { message = nil } }
     var taskLoadError: String?
     var quickAdd = false
     var newTitle = ""
@@ -792,6 +799,8 @@ final class TodoModel {
                             attempt = 0
                         } else if event.name == "reload" {
                             let reload = try JSONDecoder().decode(SnapshotReload.self, from: Data(event.data.utf8))
+                            // A Snapshot reload replaces the whole scope, so no message of the old one survives it.
+                            endMessage()
                             UserDefaults.standard.set(String(reload.seq), forKey: restoreCursorKey)
                             restoreGeneration = reload.generation
                             initializedReminders?.resetGeneration(reload.generation)
@@ -1169,7 +1178,7 @@ final class TodoModel {
                 await reloadDependencyDelete(changed: true)
                 guard isCurrentCredential(credentialEpoch), profile == deletionProfile, dependencies.deletion?.id == preview.id else { return }
                 if editor?.id == task.id { editorError = "The Task changed. Close and reopen it before deleting." }
-                else { publishMessage("The task changed before it could be deleted.", kind: .delete) }
+                else { publishMessage("The task changed before it could be deleted.", kind: .delete, surface: .deleteDialog) }
                 return
             }
             let wire = try response.ok.body.json
@@ -1187,6 +1196,7 @@ final class TodoModel {
                 deletionNotice = "Task deleted"
             }
             dependencies.deletion = nil
+            endMessage(raisedBy: .deleteDialog)
             await refreshAfterWrite("Task deleted", clearing: .delete, since: mark)
         } catch {
             guard isCurrentCredential(credentialEpoch) else { return }
