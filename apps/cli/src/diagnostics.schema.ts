@@ -2,6 +2,12 @@ import {
   DiagnosticEvent,
   DiagnosticObservation,
   DiagnosticsSnapshot,
+  RecordingBatch,
+  RecordingCompare,
+  RecordingExport,
+  RecordingImportResult,
+  RecordingRunList,
+  RecordingShow,
 } from "@todo/domain";
 import { registerCommandSchema } from "./schema.ts";
 
@@ -14,3 +20,10 @@ registerCommandSchema(
   DiagnosticObservation,
   "input",
 );
+
+registerCommandSchema("diagnostics runs", RecordingRunList);
+registerCommandSchema("diagnostics show", RecordingShow);
+registerCommandSchema("diagnostics export", RecordingExport);
+registerCommandSchema("diagnostics compare", RecordingCompare);
+registerCommandSchema("diagnostics import", RecordingImportResult);
+registerCommandSchema("diagnostics batch", RecordingBatch, "input");

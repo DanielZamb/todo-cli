@@ -192,3 +192,10 @@ After recorder or adapter changes run the compiled
 [failure-isolation controls](features/faults.md) as well. They prove that a
 recorder failure cannot change an HTTP response, stream delivery, scheduler
 job or CLI result. They do not invoke Swift.
+
+## Shared recording store and CLI
+
+After ingestion, run/export/import/compare or recording policy changes, run
+[verify-ui-profiler](../verify-ui-profiler/SKILL.md). It drives a real
+client-shaped producer into the compiled server and reads the run through the
+compiled CLI. Normal Diagnostics polling remains on its existing byte budget.

@@ -1,3 +1,4 @@
+import { dirname, join, resolve } from "node:path";
 import { BunHttpServer } from "@effect/platform-bun";
 import {
   Authorization,
@@ -33,13 +34,18 @@ import {
   exitStatus,
   Instant,
   observeDiagnostic,
+  PlanningView,
   ProfileId,
+  ProfileSummary,
+  ProjectSummary,
   parseQuickAdd,
   provideDiagnosticContext,
   readGraph,
   SnapshotError,
+  TagSummary,
   TaskId,
   type TaskMutationKind,
+  TaskRead,
   type TaskWrite,
   taskLookupError,
 } from "@todo/domain";
@@ -52,6 +58,7 @@ import {
   revertTask,
   skipOccurrence,
 } from "@todo/domain/commands";
+import { DiagnosticRecordings } from "@todo/domain/diagnostic-recordings";
 import { importTasks } from "@todo/domain/import";
 import {
   type OperationStore,
@@ -73,11 +80,23 @@ import {
   HttpApiSchema,
   OpenApi,
 } from "effect/http-api";
+import { recordingGuard, recordingRoutes } from "./diagnostic-recordings.ts";
 import { translate } from "./errors.ts";
 import { scheduler } from "./scheduler.ts";
 import { changesLayer } from "./sse.ts";
 import { taskSearchCacheHygiene } from "./task-search-cache-hygiene.ts";
 
+const encodedRead =
+  <S extends Schema.ConstraintCodec<unknown, unknown>>(schema: S) =>
+  <E, R>(effect: Effect.Effect<S["Type"], E, R>) =>
+    effect.pipe(
+      Effect.flatMap((value) =>
+        diagnosticSpan(
+          "encoding",
+          HttpServerResponse.schemaJson(schema)(value).pipe(Effect.orDie),
+        ),
+      ),
+    );
 const taskResult = (
   result: TaskCommandResult,
 ): Effect.Effect<
@@ -267,12 +286,12 @@ export const allowedHostsFrom = (value: string | undefined) =>
       .map((host) => host.trim().toLowerCase())
       .filter(Boolean),
   );
-export const diagnosticsMiddleware =
-  (
-    diagnostics: OperationStore["diagnostics"],
-    profiler = diagnostics.profiler,
-  ) =>
-  <E, R>(
+export const diagnosticsMiddleware = (
+  diagnostics: OperationStore["diagnostics"],
+  profiler = diagnostics.profiler,
+) => {
+  const visited = new Set<string>();
+  return <E, R>(
     httpEffect: Effect.Effect<HttpServerResponse.HttpServerResponse, E, R>,
   ) =>
     Effect.flatMap(HttpServerRequest.HttpServerRequest, (request) => {
@@ -293,7 +312,23 @@ export const diagnosticsMiddleware =
       const entry = root
         ? observeDiagnostic(
             profiler,
-            () => profiler.start(root, "entry"),
+            () => {
+              const method = [
+                "GET",
+                "POST",
+                "PATCH",
+                "DELETE",
+                "PUT",
+                "HEAD",
+                "OPTIONS",
+              ].includes(request.method)
+                ? request.method
+                : "OTHER";
+              const firstKey = `${method} ${knownRoutes.find((value) => value.pattern.test(path))?.path ?? "unmatched"}`;
+              const first_use = !visited.has(firstKey);
+              visited.add(firstKey);
+              return profiler.start(root, "entry", { first_use });
+            },
             "start",
           )
         : undefined;
@@ -388,6 +423,7 @@ export const diagnosticsMiddleware =
         ),
       );
     });
+};
 
 export const serverLayer = (options: {
   readonly path: string;
@@ -400,6 +436,14 @@ export const serverLayer = (options: {
       const store = yield* Effect.acquireRelease(
         openStore({ path: options.path }),
         (store) => Effect.orDie(store.close()),
+      );
+      const recordings = yield* Effect.acquireRelease(
+        Effect.promise(() =>
+          DiagnosticRecordings.open(
+            join(dirname(resolve(options.path)), "diagnostic-recordings"),
+          ),
+        ),
+        (value) => Effect.promise(() => value.flush()),
       );
       const cacheHygiene = yield* taskSearchCacheHygiene(store);
       yield* cacheHygiene.run.pipe(Effect.forkScoped);
@@ -766,7 +810,7 @@ export const serverLayer = (options: {
                         : translate(Effect.fail(error)),
                   ),
                 );
-            }),
+            }).pipe(encodedRead(Schema.Array(TaskRead))),
           show: ({ params }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -928,7 +972,7 @@ export const serverLayer = (options: {
                   ? discovery.directory(credential)
                   : reads.profiles(credential),
               );
-            }),
+            }).pipe(encodedRead(Schema.Array(ProfileSummary))),
           projects: ({ params }) =>
             Effect.gen(function* () {
               return yield* translate(
@@ -937,7 +981,7 @@ export const serverLayer = (options: {
                   profile: params.profile,
                 }),
               );
-            }),
+            }).pipe(encodedRead(Schema.Array(ProjectSummary))),
           tags: ({ params }) =>
             Effect.gen(function* () {
               return yield* translate(
@@ -946,7 +990,7 @@ export const serverLayer = (options: {
                   profile: params.profile,
                 }),
               );
-            }),
+            }).pipe(encodedRead(Schema.Array(TagSummary))),
           view: ({ params, query }) =>
             Effect.gen(function* () {
               return yield* translate(
@@ -959,7 +1003,7 @@ export const serverLayer = (options: {
                   query.now,
                 ),
               );
-            }),
+            }).pipe(encodedRead(PlanningView)),
           history: ({ params }) =>
             Effect.gen(function* () {
               return yield* translate(
@@ -1113,6 +1157,9 @@ export const serverLayer = (options: {
           CredentialsLive,
           SystemLive,
           DiagnosticsLive,
+          recordingRoutes(recordings, store).pipe(
+            Layer.provide(AuthorizationLive),
+          ),
           SnapshotsLive,
           changesLayer(store).pipe(Layer.provide(AuthorizationLive)),
         ]),
@@ -1135,7 +1182,7 @@ export const serverLayer = (options: {
             profiler,
           )(
             rejectForeignRequests(options.allowedHosts)(
-              rejectUnknownQuery(effect),
+              recordingGuard(store)(rejectUnknownQuery(effect)),
             ),
           ),
       }).pipe(

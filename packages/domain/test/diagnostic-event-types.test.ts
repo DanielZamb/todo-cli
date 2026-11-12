@@ -39,7 +39,22 @@ const stream_id = Schema.decodeUnknownSync(DiagnosticStreamId)(uuid);
 const frame_id = Schema.decodeUnknownSync(DiagnosticFrameId)(uuid);
 const commit_receipt = Schema.decodeUnknownSync(DiagnosticCommitReceipt)(uuid);
 const examples = [
-  { name: "ui.input.observed", action_id },
+  {
+    name: "ui.input.observed",
+    action_id,
+    profile_ordinal: 2,
+    input_timing: {
+      basis: "release",
+      hold_ms: 120,
+      derived_from_native_selection: true,
+    },
+    selection_context: {
+      list_rows: 15,
+      refresh_in_flight: true,
+      process_uptime_ms: 1000,
+      journal_bytes: 4096,
+    },
+  },
   { name: "ui.action.started", action_id },
   {
     name: "ui.result.committed",

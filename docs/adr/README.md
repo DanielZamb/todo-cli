@@ -143,7 +143,7 @@ images and redacts paths from History. External files are never deleted.
 | [0012](0012-owner-snapshots.md) | Owner Snapshots | accepted |
 | [0019](0019-authorized-read-only-discovery.md) | Authorized discovery is explicit and read-only | accepted; implementation in agent-discovery |
 
-| [0020](0020-diagnostics-follow-an-action-to-its-rendered-result.md) | Diagnostics follows an action to its rendered result | Proposed |
+| [0020](0020-diagnostics-follow-an-action-to-its-rendered-result.md) | Diagnostics follows an action to its rendered result | accepted for vocabulary, joins and recording policy; calibration/presentation remain proposed |
 
 The coordinator accepted the DAG records with corrections G1 through G10.
 

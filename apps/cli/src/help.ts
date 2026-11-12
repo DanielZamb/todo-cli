@@ -184,6 +184,116 @@ const guides = {
     ],
     auth: "Help and local configuration require no Session. Task commands require an authenticated Session.",
   }),
+  "diagnostics runs": reference({
+    purpose:
+      "runs private metadata recordings through the local server using an owner Session.",
+    synopsis:
+      "todo diagnostics runs --server <loopback-url> [--run <uuid>] [--file <path>] [--dry-run] [--before <uuid> --after <uuid>] [--cursor <value>] [--ndjson]",
+    flags: [
+      "--run <uuid> for show/export",
+      "--before <uuid> --after <uuid> for compare",
+      "--file <path> for import; --dry-run validates without storing",
+      "--cursor <value> resumes a page; --ndjson streams export pages",
+    ],
+    examples: [
+      "todo diagnostics runs --format json",
+      "todo diagnostics export --run <uuid> --ndjson",
+      "todo schema 'diagnostics runs'",
+    ],
+    auth: "Active owner Session and direct loopback only. Access Tokens are refused.",
+    output:
+      "One JSON object per command. --ndjson prints one compact object per line; export follows bounded pages. Import accepts a batch or exported JSON/NDJSON and validates all local input before applying.",
+    concurrency:
+      "Journal writes are queued separately from Task writes. Export can refuse an expired cursor. Comparison refuses incompatible scenario, environment, configuration, render stage or contract.",
+  }),
+  "diagnostics show": reference({
+    purpose:
+      "show private metadata recordings through the local server using an owner Session.",
+    synopsis:
+      "todo diagnostics show --server <loopback-url> [--run <uuid>] [--file <path>] [--dry-run] [--before <uuid> --after <uuid>] [--cursor <value>] [--ndjson]",
+    flags: [
+      "--run <uuid> for show/export",
+      "--before <uuid> --after <uuid> for compare",
+      "--file <path> for import; --dry-run validates without storing",
+      "--cursor <value> resumes a page; --ndjson streams export pages",
+    ],
+    examples: [
+      "todo diagnostics runs --format json",
+      "todo diagnostics export --run <uuid> --ndjson",
+      "todo schema 'diagnostics show'",
+    ],
+    auth: "Active owner Session and direct loopback only. Access Tokens are refused.",
+    output:
+      "One JSON object per command. --ndjson prints one compact object per line; export follows bounded pages. Import accepts a batch or exported JSON/NDJSON and validates all local input before applying.",
+    concurrency:
+      "Journal writes are queued separately from Task writes. Export can refuse an expired cursor. Comparison refuses incompatible scenario, environment, configuration, render stage or contract.",
+  }),
+  "diagnostics export": reference({
+    purpose:
+      "export private metadata recordings through the local server using an owner Session.",
+    synopsis:
+      "todo diagnostics export --server <loopback-url> [--run <uuid>] [--file <path>] [--dry-run] [--before <uuid> --after <uuid>] [--cursor <value>] [--ndjson]",
+    flags: [
+      "--run <uuid> for show/export",
+      "--before <uuid> --after <uuid> for compare",
+      "--file <path> for import; --dry-run validates without storing",
+      "--cursor <value> resumes a page; --ndjson streams export pages",
+    ],
+    examples: [
+      "todo diagnostics runs --format json",
+      "todo diagnostics export --run <uuid> --ndjson",
+      "todo schema 'diagnostics export'",
+    ],
+    auth: "Active owner Session and direct loopback only. Access Tokens are refused.",
+    output:
+      "One JSON object per command. --ndjson prints one compact object per line; export follows bounded pages. Import accepts a batch or exported JSON/NDJSON and validates all local input before applying.",
+    concurrency:
+      "Journal writes are queued separately from Task writes. Export can refuse an expired cursor. Comparison refuses incompatible scenario, environment, configuration, render stage or contract.",
+  }),
+  "diagnostics import": reference({
+    purpose:
+      "import private metadata recordings through the local server using an owner Session.",
+    synopsis:
+      "todo diagnostics import --server <loopback-url> [--run <uuid>] [--file <path>] [--dry-run] [--before <uuid> --after <uuid>] [--cursor <value>] [--ndjson]",
+    flags: [
+      "--run <uuid> for show/export",
+      "--before <uuid> --after <uuid> for compare",
+      "--file <path> for import; --dry-run validates without storing",
+      "--cursor <value> resumes a page; --ndjson streams export pages",
+    ],
+    examples: [
+      "todo diagnostics runs --format json",
+      "todo diagnostics export --run <uuid> --ndjson",
+      "todo schema 'diagnostics import'",
+    ],
+    auth: "Active owner Session and direct loopback only. Access Tokens are refused.",
+    output:
+      "One JSON object per command. --ndjson prints one compact object per line; export follows bounded pages. Import accepts a batch or exported JSON/NDJSON and validates all local input before applying.",
+    concurrency:
+      "Journal writes are queued separately from Task writes. Export can refuse an expired cursor. Comparison refuses incompatible scenario, environment, configuration, render stage or contract.",
+  }),
+  "diagnostics compare": reference({
+    purpose:
+      "compare private metadata recordings through the local server using an owner Session.",
+    synopsis:
+      "todo diagnostics compare --server <loopback-url> [--run <uuid>] [--file <path>] [--dry-run] [--before <uuid> --after <uuid>] [--cursor <value>] [--ndjson]",
+    flags: [
+      "--run <uuid> for show/export",
+      "--before <uuid> --after <uuid> for compare",
+      "--file <path> for import; --dry-run validates without storing",
+      "--cursor <value> resumes a page; --ndjson streams export pages",
+    ],
+    examples: [
+      "todo diagnostics runs --format json",
+      "todo diagnostics export --run <uuid> --ndjson",
+      "todo schema 'diagnostics compare'",
+    ],
+    auth: "Active owner Session and direct loopback only. Access Tokens are refused.",
+    output:
+      "One JSON object per command. --ndjson prints one compact object per line; export follows bounded pages. Import accepts a batch or exported JSON/NDJSON and validates all local input before applying.",
+    concurrency:
+      "Journal writes are queued separately from Task writes. Export can refuse an expired cursor. Comparison refuses incompatible scenario, environment, configuration, render stage or contract.",
+  }),
   diagnostics: reference({
     purpose:
       "Read server diagnostics using an owner Session. Polling is read only and includes metadata across all Profiles.",

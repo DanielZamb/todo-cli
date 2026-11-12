@@ -82,11 +82,11 @@ export function boundDiagnostics(
   const projected = summary
     ? {
         ...summary,
-        stages: select("stages", spanSummary(summary.stages), 6144, 6),
+        stages: select("stages", spanSummary(summary.stages), 8192, 6),
         categories: select(
           "categories",
           spanSummary(summary.categories),
-          16384,
+          14336,
           6,
         ),
         slow: select(

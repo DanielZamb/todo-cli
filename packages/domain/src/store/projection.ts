@@ -88,15 +88,19 @@ export function createProjection(db: Database) {
   db.exec(dependencySchemaSql);
 }
 
-export const readTasks = (db: Database): Task[] =>
-  diagnosticSync(
+export const readTasks = (db: Database): Task[] => {
+  const rows = diagnosticSync(
     "database",
     () =>
       db
         .query<{ payload: string }, []>("SELECT payload FROM tasks ORDER BY id")
         .all(),
     { statement: "store.read" },
-  ).map((row) => Schema.decodeUnknownSync(Task)(JSON.parse(row.payload)));
+  );
+  return diagnosticSync("task_materialization", () =>
+    rows.map((row) => Schema.decodeUnknownSync(Task)(JSON.parse(row.payload))),
+  );
+};
 
 export const readSeries = (db: Database): Series[] =>
   db

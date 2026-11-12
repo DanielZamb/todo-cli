@@ -244,3 +244,13 @@ requires an affordable later response and a fair available recovery source. TLC
 does not prove a CPU, heap, health-latency, cancellation or serialization bound.
 The literal budget/cache-equivalence, finalizer, compiled abort and client SSE
 regressions complement the unchanged response-order model.
+
+## Recording API mapping review, 2026-11-12
+
+The recording unit found pre-existing hash drift from 2c147ad9 in task-client.ts:
+`http.diagnostics.snapshot()` became `snapshot({ query: {} })`. This is the
+required typed argument for the optional detail query and emits the same default
+GET /diagnostics. Task list/search branches, publication identity, cancellation,
+ordering and atomicity are byte-identical. The source file is unchanged by U06.
+Only that file hash is renewed against immutable f25fbfc4; models, bounds and
+sensitivity controls are untouched. The recording report retains both command exits.

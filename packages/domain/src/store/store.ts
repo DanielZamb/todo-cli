@@ -303,7 +303,9 @@ export class OperationStore {
   }
 
   private transaction<A>(run: () => A): A {
-    const waiting = beginDiagnosticSpan("writer_lock_wait");
+    const waiting = beginDiagnosticSpan("writer_lock_wait", {
+      lock_holder: "external_or_unknown",
+    });
     let entered = false;
     let result: A;
     try {
@@ -581,7 +583,7 @@ export class OperationStore {
     );
 
   private historySync(after: number): OpLogEntry[] {
-    return this.db
+    const rows = this.db
       .query<
         {
           seq: number;
@@ -595,13 +597,15 @@ export class OperationStore {
         },
         [number]
       >("SELECT * FROM op_log WHERE seq>? ORDER BY seq")
-      .all(after)
-      .map((row) =>
+      .all(after);
+    return diagnosticSync("history_decode", () =>
+      rows.map((row) =>
         Schema.decodeUnknownSync(OpLogEntry)({
           ...row,
           event: JSON.parse(row.event),
         }),
-      );
+      ),
+    );
   }
 
   readonly fork = () =>

@@ -367,6 +367,16 @@ owner Diagnostics body. Recorder failures retain no error text.
 A stream delivery joins commit observation to encoded bytes handed to the HTTP
 adapter. It does not prove receipt. Bun dispatch before middleware, socket flush,
 body completion and the remaining internal attribution stay unobserved. The
-[Proposed ADR-0020](adr/0020-diagnostics-follow-an-action-to-its-rendered-result.md)
-separates this implemented vocabulary and joining path from proposed durable
-journals and client ingestion. Those storage/API proposals remain unimplemented.
+[ADR-0020](adr/0020-diagnostics-follow-an-action-to-its-rendered-result.md)
+accepts always-on metadata recording in each app and owner-only loopback
+ingestion. The private recording store is a sibling diagnostic-recordings
+directory beside the configured database, outside todo.db and database Snapshots.
+It has 0700 directories, 0600 atomic segments, 32 MiB per app, seven-day retention,
+a 256 MiB total ceiling, 4096 segments and a 1 MiB pending queue. Oldest segments
+expire first with visible event/loss counts. No Task write depends on this store.
+The explicit HttpApi profiler group accepts strict 128 KiB / 128-event batches;
+run list/show, one-batch export pages and comparable-build reports back the CLI
+diagnostics runs/show/export/import/compare commands. Import has a dry run;
+NDJSON export traverses pages. Client UI/local journal integration and clock
+calibration/presentation proof remain later units. Run-local Profile ordinals
+and scalar selection/release context contain no Profile identity or Task content.

@@ -129,6 +129,21 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /diagnostics`.
     /// - Remark: Generated from `#/paths//diagnostics/get(diagnostics.snapshot)`.
     func diagnostics_period_snapshot(_ input: Operations.diagnostics_period_snapshot.Input) async throws -> Operations.diagnostics_period_snapshot.Output
+    /// - Remark: HTTP `POST /diagnostics/profiler/ingest`.
+    /// - Remark: Generated from `#/paths//diagnostics/profiler/ingest/post(profiler.ingest)`.
+    func profiler_period_ingest(_ input: Operations.profiler_period_ingest.Input) async throws -> Operations.profiler_period_ingest.Output
+    /// - Remark: HTTP `GET /diagnostics/profiler/runs`.
+    /// - Remark: Generated from `#/paths//diagnostics/profiler/runs/get(profiler.runs)`.
+    func profiler_period_runs(_ input: Operations.profiler_period_runs.Input) async throws -> Operations.profiler_period_runs.Output
+    /// - Remark: HTTP `GET /diagnostics/profiler/runs/{run}`.
+    /// - Remark: Generated from `#/paths//diagnostics/profiler/runs/{run}/get(profiler.show)`.
+    func profiler_period_show(_ input: Operations.profiler_period_show.Input) async throws -> Operations.profiler_period_show.Output
+    /// - Remark: HTTP `GET /diagnostics/profiler/runs/{run}/export`.
+    /// - Remark: Generated from `#/paths//diagnostics/profiler/runs/{run}/export/get(profiler.export)`.
+    func profiler_period_export(_ input: Operations.profiler_period_export.Input) async throws -> Operations.profiler_period_export.Output
+    /// - Remark: HTTP `GET /diagnostics/profiler/compare`.
+    /// - Remark: Generated from `#/paths//diagnostics/profiler/compare/get(profiler.compare)`.
+    func profiler_period_compare(_ input: Operations.profiler_period_compare.Input) async throws -> Operations.profiler_period_compare.Output
     /// - Remark: HTTP `GET /snapshots`.
     /// - Remark: Generated from `#/paths//snapshots/get(snapshots.list)`.
     func snapshots_period_list(_ input: Operations.snapshots_period_list.Input) async throws -> Operations.snapshots_period_list.Output
@@ -618,6 +633,65 @@ extension APIProtocol {
         headers: Operations.diagnostics_period_snapshot.Input.Headers = .init()
     ) async throws -> Operations.diagnostics_period_snapshot.Output {
         try await diagnostics_period_snapshot(Operations.diagnostics_period_snapshot.Input(
+            query: query,
+            headers: headers
+        ))
+    }
+    /// - Remark: HTTP `POST /diagnostics/profiler/ingest`.
+    /// - Remark: Generated from `#/paths//diagnostics/profiler/ingest/post(profiler.ingest)`.
+    public func profiler_period_ingest(
+        query: Operations.profiler_period_ingest.Input.Query = .init(),
+        headers: Operations.profiler_period_ingest.Input.Headers = .init(),
+        body: Operations.profiler_period_ingest.Input.Body
+    ) async throws -> Operations.profiler_period_ingest.Output {
+        try await profiler_period_ingest(Operations.profiler_period_ingest.Input(
+            query: query,
+            headers: headers,
+            body: body
+        ))
+    }
+    /// - Remark: HTTP `GET /diagnostics/profiler/runs`.
+    /// - Remark: Generated from `#/paths//diagnostics/profiler/runs/get(profiler.runs)`.
+    public func profiler_period_runs(
+        query: Operations.profiler_period_runs.Input.Query = .init(),
+        headers: Operations.profiler_period_runs.Input.Headers = .init()
+    ) async throws -> Operations.profiler_period_runs.Output {
+        try await profiler_period_runs(Operations.profiler_period_runs.Input(
+            query: query,
+            headers: headers
+        ))
+    }
+    /// - Remark: HTTP `GET /diagnostics/profiler/runs/{run}`.
+    /// - Remark: Generated from `#/paths//diagnostics/profiler/runs/{run}/get(profiler.show)`.
+    public func profiler_period_show(
+        path: Operations.profiler_period_show.Input.Path,
+        headers: Operations.profiler_period_show.Input.Headers = .init()
+    ) async throws -> Operations.profiler_period_show.Output {
+        try await profiler_period_show(Operations.profiler_period_show.Input(
+            path: path,
+            headers: headers
+        ))
+    }
+    /// - Remark: HTTP `GET /diagnostics/profiler/runs/{run}/export`.
+    /// - Remark: Generated from `#/paths//diagnostics/profiler/runs/{run}/export/get(profiler.export)`.
+    public func profiler_period_export(
+        path: Operations.profiler_period_export.Input.Path,
+        query: Operations.profiler_period_export.Input.Query = .init(),
+        headers: Operations.profiler_period_export.Input.Headers = .init()
+    ) async throws -> Operations.profiler_period_export.Output {
+        try await profiler_period_export(Operations.profiler_period_export.Input(
+            path: path,
+            query: query,
+            headers: headers
+        ))
+    }
+    /// - Remark: HTTP `GET /diagnostics/profiler/compare`.
+    /// - Remark: Generated from `#/paths//diagnostics/profiler/compare/get(profiler.compare)`.
+    public func profiler_period_compare(
+        query: Operations.profiler_period_compare.Input.Query,
+        headers: Operations.profiler_period_compare.Input.Headers = .init()
+    ) async throws -> Operations.profiler_period_compare.Output {
+        try await profiler_period_compare(Operations.profiler_period_compare.Input(
             query: query,
             headers: headers
         ))

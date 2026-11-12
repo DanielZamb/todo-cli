@@ -1,6 +1,7 @@
 # Diagnostics follows an action to its rendered result
 
-Status: Proposed, 2026-11-11.
+Status: Accepted for vocabulary, joins and recording policy, 2026-11-12.
+Clock calibration, presentation proof and client UI delivery remain proposed.
 
 ## Decided for the first implementation
 
@@ -84,8 +85,7 @@ The detail sample hoists run_id, build_id and contract_id out of its rows. It
 returns at most 32 recent spans, four active spans and 16 delivery records;
 separate total and omission counts state what the sample did not include.
 The CLI exposes it as --detail and rejects --detail with --follow. Normal app
-and CLI polling never opts in. No new endpoint or persistent profiler API is
-introduced. Row quotas and a final schema byte predicate enforce both budgets.
+and CLI polling never opts in. The explicit recording API below is separate. Row quotas and a final schema byte predicate enforce both budgets.
 The internal diagnostic rings remain bounded and are accessed in full only by
 verification seams; counts distinguish omission from zero or unavailable work.
 
@@ -96,13 +96,57 @@ then separately adds one versioned profiler object to owner Diagnostics with a
 new generated contract id, as approved by the coordinator. Integration ships
 server and both clients together, preserving compatibility refusal behavior.
 
-## Awaiting the owner
+## Accepted recording policy, owner decision 2026-11-12
 
-Always-on durable journals, journal budgets and retention, crash recovery files,
-and loopback client ingestion remain proposals. New profiler runs, import,
-export and compare routes and controls require the later owner decision. This
-record does not authorize their implementation or a new endpoint. Clock
-calibration and visible presentation proof belong to later client units.
+Recording is always on in each app, bounded and metadata only. Apps send bounded
+batches to the local server so both apps and the CLI can inspect the same runs.
+Only a current owner Session may ingest, read, export, import or compare.
+Access Tokens, expired and revoked Sessions receive no records. Ingestion and
+reads require a direct loopback peer and Host; proxy/forwarded headers are refused.
+Authorization is checked before decoding and again before publishing an async read.
+
+Store recordings outside todo.db, beside the server's configured database in
+`diagnostic-recordings`. Directories use 0700 and files use 0600. Each app has
+at most 32 MiB across its runs, the server retains at most seven days, and the
+total is at most 256 MiB. Electron main and renderer share one app quota.
+Oldest segments go first; expiration, capacity losses, corrupt/orphan segments,
+queue drops and storage failures are counted and returned with every read.
+The implementation additionally caps segment count and the pending queue.
+A disk or recorder failure must never fail a Task request or write.
+Client-local journal implementation and app UI integration belong to their units.
+
+A record may contain a run-local integer Profile ordinal, never a Profile name
+or id. It can identify only "Profile 2 of this run". Allowlisted release timing
+includes the press/release basis, separate hold milliseconds and whether release
+was derived from native list selection. Selection context contains only list
+row count, refresh-in-flight, process uptime and journal byte count.
+
+The explicit HttpApi group under /diagnostics/profiler accepts batches up to
+128 KiB and 128 events. Its bounded asynchronous queue acknowledges admission,
+not durable delivery; clients retain local batches for retry until reconciliation.
+A batch UUID deduplicates retained retries. No synchronous filesystem operation
+runs during ingestion. JSON parsing/schema validation and bounded admission still
+use the server thread and must be measured. Exports page one bounded batch at a
+time; NDJSON CLI export follows pages. No arbitrary path is accepted over HTTP.
+Import validates all local input before applying; --dry-run performs no journal write.
+Run summaries retain pending, lost, crashed and unproven results. Exact frozen
+quantiles reuse nearest-rank durations and all observed starts as denominator
+for deadline fractions. Loss counts remain visible beside those samples.
+Comparison requires matching contract, app, workload/script/environment hashes,
+release/debug configuration, render capability and concurrency; dev/unknown
+identities cannot establish comparable runs. Different build ids are expected.
+
+The joined server read path now records history decoding, Task materialization,
+response schema/JSON encoding, and a bounded first-use marker per route. SQLite
+does not expose the external writer's identity: its lock-holder class is
+external_or_unknown, never an inferred process name. Socket acceptance, physical
+receipt, other endpoints' encoding and presentation remain explicit gaps.
+
+## Still proposed
+
+Cross-clock calibration, physical presentation proof, richer profiler terminal
+panes and app recording/compare controls remain later units. This acceptance
+authorizes the shared store/API/CLI, not a native app launch or owner data access.
 
 ## Consequences and rejected approaches
 

@@ -103,6 +103,7 @@ import {
 import { type OperationStore, openStore, StoreError } from "@todo/domain/store";
 import { Console, Effect, Option, Redacted, Schema, Struct } from "effect";
 import { Argument, CliError, Command, Flag, Prompt } from "effect/cli";
+import { recordingCommand } from "./diagnostic-recordings.ts";
 import "./diagnostics.schema.ts";
 import { AttachmentCommandResponse } from "./attachments.schema.ts";
 import {
@@ -2073,7 +2074,41 @@ const diagnostics = Command.make(
         );
       yield* snapshot;
     }),
-).pipe(withGuide("diagnostics"));
+).pipe(
+  Command.withSubcommands(
+    (["runs", "show", "export", "import", "compare"] as const).map((name) =>
+      Command.make(
+        name,
+        {
+          server: string(
+            "server",
+            process.env.TODO_SERVER_URL || "http://127.0.0.1:4310",
+          ),
+          run: string("run"),
+          before: string("before"),
+          after: string("after"),
+          file: string("file"),
+          cursor: string("cursor"),
+          dryRun: bool("dry-run"),
+          ndjson: bool("ndjson"),
+        },
+        (input) =>
+          Effect.gen(function* () {
+            const cfg = yield* root;
+            const credential = yield* io(() => loadCredential(cfg));
+            yield* recordingCommand(name, input, credential, (value, ndjson) =>
+              write(
+                ndjson
+                  ? JSON.stringify(value) + "\n"
+                  : JSON.stringify(value, null, 2) + "\n",
+              ),
+            );
+          }),
+      ).pipe(withGuide(`diagnostics ${name}`)),
+    ),
+  ),
+  withGuide("diagnostics"),
+);
 const top = Command.make(
   "top",
   {

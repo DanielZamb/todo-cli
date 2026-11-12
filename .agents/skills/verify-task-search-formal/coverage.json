@@ -1,6 +1,6 @@
 {
-  "sourceCommit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
-  "status": "Reviewed integrated DAG clients and contract metadata, with current matcher controls and preserved full/query catalog debt. Complete bounded command and client drives follow.",
+  "sourceCommit": "f25fbfc4b458a814c589ea9c42f49142c05bd9f0",
+  "status": "Reviewed integrated DAG clients and contract metadata, with current matcher controls and preserved full/query catalog debt. Complete bounded command and client drives follow. Reviewed 2026-11-12: pre-existing 2c147ad9 Diagnostics snapshot call supplies the required empty query object. Its emitted URL and all modeled Task list/search branches are unchanged.",
   "files": [
     {
       "path": "apps/electron/src/renderer.tsx",
@@ -38,7 +38,7 @@
         "taskRequest list branch",
         "taskRequest search branch"
       ],
-      "sha256": "35e31f0a344103fd5402659244f68cbf1f74bd659fdf8081bf3eebefdf55d5e6"
+      "sha256": "dff5d1846b7b2b540b6c0a3ce12032f7deca237119640cec8b5bbacdd81d6951"
     },
     {
       "path": "apps/electron/src/protocol.ts",

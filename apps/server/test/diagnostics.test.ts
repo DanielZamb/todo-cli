@@ -111,10 +111,13 @@ it.effect(
           "authentication",
           "database",
           "domain",
+          "encoding",
           "entry",
           "graph",
           "handler",
+          "history_decode",
           "response_handoff",
+          "task_materialization",
           "writer_lock_wait",
         ]);
         expect(

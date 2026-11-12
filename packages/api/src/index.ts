@@ -16,6 +16,7 @@ import {
   DependencyError,
   DependRequest,
   DetachTask,
+  DiagnosticRunId,
   DiagnosticsSnapshot,
   DirectoryQuery,
   EdgeReport,
@@ -42,6 +43,12 @@ import {
   ProjectSummary,
   QuickAddDraft,
   QuickAddInput,
+  RecordingBatch,
+  RecordingCompare,
+  RecordingExport,
+  RecordingReceipt,
+  RecordingRunList,
+  RecordingShow,
   RevertTask,
   SnapshotGeneration,
   SnapshotId,
@@ -558,6 +565,43 @@ const Diagnostics = HttpApiGroup.make("diagnostics")
     ),
   )
   .middleware(Authorization);
+const recordingCursor = Schema.optionalKey(
+  Schema.NumberFromString.check(
+    Schema.isInt(),
+    Schema.isGreaterThanOrEqualTo(0),
+  ),
+);
+const Profiler = HttpApiGroup.make("profiler")
+  .add(
+    HttpApiEndpoint.post("ingest", "/diagnostics/profiler/ingest", {
+      payload: RecordingBatch,
+      query: { dry_run: Schema.optionalKey(Schema.Literal("true")) },
+      success: RecordingReceipt,
+      error: [BadRequest, Forbidden, InternalError],
+    }),
+    HttpApiEndpoint.get("runs", "/diagnostics/profiler/runs", {
+      query: { cursor: recordingCursor },
+      success: RecordingRunList,
+      error: [BadRequest, Forbidden, InternalError],
+    }),
+    HttpApiEndpoint.get("show", "/diagnostics/profiler/runs/:run", {
+      params: { run: DiagnosticRunId },
+      success: RecordingShow,
+      error: [BadRequest, Forbidden, InternalError],
+    }),
+    HttpApiEndpoint.get("export", "/diagnostics/profiler/runs/:run/export", {
+      params: { run: DiagnosticRunId },
+      query: { cursor: Schema.optionalKey(DiagnosticRunId) },
+      success: RecordingExport,
+      error: [BadRequest, Forbidden, InternalError],
+    }),
+    HttpApiEndpoint.get("compare", "/diagnostics/profiler/compare", {
+      query: { before: DiagnosticRunId, after: DiagnosticRunId },
+      success: RecordingCompare,
+      error: [BadRequest, Forbidden, InternalError],
+    }),
+  )
+  .middleware(Authorization);
 const System = HttpApiGroup.make("system").add(
   HttpApiEndpoint.get("health", "/health", {
     success: Schema.Struct({
@@ -609,6 +653,7 @@ export class TodoApi extends HttpApi.make("todo-api")
     Changes,
     Reads,
     Diagnostics,
+    Profiler,
     Snapshots,
   )
   .middleware(RequestDecoding)

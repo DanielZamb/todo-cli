@@ -81,7 +81,16 @@ export async function diagnosticFixture(
     const credential = Schema.decodeUnknownSync(
       Schema.Struct({ credential: Schema.String }),
     )(await response.json()).credential;
-    return { url, credential, server, cli, close, log: () => log };
+    return {
+      url,
+      credential,
+      server,
+      cli,
+      close,
+      scratch,
+      env,
+      log: () => log,
+    };
   } catch (error) {
     await close();
     throw error;

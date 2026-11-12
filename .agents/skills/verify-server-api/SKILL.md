@@ -179,3 +179,10 @@ and Task search behavior retain their current recipes.
 Set TODO_SEED_BINARY to the matching source-hash cached provisioning executable
 alongside TODO_SERVER_BINARY to reuse both artifacts. The helper links the seed
 inside its owned scratch directory and does not recompile that source hash.
+
+## Private recording API
+
+The accepted ADR-0020 profiler group is exercised by
+[verify-ui-profiler](../verify-ui-profiler/SKILL.md). Its direct-loopback owner
+checks precede bounded streaming decode; Access Tokens, expired and revoked
+Sessions receive no recordings. Follow that skill after profiler route changes.

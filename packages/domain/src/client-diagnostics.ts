@@ -107,6 +107,8 @@ export const DiagnosticStage = Schema.Literals([
   "stdout",
   "ipc",
   "decode",
+  "history_decode",
+  "task_materialization",
 ]);
 export const DiagnosticRouteOperation = Schema.Literals([
   "health",
@@ -140,6 +142,10 @@ export const DiagnosticStatement = Schema.Literals([
   "unknown",
 ]);
 export const DiagnosticMetadata = Schema.Struct({
+  first_use: Schema.optionalKey(Schema.Boolean),
+  lock_holder: Schema.optionalKey(
+    Schema.Literals(["external_or_unknown", "none"]),
+  ),
   operation: Schema.optionalKey(DiagnosticRouteOperation),
   statement: Schema.optionalKey(DiagnosticStatement),
   rows: Schema.optionalKey(DiagnosticCount),
@@ -203,6 +209,24 @@ export const DiagnosticEnvelope = Schema.Struct({
   schema_version: Schema.Literal(1),
   ...identity,
   category: DiagnosticCategory,
+  profile_ordinal: Schema.optionalKey(
+    Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 65535 })),
+  ),
+  input_timing: Schema.optionalKey(
+    Schema.Struct({
+      basis: Schema.Literals(["press", "release"]),
+      hold_ms: DiagnosticMetric,
+      derived_from_native_selection: Schema.Boolean,
+    }),
+  ),
+  selection_context: Schema.optionalKey(
+    Schema.Struct({
+      list_rows: DiagnosticCount,
+      refresh_in_flight: Schema.Boolean,
+      process_uptime_ms: DiagnosticMetric,
+      journal_bytes: DiagnosticCount,
+    }),
+  ),
   request_id: Schema.optionalKey(DiagnosticRequestId),
   refresh_id: Schema.optionalKey(DiagnosticRefreshId),
   sequence: DiagnosticCount,

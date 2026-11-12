@@ -12,7 +12,8 @@
     "./attachment-input": "./src/attachment-input.ts",
     "./attachments": "./src/attachment-commands.ts",
     "./attachment-store": "./src/attachment-store.ts",
-    "./presentation": "./src/presentation.ts"
+    "./presentation": "./src/presentation.ts",
+    "./diagnostic-recordings": "./src/store/diagnostic-recordings.ts"
   },
   "scripts": {
     "typecheck": "bun --bun ../../node_modules/typescript/bin/tsc --noEmit",
