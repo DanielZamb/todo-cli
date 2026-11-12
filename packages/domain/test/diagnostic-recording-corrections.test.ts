@@ -70,8 +70,8 @@ it("refuses a conflicting producer sequence without improving either deadline fr
     const row = (await store.show(uuid)).summary[0];
     expect(row?.starts).toBe(1);
     expect(row?.completed_samples).toBe(0);
-    expect(row?.fraction_by_20_ms).toBe(0);
-    expect(row?.fraction_by_300_ms).toBe(0);
+    expect(row?.fraction_by_20_ms).toBeNull();
+    expect(row?.fraction_by_300_ms).toBeNull();
   } finally {
     await store.close();
     await rm(root, { recursive: true, force: true });
@@ -116,7 +116,9 @@ it("backs off a permanently failed expiry for a full minute and resumes normal s
     expect(store.status().loss.expired_events).toBe(1);
     store.ingest(batch(randomUUID()));
     await store.flush();
-    expect(timer.mock.calls.at(-1)?.[1]).toBe(recordingLimits.retentionMs + 1);
+    expect(timer.mock.calls.at(-1)?.[1]).toBe(
+      recordingLimits.retentionMs - 120000 + 1,
+    );
   } finally {
     await store.close();
     timer.mockRestore();

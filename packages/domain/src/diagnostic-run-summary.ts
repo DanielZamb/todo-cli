@@ -4,14 +4,35 @@ import {
   summarizeInteractions,
 } from "./client-diagnostics.ts";
 import type { RecordingBatch } from "./diagnostic-recordings.ts";
+import {
+  admissionIncomplete,
+  type RecordingAdmission,
+} from "./recording-admission.ts";
 import { uniqueRecordingEvents } from "./recording-event-identity.ts";
 import type { recordingRefusals } from "./recording-refusal.ts";
 
+const scope = (event: DiagnosticEvent) =>
+  `${event.run_id}:${event.process_role}`;
+const actionScope = (event: DiagnosticEvent) =>
+  `${scope(event)}:${event.action_id}`;
+function byRun(events: readonly DiagnosticEvent[]) {
+  const groups = new Map<string, DiagnosticEvent[]>();
+  for (const event of events) {
+    const group = groups.get(event.run_id) ?? [];
+    group.push(event);
+    groups.set(event.run_id, group);
+  }
+  return groups;
+}
 export function recordingObservations(
   events: readonly DiagnosticEvent[],
 ): DiagnosticObservation[] {
   events = uniqueRecordingEvents(events);
-  const clockUnknown = recordingClockDiscontinuities(events) > 0;
+  const unknownClocks = new Set(
+    [...byRun(events)]
+      .filter(([, group]) => recordingClockDiscontinuities(group) > 0)
+      .map(([id]) => id),
+  );
   const actions = new Map<
     string,
     { start: DiagnosticEvent; end?: DiagnosticEvent }
@@ -21,27 +42,27 @@ export function recordingObservations(
   const crashed = new Set<string>();
   for (const event of [...events].sort((a, b) => a.sequence - b.sequence)) {
     latest.set(
-      event.process_role,
-      Math.max(latest.get(event.process_role) ?? 0, event.monotonic_ms),
+      scope(event),
+      Math.max(latest.get(scope(event)) ?? 0, event.monotonic_ms),
     );
     if (event.name === "process.terminated" && event.reason === "crashed")
-      crashed.add(event.process_role);
+      crashed.add(scope(event));
     if (
       (event.name === "ui.action.started" ||
         event.name === "ui.input.observed") &&
-      !actions.has(`${event.process_role}:${event.action_id}`)
+      !actions.has(actionScope(event))
     )
-      actions.set(`${event.process_role}:${event.action_id}`, { start: event });
+      actions.set(actionScope(event), { start: event });
     if (
       (event.name === "ui.result.committed" ||
         event.name === "ui.action.ended") &&
       event.action_id
     ) {
-      const action = actions.get(`${event.process_role}:${event.action_id}`);
+      const action = actions.get(actionScope(event));
       if (action && action.end?.name !== "ui.result.committed")
         action.end = event;
       else if (!action)
-        actions.set(`${event.process_role}:${event.action_id}`, {
+        actions.set(actionScope(event), {
           start: event,
           end: event,
         });
@@ -82,7 +103,7 @@ export function recordingObservations(
           duration_ms: end.duration_ms,
           correct:
             end.correct &&
-            !clockUnknown &&
+            !unknownClocks.has(start.run_id) &&
             (start.name === "ui.input.observed" ||
               start.name === "ui.action.started"),
           render_stage: end.render_stage,
@@ -91,7 +112,7 @@ export function recordingObservations(
       const outcome =
         end?.name === "ui.action.ended"
           ? end.outcome
-          : crashed.has(start.process_role)
+          : crashed.has(scope(start))
             ? "crashed"
             : "pending";
       const unfinished =
@@ -112,11 +133,11 @@ export function recordingObservations(
         kind: "unfinished",
         outcome: unfinished,
         count: 1,
-        age_ms: clockUnknown
+        age_ms: unknownClocks.has(start.run_id)
           ? null
           : Math.max(
               0,
-              (latest.get(start.process_role) ?? start.monotonic_ms) -
+              (latest.get(scope(start)) ?? start.monotonic_ms) -
                 start.monotonic_ms,
             ),
       });
@@ -124,13 +145,21 @@ export function recordingObservations(
   }
   return result;
 }
-export function summarizeRecording(events: readonly DiagnosticEvent[]) {
-  return analyzeRecording(events).summary;
+export function summarizeRecording(
+  events: readonly DiagnosticEvent[],
+  admissions: ReadonlyMap<string, RecordingAdmission> = new Map(),
+) {
+  return analyzeRecording(events, false, admissions).summary;
 }
 export function recordingComparisonRefusal(
   before: RecordingBatch["run"],
   after: RecordingBatch["run"],
 ): keyof typeof recordingRefusals | undefined {
+  if (
+    admissionIncomplete(before.admission) ||
+    admissionIncomplete(after.admission)
+  )
+    return "incomplete_run";
   const a = before.comparison,
     b = after.comparison;
   if (!a || !b) return "missing_comparison";
@@ -169,9 +198,9 @@ export function recordingClockDiscontinuities(
   const clocks = new Map<string, number>();
   let discontinuities = 0;
   for (const event of [...events].sort((a, b) => a.sequence - b.sequence)) {
-    const last = clocks.get(event.process_role);
+    const last = clocks.get(scope(event));
     if (last !== undefined && event.monotonic_ms < last) discontinuities++;
-    clocks.set(event.process_role, event.monotonic_ms);
+    clocks.set(scope(event), event.monotonic_ms);
   }
   return discontinuities;
 }
@@ -180,28 +209,25 @@ export function recordingSequenceGaps(events: readonly DiagnosticEvent[]) {
   const sequences = new Map<string, number>();
   let gaps = 0;
   for (const event of [...events].sort((a, b) => a.sequence - b.sequence)) {
-    const last = sequences.get(event.process_role);
+    const last = sequences.get(scope(event));
     gaps += Math.max(0, event.sequence - (last === undefined ? 1 : last + 1));
-    sequences.set(event.process_role, event.sequence);
+    sequences.set(scope(event), event.sequence);
   }
   return gaps;
 }
 
-export function analyzeRecording(
-  events: readonly DiagnosticEvent[],
-  recovered = false,
-) {
+function analyzeRun(events: readonly DiagnosticEvent[], recovered = false) {
   events = uniqueRecordingEvents(events);
   const clock_discontinuities = recordingClockDiscontinuities(events),
     sequence_gaps = recordingSequenceGaps(events);
-  const roles = new Set(events.map((event) => event.process_role));
+  const roles = new Set(events.map(scope));
   const recovery_uncertain =
     recovered &&
     [...roles].some(
       (role) =>
         !events.some(
           (event) =>
-            event.process_role === role &&
+            scope(event) === role &&
             event.name === "process.terminated" &&
             event.reason === "clean",
         ),
@@ -238,5 +264,46 @@ export function analyzeRecording(
     recovery_uncertain,
     unattributed_lost_starts,
     summary,
+  };
+}
+
+export function analyzeRecording(
+  events: readonly DiagnosticEvent[],
+  recovered = false,
+  admissions: ReadonlyMap<string, RecordingAdmission> = new Map(),
+) {
+  const analyses = [...byRun(uniqueRecordingEvents(events)).values()].map(
+    (group) => {
+      const analysis = analyzeRun(group, recovered);
+      if (admissionIncomplete(admissions.get(group[0]?.run_id ?? "")))
+        return {
+          ...analysis,
+          summary: analysis.summary.map((row) => ({
+            ...row,
+            evidence: "incomplete" as const,
+            fraction_by_20_ms: null,
+            fraction_by_300_ms: null,
+          })),
+        };
+      return analysis;
+    },
+  );
+  return {
+    clock_discontinuities: analyses.reduce(
+      (n, analysis) => n + analysis.clock_discontinuities,
+      0,
+    ),
+    sequence_gaps: analyses.reduce(
+      (n, analysis) => n + analysis.sequence_gaps,
+      0,
+    ),
+    recovery_uncertain: analyses.some(
+      (analysis) => analysis.recovery_uncertain,
+    ),
+    unattributed_lost_starts: analyses.reduce(
+      (n, analysis) => n + analysis.unattributed_lost_starts,
+      0,
+    ),
+    summary: analyses.flatMap((analysis) => analysis.summary),
   };
 }

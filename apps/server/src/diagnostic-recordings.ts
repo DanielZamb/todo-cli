@@ -1,9 +1,16 @@
-import { BadRequest, BearerCredential, TodoApi, Unauthorized } from "@todo/api";
+import {
+  BadRequest,
+  BearerCredential,
+  InternalError,
+  TodoApi,
+  Unauthorized,
+} from "@todo/api";
 import {
   exitStatus,
   RecordingRefusal,
   recordingLimits,
   recordingRefusalMessage,
+  recordingRefusals,
   validateRecordingBatch,
 } from "@todo/domain";
 import type { DiagnosticRecordings } from "@todo/domain/diagnostic-recordings";
@@ -89,6 +96,9 @@ export const recordingGuard =
       );
     });
 
+const admissionFailure = () =>
+  new InternalError({ message: recordingRefusals.admission_storage_failure });
+
 export const recordingRoutes = (
   recordings: DiagnosticRecordings,
   store: OperationStore,
@@ -152,25 +162,38 @@ export const recordingRoutes = (
               new BadRequest({ message: "Invalid recording metadata" }),
           });
           yield* owner;
-          const receipt = yield* Effect.try({
-            try: () => recordings.ingest(batch, query.dry_run === "true"),
+          const receipt = yield* Effect.tryPromise({
+            try: async () => {
+              try {
+                return recordings.ingest(batch, query.dry_run === "true");
+              } catch (error) {
+                await recordings.flush();
+                if (!recordings.admissionDurable(batch.run.run_id))
+                  throw admissionFailure();
+                throw error;
+              }
+            },
             catch: (error) =>
-              new BadRequest({
-                message:
-                  error instanceof RecordingRefusal
-                    ? error.message
-                    : "Invalid recording metadata",
-              }),
-          });
-          if (
-            query.dry_run === "true" ||
-            !receipt.accepted ||
-            receipt.durability === "stored"
-          )
+              error instanceof InternalError
+                ? error
+                : new BadRequest({
+                    message:
+                      error instanceof RecordingRefusal
+                        ? error.message
+                        : "Invalid recording metadata",
+                  }),
+          }).pipe(Effect.tapError(() => owner));
+          if (query.dry_run === "true" || receipt.durability === "stored")
             return receipt;
           yield* Effect.promise(() => recordings.flush());
           yield* owner;
-          return recordings.settledReceipt(receipt, batch.batch_id);
+          if (!recordings.admissionDurable(batch.run.run_id))
+            return yield* Effect.fail(admissionFailure());
+          return recordings.settledReceipt(
+            receipt,
+            batch.batch_id,
+            batch.run.run_id,
+          );
         }),
       )
       .handleAll({

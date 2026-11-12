@@ -386,3 +386,13 @@ diagnostics runs/show/export/import/compare commands. Import has a dry run;
 NDJSON export traverses pages. Client UI/local journal integration and clock
 calibration/presentation proof remain later units. Run-local Profile ordinals
 and scalar selection/release context contain no Profile identity or Task content.
+
+Recording admission completeness is separate from event retention. Versioned
+run.admission metadata is persisted in private per-run files before a whole-batch
+conflict refusal is acknowledged. These files survive data eviction, are charged
+to their app quota, and expire after seven days only when no data for that run
+remains. The combined active/marked run limit is 5120; repeated writes coalesce
+per run. Marked summaries withhold all-start fractions and complete comparisons.
+Exports/imports carry the mark even without events. Mixed-run event reducers
+partition their action, clock, crash and gap state by run; clients reducing export
+raw events must preserve the run admission context.

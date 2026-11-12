@@ -1,37 +1,31 @@
-import { Database } from "bun:sqlite";
+// One writer queue coordinates admission, segment persistence, and their shared byte and retention budgets.
+import type { Database } from "bun:sqlite";
 import { createHash } from "node:crypto";
-import { constants } from "node:fs";
-import {
-  chmod,
-  lstat,
-  mkdir,
-  open,
-  readdir,
-  rename,
-  statfs,
-  unlink,
-} from "node:fs/promises";
+import { chmod, lstat, mkdir, readdir, statfs, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { Schema } from "effect";
 import {
   type RecordingBatch,
   RecordingLoss,
   type RecordingReceipt,
-  RecordingSummaryRow,
+  RecordingRun,
   recordingLimits,
   validateRecordingBatch,
 } from "../diagnostic-recordings.ts";
-import {
-  analyzeRecording,
-  recordingComparisonRefusal,
-} from "../diagnostic-run-summary.ts";
-
+import { recordingRunDefinition } from "../recording-admission.ts";
 import { RecordingRefusal } from "../recording-refusal.ts";
+
+import { RecordingAdmissions } from "./recording-admissions.ts";
 import {
   RecordingEventIndex,
-  readRecordingEvents,
   recordingEventFingerprints,
 } from "./recording-event-index.ts";
+import {
+  acquireRecordingLease,
+  readRecordingFile,
+  writeRecordingFile,
+} from "./recording-files.ts";
+import { RecordingQueries } from "./recording-queries.ts";
 
 type Segment = {
   name: string;
@@ -55,6 +49,8 @@ const zero = () => ({
 const pause = () => new Promise<void>((r) => setImmediate(r));
 export class DiagnosticRecordings {
   private entries: Segment[] = [];
+  private readonly admissionJobs = new Set<string>();
+  private readonly admissions = new RecordingAdmissions(() => this.blockBytes);
   private readonly recoveredRuns = new Set<string>();
   private readonly eventIndex = new RecordingEventIndex();
   private readonly pendingRuns = new Map<string, string>();
@@ -65,6 +61,7 @@ export class DiagnosticRecordings {
   private queued = 0;
   private loss = zero();
   private available = false;
+  private closing = false;
   private lease: Database | undefined;
   private expiry: ReturnType<typeof setTimeout> | undefined;
   private blockBytes = 4096;
@@ -115,7 +112,12 @@ export class DiagnosticRecordings {
           store.loss.corrupt_segments++;
       }
       for (const name of (await readdir(directory)).sort()) {
-        if (name === "status.json" || name === "writer.lock") continue;
+        if (
+          name === "status.json" ||
+          name === "writer.lock" ||
+          RecordingAdmissions.isFile(name)
+        )
+          continue;
         if (!/^\d{13}-[a-f0-9-]{36}\.json$/iu.test(name)) {
           await unlink(join(directory, name));
           store.loss.corrupt_segments++;
@@ -161,6 +163,9 @@ export class DiagnosticRecordings {
         }
         await pause();
       }
+      await store.admissions.load(directory, await readdir(directory), (name) =>
+        store.read(name),
+      );
       for (const entry of store.entries)
         store.recoveredRuns.add(entry.run.run_id);
       store.trimIdentity();
@@ -175,28 +180,16 @@ export class DiagnosticRecordings {
     return store;
   }
   private async acquireLease() {
-    const path = join(this.directory, "writer.lock");
-    const file = await open(
-      path,
-      constants.O_RDWR | constants.O_CREAT | constants.O_NOFOLLOW,
-      0o600,
-    );
-    await file.close();
-    await chmod(path, 0o600);
-    const lease = new Database(path);
-    try {
-      lease.exec("PRAGMA busy_timeout=0");
-      lease.query("PRAGMA journal_mode=MEMORY").get();
-      lease.exec("BEGIN EXCLUSIVE");
-      this.lease = lease;
-      return true;
-    } catch {
-      lease.close();
-      return false;
-    }
+    this.lease = await acquireRecordingLease(this.directory);
+    return !!this.lease;
   }
   async close() {
-    await this.flush();
+    this.closing = true;
+    for (;;) {
+      const tail = this.tail;
+      await tail;
+      if (tail === this.tail) break;
+    }
     this.available = false;
     clearTimeout(this.expiry);
     this.releaseLease();
@@ -215,39 +208,11 @@ export class DiagnosticRecordings {
   private filename(time: number, id: string) {
     return `${Math.floor(time).toString().padStart(13, "0")}-${id}.json`;
   }
-  private async read(name: string) {
-    const file = await open(
-      join(this.directory, name),
-      constants.O_RDONLY | constants.O_NOFOLLOW,
-    );
-    try {
-      return await file.readFile("utf8");
-    } finally {
-      await file.close();
-    }
+  private read(name: string) {
+    return readRecordingFile(this.directory, name);
   }
-  private async atomic(name: string, text: string) {
-    const temp = join(this.directory, `${name}.tmp`);
-    const file = await open(
-      temp,
-      constants.O_WRONLY |
-        constants.O_CREAT |
-        constants.O_EXCL |
-        constants.O_NOFOLLOW,
-      0o600,
-    );
-    try {
-      try {
-        await file.writeFile(text);
-        await file.sync();
-      } finally {
-        await file.close();
-      }
-      await rename(temp, join(this.directory, name));
-    } catch (error) {
-      await unlink(temp).catch(() => {});
-      throw error;
-    }
+  private atomic(name: string, text: string) {
+    return writeRecordingFile(this.directory, name, text);
   }
   private schedule(run: () => Promise<void>) {
     this.tail = this.tail.then(run).catch(() => {
@@ -257,11 +222,14 @@ export class DiagnosticRecordings {
   private armExpiry() {
     if (this.expiryBackingOff && this.expiry) return;
     clearTimeout(this.expiry);
-    const first = this.entries[0];
-    if (!this.available || !first) return;
+    const received = Math.min(
+      this.entries[0]?.received ?? Infinity,
+      this.admissions.oldest(this.activeRuns()),
+    );
+    if (!this.available || !Number.isFinite(received)) return;
     const delay = Math.max(
       this.expiryBackingOff ? 60000 : 1,
-      first.received + recordingLimits.retentionMs - this.time() + 1,
+      received + recordingLimits.retentionMs - this.time() + 1,
     );
     this.expiry = setTimeout(
       () => {
@@ -301,7 +269,7 @@ export class DiagnosticRecordings {
     });
   }
   private acceptManifest(batch: RecordingBatch) {
-    const key = JSON.stringify(batch.run);
+    const key = JSON.stringify(recordingRunDefinition(batch.run));
     const previous = this.manifests.get(batch.run.run_id);
     if (previous && previous !== key) return false;
     if (!previous) this.manifests.set(batch.run.run_id, key);
@@ -313,12 +281,132 @@ export class DiagnosticRecordings {
       queued_bytes: this.queued,
       segments: this.entries.length,
       loss: { ...this.loss },
+      admission_bytes: this.admissions.bytes(),
     };
   }
   private digest(batch: RecordingBatch) {
-    return createHash("sha256").update(JSON.stringify(batch)).digest("hex");
+    return createHash("sha256")
+      .update(
+        JSON.stringify({ ...batch, run: recordingRunDefinition(batch.run) }),
+      )
+      .digest("hex");
   }
   ingest(batch: RecordingBatch, dryRun = false): typeof RecordingReceipt.Type {
+    if (this.closing) throw new RecordingRefusal("metadata_unavailable");
+    if (!this.available) {
+      if (!dryRun) {
+        this.loss.dropped_batches++;
+        this.loss.dropped_events += batch.events.length;
+      }
+      return {
+        generated_at: new Date().toISOString(),
+        accepted: false,
+        durability: dryRun ? "validated" : "dropped",
+        duplicate: false,
+        dry_run: dryRun,
+        events: batch.events.length,
+        admission: this.admissions.state(batch.run.run_id),
+        status: this.status(),
+      };
+    }
+    try {
+      return this.admit(batch, dryRun);
+    } catch (error) {
+      if (
+        !dryRun &&
+        error instanceof RecordingRefusal &&
+        error.reason === "run_capacity"
+      ) {
+        this.loss.dropped_batches++;
+        this.loss.dropped_events += batch.events.length;
+        this.saveLater();
+      }
+      if (
+        !dryRun &&
+        error instanceof RecordingRefusal &&
+        ["sequence_conflict", "batch_conflict", "run_conflict"].includes(
+          error.reason,
+        )
+      ) {
+        this.loss.dropped_batches++;
+        this.loss.dropped_events += batch.events.length;
+        this.markRefusal(batch);
+        this.queueAdmission(batch.run.run_id);
+        const reason =
+          error.reason === "sequence_conflict"
+            ? "admission_sequence_conflict"
+            : error.reason === "batch_conflict"
+              ? "admission_batch_conflict"
+              : "admission_run_conflict";
+        throw new RecordingRefusal(reason);
+      }
+      throw error;
+    }
+  }
+  admissionDurable(id: string) {
+    return this.available && !this.admissions.dirty(id);
+  }
+  private activeRuns() {
+    return new Set([
+      ...this.entries.map((entry) => entry.run.run_id),
+      ...this.pendingRuns.values(),
+    ]);
+  }
+  private markRefusal(batch: RecordingBatch) {
+    const known = this.manifests.get(batch.run.run_id);
+    const run =
+      this.admissions.base(batch.run.run_id) ??
+      (known
+        ? Schema.decodeUnknownSync(RecordingRun)(JSON.parse(known))
+        : batch.run);
+    this.admissions.refuse(run, batch.events.length, this.time());
+  }
+  private queueAdmission(id: string) {
+    if (this.admissionJobs.has(id)) return;
+    this.admissionJobs.add(id);
+    this.schedule(async () => {
+      let persisted = false;
+      try {
+        await this.persistAdmission(id);
+        persisted = true;
+      } finally {
+        this.admissionJobs.delete(id);
+        if (persisted && this.admissions.dirty(id)) this.queueAdmission(id);
+      }
+    });
+  }
+  private async persistAdmission(id: string) {
+    const run = this.admissions.base(id);
+    if (!run) return;
+    const cap = this.options.appBytes ?? recordingLimits.appBytes;
+    const data = this.entries
+      .filter((entry) => entry.run.app === run.app)
+      .reduce((sum, entry) => sum + entry.bytes, 0);
+    if (
+      data + this.admissions.charge(run.app, cap) > cap ||
+      this.entries.reduce((sum, entry) => sum + entry.bytes, 0) +
+        this.admissions.bytes() >
+        (this.options.totalBytes ?? recordingLimits.totalBytes) -
+          3 * this.blockBytes
+    )
+      await this.prune({ app: run.app, bytes: 0 });
+    await this.admissions.persist(id, (name, text) => this.atomic(name, text));
+    await this.save();
+  }
+  private admit(
+    batch: RecordingBatch,
+    dryRun = false,
+  ): typeof RecordingReceipt.Type {
+    const run = recordingRunDefinition(batch.run);
+    const knownRuns = new Set([
+      ...this.manifests.keys(),
+      ...this.admissions.ids(),
+    ]);
+    if (
+      !knownRuns.has(run.run_id) &&
+      knownRuns.size >= recordingLimits.knownRuns
+    )
+      throw new RecordingRefusal("run_capacity");
     const digest = this.digest(batch);
     const previous =
       this.seen.get(batch.batch_id) ?? this.pendingIds.get(batch.batch_id);
@@ -331,8 +419,11 @@ export class DiagnosticRecordings {
       this.seen.has(batch.batch_id) ||
       this.pendingIds.has(batch.batch_id) ||
       this.eventIndex.check(items);
-    const known = this.manifests.get(batch.run.run_id);
-    if (known && known !== JSON.stringify(batch.run))
+    const marked = this.admissions.base(run.run_id);
+    const known =
+      this.manifests.get(batch.run.run_id) ??
+      (marked ? JSON.stringify(recordingRunDefinition(marked)) : undefined);
+    if (known && known !== JSON.stringify(run))
       throw new RecordingRefusal("run_conflict");
     const accepted =
       this.available &&
@@ -340,10 +431,16 @@ export class DiagnosticRecordings {
         (this.queued + bytes <= recordingLimits.queueBytes &&
           this.pendingIds.size < recordingLimits.pendingBatches));
     if (!dryRun) {
+      if (accepted && this.admissions.merge(batch.run, this.time()))
+        this.queueAdmission(run.run_id);
       if (duplicate) this.loss.duplicate_batches++;
       else if (!accepted) {
         this.loss.dropped_batches++;
         this.loss.dropped_events += batch.events.length;
+        if (this.available) {
+          this.markRefusal(batch);
+          this.queueAdmission(run.run_id);
+        }
         this.saveLater();
       } else {
         this.acceptManifest(batch);
@@ -354,7 +451,7 @@ export class DiagnosticRecordings {
         const received = this.time();
         this.schedule(async () => {
           try {
-            const text = JSON.stringify({ received, batch });
+            const text = JSON.stringify({ received, batch: { ...batch, run } });
             const length = this.charge(
               new TextEncoder().encode(text).byteLength,
             );
@@ -374,7 +471,7 @@ export class DiagnosticRecordings {
               received,
               bytes: length,
               batch: batch.batch_id,
-              run: batch.run,
+              run,
               events: batch.events.length,
               digest,
             });
@@ -385,6 +482,10 @@ export class DiagnosticRecordings {
             this.loss.storage_failures++;
             this.loss.dropped_batches++;
             this.loss.dropped_events += batch.events.length;
+            this.markRefusal(batch);
+            try {
+              await this.persistAdmission(run.run_id);
+            } catch {}
           } finally {
             this.queued -= bytes;
             this.pendingIds.delete(batch.batch_id);
@@ -400,7 +501,9 @@ export class DiagnosticRecordings {
       accepted,
       durability: dryRun
         ? "validated"
-        : duplicate && !this.pendingIds.has(batch.batch_id)
+        : duplicate &&
+            !this.pendingIds.has(batch.batch_id) &&
+            !this.admissions.dirty(run.run_id)
           ? "stored"
           : accepted
             ? "queued"
@@ -408,18 +511,23 @@ export class DiagnosticRecordings {
       duplicate,
       dry_run: dryRun,
       events: batch.events.length,
+      admission: this.admissions.state(run.run_id),
       status: this.status(),
     };
   }
   settledReceipt(
     receipt: typeof RecordingReceipt.Type,
     id: string,
+    run?: string,
   ): typeof RecordingReceipt.Type {
-    const stored = this.seen.has(id);
+    const stored =
+      this.seen.has(id) ||
+      (receipt.duplicate && !!run && !this.admissions.dirty(run));
     return {
       ...receipt,
       accepted: stored,
       durability: stored ? "stored" : "dropped",
+      admission: run ? this.admissions.state(run) : receipt.admission,
       status: this.status(),
     };
   }
@@ -448,6 +556,11 @@ export class DiagnosticRecordings {
       totals.set(entry.run.app, (totals.get(entry.run.app) ?? 0) + entry.bytes);
     }
     const appCap = this.options.appBytes ?? recordingLimits.appBytes;
+    for (const app of ["macos", "electron", "cli", "server"])
+      totals.set(
+        app,
+        (totals.get(app) ?? 0) + this.admissions.charge(app, appCap),
+      );
     for (;;) {
       const oldest = this.entries[0];
       const expired =
@@ -459,7 +572,7 @@ export class DiagnosticRecordings {
       const overApp =
         app && (totals.get(app) ?? 0) + (incoming?.bytes ?? 0) > appCap;
       const overTotal =
-        bytes + (incoming?.bytes ?? 0) >
+        bytes + this.admissions.bytes() + (incoming?.bytes ?? 0) >
         (this.options.totalBytes ?? recordingLimits.totalBytes) -
           3 * this.blockBytes;
       const overSegments =
@@ -487,6 +600,11 @@ export class DiagnosticRecordings {
       else this.loss.capacity_events += victim.events;
     }
     if (changed) this.trimIdentity();
+    await this.admissions.expire(
+      this.directory,
+      this.time(),
+      this.activeRuns(),
+    );
     return changed;
   }
   async flush() {
@@ -494,6 +612,7 @@ export class DiagnosticRecordings {
   }
   private async query<A>(read: () => Promise<A>): Promise<A> {
     const result = this.tail.then(async () => {
+      if (!this.available) throw new RecordingRefusal("metadata_unavailable");
       if (await this.prune()) await this.save();
       return read();
     });
@@ -506,95 +625,25 @@ export class DiagnosticRecordings {
     );
     return result;
   }
-  runs(cursor = 0) {
-    return this.query(async () => {
-      const groups = new Map<
-        string,
-        {
-          run: RecordingBatch["run"];
-          events: number;
-          bytes: number;
-          batches: number;
-        }
-      >();
-      for (const e of this.entries) {
-        const old = groups.get(e.run.run_id) ?? {
-          run: e.run,
-          events: 0,
-          bytes: 0,
-          batches: 0,
-        };
-        old.events += e.events;
-        old.bytes += e.bytes;
-        old.batches++;
-        groups.set(e.run.run_id, old);
-      }
-      const all = [...groups.values()];
-      return {
-        generated_at: new Date().toISOString(),
-        runs: all.slice(cursor, cursor + 100),
-        next_cursor: cursor + 100 < all.length ? cursor + 100 : null,
-        status: this.status(),
-      };
+  private get queries() {
+    return new RecordingQueries({
+      entries: this.entries,
+      admissions: this.admissions,
+      read: (name) => this.read(name),
+      status: () => this.status(),
+      recovered: (id) => this.recoveredRuns.has(id),
     });
+  }
+  runs(cursor = 0) {
+    return this.query(() => Promise.resolve(this.queries.runs(cursor)));
   }
   export(run: string, cursor?: string) {
-    return this.query(async () => {
-      const entries = this.entries.filter((e) => e.run.run_id === run);
-      if (!entries.length) throw new RecordingRefusal("missing_run");
-      const index = cursor ? entries.findIndex((e) => e.batch === cursor) : 0;
-      if (index < 0) throw new RecordingRefusal("expired_cursor");
-      const entry = entries[index];
-      const batches = entry
-        ? [
-            validateRecordingBatch(
-              JSON.parse(await this.read(entry.name)).batch,
-            ),
-          ]
-        : [];
-      return {
-        generated_at: new Date().toISOString(),
-        batches,
-        next_cursor: entries[index + 1]?.batch ?? null,
-        status: this.status(),
-      };
-    });
-  }
-  private async showUnsafe(id: string) {
-    const entries = this.entries.filter((e) => e.run.run_id === id);
-    const first = entries[0];
-    if (!first) throw new RecordingRefusal("missing_run");
-    const events = await readRecordingEvents(entries, (name) =>
-      this.read(name),
-    );
-    const analysis = analyzeRecording(events, this.recoveredRuns.has(id));
-    const all = analysis.summary.map((row) =>
-      Schema.decodeUnknownSync(RecordingSummaryRow)(row),
-    );
-    return {
-      generated_at: new Date().toISOString(),
-      run: first.run,
-      omitted_groups: Math.max(0, all.length - 256),
-      ...analysis,
-      summary: all.slice(0, 256),
-      status: this.status(),
-    };
+    return this.query(() => this.queries.export(run, cursor));
   }
   show(id: string) {
-    return this.query(() => this.showUnsafe(id));
+    return this.query(() => this.queries.show(id));
   }
   compare(before: string, after: string) {
-    return this.query(async () => {
-      const a = await this.showUnsafe(before),
-        b = await this.showUnsafe(after);
-      const refusal = recordingComparisonRefusal(a.run, b.run);
-      if (refusal) throw new RecordingRefusal(refusal);
-      return {
-        generated_at: new Date().toISOString(),
-        before: a,
-        after: b,
-        comparable: true as const,
-      };
-    });
+    return this.query(() => this.queries.compare(before, after));
   }
 }

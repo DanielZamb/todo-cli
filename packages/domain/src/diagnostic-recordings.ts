@@ -7,12 +7,17 @@ import {
   DiagnosticRunId,
   RenderStage,
 } from "./client-diagnostics.ts";
+import {
+  admissionIncomplete,
+  RecordingAdmission,
+} from "./recording-admission.ts";
 
 export const recordingLimits = {
   batchBytes: 131072,
   batchEvents: 128,
   queueBytes: 1048576,
   pendingBatches: 1024,
+  knownRuns: 5120,
   appBytes: 32 * 1024 * 1024,
   totalBytes: 256 * 1024 * 1024,
   retentionMs: 7 * 86400000,
@@ -26,6 +31,7 @@ export const RecordingApp = Schema.Literals([
   "server",
 ]);
 export const RecordingRun = Schema.Struct({
+  admission: Schema.optionalKey(RecordingAdmission),
   run_id: DiagnosticRunId,
   app: RecordingApp,
   build_id: DiagnosticEvent.members[0].fields.build_id,
@@ -48,7 +54,7 @@ export const RecordingBatch = Schema.Struct({
   batch_id: DiagnosticRunId,
   run: RecordingRun,
   events: Schema.Array(DiagnosticEvent).check(
-    Schema.isMinLength(1),
+    Schema.isMinLength(0),
     Schema.isMaxLength(recordingLimits.batchEvents),
   ),
 }).annotate({ parseOptions: { onExcessProperty: "error" } });
@@ -68,6 +74,7 @@ export const RecordingStatus = Schema.Struct({
   queued_bytes: DiagnosticCount,
   segments: DiagnosticCount,
   loss: RecordingLoss,
+  admission_bytes: DiagnosticCount,
 });
 export const RecordingReceipt = Schema.Struct({
   generated_at: Schema.String,
@@ -76,6 +83,7 @@ export const RecordingReceipt = Schema.Struct({
   duplicate: Schema.Boolean,
   dry_run: Schema.Boolean,
   events: DiagnosticCount,
+  admission: RecordingAdmission,
   status: RecordingStatus,
 });
 export const RecordingRunItem = Schema.Struct({
@@ -156,6 +164,8 @@ export function validateRecordingBatch(input: unknown): RecordingBatch {
     recordingLimits.batchBytes
   )
     throw new Error("Invalid recording");
+  if (!value.events.length && !admissionIncomplete(value.run.admission))
+    throw new Error("Empty recording requires an admission mark");
   const roles =
     value.run.app === "electron"
       ? ["electron.main", "electron.renderer"]

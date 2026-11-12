@@ -163,6 +163,45 @@ does not expose the external writer's identity: its lock-holder class is
 external_or_unknown, never an inferred process name. Socket acceptance, physical
 receipt, other endpoints' encoding and presentation remain explicit gaps.
 
+## Accepted admission completeness and run scope
+
+A valid conflicting batch is refused as a whole. No event in it is admitted.
+The response states this policy and tells the producer to retry its non-conflicting
+part unchanged with a new batch id. Before that HTTP 400 is returned, persist a
+content-free run mark. A persistence failure returns a storage error instead;
+the producer must keep the entire batch and retry. Task requests and writes do
+not depend on that persistence.
+
+The declared version-1 `run.admission` object carries policy `whole_batch`,
+refused_batches, unadmitted_events and incomplete. Counts are cumulative refused
+submission attempts, not inferred missing actions. Null means the count is
+unknown. Refusal marks survive data rotation and complete data eviction; they
+expire only after seven days with no retained or pending data for that run.
+Markers use separate 0600 metadata files, charged to the app quota, with an
+atomic replacement allowance. An explicit admission_bytes status field exposes
+the metadata charge. There are at most 5120 retained, pending or marked run
+identities. New run registration is refused at that limit instead of forgetting
+an existing mark. One coalesced metadata job per run prevents repeated refusals
+from growing the write queue without bound.
+
+Every row of a marked run is incomplete and has null all-start deadline fractions.
+Descriptive observed duration quantiles and known starts remain visible.
+Comparing a marked run as a complete run is refused with a safe reason. Receipt,
+list, show and export preserve the mark. Export of an evicted run may carry an
+empty event batch with its mark. Import and dry run accept that declared form;
+apply merges mark counts monotonically by maximum, and unknown remains unknown.
+This gives a lower bound across imported snapshots without double-counting the
+same exported refusal. A zero/older snapshot cannot clear a mark. A successful
+retry of valid facts does not prove that every originally refused fact arrived.
+
+All event reducers scope actions, clocks, crashes, sequences and phases by run.
+Mixed-run input is reduced into separate run rows; aggregate flags summarize the
+input while uncertainty is applied only to the affected rows. Raw events cannot
+encode an external admission refusal: consumers of exported recordings must pass
+their run admission map to analyzeRecording/summarizeRecording, or use the server's
+already masked summaries. CLI import preserves this metadata; the native client
+integration must preserve it too.
+
 ## Still proposed
 
 Cross-clock calibration, physical presentation proof, richer profiler terminal

@@ -34,8 +34,8 @@ try {
  const shown=cli(["show","--run",run]);
  results.push({case:"conflicting sequence",status:rejected.status,body:rejection,imported,preview,shown});
  if(rejected.status!==400||imported.exit!==2||preview.exit!==2)failures.push("conflicting sequence accepted through HTTP/import");
- if(imported.body.message!=="Recording sequence conflicts; resend the original data or begin a new run.")failures.push("sequence recovery reason lost");
- if(shown.body.summary[0]?.starts!==1||shown.body.summary[0]?.completed_samples!==0||shown.body.summary[0]?.fraction_by_20_ms!==0||shown.body.summary[0]?.fraction_by_300_ms!==0)failures.push("conflict improved deadline accounting");
+ if(imported.body.message!=="Recording sequence conflicts. Whole batch refused; no events were admitted. The run is incomplete. Retry non-conflicting events unchanged with a new batch id.")failures.push("sequence recovery reason lost");
+ if(shown.body.summary[0]?.starts!==1||shown.body.summary[0]?.completed_samples!==0||shown.body.summary[0]?.fraction_by_20_ms!==null||shown.body.summary[0]?.fraction_by_300_ms!==null)failures.push("conflict improved deadline accounting");
  const fresh=batch(randomUUID()); const badFresh={...batch(fresh.run.run_id),events:[{...event,run_id:fresh.run.run_id,action_id:randomUUID()}]};
  const ndjson=join(fixture.scratch,"conflicting.ndjson");writeFileSync(ndjson,`${JSON.stringify(fresh)}\n${JSON.stringify(badFresh)}\n`,{mode:0o600});
  const dryFile=cli(["import","--file",ndjson,"--dry-run"]); const applyFile=cli(["import","--file",ndjson]);

@@ -10,6 +10,7 @@ import {
   RecordingShow,
   type RecordingStatus,
   recordingRefusalMessage,
+  recordingRunDefinition,
   uniqueRecordingEvents,
   validateRecordingBatch,
 } from "@todo/domain";
@@ -131,7 +132,7 @@ export const recordingCommand = (
           uniqueRecordingEvents(batches.flatMap((batch) => batch.events));
           const runs = new Map<string, string>();
           for (const batch of batches) {
-            const manifest = JSON.stringify(batch.run),
+            const manifest = JSON.stringify(recordingRunDefinition(batch.run)),
               previous = runs.get(batch.run.run_id);
             if (previous && previous !== manifest)
               throw new RecordingRefusal("run_conflict");

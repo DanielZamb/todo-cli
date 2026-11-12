@@ -89,8 +89,8 @@ bun .agents/skills/verify-ui-profiler/scripts/corrections.ts "$PWD/docs/evidence
 
 They require literal owner HTTP 400 / CLI exit 2 with an allowlisted reason,
 reject conflicting sequence data through import and dry run, preflight conflicts
-across the entire local file before any POST, keep both deadline
-fractions at zero, and prove a retained identical event is a no-op. The domain
+across the entire local file before any POST, withhold both deadline
+fractions as unknown, and prove a retained identical event is a no-op. The domain
 controls cover pending acknowledgements, legacy contradictory files, repeated
 action phases, every comparison condition, and 1,001 admissions without a drain.
 The quota control's second segment now uses a genuinely different event, since
@@ -110,3 +110,26 @@ boundaries and two counted failures. No native app or CPU pressure is involved.
 A difference inside pair variation is inconclusive, never proof of zero cost.
 The fake-clock control additionally proves no retry for 59,999 ms, a retry at
 60,000 ms, normal scheduling after recovery and no reset by other journal work.
+
+## Admission completeness and mixed runs
+
+```sh
+pnpm --filter @todo/domain test recording-admission.test.ts recording-run-isolation.test.ts
+bun .agents/skills/verify-ui-profiler/scripts/completeness.ts "$PWD/docs/evidence/ui-speed/recording-completeness-new"
+```
+
+The compiled recipe requires a durable whole-batch refusal mark, a valid 10000 ms
+retry, null deadline fractions, a complete-comparison refusal, JSON/NDJSON transfer,
+no-write dry run and monotonic import. Six hundred 128-event batches evict the old
+run's data while its mark remains exportable, including as a zero-event batch.
+It tries private content in every new admission object and checks file modes and
+allocated bytes. It also imports two runs with shared action/producer/sequence
+identities and checks their separate 8 ms and 400 ms summaries through the CLI.
+The unit controls cover clean termination plus restart, rotation, expiry,
+coalesced repeated refusals, all exported reducers and per-run uncertainty.
+
+The earlier narrow witness's zero fractions after a refusal are superseded by
+null fractions: known starts can be counted, but the omitted facts make the
+all-start denominator unknown. The normal timer control now includes the older
+admission marker's expiry as its next wake-up, instead of assuming only data
+segments can expire. No retry-delay or byte-bound assertion is weakened.

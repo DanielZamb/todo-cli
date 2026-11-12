@@ -1,6 +1,20 @@
 import { Schema } from "effect";
 
 export const recordingRefusals = {
+  admission_sequence_conflict:
+    "Recording sequence conflicts. Whole batch refused; no events were admitted. The run is incomplete. Retry non-conflicting events unchanged with a new batch id.",
+  admission_batch_conflict:
+    "Recording batch conflicts. Whole batch refused; no events were admitted. The run is incomplete. Retry non-conflicting events unchanged with a new batch id.",
+  admission_run_conflict:
+    "Recording run metadata conflicts. Whole batch refused; no events were admitted. The run is incomplete. Use the original run metadata or a new run.",
+  admission_storage_failure:
+    "Whole batch was not admitted and its uncertainty could not be persisted. Keep the entire batch and retry when storage is available.",
+  run_capacity:
+    "Recording run capacity reached. No run was admitted. Keep the entire batch and retry later.",
+  incomplete_run:
+    "Recording comparison refused: a run is incomplete because admission facts are missing.",
+  metadata_unavailable:
+    "Recording admission metadata is unavailable; no complete summary can be shown.",
   action_conflict:
     "Recording action phases conflict; use a new action id for each interaction.",
   sequence_conflict:

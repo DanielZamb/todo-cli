@@ -13125,6 +13125,42 @@
                       "minimum": 0,
                       "maximum": 9007199254740991
                     },
+                    "admission": {
+                      "type": "object",
+                      "properties": {
+                        "schema_version": {
+                          "type": "number",
+                          "enum": [1]
+                        },
+                        "policy": {
+                          "type": "string",
+                          "enum": ["whole_batch"]
+                        },
+                        "refused_batches": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "nullable": true
+                        },
+                        "unadmitted_events": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991,
+                          "nullable": true
+                        },
+                        "incomplete": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "schema_version",
+                        "policy",
+                        "refused_batches",
+                        "unadmitted_events",
+                        "incomplete"
+                      ],
+                      "additionalProperties": false
+                    },
                     "status": {
                       "type": "object",
                       "properties": {
@@ -13198,9 +13234,20 @@
                             "uncertain_restarts"
                           ],
                           "additionalProperties": false
+                        },
+                        "admission_bytes": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
                         }
                       },
-                      "required": ["bytes", "queued_bytes", "segments", "loss"],
+                      "required": [
+                        "bytes",
+                        "queued_bytes",
+                        "segments",
+                        "loss",
+                        "admission_bytes"
+                      ],
                       "additionalProperties": false
                     }
                   },
@@ -13211,6 +13258,7 @@
                     "duplicate",
                     "dry_run",
                     "events",
+                    "admission",
                     "status"
                   ],
                   "additionalProperties": false
@@ -13275,6 +13323,42 @@
                   "run": {
                     "type": "object",
                     "properties": {
+                      "admission": {
+                        "type": "object",
+                        "properties": {
+                          "schema_version": {
+                            "type": "number",
+                            "enum": [1]
+                          },
+                          "policy": {
+                            "type": "string",
+                            "enum": ["whole_batch"]
+                          },
+                          "refused_batches": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991,
+                            "nullable": true
+                          },
+                          "unadmitted_events": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991,
+                            "nullable": true
+                          },
+                          "incomplete": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "schema_version",
+                          "policy",
+                          "refused_batches",
+                          "unadmitted_events",
+                          "incomplete"
+                        ],
+                        "additionalProperties": false
+                      },
                       "run_id": {
                         "type": "string"
                       },
@@ -20807,7 +20891,7 @@
                         }
                       ]
                     },
-                    "minItems": 1,
+                    "minItems": 0,
                     "maxItems": 128
                   }
                 },
@@ -20858,6 +20942,42 @@
                           "run": {
                             "type": "object",
                             "properties": {
+                              "admission": {
+                                "type": "object",
+                                "properties": {
+                                  "schema_version": {
+                                    "type": "number",
+                                    "enum": [1]
+                                  },
+                                  "policy": {
+                                    "type": "string",
+                                    "enum": ["whole_batch"]
+                                  },
+                                  "refused_batches": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991,
+                                    "nullable": true
+                                  },
+                                  "unadmitted_events": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991,
+                                    "nullable": true
+                                  },
+                                  "incomplete": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "schema_version",
+                                  "policy",
+                                  "refused_batches",
+                                  "unadmitted_events",
+                                  "incomplete"
+                                ],
+                                "additionalProperties": false
+                              },
                               "run_id": {
                                 "type": "string"
                               },
@@ -21030,9 +21150,20 @@
                             "uncertain_restarts"
                           ],
                           "additionalProperties": false
+                        },
+                        "admission_bytes": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
                         }
                       },
-                      "required": ["bytes", "queued_bytes", "segments", "loss"],
+                      "required": [
+                        "bytes",
+                        "queued_bytes",
+                        "segments",
+                        "loss",
+                        "admission_bytes"
+                      ],
                       "additionalProperties": false
                     }
                   },
@@ -21118,6 +21249,42 @@
                     "run": {
                       "type": "object",
                       "properties": {
+                        "admission": {
+                          "type": "object",
+                          "properties": {
+                            "schema_version": {
+                              "type": "number",
+                              "enum": [1]
+                            },
+                            "policy": {
+                              "type": "string",
+                              "enum": ["whole_batch"]
+                            },
+                            "refused_batches": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991,
+                              "nullable": true
+                            },
+                            "unadmitted_events": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991,
+                              "nullable": true
+                            },
+                            "incomplete": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "schema_version",
+                            "policy",
+                            "refused_batches",
+                            "unadmitted_events",
+                            "incomplete"
+                          ],
+                          "additionalProperties": false
+                        },
                         "run_id": {
                           "type": "string"
                         },
@@ -21502,9 +21669,20 @@
                             "uncertain_restarts"
                           ],
                           "additionalProperties": false
+                        },
+                        "admission_bytes": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
                         }
                       },
-                      "required": ["bytes", "queued_bytes", "segments", "loss"],
+                      "required": [
+                        "bytes",
+                        "queued_bytes",
+                        "segments",
+                        "loss",
+                        "admission_bytes"
+                      ],
                       "additionalProperties": false
                     }
                   },
@@ -21620,6 +21798,42 @@
                           "run": {
                             "type": "object",
                             "properties": {
+                              "admission": {
+                                "type": "object",
+                                "properties": {
+                                  "schema_version": {
+                                    "type": "number",
+                                    "enum": [1]
+                                  },
+                                  "policy": {
+                                    "type": "string",
+                                    "enum": ["whole_batch"]
+                                  },
+                                  "refused_batches": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991,
+                                    "nullable": true
+                                  },
+                                  "unadmitted_events": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991,
+                                    "nullable": true
+                                  },
+                                  "incomplete": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "schema_version",
+                                  "policy",
+                                  "refused_batches",
+                                  "unadmitted_events",
+                                  "incomplete"
+                                ],
+                                "additionalProperties": false
+                              },
                               "run_id": {
                                 "type": "string"
                               },
@@ -29372,7 +29586,7 @@
                                 }
                               ]
                             },
-                            "minItems": 1,
+                            "minItems": 0,
                             "maxItems": 128
                           }
                         },
@@ -29463,9 +29677,20 @@
                             "uncertain_restarts"
                           ],
                           "additionalProperties": false
+                        },
+                        "admission_bytes": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
                         }
                       },
-                      "required": ["bytes", "queued_bytes", "segments", "loss"],
+                      "required": [
+                        "bytes",
+                        "queued_bytes",
+                        "segments",
+                        "loss",
+                        "admission_bytes"
+                      ],
                       "additionalProperties": false
                     }
                   },
@@ -29570,6 +29795,42 @@
                         "run": {
                           "type": "object",
                           "properties": {
+                            "admission": {
+                              "type": "object",
+                              "properties": {
+                                "schema_version": {
+                                  "type": "number",
+                                  "enum": [1]
+                                },
+                                "policy": {
+                                  "type": "string",
+                                  "enum": ["whole_batch"]
+                                },
+                                "refused_batches": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991,
+                                  "nullable": true
+                                },
+                                "unadmitted_events": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991,
+                                  "nullable": true
+                                },
+                                "incomplete": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "schema_version",
+                                "policy",
+                                "refused_batches",
+                                "unadmitted_events",
+                                "incomplete"
+                              ],
+                              "additionalProperties": false
+                            },
                             "run_id": {
                               "type": "string"
                             },
@@ -29959,13 +30220,19 @@
                                 "uncertain_restarts"
                               ],
                               "additionalProperties": false
+                            },
+                            "admission_bytes": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
                             }
                           },
                           "required": [
                             "bytes",
                             "queued_bytes",
                             "segments",
-                            "loss"
+                            "loss",
+                            "admission_bytes"
                           ],
                           "additionalProperties": false
                         }
@@ -29992,6 +30259,42 @@
                         "run": {
                           "type": "object",
                           "properties": {
+                            "admission": {
+                              "type": "object",
+                              "properties": {
+                                "schema_version": {
+                                  "type": "number",
+                                  "enum": [1]
+                                },
+                                "policy": {
+                                  "type": "string",
+                                  "enum": ["whole_batch"]
+                                },
+                                "refused_batches": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991,
+                                  "nullable": true
+                                },
+                                "unadmitted_events": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991,
+                                  "nullable": true
+                                },
+                                "incomplete": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "schema_version",
+                                "policy",
+                                "refused_batches",
+                                "unadmitted_events",
+                                "incomplete"
+                              ],
+                              "additionalProperties": false
+                            },
                             "run_id": {
                               "type": "string"
                             },
@@ -30381,13 +30684,19 @@
                                 "uncertain_restarts"
                               ],
                               "additionalProperties": false
+                            },
+                            "admission_bytes": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
                             }
                           },
                           "required": [
                             "bytes",
                             "queued_bytes",
                             "segments",
-                            "loss"
+                            "loss",
+                            "admission_bytes"
                           ],
                           "additionalProperties": false
                         }

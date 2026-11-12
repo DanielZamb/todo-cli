@@ -46960,8 +46960,105 @@ public enum Operations {
                     public var batch_id: Swift.String
                     /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/requestBody/json/run`.
                     public struct runPayload: Codable, Hashable, Sendable {
-                        private var _explicitNullKeys: Set<String> = []
+                            private var _explicitNullKeys: Set<String> = []
 
+                        /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/requestBody/json/run/admission`.
+                        public struct admissionPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/requestBody/json/run/admission/schema_version`.
+                            public var schema_version: Swift.Double
+                            /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/requestBody/json/run/admission/policy`.
+                            @frozen public enum policyPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case whole_batch = "whole_batch"
+                            }
+                            /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/requestBody/json/run/admission/policy`.
+                            public var policy: Operations.profiler_period_ingest.Input.Body.jsonPayload.runPayload.admissionPayload.policyPayload
+                            /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/requestBody/json/run/admission/refused_batches`.
+                            public var refused_batches: Swift.Int?
+                            /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/requestBody/json/run/admission/unadmitted_events`.
+                            public var unadmitted_events: Swift.Int?
+                            /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/requestBody/json/run/admission/incomplete`.
+                            public var incomplete: Swift.Bool
+                            /// Creates a new `admissionPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - schema_version:
+                            ///   - policy:
+                            ///   - refused_batches:
+                            ///   - unadmitted_events:
+                            ///   - incomplete:
+                            public init(
+                                schema_version: Swift.Double,
+                                policy: Operations.profiler_period_ingest.Input.Body.jsonPayload.runPayload.admissionPayload.policyPayload,
+                                refused_batches: Swift.Int? = nil,
+                                unadmitted_events: Swift.Int? = nil,
+                                incomplete: Swift.Bool
+                            ) {
+                                self.schema_version = schema_version
+                                self.policy = policy
+                                self.refused_batches = refused_batches
+                                self.unadmitted_events = unadmitted_events
+                                self.incomplete = incomplete
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case schema_version
+                                case policy
+                                case refused_batches
+                                case unadmitted_events
+                                case incomplete
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.schema_version = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .schema_version
+                                )
+                                self.policy = try container.decode(
+                                    Operations.profiler_period_ingest.Input.Body.jsonPayload.runPayload.admissionPayload.policyPayload.self,
+                                    forKey: .policy
+                                )
+                                self.refused_batches = try container.decodeIfPresent(
+                                    Swift.Int.self,
+                                    forKey: .refused_batches
+                                )
+                                self.unadmitted_events = try container.decodeIfPresent(
+                                    Swift.Int.self,
+                                    forKey: .unadmitted_events
+                                )
+                                self.incomplete = try container.decode(
+                                    Swift.Bool.self,
+                                    forKey: .incomplete
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "schema_version",
+                                    "policy",
+                                    "refused_batches",
+                                    "unadmitted_events",
+                                    "incomplete"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.schema_version, forKey: .schema_version)
+                                try container.encode(self.policy, forKey: .policy)
+                                if self.refused_batches == nil && _explicitNullKeys.contains(CodingKeys.refused_batches.stringValue) {
+                                    try container.encodeNil(forKey: .refused_batches)
+                                } else {
+                                    try container.encodeIfPresent(self.refused_batches, forKey: .refused_batches)
+                                }
+                                if self.unadmitted_events == nil && _explicitNullKeys.contains(CodingKeys.unadmitted_events.stringValue) {
+                                    try container.encodeNil(forKey: .unadmitted_events)
+                                } else {
+                                    try container.encodeIfPresent(self.unadmitted_events, forKey: .unadmitted_events)
+                                }
+                                try container.encode(self.incomplete, forKey: .incomplete)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/requestBody/json/run/admission`.
+                        public var admission: Operations.profiler_period_ingest.Input.Body.jsonPayload.runPayload.admissionPayload?
                         /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/requestBody/json/run/run_id`.
                         public var run_id: Swift.String
                         /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/requestBody/json/run/app`.
@@ -47094,18 +47191,21 @@ public enum Operations {
                         /// Creates a new `runPayload`.
                         ///
                         /// - Parameters:
+                        ///   - admission:
                         ///   - run_id:
                         ///   - app:
                         ///   - build_id:
                         ///   - contract_id:
                         ///   - comparison:
                         public init(
+                            admission: Operations.profiler_period_ingest.Input.Body.jsonPayload.runPayload.admissionPayload? = nil,
                             run_id: Swift.String,
                             app: Operations.profiler_period_ingest.Input.Body.jsonPayload.runPayload.appPayload,
                             build_id: Swift.String,
                             contract_id: Swift.String,
                             comparison: Operations.profiler_period_ingest.Input.Body.jsonPayload.runPayload.comparisonPayload? = nil
                         ) {
+                            self.admission = admission
                             self.run_id = run_id
                             self.app = app
                             self.build_id = build_id
@@ -47113,6 +47213,7 @@ public enum Operations {
                             self.comparison = comparison
                         }
                         public enum CodingKeys: String, CodingKey {
+                            case admission
                             case run_id
                             case app
                             case build_id
@@ -47121,7 +47222,11 @@ public enum Operations {
                         }
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
-                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.admission = try container.decodeIfPresent(
+                                Operations.profiler_period_ingest.Input.Body.jsonPayload.runPayload.admissionPayload.self,
+                                forKey: .admission
+                            )
                             self.run_id = try container.decode(
                                 Swift.String.self,
                                 forKey: .run_id
@@ -47143,6 +47248,7 @@ public enum Operations {
                                 forKey: .comparison
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "admission",
                                 "run_id",
                                 "app",
                                 "build_id",
@@ -47151,19 +47257,24 @@ public enum Operations {
                             ])
                         }
 
-                        public func encode(to encoder: any Swift.Encoder) throws {
-                            var container = encoder.container(keyedBy: CodingKeys.self)
-                            try container.encode(self.run_id, forKey: .run_id)
-                            try container.encode(self.app, forKey: .app)
-                            try container.encode(self.build_id, forKey: .build_id)
-                            try container.encode(self.contract_id, forKey: .contract_id)
-                            if self.comparison == nil && _explicitNullKeys.contains(CodingKeys.comparison.stringValue) {
-                                try container.encodeNil(forKey: .comparison)
-                            } else {
-                                try container.encodeIfPresent(self.comparison, forKey: .comparison)
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                if self.admission == nil && _explicitNullKeys.contains(CodingKeys.admission.stringValue) {
+                                    try container.encodeNil(forKey: .admission)
+                                } else {
+                                    try container.encodeIfPresent(self.admission, forKey: .admission)
+                                }
+                                try container.encode(self.run_id, forKey: .run_id)
+                                try container.encode(self.app, forKey: .app)
+                                try container.encode(self.build_id, forKey: .build_id)
+                                try container.encode(self.contract_id, forKey: .contract_id)
+                                if self.comparison == nil && _explicitNullKeys.contains(CodingKeys.comparison.stringValue) {
+                                    try container.encodeNil(forKey: .comparison)
+                                } else {
+                                    try container.encodeIfPresent(self.comparison, forKey: .comparison)
+                                }
                             }
                         }
-                    }
                     /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/requestBody/json/run`.
                     public var run: Operations.profiler_period_ingest.Input.Body.jsonPayload.runPayload
                     /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/requestBody/json/eventsPayload`.
@@ -68156,6 +68267,103 @@ public enum Operations {
                         public var dry_run: Swift.Bool
                         /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/responses/200/content/json/events`.
                         public var events: Swift.Int
+                        /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/responses/200/content/json/admission`.
+                        public struct admissionPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/responses/200/content/json/admission/schema_version`.
+                            public var schema_version: Swift.Double
+                            /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/responses/200/content/json/admission/policy`.
+                            @frozen public enum policyPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case whole_batch = "whole_batch"
+                            }
+                            /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/responses/200/content/json/admission/policy`.
+                            public var policy: Operations.profiler_period_ingest.Output.Ok.Body.jsonPayload.admissionPayload.policyPayload
+                            /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/responses/200/content/json/admission/refused_batches`.
+                            public var refused_batches: Swift.Int?
+                            /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/responses/200/content/json/admission/unadmitted_events`.
+                            public var unadmitted_events: Swift.Int?
+                            /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/responses/200/content/json/admission/incomplete`.
+                            public var incomplete: Swift.Bool
+                            /// Creates a new `admissionPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - schema_version:
+                            ///   - policy:
+                            ///   - refused_batches:
+                            ///   - unadmitted_events:
+                            ///   - incomplete:
+                            public init(
+                                schema_version: Swift.Double,
+                                policy: Operations.profiler_period_ingest.Output.Ok.Body.jsonPayload.admissionPayload.policyPayload,
+                                refused_batches: Swift.Int? = nil,
+                                unadmitted_events: Swift.Int? = nil,
+                                incomplete: Swift.Bool
+                            ) {
+                                self.schema_version = schema_version
+                                self.policy = policy
+                                self.refused_batches = refused_batches
+                                self.unadmitted_events = unadmitted_events
+                                self.incomplete = incomplete
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case schema_version
+                                case policy
+                                case refused_batches
+                                case unadmitted_events
+                                case incomplete
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.schema_version = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .schema_version
+                                )
+                                self.policy = try container.decode(
+                                    Operations.profiler_period_ingest.Output.Ok.Body.jsonPayload.admissionPayload.policyPayload.self,
+                                    forKey: .policy
+                                )
+                                self.refused_batches = try container.decodeIfPresent(
+                                    Swift.Int.self,
+                                    forKey: .refused_batches
+                                )
+                                self.unadmitted_events = try container.decodeIfPresent(
+                                    Swift.Int.self,
+                                    forKey: .unadmitted_events
+                                )
+                                self.incomplete = try container.decode(
+                                    Swift.Bool.self,
+                                    forKey: .incomplete
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "schema_version",
+                                    "policy",
+                                    "refused_batches",
+                                    "unadmitted_events",
+                                    "incomplete"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.schema_version, forKey: .schema_version)
+                                try container.encode(self.policy, forKey: .policy)
+                                if self.refused_batches == nil && _explicitNullKeys.contains(CodingKeys.refused_batches.stringValue) {
+                                    try container.encodeNil(forKey: .refused_batches)
+                                } else {
+                                    try container.encodeIfPresent(self.refused_batches, forKey: .refused_batches)
+                                }
+                                if self.unadmitted_events == nil && _explicitNullKeys.contains(CodingKeys.unadmitted_events.stringValue) {
+                                    try container.encodeNil(forKey: .unadmitted_events)
+                                } else {
+                                    try container.encodeIfPresent(self.unadmitted_events, forKey: .unadmitted_events)
+                                }
+                                try container.encode(self.incomplete, forKey: .incomplete)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/responses/200/content/json/admission`.
+                        public var admission: Operations.profiler_period_ingest.Output.Ok.Body.jsonPayload.admissionPayload
                         /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/responses/200/content/json/status`.
                         public struct statusPayload: Codable, Hashable, Sendable {
                             private var _explicitNullKeys: Set<String> = []
@@ -68287,6 +68495,8 @@ public enum Operations {
                             }
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/responses/200/content/json/status/loss`.
                             public var loss: Operations.profiler_period_ingest.Output.Ok.Body.jsonPayload.statusPayload.lossPayload
+                            /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/responses/200/content/json/status/admission_bytes`.
+                            public var admission_bytes: Swift.Int
                             /// Creates a new `statusPayload`.
                             ///
                             /// - Parameters:
@@ -68294,22 +68504,26 @@ public enum Operations {
                             ///   - queued_bytes:
                             ///   - segments:
                             ///   - loss:
+                            ///   - admission_bytes:
                             public init(
                                 bytes: Swift.Int,
                                 queued_bytes: Swift.Int,
                                 segments: Swift.Int,
-                                loss: Operations.profiler_period_ingest.Output.Ok.Body.jsonPayload.statusPayload.lossPayload
+                                loss: Operations.profiler_period_ingest.Output.Ok.Body.jsonPayload.statusPayload.lossPayload,
+                                admission_bytes: Swift.Int
                             ) {
                                 self.bytes = bytes
                                 self.queued_bytes = queued_bytes
                                 self.segments = segments
                                 self.loss = loss
+                                self.admission_bytes = admission_bytes
                             }
                             public enum CodingKeys: String, CodingKey {
                                 case bytes
                                 case queued_bytes
                                 case segments
                                 case loss
+                                case admission_bytes
                             }
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -68330,11 +68544,16 @@ public enum Operations {
                                     Operations.profiler_period_ingest.Output.Ok.Body.jsonPayload.statusPayload.lossPayload.self,
                                     forKey: .loss
                                 )
+                                self.admission_bytes = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .admission_bytes
+                                )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                                     "bytes",
                                     "queued_bytes",
                                     "segments",
-                                    "loss"
+                                    "loss",
+                                    "admission_bytes"
                                 ])
                             }
 
@@ -68344,6 +68563,7 @@ public enum Operations {
                                 try container.encode(self.queued_bytes, forKey: .queued_bytes)
                                 try container.encode(self.segments, forKey: .segments)
                                 try container.encode(self.loss, forKey: .loss)
+                                try container.encode(self.admission_bytes, forKey: .admission_bytes)
                             }
                         }
                         /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/responses/200/content/json/status`.
@@ -68357,6 +68577,7 @@ public enum Operations {
                         ///   - duplicate:
                         ///   - dry_run:
                         ///   - events:
+                        ///   - admission:
                         ///   - status:
                         public init(
                             generated_at: Swift.String,
@@ -68365,6 +68586,7 @@ public enum Operations {
                             duplicate: Swift.Bool,
                             dry_run: Swift.Bool,
                             events: Swift.Int,
+                            admission: Operations.profiler_period_ingest.Output.Ok.Body.jsonPayload.admissionPayload,
                             status: Operations.profiler_period_ingest.Output.Ok.Body.jsonPayload.statusPayload
                         ) {
                             self.generated_at = generated_at
@@ -68373,6 +68595,7 @@ public enum Operations {
                             self.duplicate = duplicate
                             self.dry_run = dry_run
                             self.events = events
+                            self.admission = admission
                             self.status = status
                         }
                         public enum CodingKeys: String, CodingKey {
@@ -68382,6 +68605,7 @@ public enum Operations {
                             case duplicate
                             case dry_run
                             case events
+                            case admission
                             case status
                         }
                         public init(from decoder: any Swift.Decoder) throws {
@@ -68411,6 +68635,10 @@ public enum Operations {
                                 Swift.Int.self,
                                 forKey: .events
                             )
+                            self.admission = try container.decode(
+                                Operations.profiler_period_ingest.Output.Ok.Body.jsonPayload.admissionPayload.self,
+                                forKey: .admission
+                            )
                             self.status = try container.decode(
                                 Operations.profiler_period_ingest.Output.Ok.Body.jsonPayload.statusPayload.self,
                                 forKey: .status
@@ -68422,6 +68650,7 @@ public enum Operations {
                                 "duplicate",
                                 "dry_run",
                                 "events",
+                                "admission",
                                 "status"
                             ])
                         }
@@ -68434,6 +68663,7 @@ public enum Operations {
                             try container.encode(self.duplicate, forKey: .duplicate)
                             try container.encode(self.dry_run, forKey: .dry_run)
                             try container.encode(self.events, forKey: .events)
+                            try container.encode(self.admission, forKey: .admission)
                             try container.encode(self.status, forKey: .status)
                         }
                     }
@@ -68775,12 +69005,109 @@ public enum Operations {
                         public var generated_at: Swift.String
                         /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/GET/responses/200/content/json/runsPayload`.
                         public struct runsPayloadPayload: Codable, Hashable, Sendable {
-                                private var _explicitNullKeys: Set<String> = []
+                                    private var _explicitNullKeys: Set<String> = []
 
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/GET/responses/200/content/json/runsPayload/run`.
                             public struct runPayload: Codable, Hashable, Sendable {
-                                private var _explicitNullKeys: Set<String> = []
+                                    private var _explicitNullKeys: Set<String> = []
 
+                                /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/GET/responses/200/content/json/runsPayload/run/admission`.
+                                public struct admissionPayload: Codable, Hashable, Sendable {
+                                    private var _explicitNullKeys: Set<String> = []
+
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/GET/responses/200/content/json/runsPayload/run/admission/schema_version`.
+                                    public var schema_version: Swift.Double
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/GET/responses/200/content/json/runsPayload/run/admission/policy`.
+                                    @frozen public enum policyPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case whole_batch = "whole_batch"
+                                    }
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/GET/responses/200/content/json/runsPayload/run/admission/policy`.
+                                    public var policy: Operations.profiler_period_runs.Output.Ok.Body.jsonPayload.runsPayloadPayload.runPayload.admissionPayload.policyPayload
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/GET/responses/200/content/json/runsPayload/run/admission/refused_batches`.
+                                    public var refused_batches: Swift.Int?
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/GET/responses/200/content/json/runsPayload/run/admission/unadmitted_events`.
+                                    public var unadmitted_events: Swift.Int?
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/GET/responses/200/content/json/runsPayload/run/admission/incomplete`.
+                                    public var incomplete: Swift.Bool
+                                    /// Creates a new `admissionPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - schema_version:
+                                    ///   - policy:
+                                    ///   - refused_batches:
+                                    ///   - unadmitted_events:
+                                    ///   - incomplete:
+                                    public init(
+                                        schema_version: Swift.Double,
+                                        policy: Operations.profiler_period_runs.Output.Ok.Body.jsonPayload.runsPayloadPayload.runPayload.admissionPayload.policyPayload,
+                                        refused_batches: Swift.Int? = nil,
+                                        unadmitted_events: Swift.Int? = nil,
+                                        incomplete: Swift.Bool
+                                    ) {
+                                        self.schema_version = schema_version
+                                        self.policy = policy
+                                        self.refused_batches = refused_batches
+                                        self.unadmitted_events = unadmitted_events
+                                        self.incomplete = incomplete
+                                    }
+                                    public enum CodingKeys: String, CodingKey {
+                                        case schema_version
+                                        case policy
+                                        case refused_batches
+                                        case unadmitted_events
+                                        case incomplete
+                                    }
+                                    public init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                        self.schema_version = try container.decode(
+                                            Swift.Double.self,
+                                            forKey: .schema_version
+                                        )
+                                        self.policy = try container.decode(
+                                            Operations.profiler_period_runs.Output.Ok.Body.jsonPayload.runsPayloadPayload.runPayload.admissionPayload.policyPayload.self,
+                                            forKey: .policy
+                                        )
+                                        self.refused_batches = try container.decodeIfPresent(
+                                            Swift.Int.self,
+                                            forKey: .refused_batches
+                                        )
+                                        self.unadmitted_events = try container.decodeIfPresent(
+                                            Swift.Int.self,
+                                            forKey: .unadmitted_events
+                                        )
+                                        self.incomplete = try container.decode(
+                                            Swift.Bool.self,
+                                            forKey: .incomplete
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "schema_version",
+                                            "policy",
+                                            "refused_batches",
+                                            "unadmitted_events",
+                                            "incomplete"
+                                        ])
+                                    }
+
+                                    public func encode(to encoder: any Swift.Encoder) throws {
+                                        var container = encoder.container(keyedBy: CodingKeys.self)
+                                        try container.encode(self.schema_version, forKey: .schema_version)
+                                        try container.encode(self.policy, forKey: .policy)
+                                        if self.refused_batches == nil && _explicitNullKeys.contains(CodingKeys.refused_batches.stringValue) {
+                                            try container.encodeNil(forKey: .refused_batches)
+                                        } else {
+                                            try container.encodeIfPresent(self.refused_batches, forKey: .refused_batches)
+                                        }
+                                        if self.unadmitted_events == nil && _explicitNullKeys.contains(CodingKeys.unadmitted_events.stringValue) {
+                                            try container.encodeNil(forKey: .unadmitted_events)
+                                        } else {
+                                            try container.encodeIfPresent(self.unadmitted_events, forKey: .unadmitted_events)
+                                        }
+                                        try container.encode(self.incomplete, forKey: .incomplete)
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/GET/responses/200/content/json/runsPayload/run/admission`.
+                                public var admission: Operations.profiler_period_runs.Output.Ok.Body.jsonPayload.runsPayloadPayload.runPayload.admissionPayload?
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/GET/responses/200/content/json/runsPayload/run/run_id`.
                                 public var run_id: Swift.String
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/GET/responses/200/content/json/runsPayload/run/app`.
@@ -68913,18 +69240,21 @@ public enum Operations {
                                 /// Creates a new `runPayload`.
                                 ///
                                 /// - Parameters:
+                                ///   - admission:
                                 ///   - run_id:
                                 ///   - app:
                                 ///   - build_id:
                                 ///   - contract_id:
                                 ///   - comparison:
                                 public init(
+                                    admission: Operations.profiler_period_runs.Output.Ok.Body.jsonPayload.runsPayloadPayload.runPayload.admissionPayload? = nil,
                                     run_id: Swift.String,
                                     app: Operations.profiler_period_runs.Output.Ok.Body.jsonPayload.runsPayloadPayload.runPayload.appPayload,
                                     build_id: Swift.String,
                                     contract_id: Swift.String,
                                     comparison: Operations.profiler_period_runs.Output.Ok.Body.jsonPayload.runsPayloadPayload.runPayload.comparisonPayload? = nil
                                 ) {
+                                    self.admission = admission
                                     self.run_id = run_id
                                     self.app = app
                                     self.build_id = build_id
@@ -68932,6 +69262,7 @@ public enum Operations {
                                     self.comparison = comparison
                                 }
                                 public enum CodingKeys: String, CodingKey {
+                                    case admission
                                     case run_id
                                     case app
                                     case build_id
@@ -68940,7 +69271,11 @@ public enum Operations {
                                 }
                                 public init(from decoder: any Swift.Decoder) throws {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
-                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.admission = try container.decodeIfPresent(
+                                        Operations.profiler_period_runs.Output.Ok.Body.jsonPayload.runsPayloadPayload.runPayload.admissionPayload.self,
+                                        forKey: .admission
+                                    )
                                     self.run_id = try container.decode(
                                         Swift.String.self,
                                         forKey: .run_id
@@ -68962,6 +69297,7 @@ public enum Operations {
                                         forKey: .comparison
                                     )
                                     try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "admission",
                                         "run_id",
                                         "app",
                                         "build_id",
@@ -68970,19 +69306,24 @@ public enum Operations {
                                     ])
                                 }
 
-                                public func encode(to encoder: any Swift.Encoder) throws {
-                                    var container = encoder.container(keyedBy: CodingKeys.self)
-                                    try container.encode(self.run_id, forKey: .run_id)
-                                    try container.encode(self.app, forKey: .app)
-                                    try container.encode(self.build_id, forKey: .build_id)
-                                    try container.encode(self.contract_id, forKey: .contract_id)
-                                    if self.comparison == nil && _explicitNullKeys.contains(CodingKeys.comparison.stringValue) {
-                                        try container.encodeNil(forKey: .comparison)
-                                    } else {
-                                        try container.encodeIfPresent(self.comparison, forKey: .comparison)
+                                    public func encode(to encoder: any Swift.Encoder) throws {
+                                        var container = encoder.container(keyedBy: CodingKeys.self)
+                                        if self.admission == nil && _explicitNullKeys.contains(CodingKeys.admission.stringValue) {
+                                            try container.encodeNil(forKey: .admission)
+                                        } else {
+                                            try container.encodeIfPresent(self.admission, forKey: .admission)
+                                        }
+                                        try container.encode(self.run_id, forKey: .run_id)
+                                        try container.encode(self.app, forKey: .app)
+                                        try container.encode(self.build_id, forKey: .build_id)
+                                        try container.encode(self.contract_id, forKey: .contract_id)
+                                        if self.comparison == nil && _explicitNullKeys.contains(CodingKeys.comparison.stringValue) {
+                                            try container.encodeNil(forKey: .comparison)
+                                        } else {
+                                            try container.encodeIfPresent(self.comparison, forKey: .comparison)
+                                        }
                                     }
                                 }
-                            }
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/GET/responses/200/content/json/runsPayload/run`.
                             public var run: Operations.profiler_period_runs.Output.Ok.Body.jsonPayload.runsPayloadPayload.runPayload
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/GET/responses/200/content/json/runsPayload/events`.
@@ -69017,7 +69358,7 @@ public enum Operations {
                             }
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
-                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
                                 self.run = try container.decode(
                                     Operations.profiler_period_runs.Output.Ok.Body.jsonPayload.runsPayloadPayload.runPayload.self,
                                     forKey: .run
@@ -69042,14 +69383,14 @@ public enum Operations {
                                 ])
                             }
 
-                                public func encode(to encoder: any Swift.Encoder) throws {
-                                    var container = encoder.container(keyedBy: CodingKeys.self)
-                                    try container.encode(self.run, forKey: .run)
-                                    try container.encode(self.events, forKey: .events)
-                                    try container.encode(self.bytes, forKey: .bytes)
-                                    try container.encode(self.batches, forKey: .batches)
+                                    public func encode(to encoder: any Swift.Encoder) throws {
+                                        var container = encoder.container(keyedBy: CodingKeys.self)
+                                        try container.encode(self.run, forKey: .run)
+                                        try container.encode(self.events, forKey: .events)
+                                        try container.encode(self.bytes, forKey: .bytes)
+                                        try container.encode(self.batches, forKey: .batches)
+                                    }
                                 }
-                            }
                         /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/GET/responses/200/content/json/runs`.
                         public typealias runsPayload = [Operations.profiler_period_runs.Output.Ok.Body.jsonPayload.runsPayloadPayload]
                         /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/GET/responses/200/content/json/runs`.
@@ -69187,6 +69528,8 @@ public enum Operations {
                             }
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/GET/responses/200/content/json/status/loss`.
                             public var loss: Operations.profiler_period_runs.Output.Ok.Body.jsonPayload.statusPayload.lossPayload
+                            /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/GET/responses/200/content/json/status/admission_bytes`.
+                            public var admission_bytes: Swift.Int
                             /// Creates a new `statusPayload`.
                             ///
                             /// - Parameters:
@@ -69194,22 +69537,26 @@ public enum Operations {
                             ///   - queued_bytes:
                             ///   - segments:
                             ///   - loss:
+                            ///   - admission_bytes:
                             public init(
                                 bytes: Swift.Int,
                                 queued_bytes: Swift.Int,
                                 segments: Swift.Int,
-                                loss: Operations.profiler_period_runs.Output.Ok.Body.jsonPayload.statusPayload.lossPayload
+                                loss: Operations.profiler_period_runs.Output.Ok.Body.jsonPayload.statusPayload.lossPayload,
+                                admission_bytes: Swift.Int
                             ) {
                                 self.bytes = bytes
                                 self.queued_bytes = queued_bytes
                                 self.segments = segments
                                 self.loss = loss
+                                self.admission_bytes = admission_bytes
                             }
                             public enum CodingKeys: String, CodingKey {
                                 case bytes
                                 case queued_bytes
                                 case segments
                                 case loss
+                                case admission_bytes
                             }
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -69230,11 +69577,16 @@ public enum Operations {
                                     Operations.profiler_period_runs.Output.Ok.Body.jsonPayload.statusPayload.lossPayload.self,
                                     forKey: .loss
                                 )
+                                self.admission_bytes = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .admission_bytes
+                                )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                                     "bytes",
                                     "queued_bytes",
                                     "segments",
-                                    "loss"
+                                    "loss",
+                                    "admission_bytes"
                                 ])
                             }
 
@@ -69244,6 +69596,7 @@ public enum Operations {
                                 try container.encode(self.queued_bytes, forKey: .queued_bytes)
                                 try container.encode(self.segments, forKey: .segments)
                                 try container.encode(self.loss, forKey: .loss)
+                                try container.encode(self.admission_bytes, forKey: .admission_bytes)
                             }
                         }
                         /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/GET/responses/200/content/json/status`.
@@ -69649,8 +70002,105 @@ public enum Operations {
                         public var generated_at: Swift.String
                         /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/GET/responses/200/content/json/run`.
                         public struct runPayload: Codable, Hashable, Sendable {
-                            private var _explicitNullKeys: Set<String> = []
+                                private var _explicitNullKeys: Set<String> = []
 
+                            /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/GET/responses/200/content/json/run/admission`.
+                            public struct admissionPayload: Codable, Hashable, Sendable {
+                                private var _explicitNullKeys: Set<String> = []
+
+                                /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/GET/responses/200/content/json/run/admission/schema_version`.
+                                public var schema_version: Swift.Double
+                                /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/GET/responses/200/content/json/run/admission/policy`.
+                                @frozen public enum policyPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                    case whole_batch = "whole_batch"
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/GET/responses/200/content/json/run/admission/policy`.
+                                public var policy: Operations.profiler_period_show.Output.Ok.Body.jsonPayload.runPayload.admissionPayload.policyPayload
+                                /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/GET/responses/200/content/json/run/admission/refused_batches`.
+                                public var refused_batches: Swift.Int?
+                                /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/GET/responses/200/content/json/run/admission/unadmitted_events`.
+                                public var unadmitted_events: Swift.Int?
+                                /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/GET/responses/200/content/json/run/admission/incomplete`.
+                                public var incomplete: Swift.Bool
+                                /// Creates a new `admissionPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - schema_version:
+                                ///   - policy:
+                                ///   - refused_batches:
+                                ///   - unadmitted_events:
+                                ///   - incomplete:
+                                public init(
+                                    schema_version: Swift.Double,
+                                    policy: Operations.profiler_period_show.Output.Ok.Body.jsonPayload.runPayload.admissionPayload.policyPayload,
+                                    refused_batches: Swift.Int? = nil,
+                                    unadmitted_events: Swift.Int? = nil,
+                                    incomplete: Swift.Bool
+                                ) {
+                                    self.schema_version = schema_version
+                                    self.policy = policy
+                                    self.refused_batches = refused_batches
+                                    self.unadmitted_events = unadmitted_events
+                                    self.incomplete = incomplete
+                                }
+                                public enum CodingKeys: String, CodingKey {
+                                    case schema_version
+                                    case policy
+                                    case refused_batches
+                                    case unadmitted_events
+                                    case incomplete
+                                }
+                                public init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.schema_version = try container.decode(
+                                        Swift.Double.self,
+                                        forKey: .schema_version
+                                    )
+                                    self.policy = try container.decode(
+                                        Operations.profiler_period_show.Output.Ok.Body.jsonPayload.runPayload.admissionPayload.policyPayload.self,
+                                        forKey: .policy
+                                    )
+                                    self.refused_batches = try container.decodeIfPresent(
+                                        Swift.Int.self,
+                                        forKey: .refused_batches
+                                    )
+                                    self.unadmitted_events = try container.decodeIfPresent(
+                                        Swift.Int.self,
+                                        forKey: .unadmitted_events
+                                    )
+                                    self.incomplete = try container.decode(
+                                        Swift.Bool.self,
+                                        forKey: .incomplete
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "schema_version",
+                                        "policy",
+                                        "refused_batches",
+                                        "unadmitted_events",
+                                        "incomplete"
+                                    ])
+                                }
+
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    var container = encoder.container(keyedBy: CodingKeys.self)
+                                    try container.encode(self.schema_version, forKey: .schema_version)
+                                    try container.encode(self.policy, forKey: .policy)
+                                    if self.refused_batches == nil && _explicitNullKeys.contains(CodingKeys.refused_batches.stringValue) {
+                                        try container.encodeNil(forKey: .refused_batches)
+                                    } else {
+                                        try container.encodeIfPresent(self.refused_batches, forKey: .refused_batches)
+                                    }
+                                    if self.unadmitted_events == nil && _explicitNullKeys.contains(CodingKeys.unadmitted_events.stringValue) {
+                                        try container.encodeNil(forKey: .unadmitted_events)
+                                    } else {
+                                        try container.encodeIfPresent(self.unadmitted_events, forKey: .unadmitted_events)
+                                    }
+                                    try container.encode(self.incomplete, forKey: .incomplete)
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/GET/responses/200/content/json/run/admission`.
+                            public var admission: Operations.profiler_period_show.Output.Ok.Body.jsonPayload.runPayload.admissionPayload?
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/GET/responses/200/content/json/run/run_id`.
                             public var run_id: Swift.String
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/GET/responses/200/content/json/run/app`.
@@ -69783,18 +70233,21 @@ public enum Operations {
                             /// Creates a new `runPayload`.
                             ///
                             /// - Parameters:
+                            ///   - admission:
                             ///   - run_id:
                             ///   - app:
                             ///   - build_id:
                             ///   - contract_id:
                             ///   - comparison:
                             public init(
+                                admission: Operations.profiler_period_show.Output.Ok.Body.jsonPayload.runPayload.admissionPayload? = nil,
                                 run_id: Swift.String,
                                 app: Operations.profiler_period_show.Output.Ok.Body.jsonPayload.runPayload.appPayload,
                                 build_id: Swift.String,
                                 contract_id: Swift.String,
                                 comparison: Operations.profiler_period_show.Output.Ok.Body.jsonPayload.runPayload.comparisonPayload? = nil
                             ) {
+                                self.admission = admission
                                 self.run_id = run_id
                                 self.app = app
                                 self.build_id = build_id
@@ -69802,6 +70255,7 @@ public enum Operations {
                                 self.comparison = comparison
                             }
                             public enum CodingKeys: String, CodingKey {
+                                case admission
                                 case run_id
                                 case app
                                 case build_id
@@ -69810,7 +70264,11 @@ public enum Operations {
                             }
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
-                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.admission = try container.decodeIfPresent(
+                                    Operations.profiler_period_show.Output.Ok.Body.jsonPayload.runPayload.admissionPayload.self,
+                                    forKey: .admission
+                                )
                                 self.run_id = try container.decode(
                                     Swift.String.self,
                                     forKey: .run_id
@@ -69832,6 +70290,7 @@ public enum Operations {
                                     forKey: .comparison
                                 )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "admission",
                                     "run_id",
                                     "app",
                                     "build_id",
@@ -69840,19 +70299,24 @@ public enum Operations {
                                 ])
                             }
 
-                            public func encode(to encoder: any Swift.Encoder) throws {
-                                var container = encoder.container(keyedBy: CodingKeys.self)
-                                try container.encode(self.run_id, forKey: .run_id)
-                                try container.encode(self.app, forKey: .app)
-                                try container.encode(self.build_id, forKey: .build_id)
-                                try container.encode(self.contract_id, forKey: .contract_id)
-                                if self.comparison == nil && _explicitNullKeys.contains(CodingKeys.comparison.stringValue) {
-                                    try container.encodeNil(forKey: .comparison)
-                                } else {
-                                    try container.encodeIfPresent(self.comparison, forKey: .comparison)
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    var container = encoder.container(keyedBy: CodingKeys.self)
+                                    if self.admission == nil && _explicitNullKeys.contains(CodingKeys.admission.stringValue) {
+                                        try container.encodeNil(forKey: .admission)
+                                    } else {
+                                        try container.encodeIfPresent(self.admission, forKey: .admission)
+                                    }
+                                    try container.encode(self.run_id, forKey: .run_id)
+                                    try container.encode(self.app, forKey: .app)
+                                    try container.encode(self.build_id, forKey: .build_id)
+                                    try container.encode(self.contract_id, forKey: .contract_id)
+                                    if self.comparison == nil && _explicitNullKeys.contains(CodingKeys.comparison.stringValue) {
+                                        try container.encodeNil(forKey: .comparison)
+                                    } else {
+                                        try container.encodeIfPresent(self.comparison, forKey: .comparison)
+                                    }
                                 }
                             }
-                        }
                         /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/GET/responses/200/content/json/run`.
                         public var run: Operations.profiler_period_show.Output.Ok.Body.jsonPayload.runPayload
                         /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/GET/responses/200/content/json/summaryPayload`.
@@ -70471,6 +70935,8 @@ public enum Operations {
                             }
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/GET/responses/200/content/json/status/loss`.
                             public var loss: Operations.profiler_period_show.Output.Ok.Body.jsonPayload.statusPayload.lossPayload
+                            /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/GET/responses/200/content/json/status/admission_bytes`.
+                            public var admission_bytes: Swift.Int
                             /// Creates a new `statusPayload`.
                             ///
                             /// - Parameters:
@@ -70478,22 +70944,26 @@ public enum Operations {
                             ///   - queued_bytes:
                             ///   - segments:
                             ///   - loss:
+                            ///   - admission_bytes:
                             public init(
                                 bytes: Swift.Int,
                                 queued_bytes: Swift.Int,
                                 segments: Swift.Int,
-                                loss: Operations.profiler_period_show.Output.Ok.Body.jsonPayload.statusPayload.lossPayload
+                                loss: Operations.profiler_period_show.Output.Ok.Body.jsonPayload.statusPayload.lossPayload,
+                                admission_bytes: Swift.Int
                             ) {
                                 self.bytes = bytes
                                 self.queued_bytes = queued_bytes
                                 self.segments = segments
                                 self.loss = loss
+                                self.admission_bytes = admission_bytes
                             }
                             public enum CodingKeys: String, CodingKey {
                                 case bytes
                                 case queued_bytes
                                 case segments
                                 case loss
+                                case admission_bytes
                             }
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -70514,11 +70984,16 @@ public enum Operations {
                                     Operations.profiler_period_show.Output.Ok.Body.jsonPayload.statusPayload.lossPayload.self,
                                     forKey: .loss
                                 )
+                                self.admission_bytes = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .admission_bytes
+                                )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                                     "bytes",
                                     "queued_bytes",
                                     "segments",
-                                    "loss"
+                                    "loss",
+                                    "admission_bytes"
                                 ])
                             }
 
@@ -70528,6 +71003,7 @@ public enum Operations {
                                 try container.encode(self.queued_bytes, forKey: .queued_bytes)
                                 try container.encode(self.segments, forKey: .segments)
                                 try container.encode(self.loss, forKey: .loss)
+                                try container.encode(self.admission_bytes, forKey: .admission_bytes)
                             }
                         }
                         /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/GET/responses/200/content/json/status`.
@@ -71003,8 +71479,105 @@ public enum Operations {
                             public var batch_id: Swift.String
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/export/GET/responses/200/content/json/batchesPayload/run`.
                             public struct runPayload: Codable, Hashable, Sendable {
-                                private var _explicitNullKeys: Set<String> = []
+                                    private var _explicitNullKeys: Set<String> = []
 
+                                /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/export/GET/responses/200/content/json/batchesPayload/run/admission`.
+                                public struct admissionPayload: Codable, Hashable, Sendable {
+                                    private var _explicitNullKeys: Set<String> = []
+
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/export/GET/responses/200/content/json/batchesPayload/run/admission/schema_version`.
+                                    public var schema_version: Swift.Double
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/export/GET/responses/200/content/json/batchesPayload/run/admission/policy`.
+                                    @frozen public enum policyPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case whole_batch = "whole_batch"
+                                    }
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/export/GET/responses/200/content/json/batchesPayload/run/admission/policy`.
+                                    public var policy: Operations.profiler_period_export.Output.Ok.Body.jsonPayload.batchesPayloadPayload.runPayload.admissionPayload.policyPayload
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/export/GET/responses/200/content/json/batchesPayload/run/admission/refused_batches`.
+                                    public var refused_batches: Swift.Int?
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/export/GET/responses/200/content/json/batchesPayload/run/admission/unadmitted_events`.
+                                    public var unadmitted_events: Swift.Int?
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/export/GET/responses/200/content/json/batchesPayload/run/admission/incomplete`.
+                                    public var incomplete: Swift.Bool
+                                    /// Creates a new `admissionPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - schema_version:
+                                    ///   - policy:
+                                    ///   - refused_batches:
+                                    ///   - unadmitted_events:
+                                    ///   - incomplete:
+                                    public init(
+                                        schema_version: Swift.Double,
+                                        policy: Operations.profiler_period_export.Output.Ok.Body.jsonPayload.batchesPayloadPayload.runPayload.admissionPayload.policyPayload,
+                                        refused_batches: Swift.Int? = nil,
+                                        unadmitted_events: Swift.Int? = nil,
+                                        incomplete: Swift.Bool
+                                    ) {
+                                        self.schema_version = schema_version
+                                        self.policy = policy
+                                        self.refused_batches = refused_batches
+                                        self.unadmitted_events = unadmitted_events
+                                        self.incomplete = incomplete
+                                    }
+                                    public enum CodingKeys: String, CodingKey {
+                                        case schema_version
+                                        case policy
+                                        case refused_batches
+                                        case unadmitted_events
+                                        case incomplete
+                                    }
+                                    public init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                        self.schema_version = try container.decode(
+                                            Swift.Double.self,
+                                            forKey: .schema_version
+                                        )
+                                        self.policy = try container.decode(
+                                            Operations.profiler_period_export.Output.Ok.Body.jsonPayload.batchesPayloadPayload.runPayload.admissionPayload.policyPayload.self,
+                                            forKey: .policy
+                                        )
+                                        self.refused_batches = try container.decodeIfPresent(
+                                            Swift.Int.self,
+                                            forKey: .refused_batches
+                                        )
+                                        self.unadmitted_events = try container.decodeIfPresent(
+                                            Swift.Int.self,
+                                            forKey: .unadmitted_events
+                                        )
+                                        self.incomplete = try container.decode(
+                                            Swift.Bool.self,
+                                            forKey: .incomplete
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "schema_version",
+                                            "policy",
+                                            "refused_batches",
+                                            "unadmitted_events",
+                                            "incomplete"
+                                        ])
+                                    }
+
+                                    public func encode(to encoder: any Swift.Encoder) throws {
+                                        var container = encoder.container(keyedBy: CodingKeys.self)
+                                        try container.encode(self.schema_version, forKey: .schema_version)
+                                        try container.encode(self.policy, forKey: .policy)
+                                        if self.refused_batches == nil && _explicitNullKeys.contains(CodingKeys.refused_batches.stringValue) {
+                                            try container.encodeNil(forKey: .refused_batches)
+                                        } else {
+                                            try container.encodeIfPresent(self.refused_batches, forKey: .refused_batches)
+                                        }
+                                        if self.unadmitted_events == nil && _explicitNullKeys.contains(CodingKeys.unadmitted_events.stringValue) {
+                                            try container.encodeNil(forKey: .unadmitted_events)
+                                        } else {
+                                            try container.encodeIfPresent(self.unadmitted_events, forKey: .unadmitted_events)
+                                        }
+                                        try container.encode(self.incomplete, forKey: .incomplete)
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/export/GET/responses/200/content/json/batchesPayload/run/admission`.
+                                public var admission: Operations.profiler_period_export.Output.Ok.Body.jsonPayload.batchesPayloadPayload.runPayload.admissionPayload?
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/export/GET/responses/200/content/json/batchesPayload/run/run_id`.
                                 public var run_id: Swift.String
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/export/GET/responses/200/content/json/batchesPayload/run/app`.
@@ -71137,18 +71710,21 @@ public enum Operations {
                                 /// Creates a new `runPayload`.
                                 ///
                                 /// - Parameters:
+                                ///   - admission:
                                 ///   - run_id:
                                 ///   - app:
                                 ///   - build_id:
                                 ///   - contract_id:
                                 ///   - comparison:
                                 public init(
+                                    admission: Operations.profiler_period_export.Output.Ok.Body.jsonPayload.batchesPayloadPayload.runPayload.admissionPayload? = nil,
                                     run_id: Swift.String,
                                     app: Operations.profiler_period_export.Output.Ok.Body.jsonPayload.batchesPayloadPayload.runPayload.appPayload,
                                     build_id: Swift.String,
                                     contract_id: Swift.String,
                                     comparison: Operations.profiler_period_export.Output.Ok.Body.jsonPayload.batchesPayloadPayload.runPayload.comparisonPayload? = nil
                                 ) {
+                                    self.admission = admission
                                     self.run_id = run_id
                                     self.app = app
                                     self.build_id = build_id
@@ -71156,6 +71732,7 @@ public enum Operations {
                                     self.comparison = comparison
                                 }
                                 public enum CodingKeys: String, CodingKey {
+                                    case admission
                                     case run_id
                                     case app
                                     case build_id
@@ -71164,7 +71741,11 @@ public enum Operations {
                                 }
                                 public init(from decoder: any Swift.Decoder) throws {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
-                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.admission = try container.decodeIfPresent(
+                                        Operations.profiler_period_export.Output.Ok.Body.jsonPayload.batchesPayloadPayload.runPayload.admissionPayload.self,
+                                        forKey: .admission
+                                    )
                                     self.run_id = try container.decode(
                                         Swift.String.self,
                                         forKey: .run_id
@@ -71186,6 +71767,7 @@ public enum Operations {
                                         forKey: .comparison
                                     )
                                     try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "admission",
                                         "run_id",
                                         "app",
                                         "build_id",
@@ -71194,19 +71776,24 @@ public enum Operations {
                                     ])
                                 }
 
-                                public func encode(to encoder: any Swift.Encoder) throws {
-                                    var container = encoder.container(keyedBy: CodingKeys.self)
-                                    try container.encode(self.run_id, forKey: .run_id)
-                                    try container.encode(self.app, forKey: .app)
-                                    try container.encode(self.build_id, forKey: .build_id)
-                                    try container.encode(self.contract_id, forKey: .contract_id)
-                                    if self.comparison == nil && _explicitNullKeys.contains(CodingKeys.comparison.stringValue) {
-                                        try container.encodeNil(forKey: .comparison)
-                                    } else {
-                                        try container.encodeIfPresent(self.comparison, forKey: .comparison)
+                                    public func encode(to encoder: any Swift.Encoder) throws {
+                                        var container = encoder.container(keyedBy: CodingKeys.self)
+                                        if self.admission == nil && _explicitNullKeys.contains(CodingKeys.admission.stringValue) {
+                                            try container.encodeNil(forKey: .admission)
+                                        } else {
+                                            try container.encodeIfPresent(self.admission, forKey: .admission)
+                                        }
+                                        try container.encode(self.run_id, forKey: .run_id)
+                                        try container.encode(self.app, forKey: .app)
+                                        try container.encode(self.build_id, forKey: .build_id)
+                                        try container.encode(self.contract_id, forKey: .contract_id)
+                                        if self.comparison == nil && _explicitNullKeys.contains(CodingKeys.comparison.stringValue) {
+                                            try container.encodeNil(forKey: .comparison)
+                                        } else {
+                                            try container.encodeIfPresent(self.comparison, forKey: .comparison)
+                                        }
                                     }
                                 }
-                            }
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/export/GET/responses/200/content/json/batchesPayload/run`.
                             public var run: Operations.profiler_period_export.Output.Ok.Body.jsonPayload.batchesPayloadPayload.runPayload
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/export/GET/responses/200/content/json/batchesPayload/eventsPayload`.
@@ -92289,6 +92876,8 @@ public enum Operations {
                             }
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/export/GET/responses/200/content/json/status/loss`.
                             public var loss: Operations.profiler_period_export.Output.Ok.Body.jsonPayload.statusPayload.lossPayload
+                            /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/export/GET/responses/200/content/json/status/admission_bytes`.
+                            public var admission_bytes: Swift.Int
                             /// Creates a new `statusPayload`.
                             ///
                             /// - Parameters:
@@ -92296,22 +92885,26 @@ public enum Operations {
                             ///   - queued_bytes:
                             ///   - segments:
                             ///   - loss:
+                            ///   - admission_bytes:
                             public init(
                                 bytes: Swift.Int,
                                 queued_bytes: Swift.Int,
                                 segments: Swift.Int,
-                                loss: Operations.profiler_period_export.Output.Ok.Body.jsonPayload.statusPayload.lossPayload
+                                loss: Operations.profiler_period_export.Output.Ok.Body.jsonPayload.statusPayload.lossPayload,
+                                admission_bytes: Swift.Int
                             ) {
                                 self.bytes = bytes
                                 self.queued_bytes = queued_bytes
                                 self.segments = segments
                                 self.loss = loss
+                                self.admission_bytes = admission_bytes
                             }
                             public enum CodingKeys: String, CodingKey {
                                 case bytes
                                 case queued_bytes
                                 case segments
                                 case loss
+                                case admission_bytes
                             }
                             public init(from decoder: any Swift.Decoder) throws {
                                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -92332,11 +92925,16 @@ public enum Operations {
                                     Operations.profiler_period_export.Output.Ok.Body.jsonPayload.statusPayload.lossPayload.self,
                                     forKey: .loss
                                 )
+                                self.admission_bytes = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .admission_bytes
+                                )
                                 try decoder.ensureNoAdditionalProperties(knownKeys: [
                                     "bytes",
                                     "queued_bytes",
                                     "segments",
-                                    "loss"
+                                    "loss",
+                                    "admission_bytes"
                                 ])
                             }
 
@@ -92346,6 +92944,7 @@ public enum Operations {
                                 try container.encode(self.queued_bytes, forKey: .queued_bytes)
                                 try container.encode(self.segments, forKey: .segments)
                                 try container.encode(self.loss, forKey: .loss)
+                                try container.encode(self.admission_bytes, forKey: .admission_bytes)
                             }
                         }
                         /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/export/GET/responses/200/content/json/status`.
@@ -92764,8 +93363,105 @@ public enum Operations {
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/before/run`.
                             public struct runPayload: Codable, Hashable, Sendable {
-                                private var _explicitNullKeys: Set<String> = []
+                                    private var _explicitNullKeys: Set<String> = []
 
+                                /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/before/run/admission`.
+                                public struct admissionPayload: Codable, Hashable, Sendable {
+                                    private var _explicitNullKeys: Set<String> = []
+
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/before/run/admission/schema_version`.
+                                    public var schema_version: Swift.Double
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/before/run/admission/policy`.
+                                    @frozen public enum policyPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case whole_batch = "whole_batch"
+                                    }
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/before/run/admission/policy`.
+                                    public var policy: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.beforePayload.runPayload.admissionPayload.policyPayload
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/before/run/admission/refused_batches`.
+                                    public var refused_batches: Swift.Int?
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/before/run/admission/unadmitted_events`.
+                                    public var unadmitted_events: Swift.Int?
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/before/run/admission/incomplete`.
+                                    public var incomplete: Swift.Bool
+                                    /// Creates a new `admissionPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - schema_version:
+                                    ///   - policy:
+                                    ///   - refused_batches:
+                                    ///   - unadmitted_events:
+                                    ///   - incomplete:
+                                    public init(
+                                        schema_version: Swift.Double,
+                                        policy: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.beforePayload.runPayload.admissionPayload.policyPayload,
+                                        refused_batches: Swift.Int? = nil,
+                                        unadmitted_events: Swift.Int? = nil,
+                                        incomplete: Swift.Bool
+                                    ) {
+                                        self.schema_version = schema_version
+                                        self.policy = policy
+                                        self.refused_batches = refused_batches
+                                        self.unadmitted_events = unadmitted_events
+                                        self.incomplete = incomplete
+                                    }
+                                    public enum CodingKeys: String, CodingKey {
+                                        case schema_version
+                                        case policy
+                                        case refused_batches
+                                        case unadmitted_events
+                                        case incomplete
+                                    }
+                                    public init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                        self.schema_version = try container.decode(
+                                            Swift.Double.self,
+                                            forKey: .schema_version
+                                        )
+                                        self.policy = try container.decode(
+                                            Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.beforePayload.runPayload.admissionPayload.policyPayload.self,
+                                            forKey: .policy
+                                        )
+                                        self.refused_batches = try container.decodeIfPresent(
+                                            Swift.Int.self,
+                                            forKey: .refused_batches
+                                        )
+                                        self.unadmitted_events = try container.decodeIfPresent(
+                                            Swift.Int.self,
+                                            forKey: .unadmitted_events
+                                        )
+                                        self.incomplete = try container.decode(
+                                            Swift.Bool.self,
+                                            forKey: .incomplete
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "schema_version",
+                                            "policy",
+                                            "refused_batches",
+                                            "unadmitted_events",
+                                            "incomplete"
+                                        ])
+                                    }
+
+                                    public func encode(to encoder: any Swift.Encoder) throws {
+                                        var container = encoder.container(keyedBy: CodingKeys.self)
+                                        try container.encode(self.schema_version, forKey: .schema_version)
+                                        try container.encode(self.policy, forKey: .policy)
+                                        if self.refused_batches == nil && _explicitNullKeys.contains(CodingKeys.refused_batches.stringValue) {
+                                            try container.encodeNil(forKey: .refused_batches)
+                                        } else {
+                                            try container.encodeIfPresent(self.refused_batches, forKey: .refused_batches)
+                                        }
+                                        if self.unadmitted_events == nil && _explicitNullKeys.contains(CodingKeys.unadmitted_events.stringValue) {
+                                            try container.encodeNil(forKey: .unadmitted_events)
+                                        } else {
+                                            try container.encodeIfPresent(self.unadmitted_events, forKey: .unadmitted_events)
+                                        }
+                                        try container.encode(self.incomplete, forKey: .incomplete)
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/before/run/admission`.
+                                public var admission: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.beforePayload.runPayload.admissionPayload?
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/before/run/run_id`.
                                 public var run_id: Swift.String
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/before/run/app`.
@@ -92898,18 +93594,21 @@ public enum Operations {
                                 /// Creates a new `runPayload`.
                                 ///
                                 /// - Parameters:
+                                ///   - admission:
                                 ///   - run_id:
                                 ///   - app:
                                 ///   - build_id:
                                 ///   - contract_id:
                                 ///   - comparison:
                                 public init(
+                                    admission: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.beforePayload.runPayload.admissionPayload? = nil,
                                     run_id: Swift.String,
                                     app: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.beforePayload.runPayload.appPayload,
                                     build_id: Swift.String,
                                     contract_id: Swift.String,
                                     comparison: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.beforePayload.runPayload.comparisonPayload? = nil
                                 ) {
+                                    self.admission = admission
                                     self.run_id = run_id
                                     self.app = app
                                     self.build_id = build_id
@@ -92917,6 +93616,7 @@ public enum Operations {
                                     self.comparison = comparison
                                 }
                                 public enum CodingKeys: String, CodingKey {
+                                    case admission
                                     case run_id
                                     case app
                                     case build_id
@@ -92925,7 +93625,11 @@ public enum Operations {
                                 }
                                 public init(from decoder: any Swift.Decoder) throws {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
-                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.admission = try container.decodeIfPresent(
+                                        Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.beforePayload.runPayload.admissionPayload.self,
+                                        forKey: .admission
+                                    )
                                     self.run_id = try container.decode(
                                         Swift.String.self,
                                         forKey: .run_id
@@ -92947,6 +93651,7 @@ public enum Operations {
                                         forKey: .comparison
                                     )
                                     try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "admission",
                                         "run_id",
                                         "app",
                                         "build_id",
@@ -92955,19 +93660,24 @@ public enum Operations {
                                     ])
                                 }
 
-                                public func encode(to encoder: any Swift.Encoder) throws {
-                                    var container = encoder.container(keyedBy: CodingKeys.self)
-                                    try container.encode(self.run_id, forKey: .run_id)
-                                    try container.encode(self.app, forKey: .app)
-                                    try container.encode(self.build_id, forKey: .build_id)
-                                    try container.encode(self.contract_id, forKey: .contract_id)
-                                    if self.comparison == nil && _explicitNullKeys.contains(CodingKeys.comparison.stringValue) {
-                                        try container.encodeNil(forKey: .comparison)
-                                    } else {
-                                        try container.encodeIfPresent(self.comparison, forKey: .comparison)
+                                    public func encode(to encoder: any Swift.Encoder) throws {
+                                        var container = encoder.container(keyedBy: CodingKeys.self)
+                                        if self.admission == nil && _explicitNullKeys.contains(CodingKeys.admission.stringValue) {
+                                            try container.encodeNil(forKey: .admission)
+                                        } else {
+                                            try container.encodeIfPresent(self.admission, forKey: .admission)
+                                        }
+                                        try container.encode(self.run_id, forKey: .run_id)
+                                        try container.encode(self.app, forKey: .app)
+                                        try container.encode(self.build_id, forKey: .build_id)
+                                        try container.encode(self.contract_id, forKey: .contract_id)
+                                        if self.comparison == nil && _explicitNullKeys.contains(CodingKeys.comparison.stringValue) {
+                                            try container.encodeNil(forKey: .comparison)
+                                        } else {
+                                            try container.encodeIfPresent(self.comparison, forKey: .comparison)
+                                        }
                                     }
                                 }
-                            }
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/before/run`.
                             public var run: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.beforePayload.runPayload
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/before/summaryPayload`.
@@ -93586,6 +94296,8 @@ public enum Operations {
                                 }
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/before/status/loss`.
                                 public var loss: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.beforePayload.statusPayload.lossPayload
+                                /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/before/status/admission_bytes`.
+                                public var admission_bytes: Swift.Int
                                 /// Creates a new `statusPayload`.
                                 ///
                                 /// - Parameters:
@@ -93593,22 +94305,26 @@ public enum Operations {
                                 ///   - queued_bytes:
                                 ///   - segments:
                                 ///   - loss:
+                                ///   - admission_bytes:
                                 public init(
                                     bytes: Swift.Int,
                                     queued_bytes: Swift.Int,
                                     segments: Swift.Int,
-                                    loss: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.beforePayload.statusPayload.lossPayload
+                                    loss: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.beforePayload.statusPayload.lossPayload,
+                                    admission_bytes: Swift.Int
                                 ) {
                                     self.bytes = bytes
                                     self.queued_bytes = queued_bytes
                                     self.segments = segments
                                     self.loss = loss
+                                    self.admission_bytes = admission_bytes
                                 }
                                 public enum CodingKeys: String, CodingKey {
                                     case bytes
                                     case queued_bytes
                                     case segments
                                     case loss
+                                    case admission_bytes
                                 }
                                 public init(from decoder: any Swift.Decoder) throws {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -93629,11 +94345,16 @@ public enum Operations {
                                         Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.beforePayload.statusPayload.lossPayload.self,
                                         forKey: .loss
                                     )
+                                    self.admission_bytes = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .admission_bytes
+                                    )
                                     try decoder.ensureNoAdditionalProperties(knownKeys: [
                                         "bytes",
                                         "queued_bytes",
                                         "segments",
-                                        "loss"
+                                        "loss",
+                                        "admission_bytes"
                                     ])
                                 }
 
@@ -93643,6 +94364,7 @@ public enum Operations {
                                     try container.encode(self.queued_bytes, forKey: .queued_bytes)
                                     try container.encode(self.segments, forKey: .segments)
                                     try container.encode(self.loss, forKey: .loss)
+                                    try container.encode(self.admission_bytes, forKey: .admission_bytes)
                                 }
                             }
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/before/status`.
@@ -93766,8 +94488,105 @@ public enum Operations {
                             public var generated_at: Swift.String
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/after/run`.
                             public struct runPayload: Codable, Hashable, Sendable {
-                                private var _explicitNullKeys: Set<String> = []
+                                    private var _explicitNullKeys: Set<String> = []
 
+                                /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/after/run/admission`.
+                                public struct admissionPayload: Codable, Hashable, Sendable {
+                                    private var _explicitNullKeys: Set<String> = []
+
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/after/run/admission/schema_version`.
+                                    public var schema_version: Swift.Double
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/after/run/admission/policy`.
+                                    @frozen public enum policyPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case whole_batch = "whole_batch"
+                                    }
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/after/run/admission/policy`.
+                                    public var policy: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.afterPayload.runPayload.admissionPayload.policyPayload
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/after/run/admission/refused_batches`.
+                                    public var refused_batches: Swift.Int?
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/after/run/admission/unadmitted_events`.
+                                    public var unadmitted_events: Swift.Int?
+                                    /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/after/run/admission/incomplete`.
+                                    public var incomplete: Swift.Bool
+                                    /// Creates a new `admissionPayload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - schema_version:
+                                    ///   - policy:
+                                    ///   - refused_batches:
+                                    ///   - unadmitted_events:
+                                    ///   - incomplete:
+                                    public init(
+                                        schema_version: Swift.Double,
+                                        policy: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.afterPayload.runPayload.admissionPayload.policyPayload,
+                                        refused_batches: Swift.Int? = nil,
+                                        unadmitted_events: Swift.Int? = nil,
+                                        incomplete: Swift.Bool
+                                    ) {
+                                        self.schema_version = schema_version
+                                        self.policy = policy
+                                        self.refused_batches = refused_batches
+                                        self.unadmitted_events = unadmitted_events
+                                        self.incomplete = incomplete
+                                    }
+                                    public enum CodingKeys: String, CodingKey {
+                                        case schema_version
+                                        case policy
+                                        case refused_batches
+                                        case unadmitted_events
+                                        case incomplete
+                                    }
+                                    public init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                        self.schema_version = try container.decode(
+                                            Swift.Double.self,
+                                            forKey: .schema_version
+                                        )
+                                        self.policy = try container.decode(
+                                            Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.afterPayload.runPayload.admissionPayload.policyPayload.self,
+                                            forKey: .policy
+                                        )
+                                        self.refused_batches = try container.decodeIfPresent(
+                                            Swift.Int.self,
+                                            forKey: .refused_batches
+                                        )
+                                        self.unadmitted_events = try container.decodeIfPresent(
+                                            Swift.Int.self,
+                                            forKey: .unadmitted_events
+                                        )
+                                        self.incomplete = try container.decode(
+                                            Swift.Bool.self,
+                                            forKey: .incomplete
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "schema_version",
+                                            "policy",
+                                            "refused_batches",
+                                            "unadmitted_events",
+                                            "incomplete"
+                                        ])
+                                    }
+
+                                    public func encode(to encoder: any Swift.Encoder) throws {
+                                        var container = encoder.container(keyedBy: CodingKeys.self)
+                                        try container.encode(self.schema_version, forKey: .schema_version)
+                                        try container.encode(self.policy, forKey: .policy)
+                                        if self.refused_batches == nil && _explicitNullKeys.contains(CodingKeys.refused_batches.stringValue) {
+                                            try container.encodeNil(forKey: .refused_batches)
+                                        } else {
+                                            try container.encodeIfPresent(self.refused_batches, forKey: .refused_batches)
+                                        }
+                                        if self.unadmitted_events == nil && _explicitNullKeys.contains(CodingKeys.unadmitted_events.stringValue) {
+                                            try container.encodeNil(forKey: .unadmitted_events)
+                                        } else {
+                                            try container.encodeIfPresent(self.unadmitted_events, forKey: .unadmitted_events)
+                                        }
+                                        try container.encode(self.incomplete, forKey: .incomplete)
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/after/run/admission`.
+                                public var admission: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.afterPayload.runPayload.admissionPayload?
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/after/run/run_id`.
                                 public var run_id: Swift.String
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/after/run/app`.
@@ -93900,18 +94719,21 @@ public enum Operations {
                                 /// Creates a new `runPayload`.
                                 ///
                                 /// - Parameters:
+                                ///   - admission:
                                 ///   - run_id:
                                 ///   - app:
                                 ///   - build_id:
                                 ///   - contract_id:
                                 ///   - comparison:
                                 public init(
+                                    admission: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.afterPayload.runPayload.admissionPayload? = nil,
                                     run_id: Swift.String,
                                     app: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.afterPayload.runPayload.appPayload,
                                     build_id: Swift.String,
                                     contract_id: Swift.String,
                                     comparison: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.afterPayload.runPayload.comparisonPayload? = nil
                                 ) {
+                                    self.admission = admission
                                     self.run_id = run_id
                                     self.app = app
                                     self.build_id = build_id
@@ -93919,6 +94741,7 @@ public enum Operations {
                                     self.comparison = comparison
                                 }
                                 public enum CodingKeys: String, CodingKey {
+                                    case admission
                                     case run_id
                                     case app
                                     case build_id
@@ -93927,7 +94750,11 @@ public enum Operations {
                                 }
                                 public init(from decoder: any Swift.Decoder) throws {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
-                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.admission = try container.decodeIfPresent(
+                                        Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.afterPayload.runPayload.admissionPayload.self,
+                                        forKey: .admission
+                                    )
                                     self.run_id = try container.decode(
                                         Swift.String.self,
                                         forKey: .run_id
@@ -93949,6 +94776,7 @@ public enum Operations {
                                         forKey: .comparison
                                     )
                                     try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "admission",
                                         "run_id",
                                         "app",
                                         "build_id",
@@ -93957,19 +94785,24 @@ public enum Operations {
                                     ])
                                 }
 
-                                public func encode(to encoder: any Swift.Encoder) throws {
-                                    var container = encoder.container(keyedBy: CodingKeys.self)
-                                    try container.encode(self.run_id, forKey: .run_id)
-                                    try container.encode(self.app, forKey: .app)
-                                    try container.encode(self.build_id, forKey: .build_id)
-                                    try container.encode(self.contract_id, forKey: .contract_id)
-                                    if self.comparison == nil && _explicitNullKeys.contains(CodingKeys.comparison.stringValue) {
-                                        try container.encodeNil(forKey: .comparison)
-                                    } else {
-                                        try container.encodeIfPresent(self.comparison, forKey: .comparison)
+                                    public func encode(to encoder: any Swift.Encoder) throws {
+                                        var container = encoder.container(keyedBy: CodingKeys.self)
+                                        if self.admission == nil && _explicitNullKeys.contains(CodingKeys.admission.stringValue) {
+                                            try container.encodeNil(forKey: .admission)
+                                        } else {
+                                            try container.encodeIfPresent(self.admission, forKey: .admission)
+                                        }
+                                        try container.encode(self.run_id, forKey: .run_id)
+                                        try container.encode(self.app, forKey: .app)
+                                        try container.encode(self.build_id, forKey: .build_id)
+                                        try container.encode(self.contract_id, forKey: .contract_id)
+                                        if self.comparison == nil && _explicitNullKeys.contains(CodingKeys.comparison.stringValue) {
+                                            try container.encodeNil(forKey: .comparison)
+                                        } else {
+                                            try container.encodeIfPresent(self.comparison, forKey: .comparison)
+                                        }
                                     }
                                 }
-                            }
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/after/run`.
                             public var run: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.afterPayload.runPayload
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/after/summaryPayload`.
@@ -94588,6 +95421,8 @@ public enum Operations {
                                 }
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/after/status/loss`.
                                 public var loss: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.afterPayload.statusPayload.lossPayload
+                                /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/after/status/admission_bytes`.
+                                public var admission_bytes: Swift.Int
                                 /// Creates a new `statusPayload`.
                                 ///
                                 /// - Parameters:
@@ -94595,22 +95430,26 @@ public enum Operations {
                                 ///   - queued_bytes:
                                 ///   - segments:
                                 ///   - loss:
+                                ///   - admission_bytes:
                                 public init(
                                     bytes: Swift.Int,
                                     queued_bytes: Swift.Int,
                                     segments: Swift.Int,
-                                    loss: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.afterPayload.statusPayload.lossPayload
+                                    loss: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.afterPayload.statusPayload.lossPayload,
+                                    admission_bytes: Swift.Int
                                 ) {
                                     self.bytes = bytes
                                     self.queued_bytes = queued_bytes
                                     self.segments = segments
                                     self.loss = loss
+                                    self.admission_bytes = admission_bytes
                                 }
                                 public enum CodingKeys: String, CodingKey {
                                     case bytes
                                     case queued_bytes
                                     case segments
                                     case loss
+                                    case admission_bytes
                                 }
                                 public init(from decoder: any Swift.Decoder) throws {
                                     let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -94631,11 +95470,16 @@ public enum Operations {
                                         Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.afterPayload.statusPayload.lossPayload.self,
                                         forKey: .loss
                                     )
+                                    self.admission_bytes = try container.decode(
+                                        Swift.Int.self,
+                                        forKey: .admission_bytes
+                                    )
                                     try decoder.ensureNoAdditionalProperties(knownKeys: [
                                         "bytes",
                                         "queued_bytes",
                                         "segments",
-                                        "loss"
+                                        "loss",
+                                        "admission_bytes"
                                     ])
                                 }
 
@@ -94645,6 +95489,7 @@ public enum Operations {
                                     try container.encode(self.queued_bytes, forKey: .queued_bytes)
                                     try container.encode(self.segments, forKey: .segments)
                                     try container.encode(self.loss, forKey: .loss)
+                                    try container.encode(self.admission_bytes, forKey: .admission_bytes)
                                 }
                             }
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/after/status`.
