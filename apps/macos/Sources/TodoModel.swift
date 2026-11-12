@@ -1748,7 +1748,7 @@ final class TodoModel {
     /// A 401 under the still-current credential ends the Session even if the task that received it
     /// was cancelled meanwhile (a reply already on its way); retiring a credential changes the epoch.
     private func expireSession(credentialEpoch: Int) {
-        guard discovery.credentialEpoch == credentialEpoch else { return }
+        guard isCurrentEpoch(credentialEpoch) else { return }
         disconnect()
         try? vault.delete()
         signedIn = false
@@ -1792,8 +1792,10 @@ final class TodoModel {
         } catch { if isCurrentCredential(credentialEpoch) { publishMessage(describe(error), kind: .connection) } }
     }
 
+    /// The one credential-epoch comparison, shared by every ownership check and by expireSession.
+    func isCurrentEpoch(_ credentialEpoch: Int) -> Bool { discovery.credentialEpoch == credentialEpoch }
     func isCurrentCredential(_ credentialEpoch: Int) -> Bool {
-        discovery.credentialEpoch == credentialEpoch && !Task.isCancelled
+        isCurrentEpoch(credentialEpoch) && !Task.isCancelled
     }
     func handleAuthorization(_ error: Error, credentialEpoch: Int) {
         if failure(error)?.status == 401 { expireSession(credentialEpoch: credentialEpoch) }
