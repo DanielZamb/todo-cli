@@ -12,6 +12,7 @@ import { join } from "node:path";
 import { expect, it } from "@effect/vitest";
 import { Effect } from "effect";
 import { TestClock } from "effect/testing";
+import { SnapshotError } from "../src/snapshots.ts";
 import { openStore } from "../src/store/store.ts";
 import {
   actor,
@@ -204,15 +205,13 @@ it.effect(
               orphan,
               "orphan-tag",
             );
-            db.query("INSERT INTO attachment_cleanup VALUES (?,?)").run(
-              profile,
-              task.id,
-            );
+            db.query(
+              "INSERT OR IGNORE INTO attachment_cleanup VALUES (?,?)",
+            ).run(profile, task.id);
             if (orphan === task.id) {
-              db.query("INSERT INTO attachment_cleanup VALUES (?,?)").run(
-                profile,
-                "keeper",
-              );
+              db.query(
+                "INSERT OR IGNORE INTO attachment_cleanup VALUES (?,?)",
+              ).run(profile, "keeper");
               db.query("INSERT INTO task_dependencies VALUES (?,?,?)").run(
                 profile,
                 task.id,
@@ -242,8 +241,13 @@ it.effect(
         const copy = new Database(saved.path, { readonly: true });
         try {
           expect(copy.query("PRAGMA foreign_key_check").all()).toEqual([]);
-          expect(copy.query("SELECT * FROM attachment_cleanup").all()).toEqual([
+          expect(
+            copy
+              .query("SELECT * FROM attachment_cleanup ORDER BY task_id")
+              .all(),
+          ).toEqual([
             { profile_id: "work", task_id: "keeper" },
+            { profile_id: "work", task_id: "task-1" },
           ]);
           expect(copy.query("SELECT * FROM task_dependencies").all()).toEqual(
             [],
@@ -341,6 +345,64 @@ it.effect(
           ["keeper", null],
           ["task-1", time],
         ]);
+      }),
+    ),
+);
+
+it.effect(
+  "refuses checksum-matching non-SQLite bytes as invalid_snapshot without changing live Tasks",
+  () =>
+    fixture((store, directory) =>
+      Effect.gen(function* () {
+        const saved = yield* store.snapshots.create("malformed SQLite");
+        const bytes = Buffer.from("not a SQLite file");
+        writeFileSync(saved.path, bytes);
+        writeFileSync(
+          join(directory, "snapshots", `${saved.id}.json`),
+          JSON.stringify({
+            ...saved,
+            size: bytes.length,
+            sha256: createHash("sha256").update(bytes).digest("hex"),
+          }),
+        );
+        const rows = () => {
+          const db = new Database(join(directory, "scratch.db"), {
+            readonly: true,
+          });
+          try {
+            return Object.fromEntries(
+              db
+                .query<{ name: string }, []>(
+                  "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name",
+                )
+                .all()
+                .map(({ name }) => [
+                  name,
+                  db
+                    .query(`SELECT * FROM "${name.replaceAll('"', '""')}"`)
+                    .all(),
+                ]),
+            );
+          } finally {
+            db.close();
+          }
+        };
+        const before = rows();
+        const result = yield* store.snapshots
+          .restore(saved.id)
+          .pipe(Effect.result);
+        expect(result._tag).toBe("Failure");
+        if (result._tag === "Failure") {
+          expect(result.failure.cause).toBeInstanceOf(SnapshotError);
+          if (result.failure.cause instanceof SnapshotError)
+            expect(result.failure.cause.code).toBe("invalid_snapshot");
+        }
+        expect((yield* store.tasks()).map((row) => row.id)).toEqual([
+          "keeper",
+          "task-1",
+        ]);
+        expect((yield* store.snapshots.list()).snapshots.length).toBe(1);
+        expect(rows()).toEqual(before);
       }),
     ),
 );

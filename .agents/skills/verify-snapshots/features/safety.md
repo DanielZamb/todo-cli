@@ -20,3 +20,8 @@ The compiled drive also restores tagged and recurring Tasks after Purge,
 removes both directions of a Purged Task's Dependencies and repairs an old
 damaged copy. See [Task references](task-references.md) for the schema inventory,
 structural-id exceptions, negative controls and the old-binary recipe.
+
+The crash-recovery drive preserves pending copied-image erasure through older
+and newer restores, filters carried jobs to durable Purge ids, and retains
+Attachment bytes for a Deleted Task restored alive. The repeated-redaction
+proof requires stable actual file checksums after the first application.

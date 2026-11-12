@@ -28,6 +28,9 @@ const resolved = (entry: OpLogEntry) =>
 
 const taskReference = Schema.Struct({ id: TaskId });
 const quote = (value: string) => `"${value.replaceAll('"', '""')}"`;
+const totalChanges = (db: Database) =>
+  db.query<{ count: number }, []>("SELECT total_changes() AS count").get()
+    ?.count ?? 0;
 
 function deleteTaskReferences(db: Database, id: TaskId) {
   for (const { name } of db
@@ -75,6 +78,7 @@ export function redactTaskHistory(
   history: readonly OpLogEntry[],
   id: TaskId,
 ) {
+  const beforeChanges = totalChanges(db);
   const snapshots = db
     .query<{ seq: number; payload: string }, []>(
       "SELECT seq,payload FROM snapshots",
@@ -160,7 +164,12 @@ export function redactTaskHistory(
   const keepSeries = (change: ReturnType<typeof changes>["series"][number]) =>
     !removedSeries.has((change.after ?? change.before)?.id ?? "");
 
-  db.exec("DROP TRIGGER op_log_no_update; DROP TRIGGER snapshots_no_update;");
+  let historyWritable = false;
+  const allowHistoryUpdates = () => {
+    if (historyWritable) return;
+    db.exec("DROP TRIGGER op_log_no_update; DROP TRIGGER snapshots_no_update;");
+    historyWritable = true;
+  };
   for (const entry of history) {
     const event = entry.event;
     const value = resolved(entry);
@@ -244,27 +253,33 @@ export function redactTaskHistory(
         })),
       },
     });
-    db.query("UPDATE op_log SET event=?,entity_version=1 WHERE seq=?").run(
-      JSON.stringify(redacted),
-      entry.seq,
-    );
+    const content = JSON.stringify(redacted);
+    if (content !== JSON.stringify(entry.event)) {
+      allowHistoryUpdates();
+      db.query("UPDATE op_log SET event=?,entity_version=1 WHERE seq=?").run(
+        content,
+        entry.seq,
+      );
+    }
   }
-  for (const { seq, value } of snapshots)
-    db.query("UPDATE snapshots SET payload=? WHERE seq=?").run(
-      JSON.stringify({
-        ...value,
-        edges: (value.edges ?? []).filter(
-          (edge) => edge.dependent_id !== id && edge.blocker_id !== id,
-        ),
-        tasks: value.tasks.filter((task) => task.id !== id),
-        series: value.series.filter((value) => !removedSeries.has(value.id)),
-        projects: value.projects.filter(
-          (value) => !removedProjects.has(value.id),
-        ),
-        tags: value.tags.filter((value) => !removedTags.has(value.id)),
-      }),
-      seq,
-    );
+  for (const { seq, value, payload } of snapshots) {
+    const content = JSON.stringify({
+      ...value,
+      edges: (value.edges ?? []).filter(
+        (edge) => edge.dependent_id !== id && edge.blocker_id !== id,
+      ),
+      tasks: value.tasks.filter((task) => task.id !== id),
+      series: value.series.filter((value) => !removedSeries.has(value.id)),
+      projects: value.projects.filter(
+        (value) => !removedProjects.has(value.id),
+      ),
+      tags: value.tags.filter((value) => !removedTags.has(value.id)),
+    });
+    if (content !== payload) {
+      allowHistoryUpdates();
+      db.query("UPDATE snapshots SET payload=? WHERE seq=?").run(content, seq);
+    }
+  }
   deleteTaskReferences(db, id);
   db.query("DELETE FROM tasks WHERE id=?").run(id);
   for (const id of removedSeries)
@@ -272,8 +287,10 @@ export function redactTaskHistory(
   for (const id of removedProjects)
     db.query("DELETE FROM projects WHERE id=?").run(id);
   for (const id of removedTags) db.query("DELETE FROM tags WHERE id=?").run(id);
-  db.exec(`CREATE TRIGGER op_log_no_update BEFORE UPDATE ON op_log
+  if (historyWritable)
+    db.exec(`CREATE TRIGGER op_log_no_update BEFORE UPDATE ON op_log
     BEGIN SELECT RAISE(ABORT, 'op_log is append-only'); END;
     CREATE TRIGGER snapshots_no_update BEFORE UPDATE ON snapshots
     BEGIN SELECT RAISE(ABORT, 'snapshots are immutable'); END;`);
+  return totalChanges(db) !== beforeChanges;
 }

@@ -85,8 +85,11 @@ Snapshots are separate copies of the whole database, described in
 [ADR-0012](adr/0012-owner-snapshots.md). Purge redaction deletes materialized
 Task references discovered through SQLite foreign keys before deleting the Task.
 It also repairs orphan references when the Task is already absent. Snapshot
-copies discard pending Attachment cleanup rows only for the durable Purge ids;
-the live queue still erases copied bytes after commit. Content-free History and
+copies retain pending Attachment erasure jobs. Restore combines saved and live
+jobs, retaining only ids in the durable Purge union, so a restored Deleted Task
+keeps its bytes. The existing cleanup pass erases copied bytes after commit or
+on the next store open. Unchanged copy redaction skips compaction, keeping
+its checksum stable. Content-free History and
 Version tombstones remain. The [reference inventory](../.agents/skills/verify-snapshots/features/task-references.md)
 records declared and JSON references and their verification.
 

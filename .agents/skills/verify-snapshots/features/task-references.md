@@ -16,7 +16,7 @@ journal remain under ADR-0008 and ADR-0018. They are not dangling entity rows.
 | `tasks.id`, payload and generated columns | Task gone | Task gone | Task gone |
 | `task_tags.task_id` foreign key | Cascades away | Orphan survives; restore exits 2, including when its Tag definition also disappeared | Explicit schema-discovered deletion; restore exits 0 |
 | `task_dependencies.dependent_id` and `blocker_id`, composite foreign keys with Profile | Delete removes incident edges; Purge removes zero live edges | Already explicitly deleted on this branch; base Dependency controls pass | Same removal through schema discovery; both endpoint roles repaired even if Task absent; other Tasks and their saved Versions stay |
-| `attachment_cleanup.task_id`, undeclared | Queued until copied bytes are erased after commit, then gone | Pending row can survive in an earlier copy | Only Purged ids removed from copies; live cleanup queue still drives erasure |
+| `attachment_cleanup.task_id`, undeclared erasure intent | Queued until copied bytes are erased after commit, then gone | Newer copies preserve pending jobs; warm restore of an older copy could lose the live job. Commit 6449a590 incorrectly discarded copied jobs too | Saved copies retain jobs. Restore unions saved and live jobs, retaining only ids in the durable Purge union. Existing cleanup drains them idempotently |
 | Attachment references in Task and History JSON | Task gone; paths and labels redacted; copied images erased; external files kept | Same | Same, proven by Snapshot Attachment proof and verify-attachments |
 | `series.payload.task`, legacy Series keyed by Task id | Exclusive Series removed; shared Series retained for other Occurrences | Same | Same; recurring CLI case restores without its exclusive Series |
 | Occurrences in Task payload and replay facts | Purged Occurrence removed, other Occurrences retained | Same | Same; checkpoint and full replay controls retained |
@@ -38,7 +38,19 @@ The column audit also inspects JSON schemas and the scheduled-work queries;
 SQLite cannot detect references inside payloads.
 
 `test/snapshot-purge.test.ts` refuses an unexplained orphan after a successful
-repair of orphan Tags, both Dependency directions and a pending Attachment row.
-It preserves another pending Attachment row in the stored copy. A corrupt
+repair of orphan Tags and both Dependency directions. It preserves both pending
+Attachment rows in the stored copy; restore stages carry only the Purged id. A corrupt
 checksum still stops Purge. Existing Snapshot tests cover the live inode,
 second connections, untouched Profiles and durable-journal replay.
+
+The cleanup matrix uses the correctness seat's two-connection crash boundary.
+The Purge writer exits 73 after commit, before image erasure. An already-open
+connection takes the newer Snapshot. Eight cases cover warm/fresh restore,
+older/newer Snapshot and pending/drained cleanup. After the existing cleanup
+pass, the Purged PNG is absent. A Deleted Task restored alive keeps its PNG,
+even with a synthetic non-Purge job in the live queue before restore.
+
+Unchanged redaction skips equal History/checkpoint writes and does not drop
+immutable triggers. Copies with no changes or migration skip compaction and
+manifest replacement, so reapplying a Purge union keeps actual bytes and
+checksums stable. Repair still scans references when the Task row is absent.

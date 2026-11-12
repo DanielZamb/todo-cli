@@ -109,3 +109,26 @@ Run `pnpm --filter @todo/domain test test/snapshot-purge.test.ts` for the declar
 reference coverage guard, future-table control, already-absent Task repair,
 unexplained-orphan refusal, reminder/checkpoint replay and checksum-mismatch
 Purge refusal. `task_versions` and History retain content-free ids by design.
+
+## Interrupted Purge cleanup and validation
+
+The recipe also compiles `snapshot-cleanup-proof.ts`. Its two-connection probe
+comes from the correctness seat's post-commit crash reproduction. A separate
+Purge writer exits exactly 73 at its own cleanup boundary, after committing the
+Purge and before erasing a real managed PNG. The original store stays open and
+takes a Snapshot of that pending state. Eight cases cover warm/fresh restore,
+older/newer Snapshot and pending/already-drained cleanup. Existing cleanup on
+store open must erase the Purged PNG in every case, including after a repeated
+restore. A Deleted Task returns alive with its PNG intact; a synthetic pending
+job for its non-Purged id must not survive restore. No production source or
+covered store function is instrumented. Only the crash child's runtime method
+is replaced, and all children exit before the helper returns.
+
+`cleanup-recovery.json` retains the eight literal Task, queue and byte results.
+`redaction-stability.json` compares four actual file checksums with manifests,
+sizes and counts, requiring one stable checksum after the first redaction.
+`test/snapshot-cleanup.test.ts` runs the same cases as behavior tests.
+
+The CLI drive also supplies checksum-matching `not a SQLite file` bytes.
+Restore must report `invalid_snapshot`, exit 2 and leave live Tasks unchanged.
+This differs from checksum mismatch, which remains a separate refusal.
