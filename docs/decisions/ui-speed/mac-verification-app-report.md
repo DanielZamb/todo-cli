@@ -1,5 +1,19 @@
 # Mac verification app V01 safety correction
 
+Current attempt: resumed after the coordinator reported 44.9 GiB free. The
+checkout sample was 43.9 GiB. The coordinator now requires completion of the
+headless scope, with visible work explicitly owed. The new receipt test failed
+first at exit 1 because headless completion was always false. After the change,
+the scope tests passed at 0, and both completion removals failed their matching
+tests at 1. A failed run and guards-only still cannot complete. Headless
+completion leaves completeVisibleRecipe=false and the four visible stages in
+owedStages. Receipts: receipt-scope-red-e4a276da.json,
+receipt-scope-green-e4a276da.json and receipt-scope-removals.json. These are
+development receipts; the next full recipe will run from a new committed head.
+Visible verification remains held while the owner uses the Mac; V02 is held.
+
+## Previous disk stop
+
 Status: blocked again on the disk budget. The frozen runtime head is
 `ad79fe3a3456f5bd34574669e36ca27b7b1e53f0`. Its 102 native guard cases passed,
 as did the app-profile and inherited compiled-server literal-root baselines

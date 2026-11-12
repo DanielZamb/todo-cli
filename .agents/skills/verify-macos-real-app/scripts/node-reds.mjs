@@ -9,7 +9,8 @@ fs.mkdirSync(directory + '/home'); fs.mkdirSync(directory + '/tmp');
 const env = environment(directory + '/home', directory + '/tmp'), rows = [];
 try {
   for (const [module, test, before, after] of [
-    ['receipt-stages.mjs', 'receipt-stages.test.mjs', "scope === 'visible' && requiredStages.every(stage => result[stage])", "scope !== 'visible-only'"],
+    ['receipt-stages.mjs', 'receipt-stages.test.mjs', 'successful && needed.length > 0 && needed.every(stage => result[stage])', 'true'],
+    ['receipt-stages.mjs', 'receipt-stages.test.mjs', 'completeRecipe: successful && ', 'completeRecipe: '],
     ['process-policy.mjs', 'process-policy.test.mjs', 'const result = { HOME:', 'const result = { ...process.env, HOME:'],
   ]) {
     if (module === 'process-policy.mjs') fs.copyFileSync(path.resolve('.agents/skills/verify-macos-real-app/scripts/bun-policy.mjs'), directory + '/bun-policy.mjs');

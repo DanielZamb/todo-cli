@@ -276,7 +276,7 @@ finally {
     for (const directory of fixtures) fs.rmSync(directory, { recursive: true }); fs.rmSync(tools, { recursive: true }); stages.cleanup = true;
   }
   catch (error) { result.cleanupError = error.message; result.retainedTools = tools; result.status = 'FAIL'; process.exitCode = 1; }
-  Object.assign(result, receipt(stages, process.argv.includes('--guards-only') ? 'guards-only' : stages.visibleInputStop ? 'visible' : 'headless'));
+  Object.assign(result, receipt(stages, process.argv.includes('--guards-only') ? 'guards-only' : stages.visibleInputStop ? 'visible' : 'headless', ['PASS', 'PASS_HEADLESS'].includes(result.status)));
   result.commands = commands.length;
   fs.writeFileSync(evidence + '/result.json', JSON.stringify(result, null, 2)); console.log(JSON.stringify(result));
 }

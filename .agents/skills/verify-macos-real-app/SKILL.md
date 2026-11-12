@@ -36,7 +36,10 @@ hold and freeze the implementation. The helper keeps visibleAllowed=false
 during native controls, then permits a visible artifact only after a clean
 frozen head and the whole guard matrix pass. It builds the separate app once,
 seals it ad hoc, audits it and runs --check-manifest before any visible phase.
---headless and --guards-only remain incomplete. --development permits a dirty
+--headless completes only the headless scope when every headless stage passes
+and the run succeeds. It reports completeVisibleRecipe=false and lists the four
+visible stages in owedStages. --guards-only always remains incomplete. A failed
+run cannot report completion even if its earlier stages passed. --development permits a dirty
 diagnostic; --focus-regressions requires it and cannot qualify a frozen head.
 
 Every Swift action runs inside scripts/swift-slot.sh. The helper compiles the

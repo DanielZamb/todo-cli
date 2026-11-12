@@ -106,7 +106,7 @@ reusable input/control, not evidence of execution unless its receipt exists.
 | Metadata authority | An environment/manifest merely claims frontmost identity | Own a build-pinned metadata child and its exclusive output pipe; no manifest frontmost field; helper/library path, hash, symlink, hard-link and swap controls |
 | Metadata freshness | A valid old snapshot is replayed after the owner returns | Two-second handoff and ten-second pre-window age; live session/HID rechecks; stale/future/expired fixtures and freshness removal |
 | Error reporting | An unrelated conservative API trap is called the intended denial | Numeric domain/code normalization; server-exec control requires its message and exit 78; the old exit-79 row is excluded |
-| Partial receipt | guards-only omits UI but still says complete | Explicit actual stage vector; visible scope and every required stage must be true; partial/each-missing-stage tests and old-logic red |
+| Partial receipt | guards-only or a failed run still says complete; headless completion implies visible proof | Complete requires a successful run and every stage for its explicit scope; guards-only never completes, headless lists its four visible stages owed and completeVisibleRecipe stays false; each-missing-stage and completion/removal controls |
 | Frozen provenance | Dirty sources are compiled but stamped with an older head | Dirty qualification refused, source/binary/bindings hashes and head recheck; development receipts remain diagnostic |
 | Cleanup | A child survives while its scratch data is removed | Track owned child handles and kernel identity; active-child/uncertain cleanup retains scratch and fails |
 
