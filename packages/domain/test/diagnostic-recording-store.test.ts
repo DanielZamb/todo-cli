@@ -269,3 +269,111 @@ it("does not mark a fresh complete run incomplete because a different run expire
     await rm(root, { recursive: true, force: true });
   }
 });
+it("recovers every accepted UUID spelling including uppercase batch ids", async () => {
+  const root = await mkdtemp(join(tmpdir(), "todo-recording-uppercase-"));
+  try {
+    const value = batch("AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA");
+    const store = await DiagnosticRecordings.open(root);
+    store.ingest(value);
+    await store.flush();
+    const reopened = await DiagnosticRecordings.open(root);
+    expect((await reopened.runs()).runs).toHaveLength(1);
+    expect(reopened.ingest(value).duplicate).toBe(true);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+it("does not invent an all-start deadline fraction after missing sequence data", async () => {
+  const root = await mkdtemp(join(tmpdir(), "todo-recording-gap-"));
+  try {
+    const store = await DiagnosticRecordings.open(root);
+    store.ingest(
+      validateRecordingBatch({
+        ...batch(),
+        events: [
+          { ...event, sequence: 100 },
+          {
+            ...event,
+            name: "ui.result.committed",
+            sequence: 101,
+            monotonic_ms: 18,
+            duration_ms: 8,
+            outcome: "completed",
+            correct: true,
+            render_stage: "layout_complete",
+          },
+        ],
+      }),
+    );
+    await store.flush();
+    const show = await store.show(uuid);
+    expect(show.sequence_gaps).toBe(99);
+    expect(show.summary[0]?.starts).toBe(1);
+    expect(show.summary[0]?.p50_ms).toBe(8);
+    expect(show.summary[0]?.fraction_by_20_ms).toBe(null);
+    expect(show.summary[0]?.fraction_by_300_ms).toBe(null);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+it("does not subtract monotonic clocks or infer a crash across producers", () => {
+  const events = validateRecordingBatch({
+    ...batch(),
+    run: { ...batch().run, app: "electron" },
+    events: [
+      { ...event, process_role: "electron.renderer" },
+      {
+        ...event,
+        process_role: "electron.main",
+        name: "process.terminated",
+        reason: "crashed",
+        monotonic_ms: 100000,
+      },
+    ],
+  }).events;
+  const row = summarizeRecording(events)[0];
+  expect(row?.oldest_incomplete_ms).toBe(0);
+  expect(row?.by_outcome.pending).toBe(1);
+  expect(row?.by_outcome.crashed).toBe(0);
+});
+it("the public pure summary also treats an unknown denominator as unknown", () => {
+  const events = validateRecordingBatch({
+    ...batch(),
+    events: [
+      { ...event, sequence: 100 },
+      {
+        ...event,
+        name: "ui.result.committed",
+        sequence: 101,
+        monotonic_ms: 18,
+        duration_ms: 8,
+        outcome: "completed",
+        correct: true,
+        render_stage: "layout_complete",
+      },
+    ],
+  }).events;
+  expect(summarizeRecording(events)[0]?.fraction_by_20_ms).toBe(null);
+});
+it("counts a failed action without inventing a rendered completion", () => {
+  const events = validateRecordingBatch({
+    ...batch(),
+    events: [
+      event,
+      {
+        ...event,
+        name: "ui.action.ended",
+        sequence: 2,
+        monotonic_ms: 18,
+        duration_ms: 8,
+        outcome: "failed",
+      },
+    ],
+  }).events;
+  const row = summarizeRecording(events)[0];
+  expect(row?.starts).toBe(1);
+  expect(row?.by_outcome.failed).toBe(1);
+  expect(row?.completed_samples).toBe(0);
+  expect(row?.p50_ms).toBe(null);
+  expect(row?.fraction_by_20_ms).toBe(0);
+});

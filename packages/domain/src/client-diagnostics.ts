@@ -505,6 +505,9 @@ export const DiagnosticObservation = Schema.Union([
     ...observationScope,
     kind: Schema.Literal("unfinished"),
     outcome: Schema.Literals([
+      "failed",
+      "refused",
+      "conflicted",
       "pending",
       "superseded",
       "cancelled",

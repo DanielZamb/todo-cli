@@ -18,7 +18,7 @@ const http=async(path:string,body?:unknown,auth=true,extra:Record<string,string>
 const cli=(args:string[])=>JSON.parse(fixture.cli(["diagnostics",...args,"--server",fixture.url,"--format","json"]));
 try {
   assert.equal((await http("/diagnostics/profiler/runs",undefined,false)).status,401);
-  const ingested=await http("/diagnostics/profiler/ingest",batch);assert.equal(ingested.status,200);assert.equal((await ingested.json()).accepted,true);
+  const ingested=await http("/diagnostics/profiler/ingest",batch);assert.equal(ingested.status,200);const receipt=await ingested.json();assert.equal(receipt.accepted,true);assert.equal(receipt.durability,"stored");
   const runs=cli(["runs"]);assert.equal(runs.runs.length,1);assert.equal(runs.runs[0].events,3);
   const show=cli(["show","--run",id]);assert.equal(show.summary[0].starts,2);assert.equal(show.summary[0].p50_ms,8);assert.equal(show.summary[0].fraction_by_20_ms,0.5);assert.equal(show.summary[0].by_outcome.pending,1);
   const exported=cli(["export","--run",id]);assert.equal(exported.batches[0].events.length,3);assert.equal(exported.batches[0].events[0].profile_ordinal,2);

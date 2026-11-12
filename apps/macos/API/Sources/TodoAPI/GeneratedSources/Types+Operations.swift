@@ -70073,9 +70073,9 @@ public enum Operations {
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/GET/responses/200/content/json/summaryPayload/by_300_ms`.
                             public var by_300_ms: Swift.Int
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/GET/responses/200/content/json/summaryPayload/fraction_by_20_ms`.
-                            public var fraction_by_20_ms: Swift.Double
+                            public var fraction_by_20_ms: Swift.Double?
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/GET/responses/200/content/json/summaryPayload/fraction_by_300_ms`.
-                            public var fraction_by_300_ms: Swift.Double
+                            public var fraction_by_300_ms: Swift.Double?
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/GET/responses/200/content/json/summaryPayload/oldest_incomplete_ms`.
                             public var oldest_incomplete_ms: Swift.Double?
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/GET/responses/200/content/json/summaryPayload/evidence`.
@@ -70123,8 +70123,8 @@ public enum Operations {
                                 max_ms: Swift.Double? = nil,
                                 by_20_ms: Swift.Int,
                                 by_300_ms: Swift.Int,
-                                fraction_by_20_ms: Swift.Double,
-                                fraction_by_300_ms: Swift.Double,
+                                fraction_by_20_ms: Swift.Double? = nil,
+                                fraction_by_300_ms: Swift.Double? = nil,
                                 oldest_incomplete_ms: Swift.Double? = nil,
                                 evidence: Operations.profiler_period_show.Output.Ok.Body.jsonPayload.summaryPayloadPayload.evidencePayload
                             ) {
@@ -70226,11 +70226,11 @@ public enum Operations {
                                     Swift.Int.self,
                                     forKey: .by_300_ms
                                 )
-                                self.fraction_by_20_ms = try container.decode(
+                                self.fraction_by_20_ms = try container.decodeIfPresent(
                                     Swift.Double.self,
                                     forKey: .fraction_by_20_ms
                                 )
-                                self.fraction_by_300_ms = try container.decode(
+                                self.fraction_by_300_ms = try container.decodeIfPresent(
                                     Swift.Double.self,
                                     forKey: .fraction_by_300_ms
                                 )
@@ -70296,8 +70296,16 @@ public enum Operations {
                                 }
                                 try container.encode(self.by_20_ms, forKey: .by_20_ms)
                                 try container.encode(self.by_300_ms, forKey: .by_300_ms)
-                                try container.encode(self.fraction_by_20_ms, forKey: .fraction_by_20_ms)
-                                try container.encode(self.fraction_by_300_ms, forKey: .fraction_by_300_ms)
+                                if self.fraction_by_20_ms == nil && _explicitNullKeys.contains(CodingKeys.fraction_by_20_ms.stringValue) {
+                                    try container.encodeNil(forKey: .fraction_by_20_ms)
+                                } else {
+                                    try container.encodeIfPresent(self.fraction_by_20_ms, forKey: .fraction_by_20_ms)
+                                }
+                                if self.fraction_by_300_ms == nil && _explicitNullKeys.contains(CodingKeys.fraction_by_300_ms.stringValue) {
+                                    try container.encodeNil(forKey: .fraction_by_300_ms)
+                                } else {
+                                    try container.encodeIfPresent(self.fraction_by_300_ms, forKey: .fraction_by_300_ms)
+                                }
                                 if self.oldest_incomplete_ms == nil && _explicitNullKeys.contains(CodingKeys.oldest_incomplete_ms.stringValue) {
                                     try container.encodeNil(forKey: .oldest_incomplete_ms)
                                 } else {
@@ -93172,9 +93180,9 @@ public enum Operations {
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/before/summaryPayload/by_300_ms`.
                                 public var by_300_ms: Swift.Int
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/before/summaryPayload/fraction_by_20_ms`.
-                                public var fraction_by_20_ms: Swift.Double
+                                public var fraction_by_20_ms: Swift.Double?
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/before/summaryPayload/fraction_by_300_ms`.
-                                public var fraction_by_300_ms: Swift.Double
+                                public var fraction_by_300_ms: Swift.Double?
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/before/summaryPayload/oldest_incomplete_ms`.
                                 public var oldest_incomplete_ms: Swift.Double?
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/before/summaryPayload/evidence`.
@@ -93222,8 +93230,8 @@ public enum Operations {
                                     max_ms: Swift.Double? = nil,
                                     by_20_ms: Swift.Int,
                                     by_300_ms: Swift.Int,
-                                    fraction_by_20_ms: Swift.Double,
-                                    fraction_by_300_ms: Swift.Double,
+                                    fraction_by_20_ms: Swift.Double? = nil,
+                                    fraction_by_300_ms: Swift.Double? = nil,
                                     oldest_incomplete_ms: Swift.Double? = nil,
                                     evidence: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.beforePayload.summaryPayloadPayload.evidencePayload
                                 ) {
@@ -93325,11 +93333,11 @@ public enum Operations {
                                         Swift.Int.self,
                                         forKey: .by_300_ms
                                     )
-                                    self.fraction_by_20_ms = try container.decode(
+                                    self.fraction_by_20_ms = try container.decodeIfPresent(
                                         Swift.Double.self,
                                         forKey: .fraction_by_20_ms
                                     )
-                                    self.fraction_by_300_ms = try container.decode(
+                                    self.fraction_by_300_ms = try container.decodeIfPresent(
                                         Swift.Double.self,
                                         forKey: .fraction_by_300_ms
                                     )
@@ -93395,8 +93403,16 @@ public enum Operations {
                                     }
                                     try container.encode(self.by_20_ms, forKey: .by_20_ms)
                                     try container.encode(self.by_300_ms, forKey: .by_300_ms)
-                                    try container.encode(self.fraction_by_20_ms, forKey: .fraction_by_20_ms)
-                                    try container.encode(self.fraction_by_300_ms, forKey: .fraction_by_300_ms)
+                                    if self.fraction_by_20_ms == nil && _explicitNullKeys.contains(CodingKeys.fraction_by_20_ms.stringValue) {
+                                        try container.encodeNil(forKey: .fraction_by_20_ms)
+                                    } else {
+                                        try container.encodeIfPresent(self.fraction_by_20_ms, forKey: .fraction_by_20_ms)
+                                    }
+                                    if self.fraction_by_300_ms == nil && _explicitNullKeys.contains(CodingKeys.fraction_by_300_ms.stringValue) {
+                                        try container.encodeNil(forKey: .fraction_by_300_ms)
+                                    } else {
+                                        try container.encodeIfPresent(self.fraction_by_300_ms, forKey: .fraction_by_300_ms)
+                                    }
                                     if self.oldest_incomplete_ms == nil && _explicitNullKeys.contains(CodingKeys.oldest_incomplete_ms.stringValue) {
                                         try container.encodeNil(forKey: .oldest_incomplete_ms)
                                     } else {
@@ -94162,9 +94178,9 @@ public enum Operations {
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/after/summaryPayload/by_300_ms`.
                                 public var by_300_ms: Swift.Int
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/after/summaryPayload/fraction_by_20_ms`.
-                                public var fraction_by_20_ms: Swift.Double
+                                public var fraction_by_20_ms: Swift.Double?
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/after/summaryPayload/fraction_by_300_ms`.
-                                public var fraction_by_300_ms: Swift.Double
+                                public var fraction_by_300_ms: Swift.Double?
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/after/summaryPayload/oldest_incomplete_ms`.
                                 public var oldest_incomplete_ms: Swift.Double?
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/after/summaryPayload/evidence`.
@@ -94212,8 +94228,8 @@ public enum Operations {
                                     max_ms: Swift.Double? = nil,
                                     by_20_ms: Swift.Int,
                                     by_300_ms: Swift.Int,
-                                    fraction_by_20_ms: Swift.Double,
-                                    fraction_by_300_ms: Swift.Double,
+                                    fraction_by_20_ms: Swift.Double? = nil,
+                                    fraction_by_300_ms: Swift.Double? = nil,
                                     oldest_incomplete_ms: Swift.Double? = nil,
                                     evidence: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.afterPayload.summaryPayloadPayload.evidencePayload
                                 ) {
@@ -94315,11 +94331,11 @@ public enum Operations {
                                         Swift.Int.self,
                                         forKey: .by_300_ms
                                     )
-                                    self.fraction_by_20_ms = try container.decode(
+                                    self.fraction_by_20_ms = try container.decodeIfPresent(
                                         Swift.Double.self,
                                         forKey: .fraction_by_20_ms
                                     )
-                                    self.fraction_by_300_ms = try container.decode(
+                                    self.fraction_by_300_ms = try container.decodeIfPresent(
                                         Swift.Double.self,
                                         forKey: .fraction_by_300_ms
                                     )
@@ -94385,8 +94401,16 @@ public enum Operations {
                                     }
                                     try container.encode(self.by_20_ms, forKey: .by_20_ms)
                                     try container.encode(self.by_300_ms, forKey: .by_300_ms)
-                                    try container.encode(self.fraction_by_20_ms, forKey: .fraction_by_20_ms)
-                                    try container.encode(self.fraction_by_300_ms, forKey: .fraction_by_300_ms)
+                                    if self.fraction_by_20_ms == nil && _explicitNullKeys.contains(CodingKeys.fraction_by_20_ms.stringValue) {
+                                        try container.encodeNil(forKey: .fraction_by_20_ms)
+                                    } else {
+                                        try container.encodeIfPresent(self.fraction_by_20_ms, forKey: .fraction_by_20_ms)
+                                    }
+                                    if self.fraction_by_300_ms == nil && _explicitNullKeys.contains(CodingKeys.fraction_by_300_ms.stringValue) {
+                                        try container.encodeNil(forKey: .fraction_by_300_ms)
+                                    } else {
+                                        try container.encodeIfPresent(self.fraction_by_300_ms, forKey: .fraction_by_300_ms)
+                                    }
                                     if self.oldest_incomplete_ms == nil && _explicitNullKeys.contains(CodingKeys.oldest_incomplete_ms.stringValue) {
                                         try container.encodeNil(forKey: .oldest_incomplete_ms)
                                     } else {

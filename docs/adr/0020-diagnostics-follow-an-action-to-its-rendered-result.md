@@ -122,8 +122,10 @@ was derived from native list selection. Selection context contains only list
 row count, refresh-in-flight, process uptime and journal byte count.
 
 The explicit HttpApi group under /diagnostics/profiler accepts batches up to
-128 KiB and 128 events. Its bounded asynchronous queue acknowledges admission,
-not durable delivery; clients retain local batches for retry until reconciliation.
+128 KiB and 128 events. Its bounded asynchronous queue isolates file writes from Task work.
+The ingestion response awaits that queue asynchronously and acknowledges stored
+data only after the atomic file write. Clients retain batches until a stored
+receipt and retry failed/uncertain deliveries.
 A batch UUID deduplicates retained retries. No synchronous filesystem operation
 runs during ingestion. JSON parsing/schema validation and bounded admission still
 use the server thread and must be measured. Exports page one bounded batch at a

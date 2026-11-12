@@ -280,3 +280,19 @@ hashes renewed. The final clean command runs on the actual worktree separately.
 The reviewed product is `36f9c56e200048aa2ca16186aaf713bea8d5454e`, after the final SEC base merge. Only `attachments.ts` differs from the covered SEC source at `f709549c`. It imports `TaskLookupDetails` and adds the exit pair and authorized Task context to `AttachManyRow.error`. The stored `Attachment`, `validAttachmentLocation`, Task events, transaction, validation, projection, Version, rejection recording, and replay functions are unchanged. These report fields do not change the modeled Task content or a transaction boundary.
 
 The one command passed on the merged source. Both real store mutations then failed their intended enumeration assertions, and the byte-restored source passed the same command. The model, invariants, fixtures, bounds, and exclusions are unchanged. [REPORT.md](REPORT.md) records the renewal receipts.
+
+## U06 attribution mapping review, 2026-11-12
+
+Reviewed immutable product 3ef9e674307378dde914059cb7581d6bdccb05d0 against
+f25fbfc4, whose store/projection hashes equal the previous anchors. Only two
+mapped files change. readTasks wraps the same ordered Task JSON/schema map in
+one guarded task_materialization span; historySync wraps the same ordered
+OpLogEntry map in one guarded history_decode span after the unchanged SQL read.
+The writer-lock span adds the scalar external_or_unknown class before BEGIN.
+No await, yield, filesystem work, SQL mutation, order change or new transaction
+boundary occurs in those changes. applyEvent is byte-identical, SHA-256
+f17a6f4792bf970de03b2a5889403c54c670aefa0d6ee98102001ea6dc333863.
+The new private journal is not called by a Task mutation or transaction.
+Recorder calls retain the shared non-throwing guard; the 47 compiled fault
+controls pass. Models, invariants, bounds and crash insertion points are unchanged.
+The recording report names the full check and real-code sensitivity receipts.

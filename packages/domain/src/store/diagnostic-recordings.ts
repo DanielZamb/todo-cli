@@ -22,10 +22,8 @@ import {
   validateRecordingBatch,
 } from "../diagnostic-recordings.ts";
 import {
-  recordingClockDiscontinuities,
-  recordingSequenceGaps,
+  analyzeRecording,
   recordingsComparable,
-  summarizeRecording,
 } from "../diagnostic-run-summary.ts";
 
 type Segment = {
@@ -104,7 +102,7 @@ export class DiagnosticRecordings {
       }
       for (const name of (await readdir(directory)).sort()) {
         if (name === "status.json") continue;
-        if (!/^\d{13}-[a-f0-9-]{36}\.json$/u.test(name)) {
+        if (!/^\d{13}-[a-f0-9-]{36}\.json$/iu.test(name)) {
           await unlink(join(directory, name));
           store.loss.corrupt_segments++;
           continue;
@@ -314,6 +312,18 @@ export class DiagnosticRecordings {
       status: this.status(),
     };
   }
+  settledReceipt(
+    receipt: typeof RecordingReceipt.Type,
+    id: string,
+  ): typeof RecordingReceipt.Type {
+    const stored = this.seen.has(id);
+    return {
+      ...receipt,
+      accepted: stored,
+      durability: stored ? "stored" : "dropped",
+      status: this.status(),
+    };
+  }
   private trimIdentity() {
     this.seen.clear();
     for (const e of this.entries) this.seen.set(e.batch, e.digest);
@@ -467,49 +477,16 @@ export class DiagnosticRecordings {
       }
       await pause();
     }
-    const clock_discontinuities = recordingClockDiscontinuities(events);
-    const sequence_gaps = recordingSequenceGaps(events);
-    const recovery_uncertain =
-      this.recoveredRuns.has(id) &&
-      !events.some(
-        (event) =>
-          event.name === "process.terminated" && event.reason === "clean",
-      );
-    const unattributed_lost_starts = events.reduce(
-      (n, e) =>
-        n +
-        (e.name === "recording.loss" && e.category.inventory_id === "unknown"
-          ? e.lost_starts
-          : 0),
-      0,
-    );
-    const all = summarizeRecording(events).map((row) =>
-      Schema.decodeUnknownSync(RecordingSummaryRow)({
-        ...row,
-        ...(clock_discontinuities ||
-        sequence_gaps ||
-        recovery_uncertain ||
-        unattributed_lost_starts
-          ? { evidence: "incomplete" }
-          : {}),
-      }),
+    const analysis = analyzeRecording(events, this.recoveredRuns.has(id));
+    const all = analysis.summary.map((row) =>
+      Schema.decodeUnknownSync(RecordingSummaryRow)(row),
     );
     return {
       generated_at: new Date().toISOString(),
       run: first.run,
-      summary: all.slice(0, 256),
       omitted_groups: Math.max(0, all.length - 256),
-      clock_discontinuities,
-      sequence_gaps,
-      recovery_uncertain,
-      unattributed_lost_starts: events.reduce(
-        (n, e) =>
-          n +
-          (e.name === "recording.loss" && e.category.inventory_id === "unknown"
-            ? e.lost_starts
-            : 0),
-        0,
-      ),
+      ...analysis,
+      summary: all.slice(0, 256),
       status: this.status(),
     };
   }

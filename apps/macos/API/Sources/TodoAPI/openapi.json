@@ -21372,11 +21372,13 @@
                           },
                           "fraction_by_20_ms": {
                             "type": "number",
-                            "minimum": 0
+                            "minimum": 0,
+                            "nullable": true
                           },
                           "fraction_by_300_ms": {
                             "type": "number",
-                            "minimum": 0
+                            "minimum": 0,
+                            "nullable": true
                           },
                           "oldest_incomplete_ms": {
                             "type": "number",
@@ -29829,11 +29831,13 @@
                               },
                               "fraction_by_20_ms": {
                                 "type": "number",
-                                "minimum": 0
+                                "minimum": 0,
+                                "nullable": true
                               },
                               "fraction_by_300_ms": {
                                 "type": "number",
-                                "minimum": 0
+                                "minimum": 0,
+                                "nullable": true
                               },
                               "oldest_incomplete_ms": {
                                 "type": "number",
@@ -30250,11 +30254,13 @@
                               },
                               "fraction_by_20_ms": {
                                 "type": "number",
-                                "minimum": 0
+                                "minimum": 0,
+                                "nullable": true
                               },
                               "fraction_by_300_ms": {
                                 "type": "number",
-                                "minimum": 0
+                                "minimum": 0,
+                                "nullable": true
                               },
                               "oldest_incomplete_ms": {
                                 "type": "number",

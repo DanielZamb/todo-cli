@@ -133,11 +133,20 @@ export const recordingRoutes = (
               new BadRequest({ message: "Invalid recording metadata" }),
           });
           yield* owner;
-          return yield* Effect.try({
+          const receipt = yield* Effect.try({
             try: () => recordings.ingest(batch, query.dry_run === "true"),
             catch: () =>
               new BadRequest({ message: "Invalid recording metadata" }),
           });
+          if (
+            query.dry_run === "true" ||
+            !receipt.accepted ||
+            receipt.durability === "stored"
+          )
+            return receipt;
+          yield* Effect.promise(() => recordings.flush());
+          yield* owner;
+          return recordings.settledReceipt(receipt, batch.batch_id);
         }),
       )
       .handleAll({

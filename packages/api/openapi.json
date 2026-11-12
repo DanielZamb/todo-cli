@@ -59328,12 +59328,26 @@
                             "maximum": 9007199254740991
                           },
                           "fraction_by_20_ms": {
-                            "type": "number",
-                            "minimum": 0
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           },
                           "fraction_by_300_ms": {
-                            "type": "number",
-                            "minimum": 0
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           },
                           "oldest_incomplete_ms": {
                             "anyOf": [
@@ -67827,12 +67841,26 @@
                                 "maximum": 9007199254740991
                               },
                               "fraction_by_20_ms": {
-                                "type": "number",
-                                "minimum": 0
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
                               },
                               "fraction_by_300_ms": {
-                                "type": "number",
-                                "minimum": 0
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
                               },
                               "oldest_incomplete_ms": {
                                 "anyOf": [
@@ -68278,12 +68306,26 @@
                                 "maximum": 9007199254740991
                               },
                               "fraction_by_20_ms": {
-                                "type": "number",
-                                "minimum": 0
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
                               },
                               "fraction_by_300_ms": {
-                                "type": "number",
-                                "minimum": 0
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
                               },
                               "oldest_incomplete_ms": {
                                 "anyOf": [

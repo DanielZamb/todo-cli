@@ -14,12 +14,15 @@ export function recordingObservations(
     { start: DiagnosticEvent; end?: DiagnosticEvent }
   >();
   const losses: DiagnosticObservation[] = [];
-  let latest = 0;
-  let crashed = false;
+  const latest = new Map<string, number>();
+  const crashed = new Set<string>();
   for (const event of [...events].sort((a, b) => a.sequence - b.sequence)) {
-    latest = Math.max(latest, event.monotonic_ms);
+    latest.set(
+      event.process_role,
+      Math.max(latest.get(event.process_role) ?? 0, event.monotonic_ms),
+    );
     if (event.name === "process.terminated" && event.reason === "crashed")
-      crashed = true;
+      crashed.add(event.process_role);
     if (
       (event.name === "ui.action.started" ||
         event.name === "ui.input.observed") &&
@@ -35,7 +38,10 @@ export function recordingObservations(
       if (action && action.end?.name !== "ui.result.committed")
         action.end = event;
       else if (!action)
-        actions.set(event.action_id, { start: event, end: event });
+        actions.set(`${event.process_role}:${event.action_id}`, {
+          start: event,
+          end: event,
+        });
     }
     if (
       event.name === "recording.loss" &&
@@ -82,10 +88,13 @@ export function recordingObservations(
       const outcome =
         end?.name === "ui.action.ended"
           ? end.outcome
-          : crashed
+          : crashed.has(start.process_role)
             ? "crashed"
             : "pending";
       const unfinished =
+        outcome === "failed" ||
+        outcome === "refused" ||
+        outcome === "conflicted" ||
         outcome === "superseded" ||
         outcome === "cancelled" ||
         outcome === "unavailable" ||
@@ -100,14 +109,20 @@ export function recordingObservations(
         kind: "unfinished",
         outcome: unfinished,
         count: 1,
-        age_ms: clockUnknown ? null : Math.max(0, latest - start.monotonic_ms),
+        age_ms: clockUnknown
+          ? null
+          : Math.max(
+              0,
+              (latest.get(start.process_role) ?? start.monotonic_ms) -
+                start.monotonic_ms,
+            ),
       });
     }
   }
   return result;
 }
 export function summarizeRecording(events: readonly DiagnosticEvent[]) {
-  return summarizeInteractions(recordingObservations(events));
+  return analyzeRecording(events).summary;
 }
 export function recordingsComparable(
   before: RecordingBatch["run"],
@@ -148,4 +163,57 @@ export function recordingSequenceGaps(events: readonly DiagnosticEvent[]) {
     sequences.set(event.process_role, event.sequence);
   }
   return gaps;
+}
+
+export function analyzeRecording(
+  events: readonly DiagnosticEvent[],
+  recovered = false,
+) {
+  const clock_discontinuities = recordingClockDiscontinuities(events),
+    sequence_gaps = recordingSequenceGaps(events);
+  const roles = new Set(events.map((event) => event.process_role));
+  const recovery_uncertain =
+    recovered &&
+    [...roles].some(
+      (role) =>
+        !events.some(
+          (event) =>
+            event.process_role === role &&
+            event.name === "process.terminated" &&
+            event.reason === "clean",
+        ),
+    );
+  const unattributed_lost_starts = events.reduce(
+    (n, event) =>
+      n +
+      (event.name === "recording.loss" &&
+      event.category.inventory_id === "unknown"
+        ? event.lost_starts
+        : 0),
+    0,
+  );
+  const unknown =
+    clock_discontinuities > 0 ||
+    sequence_gaps > 0 ||
+    recovery_uncertain ||
+    unattributed_lost_starts > 0;
+  const summary = summarizeInteractions(recordingObservations(events)).map(
+    (row) => ({
+      ...row,
+      ...(unknown
+        ? {
+            evidence: "incomplete",
+            fraction_by_20_ms: null,
+            fraction_by_300_ms: null,
+          }
+        : {}),
+    }),
+  );
+  return {
+    clock_discontinuities,
+    sequence_gaps,
+    recovery_uncertain,
+    unattributed_lost_starts,
+    summary,
+  };
 }

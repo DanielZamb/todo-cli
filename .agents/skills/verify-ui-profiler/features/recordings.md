@@ -18,7 +18,7 @@ environment is refused for comparison; retry preserves the original event count.
 
 ## Gotchas
 
-Accepted queue admission is not durable delivery. Retain client batches for
-retry/reconciliation. Explicit export cursors can expire under oldest-first
+The internal queue admits work without synchronous I/O. The HTTP acknowledgement
+awaits persistence asynchronously; retain local batches until a stored receipt. Explicit export cursors can expire under oldest-first
 rotation. Losses, clock discontinuities and restart uncertainty invalidate a
 complete-performance claim. Normal Diagnostics polling never reads this journal.

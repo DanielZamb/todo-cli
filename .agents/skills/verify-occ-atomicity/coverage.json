@@ -1,9 +1,9 @@
 {
-  "confirmedCommit": "a2dea2d6328298671796cc856738fd0e4e68469d",
+  "confirmedCommit": "3ef9e674307378dde914059cb7581d6bdccb05d0",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "8e77d3ebd77db5b51a1a0f99a17af7e2b157daa50f5110d68e62e4fa86972138",
+      "sha256": "1ae2bba8d5e0b00f561af2e87b8ed5af068cff0cd080fd9228fbe836c91488cf",
       "functions": [
         "OperationStore.constructor",
         "OperationStore.transaction",
@@ -19,7 +19,7 @@
     },
     {
       "path": "packages/domain/src/store/projection.ts",
-      "sha256": "76fe3261698793601df4155f1d70b4e2c717fda18e40c971f5fa0d445d9aeb37",
+      "sha256": "1484d7189856c294451f077a2c3fed45ac55084ad9a40b444e7534ecdf2bc4df",
       "functions": [
         "changes",
         "applyEvent",

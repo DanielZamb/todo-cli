@@ -7,6 +7,7 @@ import {
   RecordingReceipt,
   RecordingRunList,
   RecordingShow,
+  type RecordingStatus,
   validateRecordingBatch,
 } from "@todo/domain";
 import { CommandError } from "@todo/domain/commands";
@@ -98,7 +99,7 @@ export const recordingCommand = (
     if (name === "import") {
       const batches = yield* Effect.tryPromise({
         try: async () => {
-          if ((await stat(input.file)).size > 32 * 1024 * 1024) throw invalid();
+          if ((await stat(input.file)).size > 64 * 1024 * 1024) throw invalid();
           const text = await readFile(input.file, "utf8");
           let values: unknown[];
           try {
@@ -122,6 +123,7 @@ export const recordingCommand = (
         },
         catch: invalid,
       });
+      let status: typeof RecordingStatus.Type | undefined;
       let accepted = 0,
         events = 0;
       for (const batch of batches) {
@@ -140,11 +142,14 @@ export const recordingCommand = (
               `Recording queue or storage unavailable after ${accepted} batches and ${events} events`,
             ),
           );
+        status = receipt.status;
         accepted++;
         events += batch.events.length;
       }
+      if (!status) return yield* Effect.fail(invalid());
       return yield* emit(
         {
+          status,
           generated_at: new Date().toISOString(),
           dry_run: input.dryRun,
           accepted_batches: accepted,

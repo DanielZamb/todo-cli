@@ -121,8 +121,8 @@ export const RecordingSummaryRow = Schema.Struct({
   max_ms: Schema.NullOr(DiagnosticMetric),
   by_20_ms: DiagnosticCount,
   by_300_ms: DiagnosticCount,
-  fraction_by_20_ms: DiagnosticMetric,
-  fraction_by_300_ms: DiagnosticMetric,
+  fraction_by_20_ms: Schema.NullOr(DiagnosticMetric),
+  fraction_by_300_ms: Schema.NullOr(DiagnosticMetric),
   oldest_incomplete_ms: Schema.NullOr(DiagnosticMetric),
   evidence: Schema.Literals(["incomplete", "unproven", "sparse", "complete"]),
 });
@@ -185,4 +185,5 @@ export const RecordingImportResult = Schema.Struct({
   dry_run: Schema.Boolean,
   accepted_batches: DiagnosticCount,
   events: DiagnosticCount,
+  status: RecordingStatus,
 });
