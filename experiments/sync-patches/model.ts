@@ -1,0 +1,8 @@
+import {Schema} from 'effect';
+import {Task,Series,ProfileSummary,ProjectSummary,TagSummary} from '../../packages/domain/src/index.ts';
+export const Computed=Schema.Struct({ready:Schema.Boolean,blocked:Schema.Boolean,depends_on:Schema.Array(Schema.String),blocks:Schema.Array(Schema.String),remaining_energy:Schema.Struct({energy:Schema.Number,unweighted:Schema.Number})});
+export const Replica=Schema.Struct({profile:Schema.String,generation:Schema.String,cursor:Schema.String,profiles:Schema.Array(ProfileSummary),projects:Schema.Array(ProjectSummary),tags:Schema.Array(TagSummary),series:Schema.Array(Series),rows:Schema.Record(Schema.String,Task),computed:Schema.Record(Schema.String,Computed),lists:Schema.Record(Schema.String,Schema.Array(Schema.String))});
+export type Replica=typeof Replica.Type;
+export const Edits=Schema.Struct({remove:Schema.Array(Schema.Number),insert:Schema.Array(Schema.Struct({index:Schema.Number,id:Schema.String}))});
+export const Patch=Schema.Struct({from:Schema.String,to:Schema.String,generation:Schema.String,mode:Schema.Literals(['whole','edits']),rows:Schema.Record(Schema.String,Task),remove:Schema.Array(Schema.String),computed:Schema.Record(Schema.String,Computed),remove_computed:Schema.Array(Schema.String),lists:Schema.Record(Schema.String,Schema.Array(Schema.String)),edits:Schema.Record(Schema.String,Edits),profiles:Schema.optionalKey(Schema.Array(ProfileSummary)),projects:Schema.optionalKey(Schema.Array(ProjectSummary)),tags:Schema.optionalKey(Schema.Array(TagSummary)),series:Schema.optionalKey(Schema.Array(Series))});
+export type Patch=typeof Patch.Type;
