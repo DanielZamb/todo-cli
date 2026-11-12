@@ -315,6 +315,23 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
                          expected_difference='SeatCandidate7cSupersessionTests.swift:77 with olderFails → true (S1-18 ruling, 2026-11-12: a later failure is a newer message and replaces the older one in the single banner)', accepted=sole or seat_others['SeatCandidate7cSupersessionTests'] == 0)
         if sole: seat_others['SeatCandidate7cSupersessionTests'] = 0
         (evidence / 'seat-ruling-s118.json').write_text(json.dumps(seat_s118, indent=2) + '\n')
+        # Coordinator ruling D1, 2026-11-12: "supersession is per target, not per kind. An action is
+        # superseded only by a newer action of the same kind ON THE SAME TARGET in the same instance
+        # ... Two actions on different targets are both live and both report their own outcome ...
+        # the seat's S1-16 probe (distinct dependents, older failure must present nothing) then fails
+        # by design and becomes a ruled line with this text." Accepted only if line 56 is the probe's
+        # sole issue for each argument AND its receipts show the older link's own named failure.
+        log = (evidence / 'SeatCandidate7bBoundaryTests.log').read_text()
+        found = re.findall(r'recorded an issue with 1 argument (newerFails → (?:true|false)) at (SeatCandidate7bBoundaryTests\.swift:\d+)', log)
+        others = re.findall(r'recorded an issue at (SeatCandidate7bBoundaryTests\.swift:\d+)', log)
+        receipts = {flag: json.loads((evidence / f'superseded-link-handoff-{flag}.json').read_text()) for flag in ('false', 'true') if (evidence / f'superseded-link-handoff-{flag}.json').exists()}
+        own = len(receipts) == 2 and all('Older dependent' in (r.get('message') or '') for r in receipts.values())
+        expected = sorted([('newerFails → false', 'SeatCandidate7bBoundaryTests.swift:56'), ('newerFails → true', 'SeatCandidate7bBoundaryTests.swift:56')])
+        sole = seat_others['SeatCandidate7bBoundaryTests'] != 0 and sorted(found) == expected and not others and own
+        seat_d1 = dict(exit=seat_others['SeatCandidate7bBoundaryTests'], issues=found + others, receipts=receipts, older_reports_its_own_failure=own,
+                       expected_difference='SeatCandidate7bBoundaryTests.swift:56 for both arguments (D1 ruling, 2026-11-12: supersession is per target; a link on another row is live and reports its own failure)', accepted=sole or seat_others['SeatCandidate7bBoundaryTests'] == 0)
+        if sole: seat_others['SeatCandidate7bBoundaryTests'] = 0
+        (evidence / 'seat-ruling-d1.json').write_text(json.dumps(seat_d1, indent=2) + '\n')
         exit_code = exit_code or seat_exit or restore_exit or interleaving_exit or int(any(seat_others.values()))
 
     with lock:

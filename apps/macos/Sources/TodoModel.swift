@@ -200,7 +200,14 @@ final class TodoModel {
     }
 
     /// The main window's messages, under the same rule as every surface (SurfaceMessages).
-    private var mainMessages = SurfaceMessages<MessageKind, String>()
+    /// Same-kind hand-offs for different Tasks merge into one message (D2); other kinds replace.
+    private var mainMessages = SurfaceMessages<MessageKind, String>(merge: { kind, parts in
+        switch kind {
+        case .dependencyLink: "Couldn't change \(parts.count) Dependencies: \(MergedFailureWording.names(parts.map(\.subject))). Open each Task's Dependencies to see why."
+        case .quickAdd: "Couldn't add \(parts.count) Tasks: \(MergedFailureWording.names(parts.map(\.subject)))."
+        default: nil
+        }
+    })
     /// The newest message. Each one has a kind and a sequence number that only grows.
     var message: String? {
         get { mainMessages.value }
@@ -252,15 +259,17 @@ final class TodoModel {
     /// (MAC-C1-S1-16): it hands off only if the action is still the newest of its kind in its
     /// instance. A superseded action presents nothing anywhere. Returns whether it handed off.
     @discardableResult
-    func handOff<Kind, Value>(_ text: String, kind: MessageKind, from ticket: SurfaceMessages<Kind, Value>.Ticket) -> Bool {
+    func handOff<Kind, Value>(_ text: String, kind: MessageKind, from ticket: SurfaceMessages<Kind, Value>.Ticket, subject: String? = nil) -> Bool {
         guard ticket.isNewest else { return false }
-        publishMessage(text, kind: kind)
+        // Carries the action's target and subject so same-kind hand-offs for different Tasks merge (D2).
+        mainMessages.publish(text, kind: kind, target: ticket.target, subject: subject)
+        messageSurface = nil
         return true
     }
     /// A success started at `mark` clears the current message only if it is one of `kinds`
     /// and already existed when the action started. A newer message always survives.
-    func clearMessage(_ kinds: Set<MessageKind>, since mark: Int) {
-        mainMessages.clear(kinds, since: mark)
+    func clearMessage(_ kinds: Set<MessageKind>, since mark: Int, onlyTarget: AnyHashable? = nil) {
+        mainMessages.clear(kinds, since: mark, onlyTarget: onlyTarget)
         if mainMessages.value == nil { messageSurface = nil }
     }
     /// Whether the banner should announce message `sequence` now: once per message, not per appearance.

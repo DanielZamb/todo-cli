@@ -52,7 +52,13 @@ struct DependencyPicker: Identifiable {
     enum MessageKind: Hashable { case reload, link, followUp }
     /// This picker instance's messages under the one message rule (SurfaceMessages). The search
     /// notice is separate: it belongs to the search request generation, which already supersedes.
-    var messages = SurfaceMessages<MessageKind, DependencyNotice>()
+    /// Link failures on different rows merge into one notice (D2); other kinds replace.
+    var messages = SurfaceMessages<MessageKind, DependencyNotice>(merge: { kind, parts in
+        guard kind == .link else { return nil }
+        let verbs = Set(parts.map(\.value.attemptVerb))
+        let verb = verbs.count == 1 ? verbs.first! : "change"
+        return DependencyNotice(message: "Couldn't \(verb) \(parts.count) Dependencies: \(MergedFailureWording.names(parts.map(\.subject))). Try each again to see why.")
+    })
     var operationFailure: DependencyNotice? { messages.value }
     var searchFailure: DependencyNotice?
     var failure: DependencyNotice? {
@@ -249,8 +255,11 @@ extension TodoModel {
         dependencies.pendingDependents.insert(dependent.id)
         dependencies.picker?.pending.insert(candidate.id)
         // The newest link action presents: it ends an earlier link or reload notice now.
-        dependencies.picker?.messages.clear([.link, .reload, .followUp])
-        guard let linkTicket = dependencies.picker?.messages.begin(.link) else { return }
+        // The newest link action on this row presents: it ends this row's earlier link or follow-up
+        // notice and a reload notice now. Another row's link is live and keeps its own (D1).
+        dependencies.picker?.messages.clear([.reload])
+        dependencies.picker?.messages.clear([.link, .followUp], onlyTarget: dependent.id)
+        guard let linkTicket = dependencies.picker?.messages.begin(.link, target: dependent.id) else { return }
         dependencies.picker?.warnings = []
         defer {
             if discovery.credentialEpoch == epoch { dependencies.pendingDependents.remove(dependent.id) }
@@ -287,7 +296,7 @@ extension TodoModel {
             guard signedIn, profile == picker.profile, isCurrentCredential(epoch) else { return }
             // Presentation in the main window too: only the newest link of this picker may clear
             // an earlier hand-off (a superseded one presents nothing anywhere).
-            if linkTicket.isNewest { clearMessage([.dependencyLink], since: mark) }
+            if linkTicket.isNewest { clearMessage([.dependencyLink], since: mark, onlyTarget: dependent.id) }
             if report.outcome != "unchanged" { await refreshAfterWrite("Dependencies updated", owner: .surface(.dependencyPicker(picker.id), .init(linkTicket))) }
         } catch {
             authorize(error, epoch: epoch, profile: picker.profile)
@@ -306,10 +315,10 @@ extension TodoModel {
                 // failure is not silent. A superseded link hands off nothing (S1-16). Both Tasks, the
                 // dependent first, whatever the picker's direction (candidate 8 ruling 2).
                 let attempt = remove ? "stop “\(dependent.title)” depending on “\(blocker.title)”" : "make “\(dependent.title)” depend on “\(blocker.title)”"
-                handOff("Couldn't \(attempt). " + notice.message, kind: .dependencyLink, from: linkTicket)
+                handOff("Couldn't \(attempt). " + notice.message, kind: .dependencyLink, from: linkTicket, subject: candidate.title)
                 return
             }
-            if dependencies.picker?.messages.fail(notice, linkTicket) == true {
+            if dependencies.picker?.messages.fail(notice, linkTicket, subject: candidate.title) == true {
                 dependencies.picker?.requiresReload = notice.failure?.code == "occ_conflict"
             }
         }

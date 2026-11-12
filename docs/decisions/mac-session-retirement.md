@@ -346,6 +346,40 @@ of publishing.
 - **Control.** `SourcePresentationRuleTests` fails if a removed parameter or
   pattern returns.
 
+**Supersession is per target** (D1, ruled 2026-11-12, correcting S1-16 for
+candidate 8). An action is superseded only by a newer action of the same kind on
+the same target in the same instance. Examples of a target:
+
+- the dependent Task of a link or unlink;
+- the rejected row of a follow-up;
+- the Task of a Save.
+
+Two actions on different targets are both live, and each reports its own
+outcome: in the surface while it is open, and as a hand-off after it closes, as
+the newest action for its target. Tickets carry their target
+(`begin(_:target:)`). A link's start clears only its own row's earlier link or
+follow-up notice. A link's success clears only its own row's earlier hand-off.
+
+The seat's S1-16 probe uses distinct dependents, so it now fails by design. The
+runner accepts its line 56, quoting the ruling, only if the probe's receipts
+show the older link reporting its own failure. The same-row version must still
+present nothing, and does.
+
+**Same-kind failures merge** (D2, ruled 2026-11-12; wording through the Opus Mac
+UI seat). When a new failure has the same kind as the one showing, for another
+target, the surface shows one merged message instead of replacing:
+
+- Picker: "Couldn't add 2 Dependencies: “A” and “B”. Try each again to see
+  why." The verb is "change" when the verbs differ.
+- Main banner: "Couldn't change N Dependencies: …. Open each Task's
+  Dependencies to see why."
+
+Messages name up to three Tasks, then "and N more". Errors of different kinds
+keep newest-wins. A success on one target removes only its own part. Only
+surfaces with targeted actions can produce two live same-kind failures: the
+picker, and the main banner's link hand-offs. Every other surface's same-kind
+actions are gated.
+
 **Known limit: one banner slot** (MAC-C1-S1-18, ruled 2026-11-12). The main
 window shows one message. A failure that arrives later is a newer message and
 replaces an earlier unread one, for example an old picker instance's link

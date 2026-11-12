@@ -243,7 +243,8 @@ extension TodoModel {
         enum Owner { case picker(UUID, SurfaceMessages<DependencyPicker.MessageKind, DependencyNotice>.Ticket), report(SurfaceMessages<ImportMessageKind, String>.Ticket), main(SurfaceMessages<MessageKind, String>.Ticket) }
         let owner: Owner
         switch surface {
-        case .dependencyPicker(let picker): owner = .picker(picker, dependencies.picker!.messages.begin(.followUp))
+        // The follow-up for this rejected row: a newer one for the same row supersedes it (D1).
+        case .dependencyPicker(let picker): owner = .picker(picker, dependencies.picker!.messages.begin(.followUp, target: id))
         case .importSheet: owner = .report(importMessages.begin(.followUp))
         default: owner = .main(beginMessage(.dependencyFollowUp))
         }

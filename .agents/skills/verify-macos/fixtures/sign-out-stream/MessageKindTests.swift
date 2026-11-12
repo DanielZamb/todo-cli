@@ -1199,7 +1199,9 @@ private actor ScriptGate: ClientTransport {
 
     @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil),
           arguments: [false, true], [[false, false], [false, true], [true, false], [true, true]])
-    func aSupersededLinkPresentsNothingAnywhereAndOnlyTheNewestHandsOff(_ olderFails: Bool, _ newer: [Bool]) async throws {
+    func twoLinksOnDifferentRowsAreBothLiveAndHandOffTheirOwnFailures(_ olderFails: Bool, _ newer: [Bool]) async throws {
+        // D1 (2026-11-12): the older link acts on another row, so it is not superseded; after the
+        // picker closes it hands off its own failure, merged with a newer hand-off of the same kind (D2).
         // newer[0]: the newer link fails; newer[1]: the picker closes before the newer link finishes.
         let newerFails = newer[0], closeFirst = newer[1]
         let gate = ScriptGate(); let (model, vault, rootSeed) = try await live(gate)
@@ -1231,12 +1233,13 @@ private actor ScriptGate: ClientTransport {
         let afterNewer = model.message
         await gate.release("tasks.depend"); await olderRun.value
         let label = "older \(olderFails ? "fails" : "succeeds"), newer \(newerFails ? "fails" : "succeeds"), closed \(closeFirst ? "before" : "after") the newer finished"
-        #expect(model.message?.contains(older.title) != true, "\(label): the superseded link presents nothing: \(model.message ?? "nil")")
-        #expect(model.message == afterNewer, "\(label): the superseded link neither publishes nor clears: \(model.message ?? "nil")")
-        if newerFails && closeFirst {
-            #expect(model.message?.contains(newerTask.title) == true && model.messageKind == .dependencyLink, "\(label): the newest link hands off: \(model.message ?? "nil")")
+        if !olderFails {
+            #expect(model.message == afterNewer, "\(label): an older success clears only its own row: \(model.message ?? "nil")")
+        } else if newerFails && closeFirst {
+            #expect(model.message?.hasPrefix("Couldn't change 2 Dependencies:") == true && model.message?.contains(older.title) == true && model.message?.contains(newerTask.title) == true,
+                    "\(label): both hand-offs merge: \(model.message ?? "nil")")
         } else {
-            #expect(model.message == nil, "\(label): \(model.message ?? "nil")")
+            #expect(model.message?.contains(older.title) == true && model.messageKind == .dependencyLink, "\(label): the older row hands off its own failure: \(model.message ?? "nil")")
         }
         await finish(model, gate, vault)
     }
@@ -1526,6 +1529,60 @@ private actor ScriptGate: ClientTransport {
             try await wait("\(kind): Session ended") { !model.signedIn }
             #expect(!model.signedIn, "\(kind): the dead Session is noticed")
         }
+        await finish(model, gate, vault)
+    }
+
+    // MARK: D1 and D2: supersession is per target; same-kind failures on different rows merge
+
+    /// A Blocks picker whose candidates are their own dependents, so two links can be live at once.
+    private func blocksPicker(_ model: TodoModel, _ gate: ScriptGate, _ vault: SessionVault, root: TaskSnapshot) async throws -> (TaskSnapshot, TaskSnapshot) {
+        let a = try await secondTask(model, gate, vault), b = try await secondTask(model, gate, vault)
+        model.dependencies.picker = .init(profile: "work", root: model.tasks.first { $0.id == root.id }!, direction: .blocks)
+        await model.reloadDependencyPicker()
+        return (a, b)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func anOlderLinkOnAnotherRowStillReportsItsRefusalInThePicker() async throws {
+        let gate = ScriptGate(); let (model, vault, root) = try await live(gate)
+        let (a, b) = try await blocksPicker(model, gate, vault, root: root)
+        await gate.next("tasks.depend", .holdThenFail(503, "ROW A refused"))
+        let older = Task { await model.toggleDependency(a) }
+        try await wait("A held") { await gate.isHeld("tasks.depend") }
+        await model.toggleDependency(b)
+        #expect(model.dependencies.picker?.feedback == "Dependency added", "B succeeds")
+        await gate.release("tasks.depend"); await older.value
+        #expect(model.dependencies.picker?.failure?.attemptTitle == a.title, "A's refusal shows for its own row: \(model.dependencies.picker?.failure?.message ?? "nil")")
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [false, true])
+    func anOlderLinkSupersededOnTheSameRowPresentsNothing(_ closed: Bool) async throws {
+        // A second tick on a pending row is refused by the pending gate, so the newer action on the
+        // same row is begun directly: the rule under test is the per-target supersession itself.
+        let gate = ScriptGate(); let (model, vault, root) = try await live(gate)
+        let (a, _) = try await blocksPicker(model, gate, vault, root: root)
+        await gate.next("tasks.depend", .holdThenFail(503, "SUPERSEDED same-row link"))
+        let older = Task { await model.toggleDependency(a) }
+        try await wait("A held") { await gate.isHeld("tasks.depend") }
+        _ = model.dependencies.picker?.messages.begin(.link, target: a.id)
+        if closed { model.closeDependencyPicker() }
+        await gate.release("tasks.depend"); await older.value
+        #expect(model.dependencies.picker?.failure == nil && model.message == nil, "closed \(closed): \(model.message ?? model.dependencies.picker?.failure?.message ?? "nil")")
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func twoRefusedLinksOnDifferentRowsMergeIntoOneNotice() async throws {
+        let gate = ScriptGate(); let (model, vault, root) = try await live(gate)
+        let (a, b) = try await blocksPicker(model, gate, vault, root: root)
+        await gate.next("tasks.depend", .holdThenFail(503, "ROW A refused"), .fail(503, "ROW B refused"))
+        let older = Task { await model.toggleDependency(a) }
+        try await wait("A held") { await gate.isHeld("tasks.depend") }
+        await model.toggleDependency(b)
+        await gate.release("tasks.depend"); await older.value
+        let notice = model.dependencies.picker?.failure?.message ?? "nil"
+        #expect(notice.hasPrefix("Couldn't add 2 Dependencies:") && notice.contains(a.title) && notice.contains(b.title), "merged: \(notice)")
         await finish(model, gate, vault)
     }
 }
