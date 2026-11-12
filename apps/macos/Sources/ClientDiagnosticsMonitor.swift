@@ -256,6 +256,7 @@ struct ClientDiagnosticInputReceipt {
         event.inputMS = released; event.durationMS = released - press.time
         if nativeSelection?.action == id { event.nativeSelectionNotifications = nativeSelection?.capabilities }
         recorder.record(event, ifScope: press.scope); pointer?.recorded = true
+        if press.scope == recorder.scopeToken { recorder.inputReleased(id, atMS: released) }
     }
     private func nativeSelectionChanged(tableID: ObjectIdentifier?, changing: Bool) {
         guard recorder.isOwnerSession, let trace = nativeSelection, trace.scope == recorder.scopeToken,

@@ -92,6 +92,35 @@ private final class DiagnosticTickCounter: @unchecked Sendable {
         #expect(events.filter { $0["name"] as? String == "ui.selection.nativeCommitted" }.count == 1)
         recorder.clear(); await recorder.flush()
     }
+    @Test @MainActor func aRowClickIsMeasuredFromItsReleaseAndKeepsThePressAsTheHold() async throws {
+        // Definition (a): the list selects on release, so the interaction starts at the release;
+        // the press is kept and the press-to-release hold is reported separately.
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: root); recorder.authorizeOwnerSession(true)
+        let source = NotificationCenter(), monitor = ClientDiagnosticsMonitor(recorder: recorder, notifications: source)
+        let fixture = DiagnosticPointerFixture(monitor: monitor); defer { monitor.stop(); fixture.close() }
+        monitor.start()
+        let down = ProcessInfo.processInfo.systemUptime - 0.4, up = down + 0.15
+        monitor.input(try fixture.mouse(.leftMouseDown, row: 1, time: down))
+        let action = try #require(monitor.selectionAction)
+        monitor.input(try fixture.mouse(.leftMouseUp, row: 1, time: up))
+        monitor.selected("synthetic-selection")
+        recorder.resultPublished(action); recorder.layoutCommitted(action)
+        let layoutAt = ProcessInfo.processInfo.systemUptime * 1000
+        let records = (await recorder.snapshot()).recent
+        let input = try #require(records.first { $0.name == .inputObserved && $0.actionID == action })
+        #expect(abs(try #require(input.inputMS) - down * 1000) < 0.001, "the press is kept")
+        let layout = try #require(records.first { $0.name == .layoutCommitted && $0.actionID == action })
+        let duration = try #require(layout.durationMS)
+        #expect(abs(duration - (layoutAt - up * 1000)) < 20, "measured from the release: \(duration)")
+        let fields = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(layout)) as? [String: Any])
+        let phases = try #require(fields["actionPhases"] as? [String: Any])
+        #expect(abs((phases["holdMS"] as? Double ?? -1) - 150) < 0.001, "press to release is the hold")
+        #expect((phases["inputQueueMS"] as? Double ?? 9_999) <= layoutAt - up * 1000 + 1, "release to handler, not press to handler")
+        let summary = try #require((await recorder.snapshot()).actions.first { $0.action == .taskSelection })
+        #expect(abs(try #require(summary.p50MS) - duration) < 0.001, "the category summary uses the release")
+        recorder.clear(); await recorder.flush()
+    }
     @Test @MainActor func unavailableNativeNotificationsAreExplicitAndScopeChangesDiscardTheOldRelease() async throws {
         let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
         let recorder = ClientDiagnosticsRecorder(journalDirectory: root); recorder.authorizeOwnerSession(true)

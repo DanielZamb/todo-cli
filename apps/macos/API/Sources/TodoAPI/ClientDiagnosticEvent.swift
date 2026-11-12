@@ -283,6 +283,9 @@ public struct ClientDiagnosticActionPhases: Codable, Sendable {
     public let handlerWallMS: Double
     public let requestUnionMS: Double?
     public let publicationToLayoutMS: Double
+    /// Press to release for an action the platform performs on release. The action itself is
+    /// measured from the release; this is the person's hold, not the app's time.
+    public var holdMS: Double? = nil
 }
 public struct ClientDiagnosticActionSummary: Codable, Sendable, Identifiable {
     public var id: String { "\(action.rawValue)/\(mode.rawValue)/\(inputKind.rawValue)" }

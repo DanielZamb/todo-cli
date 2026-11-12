@@ -85,6 +85,7 @@ struct ClientDiagnosticsView: View {
                         if let category = event.action, let phases = event.actionPhases {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(ClientDiagnosticDisplay.action(category)).fontWeight(.medium)
+                                if let hold = phases.holdMS { pair("Hold before release (ms)", milliseconds(hold)) }
                                 pair("Input queue (ms)", milliseconds(phases.inputQueueMS))
                                 pair("Handler, including waits (ms)", milliseconds(phases.handlerWallMS))
                                 pair("Requests, overlapping (ms)", milliseconds(phases.requestUnionMS))

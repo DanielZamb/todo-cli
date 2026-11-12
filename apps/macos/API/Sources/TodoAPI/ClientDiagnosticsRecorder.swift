@@ -70,6 +70,10 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
         var handler: Double?
         var publication: Double?
         var requests: [(Double, Double)] = []
+        /// A release observed before the handler starts: the platform performed the action on
+        /// release, so the interaction starts there. The press stays in `started` and the record.
+        var released: Double?
+        var holdMS: Double?
     }
     private var requests: [UUID: Request] = [:]
     private var actions: [UUID: Action] = [:]
@@ -247,6 +251,16 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
             return id
         }
     }
+    /// Records the pointer release of an action's press. Before the handler starts, the release
+    /// becomes the interaction's start; afterwards the action was performed on press and keeps it.
+    public func inputReleased(_ id: UUID?, atMS released: Double) {
+        guard let id else { return }
+        lock.withLock {
+            guard let action = actions[id], action.observedInput, released >= action.started, released <= clock() else { return }
+            actions[id]?.holdMS = released - action.started
+            if action.handler == nil { actions[id]?.released = released }
+        }
+    }
     public func handlerStarted(_ id: UUID?) {
         guard let id else { return }
         lock.withLock {
@@ -277,12 +291,13 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
             guard let action = actions[id] else { dropped += 1; return }
             guard let handler = action.handler, let publication = action.publication else { return }
             actions.removeValue(forKey: id)
-            let now = clock(), duration = max(0, now - action.started)
+            let start = action.released ?? action.started
+            let now = clock(), duration = max(0, now - start)
             if latencies[action.key, default: []].count == 512 { latencies[action.key]?.removeFirst() }
             if action.observedInput { latencies[action.key, default: []].append(duration) } else { unproven[action.key, default: 0] += 1 }
             var record = event(.layoutCommitted); record.actionID = id; record.action = action.key.category; record.mode = action.key.mode; record.inputKind = action.key.inputKind; record.traceID = id; record.outcome = .applied; record.durationMS = duration
             record.renderStage = "layout_complete"
-            record.actionPhases = .init(inputQueueMS: action.observedInput ? handler - action.started : nil, handlerWallMS: publication - handler, requestUnionMS: requests.values.contains(where: { $0.action == id }) ? nil : Self.union(action.requests), publicationToLayoutMS: now - publication)
+            record.actionPhases = .init(inputQueueMS: action.observedInput ? handler - start : nil, handlerWallMS: publication - handler, requestUnionMS: requests.values.contains(where: { $0.action == id }) ? nil : Self.union(action.requests), publicationToLayoutMS: now - publication, holdMS: action.holdMS)
             appendLocked(record)
         }
     }
