@@ -1,19 +1,18 @@
-# Patch protocol experiment, parked
+# Patch protocol experiment
 
-Work in progress, parked when the owner selected strict read restructuring.
-This branch merges the profiler at e0226565 into projection reads at a7e0ed0e.
-Nothing is installed or wired into ordinary product routes by this prototype.
+Throwaway code on exp/sync-experiment. No ordinary product route imports it.
+Do not merge, install or push this branch.
 
-The current prototype includes a Replica model, whole-list and indexed-edit
-Patch reducers, a consistent projection reader, a stored-outbox observer,
-in-memory observer, synthetic fixture seeder, transaction instrumentation builder
-and an unfinished measurement driver. The first build failed because filterTasks
-was imported from presentation.ts instead of its actual module. No experiment
-measurements or recommendations have been produced. The initial Swift-slot probe
-was contended; no Swift build was started.
+The compiled builder instruments the shared domain transaction without editing
+product sources. E1 compares an atomic stored outbox and a consistent-read memory
+Replica. The other drivers measure list representations, ring retention, JSON and
+Codable decoding, external commit detection, and SSE versus WebSocket delivery.
 
-Resume only after the checked-read restructuring. Review transaction instrumentation,
-Purge/restore erasure and driver correctness before measuring. In particular, the
-current driver still needs the CLI burst, correctness coverage, codec/reconnect
-measurements and profiler Diagnostics endpoint. Experiment code has not been
-qualified by a successful build or test run.
+Read docs/decisions/ui-speed/sync-experiment-report.md for methods, numbers and
+unqualified paths. The project-local verify-sync-experiment skill describes the
+scratch-only reproduction. No dependency or signing change is needed.
+
+The 300-edit burst uses a persistent compiled domain process. A smaller set of
+actual compiled CLI invocations proves that path separately. Transport routes
+are prototypes using Bun's built-in server and WebSocket support. They do not
+qualify the production HttpApi adapter or generated clients.

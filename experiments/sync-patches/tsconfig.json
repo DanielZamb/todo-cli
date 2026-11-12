@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["bun"],
+    "typeRoots": [
+      "../../packages/domain/node_modules/@types",
+      "../../node_modules/@types"
+    ],
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "include": ["*.ts"]
+}
