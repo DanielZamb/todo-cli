@@ -5,7 +5,7 @@
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "5d347c7fb1e0a5af728b17271f89bdf5b74e9dfb",
+  "productionSyncCommit": "566cc16c5a79f8105f0018a03cda2307de150728",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -157,7 +157,7 @@
         "signOut start, failure and commit",
         "followChanges reconnect retry from Offline and sign-out notice"
       ],
-      "sha256": "8daab56fd0d88ba8b1e84bb70daf5a6b928fff92215ac1270ff36d15b7b44f5e",
+      "sha256": "1e054d112b62d714efa7687e9134c4fc333152f30e2ad0ec12227daf0cef411f",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -193,7 +193,7 @@
       "functions": [
         "changeAttachment captured epoch and publication"
       ],
-      "sha256": "d5766ac527a50fcc3c2aaaba87671b81f9d517187003db77c3cc2d735287bfad",
+      "sha256": "fb53f798c4b259d558de0824683da9410649b4fab8ec66197bca2b206e389ff6",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -202,7 +202,7 @@
         "reloadBatchEditTargets",
         "applyBatchEdit"
       ],
-      "sha256": "9019f543a17f357ef8c2fdfe2ade757926f9f12efe609684166eef96deacc903",
+      "sha256": "6acf8b2115c0b0da7285d7977ac00f5ce7580788f7ba11fdac529f8b1e1065b9",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -211,7 +211,7 @@
         "reloadAttachmentTargets",
         "applyAttachmentBatch"
       ],
-      "sha256": "570fa7ad1fb5fcf265075b53105f34fbddbf05b90b83ab5361fafb88f1ae9405",
+      "sha256": "2df58e0f3473c1455ba41cd11d993fc1c3130774b632bcafdb77b9c081f557f2",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     }
   ],
@@ -225,7 +225,7 @@
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "a91cb00cf2f5b844a01ef1278246f695836ba6f4",
+  "previousProductionSyncCommit": "5d347c7fb1e0a5af728b17271f89bdf5b74e9dfb",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -353,6 +353,37 @@
     "review": "Messages carry a kind, a growing sequence and an optional raising surface; successes clear only their kinds and only messages older than their start; credential, Profile and Snapshot reload end any message; closing the picker, Import or Delete dialog ends its message. In Discovery, applyDiscoveryShow notes a mark after closeDiscovery and on success clears only an older discoveryShow message; its failure publishes kind discoveryShow to the main window. No discovery publication, Show acceptance, canShowDiscovery, closeDiscovery or epoch check changed.",
     "controls": [
       "docs/evidence/discovery-formal/swift-7Rz1or/result.json (5d347c7f)",
+      "Electron sources unchanged since docs/evidence/discovery-formal/electron-pfQcH2"
+    ]
+  },
+  "surfaceInstanceReview": {
+    "product": "566cc16c5a79f8105f0018a03cda2307de150728",
+    "previous": "5d347c7fb1e0a5af728b17271f89bdf5b74e9dfb",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "8daab56fd0d88ba8b1e84bb70daf5a6b928fff92215ac1270ff36d15b7b44f5e",
+        "to": "1e054d112b62d714efa7687e9134c4fc333152f30e2ad0ec12227daf0cef411f"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentModel.swift",
+        "from": "d5766ac527a50fcc3c2aaaba87671b81f9d517187003db77c3cc2d735287bfad",
+        "to": "fb53f798c4b259d558de0824683da9410649b4fab8ec66197bca2b206e389ff6"
+      },
+      {
+        "path": "apps/macos/Sources/BatchEdit.swift",
+        "from": "9019f543a17f357ef8c2fdfe2ade757926f9f12efe609684166eef96deacc903",
+        "to": "6acf8b2115c0b0da7285d7977ac00f5ce7580788f7ba11fdac529f8b1e1065b9"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentBatch.swift",
+        "from": "570fa7ad1fb5fcf265075b53105f34fbddbf05b90b83ab5361fafb88f1ae9405",
+        "to": "2df58e0f3473c1455ba41cd11d993fc1c3130774b632bcafdb77b9c081f557f2"
+      }
+    ],
+    "review": "MessageSurface carries the instance (picker id, Import instance, Delete preview id); closing an instance ends only its message; createDependencyFollowUp applies nothing once its instance is gone. Batch edit, Attachment batch and editor Attachment completions keep their epoch and Profile guards and, when their instance is gone, run only the committed read-back. No discovery publication, Show acceptance, canShowDiscovery, closeDiscovery or epoch check changed.",
+    "controls": [
+      "docs/evidence/discovery-formal/swift-MZ5PJF/result.json (566cc16c)",
       "Electron sources unchanged since docs/evidence/discovery-formal/electron-pfQcH2"
     ]
   }
