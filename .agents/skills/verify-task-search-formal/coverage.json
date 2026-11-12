@@ -77,7 +77,7 @@
         "catalogSignalRevision and full-read debt",
         "lastCatalogReadAt and activation age"
       ],
-      "sha256": "1e054d112b62d714efa7687e9134c4fc333152f30e2ad0ec12227daf0cef411f"
+      "sha256": "34e1353dedd1519ce540fc31295f458d2ca231d8fe3dd65a7784bc9507e29656"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -107,7 +107,7 @@
         "TaskSnapshot",
         "TaskSearchMatch"
       ],
-      "sha256": "8502de3358af711ba47c20790d32214caaacd3ed6c6ad1655367a93149feb9e6"
+      "sha256": "67adbee42434eeeb5179f521763375f032a84aff3bbeec62242688e10f44c67e"
     },
     {
       "path": "packages/domain/src/task-search.ts",
@@ -315,5 +315,21 @@
       }
     ],
     "review": "Only message surfaces (instance identity, importInstance), runImport and deleteTask completion guards changed. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged."
+  },
+  "completionOrderReview": {
+    "product": "05a54e6884b1bf7b727fc3159f25dab75a9da032",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "1e054d112b62d714efa7687e9134c4fc333152f30e2ad0ec12227daf0cef411f",
+        "to": "34e1353dedd1519ce540fc31295f458d2ca231d8fe3dd65a7784bc9507e29656"
+      },
+      {
+        "path": "apps/macos/Sources/TaskSnapshot.swift",
+        "from": "8502de3358af711ba47c20790d32214caaacd3ed6c6ad1655367a93149feb9e6",
+        "to": "67adbee42434eeeb5179f521763375f032a84aff3bbeec62242688e10f44c67e"
+      }
+    ],
+    "review": "TodoModel: authorize(_:epoch:profile:), instance surfaces (editor opening, quickAdd, batch drafts), refreshAfterWrite(presenting:), quick-add create and parse, runImport, deleteTask and openSeries completion order changed. TaskSnapshot: TaskDraft.opening added. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged."
   }
 }

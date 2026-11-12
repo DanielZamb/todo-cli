@@ -5,7 +5,7 @@
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "7f3bc6ac66933a1721d01af2063223f1c8871bd5",
+  "productionSyncCommit": "05a54e6884b1bf7b727fc3159f25dab75a9da032",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -133,7 +133,7 @@
         "canShowDiscovery",
         "applyDiscoveryShow"
       ],
-      "sha256": "ffb138ffd6ebe6490209f9dffa419b354d38f2668e9ba450305b19a99563dc82",
+      "sha256": "c359acd66790aeeab8b8d12518336ac2ca9318e5604e765bae57d2a6e9c0eae9",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -157,7 +157,7 @@
         "signOut start, failure and commit",
         "followChanges reconnect retry from Offline and sign-out notice"
       ],
-      "sha256": "1e054d112b62d714efa7687e9134c4fc333152f30e2ad0ec12227daf0cef411f",
+      "sha256": "34e1353dedd1519ce540fc31295f458d2ca231d8fe3dd65a7784bc9507e29656",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -193,7 +193,7 @@
       "functions": [
         "changeAttachment captured epoch and publication"
       ],
-      "sha256": "3d46dcdf480411b68d2f9fe385ca00986e516036cfa7b50630d337c938c4bb4c",
+      "sha256": "249f45349335c45271bf2be13667caeb2968e646a5b309de4468d58e7611c39b",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -202,7 +202,7 @@
         "reloadBatchEditTargets",
         "applyBatchEdit"
       ],
-      "sha256": "6acf8b2115c0b0da7285d7977ac00f5ce7580788f7ba11fdac529f8b1e1065b9",
+      "sha256": "f4febc1f885e141b6f7f0e014dbadda75d67e53eb4755f1c984a27e65f6d45ab",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -211,7 +211,7 @@
         "reloadAttachmentTargets",
         "applyAttachmentBatch"
       ],
-      "sha256": "2df58e0f3473c1455ba41cd11d993fc1c3130774b632bcafdb77b9c081f557f2",
+      "sha256": "4e4dbfc9f8d23bf02152dc205675bcc5e436462e9fc4e7e4b982fde0e5541b95",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     }
   ],
@@ -225,7 +225,7 @@
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "566cc16c5a79f8105f0018a03cda2307de150728",
+  "previousProductionSyncCommit": "7f3bc6ac66933a1721d01af2063223f1c8871bd5",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -400,5 +400,37 @@
     "controls": [
       "docs/evidence/discovery-formal/swift-pEWRyW/result.json (7f3bc6ac)"
     ]
+  },
+  "completionOrderReview": {
+    "product": "05a54e6884b1bf7b727fc3159f25dab75a9da032",
+    "controls": "check-swift passed on e742127c (product sources identical to 05a54e68), docs/evidence/discovery-formal/swift-WG9lmJ",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/Discovery.swift",
+        "from": "ffb138ffd6ebe6490209f9dffa419b354d38f2668e9ba450305b19a99563dc82",
+        "to": "c359acd66790aeeab8b8d12518336ac2ca9318e5604e765bae57d2a6e9c0eae9"
+      },
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "1e054d112b62d714efa7687e9134c4fc333152f30e2ad0ec12227daf0cef411f",
+        "to": "34e1353dedd1519ce540fc31295f458d2ca231d8fe3dd65a7784bc9507e29656"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentModel.swift",
+        "from": "3d46dcdf480411b68d2f9fe385ca00986e516036cfa7b50630d337c938c4bb4c",
+        "to": "249f45349335c45271bf2be13667caeb2968e646a5b309de4468d58e7611c39b"
+      },
+      {
+        "path": "apps/macos/Sources/BatchEdit.swift",
+        "from": "6acf8b2115c0b0da7285d7977ac00f5ce7580788f7ba11fdac529f8b1e1065b9",
+        "to": "f4febc1f885e141b6f7f0e014dbadda75d67e53eb4755f1c984a27e65f6d45ab"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentBatch.swift",
+        "from": "2df58e0f3473c1455ba41cd11d993fc1c3130774b632bcafdb77b9c081f557f2",
+        "to": "4e4dbfc9f8d23bf02152dc205675bcc5e436462e9fc4e7e4b982fde0e5541b95"
+      }
+    ],
+    "review": "requestDiscovery and showDiscoveryMatch catches now hand a 401 to handleAuthorization when the captured credential epoch is still current, before canPublishDiscovery/canShowDiscovery; publication still happens only behind those unchanged guards, and an expired Session fails them (signedIn false), so nothing is published. Batch edit, Attachment batch and the editor Attachment write call authorize(_:epoch:profile:) before their unchanged instance guards and read back with presenting: false after close. No discovery publication, Show or Close guard changed."
   }
 }

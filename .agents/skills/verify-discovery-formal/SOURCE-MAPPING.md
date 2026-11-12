@@ -220,8 +220,11 @@ or reads.lookup(prefix). Encoding/decoding constructs a local snapshot. Both
 success and catch call canPublishDiscovery before changing visible state.
 That guard checks signedIn, live connection, cancellation, credentialEpoch,
 generation, dialog, requestedIdentity and the current Lookup prefix. Success
-assigns snapshot then phase without suspension. Catch assigns human error/phase
-and passes the captured epoch to handleAuthorization without suspension.
+assigns snapshot then phase without suspension. Catch first passes the captured
+epoch to handleAuthorization when it is still current (a 401 ends the Session
+even for a closed or superseded dialog), then calls canPublishDiscovery before
+assigning human error/phase, all without suspension. An expired Session fails
+that guard, so nothing is published.
 Retry requires Error/Offline and the exact saved submitted identity/prefix;
 an edit invalidates it. Directory Retry needs no prefix.
 
@@ -229,7 +232,8 @@ showDiscoveryMatch accepts only a current snapshot and a contained match. It
 creates DiscoveryShowIntent with a fresh UUID and calls navigate. The UUID
 prevents an old cancelled callback becoming valid after another Show on the
 same row. This is stricter than the finite model. canShowDiscovery checks that
-same intent, epoch, signedIn/live state and cancellation.
+same intent, epoch, signedIn/live state and cancellation. Its catch hands a
+current-epoch 401 to handleAuthorization before that guard.
 
 The actual `DiscoveryView.swift` alert and the fallback `AppViews.swift` alert
 both use `presenting: model.pendingNavigation`. Their false isPresented setter
@@ -297,11 +301,11 @@ is erased when the authentication view changes.
 | followChanges | Captures epoch once; lifecycle/cancellation guards on stream and frames. SSE Unauthorized frame and thrown401 both pass that epoch to expireSession. Nested404-recovery and sleep catches also check it. |
 | refresh | Captures epoch, guards catch before human error/authorization, then also checks lifecycle, latest request and complete search identity. Credential replacement invalidates lifecycle/search generations for success. The c488 checkpoint held TaskSearch renewal; the final merged renewal is recorded above. |
 | discoverProfiles and refreshConflictDefinitions | Capture epoch before profiles or Project/Tag awaits; check before metadata publication and before error handling. |
-| parseDraft | Captures parseGeneration before sleep/parse awaits; replacement increments it. Both parsed result and error check the captured generation and cancellation. It does not call expireSession. |
+| parseDraft | Captures parseGeneration before sleep/parse awaits; replacement increments it. Both parsed result and error check the captured generation and cancellation. Its catch calls authorize(_:epoch:profile:) first, so a 401 under the still-current epoch and Profile reaches expireSession; nothing else in it does. |
 | loadHistory | Captures historyGeneration, lifecycle generation, Profile and editor id before the read; checks on both branches. Replacement increments both generations. It does not call expireSession. |
-| openSeries | Captures epoch and seriesGeneration before Task/History traversal; final success uses lifecycle-related series/Profile/editor guards, catch checks epoch then those guards before handleAuthorization. |
+| openSeries | Captures epoch and seriesGeneration before Task/History traversal; final success uses lifecycle-related series/Profile/editor guards, catch calls authorize(_:epoch:profile:) (current epoch and Profile) first, then checks epoch and the series/Profile/editor-opening guards before publishing editorError. |
 | runImport | Captures epoch/importGeneration/Profile before HTTP; replacement increments importGeneration; success checks Profile/importGeneration, catch checks epoch as well before structured error/authorization. |
-| create/save/write/transition/deleteTask/saveSeries/deleteProfile | Capture epoch before network operations; catches check it and pass it explicitly to handleAuthorization. The awaited Save-to-Show path additionally rechecks the exact Show intent after save. This mapping does not claim all unrelated write-success state is modeled. |
+| create/save/write/transition/deleteTask/saveSeries/deleteProfile | Capture epoch before network operations; catches pass it explicitly to handleAuthorization, through authorize(_:epoch:profile:) where the completion belongs to a surface instance (quick-add, Import, Delete, Batch edit, Attachment batch, Dependency batch, editor Attachment), before the instance guard. The awaited Save-to-Show path additionally rechecks the exact Show intent after save. This mapping does not claim all unrelated write-success state is modeled. |
 | AttachmentModel, BatchEdit, AttachmentBatch | Capture epoch before reads/writes; check it in publication/catch alongside Profile/editor/draft guards; pass it to handleAuthorization. |
 | load/create/preview/confirm Snapshots | Capture epoch; check after network awaits and before error publication. Snapshot reload is outside the finite discovery model. |
 
