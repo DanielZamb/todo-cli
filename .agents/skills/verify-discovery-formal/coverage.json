@@ -5,7 +5,7 @@
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "566cc16c5a79f8105f0018a03cda2307de150728",
+  "productionSyncCommit": "7f3bc6ac66933a1721d01af2063223f1c8871bd5",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -193,7 +193,7 @@
       "functions": [
         "changeAttachment captured epoch and publication"
       ],
-      "sha256": "fb53f798c4b259d558de0824683da9410649b4fab8ec66197bca2b206e389ff6",
+      "sha256": "3d46dcdf480411b68d2f9fe385ca00986e516036cfa7b50630d337c938c4bb4c",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -225,7 +225,7 @@
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "5d347c7fb1e0a5af728b17271f89bdf5b74e9dfb",
+  "previousProductionSyncCommit": "566cc16c5a79f8105f0018a03cda2307de150728",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -385,6 +385,20 @@
     "controls": [
       "docs/evidence/discovery-formal/swift-MZ5PJF/result.json (566cc16c)",
       "Electron sources unchanged since docs/evidence/discovery-formal/electron-pfQcH2"
+    ]
+  },
+  "editorAttachmentReview": {
+    "product": "7f3bc6ac66933a1721d01af2063223f1c8871bd5",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/AttachmentModel.swift",
+        "from": "fb53f798c4b259d558de0824683da9410649b4fab8ec66197bca2b206e389ff6",
+        "to": "3d46dcdf480411b68d2f9fe385ca00986e516036cfa7b50630d337c938c4bb4c"
+      }
+    ],
+    "review": "The editor Attachment write failure now publishes editorError only while its editor instance is open; handleAuthorization still runs first. No discovery publication, Show or epoch check changed.",
+    "controls": [
+      "docs/evidence/discovery-formal/swift-pEWRyW/result.json (7f3bc6ac)"
     ]
   }
 }
