@@ -523,9 +523,10 @@ private actor ScriptGate: ClientTransport {
         let newer = model.dependencies.picker?.id
         await gate.next("tasks.show", .fail(404, "NEWER picker B follow-up failed"))
         await model.createDependencyFollowUp(UUID().uuidString)
-        let error = try #require(model.message)
+        // Ruling 3: the newer picker's follow-up failure shows in that picker.
+        let error = try #require(model.dependencies.picker?.failure?.message)
         await gate.release("tasks.show"); await older.value
-        #expect(model.dependencies.picker?.id == newer && !model.quickAdd && model.message == error)
+        #expect(model.dependencies.picker?.id == newer && !model.quickAdd && model.dependencies.picker?.failure?.message == error && model.message == nil)
         await finish(model, gate, vault)
     }
 
