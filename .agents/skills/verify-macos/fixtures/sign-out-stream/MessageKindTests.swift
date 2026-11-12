@@ -593,4 +593,102 @@ private actor ScriptGate: ClientTransport {
         }
         await finish(model, gate, vault)
     }
+    // MARK: committed writes from a closed surface (Attachment batch, Dependency batch, editor Attachment)
+
+    /// A second open Task in the catalog, created on the server.
+    private func secondTask(_ model: TodoModel, _ gate: ScriptGate, _ vault: SessionVault) async throws -> TaskSnapshot {
+        let title = "Message kind second " + UUID().uuidString
+        _ = try await todoClient(server: url, credential: try #require(try vault.load())).tasks_period_create(path: .init(profile: "work"), body: .json(.init(title: title)))
+        await model.refreshAfterWrite("Second Task")
+        try await wait("second task") { model.tasks.contains { $0.title == title } }
+        return model.tasks.first { $0.title == title }!
+    }
+    private func hasLink(_ task: TaskSnapshot?, _ link: String) -> Bool {
+        (task?.attachments ?? []).contains { if case .link(let url) = $0.location { return url.absoluteString == link }; return false }
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [0, 1, 2])
+    func attachmentBatchAfterCloseReachesListAndEditorAndShowsNothing(mode: Int) async throws {
+        // mode 0: late success after close; 1: late failure after close; 2: late success after reopen.
+        let gate = ScriptGate(); let (model, vault, source) = try await live(gate)
+        let target = try await secondTask(model, gate, vault)
+        let link = "https://example.test/batch-" + UUID().uuidString
+        model.beginEditing(source)
+        await model.attachLink(link)
+        try await wait("source link") { hasLink(model.tasks.first { $0.id == source.id }, link) }
+        let reference = try #require(model.tasks.first { $0.id == source.id }?.attachments?.first { if case .link(let url) = $0.location { return url.absoluteString == link }; return false })
+        model.editor = nil
+        model.attachmentBatch = .init(profile: "work", reference: reference)
+        await model.reloadAttachmentTargets()
+        model.attachmentBatch?.selected = [target.id]
+        await model.applyAttachmentBatch(dryRun: true)
+        try #require(model.attachmentBatch?.report != nil)
+        model.beginEditing(model.tasks.first { $0.id == target.id }!)
+        await gate.next("tasks.attachMany", mode == 1 ? .holdThenFail(503, "OLD closed-sheet attach failed") : .hold)
+        let apply = Task { await model.applyAttachmentBatch(dryRun: false) }
+        try await wait("attach held") { await gate.isHeld("tasks.attachMany") }
+        model.attachmentBatch = nil
+        if mode == 2 { model.attachmentBatch = .init(profile: "work", reference: reference) }
+        let newer = model.attachmentBatch?.id
+        let reads = await gate.count("tasks.list")
+        await gate.release("tasks.attachMany"); await apply.value
+        #expect(model.attachmentBatch?.id == newer && model.attachmentBatch?.report == nil && model.attachmentBatch?.error == nil, "mode \(mode)")
+        #expect(model.message == nil && model.editorError == nil, "mode \(mode)")
+        if mode != 1 {
+            #expect(await gate.count("tasks.list") > reads, "mode \(mode): the committed apply's read-back ran")
+            #expect(hasLink(model.tasks.first { $0.id == target.id }, link), "mode \(mode): the list shows it")
+            #expect(hasLink(model.editor?.base, link), "mode \(mode): the open editor shows it")
+        }
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [0, 1, 2])
+    func dependencyBatchAfterCloseReachesListAndShowsNothing(mode: Int) async throws {
+        let gate = ScriptGate(); let (model, vault, root) = try await live(gate)
+        let target = try await secondTask(model, gate, vault)
+        let rootNow = model.tasks.first { $0.id == root.id }!
+        model.dependencies.batch = .init(profile: "work", root: rootNow, direction: .dependsOn)
+        await model.reloadDependencyBatch()
+        model.dependencies.batch?.selected = [target.id]
+        await model.previewDependencyBatch()
+        try #require(model.dependencies.batch?.report?.dry_run == true)
+        await gate.next("tasks.batchDepend", mode == 1 ? .holdThenFail(503, "OLD closed-dialog batch failed") : .hold)
+        let apply = Task { await model.applyDependencyBatch() }
+        try await wait("batch held") { await gate.isHeld("tasks.batchDepend") }
+        model.dependencies.batch = nil
+        if mode == 2 { model.dependencies.batch = .init(profile: "work", root: rootNow, direction: .dependsOn) }
+        let newer = model.dependencies.batch?.id
+        let reads = await gate.count("tasks.list")
+        await gate.release("tasks.batchDepend"); await apply.value
+        #expect(model.dependencies.batch?.id == newer && model.dependencies.batch?.report == nil && model.dependencies.batch?.failure == nil, "mode \(mode)")
+        #expect(model.message == nil, "mode \(mode)")
+        if mode != 1 {
+            #expect(await gate.count("tasks.list") > reads, "mode \(mode): the committed apply's read-back ran")
+            #expect(model.tasks.first { $0.id == root.id }?.depends_on?.contains(target.id) == true, "mode \(mode): the list shows it")
+        }
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [0, 1, 2])
+    func editorAttachmentAfterCloseReachesListAndShowsNothing(mode: Int) async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        let other = try await secondTask(model, gate, vault)
+        let link = "https://example.test/editor-" + UUID().uuidString
+        model.beginEditing(model.tasks.first { $0.id == task.id }!)
+        await gate.next("tasks.attach", mode == 1 ? .holdThenFail(503, "OLD closed-editor attach failed") : .hold)
+        let attach = Task { await model.attachLink(link) }
+        try await wait("attach held") { await gate.isHeld("tasks.attach") }
+        model.editor = nil
+        if mode == 2 { model.beginEditing(model.tasks.first { $0.id == other.id }!) }
+        let newer = model.editor?.id
+        let reads = await gate.count("tasks.list")
+        await gate.release("tasks.attach"); await attach.value
+        #expect(model.editor?.id == newer && model.editorError == nil && model.message == nil, "mode \(mode)")
+        if mode == 2 { #expect(!hasLink(model.editor?.base, link), "the newer editor is untouched") }
+        if mode != 1 {
+            #expect(await gate.count("tasks.list") > reads, "mode \(mode): the accepted change's read-back ran")
+            #expect(hasLink(model.tasks.first { $0.id == task.id }, link), "mode \(mode): the list shows it")
+        }
+        await finish(model, gate, vault)
+    }
 }

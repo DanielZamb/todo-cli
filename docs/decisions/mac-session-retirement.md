@@ -154,6 +154,19 @@ which ends the message before it resets the scope.
 Import sheet, and applies nothing unless that instance is still showing.
 Closing an instance ends only a message that instance raised.
 
+Before this change, seven committed writes skipped their read-back once their
+surface had closed: Batch edit, Attachment batch, Dependency batch, picker link
+or unlink, Delete, Import apply after a reopen, and the editor's Attachment
+write after the editor closed. In the installed build, the list was still
+repaired one stream event later, so it did not stay stale. Every committed
+operation for the current Profile triggers a full catalog refresh when it
+arrives on the stream. When the stream is not live, the reconnect's replay
+triggers it. One visible defect did persist. After an Attachment batch whose
+sheet closed during apply, an editor left open on one of its Tasks kept its old
+Attachments until it was reopened, because a refresh never updates the open
+editor. The change now updates that editor and runs the read-back directly. It
+no longer depends on the stream being live.
+
 | Kind | Published by | Success that clears it | Reachable in ordinary use |
 | --- | --- | --- | --- |
 | `connection` | Stream failure that goes Offline; write accepted with "… The live view is reconnecting."; stream 404 that cannot leave a deleted Profile; update reconnect check failure | Ready after a later connection attempt; a successful restore, sign-in, or write read-back | Yes: the stream retries automatically, and the banner's Retry reconnects |

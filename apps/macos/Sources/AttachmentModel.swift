@@ -38,8 +38,10 @@ extension TodoModel {
       }
     } catch {
       guard isCurrentCredential(credentialEpoch) else { return }
-      editorError = describe(error, at: .editor)
       handleAuthorization(error, credentialEpoch: credentialEpoch)
+      // A closed editor shows nothing; its error would otherwise reach whatever editor opens next.
+      guard profile == draft.base.profile_id, editor?.id == draft.id else { return }
+      editorError = describe(error, at: .editor)
     }
   }
 
