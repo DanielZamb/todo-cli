@@ -139,12 +139,13 @@ export const readGraphQuery = (
       Schema.Struct({ task_id: TaskId, generated_at: Instant }),
       { task_id: request.task_id, generated_at },
     );
+    const authority = yield* store.auth.checkRead(read, "read");
     return {
       read,
       graph: queryGraph(
         yield* store.graphRead(read),
-        read.fields.task_id,
-        read.fields.generated_at,
+        authority.fields.task_id,
+        authority.fields.generated_at,
       ),
     };
   });

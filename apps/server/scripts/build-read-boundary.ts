@@ -69,11 +69,11 @@ const result = await Bun.build({
         build.onLoad(
           {
             filter:
-              /(?:apps\/server\/src\/(server|sse)|packages\/domain\/src\/auth\/authorized-read)\.ts$/,
+              /(?:apps\/server\/src\/(server|sse)|packages\/domain\/src\/auth\/auth)\.ts$/,
           },
           (args) => {
             let source = readFileSync(args.path, "utf8");
-            if (args.path.endsWith("authorized-read.ts")) {
+            if (args.path.endsWith("auth.ts")) {
               assert.ok(source.includes("Object.freeze(this);"));
               return {
                 contents:

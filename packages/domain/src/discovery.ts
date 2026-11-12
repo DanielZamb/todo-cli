@@ -59,13 +59,15 @@ export class Discovery {
 
   readonly lookup = (credential: string, input: typeof LookupQuery.Type) =>
     this.store.auth.readSnapshot((auth) =>
-      Effect.gen(function* () {
-        const { read, profiles } = yield* auth.profilesRead(
+      Effect.gen({ self: this }, function* () {
+        const { read } = yield* auth.profilesRead(
           { credential },
           LookupQuery,
           input,
         );
-        const { prefix } = read.fields;
+        const authority = yield* this.store.auth.checkRead(read, "profiles");
+        const { prefix } = authority.fields;
+        const profiles = authority.profiles;
         const groups = yield* Effect.forEach(
           [...profiles].sort(byName),
           (profile) =>

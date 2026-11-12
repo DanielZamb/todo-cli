@@ -18,7 +18,10 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { Effect, Schema } from "effect";
-import type { AuthorizedOwnerRead } from "../auth/authorized-read.ts";
+import {
+  type AuthorizedOwnerRead,
+  checkedRead,
+} from "../auth/authorized-read.ts";
 import { DatabaseRestored, OpLogEntry } from "../events.ts";
 import { TaskId } from "../ids.ts";
 import {
@@ -267,9 +270,12 @@ export class Snapshots {
   }
   readonly create = (reason: string) =>
     attempt(() => this.transaction(() => this.createSync(reason)));
-  readonly listRead = (_read: AuthorizedOwnerRead) => this.list();
+  readonly listRead = (read: AuthorizedOwnerRead) =>
+    checkedRead(read, "owner", this.db).pipe(Effect.flatMap(() => this.list()));
   readonly showRead = (read: AuthorizedOwnerRead<{ snapshot: string }>) =>
-    this.show(read.fields.snapshot);
+    checkedRead(read, "owner", this.db).pipe(
+      Effect.flatMap((value) => this.show(value.fields.snapshot)),
+    );
 
   readonly list = () => attempt(() => this.transaction(() => this.listSync()));
   readonly show = (id: string) =>

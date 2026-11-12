@@ -470,8 +470,9 @@ export class AttachmentCommands {
         Schema.Struct({ task_id: TaskId, attachment_id: AttachmentId }),
         { task_id: request.task_id, attachment_id: id },
       );
+      const authority = yield* this.store.auth.checkRead(read, "read");
       const attachment = task?.attachments?.find(
-        (value) => value.id === read.fields.attachment_id,
+        (value) => value.id === authority.fields.attachment_id,
       );
       const image =
         attachment === undefined
@@ -480,7 +481,7 @@ export class AttachmentCommands {
               readManagedImage(
                 this.store.attachmentRoot,
                 attachment,
-                read.fields.task_id,
+                authority.fields.task_id,
               ),
             ).pipe(Effect.catch(() => Effect.succeed(null)));
       return { read, image };

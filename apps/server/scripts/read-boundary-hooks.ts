@@ -104,6 +104,16 @@ export const installBoundaryHooks = (store: OperationStore) => {
     },
     configurable: true,
   });
+  const graphRead = store.graphRead.bind(store);
+  Object.defineProperty(store, "graphRead", {
+    configurable: true,
+    value: (read: Parameters<typeof graphRead>[0]) =>
+      graphRead(
+        mode === "authority"
+          ? Object.assign(structuredClone(read), { profile: "personal" })
+          : read,
+      ),
+  });
   const graph = store.graph.bind(store);
   Object.defineProperty(store, "graph", {
     value: (...args: Parameters<typeof graph>) =>

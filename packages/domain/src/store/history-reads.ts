@@ -1,5 +1,6 @@
 import type { Database } from "bun:sqlite";
 import { Schema } from "effect";
+import { type AuthorizedRead, readAuthority } from "../auth/authorized-read.ts";
 import { OpLogEntry } from "../events.ts";
 import type { ProfileId, TaskId } from "../ids.ts";
 
@@ -54,14 +55,21 @@ const decode = (rows: { event: string }[]) =>
     }),
   );
 
-export const taskHistory = (db: Database, profile: ProfileId, id: TaskId) =>
-  decode(
+export const taskHistory = (
+  db: Database,
+  read: AuthorizedRead<{ task_id: TaskId }>,
+) => {
+  const value = readAuthority(read, "read", db);
+  const profile = value.profile,
+    id = value.fields.task_id;
+  return decode(
     db
       .query<{ event: string }, { profile: string; id: string }>(
         `SELECT * FROM op_log WHERE profile=:profile AND (${relevant}) ORDER BY seq`,
       )
       .all({ profile, id }),
   );
+};
 
 export const committedHistory = (
   db: Database,

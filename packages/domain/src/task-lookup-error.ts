@@ -50,11 +50,15 @@ export const taskLookupError = Effect.fn(function* (
         Effect.succeed(undefined),
       ),
     );
+  const authority =
+    resolved === undefined
+      ? undefined
+      : yield* store.auth.checkRead(resolved.read, "read");
   return authorizedTaskLookupError(
     resolved?.profile,
-    resolved?.read.fields.task_id ?? "",
-    resolved?.read.fields.transport ?? "http",
-    resolved?.read.fields.credentialProfile ?? "",
+    authority?.fields.task_id ?? "",
+    authority?.fields.transport ?? "http",
+    authority?.fields.credentialProfile ?? "",
   );
 });
 

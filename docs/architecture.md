@@ -204,6 +204,13 @@ immediate authorization transaction. Directory counts share its existing deferre
 read snapshot. Projection guards, generated Task columns, Version validation and
 atomic event/projection writes remain authoritative. Reads do not replay the log.
 
+Credential checks create read authorities inside the authentication module.
+Profile, scope, parsed fields and database identity live in ECMAScript private
+fields. Query ports validate the genuine instance, exact prototype, authority
+kind and database before consuming its values. Copies, subclasses and mutation
+cannot grant access; refusal uses the existing generic storage error. The
+authority, its payload and its class/prototype are frozen.
+
 Task History selects relevant event rows in SQL before decoding OpLogEntry.
 SSE catch-up selects only committed rows for its Profile and cursor. Full History
 reads remain available to commands that need them, Revert, replay and recovery.

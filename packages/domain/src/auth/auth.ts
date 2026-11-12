@@ -16,14 +16,6 @@ import { changes, metadata } from "../store/projection.ts";
 import { Instant } from "../time.ts";
 
 import {
-  type AuthorizedRead,
-  bindOwnerRead,
-  bindProfiles,
-  bindRead,
-  freezeRead,
-} from "./authorized-read.ts";
-
-import {
   AccessRequest,
   type AccessScope,
   AuthError,
@@ -35,6 +27,144 @@ import {
   StartSeriesRequest,
   TokenOptions,
 } from "./model.ts";
+
+type AuthorityKind = "read" | "profiles" | "owner";
+type AuthorityValue<Kind extends AuthorityKind, P, Fields> = Readonly<{
+  kind: Kind;
+  profile: P;
+  scope: AccessScope;
+  credential: string;
+  fields: Readonly<Fields>;
+  profiles: readonly Profile[];
+}>;
+const authorityCreation = Symbol("credential-checked read authority");
+
+export const freezeRead = <A>(value: A): Readonly<A> => {
+  if (value !== null && typeof value === "object")
+    for (const child of Object.values(value)) freezeRead(child);
+  return Object.freeze(value);
+};
+
+class ReadAuthority<Kind extends AuthorityKind, P, Fields> {
+  readonly #origin: object;
+  readonly #value: AuthorityValue<Kind, P, Fields>;
+  constructor(
+    key: typeof authorityCreation,
+    origin: object,
+    value: AuthorityValue<Kind, P, Fields>,
+  ) {
+    if (key !== authorityCreation || new.target !== ReadAuthority)
+      throw new StoreError(new Error("Invalid read authority"));
+    this.#origin = origin;
+    this.#value = value;
+    Object.freeze(this);
+  }
+  static inspect<K extends AuthorityKind, P, F>(
+    value: ReadAuthority<K, P, F>,
+    kind?: K,
+    origin?: object,
+  ): AuthorityValue<K, P, F> {
+    if (
+      value === null ||
+      typeof value !== "object" ||
+      !(#value in value) ||
+      Object.getPrototypeOf(value) !== ReadAuthority.prototype ||
+      (kind !== undefined && value.#value.kind !== kind) ||
+      (origin !== undefined && value.#origin !== origin)
+    )
+      throw new StoreError(new Error("Invalid read authority"));
+    return value.#value;
+  }
+  get kind() {
+    return ReadAuthority.inspect(this).kind;
+  }
+  get profile() {
+    return ReadAuthority.inspect(this).profile;
+  }
+  get scope() {
+    return ReadAuthority.inspect(this).scope;
+  }
+  get fields() {
+    return ReadAuthority.inspect(this).fields;
+  }
+  get credential() {
+    return ReadAuthority.inspect(this).credential;
+  }
+}
+Object.freeze(ReadAuthority.prototype);
+Object.freeze(ReadAuthority);
+
+export type AuthorizedRead<Fields = unknown> = ReadAuthority<
+  "read",
+  ProfileId,
+  Fields
+>;
+export type AuthorizedProfiles<Fields = unknown> = ReadAuthority<
+  "profiles",
+  null,
+  Fields
+>;
+export type AuthorizedOwnerRead<Fields = unknown> = ReadAuthority<
+  "owner",
+  null,
+  Fields
+>;
+export const readAuthority = <K extends AuthorityKind, P, F>(
+  read: ReadAuthority<K, P, F>,
+  kind: K,
+  origin: object,
+) => ReadAuthority.inspect(read, kind, origin);
+export const checkedRead = <K extends AuthorityKind, P, F>(
+  read: ReadAuthority<K, P, F>,
+  kind: K,
+  origin: object,
+) =>
+  Effect.try({
+    try: () => readAuthority(read, kind, origin),
+    catch: (cause) =>
+      cause instanceof StoreError ? cause : new StoreError(cause),
+  });
+const createAuthority = <K extends AuthorityKind, P, F>(
+  kind: K,
+  origin: object,
+  profile: P,
+  credential: string,
+  fields: F,
+  info: CredentialInfo,
+  profiles: readonly Profile[] = [],
+): ReadAuthority<K, P, F> =>
+  new ReadAuthority(
+    authorityCreation,
+    origin,
+    Object.freeze({
+      kind,
+      profile,
+      credential,
+      fields: freezeRead(fields),
+      scope: info.scope,
+      profiles: freezeRead(profiles),
+    }),
+  );
+const bindRead = <F>(
+  db: Database,
+  profile: ProfileId,
+  credential: string,
+  fields: F,
+  info: CredentialInfo,
+) => createAuthority("read", db, profile, credential, fields, info);
+const bindProfiles = <F>(
+  db: Database,
+  credential: string,
+  fields: F,
+  info: CredentialInfo,
+  profiles: readonly Profile[],
+) => createAuthority("profiles", db, null, credential, fields, info, profiles);
+const bindOwnerRead = <F>(
+  db: Database,
+  credential: string,
+  fields: F,
+  info: CredentialInfo,
+) => createAuthority("owner", db, null, credential, fields, info);
 
 const EmptyRead = Schema.Struct({});
 const TaskReadFields = Schema.Struct({ task_id: TaskId });
@@ -581,7 +711,13 @@ export class Authentication<Read> {
         return profile
           ? {
               profile: freezeRead({ id: profile.id, name: profile.name }),
-              read: bindRead(profile.id, request.credential, parsed, info),
+              read: bindRead(
+                this.db,
+                profile.id,
+                request.credential,
+                parsed,
+                info,
+              ),
             }
           : null;
       }).pipe(
@@ -775,13 +911,13 @@ export class Authentication<Read> {
               catalog: (input) =>
                 this.projectionWithin(
                   input,
-                  (read) => this.projection.catalog(read.profile),
+                  (read) => this.projection.catalog(read),
                   boundary,
                 ),
               metadata: (input) =>
                 this.projectionWithin(
                   input,
-                  (read) => this.projection.metadata(read.profile),
+                  (read) => this.projection.metadata(read),
                   boundary,
                 ),
               profileSummaries: (input) =>
@@ -821,9 +957,16 @@ export class Authentication<Read> {
           ),
           parsed = freezeRead(parse(schema, structuredClone(fields)));
         const info = this.requireCredential(request, time, "profiles");
+        const profiles = freezeRead(this.authorizedProfiles(info));
         return {
-          read: bindProfiles(request.credential, parsed, info),
-          profiles: freezeRead(this.authorizedProfiles(info)),
+          read: bindProfiles(
+            this.db,
+            request.credential,
+            parsed,
+            info,
+            profiles,
+          ),
+          profiles,
         };
       },
       boundary,
@@ -846,20 +989,20 @@ export class Authentication<Read> {
   readonly read = (input: AccessRequest) => this.readWithin(input);
 
   readonly catalog = (input: AccessRequest) =>
-    this.projectionWithin(input, (read) =>
-      this.projection.catalog(read.profile),
-    );
+    this.projectionWithin(input, (read) => this.projection.catalog(read));
 
   readonly metadata = (input: AccessRequest) =>
-    this.projectionWithin(input, (read) =>
-      this.projection.metadata(read.profile),
-    );
+    this.projectionWithin(input, (read) => this.projection.metadata(read));
 
   readonly authorizeRead = <S extends Schema.ConstraintDecoder<unknown>>(
     input: AccessRequest,
     schema: S,
     fields: S["Type"],
-  ) => this.queryWithin(input, schema, fields, (read) => read);
+  ) =>
+    this.queryWithin(input, schema, fields, (read) => {
+      readAuthority(read, "read", this.db);
+      return read;
+    });
 
   readonly readMetadata = <S extends Schema.ConstraintDecoder<unknown>>(
     input: AccessRequest,
@@ -868,7 +1011,7 @@ export class Authentication<Read> {
   ) =>
     this.queryWithin(input, schema, fields, (read) => ({
       read,
-      data: this.projection.metadata(read.profile),
+      data: this.projection.metadata(read),
     }));
 
   readonly readState = <S extends Schema.ConstraintDecoder<unknown>>(
@@ -878,7 +1021,7 @@ export class Authentication<Read> {
   ) =>
     this.queryWithin(input, schema, fields, (read) => ({
       read,
-      data: this.ports.read(read.profile),
+      data: this.ports.read(readAuthority(read, "read", this.db).profile),
     }));
 
   readonly readCatalog = <S extends Schema.ConstraintDecoder<unknown>>(
@@ -888,7 +1031,7 @@ export class Authentication<Read> {
   ) =>
     this.queryWithin(input, schema, fields, (read) => ({
       read,
-      data: this.projection.catalog(read.profile),
+      data: this.projection.catalog(read),
     }));
 
   readonly subscribe = <S extends Schema.ConstraintDecoder<unknown>>(
@@ -900,17 +1043,28 @@ export class Authentication<Read> {
       input,
       schema,
       fields,
-      (read) => read,
+      (read) => {
+        readAuthority(read, "read", this.db);
+        return read;
+      },
       undefined,
       "authenticate",
     );
 
+  readonly checkRead = <K extends AuthorityKind, P, F>(
+    read: ReadAuthority<K, P, F>,
+    kind: K,
+  ) => checkedRead(read, kind, this.db);
   readonly recheckRead = (read: AuthorizedRead) =>
-    this.authenticate({
-      credential: read.credential,
-      profile: read.profile,
-      access: "read",
-    });
+    this.checkRead(read, "read").pipe(
+      Effect.flatMap((value) =>
+        this.authenticate({
+          credential: value.credential,
+          profile: value.profile,
+          access: "read",
+        }),
+      ),
+    );
 
   readonly ownerRead = <S extends Schema.ConstraintDecoder<unknown>>(
     input: { credential: string },
@@ -923,7 +1077,7 @@ export class Authentication<Read> {
         ),
         parsed = freezeRead(parse(schema, structuredClone(fields)));
       const info = this.requireCredential(request, time, "owner");
-      return bindOwnerRead(request.credential, parsed, info);
+      return bindOwnerRead(this.db, request.credential, parsed, info);
     });
 
   readonly taskHistory = (
@@ -933,16 +1087,14 @@ export class Authentication<Read> {
       input,
       TaskReadFields,
       { task_id: input.task_id },
-      (read) => taskHistory(this.db, read.profile, read.fields.task_id),
+      (read) => taskHistory(this.db, read),
     );
 
   readonly projects = (input: AccessRequest) =>
-    this.projectionWithin(input, (read) =>
-      this.projection.projects(read.profile),
-    );
+    this.projectionWithin(input, (read) => this.projection.projects(read));
 
   readonly tags = (input: AccessRequest) =>
-    this.projectionWithin(input, (read) => this.projection.tags(read.profile));
+    this.projectionWithin(input, (read) => this.projection.tags(read));
 
   readonly profileSummaries = (input: { readonly credential: string }) =>
     this.profileSummariesWithin(input);
@@ -973,7 +1125,9 @@ export class Authentication<Read> {
               profile.id,
             );
           }
-          return this.projection.profiles(profiles);
+          return this.projection.profiles(
+            bindProfiles(this.db, request.credential, {}, credential, profiles),
+          );
         },
         boundary,
       );
@@ -1011,7 +1165,13 @@ export class Authentication<Read> {
           request.profile,
         );
         return operation(
-          bindRead(request.profile, request.credential, parsed, credential),
+          bindRead(
+            this.db,
+            request.profile,
+            request.credential,
+            parsed,
+            credential,
+          ),
         );
       },
       boundary,
@@ -1035,7 +1195,11 @@ export class Authentication<Read> {
           request.profile,
         );
         return this.ports.read(
-          bindRead(request.profile, request.credential, {}, info).profile,
+          readAuthority(
+            bindRead(this.db, request.profile, request.credential, {}, info),
+            "read",
+            this.db,
+          ).profile,
         );
       },
       boundary,

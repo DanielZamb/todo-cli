@@ -157,7 +157,8 @@ export const readTasks = Effect.fn(function* (
     Schema.Struct({ filters: TaskFilters }),
     fields,
   );
-  const checkedFilters = read.fields.filters;
+  const authority = yield* store.auth.checkRead(read, "read");
+  const checkedFilters = authority.fields.filters;
   const graph = yield* store.graphRead(read);
   const ordered = graph.tasks
     .filter((t) => t.deleted_at === null)
@@ -359,7 +360,8 @@ export class TaskCommands {
           TaskListFields,
           fields,
         );
-        const filters = read.fields.filters;
+        const authority = yield* this.store.auth.checkRead(read, "read");
+        const filters = authority.fields.filters;
         const graph = yield* this.store.graphRead(read);
         const tasks = graph.tasks.filter((task) => task.deleted_at === null);
         const context =
@@ -401,6 +403,7 @@ export class TaskCommands {
         schema,
         fields,
       );
+      const authority = yield* this.store.auth.checkRead(read, "read");
       const graph = yield* this.store.graphRead(read);
       const tasks = filterTaskRecords(
         graph.tasks.filter((task) => task.deleted_at === null),
@@ -414,8 +417,8 @@ export class TaskCommands {
         task:
           tasks.find(
             (task) =>
-              task.profile_id === read.profile &&
-              task.id === read.fields.task_id,
+              task.profile_id === authority.profile &&
+              task.id === authority.fields.task_id,
           ) ?? null,
       };
     });
@@ -1207,9 +1210,11 @@ export const mutateTask = Effect.fn(function* (
         Schema.Struct({ id: Schema.String }),
         { id },
       );
+      const authority = yield* store.auth.checkRead(read, "read");
       const task = checked.tasks.find(
         (task) =>
-          task.profile_id === read.profile && task.id === read.fields.id,
+          task.profile_id === authority.profile &&
+          task.id === authority.fields.id,
       );
       return yield* Effect.fail(
         new CommandError(
@@ -1464,9 +1469,10 @@ const transferMetadata = Effect.fn(function* (
     Schema.Struct({ task: Task, destination: ProfileId }),
     { task: sourceTask, destination: destinationProfile },
   );
-  const { task, destination } = read.fields;
+  const authority = yield* store.auth.checkRead(read, "read");
+  const { task, destination } = authority.fields;
   const { data: target, read: targetRead } = yield* store.auth.readState(
-    { credential: read.credential, profile: destination },
+    { credential: authority.credential, profile: destination },
     Schema.Struct({}),
     {},
   );
@@ -1757,12 +1763,13 @@ export const revertTask = (
       Schema.Struct({ task_id: TaskId, input: RevertTask }),
       { task_id: source.task_id, input: options },
     );
+    const authority = yield* store.auth.checkRead(read, "read");
     const request = Object.freeze({
-      credential: read.credential,
-      profile: read.profile,
-      task_id: read.fields.task_id,
+      credential: authority.credential,
+      profile: authority.profile,
+      task_id: authority.fields.task_id,
     });
-    const input = read.fields.input;
+    const input = authority.fields.input;
     const entry = data.history.find((entry) => entry.seq === input.seq);
     if (
       entry?.event.kind === "TaskHistoryRedacted" &&

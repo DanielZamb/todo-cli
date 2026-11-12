@@ -136,3 +136,11 @@ callback and graph read. It also proves owned frozen fields, nominal query-port
 types and a Profile inserted between discovery and count reads. Counts must use
 the checked Profile set. The HTTP and overlapping-request controls are documented
 in [verify-server-api](../verify-server-api/SKILL.md).
+
+`pnpm --filter @todo/domain test authority-runtime.test.ts` attempts clone,
+spread, assignment, prototype and JSON copies, subclasses, a Proxy and mutation
+at every query port. Each must fail before returning rows. Genuine authorities
+also carry their originating database identity. Creation is private to the
+credential-check module; ports inspect private fields, kind and database before
+using any Profile or parsed field. Optional `TODO_AUTHORITY_EVIDENCE` writes the
+complete attempt matrix to an ignored local JSON path.

@@ -97,7 +97,7 @@ export class ClientReads {
         }),
         { name, ...(at === undefined ? {} : { at }) },
       );
-      const selected = read.fields;
+      const selected = (yield* this.store.auth.checkRead(read, "read")).fields;
       const now =
         selected.at ??
         Schema.decodeUnknownSync(Instant)(

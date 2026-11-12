@@ -44,15 +44,18 @@ export const changesLayer = (store: OperationStore) =>
               },
             ),
           );
+          const authority = yield* translate(
+            store.auth.checkRead(read, "read"),
+          );
           const authorize = translate(store.auth.recheckRead(read));
           const initial = yield* translate(store.snapshots.generation());
           const reset =
-            read.fields.after > initial.seq ||
+            authority.fields.after > initial.seq ||
             (initial.generation !== "initial" &&
-              read.fields.generation !== initial.generation);
+              authority.fields.generation !== initial.generation);
           const operations = Stream.unfold(
             {
-              cursor: reset ? initial.restore_seq : read.fields.after,
+              cursor: reset ? initial.restore_seq : authority.fields.after,
               generation: initial.generation,
             },
             (state) =>
@@ -82,7 +85,7 @@ export const changesLayer = (store: OperationStore) =>
                 for (const entry of entries) {
                   if (
                     entry.outcome === "committed" &&
-                    entry.profile === read.profile
+                    entry.profile === authority.profile
                   )
                     events.push({
                       id: String(entry.seq),
@@ -119,13 +122,13 @@ export const changesLayer = (store: OperationStore) =>
             headers: { "cache-control": "no-store" },
             body: Stream.unwrap(
               Effect.gen(function* () {
-                const kind = read.fields.kind;
+                const kind = authority.fields.kind;
                 const id = yield* Effect.acquireRelease(
                   Effect.sync(() =>
                     store.diagnostics.connect(
-                      read.profile,
+                      authority.profile,
                       kind ?? "unknown",
-                      reset ? undefined : read.fields.header,
+                      reset ? undefined : authority.fields.header,
                     ),
                   ),
                   (id) => Effect.sync(() => store.diagnostics.disconnect(id)),

@@ -1,13 +1,18 @@
 import type { Database } from "bun:sqlite";
 import { Schema } from "effect";
+import {
+  type AuthorizedProfiles,
+  type AuthorizedRead,
+  readAuthority,
+} from "../auth/authorized-read.ts";
 import { ProfileSummary, ProjectSummary, TagSummary } from "../client-reads.ts";
-import { type Profile, Project, Tag, Task } from "../entities.ts";
+import { Project, Tag, Task } from "../entities.ts";
 import type { ProfileId } from "../ids.ts";
 
 export class ClientProjection {
   constructor(private readonly db: Database) {}
 
-  readonly metadata = (profile: ProfileId) => ({
+  private metadataAt = (profile: ProfileId) => ({
     projects: Schema.decodeUnknownSync(Schema.Array(Project))(
       this.db
         .query("SELECT * FROM projects WHERE profile_id=? ORDER BY id")
@@ -20,7 +25,7 @@ export class ClientProjection {
     ),
   });
 
-  readonly tasks = (profile: ProfileId) =>
+  readonly tasksForMutation = (profile: ProfileId) =>
     this.db
       .query<{ payload: string }, [string]>(
         "SELECT payload FROM tasks WHERE profile_id=? ORDER BY id",
@@ -28,12 +33,20 @@ export class ClientProjection {
       .all(profile)
       .map((row) => Schema.decodeUnknownSync(Task)(JSON.parse(row.payload)));
 
-  readonly catalog = (profile: ProfileId) => ({
-    ...this.metadata(profile),
-    tasks: this.tasks(profile),
-  });
+  readonly metadata = (read: AuthorizedRead) =>
+    this.metadataAt(readAuthority(read, "read", this.db).profile);
+  readonly tasks = (read: AuthorizedRead) =>
+    this.tasksForMutation(readAuthority(read, "read", this.db).profile);
+  readonly catalog = (read: AuthorizedRead) => {
+    const value = readAuthority(read, "read", this.db);
+    return {
+      ...this.metadataAt(value.profile),
+      tasks: this.tasksForMutation(value.profile),
+    };
+  };
 
-  readonly profiles = (profiles: readonly Profile[]) => {
+  readonly profiles = (read: AuthorizedProfiles) => {
+    const profiles = readAuthority(read, "profiles", this.db).profiles;
     const counts = this.db
       .query(`SELECT visible.value AS id,
       count(t.id) AS visible_task_count,
@@ -57,17 +70,20 @@ export class ClientProjection {
     );
   };
 
-  readonly projects = (profile: ProfileId) =>
-    Schema.decodeUnknownSync(Schema.Array(ProjectSummary))(
+  readonly projects = (read: AuthorizedRead) => {
+    const profile = readAuthority(read, "read", this.db).profile;
+    return Schema.decodeUnknownSync(Schema.Array(ProjectSummary))(
       this.db
         .query(`SELECT p.*,count(t.id) AS open_task_count FROM projects p
         LEFT JOIN tasks t ON t.profile_id=p.profile_id AND t.project_id=p.id AND t.status='open' AND t.deleted_at IS NULL
         WHERE p.profile_id=? GROUP BY p.id ORDER BY p.id`)
         .all(profile),
     );
+  };
 
-  readonly tags = (profile: ProfileId) =>
-    Schema.decodeUnknownSync(Schema.Array(TagSummary))(
+  readonly tags = (read: AuthorizedRead) => {
+    const profile = readAuthority(read, "read", this.db).profile;
+    return Schema.decodeUnknownSync(Schema.Array(TagSummary))(
       this.db
         .query(`SELECT g.*,count(t.id) AS open_task_count FROM tags g
         LEFT JOIN task_tags l ON l.tag_id=g.id
@@ -75,4 +91,5 @@ export class ClientProjection {
         WHERE g.profile_id=? GROUP BY g.id ORDER BY g.id`)
         .all(profile),
     );
+  };
 }

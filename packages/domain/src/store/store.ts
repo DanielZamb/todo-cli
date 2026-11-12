@@ -11,7 +11,7 @@ import { Effect, Option, Schema } from "effect";
 import { eraseTaskAttachments } from "../attachment-store.ts";
 import { validAttachmentLocation } from "../attachments.ts";
 import { Authentication } from "../auth/auth.ts";
-import type { AuthorizedRead } from "../auth/authorized-read.ts";
+import { type AuthorizedRead, checkedRead } from "../auth/authorized-read.ts";
 import { DependencyError, Edge, RejectionDetails } from "../dependencies.ts";
 import {
   Profile,
@@ -553,7 +553,7 @@ export class OperationStore {
   readonly graph = (profile: ProfileId) =>
     attempt(() =>
       this.db.transaction(() => ({
-        tasks: new ClientProjection(this.db).tasks(profile),
+        tasks: new ClientProjection(this.db).tasksForMutation(profile),
         edges: Schema.decodeUnknownSync(Schema.Array(Edge))(
           this.db
             .query(
@@ -564,7 +564,10 @@ export class OperationStore {
       }))(),
     );
 
-  readonly graphRead = (read: AuthorizedRead) => this.graph(read.profile);
+  readonly graphRead = (read: AuthorizedRead) =>
+    checkedRead(read, "read", this.db).pipe(
+      Effect.flatMap((value) => this.graph(value.profile)),
+    );
 
   private historySync(after: number): OpLogEntry[] {
     return this.db
@@ -607,7 +610,9 @@ export class OperationStore {
     attempt(() => committedHistory(this.db, profile, after));
 
   readonly changesRead = (read: AuthorizedRead, after: number) =>
-    this.committedHistory(read.profile, after);
+    checkedRead(read, "read", this.db).pipe(
+      Effect.flatMap((value) => this.committedHistory(value.profile, after)),
+    );
 
   readonly searchCacheEvents = (cursor?: {
     readonly seq: number;

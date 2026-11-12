@@ -98,7 +98,9 @@ try {
 }
 const results = [];
 try {
-  for (const mode of ["off", "credential", "port"]) {
+  for (const mode of process.env.READ_BOUNDARY_REFUSAL_ONLY === "1"
+    ? ["authority"]
+    : ["off", "credential", "port"]) {
     const home = join(scratch, "home");
     mkdirSync(home, { recursive: true });
     const child: ReturnType<typeof spawn> = spawn(resolve(binary), [], {
@@ -131,6 +133,16 @@ try {
               base + "/profiles/" + profile + "/tasks?status=open",
               { headers: { Authorization: "Bearer " + credentials[profile] } },
             );
+            if (mode === "authority") {
+              assert.equal(response.status, 500);
+              assert.deepEqual(await response.json(), {
+                _tag: "InternalError",
+                message: "Storage operation failed",
+                exit_code: 1,
+                exit_meaning: "runtime failure",
+              });
+              return [];
+            }
             assert.equal(response.status, 200);
             const body: readonly { id: string; profile_id: string }[] =
               Schema.decodeUnknownSync(
@@ -144,10 +156,12 @@ try {
             return body.map((t) => [t.id, t.profile_id]);
           }),
         );
-        assert.deepEqual(actual, [
-          [["aa-work", "work"]],
-          [["aa-personal", "personal"]],
-        ]);
+        assert.deepEqual(
+          actual,
+          mode === "authority"
+            ? [[], []]
+            : [[["aa-work", "work"]], [["aa-personal", "personal"]]],
+        );
       }
     } finally {
       if (child.exitCode === null && child.signalCode === null) {
@@ -161,10 +175,11 @@ try {
       log.match(/BOUNDARY_COUNTERS (\{[^\n]+\})/)?.[1] ?? "null",
     );
     assert.ok(
-      counters && counters.overlap > 0,
+      counters && (mode === "authority" || counters.overlap > 0),
       "Two requests must overlap on this server",
     );
-    if (mode !== "off") assert.ok(counters.mutations > 0);
+    if (mode === "credential" || mode === "port")
+      assert.ok(counters.mutations > 0);
     results.push({ mode, pairs: 10, responses: 20, counters });
     writeFileSync(
       join(evidence, "result.json"),

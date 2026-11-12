@@ -233,3 +233,8 @@ Tokens in a fresh scratch database. It runs ten pairs of overlapping requests pe
 mode on one server. Every pair must return only `aa-work` and `aa-personal` in
 its respective Profile. Hook counters must prove actual overlap and mutation.
 The driver stops its owned server and removes its scratch database and HOME.
+
+`READ_BOUNDARY_MODE=authority` substitutes a cloned authority at the graph query
+port. A valid scoped Task read must return the existing generic storage error
+(HTTP 500), without Task rows. This mode tests runtime refusal; use the two
+mutation modes above for byte parity of valid requests.

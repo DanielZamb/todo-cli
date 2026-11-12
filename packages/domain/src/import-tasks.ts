@@ -47,11 +47,12 @@ const executeImport = Effect.fn(function* (
     Schema.Struct({ input: ImportRequest }),
     { input: options },
   );
+  const authority = yield* store.auth.checkRead(read, "read");
   const request = Object.freeze({
-      credential: read.credential,
-      profile: read.profile,
+      credential: authority.credential,
+      profile: authority.profile,
     }),
-    input = read.fields.input;
+    input = authority.fields.input;
   const graph = yield* store.graphRead(read);
   const initial = graph.tasks;
   const dependencyPlan = planImportDependencies(

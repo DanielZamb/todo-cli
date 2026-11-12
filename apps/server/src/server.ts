@@ -525,18 +525,24 @@ export const serverLayer = (options: {
                   params.attachment,
                 ),
               );
+              const authority = yield* translate(
+                store.auth.checkRead(read, "read"),
+              );
               if (image) return image;
               const task = yield* translate(
                 commands.get({
-                  credential: read.credential,
-                  profile: read.profile,
-                  task_id: read.fields.task_id,
+                  credential: authority.credential,
+                  profile: authority.profile,
+                  task_id: authority.fields.task_id,
                 }),
               );
               return yield* Effect.fail(
                 task === null
                   ? yield* missingTask(
-                      { profile: read.profile, task: read.fields.task_id },
+                      {
+                        profile: authority.profile,
+                        task: authority.fields.task_id,
+                      },
                       "read",
                     )
                   : new NotFound({ message: "Managed image not found" }),
@@ -617,11 +623,17 @@ export const serverLayer = (options: {
                   Schema.decodeUnknownSync(Instant)(new Date().toISOString()),
                 ),
               );
+              const authority = yield* translate(
+                store.auth.checkRead(read, "read"),
+              );
               return (
                 graph ??
                 (yield* Effect.fail(
                   yield* missingTask(
-                    { profile: read.profile, task: read.fields.task_id },
+                    {
+                      profile: authority.profile,
+                      task: authority.fields.task_id,
+                    },
                     "read",
                   ),
                 ))
@@ -664,11 +676,17 @@ export const serverLayer = (options: {
                   { task_id: params.task },
                 ),
               );
+              const authority = yield* translate(
+                store.auth.checkRead(read, "read"),
+              );
               return (
                 task ??
                 (yield* Effect.fail(
                   yield* missingTask(
-                    { profile: read.profile, task: read.fields.task_id },
+                    {
+                      profile: authority.profile,
+                      task: authority.fields.task_id,
+                    },
                     "read",
                   ),
                 ))
@@ -875,7 +893,10 @@ export const serverLayer = (options: {
                   payload,
                 ),
               );
-              return yield* parseQuickAdd(read.fields).pipe(
+              const authority = yield* translate(
+                store.auth.checkRead(read, "read"),
+              );
+              return yield* parseQuickAdd(authority.fields).pipe(
                 Effect.catchTag("QuickAddError", (error) =>
                   Effect.fail(
                     new InvalidTask({
