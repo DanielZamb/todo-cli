@@ -118,6 +118,21 @@ struct Snapshots {
                     }
                 }
                 try await Task.sleep(for: .milliseconds(100))
+                if name.hasPrefix("c8-") {
+                    // Candidate 8 bounds receipt: the window, where its content starts (global frames
+                    // include the title bar), every Compact frame, and whether every action, footer
+                    // and Dismiss frame lies inside the content (nothing cut off at this size).
+                    let top = window.frame.height - window.contentRect(forFrameRect: window.frame).height
+                    let frames = compactMeasurements.frames.mapValues { ["x": Double($0.minX), "y": Double($0.minY), "width": Double($0.width), "height": Double($0.height)] }
+                    let controls = compactMeasurements.frames.filter { key, _ in ["actions", "footer", "dismiss"].contains { key.contains($0) } }
+                    let inside = controls.values.allSatisfy { $0.minX >= -0.5 && $0.maxX <= width + 0.5 && $0.minY >= top - 0.5 && $0.maxY <= top + height + 0.5 }
+                    #expect(inside, "\(name): every action and footer is inside the \(Int(width)) by \(Int(height)) window: \(controls)")
+                    let data: [String: Any] = ["window": ["width": Double(width), "height": Double(height)], "contentTop": Double(top), "controlsInside": inside, "controls": Array(controls.keys).sorted(), "frames": frames]
+                    try JSONSerialization.data(withJSONObject: data, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("\(name)-\(mode)-bounds.json"))
+                    if let dismiss = compactMeasurements.frames["message-dismiss"] {
+                        #expect(dismiss.width >= 28 && dismiss.height >= 28, "\(name): the Dismiss target is at least 28 by 28 (ruling 3)")
+                    }
+                }
                 if name.hasPrefix("search-") {
                     let frames = compactMeasurements.frames
                     compactLayouts[name + "-" + mode] = frames.mapValues { [Double($0.minX), Double($0.minY), Double($0.width), Double($0.height)] }
@@ -340,6 +355,47 @@ struct Snapshots {
                     #expect(actionOrder == true)
                 }
 
+            }
+            if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C8_ONLY"] == "1" {
+                // Candidate 8 review states for the Opus Mac UI seat: rulings 1, 2, 3 and 5, and D1/D2.
+                func banner(_ text: String, _ kind: TodoModel.MessageKind) -> TodoModel {
+                    let state = fixture(); state.signedIn = true; state.publishMessage(text, kind: kind); return state
+                }
+                let picker = fixture(); picker.signedIn = true
+                picker.dependencies.picker = .init(profile: "work", root: picker.tasks[0], direction: .dependsOn)
+                picker.dependencies.picker?.failure = DependencyNotice(message: "This Task blocks done Tasks.", followUp: picker.tasks[1].id,
+                    followUpFailure: "Couldn't prepare the follow-up Task: The server rejected this request (HTTP 404). Try again.")
+                try await render("c8-picker-follow-up-failed", DependencyPickerView(model: picker, compact: true), width: 393, height: 426)
+                try await render("c8-banner-hand-off-depends", WorkspaceSnapshot(model: banner("Couldn't make “Review the interaction design” depend on “Prepare the release notes”. This Dependency would create a loop. Choose another Task.", .dependencyLink)), width: 1100, height: 720)
+                try await render("c8-banner-hand-off-blocks", WorkspaceSnapshot(model: banner("Couldn't stop “Prepare the release notes” depending on “Review the interaction design”. The Task changed. Reload its Dependencies before trying again.", .dependencyLink)), width: 1100, height: 720)
+                let conflict = banner("The Task changed. Close and reopen it before trying that action again.", .transition)
+                try await render("c8-banner-dismiss", WorkspaceSnapshot(model: conflict), width: 1100, height: 720)
+                try await render("c8-compact-banner-dismiss", TaskListView(model: conflict, compactMode: true, referenceDate: referenceDate).compactContent, width: 393, height: 426)
+                let editing = fixture(); editing.signedIn = true; editing.editor = TaskDraft(editing.tasks[0])
+                try await render("c8-compact-editor", TaskListView(model: editing, compactMode: true, referenceDate: referenceDate).compactContent, width: 393, height: 426)
+                let adding = fixture(); adding.signedIn = true; adding.quickAdd = true
+                adding.newTitle = "Review the launch notes tomorrow 9am p1 #review +Launch"
+                try await render("c8-compact-quick-add-short", QuickAddView(model: adding, floating: true, compact: true, referenceDate: referenceDate).content, width: 393, height: 426)
+                // D2: two refused links on different rows merge, saying a shared reason once.
+                let merging = fixture(); merging.signedIn = true
+                merging.dependencies.picker = .init(profile: "work", root: merging.tasks[0], direction: .blocks)
+                for (index, task) in merging.tasks.dropFirst().prefix(2).enumerated() {
+                    var notice = DependencyNotice(message: "This Dependency would create a loop. Choose another Task.", failure: ServerFailure(message: "loop", code: "dependency_cycle"))
+                    notice.attemptTitle = task.title
+                    merging.dependencies.picker?.messages.publish(notice, kind: .link, target: "row-\(index)", subject: task.title, reasonCode: "dependency_cycle", reasonText: notice.message)
+                }
+                try await render("c8-picker-merged", DependencyPickerView(model: merging, compact: true), width: 393, height: 426)
+                for (name, codes) in [("c8-banner-merged-same-reason", ["dependency_cycle", "dependency_cycle"]), ("c8-banner-merged-different-reasons", ["dependency_cycle", "occ_conflict"])] {
+                    let handed = fixture(); handed.signedIn = true
+                    var tickets = SurfaceMessages<DependencyPicker.MessageKind, DependencyNotice>()
+                    for (index, task) in handed.tasks.dropFirst().prefix(2).enumerated() {
+                        let ticket = tickets.begin(.link, target: "row-\(index)")
+                        let reason = codes[index] == "dependency_cycle" ? "This Dependency would create a loop. Choose another Task." : "The Task changed. Reload its Dependencies before trying again."
+                        handed.handOff("Couldn't make “\(task.title)” depend on “\(handed.tasks[0].title)”. " + reason, kind: .dependencyLink, from: ticket, subject: task.title, reasonCode: codes[index], reasonText: reason)
+                    }
+                    try await render(name, WorkspaceSnapshot(model: handed), width: 1100, height: 720)
+                }
+                continue
             }
             if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C7_ONLY"] == "1" {
                 // Candidate 7 review states for the Opus Mac UI seat: the banner's two controls,
@@ -1075,7 +1131,7 @@ struct Snapshots {
         try JSONEncoder().encode(importLayouts).write(to: directory.appendingPathComponent("import-layout.json"))
         try JSONEncoder().encode(transferLayouts).write(to: directory.appendingPathComponent("transfer-layout.json"))
         try JSONSerialization.data(withJSONObject: compactLayouts, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("compact-layout.json"))
-        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C7_ONLY"] == "1" ? 22 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" ? 60 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 362))
+        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C8_ONLY"] == "1" ? 20 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C7_ONLY"] == "1" ? 22 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" ? 60 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 362))
         if !ProcessInfo.processInfo.environment.contains(where: { $0.key.hasPrefix("TODO_SNAPSHOT_") && $0.key.hasSuffix("_ONLY") && $0.value == "1" }) {
             let discovery = try await DiscoverySnapshots.render(directory: directory)
             let dependencies = try await DependencyMatrixSnapshots.render(directory: directory)

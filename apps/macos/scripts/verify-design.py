@@ -64,6 +64,8 @@ binary = run(['swift', 'build', '--package-path', 'apps/macos', '--scratch-path'
 run([
     'xcrun', 'swiftc', '-typecheck', '-parse-as-library', '-swift-version', '6',
     '-target', f'{platform.machine()}-apple-macosx26.0', '-I', str(Path(binary) / 'Modules'),
+    # TodoAPI imports the stall sampler's C module (candidate 8); SwiftPM keeps its module map apart.
+    '-Xcc', f"-fmodule-map-file={Path(binary) / 'ClientStallSampling.build' / 'module.modulemap'}",
     *[str(path) for path in sorted((root / 'apps/macos/Sources').glob('*.swift'))]
 ], 'app-typecheck.log')
 resources = Path(binary) / 'TodoStateProofPackageTests.xctest' / 'Contents' / 'Resources'
@@ -124,7 +126,7 @@ if any(evidence.glob('dag*-capture-manifest.json')):
         validation.append(state_command)
     run(validation, 'capture-inputs.log')
 manifest = json.loads((evidence / 'manifest.json').read_text())
-assert len(manifest['files']) == (22 if os.environ.get('TODO_SNAPSHOT_C7_ONLY') == '1' else 8 if os.environ.get('TODO_SNAPSHOT_SC1_ONLY') == '1' else 32 if os.environ.get('TODO_SNAPSHOT_DAG_CHECKPOINT2') == '1' else 24 if os.environ.get('TODO_SNAPSHOT_DAG_CHECKPOINT1') == '1' else 394 if os.environ.get('TODO_SNAPSHOT_DAG_ONLY') == '1' else 116 if os.environ.get('TODO_SNAPSHOT_DISCOVERY_ONLY') == '1' else 60 if os.environ.get('TODO_SNAPSHOT_SEARCH_ONLY') == '1' else 2 if os.environ.get('TODO_SNAPSHOT_QUICK_ONLY') == '1' else 18 if os.environ.get('TODO_SNAPSHOT_PRIORITY_ONLY') == '1' else 28 if os.environ.get('TODO_SNAPSHOT_BATCH_EDIT_ONLY') == '1' else 872)
+assert len(manifest['files']) == (20 if os.environ.get('TODO_SNAPSHOT_C8_ONLY') == '1' else 22 if os.environ.get('TODO_SNAPSHOT_C7_ONLY') == '1' else 8 if os.environ.get('TODO_SNAPSHOT_SC1_ONLY') == '1' else 32 if os.environ.get('TODO_SNAPSHOT_DAG_CHECKPOINT2') == '1' else 24 if os.environ.get('TODO_SNAPSHOT_DAG_CHECKPOINT1') == '1' else 394 if os.environ.get('TODO_SNAPSHOT_DAG_ONLY') == '1' else 116 if os.environ.get('TODO_SNAPSHOT_DISCOVERY_ONLY') == '1' else 60 if os.environ.get('TODO_SNAPSHOT_SEARCH_ONLY') == '1' else 2 if os.environ.get('TODO_SNAPSHOT_QUICK_ONLY') == '1' else 18 if os.environ.get('TODO_SNAPSHOT_PRIORITY_ONLY') == '1' else 28 if os.environ.get('TODO_SNAPSHOT_BATCH_EDIT_ONLY') == '1' else 872)
 assert all((evidence / name).is_file() for name in manifest['files'])
 settle_rows = [json.loads(line) for line in (evidence / 'settle.jsonl').read_text().splitlines()] if (evidence / 'settle.jsonl').is_file() else []
 settle_histogram = {}

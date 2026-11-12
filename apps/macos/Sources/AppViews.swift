@@ -1058,7 +1058,7 @@ struct MessageBanner: View {
                 Button { model.dismissMessage(sequence) } label: {
                     Image(systemName: "xmark").frame(minWidth: 28, minHeight: 28).contentShape(Rectangle())
                 }
-                    .buttonStyle(.borderless).foregroundStyle(.secondary).help("Dismiss").accessibilityLabel("Dismiss message").accessibilityIdentifier("message-dismiss")
+                    .buttonStyle(.borderless).foregroundStyle(.secondary).help("Dismiss").accessibilityLabel("Dismiss message").accessibilityIdentifier("message-dismiss").compactBounds("message-dismiss")
             }
         }.padding()
             .onAppear { announce() }
