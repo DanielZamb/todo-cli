@@ -195,7 +195,10 @@ public final class ClientStallSampler: @unchecked Sendable {
         var stacks: [[ClientStallSymbol]] = []
         for index in 0..<taken {
             let sample = buffer.advanced(by: index).pointee
-            let pcs = withUnsafeBytes(of: sample.pcs) { Array($0.bindMemory(to: UInt64.self).prefix(Int(sample.count))) }
+            var pcs = withUnsafeBytes(of: sample.pcs) { Array($0.bindMemory(to: UInt64.self).prefix(Int(sample.count))) }
+            // A leaf that has not pushed a frame record has its caller only in LR: the frame walk
+            // starts at the caller's caller. Insert LR after the pc unless the walk already has it.
+            if sample.lr != 0, !pcs.isEmpty, pcs.count < 2 || pcs[1] != sample.lr { pcs.insert(sample.lr, at: 1) }
             stacks.append(pcs.enumerated().map { offset, pc in ClientStallSymbolizer.symbol(pc, isReturnAddress: offset > 0, ownImages: ownImages) })
         }
         return ClientStallAttributor.attribute(stacks, disabled: disabled)

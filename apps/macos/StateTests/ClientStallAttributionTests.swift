@@ -101,7 +101,7 @@ import TodoAPI
         let stall = try #require((await recorder.snapshot()).recent.last { $0.name == .stall && $0.stallAttribution != nil }, "the stall was recorded with an attribution")
         let attribution = try #require(stall.stallAttribution)
         #expect(attribution.samples >= 4 && sampler.samplesTaken - samplesBefore >= 4, "about one sample every 50 ms after the first 100: \(attribution.samples)")
-        #expect(attribution.inLabel?.contains("stallTheMainThreadForAttribution") == true, "in: \(attribution.inLabel ?? "nil")")
+        #expect(attribution.inLabel?.contains("stallTheMainThreadForAttribution") == true, "in: \(attribution.inLabel ?? "nil"); frames: \(attribution.frames.map { "\($0.image):\($0.symbol ?? "?")" })")
         #expect(attribution.agreeing * 2 >= attribution.samples)
         #expect(stall.applicationActive == true)
         #expect(attribution.frames.allSatisfy { !$0.image.contains("/") } && attribution.disabled == nil)
