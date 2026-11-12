@@ -34,6 +34,7 @@ const env = { ...base, HOME: home, CFFIXED_USER_HOME: home, TODO_DB: path.join(s
 let server;
 let app;
 let decoy;
+const decoyErrors = [];
 let outside;
 let globalOutside;
 let probeDirectory;
@@ -115,7 +116,10 @@ try {
   const executable = path.join(appPath, 'Contents/MacOS/TodoVerification');
   const visibleOnly = process.argv.includes('--visible-only');
   assert(!visibleOnly || process.argv.includes('--development'), 'A focused identity run cannot qualify V01');
-  decoy = net.createServer(socket => socket.end());
+  decoy = net.createServer(socket => {
+    socket.on('error', error => decoyErrors.push({ code: error.code, message: error.message }));
+    socket.end();
+  });
   await new Promise(resolve => decoy.listen(0, '127.0.0.1', resolve));
   const decoyPort = decoy.address().port;
   fs.writeFileSync(manifestPath, JSON.stringify(manifest), { mode: 0o600 });
@@ -345,6 +349,7 @@ try {
     fs.writeFileSync(path.join(evidence, 'interruption.json'), JSON.stringify({ sourceHead, bundleIdentifier: 'local.todo.verification', api: 'NSApplication.postEvent (in-process event queue; scratch file requests the one marked stop control)' , event: 'F20 keyDown', markedTestInput: true, appExit: app.exitCode, originalOwnerInput: false, realInputBehavior: 'An unmarked event in this window uses the same local monitor; input elsewhere in the session is checked by the 100 ms idle timer.' }, null, 2));
   }
   assert.equal(must(['git', 'status', '--porcelain', '--untracked-files=normal'], 'source-status-after').trim(), dirty.trim(), 'Source changed during qualification');
+  assert(decoyErrors.every(error => error.code === 'ECONNRESET'), 'Unexpected decoy socket error');
   result.status = 'PASS';
   result.completeRecipe = !visibleOnly;
   assert.equal(must(['git', 'rev-parse', 'HEAD'], 'source-head').trim(), sourceHead, 'Head changed during qualification');
@@ -364,6 +369,7 @@ try {
   }
   if (fs.existsSync(privateAppLog)) fs.copyFileSync(privateAppLog, path.join(evidence, 'app.log'));
   if (decoy) await new Promise(resolve => decoy.close(resolve));
+  fs.writeFileSync(path.join(evidence, 'decoy-errors.json'), JSON.stringify(decoyErrors, null, 2));
   if (outside) fs.rmSync(outside, { force: true });
   if (globalOutside) fs.rmSync(globalOutside, { force: true });
   if (probeDirectory) fs.rmSync(probeDirectory, { recursive: true, force: true });
