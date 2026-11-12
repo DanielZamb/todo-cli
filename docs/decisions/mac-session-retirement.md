@@ -205,7 +205,7 @@ no longer depends on the stream being live.
 
 | Kind | Published by | Success that clears it | Reachable in ordinary use |
 | --- | --- | --- | --- |
-| `connection` | Stream failure that goes Offline; write accepted with "… The live view is reconnecting."; stream 404 that cannot leave a deleted Profile; update reconnect check failure | Ready after a later connection attempt; a successful restore, sign-in, or write read-back | Yes: the stream retries automatically, and the banner's Retry reconnects |
+| `connection` | Stream failure that goes Offline; write accepted with "… The live view is reconnecting."; stream 404 that cannot leave a deleted Profile; update reconnect check failure | Ready after a later connection attempt; a successful restore, sign-in, or write read-back | Yes: the stream retries automatically, and the banner's Reconnect reconnects |
 | `restore` | Restore failure (server or stored-Session error) | Successful restore or sign-in | Yes: Retry Session or Sign in |
 | `signIn` | Sign-in failure | Successful sign-in or restore | Yes: Sign in again |
 | `sessionEnded` | A 401 that ends the Session | Successful sign-in or restore | Yes: the sign-in screen is shown |
@@ -214,6 +214,8 @@ no longer depends on the stream being live.
 | `delete` | Delete conflict on a Task that is not open in the editor | A later successful delete and its read-back | Yes: Delete again after the preview reloads |
 | `dependencyFollowUp` | Dependency follow-up Task read failure | A later successful follow-up | Yes: the same picker action |
 | `discoveryShow` | Discovery Show failure | A later successful Show | Yes: Show from Look up Task |
+| `dependencyLink` | A picker link or unlink that failed after its picker was closed while pending (ruling 2, 2026-11-12) | A later successful link or unlink | Yes: the picker again |
+| `quickAdd` | A quick-add create that failed after its quick-add was closed during the create | A later successful create | Yes: quick-add again |
 | `general` | Direct assignments only. No production writer remains. | Only rule 4 | Not used by production code |
 
 Every kind except `connection` can also be ended by the person with the

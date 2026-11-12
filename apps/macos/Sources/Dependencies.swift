@@ -220,6 +220,7 @@ extension TodoModel {
         let blocker = picker.direction == .dependsOn ? candidate : picker.root
         guard !dependencies.pendingDependents.contains(dependent.id) else { return }
         let remove = picker.checked(candidate.id)
+        let mark = messageMark
         let epoch = discovery.credentialEpoch
         let run = dependencies.generation
         dependencies.pendingDependents.insert(dependent.id)
@@ -255,13 +256,20 @@ extension TodoModel {
             }
             // Data: a committed edge reaches the list whether or not the picker is still showing.
             guard signedIn, profile == picker.profile, isCurrentCredential(epoch) else { return }
+            clearMessage([.dependencyLink], since: mark)
             if report.outcome != "unchanged" { await refreshAfterWrite("Dependencies updated", presenting: .dependencyPicker(picker.id)) }
         } catch {
             authorize(error, epoch: epoch, profile: picker.profile)
-            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == picker.id else { return }
+            guard signedIn, profile == picker.profile, isCurrentCredential(epoch) else { return }
             var notice = dependencyNotice(error, context: dependent.status == "done" ? .linkDone : .link)
             notice.attemptTitle = candidate.title
             notice.attemptVerb = remove ? "remove" : "add"
+            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == picker.id else {
+                // The picker can be closed while a link is pending (Close and Escape are not gated):
+                // hand one named message to the main window, so the failure is not silent.
+                publishMessage("Couldn't \(remove ? "remove" : "add") the Dependency on “\(candidate.title)”. " + notice.message, kind: .dependencyLink)
+                return
+            }
             dependencies.picker?.failure = notice
             dependencies.picker?.requiresReload = notice.failure?.code == "occ_conflict"
         }

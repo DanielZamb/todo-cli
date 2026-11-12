@@ -743,7 +743,13 @@ private actor ScriptGate: ClientTransport {
         await gate.release("tasks.create"); _ = await create.value
         if try await closedOutcome(mode, model, gate, vault, streams: streams, "quick add") { await finish(model, gate, vault); return }
         #expect(model.quickAdd && model.newTitle == "Newer draft" && model.quickAddError == nil, "mode \(mode): the newer draft is untouched")
-        #expect(model.editor == nil && model.message == nil, "mode \(mode): nothing opens and nothing is announced")
+        if mode == 1 {
+            // Ruling 2: a failure after its quick-add closed hands one named message to the main window.
+            #expect(model.message?.hasPrefix("Couldn't add “\(title)”.") == true && String(describing: model.messageKind) == "Optional(TodoState.TodoModel.MessageKind.quickAdd)", "the failure names what failed: \(model.message ?? "nil")")
+            #expect(model.editor == nil, "nothing opens")
+        } else {
+            #expect(model.editor == nil && model.message == nil, "mode \(mode): nothing opens and nothing is announced")
+        }
         if mode == 0 {
             #expect(await gate.count("tasks.list") > reads, "the created Task's read-back ran")
             #expect(model.tasks.contains { $0.title == title }, "the list shows the created Task")
@@ -781,7 +787,13 @@ private actor ScriptGate: ClientTransport {
         if mode == 4 { await gate.next("tasks.list", .fail(503, "catalog read failed")) }
         await gate.release("tasks.depend"); await toggle.value
         if try await closedOutcome(mode, model, gate, vault, streams: streams, "picker toggle") { await finish(model, gate, vault); return }
-        #expect(model.dependencies.picker == nil && model.message == nil, "mode \(mode)")
+        if mode == 1 {
+            // Ruling 2: the picker could be closed while its link was pending; its failure is handed to the main window, named.
+            #expect(model.dependencies.picker == nil, "mode 1")
+            #expect(model.message?.hasPrefix("Couldn't add the Dependency on “\(candidate.title)”.") == true && String(describing: model.messageKind) == "Optional(TodoState.TodoModel.MessageKind.dependencyLink)", "the failure names what failed: \(model.message ?? "nil")")
+        } else {
+            #expect(model.dependencies.picker == nil && model.message == nil, "mode \(mode)")
+        }
         if mode == 0 {
             #expect(await gate.count("tasks.list") > reads, "the committed edge's read-back ran")
             #expect(model.tasks.first { $0.id == root.id }?.depends_on?.contains(candidate.id) == true, "the list shows it")
@@ -903,6 +915,25 @@ private actor ScriptGate: ClientTransport {
         model.quickAdd = false; model.quickAdd = true; model.newTitle = "Newer draft"
         await gate.release("tasks.create")
         #expect(await create.value == false, "a closed instance's completion is not reported as presented")
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func aQuickAddSuccessTheViewHidesShowsTheCapsule() async throws {
+        // Ruling 2: a created Task the current view filters out (no date, in Today) is confirmed
+        // in the bottom capsule; one the view shows needs no confirmation.
+        let gate = ScriptGate(); let (model, vault, _) = try await live(gate)
+        model.selectView("today")
+        try await wait("today loaded") { !model.loading && model.connection == .live }
+        model.quickAdd = true; model.newTitle = "Undated quick add " + UUID().uuidString
+        #expect(await model.create(openEditor: false))
+        #expect(model.deletionNotice == "Task added", "hidden by Today: \(model.deletionNotice ?? "nil")")
+        model.deletionNotice = nil
+        model.selectView("all")
+        try await wait("all loaded") { !model.loading && model.connection == .live }
+        model.quickAdd = true; model.newTitle = "Visible quick add " + UUID().uuidString
+        #expect(await model.create(openEditor: false))
+        #expect(model.deletionNotice == nil, "shown in All tasks: no capsule")
         await finish(model, gate, vault)
     }
 }

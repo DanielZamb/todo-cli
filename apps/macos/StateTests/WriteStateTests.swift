@@ -1192,7 +1192,7 @@ func deleteNeverAcceptsPreviewOrForeignRepliesAsConfirmedSuccess(reply: String) 
 @Test @MainActor func onlyConnectionMessagesOfferReconnectAndEveryOtherKindCanBeDismissed() {
     typealias Kind = TodoModel.MessageKind
     #expect(Kind.connection.bannerControl == .reconnect, "a reconnect clears connection messages")
-    for kind: Kind in [.general, .restore, .signIn, .sessionEnded, .signOut, .transition, .delete, .dependencyFollowUp, .discoveryShow] {
+    for kind: Kind in [.general, .restore, .signIn, .sessionEnded, .signOut, .transition, .delete, .dependencyFollowUp, .discoveryShow, .dependencyLink, .quickAdd] {
         #expect(kind.bannerControl == .dismiss, "\(kind): a reconnect does not clear it, so the banner offers Dismiss")
     }
 }

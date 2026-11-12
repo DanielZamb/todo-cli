@@ -139,6 +139,9 @@ final class TodoModel {
     /// docs/decisions/mac-session-retirement.md for the rule and the per-kind table.
     enum MessageKind: Hashable {
         case general, connection, restore, signIn, sessionEnded, signOut, transition, delete, dependencyFollowUp, discoveryShow
+        /// A link or unlink that failed after its picker closed, and a create that failed after its
+        /// quick-add closed: the surface could be closed mid-write, so the main window is told.
+        case dependencyLink, quickAdd
         /// What a successful restore or sign-in makes untrue.
         static let session: Set<MessageKind> = [.restore, .signIn, .sessionEnded, .connection]
         /// The banner's one control for a message of this kind. A reconnect clears only connection
@@ -963,6 +966,7 @@ final class TodoModel {
         let removedFields = removedQuickAddFields
         // The quick-add instance this creation belongs to; nil when created outside quick-add.
         let surface: MessageSurface? = quickAdd ? .quickAdd(quickAddInstance) : nil
+        let mark = messageMark
         busy = true
         quickAddError = nil
         defer { if discovery.credentialEpoch == credentialEpoch { busy = false } }
@@ -998,14 +1002,21 @@ final class TodoModel {
             // A showing quick-add closes itself on success, so its read-back belongs to the main window.
             await refreshAfterWrite("Task added", presenting: showing ? nil : surface)
             guard isCurrentCredential(credentialEpoch), profile == creationProfile else { return false }
+            clearMessage([.quickAdd], since: mark)
             if showing { announce("Task added to \(profileName)") }
+            // A Task the current view filters out (no date in Today, say) is confirmed quietly.
+            if !showsInCurrentView(task.id) { deletionNotice = "Task added" }
             // The caller's view acts on true (dismisses itself or opens the Tasks window); only the
             // instance that presented this completion may.
             return showing
         } catch {
             authorize(error, epoch: credentialEpoch, profile: creationProfile)
-            guard isCurrentCredential(credentialEpoch), profile == creationProfile, surface.map(isShowing) ?? true else { return false }
-            quickAddError = describe(error, at: .quickAdd); return false }
+            guard isCurrentCredential(credentialEpoch), profile == creationProfile else { return false }
+            if surface.map(isShowing) ?? true { quickAddError = describe(error, at: .quickAdd); return false }
+            // The quick-add that started this was closed during the create (Escape is not gated by
+            // busy): hand one named message to the main window, so the failure is not silent.
+            publishMessage("Couldn't add “\(title)”. " + describe(error), kind: .quickAdd)
+            return false }
     }
 
     @discardableResult
@@ -1533,6 +1544,15 @@ final class TodoModel {
             }
         case .superseded:
             break
+        }
+    }
+
+    /// Whether the list as currently shown (view, search, Project, Tag and filters) includes `id`.
+    func showsInCurrentView(_ id: String) -> Bool {
+        let rows = appliedSearchSnapshot?.rows ?? (selectedView == "all" ? tasks : planning?.groups.flatMap(\.tasks) ?? [])
+        return rows.contains { task in
+            task.id == id && (selectedProject == nil || task.project_id == selectedProject) && (selectedTag == nil || task.tags.contains(selectedTag ?? ""))
+                && (taskFilters.isEmpty || (matchingTaskIDs?.contains(task.id) ?? true))
         }
     }
 
