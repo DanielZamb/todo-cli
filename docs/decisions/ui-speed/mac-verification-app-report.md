@@ -1,8 +1,10 @@
 # Mac verification app V01 safety correction
 
-Status: blocked for qualification by the coordinator's Swift-slot hold; correction
-is draft, with all seven findings still awaiting final closure. Visible launches
-and V02 remain held. No new frozen-head or end-to-end safety pass is claimed.
+Status: blocked on the server startup boundary. The coordinator lifted the
+Swift-slot hold, and the resumed diagnostic proved that native server startup
+requires file-read-data on the filesystem root. That allowance is outside the
+permitted boundary and has not been added. The correction is draft; all seven
+findings still await final closure. Visible launches and V02 remain held. No new frozen-head or end-to-end safety pass is claimed.
 Branch: feat/mac-verification-app. Previous reviewed head:
 `eceedba4589717ff0615614ce283841bab378638`.
 
@@ -46,7 +48,8 @@ has been returned to draft until its corrected recipe passes end to end.
 
 All paths below are relative to this checkout. Local evidence is ignored by Git.
 Every Swift build/probe before the hold ran through scripts/swift-slot.sh.
-After the hold message no Swift job was running, and none was started.
+After the earlier hold message no Swift job was running, and none was started.
+The resumed startup investigation also used no Swift jobs.
 
 | Command | Exit/result | Evidence |
 | --- | --- | --- |
@@ -73,9 +76,11 @@ executable solely so its process-execution denial can be tested independently.
 
 ## Remaining work after the holds
 
-1. After the Swift hold is released, resolve the stricter sandbox child-startup
-   failure using only owned scratch logs, keeping credential brokers denied.
-   Qualify SQLite side-file/Diagnostics creation and cleanup under directory pins.
+1. Resolve the ownership/bootstrap design with the coordinator. The new
+   [supervisor proposal](mac-verification-supervisor-proposal.md) preserves the
+   app's strict profile and identifies the remaining server confinement gate.
+   Do not add the rejected root-directory read allowance. Then qualify SQLite
+   side-file/Diagnostics creation and cleanup under directory pins.
 2. Compile/run the latest class controls (input/defaults/sandbox), guard predicate
    sweep, full 1,099 binding positives and individual removals, and current app
    source/project generation. The generator script is changed but the tracked
@@ -177,18 +182,70 @@ unproven, and no permission is requested by this draft.
 
 ## Disk and cleanup during the Swift hold
 
-After checking every removed directory with lsof -Di +D (exit 1, no open files),
-removed only this worker's superseded verification/production/candidate DerivedData
-and compiled-binary caches. Preserved all evidence plus hash-verified production
+Correction: the historical lsof -Di +D commands returned exit 1 because this
+Mac's lsof does not support -D. Their stderr logs contain the usage error. Those
+receipts do not prove the removed directories were closed, and the earlier
+closed-directory claim is withdrawn. Only this worker's superseded
+verification/production/candidate DerivedData and compiled caches were removed. Preserved all evidence plus hash-verified production
 and candidate-6 symbol inputs at .scratch/preserved-symbol-inputs. Free disk
 before was 40,383,459,328 bytes (37.610 GiB); after was 45,082,894,336 bytes
 (41.987 GiB), reclaiming 4,699,435,008 bytes (4.377 GiB). Receipt:
 slot-hold-cleanup/receipt.json. Shared disk usage can change independently.
 No other worker's cache, production app, server or launchd state was touched.
 
-The separate closed apps/macos/DerivedData/V01Proof directory was subsequently
-retired after another empty lsof check. This reclaimed 1,095,606,272 bytes
+The apps/macos/DerivedData/V01Proof retirement used the same unsupported
+lsof option, so its historical closed-file claim is also withdrawn. This reclaimed 1,095,606,272 bytes
 (1.020 GiB); free disk immediately before/after was 50.019/51.040 GiB. The
 other free-space increase was concurrent shared-disk activity, not attributed
 to this worker. Receipt: slot-hold-cleanup/state-proof-cleanup.json. Total
 reclaimed by these two recorded cleanups was 5,795,041,280 bytes (5.397 GiB).
+
+## Resumed startup investigation
+
+The profile and production server inputs remain those of committed bdc45efa.
+Only new diagnostic inputs/documentation were added. No app target, Swift job,
+installed application, original credential API, real Todo directory or managed
+server was used. All children used newly owned scratch HOME/database and a
+chosen literal-loopback port; they exited before scratch retirement.
+
+The exact denied operation is `file-read-data /`. Own-PID kernel evidence is
+retained locally. Ancestor metadata allowances alone still abort the server.
+The single diagnostic-only addition
+`(allow file-read-data (literal "/"))` lets the same compiled server answer
+health. This grants root-directory data access outside scratch, so it has not
+been applied to the application or selected as a correction.
+
+The deterministic C control installs the strict profile in-process, opens the
+root directory and gets errno 1/exit 78. Its literal-root mutation exits 0. It
+reads no directory entry. A minimal C executable launched under the strict
+profile also aborted; this is a native startup issue rather than evidence of
+a bad server database.
+
+Reusable command, with no Swift job:
+
+```sh
+node .agents/skills/verify-macos-real-app/scripts/diagnose-server-sandbox.mjs "$PWD/docs/evidence/mac-verification-app/denial-committed"
+```
+
+The earlier completed diagnostic receipt is denial-bdc45efa-final/result.json:
+outer exit 0, PASS_DIAGNOSTIC_ONLY, strict/ancestor-metadata server SIGABRT,
+baseline/literal-root diagnostic health 200 followed by intentional shutdown
+at 130, C root-open control 78 and mutation 0, and supported lsof cleanup exit 1
+with empty stdout/stderr. Before that pass, one run failed because kernel logs
+were rate-limited; another demonstrated the C executable startup abort. Both
+failed receipts remain local and are excluded from qualification.
+
+The committed diagnostic adds an actual held-file positive control to the
+cleanup probe. Supported lsof -Fpcn +D must first report the intentionally held
+owned descriptor at exit 0, then return 1 with no output or error after close.
+Any other result retains scratch and fails. The initial manual diagnostic root
+was retired with these supported arguments and empty output/error; its receipt
+is denial-bdc45efa-final/manual-scratch-retirement.json. Deleted historical
+build directories cannot be retrospectively rechecked.
+
+The [supervisor proposal](mac-verification-supervisor-proposal.md) is not
+implemented. It does not claim that moving an unrestricted server outside the
+app sandbox preserves confinement. The proposed bootstrap must prove strict
+server confinement after runtime startup and reject retained outside descriptors
+before production server code or HTTP starts. If that cannot be proved, this
+unit remains blocked rather than relaxing file/network reach.

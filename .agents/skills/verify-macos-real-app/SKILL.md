@@ -11,10 +11,12 @@ seeded Tasks, but the independent review disproved its isolation. It does not
 qualify this revision. All seven review findings remain open until the new
 frozen-head controls and required reviews pass. V02 and visible launches are held.
 
-The coordinator has also held the Swift slot for candidate 7's correctness
-seat. Until that hold is released, do not invoke this helper, build Swift,
-run a Swift probe or regenerate the Xcode project. Node-only policy and receipt
-tests may run. Elapsed time does not release either hold.
+The coordinator lifted the earlier Swift-slot hold. A new seat hold may arrive;
+finish the current Swift job and start none until released. Qualification is
+now blocked on native server startup requiring root-directory data access.
+Do not add that out-of-scratch permission. Read the report and supervisor
+proposal before changing ownership. No full or visible helper run is qualified
+for this correction.
 
 ## Launch
 
