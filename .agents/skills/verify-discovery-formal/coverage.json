@@ -5,7 +5,7 @@
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "475726d3d81c382469375bd8ce51d687bdec4fa2",
+  "productionSyncCommit": "a91cb00cf2f5b844a01ef1278246f695836ba6f4",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -157,7 +157,7 @@
         "signOut start, failure and commit",
         "followChanges reconnect retry from Offline and sign-out notice"
       ],
-      "sha256": "7866563dd9fc531c922477ded4ed92157a970018d82e2ac428e691a7ebdbc51d",
+      "sha256": "1d6d18af0d0cdf4ba0e1ac6e02952675dceda4b7a29942ced22736b214a81338",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -225,7 +225,7 @@
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
+  "previousProductionSyncCommit": "475726d3d81c382469375bd8ce51d687bdec4fa2",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -318,5 +318,21 @@
       "docs/evidence/discovery-formal/swift-teol9Y/result.json (475726d3)"
     ],
     "housekeeping": "prepare-inputs compiles leave .bun-build temporaries in the new .scratch/bin cache; they were moved out of the checkout after lsof showed no holder, so check-swift could run its temporary guard. No file was deleted."
+  },
+  "messageOwnershipReview": {
+    "product": "a91cb00cf2f5b844a01ef1278246f695836ba6f4",
+    "previous": "475726d3d81c382469375bd8ce51d687bdec4fa2",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "7866563dd9fc531c922477ded4ed92157a970018d82e2ac428e691a7ebdbc51d",
+        "to": "1d6d18af0d0cdf4ba0e1ac6e02952675dceda4b7a29942ced22736b214a81338"
+      }
+    ],
+    "review": "message gains an owner (general, connection, signOut); ready and successful writes clear only named owners; a credential or Profile change ends a sign-out notice; the saved signOutNotice restore is removed. restore and signIn use stillOwns(epoch) after each await: a superseded epoch returns without touching state, a cancelled same-epoch task throws to the existing cancellation cleanup. Discovery publication, Show acceptance, closeDiscovery at sign-out start and every epoch comparison are unchanged.",
+    "controls": [
+      "docs/evidence/discovery-formal/swift-tRAIuC/result.json (a91cb00c)",
+      "Electron sources unchanged since docs/evidence/discovery-formal/electron-pfQcH2"
+    ]
   }
 }

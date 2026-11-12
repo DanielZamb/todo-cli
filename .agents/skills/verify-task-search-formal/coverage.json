@@ -77,7 +77,7 @@
         "catalogSignalRevision and full-read debt",
         "lastCatalogReadAt and activation age"
       ],
-      "sha256": "7866563dd9fc531c922477ded4ed92157a970018d82e2ac428e691a7ebdbc51d"
+      "sha256": "1d6d18af0d0cdf4ba0e1ac6e02952675dceda4b7a29942ced22736b214a81338"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -282,5 +282,16 @@
       }
     ],
     "review": "performRefresh captures one scoped Client per refresh and passes it to its search reads; generation, requestedIdentity and canPublishSearch guards are unchanged. followChanges checks generation before the health result and adds generation guards after dependency reads and the operation refresh; healthy-ready predicate unchanged. refreshAfterWrite adds an epoch guard after publication. Other changes are session ownership, epoch-owned busy cleanup, sign-out and diagnostics scoping, outside the search model."
+  },
+  "messageOwnershipReview": {
+    "product": "a91cb00cf2f5b844a01ef1278246f695836ba6f4",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "7866563dd9fc531c922477ded4ed92157a970018d82e2ac428e691a7ebdbc51d",
+        "to": "1d6d18af0d0cdf4ba0e1ac6e02952675dceda4b7a29942ced22736b214a81338"
+      }
+    ],
+    "review": "Only message ownership in the stream ready path and restore/signIn cancellation handling changed. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged."
   }
 }
