@@ -8,6 +8,14 @@ The generated Xcode project is being refreshed before freezing the runtime head.
 Final results and actual command exits will be retained under a fresh local
 evidence directory. No seven-finding closure is claimed before those results.
 
+The first frozen attempt at 40c372320289b790a8d95fe7d3fbbc1b3bfc3ffe passed
+102 native cases, 15 class removals, both root-rule widening controls and the
+parent-death check. Predicate control 18 then hit the matching helper's
+30-second timeout while waiting for the shared Swift lock (SIGTERM, no output).
+That row is excluded, and the attempt is incomplete. The helper now uses the
+same 20-minute queue allowance as the qualification runner. No app was built
+or launched in that attempt. Receipts: frozen-40c37232.
+
 Previous stop: blocked on disk preflight, qualification incomplete. After the latest
 Swift-slot release, the small Bun configuration and parent-exit controls were
 completed without a Swift job. Available space then fell from about 30.4 GiB
