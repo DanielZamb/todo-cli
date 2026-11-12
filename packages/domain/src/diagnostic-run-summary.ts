@@ -137,7 +137,16 @@ export function recordingsComparable(
     before.comparison.configuration !== "unknown" &&
     before.comparison.render_stage !== "unknown" &&
     before.comparison.render_stage !== "unavailable" &&
-    JSON.stringify(before.comparison) === JSON.stringify(after.comparison)
+    (
+      [
+        "fixture_hash",
+        "script_hash",
+        "environment_hash",
+        "configuration",
+        "render_stage",
+        "concurrency",
+      ] as const
+    ).every((key) => before.comparison[key] === after.comparison[key])
   );
 }
 

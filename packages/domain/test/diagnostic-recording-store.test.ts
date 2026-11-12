@@ -377,3 +377,42 @@ it("counts a failed action without inventing a rendered completion", () => {
   expect(row?.p50_ms).toBe(null);
   expect(row?.fraction_by_20_ms).toBe(0);
 });
+it("compares declared conditions independently of JSON property order", () => {
+  const original = batch().run;
+  const c = original.comparison;
+  const reordered = {
+    ...original,
+    comparison: {
+      concurrency: c.concurrency,
+      render_stage: c.render_stage,
+      configuration: c.configuration,
+      environment_hash: c.environment_hash,
+      script_hash: c.script_hash,
+      fixture_hash: c.fixture_hash,
+    },
+  };
+  expect(recordingsComparable(original, reordered)).toBe(true);
+});
+it("recognizes an equivalent batch with reordered JSON keys as a retry", async () => {
+  const root = await mkdtemp(join(tmpdir(), "todo-recording-key-order-"));
+  const reverse = (value: unknown): unknown =>
+    Array.isArray(value)
+      ? value.map(reverse)
+      : value !== null && typeof value === "object"
+        ? Object.fromEntries(
+            Object.entries(value)
+              .reverse()
+              .map(([key, item]) => [key, reverse(item)]),
+          )
+        : value;
+  try {
+    const store = await DiagnosticRecordings.open(root);
+    store.ingest(batch());
+    await store.flush();
+    expect(
+      store.ingest(validateRecordingBatch(reverse(batch()))).duplicate,
+    ).toBe(true);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
