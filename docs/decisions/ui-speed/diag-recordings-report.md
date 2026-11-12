@@ -1,11 +1,13 @@
 # Private Diagnostics recordings
 
-The latest correction addresses C3 and C4 from the review of 241306a2. Marked
-data publication, retry, recovery and expiry now share an explicit lifecycle;
-the C1 and C2 controls remain green. The contract remains
-55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8.
-The final section records this correction and its gates. Earlier sections retain
-the d1541167 delivery and S1-1 through S1-4 correction receipts as history.
+The latest correction replaces the two-authority journal with one manifest per
+run, under the coordinator's C5/C6/C7 ruling. Missing or corrupt manifests mean
+absence; blobs never reconstruct runs. Segments publish before one manifest
+rename, and bounded split exports preserve every acknowledged event. The
+contract remains 55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8.
+The final section and its generated lifecycle table are the current design and
+receipts. Earlier sections are historical, including their superseded
+checkpoint/snapshot descriptions.
 
 U06 and U07a implement the accepted recording policy in ADR-0020. Recording
 files are separate from the Task database. Owner-authenticated loopback HTTP
@@ -1088,3 +1090,335 @@ Final CLI SHA-256: b91fa40478d1c482429134bfacbde3bf77aba0f209db9c542683d1a5b0886
 Final server SHA-256: ecf91579ec099b6b2d3897214bc1aa520dc84086e9fc1727d471dc719b21cb84.
 Verification-only durability server SHA-256: 0eabb813a219590dd5bfedbfc00e99d214465829dd6b7359c3ef463ca41866b8.
 C3 and C4 are ready for the seat's re-check. No independent verdict is claimed.
+
+## C5/C6/C7 replacement: one manifest authority
+
+This replaces the two-file qualification design in 44da13f3. The seat's original
+C5, C6 and C7 compiled witnesses each exit 1 before implementation. Their sources
+are unchanged and hashed in recordings-manifest/seat-sources.sha256. All receipts
+below are under ignored docs/evidence/ui-speed/recordings-manifest. No independent
+review verdict is claimed.
+
+A valid version-2 run manifest is the only authority. It contains the run
+definition, admission counts/uncertainty, per-run capacity/expiry/corruption event
+counts and immutable segment descriptors. Descriptors include sizes, checksums,
+event counts, original batch identity and a fingerprint of the entire original
+batch. The manifest itself has a checksum and a 256 KiB encoded cap. The legacy
+internal filename suffix .admission.json remains so existing filesystem fault
+controls can target the same atomic boundary. There is no separate admission
+checkpoint and no mark in any segment. The RecordingAdmissions class is deleted.
+There is no legacy blob reconstruction or migration of this unshipped private
+format; an old checkpoint is invalid authority and its blobs become orphans.
+
+Each writer job stages all bounded immutable segments first. It writes, flushes
+and atomically renames the manifest naming all of them last. A refusal changes
+only that manifest. An interrupted split leaves the old manifest and orphan
+blobs, never a partially published batch. Lost acknowledgements retry all events
+idempotently across splits. Retained fingerprints compare content, not only keys.
+An exact retry is queued until disk authority has been rechecked; HTTP and CLI
+still report stored only after that check completes. A failed manifest write
+cannot expose the staged data. Retrying a dirty qualifier or its original batch
+retries the write, without a timer loop.
+
+Missing or corrupt manifest means absent, for both previously clean and marked
+runs. List omits it; show/export/compare return the existing safe missing-run
+refusal. Startup deletes orphan blobs and releases derived indexes and charges.
+A missing/corrupt named blob instead causes an incomplete manifest replacement
+before surviving events are returned. If repair cannot publish, queries about
+that run refuse safely while healthy peers continue. Likewise, a pending refusal
+whose publication failed cannot expose a clean-looking live summary. It refuses
+until explicit retry persists the command. Pending commands are not authority.
+Global loss status recovers at least the counted losses of surviving manifests
+if its ancillary status file is absent or behind; it never qualifies a run.
+
+One helper in recording-files.ts handles every unlink. ENOENT is success. The
+writer retires segment references/indexes only with authority publication and
+keeps failed physical removals charged. Failed cleanup blocks recording growth,
+not Task requests. Other errors remain visible and retry no sooner than 60000 ms.
+The normal timer's data selector now requires the full 13-digit timestamp prefix;
+its old digit-only predicate could mistake a numeric UUID manifest for data.
+No existing retry delay, timeout, production quota or comparison assertion changed.
+
+### Bounds and new modules
+
+recording-manifest.ts owns the strict internal codec, checksum, admission merge,
+publication descriptors, bounded split planning and the pure recovery
+inspection used by production and the generated controls. DiagnosticRecordings
+owns the sole writer queue and all publication, budgets, receipts and removal.
+RecordingQueries projects only manifest-owned batches. recording-files.ts owns
+native lease/read/atomic-write/idempotent-remove boundaries. No business rules
+moved into HTTP. The server changes only construction to start recovery without
+awaiting it. Task store.ts and projection.ts remain byte-identical to the base;
+no formal mapping or pin is renewed.
+
+Metadata admission_bytes now charges the complete qualifying manifest, including
+segment references. The app/total budget includes its charged size and one
+maximum manifest replacement reserve for the single writer, plus the existing
+three blocks for status replacement and the lease. Failed garbage stays charged.
+The 32 MiB app, seven-day, 256 MiB total, 4096-segment, 5120-run, 1 MiB queue and
+1024-pending bounds remain. A full manifest rotates its own oldest references;
+this local bound cannot evict another run's data. Ordinary app/global capacity
+still evicts oldest eligible data under those independent limits.
+
+The default-cap census admits 1100 three-event batches into one run beside a
+healthy peer. Its final manifest holds 878 segments / 2634 events in 261639 bytes,
+with 296-byte descriptors. It counts 222 evicted segments / 666 events, preserves
+incomplete fractions and leaves the peer manifest byte-identical. Total physical
+allocation is 3870720 bytes; data/garbage charge is 3600384 and metadata charge
+266240. Capacity depends on descriptor/run metadata length and event size; 878
+is this literal fixture, not a universal events-per-run promise. The 128-event
+and app-byte caps also apply. The full census remains in the compiled recipe;
+the unit test uses a 2048-byte planning seam and 20 admissions to exercise the
+same rotation without another 1100-write job inside parallel unit suites.
+
+Export reserves the maximum legal admission object and the response/status
+wrapper before acknowledgement. The C7 input is 131004 bytes / 95 events. It
+returns two pages, each at most 131072 bytes, with the mark on both, in original
+order. All 95 events remain after normal restart. Exact retry creates no segment;
+a changed final event under the same original batch id is refused. The wire
+schema and contract id do not change. Old and new are both:
+55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8.
+No generator or Swift command is needed or run.
+
+### Executed lifecycle and oracle changes
+
+The [generated lifecycle table](recordings-manifest-lifecycle.md) comes from
+the executed model, not a hand-maintained second specification. Each
+row lists operation prefixes, data/manifest state combinations, reader outcomes
+and retry semantics. Clean and marked two-segment runs cover ingest, refusal,
+import, export, own-manifest rotation, eviction, expiry and restart. Every
+existing run file independently takes valid, missing, truncated and corrupt
+states. The production recovery inspector and production query reducer execute
+for each image, followed by a real scratch-directory reopen through the writer.
+All 14537 states pass with their captured clock, physical cleanup, index/byte
+charges, export pages, a marked import retry and a second idempotent retry.
+The 362 captured prefixes produce 143 distinct file/clock images. A second
+healthy run is read and compared in every combination.
+The real-directory unit test separately reopens all 64 combinations for two
+blobs and one refused manifest, plus explicit clean/marked deletion/corruption.
+
+The 190 compiled process cases include 174 SIGKILLs of their owned child at
+each mutation boundary,
+including before/after immutable writes, manifest publication, unlink and
+constructed empty/partial/flushed temporaries. Every recovered state checks the
+healthy peer, absence or qualified data, explicit retry and a second idempotent
+retry. A separate sixteen-case real HTTP/CLI control imports a genuine marked
+export, interrupts data/manifest publication and injects write failures. Four
+held-write controls cover later refusal and pending duplicates. Their barrier
+moved from data publication to manifest publication because that is now the commit
+boundary. These controls do not claim to interrupt a kernel write or prove
+power-loss durability. The native file is flushed before rename; filesystem
+power-loss guarantees remain unclaimed.
+
+The coordinator explicitly confirmed the two changed seat oracles. The original
+C6 witness remains red because show of the deleted sole manifest safely refuses
+instead of returning a reconstructed run. The original C7 witness remains red
+because its first-page-only assertion sees 91 rather than 95 events; the approved
+pagination control sees all 95 in two pages, before and after restart. Raw
+red/final logs are retained, not relabelled as passes. The unchanged C5 probe
+passes. The earlier unchanged C3 fault/retry probe also passes. C4's unchanged
+probe reaches successful fresh-run queries but then throws on its removed
+admissions.states private seam; the corresponding manifest-expiry control passes.
+The unchanged identity witness passes 10 of 13 cases. The three obsolete
+expectations are an immediate in-memory stored receipt, a 4096-byte quota that
+cannot hold data plus authority plus replacement, and reconstruction from an
+unreferenced contradictory blob. The manifest-identity variant keeps all 13
+behavioral cases with queued/settled receipts, a 12288-byte fixture quota and
+orphan removal. It passes all 13; the raw unchanged receipt is retained.
+
+Five additional literal regressions failed first during the replacement's own
+review. A failed refusal publication could still display the old clean summary;
+a producer could enter midway through background recovery; and losing ancillary
+status could hide an authority's counted eviction. Their raw red receipts are
+red-dirty-summary, red-ready-race, red-loss-status, red-ready-http and
+red-temp-charge. Final controls cover safe query refusal until retry, no internal
+admission before recovery completes, an owner upload waiting across recovery,
+recovered loss counts from the sole manifest and charged failed temporaries.
+Failed atomic cleanup is routed through the same removal guard. Only an explicit
+retry for a run with refused facts can attempt cleanup during an armed backoff;
+ordinary activity preserves the timer.
+
+### Startup and request-path cost
+
+No synchronous filesystem operation was added to a Task request. Startup launches
+the private recovery task and returns; each file/run yields to the event loop.
+Authenticated ingestion awaits readiness, then performs bounded decoding,
+producer fingerprints, validation and split planning on the server thread. File
+writes and publication are asynchronous and use one queue. Synchronous parsing,
+hashing and schema work are real cost, not zero. No allocation or limiting-stage
+profile was taken. This is not a claim about app capture or physical paint.
+
+The seat-shaped full fixture has 4096 data segments, 5120 marked manifests,
+9218 files and 54530048 allocated bytes. Charged data is 33554432 and manifest
+metadata 20971520 bytes. Five alternating light/full pairs use a warm OS file
+cache, ten literal 15-Task reads per process and one first recording-list query.
+All 100 Task reads pass, plus a separate held-recovery Task control. The first
+query time includes both startup validation and the list's fresh validation; it
+is not a standalone timing of initialize(). No run is reconstructed from blobs.
+
+| Measurement, ms | Light, median [range] | Full, median [range] |
+| --- | --- | --- |
+| Process to Listening | 96.155 [96.125, 101.954] | 96.197 [96.076, 102.556] |
+| Start through first recording-list response | 110.713 [110.003, 114.351] | 3544.864 [3529.076, 4234.096] |
+| First recording-list request | 0.926 [0.842, 1.035] | 3436.036 [3414.290, 4124.108] |
+| Per-run Task-read p50 | 0.826 [0.693, 0.933] | 0.838 [0.772, 0.868] |
+
+Full-store maximum checked Task read is 6.236 ms; light
+is 6.292 ms. Boundary load is 3.297 to 3.667. The
+verification entry also holds the first manifest read before recovery completes;
+a literal Task read still succeeds. The owner upload control requires a stored
+receipt after release, rather than silently dropping that early batch. Compared
+with the seat's historical 3.4-second reconstruction-before-Listening observation,
+the structural change is that recording recovery no longer gates Task readiness.
+The machines/times differ, so no controlled cross-build speedup is claimed.
+An initial supplementary startup run overlapped owned verification; startup-final
+is the isolated owned-job run reported here.
+
+Marked-ingestion cost uses one compiled binary, 15 Tasks, 100 reads per cell, ten
+AB/BA alternating pairs per batch size, and a concurrent upload only in the
+enabled cells. Every boundary load and individual duration is in raw.json.
+Each size has 2000 successful reads and 1000 stored uploads, zero storage failures.
+The 128-event run rotates 575 segments / 73600 events at the app quota, all counted.
+The 16-event run ends with 1000 retained segments and no capacity loss. These
+are ambient-host observations, with no imposed CPU pressure. The existing quiet
+recipe and its ceiling remain untouched.
+
+| Batch | Read p50 without uploads, ms | With uploads, ms | Upload handler p50, ms | Paired median addition [range], ms |
+| --- | --- | --- | --- | --- |
+| 16 events | 0.306 [0.298, 0.414] | 0.343 [0.334, 0.409] | 1.931 [1.872, 2.104] | 0.039 [-0.005, 0.061] |
+| 128 events | 0.304 [0.293, 0.402] | 0.541 [0.531, 0.612] | 22.686 [21.951, 23.011] | 0.234 [0.210, 0.290] |
+
+| Pair | 16-event read-p50 addition, ms | 128-event read-p50 addition, ms |
+| ---: | ---: | ---: |
+| 1 | -0.005 | 0.210 |
+| 2 | 0.061 | 0.290 |
+| 3 | 0.056 | 0.246 |
+| 4 | 0.041 | 0.234 |
+| 5 | 0.037 | 0.260 |
+| 6 | 0.026 | 0.229 |
+| 7 | 0.044 | 0.244 |
+| 8 | 0.023 | 0.221 |
+| 9 | 0.040 | 0.230 |
+| 10 | 0.034 | 0.233 |
+
+The 16-event difference is inside pair variation and is inconclusive. The
+128-event addition exceeds pair variation in this run; it is an observed
+0.234 ms read-p50 cost, not a general machine-independent bound. Its 22.686 ms
+upload-handler median includes durable storage and is not a Task handler or
+input-to-render duration. Loads span 3.264 to 3.563 for 16 events and 2.971 to
+3.563 for 128. CPU/RSS and driver CPU are retained, but no bottleneck profile
+was taken, so no stronger causal or throughput claim is made.
+
+The permanent-unlink control makes 2933 successful literal Task reads in five
+AB/BA pairs of 6.5 seconds per cell. Two actual failed timer attempts are counted.
+Its paired p50 differences are 0.068, -0.015, 1.021, 0.107 and 0.025 ms, median
+0.068, range [-0.015, 1.021]. This is inconclusive against pair variation. The
+expired segment's logical reference is retired; the failed physical removal
+remains charged as 4096 bytes. There is no 1 ms failure retry loop.
+
+Quiet-machine confirmation under the unchanged ceiling is owed at integration.
+The local measurement-chart.html was previewed and rendered, with no console
+errors. Raw data, tables and the chart remain ignored evidence.
+
+### Commands and real receipts
+
+E is "$PWD/docs/evidence/ui-speed/recordings-manifest", C is "$PWD/.scratch/bin"
+and P is ".agents/skills/verify-ui-profiler/scripts". Each named receipt is a
+.log/.exit pair, with result.json inside recipe directories where applicable.
+The source cache's final source hash is
+605cbff056b541c0b2a2bc4a9133c8f9f4abf72d6e0e4fbc0de9c57bd494c8676.
+Changing only the new unit fixture size changed its prior cache hash without
+changing either executable, as binary-frozen.sha256 records. The final server
+includes the later readiness and temporary-cleanup guards; its final SHA-256 is
+a5269c9276878d567579e8caaa333f6bb69e717a4d3a84d80cbf0dbe2a53d026.
+CLI SHA-256 remains b91fa40478d1c482429134bfacbde3bf77aba0f209db9c542683d1a5b0886cbe.
+No source mutation occurred during the final measurements or root checks.
+
+| Command | Real exit | Receipt |
+| --- | ---: | --- |
+| sh scripts/disk-guard.sh | 0 before compile/measurement/root batches | disk-build, disk-cost, disk-root, disk-root-retry |
+| bun apps/server/scripts/scratch-diagnostics.ts build | 0 final | build-sealed-final; source-sealed-final.json and binary-sealed.sha256 |
+| bun packages/api/scripts/openapi.ts --check | 0 | contract-current; same full contract id above |
+| pnpm typecheck | 0 | types-sealed |
+| pnpm exec biome check . | 0, existing informational notices only | lint-sealed |
+| bun --bun node_modules/typescript/bin/tsc -p .agents/skills/verify-ui-profiler/tsconfig.json | 0, including real-filesystem model | helper-types-files |
+| pnpm --filter @todo/domain test recording-manifest.test.ts recording-durability.test.ts diagnostic-recording-corrections.test.ts | 0, 17 controls | authority-sealed-2 |
+| pnpm --filter @todo/domain test | 0, 455 tests | domain-sealed |
+| pnpm --filter @todo/server test | 0, 38 tests | server-sealed |
+| bun build --compile "$P/manifest-model.ts" --outfile "$C/manifest-model"; "$C/manifest-model" "$E/model-files" | 0 each, 14537 real-directory states | model-files-build, model-files |
+| bun build --compile "$P/manifest-crash.ts" --outfile "$C/manifest-crash"; "$C/manifest-crash" "$E/crash-sealed" | 0 each, 190 process cases | crash-sealed-build, crash-sealed |
+| bun build --compile "$P/manifest-capacity.ts" --outfile "$C/manifest-capacity"; "$C/manifest-capacity" "$E/capacity-final" | 0 each | capacity-build-final, capacity-final |
+| bun build --compile "$P/durability-server.ts" --outfile "$C/durability-server"; bun "$P/durability.ts" "$E/http-sealed"; bun "$P/durability-concurrency.ts" "$E/concurrency-sealed" | 0 each, 16 and four cases | http-sealed-build, http-sealed, concurrency-sealed |
+| bun build --compile "$P/manifest-wire.ts" --outfile "$C/manifest-wire"; "$C/manifest-wire" "$E/wire-final" | 0 each, all 95 events across pages | wire-build-final, wire-final |
+| bun build --compile "$P/manifest-expiry.ts" --outfile "$C/manifest-expiry"; "$C/manifest-expiry" "$E/expiry-approved" | 0 each | expiry-approved-build, expiry-approved |
+| bun build --compile "$P/manifest-identity.ts" --outfile "$C/manifest-identity"; "$C/manifest-identity" "$E/identity-approved" | 0 each, 13 cases | identity-approved-build, identity-approved |
+| TODO_PROFILER_STRESS=1 bun "$P/verify.ts" "$E/producer-sealed" | 0, 700 batches | producer-sealed |
+| bun "$P/completeness.ts" "$E/completeness-sealed"; bun "$P/admission-fault.ts" "$E/admission-fault-sealed"; bun "$P/corrections.ts" "$E/corrections-last" | 0 each | completeness-sealed, admission-fault-sealed, corrections-last |
+| TODO_DIAGNOSTICS_NO_SWIFT=1 .agents/skills/verify-diagnostics/scripts/verify.sh "$E/diagnostics-sealed" | 0; terminal PNG HOLD | diagnostics-sealed |
+| TODO_SERVER_BINARY="$C/todo-server" TODO_SEED_BINARY="$C/seed" .agents/skills/verify-server-api/scripts/verify.sh "$E/api-sealed" | 0 | api-sealed |
+| .agents/skills/verify-auth/scripts/verify.sh "$E/auth-sealed" | 0 | auth-sealed |
+| TODO_CLI_BINARY="$C/todo" .agents/skills/verify-cli/scripts/verify.sh "$E/cli-frozen" | 0, 80 tests; CLI byte-identical | cli-frozen; another attempt cli-final failed two expired-HTTP fixture cases |
+| bun build --compile apps/server/scripts/diagnostic-fault-cli.ts --outfile "$C/diagnostic-fault-cli"; bun build --compile apps/server/scripts/verify-diagnostic-faults.ts --outfile "$C/verify-diagnostic-faults"; "$C/verify-diagnostic-faults" "$E/faults-sealed" | 0 each, 47 cases | fault-cli-sealed-build, fault-driver-sealed-build, faults-sealed |
+| bun apps/server/scripts/verify-diagnostic-payload-budget.ts "$E/payload-sealed" | 0, 10000 requests and 200 clients, replay through three streams | payload-sealed |
+| bun build --compile "$P/manifest-startup-server.ts" --outfile "$C/manifest-startup-server"; bun "$P/manifest-startup.ts" "$E/startup-final" | 0 each | startup-sealed-build, startup-final |
+| bun "$P/manifest-ready.ts" "$E/ready-final" | 0 | ready-final |
+| /usr/bin/lockf -k /tmp/todo-ui-profiler-benchmark.lock env TODO_PROFILER_MARKED=1 TODO_PROFILER_PAIRS=10 bun "$P/benchmark.ts" "$E/marked-16"; same with TODO_PROFILER_EVENTS=128 and "$E/marked-128" | 0 each | marked-16, marked-128 |
+| bun build --compile "$P/expiry-server.ts" --outfile "$C/expiry-fault-server"; /usr/bin/lockf -k /tmp/todo-ui-profiler-benchmark.lock bun "$P/expiry-cost.ts" "$E/expiry-cost-final" | 0 each | expiry-sealed-build, expiry-cost-final |
+
+The domain suite's intermediate domain-final-2, domain-frozen, domain-current
+and domain-final-alone attempts exit 1 on the unchanged five-second continuous
+admission control. Every other test passes in those runs. Some attempts overlap
+owned compiled verification and other units are active; boundary load was not
+captured for those unit attempts, so no numerical load attribution is claimed.
+The later domain-sealed run and both root domain phases pass all 455 tests with
+the timeout and assertions unchanged. The full-cap census moved to the compiled
+recipe; no capacity coverage was discarded. The focused 17 controls take 1.35 s.
+Initial type/setup and quota-fixture failures remain in their named logs; none is
+reported as a final passing gate.
+
+The first exact root command exits 1 on one CLI fixture, not a timeout:
+"records one selected-Profile rejection for expired http show" expects History
+detail expired and observes invalid_credential. Auth cleanup can delete the
+fixture's backdated credential before its request. The same CLI suite passes
+all 80 in cli-frozen; cli-final observes that race for expired HTTP show and edit.
+No auth code, test expectation, scheduler behavior, timeout or worker limit was
+changed. The root failure still passes contract/types/lint, all 455 domain,
+38 server and 168 Electron tests, with the existing one Electron skip. Boundary
+one-minute load is 4.16 to 5.43. root.log/.exit and the two load logs retain it.
+The exact command is rerun after all owned heavy verification completes; its
+receipt is recorded below. No worker-capped substitute is used.
+
+The second exact root run exits 0. With the disk guard first, the unchanged
+`/usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check` passes contract, types,
+lint, 455 domain, 80 CLI, 38 server and 168 Electron tests, with the same one
+Electron skip. root-retry.log/.exit retain the full output. Boundary one-minute
+load is 2.03 to 3.24, with 31.3 GB free before the command. No owned benchmark,
+fixture drive or filesystem matrix runs alongside it. There is no supplementary
+worker-capped command. Integration retains its own combined-branch gate.
+
+The terminal PNG render remains owed by a unit holding the Swift slot. Native
+app capture/upload integration, native builds/UI, fresh Claude skill discovery,
+allocation/limiting-stage profiling and power-loss proof remain unclaimed.
+No children, push, install, native app, Keychain or real Todo data were used.
+The single-worker brief precludes a delegated comment review; the manual diff
+review keeps the one queue-ownership comment and adds no explanatory production
+commentary. The new shared module's job and the removed authority are documented
+above. ADR-0020 and architecture.md now describe that one authority.
+
+Delivery rechecks compile the seat sources unchanged again against the final
+product. final-missing-segment and final-c3 exit 0. final-clean-then-refused and
+final-wire-limit retain their coordinator-approved red exits 1; their absence
+and paginated alternatives pass above. Every compile exits 0. seat-source-check
+exits 0 for the original source hashes, and contract-delivery exits 0. The removed
+legacy-seam witnesses are reported explicitly rather than presented as passes.
+
+Cleanup checks lsof before removing only owned closed files. Across cleanup-mid,
+cleanup-pre-cost, cleanup-superseded and cleanup-final it deletes 81 files with
+7186747392 allocated bytes of file accounting. The seven superseded executable
+copies retain hashes and sources/receipts; the other 74 are closed Bun compile
+temporaries. Zero open-file skips occur in the temporary cleanups. APFS shared
+extents and other units' activity mean this is not an attributed global df delta.
+The final guarded reading is 33.6 GB free. An earlier delivery reading was 30.0 GB;
+no further build was started there, and the next df reading returned above 33 GB.
+All owned fixture processes have exited, and their helpers removed scratch data.
+Raw receipts remain local and ignored. No evidence or binary is tracked.

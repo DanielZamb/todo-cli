@@ -113,7 +113,7 @@ Oldest segments go first; expiration, capacity losses, corrupt/orphan segments,
 queue drops and storage failures are counted and returned with every read.
 The implementation additionally caps segment count and the pending queue:
 4,096 retained segments, 1 MiB pending encoded data and 1,024 pending batches.
-Run manifests reference only retained or pending batches, at most 5,120 runs.
+At most 5,120 run manifests exist; pending commands cannot publish a run.
 Event fingerprints have at most 655,360 retained/pending references.
 Cleanup never waits for the whole queue to drain.
 An unreferenced expiry timer removes idle records without a later request;
@@ -140,8 +140,8 @@ A batch UUID deduplicates retained retries. Within a run, a producer sequence
 may repeat only with identical event content. Conflicting content is refused
 with an allowlisted recovery message before admission, including import/dry run.
 A fully retained identical event batch is a no-op. Pending data is not called
-stored. Legacy contradictory files and repeated contradictory action phases
-produce a refusal instead of a summary that hides observations. No synchronous filesystem operation
+stored. Unreferenced segments are orphans and never create runs. Repeated contradictory
+action phases produce a refusal instead of a summary that hides observations. No synchronous filesystem operation
 runs during ingestion. JSON parsing/schema validation and bounded admission still
 use the server thread and must be measured. Exports page one bounded batch at a
 time; NDJSON CLI export follows pages. No arbitrary path is accepted over HTTP.
@@ -178,7 +178,7 @@ submission attempts, not inferred missing actions. Null means the count is
 unknown. Refusal marks survive data rotation and complete data eviction; they
 expire only when the mark is more than seven days old and no retained or pending
 data for that run remains.
-Markers use separate 0600 metadata files, charged to the app quota, with an
+The sole run manifest holds the mark, charged to the app quota with an
 atomic replacement allowance. An explicit admission_bytes status field exposes
 the metadata charge. There are at most 5120 retained, pending or marked run
 identities. New run registration is refused at that limit instead of forgetting
@@ -203,23 +203,45 @@ their run admission map to analyzeRecording/summarizeRecording, or use the serve
 already masked summaries. CLI import preserves this metadata; the native client
 integration must preserve it too.
 
-Marked data segments retain their qualifying admission snapshot in the same
-atomic file. A run checkpoint is written before new qualifying data, within one
-writer job. A failed checkpoint cannot publish that data. Startup reconstructs
-a missing checkpoint from marked segments before exposing recording queries.
-The checkpoint also preserves refusals with no admitted events and survives data
-eviction. An explicit retry requeues dirty checkpoint state even when unchanged.
-Receipts acknowledge their own durable mark and stored facts. A later uncommitted
-refusal cannot turn an already committed batch into a failed admission, and a
-pending duplicate cannot acknowledge a failed shared data write. Per-run durable
-snapshots remain bounded; receipt identity bookkeeping uses weak references.
+A run exists exactly when its valid, checksummed version-2 manifest exists.
+That one 0600 file holds the run definition, admission state, per-run loss counts
+and immutable segment references with sizes, event counts and checksums. Its
+legacy .admission.json suffix is internal; there is no separate checkpoint.
+Recovery never reconstructs a run from segments. Missing or corrupt manifests
+mean absent runs and orphan segments. Missing or corrupt named segments persist
+an incomplete mark before any surviving events are returned. One run's damage
+cannot fail another run's queries.
 
-Expiry of an already absent inactive checkpoint succeeds and releases its
-charge. After asynchronous unlink, recheck the state version and current data
-references. A new refusal or pending data admission retains a dirty checkpoint
-for ordered persistence. Other errors keep their counted failure and minimum
-one-minute backoff. The joint lifecycle table and executable controls are in the
-DIAG-CORE recordings report. Process-crash tests do not claim power-loss proof.
+The writer publishes every immutable segment first, then writes, flushes and
+atomically renames the manifest naming all segments of that batch. A refusal
+replaces only the manifest. A crash before rename leaves the previous authority
+and orphan blobs; startup removes the orphans. An explicit retry revalidates
+pending facts; retained exact retries are idempotent across segment splits.
+The original batch fingerprint covers every event independently of the split.
+No blob contains a copy of the admission mark. Export adds the current mark to
+every page. Splitting reserves the largest permitted mark and the transfer
+envelope before acknowledgement, so each page stays within 131072 bytes.
+
+A manifest is at most 256 KiB including its checksum wrapper. Its charged size
+and one maximum-size replacement are included in the app and total limits.
+When that manifest fills, its own oldest segment references rotate out first;
+evicted events are counted and the run remains incomplete. This local limit
+cannot evict another run's data. The ordinary app and total quotas still evict
+the oldest eligible data. Failed removals stay charged and prevent new recording
+growth until cleaned. All unlinks use one helper where ENOENT is success.
+Other failures retain their count and one-minute minimum retry interval.
+
+Server readiness does not await recording recovery. Recovery yields between files;
+recording queries await it, while Task requests and writes never do. Until ready,
+the synchronous store boundary explicitly drops new admissions. Authenticated
+HTTP uploads await readiness before admission, so a first upload can wait without
+blocking Task requests. No upload is acknowledged as stored before publication.
+Receipts record their own publication outcome. A later refused batch cannot
+reverse a stored receipt, and pending duplicates cannot acknowledge a failed
+shared write. Receipt bookkeeping uses weak references.
+
+The generated lifecycle table and compiled controls are in the DIAG-CORE
+recordings report. Process-crash tests do not claim power-loss proof.
 
 ## Still proposed
 

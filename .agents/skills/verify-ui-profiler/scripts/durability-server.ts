@@ -62,7 +62,7 @@ assert.equal(Reflect.set(DiagnosticRecordings.prototype, "atomic", async functio
     throw Object.assign(new Error("Verification-only data I/O failure"), { code: "EIO" });
   }
   await original.call(this, name, text);
-  if(!fired&&data&&point==="later_refusal") await releaseBarrier(name);
+  if(!fired&&mark&&point==="later_refusal") await releaseBarrier(name);
   if (!fired && ((mark && point === "after_mark") || (data && point === "after_data"))) await barrier(name);
 }), true);
 process.argv = process.argv.slice(0, 2);

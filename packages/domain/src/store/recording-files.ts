@@ -56,7 +56,16 @@ export async function writeRecordingFile(
     }
     await rename(temp, join(directory, name));
   } catch (error) {
-    await unlink(temp).catch(() => {});
+    await removeRecordingFile(directory, `${name}.tmp`).catch(() => {});
     throw error;
+  }
+}
+
+export async function removeRecordingFile(directory: string, name: string) {
+  try {
+    await unlink(join(directory, name));
+  } catch (error) {
+    if (!(error instanceof Error && "code" in error && error.code === "ENOENT"))
+      throw error;
   }
 }

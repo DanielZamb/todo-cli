@@ -14,7 +14,7 @@ for(const mode of ["producer","import"] as const) for(const point of ["later_ref
   const f=await diagnosticFixture(true,1,[resolve(".scratch/bin/durability-server"),"--durability-point",point,"--durability-run",id]),headers={Authorization:`Bearer ${f.credential}`,"Content-Type":"application/json"};
   let number=0;
   const upload=()=>{
-    if(mode==="producer")return fetch(f.url+"/diagnostics/profiler/ingest",{method:"POST",headers,body:JSON.stringify(batch)}).then(async response=>{assert.equal(response.status,200);return{exit:0,body:Schema.decodeUnknownSync(RecordingReceipt)(await response.json())};});
+    if(mode==="producer")return fetch(f.url+"/diagnostics/profiler/ingest",{method:"POST",headers,body:JSON.stringify(batch)}).then(async response=>{if(point==="pending_duplicate"&&response.status===500){const body:unknown=await response.json();return{exit:1,body};}assert.equal(response.status,200);return{exit:0,body:Schema.decodeUnknownSync(RecordingReceipt)(await response.json())};});
     const file=join(f.scratch,`batch-${number++}.json`);writeFileSync(file,JSON.stringify(batch));
     return new Promise<{exit:number;body:unknown}>((done,reject)=>{const child=spawn(resolve(".scratch/bin/todo"),["--profile","work","diagnostics","import","--file",file,"--server",f.url,"--format","json"],{env:f.env,stdio:["ignore","pipe","pipe"]});let out="",err="";child.stdout.on("data",x=>out+=x);child.stderr.on("data",x=>err+=x);child.once("error",reject);child.once("exit",exit=>{try{assert.equal(err,"");done({exit:exit??-1,body:JSON.parse(out)});}catch(error){reject(error);}});});
   };
@@ -33,10 +33,10 @@ for(const mode of ["producer","import"] as const) for(const point of ["later_ref
       assert.equal(one.exit,0);if(mode==="producer"){const receipt=Schema.decodeUnknownSync(RecordingReceipt)(one.body);assert.equal(receipt.accepted,true);assert.equal(receipt.admission.refused_batches,1);}
       assert.ok("status"in two);assert.equal(two.status,500);rmSync(blocker,{recursive:true});
     }else{
-      assert.equal(one.exit,mode==="import"?1:0);assert.ok("exit"in two);assert.equal(two.exit,mode==="import"?1:0);
-      if(mode==="producer"){assert.equal(Schema.decodeUnknownSync(RecordingReceipt)(one.body).accepted,false);assert.equal(Schema.decodeUnknownSync(RecordingReceipt)(two.body).accepted,false);}
+      assert.equal(one.exit,1);assert.ok("exit"in two);assert.equal(two.exit,1);
+      if(mode==="producer"){for(const body of [one.body,two.body])assert.equal(Schema.decodeUnknownSync(Schema.Struct({message:Schema.String}))(body).message,"Whole batch was not admitted and its uncertainty could not be persisted. Keep the entire batch and retry when storage is available.");}
     }
-    const before=Schema.decodeUnknownSync(RecordingShow)(await(await fetch(f.url+`/diagnostics/profiler/runs/${id}`,{headers})).json());assert.equal(before.summary.length,point==="later_refusal"?1:0);assert.equal(before.run.admission?.refused_batches,2);
+    const beforeResponse=await fetch(f.url+`/diagnostics/profiler/runs/${id}`,{headers});if(point==="later_refusal"){assert.equal(beforeResponse.status,400);assert.equal(Schema.decodeUnknownSync(Schema.Struct({message:Schema.String}))(await beforeResponse.json()).message,"Recording admission metadata is unavailable; no complete summary can be shown.");}else{assert.equal(beforeResponse.status,400);assert.equal(Schema.decodeUnknownSync(Schema.Struct({message:Schema.String}))(await beforeResponse.json()).message,"Recording unavailable: the run is missing or expired.");}
     const retry=await upload();assert.equal(retry.exit,0);const final=Schema.decodeUnknownSync(RecordingShow)(await(await fetch(f.url+`/diagnostics/profiler/runs/${id}`,{headers})).json());assert.equal(final.summary[0]?.starts,1);assert.equal(final.summary[0]?.fraction_by_20_ms,null);
     assert.equal(readdirSync(join(f.scratch,"diagnostic-recordings")).filter(name=>/^\d{13}-.*\.json$/u.test(name)).length,1);
     rows.push({mode,point,first:one,second:two,final:final.run.admission});writeFileSync(join(evidence,"result.json"),JSON.stringify({result:rows.length===4?"PASS":"RUNNING",cases:rows.length,rows},null,2));

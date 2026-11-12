@@ -438,8 +438,8 @@ export const serverLayer = (options: {
         (store) => Effect.orDie(store.close()),
       );
       const recordings = yield* Effect.acquireRelease(
-        Effect.promise(() =>
-          DiagnosticRecordings.open(
+        Effect.sync(() =>
+          DiagnosticRecordings.start(
             join(dirname(resolve(options.path)), "diagnostic-recordings"),
           ),
         ),

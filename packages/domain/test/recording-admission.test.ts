@@ -51,7 +51,7 @@ const batch = (run: string, events: unknown[]) =>
 it("durably marks whole refusal, admits its valid slow retry, and carries uncertainty through eviction/export/import", async () => {
   const root = await mkdtemp(join(tmpdir(), "todo-admission-"));
   let store = await DiagnosticRecordings.open(join(root, "source"), {
-    appBytes: 16384,
+    appBytes: 65536,
   });
   try {
     const a = start(),

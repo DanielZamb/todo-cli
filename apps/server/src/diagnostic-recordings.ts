@@ -133,6 +133,7 @@ export const recordingRoutes = (
       .handleRaw("ingest", ({ request, query }) =>
         Effect.gen(function* () {
           yield* owner;
+          yield* Effect.promise(() => recordings.whenReady());
           const parts: Uint8Array[] = [];
           let bytes = 0;
           yield* request.stream.pipe(

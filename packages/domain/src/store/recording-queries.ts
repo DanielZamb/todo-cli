@@ -11,57 +11,26 @@ import {
 } from "../diagnostic-run-summary.ts";
 import { RecordingRefusal } from "../recording-refusal.ts";
 import type { DiagnosticRecordings } from "./diagnostic-recordings.ts";
-import type { RecordingAdmissions } from "./recording-admissions.ts";
-import { readRecordingEvents } from "./recording-event-index.ts";
-
-type Entry = {
-  name: string;
-  run: RecordingBatch["run"];
-  batch: RecordingBatch["batch_id"];
-  bytes: number;
-  events: number;
-};
+import type { Manifest, Segment } from "./recording-manifest.ts";
 export class RecordingQueries {
   constructor(
     private readonly state: {
-      entries: readonly Entry[];
-      admissions: RecordingAdmissions;
-      read: (name: string) => Promise<string>;
+      manifests: ReadonlyMap<string, Manifest>;
+      read: (s: Segment, run: RecordingBatch["run"]) => Promise<RecordingBatch>;
       status: () => ReturnType<DiagnosticRecordings["status"]>;
       recovered: (id: string) => boolean;
+      unavailable: (id: string) => boolean;
     },
   ) {}
   runs(cursor = 0) {
-    const groups = new Map<
-      string,
-      {
-        run: RecordingBatch["run"];
-        events: number;
-        bytes: number;
-        batches: number;
-      }
-    >();
-    for (const e of this.state.entries) {
-      const old = groups.get(e.run.run_id) ?? {
-        run: this.state.admissions.describe(e.run),
-        events: 0,
-        bytes: 0,
-        batches: 0,
-      };
-      old.events += e.events;
-      old.bytes += e.bytes;
-      old.batches++;
-      groups.set(e.run.run_id, old);
-    }
-    for (const state of this.state.admissions.values())
-      if (!groups.has(state.run.run_id))
-        groups.set(state.run.run_id, {
-          run: this.state.admissions.describe(state.run),
-          events: 0,
-          bytes: 0,
-          batches: 0,
-        });
-    const all = [...groups.values()];
+    const all = [...this.state.manifests.values()]
+      .filter((m) => !this.state.unavailable(m.run.run_id))
+      .map((m) => ({
+        run: m.run,
+        events: m.segments.reduce((n, s) => n + s.events, 0),
+        bytes: m.segments.reduce((n, s) => n + s.size, 0),
+        batches: new Set(m.segments.map((s) => s.origin)).size,
+      }));
     return {
       generated_at: new Date().toISOString(),
       runs: all.slice(cursor, cursor + 100),
@@ -69,63 +38,55 @@ export class RecordingQueries {
       status: this.state.status(),
     };
   }
-  async export(run: string, cursor?: string) {
-    const entries = this.state.entries.filter((e) => e.run.run_id === run),
-      base = entries[0]?.run ?? this.state.admissions.base(run);
-    if (!base) throw new RecordingRefusal("missing_run");
-    const index = cursor ? entries.findIndex((e) => e.batch === cursor) : 0;
+  private manifest(id: string) {
+    const m = this.state.manifests.get(id);
+    if (!m) throw new RecordingRefusal("missing_run");
+    if (this.state.unavailable(id))
+      throw new RecordingRefusal("metadata_unavailable");
+    return m;
+  }
+  async export(id: string, cursor?: string) {
+    const m = this.manifest(id),
+      index = cursor ? m.segments.findIndex((s) => s.id === cursor) : 0;
     if (index < 0) throw new RecordingRefusal("expired_cursor");
-    const entry = entries[index];
-    const batch = entry
-      ? validateRecordingBatch(
-          JSON.parse(await this.state.read(entry.name)).batch,
-        )
-      : {
-          schema_version: 1 as const,
-          batch_id: randomUUID(),
-          run: base,
-          events: [],
-        };
+    const s = m.segments[index];
+    const batch = s
+      ? await this.state.read(s, m.run)
+      : { schema_version: 1, batch_id: randomUUID(), run: m.run, events: [] };
     return {
       generated_at: new Date().toISOString(),
-      batches: [
-        validateRecordingBatch({
-          ...batch,
-          run: this.state.admissions.describe(base),
-        }),
-      ],
-      next_cursor: entries[index + 1]?.batch ?? null,
+      batches: [validateRecordingBatch({ ...batch, run: m.run })],
+      next_cursor: m.segments[index + 1]?.id ?? null,
       status: this.state.status(),
     };
   }
   async show(id: string) {
-    const entries = this.state.entries.filter((e) => e.run.run_id === id),
-      base = entries[0]?.run ?? this.state.admissions.base(id);
-    if (!base) throw new RecordingRefusal("missing_run");
-    const events = await readRecordingEvents(entries, this.state.read),
-      run = this.state.admissions.describe(base);
+    const m = this.manifest(id),
+      events: RecordingBatch["events"][number][] = [];
+    for (const s of m.segments)
+      events.push(...(await this.state.read(s, m.run)).events);
     const analysis = analyzeRecording(
       events,
       this.state.recovered(id),
-      new Map([[id, this.state.admissions.state(id)]]),
+      new Map(m.run.admission ? [[id, m.run.admission]] : []),
     );
-    const all = analysis.summary.map((row) =>
+    const rows = analysis.summary.map((row) =>
       Schema.decodeUnknownSync(RecordingSummaryRow)(row),
     );
     return {
       generated_at: new Date().toISOString(),
-      run,
-      omitted_groups: Math.max(0, all.length - 256),
+      run: m.run,
       ...analysis,
-      summary: all.slice(0, 256),
+      summary: rows.slice(0, 256),
+      omitted_groups: Math.max(0, rows.length - 256),
       status: this.state.status(),
     };
   }
   async compare(before: string, after: string) {
     const a = await this.show(before),
       b = await this.show(after),
-      refusal = recordingComparisonRefusal(a.run, b.run);
-    if (refusal) throw new RecordingRefusal(refusal);
+      reason = recordingComparisonRefusal(a.run, b.run);
+    if (reason) throw new RecordingRefusal(reason);
     return {
       generated_at: new Date().toISOString(),
       before: a,

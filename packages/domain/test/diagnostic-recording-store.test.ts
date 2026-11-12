@@ -100,7 +100,7 @@ it("bounds private storage, deduplicates retries, recovers and counts expired/ev
   let now = 1000;
   try {
     const store = await DiagnosticRecordings.open(join(root, "recordings"), {
-      appBytes: 4096,
+      appBytes: 12288,
       totalBytes: 32768,
       now: () => now,
     });

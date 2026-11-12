@@ -13,7 +13,7 @@ if (process.argv.includes("--expiry-fault")) {
   const recordings = await DiagnosticRecordings.open(directory, {now: () => now});
   recordings.ingest(validateRecordingBatch({schema_version:1,batch_id:uuid,run:{run_id:uuid,app:"macos",build_id:event.build_id,contract_id:event.contract_id},events:[event]}));
   await recordings.flush();
-  const name = (await readdir(directory)).find(name => /^\d/u.test(name)); assert.ok(name);
+  const name = (await readdir(directory)).find(name => /^\d{13}-.*\.json$/u.test(name)); assert.ok(name);
   await rm(join(directory,name)); await mkdir(join(directory,name));
   now += recordingLimits.retentionMs + 1;
   const arm: unknown = Reflect.get(recordings,"armExpiry"); assert.equal(typeof arm,"function");

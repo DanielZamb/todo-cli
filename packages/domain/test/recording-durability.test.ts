@@ -1,402 +1,113 @@
 import { randomUUID } from "node:crypto";
-import {
-  chmod,
-  mkdir,
-  mkdtemp,
-  readdir,
-  readFile,
-  rm,
-  unlink,
-  writeFile,
-} from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, it } from "@effect/vitest";
 import { validateRecordingBatch } from "../src/diagnostic-recordings.ts";
 import { DiagnosticRecordings } from "../src/store/diagnostic-recordings.ts";
-import { RecordingAdmissions } from "../src/store/recording-admissions.ts";
-import { event } from "./fixtures/diagnostic-recording.ts";
+import { manifestName } from "../src/store/recording-manifest.ts";
+import { modelBatch } from "./fixtures/recording-authority.ts";
 
-const make = (marked = false) => {
-  const run_id = randomUUID();
-  return validateRecordingBatch({
-    schema_version: 1,
-    batch_id: randomUUID(),
-    run: {
-      run_id,
-      app: "macos",
-      build_id: event.build_id,
-      contract_id: event.contract_id,
-      ...(marked
-        ? {
-            admission: {
-              schema_version: 1,
-              policy: "whole_batch",
-              refused_batches: 1,
-              unadmitted_events: 3,
-              incomplete: true,
-            },
-          }
-        : {}),
-    },
-    events: [
-      { ...event, run_id },
-      {
-        ...event,
-        run_id,
-        name: "ui.result.committed",
-        sequence: 2,
-        monotonic_ms: 18,
-        duration_ms: 8,
-        outcome: "completed",
-        correct: true,
-        render_stage: "layout_complete",
-      },
-      {
-        ...event,
-        run_id,
-        name: "process.terminated",
-        sequence: 3,
-        monotonic_ms: 30,
-        reason: "clean",
-      },
-    ],
-  });
-};
-it("does not publish marked data after its mark fails, and an exact retry recovers", async () => {
-  const root = await mkdtemp(join(tmpdir(), "todo-durability-import-"));
-  const store = await DiagnosticRecordings.open(root);
+it("enumerates every missing, truncated and corrupt subset of a two-segment refused run", async () => {
+  const source = await mkdtemp(join(tmpdir(), "todo-authority-source-"));
+  const a = modelBatch(),
+    b = modelBatch(a.run.run_id, 3),
+    healthy = modelBatch();
+  let store = await DiagnosticRecordings.open(source);
   try {
-    const batch = make(true),
-      blocker = join(root, `${batch.run.run_id}.admission.json.tmp`);
-    await mkdir(blocker);
-    store.ingest(batch);
+    store.ingest(a);
+    store.ingest(b);
+    store.ingest(healthy);
     await store.flush();
-    expect(store.status().segments).toBe(0);
-    expect(
-      (await readdir(root)).filter((name) => /^\d{13}-/u.test(name)),
-    ).toEqual([]);
-    expect(store.admissionDurable(batch.run.run_id)).toBe(false);
-    await rm(blocker, { recursive: true });
-    const receipt = store.ingest(batch);
+    expect(() =>
+      store.ingest(
+        validateRecordingBatch({
+          ...a,
+          batch_id: randomUUID(),
+          events: [{ ...a.events[0], action_id: randomUUID() }],
+        }),
+      ),
+    ).toThrow("Whole batch refused");
     await store.flush();
-    expect(
-      store.settledReceipt(receipt, batch.batch_id, batch.run.run_id)
-        .durability,
-    ).toBe("stored");
-    expect(store.status().segments).toBe(1);
-    const show = await store.show(batch.run.run_id);
-    expect(show.run.admission).toEqual({
-      schema_version: 1,
-      policy: "whole_batch",
-      refused_batches: 2,
-      unadmitted_events: 6,
-      incomplete: true,
-    });
-    expect(show.summary[0]?.fraction_by_20_ms).toBeNull();
-    expect(show.summary[0]?.fraction_by_300_ms).toBeNull();
-  } finally {
     await store.close();
-    await rm(root, { recursive: true, force: true });
-  }
-});
-it("an unchanged duplicate explicitly retries its dirty refusal mark once", async () => {
-  const root = await mkdtemp(join(tmpdir(), "todo-durability-duplicate-"));
-  const store = await DiagnosticRecordings.open(root);
-  try {
-    const batch = make(),
-      blocker = join(root, `${batch.run.run_id}.admission.json.tmp`);
-    store.ingest(batch);
-    await store.flush();
-    await mkdir(blocker);
-    const conflict = validateRecordingBatch({
-      ...batch,
-      batch_id: randomUUID(),
-      events: [{ ...batch.events[0], action_id: randomUUID() }],
-    });
-    expect(() => store.ingest(conflict)).toThrow("Whole batch refused");
-    await store.flush();
-    expect(store.admissionDurable(batch.run.run_id)).toBe(false);
-    await rm(blocker, { recursive: true });
-    const receipt = store.ingest(batch);
-    await store.flush();
-    expect(
-      store.settledReceipt(receipt, batch.batch_id, batch.run.run_id)
-        .durability,
-    ).toBe("stored");
-    expect(store.admissionDurable(batch.run.run_id)).toBe(true);
-    expect(store.status().segments).toBe(1);
-    expect(
-      (await store.show(batch.run.run_id)).run.admission?.refused_batches,
-    ).toBe(1);
-  } finally {
-    await store.close();
-    await rm(root, { recursive: true, force: true });
-  }
-});
-it("expires a never-written inactive mark idempotently without blocking a fresh run", async () => {
-  const root = await mkdtemp(join(tmpdir(), "todo-durability-expiry-"));
-  let now = 1000;
-  const store = await DiagnosticRecordings.open(root, { now: () => now });
-  try {
-    await chmod(root, 0o500);
-    const failed = make();
-    store.ingest(failed);
-    await store.flush();
-    expect(store.admissionDurable(failed.run.run_id)).toBe(false);
-    await chmod(root, 0o700);
-    now += 6 * 86400000;
-    const fresh = make();
-    store.ingest(fresh);
-    await store.flush();
-    now += 2 * 86400000;
-    for (let n = 0; n < 3; n++)
-      expect((await store.runs()).runs.map((row) => row.run.run_id)).toEqual([
-        fresh.run.run_id,
-      ]);
-    expect(
-      (await store.show(fresh.run.run_id)).summary[0]?.fraction_by_20_ms,
-    ).toBe(1);
-    expect(store.status().admission_bytes).toBe(0);
-    expect(store.status().segments).toBe(1);
-  } finally {
-    await chmod(root, 0o700);
-    await store.close();
-    await rm(root, { recursive: true, force: true });
-  }
-});
-
-it("does not erase a new refusal that arrives while its old mark is expiring", async () => {
-  const root = await mkdtemp(join(tmpdir(), "todo-durability-expiry-race-"));
-  const admissions = new RecordingAdmissions(() => 4096),
-    batch = make(true);
-  try {
-    admissions.merge(batch.run, 1000);
-    await admissions.persist(batch.run.run_id, (name, text) =>
-      writeFile(join(root, name), text),
-    );
-    const now = 1000 + 8 * 86400000;
-    const expired = admissions.expire(root, now, () => new Set());
-    admissions.refuse(batch.run, 3, now);
-    await expired;
-    expect(admissions.state(batch.run.run_id).refused_batches).toBe(2);
-    expect(admissions.dirty(batch.run.run_id)).toBe(true);
-    expect(admissions.bytes()).toBe(4096);
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});
-
-it("retains and dirties an expiring mark when qualifying data arrives during unlink", async () => {
-  const root = await mkdtemp(join(tmpdir(), "todo-durability-expiry-active-"));
-  const admissions = new RecordingAdmissions(() => 4096),
-    batch = make(true),
-    active = new Set<string>();
-  try {
-    admissions.merge(batch.run, 1000);
-    await admissions.persist(batch.run.run_id, (name, text) =>
-      writeFile(join(root, name), text),
-    );
-    const expired = admissions.expire(root, 1000 + 8 * 86400000, () => active);
-    active.add(batch.run.run_id);
-    await expired;
-    expect(admissions.state(batch.run.run_id).refused_batches).toBe(1);
-    expect(admissions.dirty(batch.run.run_id)).toBe(true);
-    expect(admissions.bytes()).toBe(4096);
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});
-
-const dataStates = ["present", "absent", "partial_temp"] as const;
-const markStates = [
-  "present",
-  "absent",
-  "partial_temp",
-  "corrupt_final",
-] as const;
-for (const dataState of dataStates)
-  for (const markState of markStates)
-    it(`recovers, exports, evicts and expires data=${dataState}, mark=${markState}`, async () => {
-      const root = await mkdtemp(join(tmpdir(), "todo-durability-files-"));
-      let now = 1000;
-      let store = await DiagnosticRecordings.open(root, {
-        appBytes: 16384,
-        now: () => now,
-      });
+    const files = new Map<string, string>();
+    for (const name of await readdir(source))
+      if (name.endsWith(".json"))
+        files.set(name, await readFile(join(source, name), "utf8"));
+    const manifest = JSON.parse(
+      files.get(manifestName(a.run.run_id)) ?? "",
+    ).manifest;
+    const names = [
+      manifestName(a.run.run_id),
+      ...manifest.segments.map(
+        (s: { time: number; id: string }) =>
+          `${String(s.time).padStart(13, "0")}-${s.id}.json`,
+      ),
+    ];
+    expect(names.length).toBe(3);
+    for (let state = 0; state < 64; state++) {
+      const root = await mkdtemp(join(tmpdir(), "todo-authority-state-"));
       try {
-        const batch = make(true);
-        store.ingest(batch);
-        await store.flush();
-        await store.close();
-        const data = (await readdir(root)).find((name) =>
-          /^\d{13}-/u.test(name),
+        for (const [name, text] of files)
+          await writeFile(join(root, name), text);
+        let code = state;
+        for (const name of names) {
+          const mode = code % 4;
+          code = Math.floor(code / 4);
+          if (mode === 1) await rm(join(root, name));
+          if (mode === 2)
+            await writeFile(
+              join(root, name),
+              (files.get(name) ?? "").slice(0, 12),
+            );
+          if (mode === 3)
+            await writeFile(
+              join(root, name),
+              (files.get(name) ?? "").replace('"run_id"', '"bad_id"'),
+            );
+        }
+        store = await DiagnosticRecordings.open(root);
+        expect((await store.show(healthy.run.run_id)).summary[0]?.starts).toBe(
+          1,
         );
-        if (!data) throw new Error("Missing committed data fixture");
-        if (dataState !== "present") {
-          const text = await readFile(join(root, data), "utf8");
-          await unlink(join(root, data));
-          if (dataState === "partial_temp")
-            await writeFile(join(root, `${data}.tmp`), text.slice(0, 40));
-        }
-        const mark = join(root, `${batch.run.run_id}.admission.json`);
-        if (markState !== "present") await unlink(mark);
-        if (markState === "partial_temp")
-          await writeFile(`${mark}.tmp`, '{"updated_at":');
-        if (markState === "corrupt_final")
-          await writeFile(mark, '{"updated_at":');
-        store = await DiagnosticRecordings.open(root, {
-          appBytes: 16384,
-          now: () => now,
-        });
-        if (markState === "corrupt_final") {
-          await expect(store.runs()).rejects.toThrow("metadata is unavailable");
-          await expect(store.export(batch.run.run_id)).rejects.toThrow(
-            "metadata is unavailable",
-          );
-          expect(store.status().loss.storage_failures).toBe(1);
-          return;
-        }
         expect(
-          (await readdir(root)).filter((name) => name.endsWith(".tmp")),
-        ).toEqual([]);
-        const exists = dataState === "present" || markState === "present";
-        if (exists) {
-          const show = await store.show(batch.run.run_id);
-          expect(show.run.admission?.incomplete).toBe(true);
-          expect(show.run.admission?.refused_batches).toBe(1);
-          expect(show.summary.length).toBe(dataState === "present" ? 1 : 0);
-          if (dataState === "present")
-            expect(show.summary[0]?.fraction_by_20_ms).toBeNull();
-          const exported = await store.export(batch.run.run_id);
-          expect(exported.batches[0]?.run.admission?.incomplete).toBe(true);
-          expect(exported.batches[0]?.events.length).toBe(
-            dataState === "present" ? 3 : 0,
+          (await store.compare(healthy.run.run_id, healthy.run.run_id))
+            .comparable,
+        ).toBe(true);
+        const listed = await store.runs();
+        if (state % 4 !== 0) {
+          expect(listed.runs.some((x) => x.run.run_id === a.run.run_id)).toBe(
+            false,
           );
-          expect(store.status().admission_bytes).toBe(4096);
-        } else {
-          expect((await store.runs()).runs).toEqual([]);
-          await expect(store.export(batch.run.run_id)).rejects.toThrow(
+          await expect(store.show(a.run.run_id)).rejects.toThrow(
             "run is missing",
           );
-        }
-        now += 6 * 86400000;
-        for (let n = 0; n < 4; n++) {
-          store.ingest(make());
-          await store.flush();
-        }
-        if (exists) {
-          expect((await store.show(batch.run.run_id)).summary).toEqual([]);
+          await expect(store.export(a.run.run_id)).rejects.toThrow(
+            "run is missing",
+          );
+          await expect(
+            store.compare(a.run.run_id, healthy.run.run_id),
+          ).rejects.toThrow("run is missing");
+        } else {
+          const shown = await store.show(a.run.run_id);
+          expect(shown.run.admission?.incomplete).toBe(true);
+          for (const row of shown.summary) {
+            expect(row.fraction_by_20_ms).toBeNull();
+            expect(row.fraction_by_300_ms).toBeNull();
+          }
           expect(
-            (await store.export(batch.run.run_id)).batches[0]?.events,
-          ).toEqual([]);
-          expect(
-            (await store.export(batch.run.run_id)).batches[0]?.run.admission
+            (await store.export(a.run.run_id)).batches[0]?.run.admission
               ?.incomplete,
           ).toBe(true);
         }
-        now += 2 * 86400000;
-        const runs = await store.runs();
-        expect(
-          runs.runs.some((row) => row.run.run_id === batch.run.run_id),
-        ).toBe(false);
-        expect(runs.runs.length).toBeGreaterThanOrEqual(1);
-        expect(runs.status.admission_bytes).toBe(0);
-        expect(
-          (await readdir(root)).filter((name) =>
-            name.endsWith(".admission.json"),
-          ),
-        ).toEqual([]);
+        await store.close();
       } finally {
         await store.close();
         await rm(root, { recursive: true, force: true });
       }
-    });
-
-it("acknowledges committed facts against their own mark when a later refusal fails", async () => {
-  const root = await mkdtemp(join(tmpdir(), "todo-durability-ack-"));
-  const store = await DiagnosticRecordings.open(root),
-    batch = make(true);
-  const original: unknown = Reflect.get(store, "atomic");
-  if (typeof original !== "function")
-    throw new Error("Missing atomic file boundary");
-  let entered = () => {},
-    release = () => {};
-  const written = new Promise<void>((resolve) => (entered = resolve)),
-    gate = new Promise<void>((resolve) => (release = resolve));
-  Reflect.set(store, "atomic", async (name: string, text: string) => {
-    await original.call(store, name, text);
-    if (/^\d{13}-/u.test(name)) {
-      entered();
-      await gate;
     }
-  });
-  try {
-    const receipt = store.ingest(batch);
-    await written;
-    const blocker = join(root, `${batch.run.run_id}.admission.json.tmp`);
-    await mkdir(blocker);
-    expect(() =>
-      store.ingest(
-        validateRecordingBatch({
-          ...batch,
-          batch_id: randomUUID(),
-          events: [{ ...batch.events[0], action_id: randomUUID() }],
-        }),
-      ),
-    ).toThrow("Whole batch refused");
-    release();
-    await store.flush();
-    expect(store.admissionDurable(batch.run.run_id)).toBe(false);
-    expect(store.admissionDurable(batch.run.run_id, receipt.admission)).toBe(
-      true,
-    );
-    const settled = store.settledReceipt(
-      receipt,
-      batch.batch_id,
-      batch.run.run_id,
-    );
-    expect(settled.accepted).toBe(true);
-    expect(settled.admission.refused_batches).toBe(1);
-    expect(
-      (await store.show(batch.run.run_id)).run.admission?.refused_batches,
-    ).toBe(2);
-    await rm(blocker, { recursive: true });
-  } finally {
-    release();
-    await store.close();
-    await rm(root, { recursive: true, force: true });
-  }
-});
-
-it("does not acknowledge a pending exact duplicate when the shared data write fails", async () => {
-  const root = await mkdtemp(join(tmpdir(), "todo-durability-pending-"));
-  const store = await DiagnosticRecordings.open(root),
-    batch = make(true);
-  const original: unknown = Reflect.get(store, "atomic");
-  if (typeof original !== "function")
-    throw new Error("Missing atomic file boundary");
-  Reflect.set(store, "atomic", async (name: string, text: string) => {
-    if (/^\d{13}-/u.test(name))
-      throw Object.assign(new Error("Data write failed"), { code: "EIO" });
-    await original.call(store, name, text);
-  });
-  try {
-    const first = store.ingest(batch),
-      duplicate = store.ingest(batch);
-    expect(duplicate.duplicate).toBe(true);
-    await store.flush();
-    expect(
-      store.settledReceipt(first, batch.batch_id, batch.run.run_id).accepted,
-    ).toBe(false);
-    expect(
-      store.settledReceipt(duplicate, batch.batch_id, batch.run.run_id)
-        .accepted,
-    ).toBe(false);
-    expect(store.status().segments).toBe(0);
-    expect((await store.show(batch.run.run_id)).summary).toEqual([]);
   } finally {
     await store.close();
-    await rm(root, { recursive: true, force: true });
+    await rm(source, { recursive: true, force: true });
   }
 });

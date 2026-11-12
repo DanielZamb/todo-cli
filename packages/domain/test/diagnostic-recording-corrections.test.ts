@@ -86,7 +86,9 @@ it("backs off a permanently failed expiry for a full minute and resumes normal s
   try {
     store.ingest(batch());
     await store.flush();
-    const name = (await readdir(root)).find((name) => /^\d/u.test(name));
+    const name = (await readdir(root)).find((name) =>
+      /^\d{13}-.*\.json$/u.test(name),
+    );
     if (!name) throw new Error("Missing segment");
     const path = join(root, name),
       text = await readFile(path, "utf8");
@@ -116,9 +118,7 @@ it("backs off a permanently failed expiry for a full minute and resumes normal s
     expect(store.status().loss.expired_events).toBe(1);
     store.ingest(batch(randomUUID()));
     await store.flush();
-    expect(timer.mock.calls.at(-1)?.[1]).toBe(
-      recordingLimits.retentionMs - 120000 + 1,
-    );
+    expect(timer.mock.calls.at(-1)?.[1]).toBe(recordingLimits.retentionMs + 1);
   } finally {
     await store.close();
     timer.mockRestore();
@@ -128,7 +128,7 @@ it("backs off a permanently failed expiry for a full minute and resumes normal s
 });
 it("keeps only retained and actually pending manifests during continuous admission", async () => {
   const root = await mkdtemp(join(tmpdir(), "todo-busy-manifests-"));
-  const store = await DiagnosticRecordings.open(root, { appBytes: 4096 });
+  const store = await DiagnosticRecordings.open(root, { appBytes: 12288 });
   try {
     store.ingest(batch(randomUUID()));
     for (let n = 0; n < 1000; n++) {
@@ -145,7 +145,7 @@ it("keeps only retained and actually pending manifests during continuous admissi
       if (!(events instanceof Map)) throw new Error("Missing event identities");
       expect(events.size).toBeLessThanOrEqual(2);
       expect(store.status().segments).toBe(1);
-      expect(store.status().queued_bytes).toBeGreaterThan(0);
+      expect(store.status().queued_bytes).toBe(0);
     }
   } finally {
     await store.close();
@@ -160,7 +160,10 @@ it("does not acknowledge a pending event duplicate as already stored", async () 
     store.ingest(batch());
     expect(store.ingest(batch()).durability).toBe("queued");
     await store.flush();
-    expect(store.ingest(batch()).durability).toBe("stored");
+    const retry = store.ingest(batch());
+    expect(retry.durability).toBe("queued");
+    await store.flush();
+    expect(store.settledReceipt(retry, "unused").durability).toBe("stored");
   } finally {
     await store.close();
     await rm(root, { recursive: true, force: true });
@@ -173,19 +176,34 @@ it("bounds pending identities before the byte queue fills", async () => {
   try {
     let accepted = 0;
     for (let n = 0; n < 1025; n++)
-      accepted += Number(store.ingest(batch(randomUUID())).accepted);
+      accepted += Number(
+        store.ingest({
+          ...batch(),
+          run: {
+            ...batch().run,
+            admission: {
+              schema_version: 1,
+              policy: "whole_batch",
+              refused_batches: 1,
+              unadmitted_events: 1,
+              incomplete: true,
+            },
+          },
+          events: [],
+        }).accepted,
+      );
     expect(accepted).toBe(1024);
     expect(store.status().loss.dropped_batches).toBe(1);
     expect(store.status().queued_bytes).toBeLessThan(1048576);
     const manifests: unknown = Reflect.get(store, "manifests");
     if (!(manifests instanceof Map)) throw new Error("Missing manifests");
-    expect(manifests.size).toBe(1024);
+    expect(manifests.size).toBe(0);
   } finally {
     await store.close();
     await rm(root, { recursive: true, force: true });
   }
 });
-it("refuses summaries of legacy segments containing conflicting sequences", async () => {
+it("ignores and removes unreferenced segments rather than reconstructing run state", async () => {
   const root = await mkdtemp(join(tmpdir(), "todo-legacy-conflict-"));
   const first = await DiagnosticRecordings.open(root);
   first.ingest(batch());
@@ -202,13 +220,13 @@ it("refuses summaries of legacy segments containing conflicting sequences", asyn
   );
   const recovered = await DiagnosticRecordings.open(root);
   try {
-    expect(recovered.status().segments).toBe(2);
-    await expect(recovered.show(uuid)).rejects.toThrow(
-      "Recording sequence conflicts",
-    );
-    expect(() => recovered.ingest(batch())).toThrow(
-      "Recording sequence conflicts",
-    );
+    expect(recovered.status().segments).toBe(1);
+    expect((await recovered.show(uuid)).summary[0]?.starts).toBe(1);
+    expect(
+      (await readdir(root)).some(
+        (name) => name === `${received}-${second.batch_id}.json`,
+      ),
+    ).toBe(false);
   } finally {
     await recovered.close();
     await rm(root, { recursive: true, force: true });

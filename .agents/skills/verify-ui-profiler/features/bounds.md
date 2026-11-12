@@ -29,20 +29,19 @@ admission test retains one segment and one pending write through 1001 runs,
 with at most two manifests/event identities. Failed expiry has a 60000 ms minimum
 retry and other status writes cannot shorten or postpone that timer.
 
-The combined retained/pending/marked run set is at most 5120 identities. A mark
-has at most 2048 encoded bytes and a charged filesystem block, plus an atomic
-replacement allowance. Marks survive data eviction and expire only when more
-than seven days old with no retained or pending data. At capacity, refuse a new run rather than
-forget an existing mark. Repeated refusals coalesce to one metadata job per run.
-Metadata write failure has no retry loop; shutdown attempts remaining dirty marks
-once after the queue drains. An unavailable metadata store cannot publish a
-complete-looking run. Forced-GC lease-liveness controls distinguish an idle
-process from a retained store; the crash fixture must keep its store alive.
+The combined retained/pending/marked run set is at most 5120 identities. A sole
+manifest holds definition, mark, loss counters and segment descriptors. Its
+256 KiB cap and charged replacement are included in quotas. Full manifests evict
+only their own oldest references, count the evicted events and retain uncertainty.
+The 4096 global segment cap and app/total byte caps still apply independently.
+Pending commands do not create a run. Repeated refusals coalesce to one job.
 
-The durability cross product tests three data-file states against four mark-file
-states, including missing and partial files. Marked segments carry their own
-qualifier and recover a missing checkpoint before queries open. Expiry ignores
-only ENOENT and rechecks newer state and active references after unlink. Both
-unlink races have literal controls. Per-run durable snapshots have the same
-5120 identity bound; weak receipt identity flags retain no completed requests.
-Pending duplicates cannot acknowledge a failed shared data write.
+Missing or corrupt manifests mean absence, never reconstruction. Named missing
+or corrupt segments persist an incomplete run before query output. Failed file
+removals stay charged and block growth; ENOENT succeeds. Startup removes orphans
+without learning run identity from them. The generated model and compiled SIGKILL
+controls enumerate lifecycle mutation points and file-state subsets. The generated drive reopens all 14537 file/clock combinations in real
+directories, checks charges and retries every image twice. The smaller unit
+reopen test covers the 64 two-segment/manifest combinations as well.
+Pending duplicates cannot acknowledge a failed shared write. Split batches publish
+all segment references in one manifest and remain idempotent after lost receipts.

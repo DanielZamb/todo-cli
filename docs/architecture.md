@@ -397,13 +397,17 @@ Exports/imports carry the mark even without events. Mixed-run event reducers
 partition their action, clock, crash and gap state by run; clients reducing export
 raw events must preserve the run admission context.
 
-Each marked segment stores its admission snapshot with its events. The single
-recording writer first persists the run checkpoint, then atomically publishes
-the qualifying segment. Missing checkpoints recover from those segments at
-startup; partial temporaries are removed and corrupt published metadata refuses
-queries. Mark-only checkpoints survive data eviction. Exact retries retry dirty
-state, including duplicate batches. Acknowledgements use the requesting batch's
-durable qualifier and retained-event evidence, independently of newer refusals.
-Weak receipt bookkeeping retains no completed requests. Expiry accepts ENOENT
-and rechecks newer state and active references after unlink, preserving dirty
-state if another admission arrived during the I/O.
+The run's sole authority is one checksummed manifest containing its definition,
+admission state, per-run losses and immutable segment references with byte sizes,
+event counts and checksums. Missing or corrupt manifests mean absent runs; blobs
+never reconstruct a run. Missing or corrupt named blobs mark the run incomplete.
+Segments publish first, then one flushed atomic manifest replacement publishes
+all splits together. Each export page adds the manifest's current mark, within
+the unchanged 128 KiB transfer bound. An original-batch fingerprint spans splits.
+Manifests have a 256 KiB cap, charged with one replacement allowance. A full
+manifest rotates only its own oldest references with counted loss and uncertainty.
+All removal passes one idempotent ENOENT-success boundary; failed garbage stays
+charged. Recovery yields between files and runs in the background. Task readiness
+and requests do not await it; recording queries do. There is no separate admission
+checkpoint or per-segment mark snapshot. See the generated lifecycle table in
+[the recordings report](decisions/ui-speed/diag-recordings-report.md).

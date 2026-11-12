@@ -142,35 +142,68 @@ production lease code and crash-ownership assertions are unchanged.
 
 The earlier narrow witness's zero fractions after a refusal are superseded by
 null fractions: known starts can be counted, but the omitted facts make the
-all-start denominator unknown. The normal timer control now includes the older
-admission marker's expiry as its next wake-up, instead of assuming only data
-segments can expire. No retry-delay or byte-bound assertion is weakened.
+all-start denominator unknown. The normal timer control follows published manifests; a failed unpublished
+command is not authority. Its data-file selector requires the full timestamp
+prefix, so numeric UUID manifest names cannot accidentally become the fixture. No retry-delay or byte-bound assertion is weakened.
 
-## Mark and data durability
+## Manifest authority and process recovery
 
-Run the joint lifecycle controls after reading the C3/C4 lifecycle table in
-docs/decisions/ui-speed/diag-recordings-report.md:
+The sole authority is a version-2 checksummed run manifest. Its legacy filename
+ends in .admission.json; it is not a separate admission checkpoint. Immutable
+segments contain no mark. Missing/corrupt manifests mean absent runs, and
+unreferenced blobs are removed. Named missing/corrupt blobs mark their run
+incomplete before queries return. All unlinks share an ENOENT-success helper.
+
+Run the generated exhaustive model, real SIGKILL controls, pagination proof and
+capacity census with the same-source compiled cache:
 
 ```sh
-pnpm --filter @todo/domain test recording-durability.test.ts
-bun build --compile .agents/skills/verify-ui-profiler/scripts/durability-server.ts --outfile .scratch/bin/durability-server
-bun .agents/skills/verify-ui-profiler/scripts/durability.ts "$PWD/docs/evidence/ui-speed/recording-durability-new"
-bun .agents/skills/verify-ui-profiler/scripts/durability-concurrency.ts "$PWD/docs/evidence/ui-speed/recording-durability-concurrency-new"
+pnpm --filter @todo/domain test recording-durability.test.ts recording-manifest.test.ts
+bun build --compile .agents/skills/verify-ui-profiler/scripts/manifest-model.ts --outfile .scratch/bin/manifest-model
+bun build --compile .agents/skills/verify-ui-profiler/scripts/manifest-crash.ts --outfile .scratch/bin/manifest-crash
+.scratch/bin/manifest-model "$PWD/docs/evidence/ui-speed/manifest-model-new"
+.scratch/bin/manifest-crash "$PWD/docs/evidence/ui-speed/manifest-crashes-new"
+bun .agents/skills/verify-ui-profiler/scripts/manifest-wire.ts "$PWD/docs/evidence/ui-speed/manifest-wire-new"
+bun .agents/skills/verify-ui-profiler/scripts/manifest-capacity.ts "$PWD/docs/evidence/ui-speed/manifest-capacity-new"
 ```
 
-The verification-only server requires its owned scratch HOME/database. It uses
-the production file boundary and contains no production fault flag. Sixteen
-producer/CLI-import cases use a genuine marked export and SIGKILL before the
-mark, after the mark, after data publication and after acknowledgement. Partial
-temporary recovery cases construct a partial private temporary before SIGKILL;
-they do not claim to interrupt a kernel write or prove power-loss durability.
-Every restart/export is absent or marked, and exact retry commits one action.
-Permanent mark-write failure and one data-write failure also preserve the
-literal Task read and recover on explicit retry. The unit cross product covers
-present, absent and partial data with present, absent, partial and corrupt marks,
-then export, eviction and expiry. Two races cover refusal/new data during unlink.
-Four additional real HTTP/CLI controls hold a data write while a second request
-arrives. A later failed refusal leaves the first committed request successful;
-two pending exact duplicates both refuse to acknowledge a failed shared write.
-An explicit retry then settles one action. Set TODO_PROFILER_MARKED=1 on the
-existing benchmark to measure this marked-data path; its default is unchanged.
+The model enumerates all missing, truncated and corrupt subsets of the run's
+files at every captured file boundary for ingest, refuse, import, export, rotate,
+evict, expire and restart. It uses the production inspection/projection functions
+and generates lifecycle.md from the executed rows. Every image is additionally
+reopened in a real scratch directory at its captured clock, with actual orphan
+cleanup, index/byte accounting, export and two import retries. Expect several
+minutes for the complete filesystem matrix. The unit cross product also
+reopens real scratch directories for all 64 states. The compiled crash helper
+kills its own child at every mutation boundary, including explicitly constructed
+empty, partial and flushed temporaries. It does not claim to interrupt a kernel
+write or prove power-loss durability. A second healthy run is checked throughout.
+The wire control retains all 95 events of a maximum-size admission across bounded
+pages, after restart, with the mark on each page. The capacity census rotates one
+run's references while asserting that a peer's authority stays byte-identical.
+
+durability.ts now drives sixteen real HTTP/CLI import controls with segment-first,
+manifest-last expectations. Pending data and temporaries are orphans until the
+manifest rename; a failed marked import leaves an absent run and a safe 500.
+durability-concurrency.ts drives the four held-write acknowledgement races through
+durability-server.ts. Its later-refusal barrier follows manifest publication.
+manifest-expiry.ts and manifest-identity.ts retain the earlier witnesses with
+private checkpoint inspection, early stored receipts and blob-reconstruction
+expectations replaced by the ruled manifest semantics. Raw seat sources and
+results remain unchanged in ignored evidence.
+
+For startup, run after other owned heavy verification jobs finish:
+
+```sh
+bun build --compile .agents/skills/verify-ui-profiler/scripts/manifest-startup-server.ts --outfile .scratch/bin/manifest-startup-server
+bun .agents/skills/verify-ui-profiler/scripts/manifest-startup.ts "$PWD/docs/evidence/ui-speed/manifest-startup-new"
+```
+
+Five counterbalanced pairs use light and full 4096-segment/5120-run stores and
+ten checked 15-Task reads per process. Loads, CPU and RSS are retained. A separate
+entry holds recovery's first manifest read and proves Task HTTP readiness before
+release. Recovery remains on the recording-query path, never Task readiness.
+The manifest-ready.ts control also starts an owner upload while recovery is
+held, serves a literal Task read, releases recovery and requires a stored receipt.
+This warm-file-cache observation is not a cold-disk, allocation or limiting-stage
+profile. Keep the existing quiet collection-cost recipe and its ceiling unchanged.
