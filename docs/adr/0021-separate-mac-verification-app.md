@@ -2,7 +2,7 @@
 
 Status: accepted by the owner on 2026-11-12.
 
-Build a separate, unsigned application named Todo Verification, with bundle
+Build a separate application without a developer signature named Todo Verification, with bundle
 identifier `local.todo.verification`. It uses the production screens,
 TodoModel, generated HTTP client and resources. Its only production source
 change is an optional Session-storage injection seam. The production default
@@ -47,3 +47,10 @@ state tests alone cannot prove that a click reaches a row or that its result
 renders. A second renderer would measure different screens. A separate app
 shares the production interactions while giving startup and credential storage
 a test-only boundary. No new dependency or HTTP protocol is needed.
+
+The verification build disables Xcode signing. An ad hoc bundle seal is allowed
+when required for its own runtime bundle identity: the linker-only signature
+reported no Info.plist binding and NSRunningApplication returned nil for the
+owned process. Sealing only TodoVerification.app with its test identifier made
+bundle-ID lookup succeed. The seal has no Team ID or developer authority,
+installs nothing, and grants no permission to sign the production app.

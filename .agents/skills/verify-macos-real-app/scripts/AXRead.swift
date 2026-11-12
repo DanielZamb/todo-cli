@@ -1,9 +1,17 @@
 import AppKit
 import ApplicationServices
 
+@_silgen_name("verification_window_id")
+private func windowID(_ window: AXUIElement) -> CGWindowID
+
 @main struct AXRead {
     static func main() throws {
         guard CommandLine.arguments.count == 2, let pid = Int32(CommandLine.arguments[1]) else { exit(2) }
+        guard NSRunningApplication.runningApplications(withBundleIdentifier: "local.todo.verification").contains(where: { $0.processIdentifier == pid }) else {
+            let process = NSRunningApplication(processIdentifier: pid)
+            FileHandle.standardError.write(Data(("Verification PID identity pending: " + (process?.bundleIdentifier ?? "missing") + "\n").utf8))
+            exit(2)
+        }
         guard AXIsProcessTrusted() else {
             FileHandle.standardError.write(Data("Accessibility permission is unavailable; no prompt was requested.\n".utf8))
             exit(78)
@@ -25,10 +33,14 @@ import ApplicationServices
                 for child in children { visit(child, depth + 1) }
             }
         }
-        visit(app, 0)
-        if let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] {
-            for window in windows where window[kCGWindowOwnerPID as String] as? Int32 == pid && window[kCGWindowLayer as String] as? Int == 0 {
-                if let number = window[kCGWindowNumber as String] as? UInt32 {
+        if let windows = read(app, kAXWindowsAttribute) as? [AXUIElement] {
+            let titles = windows.compactMap { read($0, kAXTitleAttribute) as? String }
+            FileHandle.standardError.write(try JSONSerialization.data(withJSONObject: ["bundleIdentifier": "local.todo.verification", "pid": pid, "windowTitles": titles], options: .sortedKeys))
+            for window in windows where read(window, kAXTitleAttribute) as? String == "Todo Verification" || read(window, kAXMainAttribute) as? Bool == true {
+                rows.append(["bundleIdentifier": "local.todo.verification", "pid": String(pid)])
+                visit(window, 0)
+                let number = windowID(window)
+                if number != 0 {
                     rows.append(["role": "CGWindow", "CGWindowID": String(number)])
                 }
             }

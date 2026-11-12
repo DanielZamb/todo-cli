@@ -6,10 +6,8 @@ description: Build and drive the separate Todo Verification Mac app on a compile
 # Verify the separate Mac app
 
 Created with create-verification-skill. Read [the feature map](features/README.md).
-Status: draft until the visible Task readback succeeds. The first full recipe
-passed its headless controls and built-app guards, then refused the visible
-launch because the owner's Todo app was frontmost. It cleaned its scratch
-state. Do not claim this skill has been proven end to end yet.
+Status: draft pending the fresh committed-head recipe, production state/offscreen
+proofs and linked-symbol comparison. Development readback alone does not qualify.
 This recipe never launches the production Todo app. V01 covers startup and
 readback only. Input automation and latency measurement belong to V02 and
 require the coordinator's review release.
@@ -25,7 +23,10 @@ node .agents/skills/verify-macos-real-app/scripts/verify.mjs "$PWD/docs/evidence
 The helper uses the compiled CLI to initialize a synthetic Profile and two
 Tasks, then starts a compiled server with scratch HOME and database. Readiness
 requires its loopback health within 60 seconds. It builds only the separate
-TodoVerification scheme with signing and package resolution disabled. Every
+TodoVerification scheme with Xcode signing and package resolution disabled. It then applies an ad hoc
+bundle seal with the test identifier, no Team ID and no developer authority.
+The unsealed linker-signed artifact has no runtime bundle identifier on this Mac;
+the seal is required for bundle-ID-qualified accessibility. Every
 Swift command goes through scripts/swift-slot.sh. It never installs an app.
 
 The app refuses before a window unless its manifest, scratch paths, binary
@@ -40,7 +41,8 @@ permission for V02.
 
 ## Doctor
 
-Read result.json, commands.json and guards.json. Require the valid manifest to
+Read result.json, commands.json, guards.json, guard-reds.json, sandbox-reds.json,
+trap-reds.json and local-input-red.json. Require the valid manifest to
 exit 0 and every refused case to exit 78 with its literal reason. Require the
 compiled hashes and PID to match the owned scratch listener before any HTTP
 probe from the app. A missing prerequisite, owner activity, trap failure,
@@ -50,7 +52,8 @@ run, never a passing empty screen.
 ## Drive
 
 The visible V01 helper launches the app's own executable, restores a scratch
-Session from memory and reads only that PID's accessibility tree. Require both
+Session from memory and reads the accessibility tree only after resolving that owned PID by
+`local.todo.verification`. Require both
 literal titles `V01 seeded Task alpha` and `V01 seeded Task beta`. No setter or
 fixture-only UI supplies these rows. The Tasks come from compiled CLI writes,
 public HTTP, the generated client and production TodoModel/RootView.
@@ -65,6 +68,12 @@ Keep commands.json with real exits, result.json, guard receipts, server/app
 logs, binary identities, symbol audits and accessibility.json under the named
 evidence directory. Keep manifests and credentials in scratch only. A screenshot
 cannot replace the two independently read Task titles or prove a mutation.
+After capture, a run-owned scratch request makes the verification process post
+a marked F20 event into its own NSApplication queue. Its local monitor must
+exit 80. This proves the stop mechanism, not WindowServer or physical delivery.
+The full recipe includes an offscreen event-queue control with that monitor
+removed; the same expected-exit assertion must fail.
+
 V01 supplies no input-to-render timings and makes no performance claim.
 
 ## Cleanup
@@ -77,9 +86,16 @@ Keychain or delete an existing evidence directory.
 
 ## Helpers
 
-- `scripts/verify.mjs <new-absolute-evidence-directory> [--guards-only]` builds,
+- `scripts/verify.mjs <new-absolute-evidence-directory> [--fresh-build] [--guards-only]` builds,
   provisions, checks guards, optionally opens the app, reads accessibility and
-  cleans its own scratch data.
+  cleans its own scratch data. Qualification requires a clean committed head;
+  use `--fresh-build` for the frozen-head run. `--development --visible-only`
+  is a focused diagnostic and cannot qualify the complete recipe.
+- `scripts/production-proofs.mjs <new-evidence> <native-evidence>` reruns the
+  original state and offscreen recipes from the same clean head and compiled
+  scratch binaries, with a fatal credential interposer.
+- `scripts/compare-production.mjs <production-executable> <candidate6-executable> <evidence>`
+  compares credential imports, SessionVault source and storage symbols.
 - `scripts/GuardProbe.swift` runs the same startup validation without SwiftUI.
 - `scripts/AXRead.swift <owned-app-pid>` reads that app's accessibility tree.
 - `scripts/TrapProbe.c <credential-symbol>` calls a trap only after proving the

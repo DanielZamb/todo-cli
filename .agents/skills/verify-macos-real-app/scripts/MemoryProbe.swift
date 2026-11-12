@@ -1,7 +1,7 @@
 import Foundation
 
 @main struct MemoryProbe {
-    static func main() throws {
+    @MainActor static func main() throws {
         let vault = MemorySessionVault()
         guard try vault.load() == nil else { exit(1) }
         try vault.save("ses_literal_scratch")

@@ -33,3 +33,31 @@ in the private scratch root. No manifest, dump or capture is tracked.
 
 V01 has read-only accessibility proof. V02 real input and measurement is held
 until the coordinator releases it after review.
+
+The entrypoint registers only its own bundle with LaunchServices after the
+manifest and idle checks, before sandbox installation. AX helpers
+resolve `local.todo.verification` and require the recorded owned PID. They never
+inspect another application's windows. OwnerIdle logs the frontmost application
+identity and session/HID idle seconds before any visible launch.
+
+The policy-check helper uses the sandbox query declaration and global-name
+filter documented by [WebKit's Apple Sandbox SPI header](https://github.com/WebKit/WebKit/blob/main/Source/WTF/wtf/spi/darwin/SandboxSPI.h).
+It queries this process's permission for a service name. It does not look up
+or contact that service and calls no Security credential function.
+
+The AX reader maps its already-verified application's own AX window to a window
+number through the runtime-resolved `_AXUIElementGetWindow` SPI, also used in
+[the node-window-manager implementation](https://github.com/sentialx/node-window-manager/blob/master/lib/macos.mm).
+It has no global-window enumeration fallback. A missing SPI or missing owned
+window fails capture instead of inspecting another application's windows.
+
+After the unsigned build, the recipe seals only this bundle with `codesign
+--force --sign - --identifier local.todo.verification --timestamp=none`. The
+linker-only artifact had no Info.plist binding and no runtime bundle identifier;
+the ad hoc seal restored bundle-ID lookup. Its receipt must show adhoc,
+TeamIdentifier not set and no Authority. It uses no developer identity.
+
+The V01 interruption control watches one file inside its accepted scratch root.
+A request posts a marked F20 event into this process's NSApplication queue;
+the ordinary local input monitor exits 80. It supplies no general input driver
+and makes no WindowServer-delivery or latency claim.

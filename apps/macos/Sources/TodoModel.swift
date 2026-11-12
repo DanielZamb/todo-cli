@@ -4,7 +4,7 @@ import Observation
 import OpenAPIRuntime
 import TodoAPI
 
-protocol SessionStorage {
+@MainActor protocol SessionStorage {
     func load() throws -> String?
     func save(_ credential: String) throws
     func delete() throws
