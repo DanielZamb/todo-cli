@@ -79,7 +79,8 @@ try:
         (sources / Path(file).name).write_bytes(data)
         hashes[file] = hashlib.sha256(data).hexdigest()
     shutil.copyfile(fixtures / 'auth-epoch/SessionVault.swift', sources / 'SessionVault.swift')
-    shutil.copyfile(fixtures / 'sign-out-stream/SignOutStreamTests.swift', tests / 'SignOutStreamTests.swift')
+    for name in ['SignOutStreamTests.swift', 'SignOutNoticeTests.swift', 'SeatSignOutNoticeTests.swift']:
+        shutil.copyfile(fixtures / 'sign-out-stream' / name, tests / name)
     shutil.copyfile(root / 'apps/macos/Package.resolved', package / 'Package.resolved')
     api = str(root / 'apps/macos/API')
     (package / 'Package.swift').write_text('''// swift-tools-version: 6.2
@@ -91,7 +92,7 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
 ''')
     api_hashes = {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest() for path in (root / 'apps/macos/API/Sources/TodoAPI').rglob('*.swift')}
     cache = json.loads((root / '.scratch/bin/build.json').read_text())
-    (evidence / 'source-provenance.json').write_text(json.dumps({'source': source, 'sources': hashes, 'apiSources': api_hashes, 'memorySessionAdapter': hashlib.sha256((sources / 'SessionVault.swift').read_bytes()).hexdigest(), 'test': hashlib.sha256((tests / 'SignOutStreamTests.swift').read_bytes()).hexdigest(), 'harness': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), 'compiledServer': cache, 'binaries': {k: hashlib.sha256(Path(cache[k]).read_bytes()).hexdigest() for k in ['cli', 'server', 'seed']}, 'nativeApp': False, 'keychain': False}, indent=2) + '\n')
+    (evidence / 'source-provenance.json').write_text(json.dumps({'source': source, 'sources': hashes, 'apiSources': api_hashes, 'memorySessionAdapter': hashlib.sha256((sources / 'SessionVault.swift').read_bytes()).hexdigest(), 'tests': {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(tests.glob('*.swift'))}, 'harness': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), 'compiledServer': cache, 'binaries': {k: hashlib.sha256(Path(cache[k]).read_bytes()).hexdigest() for k in ['cli', 'server', 'seed']}, 'nativeApp': False, 'keychain': False}, indent=2) + '\n')
     if run([cache['seed'], str(scratch), 'diagnostics'], 'seed.log'):
         raise RuntimeError('Provisioner failed')
     with (evidence / 'server.log').open('w') as output:
@@ -237,8 +238,12 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
     threading.Thread(target=proxy.serve_forever, daemon=True).start()
     proxy_url = f'http://127.0.0.1:{proxy.server_port}'
     (evidence / 'endpoints.json').write_text(json.dumps({'server': url, 'proxy': proxy_url, 'database': str(scratch / 'scratch.db')}) + '\n')
-    test_env = dict(env, TODO_SIGN_OUT_STREAM='1', TODO_SIGN_OUT_PROXY=proxy_url, TODO_SIGN_OUT_SERVER=url, TODO_SIGN_OUT_EVIDENCE=str(evidence))
-    exit_code = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SignOutStreamTests'], 'tests.log', test_env)
+    test_env = dict(env, TODO_SIGN_OUT_STREAM='1', TODO_SIGN_OUT_PROXY=proxy_url, TODO_SIGN_OUT_SERVER=url, TODO_SIGN_OUT_EVIDENCE=str(evidence), SEAT_SERVER=url, SEAT_EVIDENCE=str(evidence))
+    exit_code = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SignOutStreamTests', '--skip', 'SeatSignOutNoticeTests'], 'tests.log', test_env)
+    # The seat's unchanged probe runs alone: its teardown invalidates its URLSession while
+    # the model can still reconnect, and an exception there would hide the other suites.
+    seat_exit = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatSignOutNoticeTests'], 'seat-tests.log', test_env)
+    exit_code = exit_code or seat_exit
     with lock:
         (evidence / 'proxy-requests.json').write_text(json.dumps(requests, indent=1) + '\n')
         (evidence / 'proxy-streams.json').write_text(json.dumps(streams, indent=1) + '\n')

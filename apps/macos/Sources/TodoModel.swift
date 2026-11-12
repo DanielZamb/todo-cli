@@ -34,7 +34,8 @@ final class TodoModel {
         initializedReminders = value
         return value
     }
-    var profile: String
+    /// A Profile change ends a failed sign-out's notice, whichever path changes it.
+    var profile: String { didSet { if profile != oldValue { clearMessage(ownedBy: [.signOut]) } } }
     var tasks: [TaskSnapshot] = []
     var profiles: [DiscoveryEntry] = []
     var profileDeletion: ProfileDeletionPrompt?
@@ -129,7 +130,16 @@ final class TodoModel {
     var loading = false { didSet { reportClientAvailability() } }
     var connection = Connection.connecting { didSet { if connection == .offline { discoveryWentOffline(); dependenciesWentOffline() }; reportClientAvailability(); if connection == .live { scheduleEnvironmentRefresh() } } }
     var outdatedServerBuild: String?
-    var message: String?
+    /// Who put the current `message` there. Every clear names the owners it may clear,
+    /// so reaching ready or a successful write never erases a newer message from
+    /// something else, and a failed sign-out's notice is never brought back.
+    enum MessageOwner: Equatable { case general, connection, signOut }
+    var message: String? { didSet { messageOwner = pendingMessageOwner; pendingMessageOwner = .general } }
+    @ObservationIgnored private(set) var messageOwner = MessageOwner.general
+    @ObservationIgnored private var pendingMessageOwner = MessageOwner.general
+    func setMessage(_ text: String?, owner: MessageOwner) { pendingMessageOwner = owner; message = text }
+    /// Clears the message only when one of `owners` put it there.
+    func clearMessage(ownedBy owners: Set<MessageOwner>) { if message != nil, owners.contains(messageOwner) { message = nil } }
     var taskLoadError: String?
     var quickAdd = false
     var newTitle = ""
@@ -174,6 +184,7 @@ final class TodoModel {
         seriesGeneration += 1
         serverErrors = [:]
         credential = value
+        clearMessage(ownedBy: [.signOut])
         busy = false
         diagnosticsLoading = false
         // Their completions are rejected by the new epoch or Series generation,
@@ -184,8 +195,6 @@ final class TodoModel {
     }
     private var streamTask: Task<Void, Never>?
     private var restored = false
-    /// A failed sign-out's notice, kept through the first ready event of the reconnect it starts.
-    private var signOutNotice: (run: Int, text: String)?
     private var generation = 0
     private var refreshGeneration = 0
     private var vault: SessionVault { SessionVault(service: configuration.vaultService, account: configuration.server.absoluteString) }
@@ -400,16 +409,11 @@ final class TodoModel {
             message = nil
         } catch {
             guard discovery.credentialEpoch == credentialEpoch else { return }
-            var notice: String?
             if !Task.isCancelled {
-                notice = describe(error)
-                message = notice
+                setMessage(describe(error), owner: .signOut)
                 handleAuthorization(error, credentialEpoch: credentialEpoch)
             }
-            if signedIn {
-                connect()
-                if let notice { signOutNotice = (generation, notice) }
-            }
+            if signedIn { connect() }
         }
     }
 
@@ -751,11 +755,7 @@ final class TodoModel {
                             if !healthySnapshot || recovering {
                                 await refreshDependencyReads()
                                 guard generation == run, !Task.isCancelled else { return }
-                                message = nil
-                            }
-                            if let notice = signOutNotice {
-                                signOutNotice = nil
-                                if notice.run == run { message = notice.text }
+                                clearMessage(ownedBy: [.connection])
                             }
                             if discovery.phase == .offline { await requestDiscovery(retry: true) }
                             sawReady = true
@@ -854,8 +854,7 @@ final class TodoModel {
                 }
                 connection = .offline
                 loading = false
-                signOutNotice = nil
-                message = describe(error)
+                setMessage(describe(error), owner: .connection)
                 attempt += 1
                 reconnectCount += 1
                 do { try await Task.sleep(for: .seconds(min(8, attempt))) } catch {
@@ -1394,10 +1393,10 @@ final class TodoModel {
         guard isCurrentCredential(credentialEpoch) else { return }
         switch result {
         case .applied:
-            message = nil
+            clearMessage(ownedBy: [.general, .connection])
         case .failed:
             if signedIn {
-                message = accepted + ". The live view is reconnecting."
+                setMessage(accepted + ". The live view is reconnecting.", owner: .connection)
                 connect()
             }
         case .superseded:

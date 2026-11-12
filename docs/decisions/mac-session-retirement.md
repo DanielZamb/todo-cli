@@ -50,9 +50,8 @@ model discarded the reply, so a 409 or any other status that the bearer
 middleware does not raise counted as revocation. The app then deleted the
 stored Session and signed out locally while the server kept it. A failed
 sign-out's notice also lasted only until its own reconnect cleared every
-message, a few milliseconds later. The notice now survives the first ready
-event of that reconnect. A later Offline state replaces it. Cancellation shows
-nothing.
+message, a few milliseconds later. Cancellation shows nothing. The notice's
+lifetime is set by message ownership, below.
 
 What the owner sees, measured through the production model and transport on a
 compiled scratch server
@@ -76,6 +75,43 @@ loading are false afterwards. The same harness fails at 2ce2abcf: the failed
 sign-out's message is lost, a cancelled sign-out never reconnects, a
 revocation reply after cancellation leaves the model signed in, and a 200 or
 409 reply signs out locally.
+
+## Message ownership
+
+MAC-C1-S1-07 showed that 475726d3 restored a saved sign-out notice by
+lifecycle generation alone, and that every ready event cleared any message.
+A newer error from the still-current credential could therefore be erased on
+ready and then replaced by the older notice. The model now records who set
+`message` (`general`, `connection` or `signOut`), and every clear names the
+owners it may clear. Nothing is saved or restored. The app shows the newest
+message. A failed sign-out's notice stays until a newer message replaces it, a
+later sign-out succeeds, or the credential or Profile changes. There is no
+dismiss control today. Adding one is a visible change for the Opus Mac UI
+seat.
+
+| Writer | Owner | May overwrite or clear |
+| --- | --- | --- |
+| Stream ready after a failed or unhealthy connection | – | Clears only a `connection` message. Before this, it cleared every message. |
+| Stream failure that goes Offline | `connection` | Replaces any message: it is newer. |
+| Stream 404 that cannot leave a deleted Profile | `general` | Replaces any message. |
+| `refreshAfterWrite` applied | – | Clears `general` and `connection` messages, as before, but no longer a `signOut` notice. |
+| `refreshAfterWrite` failed ("… The live view is reconnecting.") | `connection` | Replaces any message. The reconnect's ready clears it. |
+| `signOut` failed (not cancelled) | `signOut` | Replaces any message. |
+| `signOut` succeeded, `signIn` start, `expireSession` | `general` or cleared | Clears or replaces any message. The credential ends. |
+| `replaceCredential` | – | Clears only a `signOut` notice. |
+| Any change of `profile` (switch, Discovery Show, transfer, deleted-Profile fallback, Snapshot reload) | – | Clears only a `signOut` notice. |
+| `leaveDeletedProfile` | cleared | Clears any message. The Profile ends. |
+| `restore` failure, `reconnectAfterUpdate` failure | `general` | Replaces any message. |
+| `transition` conflict or failure, `deleteTask` conflict | `general` | Replaces any message. |
+| Discovery Show failure, Dependency follow-up failure | `general` | Replaces any message. |
+
+The sibling states each belong to one surface, and the ready path writes none
+of them: `editorError`, `quickAddError`, `searchError`, `taskLoadError`,
+`snapshotError`, `diagnosticsError`, `importError`, `historyError`,
+`profileDeletionError` and `deletionNotice`. Each is set and cleared by its own
+surface's actions, by a Profile activation, or by the Snapshot reload reset. A
+search refusal, an Attachment action or a Diagnostics failure therefore leaves
+`message`, including a failed sign-out's notice, unchanged.
 
 ## Close admission before invalidation
 
