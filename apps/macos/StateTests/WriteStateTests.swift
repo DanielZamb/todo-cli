@@ -1176,3 +1176,15 @@ func deleteNeverAcceptsPreviewOrForeignRepliesAsConfirmedSuccess(reply: String) 
     #expect(model.editor?.base.row_version == 1)
     #expect(model.deletionNotice == nil)
 }
+
+@Test @MainActor func aQuickAddViewOnlyActsOnTheCompletionOfItsOwnOpening() {
+    // The menu-bar quick-add has no model instance; its view's gate stands in for one.
+    let gate = QuickAddCompletionGate()
+    let first = gate.opening
+    #expect(gate.owns(first), "the opening that started a create may act on its completion")
+    gate.renew()                     // the window closed
+    #expect(!gate.owns(first), "a closed opening's completion does nothing")
+    let second = gate.opening
+    gate.renew()                     // and opened again
+    #expect(!gate.owns(first) && !gate.owns(second) && gate.owns(gate.opening), "only the current opening acts")
+}

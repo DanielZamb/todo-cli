@@ -124,13 +124,13 @@ extension TodoModel {
             let report = try decode(DependencyBatchReport.self, wire)
             guard signedIn, profile == batch.profile, isCurrentCredential(epoch) else { return }
             // Once this dialog has closed, a committed apply still reaches the list and nothing is shown.
-            guard dependencies.batch?.id == batch.id else { if !dryRun { await refreshAfterWrite("Dependencies updated", presenting: false) }; return }
+            guard dependencies.batch?.id == batch.id else { if !dryRun { await refreshAfterWrite("Dependencies updated", presenting: .dependencyBatch(batch.id)) }; return }
             if report.results.contains(where: { $0.error.map { $0.hasMalformedDependencyError || $0.exitDetail == nil } ?? false }) {
                 dependencies.batch?.report = nil
                 throw DependencyGraphReply.ProtocolError.incompatible
             }
             dependencies.batch?.report = report
-            if !dryRun { await refreshAfterWrite("Dependencies updated") }
+            if !dryRun { await refreshAfterWrite("Dependencies updated", presenting: .dependencyBatch(batch.id)) }
         } catch {
             authorize(error, epoch: epoch, profile: batch.profile)
             guard signedIn, profile == batch.profile, isCurrentCredential(epoch), dependencies.batch?.id == batch.id else { return }

@@ -788,4 +788,121 @@ private actor ScriptGate: ClientTransport {
         }
         await finish(model, gate, vault)
     }
+
+    // MARK: completion order after each await (MAC-C1-S1-14 and the seat's P2 observations)
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [false, true])
+    func batchEditClosedDuringItsReadBackShowsNothing(reopen: Bool) async throws {
+        // The sheet closes, or closes and reopens, while the committed apply's catalog read-back is
+        // still waiting; the read then fails. The instance is checked after that await, not before.
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        model.batchEdit = .init(profile: "work")
+        await model.reloadBatchEditTargets()
+        model.batchEdit?.selected = [task.id]; model.batchEdit?.field = .priority; model.batchEdit?.value = task.priority == "P1" ? "P2" : "P1"
+        await gate.next("tasks.list", .holdThenFail(503, "catalog read failed"))
+        let apply = Task { await model.applyBatchEdit(dryRun: false) }
+        try await wait("read-back held") { await gate.isHeld("tasks.list") }
+        model.batchEdit = nil
+        if reopen { model.batchEdit = .init(profile: "work") }
+        let newer = model.batchEdit?.id
+        await gate.release("tasks.list"); await apply.value
+        #expect(model.message == nil, "reopen \(reopen): no banner from a sheet closed during its read-back: \(model.message ?? "")")
+        #expect(model.batchEdit?.id == newer && model.batchEdit?.report == nil && model.batchEdit?.error == nil, "reopen \(reopen): the newer sheet is untouched")
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func pickerClosedDuringItsReloadStillReadsBackTheCommittedEdge() async throws {
+        let gate = ScriptGate(); let (model, vault, root) = try await live(gate)
+        let candidate = try await secondTask(model, gate, vault)
+        await model.openDependencyPicker(model.tasks.first { $0.id == root.id }!)
+        try await wait("picker loaded") { model.dependencies.picker?.loading == false && model.dependencies.picker?.candidates.contains { $0.id == candidate.id } == true }
+        await gate.next("tasks.show", .hold)
+        let toggle = Task { await model.toggleDependency(model.dependencies.picker!.candidates.first { $0.id == candidate.id }!) }
+        try await wait("picker reload held") { await gate.isHeld("tasks.show") }
+        model.closeDependencyPicker()
+        let reads = await gate.count("tasks.list")
+        await gate.release("tasks.show"); await toggle.value
+        #expect(await gate.count("tasks.list") > reads, "the committed edge's catalog read-back ran after the close")
+        #expect(model.tasks.first { $0.id == root.id }?.depends_on?.contains(candidate.id) == true, "the list shows the committed edge")
+        #expect(model.dependencies.picker == nil && model.message == nil)
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func attachmentBatchReadsBackEvenWhenItsEditorReadFails() async throws {
+        let gate = ScriptGate(); let (model, vault, source) = try await live(gate)
+        let target = try await secondTask(model, gate, vault)
+        let link = "https://example.test/batch-editor-" + UUID().uuidString
+        model.beginEditing(source)
+        await model.attachLink(link)
+        try await wait("source link") { hasLink(model.tasks.first { $0.id == source.id }, link) }
+        let reference = try #require(model.tasks.first { $0.id == source.id }?.attachments?.first { if case .link(let url) = $0.location { return url.absoluteString == link }; return false })
+        model.editor = nil
+        model.attachmentBatch = .init(profile: "work", reference: reference)
+        await model.reloadAttachmentTargets()
+        model.attachmentBatch?.selected = [target.id]
+        model.beginEditing(model.tasks.first { $0.id == target.id }!)
+        let reads = await gate.count("tasks.list")
+        await gate.next("tasks.show", .fail(503, "editor read failed"))
+        await model.applyAttachmentBatch(dryRun: false)
+        #expect(await gate.count("tasks.list") > reads, "the committed Attachment's catalog read-back ran despite the failed editor read")
+        #expect(hasLink(model.tasks.first { $0.id == target.id }, link), "the list shows the committed Attachment")
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func aBufferedCurrent401AfterCancellationStillEndsTheSession() async throws {
+        // A reply already on its way when the task was cancelled still says the current credential
+        // is refused; the Session ends whatever the task's cancellation.
+        let gate = ScriptGate(); let (model, vault, _) = try await live(gate)
+        model.batchEdit = .init(profile: "work")
+        await gate.next("tasks.list", .holdThenFail(401, "expired"))
+        let reload = Task { await model.reloadBatchEditTargets() }
+        try await wait("reload held") { await gate.isHeld("tasks.list") }
+        reload.cancel()
+        await gate.release("tasks.list"); await reload.value
+        try await wait("expired") { !model.signedIn }
+        let stored = try vault.load()
+        #expect(!model.signedIn && stored == nil)
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: ["save", "save-failure", "move-failure"])
+    func anEditorWriteCannotPresentIntoANewerOpening(_ kind: String) async throws {
+        // The editor that started the write is closed and the same Task reopened while the write
+        // waits. Its completion may reach the list, but it must not close, fail or announce into
+        // the newer opening.
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        model.beginEditing(task)
+        let operation = kind == "move-failure" ? "tasks.move" : "tasks.edit"
+        await gate.next(operation, kind == "save-failure" ? .holdThenFail(503, "OLD save failed") : .hold)
+        let write = Task {
+            if kind == "move-failure" { await model.write(.move("no-such-profile-\(UUID().uuidString.prefix(6))")) }
+            else { model.editor?.title = task.title + " saved"; _ = await model.save() }
+        }
+        try await wait("write held") { await gate.isHeld(operation) }
+        model.editor = nil
+        model.beginEditing(model.tasks.first { $0.id == task.id }!)
+        let newer = try #require(model.editor?.opening)
+        await gate.release(operation); await write.value
+        #expect(model.editor?.opening == newer, "\(kind): the newer opening stays open")
+        #expect(model.editorError == nil && model.transferResult == nil && model.conflict == nil, "\(kind): nothing is presented into the newer opening: \(model.editorError ?? "")")
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func aQuickAddClosedDuringItsCreateDoesNotReportItsCompletionToTheView() async throws {
+        // The view dismisses itself or opens the Tasks window when create returns true; an instance
+        // closed during the create must not drive the view.
+        let gate = ScriptGate(); let (model, vault, _) = try await live(gate)
+        model.quickAdd = true; model.newTitle = "Closed quick add " + UUID().uuidString
+        await gate.next("tasks.create", .hold)
+        let create = Task { await model.create(openEditor: true) }
+        try await wait("create held") { await gate.isHeld("tasks.create") }
+        model.quickAdd = false; model.quickAdd = true; model.newTitle = "Newer draft"
+        await gate.release("tasks.create")
+        #expect(await create.value == false, "a closed instance's completion is not reported as presented")
+        await finish(model, gate, vault)
+    }
 }

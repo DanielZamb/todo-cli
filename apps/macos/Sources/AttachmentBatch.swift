@@ -73,12 +73,19 @@ extension TodoModel {
       // Once this sheet has closed, a committed apply still reaches the editor and the list, and nothing is shown.
       if attachmentBatch?.id == draft.id { attachmentBatch?.report = report }
       if !dryRun {
+        // The open editor's extra read is secondary: its failure cannot skip the committed apply's
+        // catalog read-back, and the stream repairs the editor.
         if let editor, draft.selected.contains(editor.id) {
-          let wire = try await client.tasks_period_show(path: .init(profile: draft.profile, task: editor.id)).ok.body.json
-          guard isCurrentCredential(credentialEpoch), profile == draft.profile else { return }
-          if self.editor?.id == editor.id { self.editor = self.editor?.acceptingAttachmentChange(try TaskSnapshot.decode(wire)) }
+          do {
+            let wire = try await client.tasks_period_show(path: .init(profile: draft.profile, task: editor.id)).ok.body.json
+            guard isCurrentCredential(credentialEpoch), profile == draft.profile else { return }
+            if self.editor?.opening == editor.opening { self.editor = self.editor?.acceptingAttachmentChange(try TaskSnapshot.decode(wire)) }
+          } catch {
+            authorize(error, epoch: credentialEpoch, profile: draft.profile)
+            guard isCurrentCredential(credentialEpoch), profile == draft.profile else { return }
+          }
         }
-        await refreshAfterWrite("Attachments updated", presenting: attachmentBatch?.id == draft.id)
+        await refreshAfterWrite("Attachments updated", presenting: .attachmentBatch(draft.id))
       }
     } catch {
       authorize(error, epoch: credentialEpoch, profile: draft.profile)

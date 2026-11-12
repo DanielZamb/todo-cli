@@ -911,8 +911,11 @@ struct QuickAddView: View {
     @FocusState private var focused: Bool
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openWindow) private var openWindow
+    @State private var completions = QuickAddCompletionGate()
     var body: some View {
         content
+            .onAppear { completions.renew() }
+            .onDisappear { completions.renew() }
             .background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .quickAdd))
             .defaultFocus($focused, true)
             .task(id: model.profile + "\u{0}" + model.newTitle) { await model.parseDraft() }
@@ -1019,13 +1022,23 @@ struct QuickAddView: View {
         }
     }
     private func add(edit: Bool) {
+        let opening = completions.opening
         model.clientDiagnosticsUI.perform(floating ? .quickAdd : .sheetAdd) {
-            if await model.create(openEditor: edit) {
+            if await model.create(openEditor: edit), completions.owns(opening) {
                 if !floating { dismiss() }
                 if edit { openWindow(id: "tasks") }
             }
         }
     }
+}
+
+/// The view side of quick-add's instance rule. The menu-bar window has no model instance, so its
+/// view keeps an opening token, renewed whenever it appears or disappears: a create that outlives
+/// the view that started it (closed, or closed and reopened) cannot dismiss or open windows for it.
+@MainActor final class QuickAddCompletionGate {
+    private(set) var opening = UUID()
+    func renew() { opening = UUID() }
+    func owns(_ token: UUID) -> Bool { token == opening }
 }
 
 struct QuickAddMetadataRegion<Content: View>: View {

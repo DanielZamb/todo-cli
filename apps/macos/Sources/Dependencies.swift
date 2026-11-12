@@ -241,17 +241,21 @@ extension TodoModel {
                 if case .conflict(let conflict) = response { throw try dependencyConflict(conflict.body.json) }
                 report = try decode(DependencyEdgeReport.self, response.ok.body.json)
             }
+            // Ownership: the credential and Profile the edge was written under. (The Dependency
+            // generation is not ownership: closing a picker advances it.)
             guard signedIn, profile == picker.profile, isCurrentCredential(epoch) else { return }
-            // Once this picker has closed, a committed edge still reaches the list and the picker shows nothing.
-            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == picker.id else {
-                if report.outcome != "unchanged" { await refreshAfterWrite("Dependencies updated", presenting: false) }
-                return
+            // Presentation, only while this picker is still the one showing; a close at any point
+            // (including during its reload) cannot skip the committed edge's catalog read-back.
+            if dependencies.picker?.id == picker.id {
+                await reloadDependencyPicker()
+                if currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == picker.id {
+                    dependencies.picker?.feedback = report.outcome == "unchanged" ? (remove ? "Already removed" : "Already linked") : (remove ? "Dependency removed" : "Dependency added")
+                    dependencies.picker?.warnings = report.warnings.map { $0.notice }
+                }
             }
-            await reloadDependencyPicker()
-            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == picker.id else { return }
-            dependencies.picker?.feedback = report.outcome == "unchanged" ? (remove ? "Already removed" : "Already linked") : (remove ? "Dependency removed" : "Dependency added")
-            dependencies.picker?.warnings = report.warnings.map { $0.notice }
-            if report.outcome != "unchanged" { await refreshAfterWrite("Dependencies updated") }
+            // Data: a committed edge reaches the list whether or not the picker is still showing.
+            guard signedIn, profile == picker.profile, isCurrentCredential(epoch) else { return }
+            if report.outcome != "unchanged" { await refreshAfterWrite("Dependencies updated", presenting: .dependencyPicker(picker.id)) }
         } catch {
             authorize(error, epoch: epoch, profile: picker.profile)
             guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == picker.id else { return }

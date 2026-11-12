@@ -351,13 +351,13 @@ final class TodoModel {
             let report = try decode(ImportSummary.self, response.ok.body.json)
             guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
             // A reopened Import has a new generation; the previous sheet's committed apply still reaches the list.
-            guard importGeneration == requestedGeneration, surface.map(isShowing) ?? true else { if !dryRun { await refreshAfterWrite("Import applied", presenting: false) }; return }
+            guard importGeneration == requestedGeneration, surface.map(isShowing) ?? true else { if !dryRun { await refreshAfterWrite("Import applied", presenting: surface ?? .importSheet(UUID())) }; return }
             if report.items.contains(where: { $0.error?.hasMalformedDependencyError == true }) {
                 importReport = nil
                 throw DependencyGraphReply.ProtocolError.incompatible
             }
             importReport = report
-            if !dryRun { await refreshAfterWrite("Import applied") }
+            if !dryRun { await refreshAfterWrite("Import applied", presenting: surface) }
         } catch {
             authorize(error, epoch: credentialEpoch, profile: requestedProfile)
             guard isCurrentCredential(credentialEpoch) else { return }
@@ -980,10 +980,13 @@ final class TodoModel {
                     else { beginEditing(task, focusTitle: true) }
                 }
             }
-            await refreshAfterWrite("Task added", presenting: showing)
+            // A showing quick-add closes itself on success, so its read-back belongs to the main window.
+            await refreshAfterWrite("Task added", presenting: showing ? nil : surface)
             guard isCurrentCredential(credentialEpoch), profile == creationProfile else { return false }
             if showing { announce("Task added to \(profileName)") }
-            return true
+            // The caller's view acts on true (dismisses itself or opens the Tasks window); only the
+            // instance that presented this completion may.
+            return showing
         } catch {
             authorize(error, epoch: credentialEpoch, profile: creationProfile)
             guard isCurrentCredential(credentialEpoch), profile == creationProfile, surface.map(isShowing) ?? true else { return false }
@@ -1003,7 +1006,10 @@ final class TodoModel {
             let payload = try JSONDecoder().decode(Operations.tasks_period_edit.Input.Body.jsonPayload.self, from: draft.changesData())
             let response = try await client.tasks_period_edit(path: .init(profile: profile, task: draft.id), body: .json(payload))
             guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return nil }
+            // Presentation belongs to the editor opening that started the Save.
+            let showing = editor?.opening == draft.opening
             if case .conflict(let response) = response {
+                guard showing else { return nil }
                 struct Payload: Decodable { let latest: TaskSnapshot? }
                 let payload = try JSONDecoder().decode(Payload.self, from: JSONEncoder().encode(response.body.json))
                 conflict = TaskConflict(latest: payload.latest)
@@ -1011,16 +1017,20 @@ final class TodoModel {
                 return nil
             }
             let saved = try TaskSnapshot.decode(response.ok.body.json)
-            editor = nil
-            conflict = nil
-            writeIntent = nil
-            await refreshAfterWrite("Task saved")
+            if showing {
+                editor = nil
+                conflict = nil
+                writeIntent = nil
+            }
+            // A showing editor closes itself on success, so its read-back belongs to the main window.
+            await refreshAfterWrite("Task saved", presenting: showing ? nil : .editor(draft.opening))
             guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return nil }
-            announce("Task saved")
+            if showing { announce("Task saved") }
             return saved
         } catch {
-            guard isCurrentCredential(credentialEpoch) else { return nil }
-            editorError = describe(error, at: .editor); handleAuthorization(error, credentialEpoch: credentialEpoch); return nil }
+            authorize(error, epoch: credentialEpoch, profile: requestedProfile)
+            guard isCurrentCredential(credentialEpoch), profile == requestedProfile, editor?.opening == draft.opening else { return nil }
+            editorError = describe(error, at: .editor); return nil }
     }
 
     func refreshConflictDefinitions() async {
@@ -1242,7 +1252,7 @@ final class TodoModel {
             let showing = dependencies.deletion?.id == preview.id
             if showing { dependencies.deletion = nil }
             endMessage(raisedBy: .deleteDialog(preview.id))
-            await refreshAfterWrite("Task deleted", clearing: .delete, since: mark, presenting: showing)
+            await refreshAfterWrite("Task deleted", clearing: .delete, since: mark, presenting: showing ? nil : .deleteDialog(preview.id))
         } catch {
             authorize(error, epoch: credentialEpoch, profile: deletionProfile)
             guard isCurrentCredential(credentialEpoch) else { return }
@@ -1280,31 +1290,42 @@ final class TodoModel {
             case .move(let destination):
                 let response = try await client.tasks_period_move(path: .init(profile: profile, task: draft.id), body: .json(.init(from_version: draft.base.row_version, destination_profile: destination)))
                 guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
-                if case .conflict(let value) = response { try acceptConflict(value.body.json, intent: intent); return }
+                if case .conflict(let value) = response { if editor?.opening == draft.opening { try acceptConflict(value.body.json, intent: intent) }; return }
                 let wire = try response.ok.body.json
                 task = try TaskSnapshot.decode(wire)
                 removedDependencies = try (wire.removed_dependencies ?? []).map { try decode(DependencyEdge.self, $0) }
             case .copy(let destination):
                 let response = try await client.tasks_period_copy(path: .init(profile: profile, task: draft.id), body: .json(.init(from_version: draft.base.row_version, destination_profile: destination)))
                 guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
-                if case .conflict(let value) = response { try acceptConflict(value.body.json, intent: intent); return }
+                if case .conflict(let value) = response { if editor?.opening == draft.opening { try acceptConflict(value.body.json, intent: intent) }; return }
                 task = try TaskSnapshot.decode(response.ok.body.json)
             case .revert(let seq):
                 let response = try await client.tasks_period_revert(path: .init(profile: profile, task: draft.id), body: .json(.init(from_version: draft.base.row_version, seq: Int(seq))))
                 guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
-                if case .conflict(let value) = response { try acceptConflict(value.body.json, intent: intent); return }
+                if case .conflict(let value) = response { if editor?.opening == draft.opening { try acceptConflict(value.body.json, intent: intent) }; return }
                 task = try TaskSnapshot.decode(response.ok.body.json)
             case .skipOccurrence:
                 let response = try await client.tasks_period_skipOccurrence(path: .init(profile: profile, task: draft.id), body: .json(.init(from_version: draft.base.row_version)))
                 guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
-                if case .conflict(let value) = response { try acceptConflict(value.body.json, intent: intent); return }
+                if case .conflict(let value) = response { if editor?.opening == draft.opening { try acceptConflict(value.body.json, intent: intent) }; return }
                 task = try TaskSnapshot.decode(response.ok.body.json)
             case .editSeries(let recurrence):
                 let payload = try JSONDecoder().decode(Operations.tasks_period_editSeries.Input.Body.jsonPayload.self, from: draft.seriesData(recurrence))
                 let response = try await client.tasks_period_editSeries(path: .init(profile: profile, task: draft.id), body: .json(payload))
                 guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
-                if case .conflict(let value) = response { try acceptConflict(value.body.json, intent: intent); return }
+                if case .conflict(let value) = response { if editor?.opening == draft.opening { try acceptConflict(value.body.json, intent: intent) }; return }
                 task = try TaskSnapshot.decode(response.ok.body.json)
+            }
+            // Presentation belongs to the editor opening that started the write; the data steps below
+            // (the read-back, removing a moved Task from the list) run for any current owner.
+            let showing = editor?.opening == draft.opening
+            guard showing else {
+                if let transfer = intent.transfer, transfer.kind == .move {
+                    tasks.removeAll { $0.id == task.id }
+                    if let current = planning { planning = PlanningResult(name: current.name, groups: current.groups.map { .init(name: $0.name, tasks: $0.tasks.filter { $0.id != task.id }) }) }
+                }
+                await refreshAfterWrite("Task updated", presenting: .editor(draft.opening))
+                return
             }
             writeIntent = nil
             conflict = nil
@@ -1318,7 +1339,7 @@ final class TodoModel {
             if let transfer = intent.transfer {
                 let name = profiles.first { $0.id == transfer.destination }?.name ?? transfer.destination
                 if transfer.kind == .move { editor = nil }
-                await refreshAfterWrite("Task updated")
+                await refreshAfterWrite("Task updated", presenting: transfer.kind == .move ? nil : .editor(draft.opening))
                 guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
                 if transfer.kind == .move {
                     tasks.removeAll { $0.id == task.id }
@@ -1326,6 +1347,8 @@ final class TodoModel {
                         planning = PlanningResult(name: current.name, groups: current.groups.map { .init(name: $0.name, tasks: $0.tasks.filter { $0.id != task.id }) })
                     }
                 }
+                // A newer editor opened during the read-back owns the inspector now.
+                guard editor == nil || editor?.opening == draft.opening else { return }
                 transferResult = TaskTransferResult(kind: transfer.kind, task: task, profileName: name, removedDependencies: removedDependencies)
                 announce(transferResult?.message ?? "Task updated")
                 return
@@ -1345,18 +1368,18 @@ final class TodoModel {
             } else {
                 editor = task.deleted_at != nil ? nil : intent.mergesFields ? TaskDraft(task) : draft.merging(task, choices: [:])
                 editor?.opening = draft.opening
-                await refreshAfterWrite("Task updated")
+                await refreshAfterWrite("Task updated", presenting: .editor(draft.opening))
                 guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
             }
             guard isCurrentCredential(credentialEpoch) else { return }
             announce("Task updated")
         } catch {
-            guard isCurrentCredential(credentialEpoch) else { return }
+            authorize(error, epoch: credentialEpoch, profile: requestedProfile)
+            guard isCurrentCredential(credentialEpoch), profile == requestedProfile, editor?.opening == draft.opening else { return }
             let context: DependencyActionContext
             if case .revert = intent { context = .revert } else { context = .link }
             editorError = describe(error, at: .editor, dependencyContext: context)
             if intent.transfer != nil { writeIntent = intent }
-            handleAuthorization(error, credentialEpoch: credentialEpoch)
         }
     }
 
@@ -1476,9 +1499,10 @@ final class TodoModel {
 
     /// `kind` and `writeMark` name the write whose success this read-back confirms: its
     /// earlier error of that kind and older connection messages end; nothing newer does.
-    /// `presenting` is false when the surface that made the write has gone: a failed read-back then
-    /// raises no message of its own and is left to the ordinary connection recovery.
-    func refreshAfterWrite(_ accepted: String, clearing kind: MessageKind? = nil, since writeMark: Int? = nil, presenting: Bool = true) async {
+    /// `presenting` is the surface instance that made the write (nil: the main window). It is checked
+    /// after the read-back's await, not before: if that instance is no longer showing, a failed
+    /// read-back raises no message of its own and is left to the ordinary connection recovery.
+    func refreshAfterWrite(_ accepted: String, clearing kind: MessageKind? = nil, since writeMark: Int? = nil, presenting surface: MessageSurface? = nil) async {
         let credentialEpoch = discovery.credentialEpoch
         let mark = writeMark ?? messageMark
         catalogStale = true
@@ -1489,7 +1513,7 @@ final class TodoModel {
             clearMessage(Set([MessageKind.connection] + (kind.map { [$0] } ?? [])), since: mark)
         case .failed:
             if signedIn {
-                if presenting { publishMessage(accepted + ". The live view is reconnecting.", kind: .connection) }
+                if surface.map(isShowing) ?? true { publishMessage(accepted + ". The live view is reconnecting.", kind: .connection) }
                 connect()
             }
         case .superseded:
@@ -1676,8 +1700,10 @@ final class TodoModel {
             snapshotError = describe(error, at: .snapshot) }
     }
 
+    /// A 401 under the still-current credential ends the Session even if the task that received it
+    /// was cancelled meanwhile (a reply already on its way); retiring a credential changes the epoch.
     private func expireSession(credentialEpoch: Int) {
-        guard isCurrentCredential(credentialEpoch) else { return }
+        guard discovery.credentialEpoch == credentialEpoch else { return }
         disconnect()
         try? vault.delete()
         signedIn = false
