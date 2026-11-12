@@ -276,14 +276,7 @@ struct Snapshots {
                     try JSONSerialization.data(withJSONObject: receipt, options: [.sortedKeys]).write(to: directory.appendingPathComponent("compact-quick-chip-bounds-\(mode).json"))
                 }
                 #expect(window.isVisible == false)
-                let template = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
-                let backing = try #require(
-                    NSBitmapImageRep(
-                        bitmapDataPlanes: nil, pixelsWide: Int(width * 2), pixelsHigh: Int(height * 2),
-                        bitsPerSample: template.bitsPerSample, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
-                        colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0))
-                backing.size = NSSize(width: width, height: height)
-                host.cacheDisplay(in: host.bounds, to: backing)
+                let backing = try await settledSnapshotBitmap(host, name: name)
                 defer {
                     window.contentViewController = nil
                     window.close()
@@ -534,7 +527,7 @@ struct Snapshots {
             let previewData = try Data(contentsOf: URL(fileURLWithPath: previewSource))
             try previewData.write(to: preview)
             attachmentTask.attachments = [
-                .init(id: "jira", location: .file(directory.appendingPathComponent("missing-jira-draft.md").path), label: "jira", added_at: "2026-10-29T00:00:00Z"),
+                .init(id: "jira", location: .file("/var/empty/todo-design-fixture/missing-jira-draft.md"), label: "jira", added_at: "2026-10-29T00:00:00Z"),
                 .init(id: "image", location: .image(preview.path), name: "launch-sketch.png", byte_size: previewData.count, added_at: "2026-10-29T00:00:00Z"),
                 .init(id: "link", location: .link(URL(string: "https://example.com/issue/42")!), label: "Issue 42", added_at: "2026-10-29T00:00:00Z")
             ]
@@ -1132,4 +1125,139 @@ private final class DiagnosticsLayoutReceipt {
 @MainActor private final class ChipFrameRecorder {
     var frames: [String: CGRect] = [:]
     var labels: [String: String] = [:]
+}
+
+/// Renders a view for the design suite at a fixed 2x scale in generic (calibrated) RGB and tags it
+/// sRGB, independent of the capturing host's display scale and colour profile, so two runs of the
+/// same source give byte-identical PNGs. verify-design.py records this in result.json.
+@MainActor func snapshotBitmap(_ view: NSView) throws -> NSBitmapImageRep {
+    let size = view.bounds.size
+    let rep = try #require(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int((size.width * 2).rounded()), pixelsHigh: Int((size.height * 2).rounded()),
+                                            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                            colorSpaceName: .calibratedRGB, bytesPerRow: 0, bitsPerPixel: 0))
+    rep.size = size
+    view.cacheDisplay(in: view.bounds, to: rep)
+    return try #require(rep.retagging(with: .sRGB))
+}
+
+/// Maximum captures a render may need before two consecutive ones are byte-identical. 2 means the
+/// first capture was already final; 3 allows one late change. More fails the render.
+let settleCaptureLimit = 3
+
+/// Captures the verdict image and records how it got there. Before each capture it applies pending
+/// constraints, layout and Core Animation work (work already scheduled, nothing forced), then
+/// captures every 100 ms until two consecutive bitmaps are byte-identical. The number of captures
+/// and every control whose frame changed between them go to settle.jsonl in TODO_SNAPSHOT_DIR, and
+/// the render fails above `settleCaptureLimit`.
+///
+/// A layout that is stale and stays stale (a control measured before its font arrived, never
+/// re-measured) is stable, so it passes the count. The detector after the verdict image forces
+/// every control to re-measure and captures again: when that image differs, the render was wrong
+/// on its first layout and the controls that moved are recorded as `staleControls`. The forced
+/// image never replaces the verdict image; with TODO_SNAPSHOT_INVALIDATED_DIR set it is written
+/// there so runs can be compared with and without the invalidation.
+@MainActor func settledSnapshotBitmap(_ view: NSView, name: String = #function) async throws -> NSBitmapImageRep {
+    func bytes(_ rep: NSBitmapImageRep) -> Data { Data(bytes: rep.bitmapData!, count: rep.bytesPerRow * rep.pixelsHigh) }
+    func apply() {
+        view.window?.updateConstraintsIfNeeded()
+        view.window?.layoutIfNeeded()
+        view.layoutSubtreeIfNeeded()
+        CATransaction.flush()
+    }
+    func settle() async throws -> (NSBitmapImageRep, Int, [[String: Any]]) {
+        apply()
+        var previous = try snapshotBitmap(view)
+        var frames = controlFrames(view)
+        var changes: [[String: Any]] = []
+        for capture in 2...30 {
+            try await Task.sleep(for: .milliseconds(100))
+            apply()
+            let next = try snapshotBitmap(view)
+            let nextFrames = controlFrames(view)
+            if bytes(next) == bytes(previous) { return (next, capture, changes) }
+            changes += frameChanges(frames, nextFrames).map { $0.merging(["between": [capture - 1, capture]]) { a, _ in a } }
+            previous = next
+            frames = nextFrames
+        }
+        return (previous, 31, changes)
+    }
+    let (verdict, captures, changes) = try await settle()
+    let verdictFrames = controlFrames(view)
+    // Detector only: force every control to re-measure and see whether the layout moves.
+    func controls(_ view: NSView) -> [NSControl] { ((view as? NSControl).map { [$0] } ?? []) + view.subviews.flatMap(controls) }
+    controls(view).forEach { $0.invalidateIntrinsicContentSize() }
+    let (forced, forcedCaptures, _) = try await settle()
+    let stale = bytes(forced) != bytes(verdict)
+    let sequence = SettleLedger.shared.next()
+    var row: [String: Any] = ["sequence": sequence, "name": name, "captures": captures, "changes": changes, "forcedCaptures": forcedCaptures, "staleOnFirstLayout": stale,
+                              "appearance": view.effectiveAppearance.name.rawValue]
+    if stale { row["staleControls"] = frameChanges(verdictFrames, controlFrames(view)) }
+    SettleLedger.shared.append(row)
+    if let directory = ProcessInfo.processInfo.environment["TODO_SNAPSHOT_INVALIDATED_DIR"] {
+        try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
+        try forced.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: directory).appendingPathComponent(String(format: "%04d-%@.png", sequence, name)))
+    }
+    probeTextFields(view, name: name)
+    if captures > settleCaptureLimit {
+        Issue.record("\(name): needed \(captures) captures to settle (limit \(settleCaptureLimit)); changes \(changes)")
+    }
+    return verdict
+}
+
+/// Frames of every control and scroll view, keyed by depth-first index, class and accessibility identifier.
+@MainActor func controlFrames(_ root: NSView) -> [String: CGRect] {
+    var result: [String: CGRect] = [:]
+    var index = 0
+    func walk(_ view: NSView) {
+        if view is NSControl || view is NSScrollView {
+            let identifier = view.accessibilityIdentifier()
+            result["\(index):\(type(of: view))\(identifier.isEmpty ? "" : ":" + identifier)"] = view.convert(view.bounds, to: root)
+            index += 1
+        }
+        view.subviews.forEach(walk)
+    }
+    walk(root)
+    return result
+}
+
+@MainActor func frameChanges(_ before: [String: CGRect], _ after: [String: CGRect]) -> [[String: Any]] {
+    Set(before.keys).union(after.keys).sorted().compactMap { key in
+        let a = before[key], b = after[key]
+        guard a != b else { return nil }
+        func list(_ r: CGRect?) -> Any { r.map { [$0.minX, $0.minY, $0.width, $0.height].map(Double.init) } ?? NSNull() }
+        return ["control": key, "from": list(a), "to": list(b), "dHeight": Double((b?.height ?? 0) - (a?.height ?? 0)), "dY": Double((b?.minY ?? 0) - (a?.minY ?? 0))]
+    }
+}
+
+/// Appends one settle row per render to TODO_SNAPSHOT_DIR/settle.jsonl.
+@MainActor final class SettleLedger {
+    static let shared = SettleLedger()
+    private var sequence = 0
+    func next() -> Int { sequence += 1; return sequence }
+    func append(_ row: [String: Any]) {
+        guard let directory = ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DIR"],
+              let data = try? JSONSerialization.data(withJSONObject: row, options: [.sortedKeys]) else { return }
+        let path = URL(fileURLWithPath: directory).appendingPathComponent("settle.jsonl").path
+        if !FileManager.default.fileExists(atPath: path) { FileManager.default.createFile(atPath: path, contents: nil) }
+        guard let handle = FileHandle(forWritingAtPath: path) else { return }
+        handle.seekToEndOfFile(); handle.write(data + Data("\n".utf8)); try? handle.close()
+    }
+}
+
+/// Diagnostic for the text-field height flip: with TODO_SNAPSHOT_FIELD_PROBE set, appends each
+/// text field's drawing state at capture time to that JSONL file.
+@MainActor func probeTextFields(_ view: NSView, name: String) {
+    guard let path = ProcessInfo.processInfo.environment["TODO_SNAPSHOT_FIELD_PROBE"] else { return }
+    func fields(_ view: NSView) -> [NSControl] { ((view as? NSControl).map { [$0] } ?? []) + view.subviews.flatMap(fields) }
+    let rows: [[String: Any]] = fields(view).map { field in
+        let frame = field.convert(field.bounds, to: view)
+        return ["class": String(describing: type(of: field)), "cell": String(describing: type(of: field.cell)), "frame": [frame.minX, frame.minY, frame.width, frame.height].map(Double.init),
+                "intrinsic": [Double(field.intrinsicContentSize.width), Double(field.intrinsicContentSize.height)], "controlSize": field.controlSize.rawValue,
+                "font": "\(field.font?.fontName ?? "nil") \(field.font?.pointSize ?? 0)", "bezelStyle": (field as? NSTextField)?.bezelStyle.rawValue ?? -1, "appearance": field.effectiveAppearance.name.rawValue,
+                "editing": field.currentEditor() != nil, "layer": field.layer != nil, "wantsLayer": field.wantsLayer, "firstResponder": field.window?.firstResponder === field,
+                "windowKey": field.window?.isKeyWindow ?? false, "windowAppearance": field.window?.effectiveAppearance.name.rawValue ?? "nil", "appAppearance": NSApp.effectiveAppearance.name.rawValue]
+    }
+    guard let data = try? JSONSerialization.data(withJSONObject: ["name": name, "fields": rows], options: [.sortedKeys]),
+          let handle = FileHandle(forWritingAtPath: path) ?? { FileManager.default.createFile(atPath: path, contents: nil); return FileHandle(forWritingAtPath: path) }() else { return }
+    handle.seekToEndOfFile(); handle.write(data + Data("\n".utf8)); try? handle.close()
 }

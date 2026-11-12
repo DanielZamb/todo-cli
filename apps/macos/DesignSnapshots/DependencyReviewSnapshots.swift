@@ -78,8 +78,7 @@ enum SnapshotText {
         host.layoutSubtreeIfNeeded()
         try await Task.sleep(for: .milliseconds(300))
         host.layoutSubtreeIfNeeded()
-        let bitmap = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
-        host.cacheDisplay(in: host.bounds, to: bitmap)
+        let bitmap = try await settledSnapshotBitmap(host, name: name)
         try #require(bitmap.representation(using: .png, properties: [:])).write(to: directory.appendingPathComponent(name + ".png"))
         return try SnapshotText.read(bitmap)
     }

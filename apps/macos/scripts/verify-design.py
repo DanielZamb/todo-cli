@@ -126,6 +126,21 @@ if any(evidence.glob('dag*-capture-manifest.json')):
 manifest = json.loads((evidence / 'manifest.json').read_text())
 assert len(manifest['files']) == (8 if os.environ.get('TODO_SNAPSHOT_SC1_ONLY') == '1' else 32 if os.environ.get('TODO_SNAPSHOT_DAG_CHECKPOINT2') == '1' else 24 if os.environ.get('TODO_SNAPSHOT_DAG_CHECKPOINT1') == '1' else 394 if os.environ.get('TODO_SNAPSHOT_DAG_ONLY') == '1' else 116 if os.environ.get('TODO_SNAPSHOT_DISCOVERY_ONLY') == '1' else 60 if os.environ.get('TODO_SNAPSHOT_SEARCH_ONLY') == '1' else 2 if os.environ.get('TODO_SNAPSHOT_QUICK_ONLY') == '1' else 18 if os.environ.get('TODO_SNAPSHOT_PRIORITY_ONLY') == '1' else 28 if os.environ.get('TODO_SNAPSHOT_BATCH_EDIT_ONLY') == '1' else 872)
 assert all((evidence / name).is_file() for name in manifest['files'])
-(evidence / 'result.json').write_text(json.dumps({'status': 'PASS' if render_exit == 0 else 'FAIL', 'exit': render_exit, 'pngs': len(manifest['files']), 'appLaunched': False, 'signed': False, 'keychainAccess': False, 'nativeGlassVerified': False}, indent=2) + '\n')
+settle_rows = [json.loads(line) for line in (evidence / 'settle.jsonl').read_text().splitlines()] if (evidence / 'settle.jsonl').is_file() else []
+settle_histogram = {}
+for row in settle_rows:
+    settle_histogram[str(row['captures'])] = settle_histogram.get(str(row['captures']), 0) + 1
+settle = {
+    'renders': len(settle_rows),
+    'capture_limit': 3,
+    'captures_histogram': dict(sorted(settle_histogram.items(), key=lambda item: int(item[0]))),
+    'over_limit': [{'sequence': row['sequence'], 'name': row['name'], 'captures': row['captures'], 'changes': row['changes']} for row in settle_rows if row['captures'] > 3],
+    'late_changes': [{'sequence': row['sequence'], 'name': row['name'], 'captures': row['captures'], 'changes': row['changes']} for row in settle_rows if row['captures'] > 2],
+    'stale_on_first_layout': [{'sequence': row['sequence'], 'name': row['name'], 'appearance': row['appearance'], 'controls': row.get('staleControls', [])} for row in settle_rows if row['staleOnFirstLayout']],
+    'verdict_image': 'natural layout; the forced re-measure is a detector only',
+}
+if settle['over_limit']:
+    render_exit = render_exit or 4
+(evidence / 'result.json').write_text(json.dumps({'status': 'PASS' if render_exit == 0 else 'FAIL', 'exit': render_exit, 'pngs': len(manifest['files']), 'render': {'scale': 2, 'drawing_colour_space': 'calibratedRGB (generic)', 'png_colour_space': 'sRGB', 'independent_of_host_display': True, 'settle': 'pending constraints, layout and CATransaction applied; two consecutive identical captures 100 ms apart'}, 'settle': settle, 'appLaunched': False, 'signed': False, 'keychainAccess': False, 'nativeGlassVerified': False}, indent=2) + '\n')
 print(f"{'PASS' if render_exit == 0 else 'FAIL'}: {len(manifest['files'])} offscreen PNGs; actual render exit {render_exit}; {evidence}")
 raise SystemExit(render_exit)

@@ -34,12 +34,12 @@ import WebKit
         return model
     }
     static func webViews(_ view: NSView) -> [WKWebView] { (view as? WKWebView).map { [$0] } ?? view.subviews.flatMap(webViews) }
-    static func image(host: NSView) async throws -> Data {
-        let bitmap = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
-        host.cacheDisplay(in: host.bounds, to: bitmap)
+    static func image(host: NSView, name: String = "graph") async throws -> Data {
+        let bitmap = try await settledSnapshotBitmap(host, name: name)
         guard !webViews(host).isEmpty else { return try #require(bitmap.representation(using: .png, properties: [:])) }
         let original = try #require(bitmap.cgImage)
-        let context = try #require(CGContext(data: nil, width: original.width, height: original.height, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        let sRGB = try #require(CGColorSpace(name: CGColorSpace.sRGB))
+        let context = try #require(CGContext(data: nil, width: original.width, height: original.height, bitsPerComponent: 8, bytesPerRow: 0, space: sRGB, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
         context.draw(original, in: .init(x: 0, y: 0, width: original.width, height: original.height))
         let scale = CGFloat(original.width) / host.bounds.width
         for web in webViews(host) {
@@ -131,7 +131,7 @@ import WebKit
                         #expect(tools.minX >= 0 && tools.maxX <= width && tools.minY >= 0 && tools.maxY <= height, "\(file) tools inside viewport")
                     } else { #expect(frames.frames["dependency-graph-tools"] == nil, "\(file) has no diagram tools") }
                 }
-                try await image(host: host).write(to: directory.appendingPathComponent(file))
+                try await image(host: host, name: file).write(to: directory.appendingPathComponent(file))
                 files.append(file)
                 receipts.append(["client": "macos", "layout": compact ? "compact" : "full", "appearance": scheme == .light ? "light" : "dark", "state": name, "png": file, "rendered_nodes": model.dependencies.graph?.renderedNodeCount as Any? ?? NSNull(), "render_error": model.dependencies.graph?.renderError as Any? ?? NSNull(), "geometry": frames.frames.mapValues { [Double($0.minX), Double($0.minY), Double($0.width), Double($0.height)] }, "adapter": "canonical Pele 1.13.0", "supplied_muted_text": suppliedMuted as Any? ?? NSNull(), "computed_edge_stroke": edgeStroke as Any? ?? NSNull(), "expected_edge_stroke": expectedStroke as Any? ?? NSNull(), "identifiers": ["dependency-graph", "dependency-graph-list", "dependency-graph-details", "dependency-graph-diagram", "dependency-graph-close", "dependency-graph-task-<id>", "dependency-graph-related-<section>-<id>"], "behavior_status": "pending", "behavior_receipt": NSNull()])
                 window.close()

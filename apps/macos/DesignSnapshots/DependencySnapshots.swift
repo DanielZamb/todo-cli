@@ -130,8 +130,7 @@ import TodoAPI
                         let body = try #require(capture.frames["dependency-body"])
                         #expect(last.minY >= body.minY - 0.5 && last.maxY <= body.maxY + 0.5, "\(file) longest list last row \(last) in \(body)")
                     }
-                    let bitmap = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
-                    host.cacheDisplay(in: host.bounds, to: bitmap)
+                    let bitmap = try await settledSnapshotBitmap(host, name: file)
                     if name.hasPrefix("drag") {
                         let during = capture.frames.filter { $0.key.hasPrefix("row-") }
                         model.dependencies.dropTarget = nil
