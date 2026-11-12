@@ -5,7 +5,7 @@
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
+  "productionSyncCommit": "475726d3d81c382469375bd8ce51d687bdec4fa2",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -133,7 +133,7 @@
         "canShowDiscovery",
         "applyDiscoveryShow"
       ],
-      "sha256": "d4cb2548215a43da7589646195d4907e74731c3b2db8ad8c7f667b350a162b60",
+      "sha256": "fca1231652bb3b7d471761e580e42c4c251e0f75bbc1bac96da4488e7b9291db",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -153,9 +153,11 @@
         "handleAuthorization",
         "expireSession",
         "followChanges Unauthorized",
-        "metadata/parse/History/Series/import invalidation"
+        "metadata/parse/History/Series/import invalidation",
+        "signOut start, failure and commit",
+        "followChanges reconnect retry from Offline and sign-out notice"
       ],
-      "sha256": "e32b6f0ca0d53408aeb7624eabc52f55fc38f203c15fb7c18c6c0a2b82c33203",
+      "sha256": "7866563dd9fc531c922477ded4ed92157a970018d82e2ac428e691a7ebdbc51d",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -165,7 +167,7 @@
         "TaskListView sheet/alert binding",
         "DraftNavigationActions target capture and explicit Cancel"
       ],
-      "sha256": "1abf621b6a576f217ea92d74353650c956a7bd255ea06f5b61e539066130bc43",
+      "sha256": "6942fe51d6c26253067c9c2a8c8d3d95f7af2210a53a81d9b0be7d3b20dd92d1",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -191,7 +193,7 @@
       "functions": [
         "changeAttachment captured epoch and publication"
       ],
-      "sha256": "014232d99ade1c2178fb1ea8c2dbdf8935b8862ebad88af9865291cc2e0909fa",
+      "sha256": "d5766ac527a50fcc3c2aaaba87671b81f9d517187003db77c3cc2d735287bfad",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -200,7 +202,7 @@
         "reloadBatchEditTargets",
         "applyBatchEdit"
       ],
-      "sha256": "91693b636baeffda3d17128d573071d62932ee7d93fc7eb8b92db56e75693fef",
+      "sha256": "9019f543a17f357ef8c2fdfe2ade757926f9f12efe609684166eef96deacc903",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -209,7 +211,7 @@
         "reloadAttachmentTargets",
         "applyAttachmentBatch"
       ],
-      "sha256": "acaa4385ca0b8b4566bdfaf747bf05f98d47c7d1f75a814379596c7c19d28dc8",
+      "sha256": "570fa7ad1fb5fcf265075b53105f34fbddbf05b90b83ab5361fafb88f1ae9405",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     }
   ],
@@ -223,7 +225,7 @@
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "ecee73d77b2d58e185d098fa3d836c78825f8325",
+  "previousProductionSyncCommit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -273,5 +275,48 @@
     "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
     "changes": "Delete preview adds accepted request Version; batch item code/schema becomes occ_conflict only. Store, graph algorithms, events, transaction and matcher bodies unchanged. New clients retain request-time getters, source identities and catalog debt. PR12 exact56pt/px Import layout composes with the same structured Dependency projector.",
     "limits": "Finite models and manual function mapping; native signing, storage, Keychain, Session persistence, real OS dispatch and VoiceOver remain held."
+  },
+  "signOutSplitReview": {
+    "product": "475726d3d81c382469375bd8ce51d687bdec4fa2",
+    "previous": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/Discovery.swift",
+        "from": "d4cb2548215a43da7589646195d4907e74731c3b2db8ad8c7f667b350a162b60",
+        "to": "fca1231652bb3b7d471761e580e42c4c251e0f75bbc1bac96da4488e7b9291db"
+      },
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "e32b6f0ca0d53408aeb7624eabc52f55fc38f203c15fb7c18c6c0a2b82c33203",
+        "to": "7866563dd9fc531c922477ded4ed92157a970018d82e2ac428e691a7ebdbc51d"
+      },
+      {
+        "path": "apps/macos/Sources/AppViews.swift",
+        "from": "1abf621b6a576f217ea92d74353650c956a7bd255ea06f5b61e539066130bc43",
+        "to": "6942fe51d6c26253067c9c2a8c8d3d95f7af2210a53a81d9b0be7d3b20dd92d1"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentModel.swift",
+        "from": "014232d99ade1c2178fb1ea8c2dbdf8935b8862ebad88af9865291cc2e0909fa",
+        "to": "d5766ac527a50fcc3c2aaaba87671b81f9d517187003db77c3cc2d735287bfad"
+      },
+      {
+        "path": "apps/macos/Sources/BatchEdit.swift",
+        "from": "91693b636baeffda3d17128d573071d62932ee7d93fc7eb8b92db56e75693fef",
+        "to": "9019f543a17f357ef8c2fdfe2ade757926f9f12efe609684166eef96deacc903"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentBatch.swift",
+        "from": "acaa4385ca0b8b4566bdfaf747bf05f98d47c7d1f75a814379596c7c19d28dc8",
+        "to": "570fa7ad1fb5fcf265075b53105f34fbddbf05b90b83ab5361fafb88f1ae9405"
+      }
+    ],
+    "model": "Discovery.tla splits SignOut into SignOutStart (close, credential provenance kept), SignOutFail (no change) and SignOut (committed revocation or expiry). CredentialChanged cannot start during sign-out. New broken variant signout-start-clear must violate ClosedIsEmpty.",
+    "review": "Since 7d947f91: signOut calls closeDiscovery and keeps the epoch until a 204 revocation reply; failed or cancelled sign-out reconnects; Show and write busy cleanup is epoch-owned; checkServerContract rethrows CancellationError on epoch change; followChanges retries discovery from Offline on ready, mapped to Retry; Attachment, batch-edit and Series loading are released at replacement. No publication guard, Show acceptance or identity check is weakened.",
+    "controls": [
+      "docs/evidence/discovery-formal/electron-pfQcH2/result.json (18799cb8; Electron sources unchanged since)",
+      "docs/evidence/discovery-formal/swift-teol9Y/result.json (475726d3)"
+    ],
+    "housekeeping": "prepare-inputs compiles leave .bun-build temporaries in the new .scratch/bin cache; they were moved out of the checkout after lsof showed no holder, so check-swift could run its temporary guard. No file was deleted."
   }
 }

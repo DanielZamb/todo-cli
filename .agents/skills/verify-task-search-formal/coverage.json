@@ -77,7 +77,7 @@
         "catalogSignalRevision and full-read debt",
         "lastCatalogReadAt and activation age"
       ],
-      "sha256": "6feeee8a2c1d68d990ae6eb3eb7fae581206662a236eb1f6a11526867fb52210"
+      "sha256": "7866563dd9fc531c922477ded4ed92157a970018d82e2ac428e691a7ebdbc51d"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -270,5 +270,17 @@
     "limits": "Finite models and manual function mapping; native signing, storage, Keychain, Session persistence, real OS dispatch and VoiceOver remain held."
   },
   "previousProductCommit": "36f9c56e200048aa2ca16186aaf713bea8d5454e",
-  "previousIntegrationCommit": "81cdef8ec257a8ca7e1cbfb1ab2b3ff3afcbbf14"
+  "previousIntegrationCommit": "81cdef8ec257a8ca7e1cbfb1ab2b3ff3afcbbf14",
+  "sessionRetirementReview": {
+    "product": "475726d3d81c382469375bd8ce51d687bdec4fa2",
+    "previousRenewal": "6b976262",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "6feeee8a2c1d68d990ae6eb3eb7fae581206662a236eb1f6a11526867fb52210",
+        "to": "7866563dd9fc531c922477ded4ed92157a970018d82e2ac428e691a7ebdbc51d"
+      }
+    ],
+    "review": "performRefresh captures one scoped Client per refresh and passes it to its search reads; generation, requestedIdentity and canPublishSearch guards are unchanged. followChanges checks generation before the health result and adds generation guards after dependency reads and the operation refresh; healthy-ready predicate unchanged. refreshAfterWrite adds an epoch guard after publication. Other changes are session ownership, epoch-owned busy cleanup, sign-out and diagnostics scoping, outside the search model."
+  }
 }
