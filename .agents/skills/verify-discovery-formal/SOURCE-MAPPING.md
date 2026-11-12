@@ -287,11 +287,13 @@ holds busy.
 restore and signIn re-capture after installing their new credential and check
 before final publication.
 
-`isCurrentCredential` compares the one discovery credentialEpoch and Task
-cancellation. `handleAuthorization(error, credentialEpoch:)` requires its caller's
-captured epoch. `expireSession(credentialEpoch:)` checks it before disconnect,
-vault deletion, signedIn=false, credential replacement or the Session-ended
-notice. There is no epoch-less authorization overload. RootView displays TaskListView
+`isCurrentEpoch` compares the one discovery credentialEpoch; `isCurrentCredential`
+adds Task cancellation. `handleAuthorization(error, credentialEpoch:)` requires its caller's
+captured epoch. `expireSession(credentialEpoch:)` compares that epoch alone (`isCurrentEpoch`)
+(candidate 7: not Task cancellation, since a 401 already on its way to a
+cancelled task still refuses the current credential, and retiring a
+credential changes the epoch) before disconnect, vault deletion,
+signedIn=false, credential replacement or the Session-ended notice. There is no epoch-less authorization overload. RootView displays TaskListView
 only while signedIn; otherwise it displays SignInView. Model openedTask is
 visible authorized navigation, not a claim that all private editor/draft memory
 is erased when the authentication view changes.

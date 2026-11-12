@@ -77,7 +77,7 @@
         "catalogSignalRevision and full-read debt",
         "lastCatalogReadAt and activation age"
       ],
-      "sha256": "34e1353dedd1519ce540fc31295f458d2ca231d8fe3dd65a7784bc9507e29656"
+      "sha256": "95873235d559a9228ef87be57ad8e1a6c377f12a471d2ddc63fb3d9aefa13c13"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -99,7 +99,7 @@
         "taskContent",
         "searchField"
       ],
-      "sha256": "6942fe51d6c26253067c9c2a8c8d3d95f7af2210a53a81d9b0be7d3b20dd92d1"
+      "sha256": "f165beb65fe6eb60ab7eb036d5c58319af68ced2cd7026d8fbb05abb59f913d6"
     },
     {
       "path": "apps/macos/Sources/TaskSnapshot.swift",
@@ -331,5 +331,21 @@
       }
     ],
     "review": "TodoModel: authorize(_:epoch:profile:), instance surfaces (editor opening, quickAdd, batch drafts), refreshAfterWrite(presenting:), quick-add create and parse, runImport, deleteTask and openSeries completion order changed. TaskSnapshot: TaskDraft.opening added. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged."
+  },
+  "candidate7Review": {
+    "product": "e2d58e4f9a82219a8acac9920a668a53ddf2829f",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "34e1353dedd1519ce540fc31295f458d2ca231d8fe3dd65a7784bc9507e29656",
+        "to": "95873235d559a9228ef87be57ad8e1a6c377f12a471d2ddc63fb3d9aefa13c13"
+      },
+      {
+        "path": "apps/macos/Sources/AppViews.swift",
+        "from": "6942fe51d6c26253067c9c2a8c8d3d95f7af2210a53a81d9b0be7d3b20dd92d1",
+        "to": "f165beb65fe6eb60ab7eb036d5c58319af68ced2cd7026d8fbb05abb59f913d6"
+      }
+    ],
+    "review": "TodoModel and AppViews changed for the completion order, messages (Dismiss, named hand-offs, sign-out wording), Profile switch readiness, quick-add completion gate and capsule, and the shared isCurrentEpoch helper. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged."
   }
 }

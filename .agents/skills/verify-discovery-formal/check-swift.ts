@@ -152,10 +152,13 @@ const mutations = [
     witness: "model.discovery.showIntent?.id",
   },
   {
+    // Candidate 7: expireSession compares the epoch without Task cancellation, so the epoch
+    // comparison is one helper used by both isCurrentCredential and expireSession; the mutant
+    // removes it from both layers at once.
     name: "authorization-epoch",
     path: modelFile,
-    from: "discovery.credentialEpoch == credentialEpoch && !Task.isCancelled",
-    to: "!Task.isCancelled",
+    from: "func isCurrentEpoch(_ credentialEpoch: Int) -> Bool { discovery.credentialEpoch == credentialEpoch }",
+    to: "func isCurrentEpoch(_ credentialEpoch: Int) -> Bool { true }",
     filter:
       "oldUnauthorizedCannotExpireReplacementSessionAndCurrentUnauthorizedStillExpires",
     witness: "replacementSurvived",

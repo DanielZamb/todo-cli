@@ -5,7 +5,7 @@
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "05a54e6884b1bf7b727fc3159f25dab75a9da032",
+  "productionSyncCommit": "e2d58e4f9a82219a8acac9920a668a53ddf2829f",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -157,7 +157,7 @@
         "signOut start, failure and commit",
         "followChanges reconnect retry from Offline and sign-out notice"
       ],
-      "sha256": "34e1353dedd1519ce540fc31295f458d2ca231d8fe3dd65a7784bc9507e29656",
+      "sha256": "95873235d559a9228ef87be57ad8e1a6c377f12a471d2ddc63fb3d9aefa13c13",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -167,7 +167,7 @@
         "TaskListView sheet/alert binding",
         "DraftNavigationActions target capture and explicit Cancel"
       ],
-      "sha256": "6942fe51d6c26253067c9c2a8c8d3d95f7af2210a53a81d9b0be7d3b20dd92d1",
+      "sha256": "f165beb65fe6eb60ab7eb036d5c58319af68ced2cd7026d8fbb05abb59f913d6",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -193,7 +193,7 @@
       "functions": [
         "changeAttachment captured epoch and publication"
       ],
-      "sha256": "249f45349335c45271bf2be13667caeb2968e646a5b309de4468d58e7611c39b",
+      "sha256": "e51b0e6201f5f552c32108269dc4895bca6ad23cbda388e9b214ffa8558be149",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -202,7 +202,7 @@
         "reloadBatchEditTargets",
         "applyBatchEdit"
       ],
-      "sha256": "f4febc1f885e141b6f7f0e014dbadda75d67e53eb4755f1c984a27e65f6d45ab",
+      "sha256": "b0002043c56ae8e68b122957ad7a66e4da0594613971915e27835cc03ad57f66",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -211,7 +211,7 @@
         "reloadAttachmentTargets",
         "applyAttachmentBatch"
       ],
-      "sha256": "4e4dbfc9f8d23bf02152dc205675bcc5e436462e9fc4e7e4b982fde0e5541b95",
+      "sha256": "71769f13937b3ff9be1f6d8759294f021830df465f4255b98b399ed568c4d8b6",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     }
   ],
@@ -225,7 +225,7 @@
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "7f3bc6ac66933a1721d01af2063223f1c8871bd5",
+  "previousProductionSyncCommit": "05a54e6884b1bf7b727fc3159f25dab75a9da032",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -432,5 +432,37 @@
       }
     ],
     "review": "requestDiscovery and showDiscoveryMatch catches now hand a 401 to handleAuthorization when the captured credential epoch is still current, before canPublishDiscovery/canShowDiscovery; publication still happens only behind those unchanged guards, and an expired Session fails them (signedIn false), so nothing is published. Batch edit, Attachment batch and the editor Attachment write call authorize(_:epoch:profile:) before their unchanged instance guards and read back with presenting: false after close. No discovery publication, Show or Close guard changed."
+  },
+  "candidate7Review": {
+    "product": "e2d58e4f9a82219a8acac9920a668a53ddf2829f",
+    "controls": "check-swift passed on e2d58e4f: docs/evidence/discovery-formal/swift-JEo1IZ",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "34e1353dedd1519ce540fc31295f458d2ca231d8fe3dd65a7784bc9507e29656",
+        "to": "95873235d559a9228ef87be57ad8e1a6c377f12a471d2ddc63fb3d9aefa13c13"
+      },
+      {
+        "path": "apps/macos/Sources/AppViews.swift",
+        "from": "6942fe51d6c26253067c9c2a8c8d3d95f7af2210a53a81d9b0be7d3b20dd92d1",
+        "to": "f165beb65fe6eb60ab7eb036d5c58319af68ced2cd7026d8fbb05abb59f913d6"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentModel.swift",
+        "from": "249f45349335c45271bf2be13667caeb2968e646a5b309de4468d58e7611c39b",
+        "to": "e51b0e6201f5f552c32108269dc4895bca6ad23cbda388e9b214ffa8558be149"
+      },
+      {
+        "path": "apps/macos/Sources/BatchEdit.swift",
+        "from": "f4febc1f885e141b6f7f0e014dbadda75d67e53eb4755f1c984a27e65f6d45ab",
+        "to": "b0002043c56ae8e68b122957ad7a66e4da0594613971915e27835cc03ad57f66"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentBatch.swift",
+        "from": "4e4dbfc9f8d23bf02152dc205675bcc5e436462e9fc4e7e4b982fde0e5541b95",
+        "to": "71769f13937b3ff9be1f6d8759294f021830df465f4255b98b399ed568c4d8b6"
+      }
+    ],
+    "review": "Candidate 7 changes no discovery publication, Show or Close guard. expireSession compares the credential epoch alone (not Task cancellation), through isCurrentEpoch, which isCurrentCredential also uses; the authorization-epoch mutant now replaces isCurrentEpoch so it removes the epoch comparison from both layers (caller ownership checks and expireSession) and still fails oldUnauthorizedCannotExpireReplacementSession with replacementSurvived. Other changes: owning-instance checks after awaits, committed read-backs, Save/Move/Copy openings, the message banner and Dismiss, named hand-offs, Import follow-up state, and This client wording."
   }
 }
