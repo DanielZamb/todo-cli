@@ -343,13 +343,17 @@ struct Snapshots {
                 recorder.authorizeOwnerSession(true)
                 let click = recorder.beginAction(.taskSelection, inputMS: 1000, mode: .full, inputKind: .pointer)
                 clock.now = 1054; recorder.inputReleased(click, atMS: 1053.9, source: .nativeSelection)
+                var released = ClientDiagnosticEvent(name: .inputReleased, run: recorder.run, now: 1054)
+                released.actionID = click; released.traceID = click; released.inputKind = .pointer; released.inputMS = 1053.9; released.durationMS = 53.9; released.releaseSource = .nativeSelection
+                recorder.record(released)
                 clock.now = 1086; recorder.handlerStarted(click); clock.now = 1128; recorder.resultPublished(click); clock.now = 1321; recorder.layoutCommitted(click)
+                clock.now = 2000
                 let settings = recorder.beginAction(.openSettings, inputMS: 2000, mode: .full, inputKind: .pointer)
                 clock.now = 2030; recorder.handlerStarted(settings); clock.now = 2040; recorder.resultPublished(settings); clock.now = 2190; recorder.layoutCommitted(settings)
                 let diagnostics = fixture(); diagnostics.signedIn = true
                 diagnostics.clientDiagnosticsUI.summary = await recorder.snapshot()
-                try await render("c7-this-client-holds", DiagnosticsView(model: diagnostics, live: false, initiallyExpanded: ["This client", "Interaction phases", "Recent activity"]), width: 1160, height: 1400)
-                try await render("c7-compact-this-client-holds", DiagnosticsView(model: diagnostics, live: false, initiallyExpanded: ["This client", "Interaction phases"]), width: 393, height: 1400)
+                try await render("c7-this-client-holds", ScrollView { ClientDiagnosticsView(model: diagnostics, compact: false, initiallyExpanded: ["Interaction phases", "Recent activity"]).padding(20) }, width: 1160, height: 1400)
+                try await render("c7-compact-this-client-holds", ScrollView { ClientDiagnosticsView(model: diagnostics, compact: true, initiallyExpanded: ["Interaction phases"]).padding(16) }, width: 393, height: 1400)
                 recorder.clear()
                 continue
             }
