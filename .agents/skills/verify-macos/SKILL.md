@@ -5,6 +5,10 @@ description: Verify the compiled macOS 26 Todo SwiftUI app against scratch HTTP 
 
 # Verify Todo for Mac
 
+The separately authorized [Todo Verification app](../verify-macos-real-app/SKILL.md)
+uses scratch data and memory-only Session storage under ADR-0021. Its V01 proof
+does not lift this skill's production-app HOLD or release V02 input automation.
+
 Created with `create-verification-skill`.
 Read [the feature map](features/README.md) before selecting coverage.
 

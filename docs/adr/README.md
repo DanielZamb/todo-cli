@@ -124,8 +124,14 @@ images and redacts paths from History. External files are never deleted.
 
 ## Index
 
+The separate Mac verification app has its own startup and credential boundary.
+It shares production screens and uses only scratch data.
+
+[ADR-0021. A separate Mac verification app](0021-separate-mac-verification-app.md)
+
 | ID | Title | Status |
 | --- | --- | --- |
+| [0021](0021-separate-mac-verification-app.md) | A separate Mac verification app | accepted 2026-11-12 |
 | [0001](0001-port-to-effect-with-shared-domain.md) | Port to Effect with one shared domain package | accepted |
 | [0002](0002-server-is-the-gateway-for-ui-and-remote-clients.md) | The server is the gateway for UI and remote clients | accepted |
 | [0003](0003-httpapi-openapi-as-the-single-contract.md) | HttpApi with OpenAPI is the single client contract | accepted |

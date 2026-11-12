@@ -4,6 +4,14 @@ import Observation
 import OpenAPIRuntime
 import TodoAPI
 
+protocol SessionStorage {
+    func load() throws -> String?
+    func save(_ credential: String) throws
+    func delete() throws
+}
+
+extension SessionVault: SessionStorage {}
+
 private final class CatalogNotificationObservers: @unchecked Sendable {
     private let observers: [(NotificationCenter, NSObjectProtocol)]
     init(system: NotificationCenter, workspace: NotificationCenter, receive: @escaping @Sendable (ClientDiagnosticTrigger) -> Void) {
@@ -249,7 +257,7 @@ final class TodoModel {
     private var restored = false
     private var generation = 0
     private var refreshGeneration = 0
-    private var vault: SessionVault { SessionVault(service: configuration.vaultService, account: configuration.server.absoluteString) }
+    private let vault: any SessionStorage
     private let clientFactory: ((URL, String) -> Client)?
     var client: Client {
         if let clientFactory { return clientFactory(configuration.server, credential) }
@@ -262,7 +270,8 @@ final class TodoModel {
     private var restoreCursorKey: String { "restore-cursor.\(configuration.server.absoluteString)" }
     var canWrite: Bool { signedIn && connection == .live && !busy && outdatedServerBuild == nil }
 
-    init(configuration: ClientConfiguration, clientFactory: ((URL, String) -> Client)? = nil, clientDiagnostics: ClientDiagnosticsRecorder = .disabled, catalogNow: @escaping () -> Date = Date.init, catalogNotifications: NotificationCenter = .default, wakeNotifications: NotificationCenter? = nil) {
+    init(configuration: ClientConfiguration, clientFactory: ((URL, String) -> Client)? = nil, clientDiagnostics: ClientDiagnosticsRecorder = .disabled, catalogNow: @escaping () -> Date = Date.init, catalogNotifications: NotificationCenter = .default, wakeNotifications: NotificationCenter? = nil, sessionStorage: (any SessionStorage)? = nil) {
+        self.vault = sessionStorage ?? SessionVault(service: configuration.vaultService, account: configuration.server.absoluteString)
         self.clientDiagnostics = clientDiagnostics
         self.catalogNow = catalogNow
         self.catalogNotifications = catalogNotifications
