@@ -998,4 +998,185 @@ private actor ScriptGate: ClientTransport {
         }
         await finish(model, gate, vault)
     }
+
+    // MARK: MAC-C1-S1-15: the message rule inside a surface (Import report and picker follow-ups)
+
+    /// Opens the surface and returns how to read its follow-up failure.
+    private func followUpSurface(_ surface: String, _ model: TodoModel, _ task: TaskSnapshot) async throws -> () -> String? {
+        if surface == "import" {
+            model.showingImport = true
+            model.loadImport(data: Data("[{\"title\":\"Report remains open\"}]".utf8), name: "report.json")
+            await model.previewImport()
+            try #require(model.importReport != nil)
+            return { model.importFollowUpError }
+        }
+        pickerFor(model, task)
+        return { model.dependencies.picker?.failure?.message }
+    }
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil),
+          arguments: ["import", "picker"], ["older-success-after-newer-failure", "older-failure-after-newer-success", "older-success-after-newer-success"])
+    func anOlderFollowUpCannotChangeANewerOneInTheSameSurface(_ surface: String, _ order: String) async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        let other = try await secondTask(model, gate, vault)
+        let shown = try await followUpSurface(surface, model, task)
+        let instance = surface == "import" ? model.importInstance : model.dependencies.picker!.id
+        await gate.next("tasks.show", order == "older-failure-after-newer-success" ? .holdThenFail(404, "OLDER follow-up failed") : .hold)
+        let older = Task { await model.createDependencyFollowUp(task.id) }
+        try await wait("older held") { await gate.isHeld("tasks.show") }
+        if order == "older-success-after-newer-failure" {
+            await gate.next("tasks.show", .fail(404, "NEWER follow-up failed"))
+            await model.createDependencyFollowUp(UUID().uuidString)
+            let newer = try #require(shown(), "\(surface): the newer failure shows")
+            await gate.release("tasks.show"); await older.value
+            #expect(shown() == newer, "\(surface): the older success leaves the newer failure: \(shown() ?? "nil")")
+            #expect(!model.quickAdd, "\(surface): the older success opens no Quick Add")
+            #expect(surface == "import" ? model.showingImport && model.importInstance == instance : model.dependencies.picker?.id == instance, "\(surface): the same surface stays open")
+        } else {
+            await model.createDependencyFollowUp(other.id)
+            #expect(model.quickAdd && model.dependencies.initial.contains { $0.id == other.id }, "\(surface): the newer success presents")
+            await gate.release("tasks.show"); await older.value
+            #expect(shown() == nil && model.message == nil, "\(surface): the older completion shows nothing: \(shown() ?? model.message ?? "nil")")
+            #expect(!model.dependencies.initial.contains { $0.id == task.id }, "\(surface): the older completion adds nothing to the draft")
+        }
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil),
+          arguments: ["import-apply", "batch-edit", "dependency-batch", "delete", "save", "quick-add"])
+    func aGatedSurfaceStartsNoSecondActionOfTheSameKindWhileOneIsPending(_ kind: String) async throws {
+        // These surfaces cannot interleave two actions of one kind: busy or pending refuses the
+        // second start, so the older one is never overtaken (S1-15 ruling, gated case).
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        let operation: String
+        let start: () async -> Void
+        switch kind {
+        case "import-apply":
+            model.showingImport = true
+            model.loadImport(data: Data(#"[{"external_id":"gated:\#(UUID().uuidString)","title":"Gated import"}]"#.utf8), name: "gated.json")
+            await model.previewImport(); try #require(model.importReport?.dry_run == true)
+            operation = "tasks.importTasks"; start = { await model.applyImport() }
+        case "batch-edit":
+            model.batchEdit = .init(profile: "work"); await model.reloadBatchEditTargets()
+            model.batchEdit?.selected = [task.id]; model.batchEdit?.field = .priority; model.batchEdit?.value = task.priority == "P1" ? "P2" : "P1"
+            operation = "tasks.batchEdit"; start = { await model.applyBatchEdit(dryRun: false) }
+        case "dependency-batch":
+            let target = try await secondTask(model, gate, vault)
+            model.dependencies.batch = .init(profile: "work", root: model.tasks.first { $0.id == task.id }!, direction: .dependsOn)
+            await model.reloadDependencyBatch(); model.dependencies.batch?.selected = [target.id]
+            await model.previewDependencyBatch(); try #require(model.dependencies.batch?.report?.dry_run == true)
+            operation = "tasks.batchDepend"; start = { await model.applyDependencyBatch() }
+        case "delete":
+            await model.openDependencyDelete(task)
+            try await wait("delete preview") { model.dependencies.deletion?.acceptedFromVersion != nil }
+            operation = "tasks.delete"; start = { await model.deleteTask(task) }
+        case "save":
+            model.beginEditing(task); model.editor?.title = task.title + " gated"
+            operation = "tasks.edit"; start = { _ = await model.save() }
+        default:
+            model.quickAdd = true; model.newTitle = "Gated quick add " + UUID().uuidString
+            operation = "tasks.create"; start = { _ = await model.create(openEditor: false) }
+        }
+        let before = await gate.count(operation)
+        await gate.next(operation, .hold)
+        let first = Task { await start() }
+        try await wait("\(kind) held") { await gate.isHeld(operation) }
+        await start()
+        #expect(await gate.count(operation) == before + 1, "\(kind): the second start sent nothing")
+        await gate.release(operation); await first.value
+        await finish(model, gate, vault)
+    }
+
+    // MARK: S1-15, every surface-local message whose same-kind actions are not gated
+
+    private struct Interleaving { let op: String; let older: () async -> Void; let newer: () async -> Void; let shown: () -> String? }
+
+    /// Opens the surface; `older` and `newer` start one action of the same kind on it.
+    private func interleaving(_ surface: String, _ model: TodoModel, _ gate: ScriptGate, _ vault: SessionVault, _ task: TaskSnapshot) async throws -> Interleaving {
+        switch surface {
+        case "picker-link":
+            // Blocks: each candidate is its own dependent, so two links can be pending at once.
+            let first = try await secondTask(model, gate, vault), second = try await secondTask(model, gate, vault)
+            model.dependencies.picker = .init(profile: "work", root: model.tasks.first { $0.id == task.id }!, direction: .blocks)
+            await model.reloadDependencyPicker()
+            return .init(op: "tasks.depend", older: { await model.toggleDependency(first) }, newer: { await model.toggleDependency(second) }, shown: { model.dependencies.picker?.failure?.message })
+        case "snapshot-list":
+            return .init(op: "snapshots.list", older: { await model.loadSnapshots() }, newer: { await model.loadSnapshots() }, shown: { model.snapshotError })
+        case "history":
+            model.beginEditing(task)
+            return .init(op: "reads.history", older: { await model.loadHistory() }, newer: { await model.loadHistory() }, shown: { model.historyError })
+        default: // editor-conflict: the conflict reload of the editor's definitions
+            model.beginEditing(task); model.editor?.title = task.title + " mine"
+            try await edit(task, credential: try #require(try vault.load()))
+            _ = await model.save()
+            try #require(model.conflict != nil, "a save conflict opens the conflict view")
+            return .init(op: "reads.projects", older: { await model.refreshConflictDefinitions() }, newer: { await model.refreshConflictDefinitions() }, shown: { model.editorError })
+        }
+    }
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil),
+          arguments: ["picker-link", "snapshot-list", "history", "editor-conflict"], ["older-success-after-newer-failure", "older-failure-after-newer-success", "older-success-after-newer-success"])
+    func anOlderActionCannotChangeANewerOneOfItsKindInTheSameSurface(_ surface: String, _ order: String) async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        let s = try await interleaving(surface, model, gate, vault, task)
+        await gate.next(s.op, order == "older-failure-after-newer-success" ? .holdThenFail(503, "OLDER \(surface) failed") : .hold)
+        let older = Task { await s.older() }
+        try await wait("older held") { await gate.isHeld(s.op) }
+        if order == "older-success-after-newer-failure" {
+            await gate.next(s.op, .fail(503, "NEWER \(surface) failed"))
+            await s.newer()
+            let newer = try #require(s.shown(), "\(surface): the newer failure shows")
+            await gate.release(s.op); await older.value
+            #expect(s.shown() == newer, "\(surface): the older success leaves the newer failure: \(s.shown() ?? "nil")")
+            if surface == "picker-link" { #expect(model.dependencies.picker?.feedback == nil, "picker: the older success shows no feedback") }
+        } else {
+            await s.newer()
+            #expect(s.shown() == nil, "\(surface): the newer success shows no message: \(s.shown() ?? "nil")")
+            let feedback = model.dependencies.picker?.feedback
+            await gate.release(s.op); await older.value
+            #expect(s.shown() == nil, "\(surface): the older completion shows nothing: \(s.shown() ?? "nil")")
+            if surface == "picker-link" { #expect(model.dependencies.picker?.feedback == feedback, "picker: only the newer link presents feedback") }
+        }
+        await finish(model, gate, vault)
+    }
+
+    // MARK: S1-15, across kinds in one surface: a reload's success clears nothing newer
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func aDependencyBatchReloadKeepsARunFailurePublishedWhileItLoaded() async throws {
+        let gate = ScriptGate(); let (model, vault, root) = try await live(gate)
+        let target = try await secondTask(model, gate, vault)
+        model.dependencies.batch = .init(profile: "work", root: model.tasks.first { $0.id == root.id }!, direction: .dependsOn)
+        await model.reloadDependencyBatch()
+        model.dependencies.batch?.selected = [target.id]
+        await model.previewDependencyBatch()
+        try #require(model.dependencies.batch?.report?.dry_run == true)
+        try await wait("quiet catalog") { !model.loading }
+        try await Task.sleep(for: .milliseconds(200))
+        await gate.next("tasks.list", .hold)
+        let reload = Task { await model.reloadDependencyBatch() }
+        try await wait("reload held") { await gate.isHeld("tasks.list") }
+        await gate.next("tasks.batchDepend", .fail(503, "NEWER apply failed"))
+        await model.applyDependencyBatch()
+        let failure = try #require(model.dependencies.batch?.failure?.message, "the apply's failure shows")
+        await gate.release("tasks.list"); await reload.value
+        #expect(model.dependencies.batch?.failure?.message == failure, "the reload's success leaves the newer failure: \(model.dependencies.batch?.failure?.message ?? "nil")")
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func aDeleteConfirmationReloadKeepsARefusalPublishedWhileItLoaded() async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        await model.openDependencyDelete(task)
+        try await wait("delete preview") { model.dependencies.deletion?.acceptedFromVersion != nil }
+        await gate.next("tasks.delete", .holdThenFail(503, "NEWER delete failed"))
+        let delete = Task { await model.deleteTask(task) }
+        try await wait("delete held") { await gate.isHeld("tasks.delete") }
+        await gate.next("tasks.show", .hold)
+        let reload = Task { await model.reloadDependencyDelete(changed: true) }
+        try await wait("reload held") { await gate.isHeld("tasks.show") }
+        await gate.release("tasks.delete"); await delete.value
+        let refusal = try #require(model.dependencies.deletion?.failure?.message, "the delete's failure shows")
+        await gate.release("tasks.show"); await reload.value
+        #expect(model.dependencies.deletion?.failure?.message == refusal, "the reload's success leaves the newer refusal: \(model.dependencies.deletion?.failure?.message ?? "nil")")
+        await finish(model, gate, vault)
+    }
 }

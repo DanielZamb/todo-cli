@@ -234,15 +234,28 @@ extension TodoModel {
         // The follow-up is offered by a Dependency picker or an Import report. Its result belongs to
         // that instance: once it has closed, the read raises no message, closes nothing and opens nothing.
         let surface: MessageSurface? = dependencies.picker.map { .dependencyPicker($0.id) } ?? (showingImport ? .importSheet(importInstance) : nil)
+        // MAC-C1-S1-15: the message rule holds inside the surface too. A newer follow-up in the same
+        // surface supersedes this one: then this one presents nothing (no clearing, no Quick Add).
+        enum Owner { case picker(UUID, SurfaceMessages<DependencyPicker.MessageKind, DependencyNotice>.Ticket), report(SurfaceMessages<ImportMessageKind, String>.Ticket), main(SurfaceMessages<MessageKind, String>.Ticket) }
+        let owner: Owner
+        switch surface {
+        case .dependencyPicker(let picker): owner = .picker(picker, dependencies.picker!.messages.begin(.followUp))
+        case .importSheet: owner = .report(importMessages.begin(.followUp))
+        default: owner = .main(beginMessage(.dependencyFollowUp))
+        }
         let epoch = discovery.credentialEpoch
         let selectedProfile = profile
-        let mark = messageMark
         do {
             let task = try await TaskSnapshot.decode(client.tasks_period_show(path: .init(profile: selectedProfile, task: id)).ok.body.json)
             guard isCurrentCredential(epoch), profile == selectedProfile else { return }
             guard surface.map(isShowing) ?? true else { return }
-            clearMessage([.dependencyFollowUp], since: mark)
-            importFollowUpError = nil
+            let present: Bool
+            switch owner {
+            case .picker(let picker, let ticket): present = dependencies.picker?.id == picker && dependencies.picker?.messages.succeed(ticket) == true
+            case .report(let ticket): present = importMessages.succeed(ticket)
+            case .main(let ticket): present = succeedMessage(ticket)
+            }
+            guard present else { return }
             closeDependencyPicker()
             if !dependencies.initial.contains(where: { $0.id == task.id }) { dependencies.initial.append(task) }
             quickAdd = true
@@ -251,10 +264,14 @@ extension TodoModel {
             guard isCurrentCredential(epoch), profile == selectedProfile else { return }
             guard surface.map(isShowing) ?? true else { return }
             // Shown where the person is looking: inside the sheet that offered the follow-up.
-            switch surface {
-            case .dependencyPicker: dependencies.picker?.failure = DependencyNotice(message: describe(error))
-            case .importSheet: importFollowUpError = describe(error, at: .importTasks)
-            default: publishMessage(describe(error), kind: .dependencyFollowUp, surface: surface)
+            switch owner {
+            case .picker(let picker, let ticket):
+                let failureNotice = DependencyNotice(message: describe(error))
+                if dependencies.picker?.id == picker { dependencies.picker?.messages.fail(failureNotice, ticket) }
+            case .report(let ticket):
+                let failureText = describe(error, at: .importTasks)
+                importMessages.fail(failureText, ticket)
+            case .main(let ticket): if isNewestMessage(ticket) { publishMessage(describe(error), kind: .dependencyFollowUp, surface: surface) }
             }
         }
     }

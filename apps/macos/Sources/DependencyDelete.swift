@@ -17,7 +17,7 @@ extension TodoModel {
         let epoch = discovery.credentialEpoch
         let client = self.client
         dependencies.deletion?.request += 1
-        guard let request = dependencies.deletion?.request else { return }
+        guard let request = dependencies.deletion?.request, let ticket = dependencies.deletion?.messages.begin(.reload) else { return }
         dependencies.deletion?.loading = true
         dependencies.deletion?.fingerprint = nil
         dependencies.deletion?.acceptedFromVersion = nil
@@ -46,12 +46,13 @@ extension TodoModel {
             dependencies.deletion?.fingerprint = fingerprint
             dependencies.deletion?.acceptedFromVersion = current.row_version
             dependencies.deletion?.loading = false
-            dependencies.deletion?.failure = nil
+            if dependencies.deletion?.messages.isNewest(ticket) == true { dependencies.deletion?.messages.clear([.reload, .delete], since: ticket.mark) }
         } catch {
             authorize(error, epoch: epoch, profile: deletion.profile)
             guard currentDependencyDelete(deletion, epoch: epoch, request: request) else { return }
             dependencies.deletion?.loading = false
-            dependencies.deletion?.failure = dependencyNotice(error, context: .delete)
+            let failureNotice = dependencyNotice(error, context: .delete)
+            dependencies.deletion?.messages.fail(failureNotice, ticket)
         }
     }
     private func currentDependencyDelete(_ deletion: DependencyDelete, epoch: Int, request: Int) -> Bool {

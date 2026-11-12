@@ -39,7 +39,13 @@ struct BatchEditDraft: Identifiable {
   var field = BatchEditField.priority
   var value = "P1"
   var loading = true
-  var error: String?
+  enum MessageKind: Hashable { case reload, apply }
+  /// This dialog instance's messages under the one message rule (SurfaceMessages).
+  var messages = SurfaceMessages<MessageKind, String>()
+  var error: String? {
+    get { messages.value }
+    set { if let newValue { messages.publish(newValue, kind: .apply) } else { messages.end() } }
+  }
   var report: BatchEditReport?
   var valid: Bool {
     switch field {
@@ -81,16 +87,17 @@ extension TodoModel {
     guard let draft = batchEdit, !busy else { return }
     batchEdit?.loading = true
     batchEdit?.report = nil
-    batchEdit?.error = nil
+    guard let messageTicket = batchEdit?.messages.beginClean(.reload) else { return }
     do {
       let values = try await client.tasks_period_list(path: .init(profile: draft.profile)).ok.body.json.map(TaskSnapshot.decode).sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
-      guard isCurrentCredential(credentialEpoch), batchEdit?.id == draft.id, profile == draft.profile else { return }
+      guard isCurrentCredential(credentialEpoch), batchEdit?.id == draft.id, profile == draft.profile, batchEdit?.messages.succeed(messageTicket) == true else { return }
       batchEdit?.targets = values
       batchEdit?.selected.formIntersection(Set(values.map(\.id)))
     } catch {
       authorize(error, epoch: credentialEpoch, profile: draft.profile)
       guard isCurrentCredential(credentialEpoch), batchEdit?.id == draft.id else { return }
-      batchEdit?.error = describe(error, at: .batchEdit)
+      let failureNotice = describe(error, at: .batchEdit)
+      batchEdit?.messages.fail(failureNotice, messageTicket)
     }
     if isCurrentCredential(credentialEpoch), batchEdit?.id == draft.id { batchEdit?.loading = false }
   }
@@ -98,7 +105,7 @@ extension TodoModel {
     let credentialEpoch = discovery.credentialEpoch
     guard canWrite, !busy, let draft = batchEdit, !draft.loading, draft.valid, !draft.selected.isEmpty else { return }
     busy = true
-    batchEdit?.error = nil
+    guard let messageTicket = batchEdit?.messages.beginClean(.apply) else { return }
     defer { if discovery.credentialEpoch == credentialEpoch { busy = false } }
     do {
       let items: [[String: Any]] = draft.targets.filter { draft.selected.contains($0.id) }.map { ["task_id": $0.id, "from_version": $0.row_version] }
@@ -108,12 +115,14 @@ extension TodoModel {
       guard isCurrentCredential(credentialEpoch), profile == draft.profile else { return }
       // Once this sheet has closed, a committed apply still reaches the list and nothing is shown.
       guard batchEdit?.id == draft.id else { if !dryRun { await refreshAfterWrite("Tasks updated", presenting: .batchEdit(draft.id)) }; return }
-      batchEdit?.report = report
+      // Only the newest apply of this sheet presents its report; an older one's commit still lands.
+      if batchEdit?.messages.succeed(messageTicket) == true { batchEdit?.report = report }
       if !dryRun { await refreshAfterWrite("Tasks updated", presenting: .batchEdit(draft.id)) }
     } catch {
       authorize(error, epoch: credentialEpoch, profile: draft.profile)
       guard isCurrentCredential(credentialEpoch), batchEdit?.id == draft.id else { return }
-      batchEdit?.error = describe(error, at: .batchEdit)
+      let failureNotice = describe(error, at: .batchEdit)
+      batchEdit?.messages.fail(failureNotice, messageTicket)
     }
   }
 }

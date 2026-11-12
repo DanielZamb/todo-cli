@@ -13,7 +13,12 @@ struct DependencyBatchDraft: Identifiable {
     var remove = false
     var loading = true
     var pending = false
-    var failure: DependencyNotice?
+    enum MessageKind: Hashable { case reload, run }
+    /// This dialog instance's notice under the one message rule (SurfaceMessages): a reload and a
+    /// preview or apply each take a ticket; a run is gated by `pending`, a reload supersedes an
+    /// older reload, and a reload may still be loading while a run starts.
+    var messages = SurfaceMessages<MessageKind, DependencyNotice>()
+    var failure: DependencyNotice? { messages.value }
     var report: DependencyBatchReport?
     var items: [DependencyBatchItem] = []
     var versionFacts: [DependencyBatchVersionFact] = []
@@ -70,7 +75,7 @@ extension TodoModel {
         guard let batch = dependencies.batch, !batch.pending else { return }
         let epoch = discovery.credentialEpoch
         dependencies.batch?.reloadRequest += 1
-        guard let request = dependencies.batch?.reloadRequest else { return }
+        guard let request = dependencies.batch?.reloadRequest, let ticket = dependencies.batch?.messages.begin(.reload) else { return }
         dependencies.batch?.loading = true
         do {
             let rows = try await client.tasks_period_list(path: .init(profile: batch.profile)).ok.body.json.map(TaskSnapshot.decode)
@@ -81,12 +86,15 @@ extension TodoModel {
             dependencies.batch?.report = nil
             dependencies.batch?.items = []
             dependencies.batch?.loading = false
-            dependencies.batch?.failure = nil
+            // Fresh targets make an earlier reload or run notice untrue; one published after this
+            // reload began (a run that failed meanwhile) survives.
+            if dependencies.batch?.messages.isNewest(ticket) == true { dependencies.batch?.messages.clear([.reload, .run], since: ticket.mark) }
         } catch {
             authorize(error, epoch: epoch, profile: batch.profile)
             guard signedIn, profile == batch.profile, isCurrentCredential(epoch), dependencies.batch?.id == batch.id, dependencies.batch?.reloadRequest == request else { return }
             dependencies.batch?.loading = false
-            dependencies.batch?.failure = dependencyNotice(error, context: .link)
+            let failureNotice = dependencyNotice(error, context: .link)
+            dependencies.batch?.messages.fail(failureNotice, ticket)
         }
     }
     func previewDependencyBatch() async {
@@ -114,6 +122,7 @@ extension TodoModel {
         guard let batch = dependencies.batch, canWrite, !batch.items.isEmpty, !batch.pending else { return }
         let epoch = discovery.credentialEpoch
         dependencies.batch?.pending = true
+        guard let ticket = dependencies.batch?.messages.begin(.run) else { return }
         defer { if dependencies.batch?.id == batch.id { dependencies.batch?.pending = false } }
         struct Payload: Encodable { let items: [DependencyBatchItem]; let dry_run: Bool }
         do {
@@ -130,11 +139,13 @@ extension TodoModel {
                 throw DependencyGraphReply.ProtocolError.incompatible
             }
             dependencies.batch?.report = report
+            dependencies.batch?.messages.succeed(ticket)
             if !dryRun { await refreshAfterWrite("Dependencies updated", presenting: .dependencyBatch(batch.id)) }
         } catch {
             authorize(error, epoch: epoch, profile: batch.profile)
             guard signedIn, profile == batch.profile, isCurrentCredential(epoch), dependencies.batch?.id == batch.id else { return }
-            dependencies.batch?.failure = dependencyNotice(error, context: .link)
+            let failureNotice = dependencyNotice(error, context: .link)
+            dependencies.batch?.messages.fail(failureNotice, ticket)
         }
     }
 }

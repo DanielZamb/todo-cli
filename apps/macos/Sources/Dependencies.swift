@@ -49,11 +49,15 @@ struct DependencyPicker: Identifiable {
     var candidates: [TaskSnapshot] = []
     var loading = false
     var pending: Set<String> = []
-    var operationFailure: DependencyNotice?
+    enum MessageKind: Hashable { case reload, link, followUp }
+    /// This picker instance's messages under the one message rule (SurfaceMessages). The search
+    /// notice is separate: it belongs to the search request generation, which already supersedes.
+    var messages = SurfaceMessages<MessageKind, DependencyNotice>()
+    var operationFailure: DependencyNotice? { messages.value }
     var searchFailure: DependencyNotice?
     var failure: DependencyNotice? {
         get { operationFailure ?? searchFailure }
-        set { operationFailure = newValue }
+        set { if let newValue { messages.publish(newValue, kind: .link) } else { messages.end() } }
     }
     var warnings: [DependencyNotice] = []
     var feedback: String?
@@ -74,7 +78,13 @@ struct DependencyDelete: Identifiable {
     var loading = true
     var pending = false
     var changed = false
-    var failure: DependencyNotice?
+    enum MessageKind: Hashable { case reload, delete }
+    /// This confirmation's notice under the one message rule (SurfaceMessages): its reload and its
+    /// delete each take a ticket. A delete is gated by busy and pending; a newer reload supersedes
+    /// an older one. A reload's success turns a refusal that existed when it began into the review
+    /// text (`reviewFailure`), so it clears both kinds from before its mark and nothing newer.
+    var messages = SurfaceMessages<MessageKind, DependencyNotice>()
+    var failure: DependencyNotice? { messages.value }
     var reviewFailure: ServerFailure?
     var reviewExitDetail: String? { reviewFailure?.exitDetail }
     var action: String { edges.isEmpty ? "Delete Task" : "Delete Task and remove Dependencies" }
@@ -152,7 +162,9 @@ extension TodoModel {
         dependencies.picker?.direction = direction
         await reloadDependencyPicker()
     }
-    func reloadDependencyPicker() async {
+    /// Reloads the picker. Opening it and the person's Reload clear an earlier reload or link notice
+    /// on success (`clearing`); a link's read-back and a background refresh only refresh the data.
+    func reloadDependencyPicker(clearing: Bool = true) async {
         guard let picker = dependencies.picker else { return }
         guard connection == .live else { dependencies.picker?.loading = false; return }
         if picker.purpose != .edit { await searchDependencyCandidates(); return }
@@ -163,6 +175,7 @@ extension TodoModel {
         let client = self.client
         let id = picker.id
         dependencies.picker?.loading = true
+        guard let ticket = dependencies.picker?.messages.begin(.reload) else { return }
         do {
             let root = try await TaskSnapshot.decode(client.tasks_period_show(path: .init(profile: picker.profile, task: picker.root.id)).ok.body.json)
             guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == id, dependencies.picker?.reloadRequest == request else { return }
@@ -173,12 +186,14 @@ extension TodoModel {
             dependencies.picker?.root = root
             dependencies.picker?.linked = linked
             dependencies.picker?.requiresReload = false
-            dependencies.picker?.failure = nil
+            // Ends a reload or link notice from before it began; a newer one (a follow-up failure, say) stays.
+            if clearing, dependencies.picker?.messages.isNewest(ticket) == true { dependencies.picker?.messages.clear([.reload, .link], since: ticket.mark) }
             await searchDependencyCandidates()
         } catch {
             authorize(error, epoch: epoch, profile: picker.profile)
             guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == id, dependencies.picker?.reloadRequest == request else { return }
-            dependencies.picker?.failure = dependencyNotice(error, context: .link)
+            let failureNotice = dependencyNotice(error, context: .link)
+            dependencies.picker?.messages.fail(failureNotice, ticket)
             dependencies.picker?.loading = false
         }
     }
@@ -225,7 +240,9 @@ extension TodoModel {
         let run = dependencies.generation
         dependencies.pendingDependents.insert(dependent.id)
         dependencies.picker?.pending.insert(candidate.id)
-        dependencies.picker?.failure = nil
+        // The newest link action presents: it ends an earlier link or reload notice now.
+        dependencies.picker?.messages.clear([.link, .reload])
+        guard let linkTicket = dependencies.picker?.messages.begin(.link) else { return }
         dependencies.picker?.warnings = []
         defer {
             if discovery.credentialEpoch == epoch { dependencies.pendingDependents.remove(dependent.id) }
@@ -248,8 +265,9 @@ extension TodoModel {
             // Presentation, only while this picker is still the one showing; a close at any point
             // (including during its reload) cannot skip the committed edge's catalog read-back.
             if dependencies.picker?.id == picker.id {
-                await reloadDependencyPicker()
-                if currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == picker.id {
+                await reloadDependencyPicker(clearing: false)
+                if currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == picker.id,
+                   dependencies.picker?.messages.succeed(linkTicket) == true {
                     dependencies.picker?.feedback = report.outcome == "unchanged" ? (remove ? "Already removed" : "Already linked") : (remove ? "Dependency removed" : "Dependency added")
                     dependencies.picker?.warnings = report.warnings.map { $0.notice }
                 }
@@ -270,8 +288,9 @@ extension TodoModel {
                 publishMessage("Couldn't \(remove ? "remove" : "add") the Dependency on “\(candidate.title)”. " + notice.message, kind: .dependencyLink)
                 return
             }
-            dependencies.picker?.failure = notice
-            dependencies.picker?.requiresReload = notice.failure?.code == "occ_conflict"
+            if dependencies.picker?.messages.fail(notice, linkTicket) == true {
+                dependencies.picker?.requiresReload = notice.failure?.code == "occ_conflict"
+            }
         }
     }
     func currentDependencyScope(profile expected: String, epoch: Int, run: Int) -> Bool {

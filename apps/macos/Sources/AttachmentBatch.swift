@@ -22,7 +22,13 @@ struct AttachmentBatchDraft: Identifiable {
   var targets: [TaskSnapshot] = []
   var selected: Set<String> = []
   var loading = true
-  var error: String?
+  enum MessageKind: Hashable { case reload, apply }
+  /// This dialog instance's messages under the one message rule (SurfaceMessages).
+  var messages = SurfaceMessages<MessageKind, String>()
+  var error: String? {
+    get { messages.value }
+    set { if let newValue { messages.publish(newValue, kind: .apply) } else { messages.end() } }
+  }
   var report: AttachmentBatchReport?
 }
 
@@ -36,17 +42,18 @@ extension TodoModel {
     let credentialEpoch = discovery.credentialEpoch
     guard let draft = attachmentBatch, canWrite else { return }
     attachmentBatch?.loading = true
-    attachmentBatch?.error = nil
+    guard let messageTicket = attachmentBatch?.messages.beginClean(.reload) else { return }
     do {
       let values = try await client.tasks_period_list(path: .init(profile: draft.profile)).ok.body.json.map(TaskSnapshot.decode)
-      guard isCurrentCredential(credentialEpoch), attachmentBatch?.id == draft.id, profile == draft.profile else { return }
+      guard isCurrentCredential(credentialEpoch), attachmentBatch?.id == draft.id, profile == draft.profile, attachmentBatch?.messages.succeed(messageTicket) == true else { return }
       attachmentBatch?.targets = values
       attachmentBatch?.selected.formIntersection(Set(values.map(\.id)))
       attachmentBatch?.report = nil
     } catch {
       authorize(error, epoch: credentialEpoch, profile: draft.profile)
       guard isCurrentCredential(credentialEpoch), attachmentBatch?.id == draft.id else { return }
-      attachmentBatch?.error = describe(error, at: .attachmentBatch)
+      let failureNotice = describe(error, at: .attachmentBatch)
+      attachmentBatch?.messages.fail(failureNotice, messageTicket)
     }
     if isCurrentCredential(credentialEpoch), attachmentBatch?.id == draft.id { attachmentBatch?.loading = false }
   }
@@ -55,7 +62,7 @@ extension TodoModel {
     guard canWrite, let draft = attachmentBatch, !draft.loading, !draft.selected.isEmpty else { return }
     let client = self.client
     busy = true
-    attachmentBatch?.error = nil
+    guard let messageTicket = attachmentBatch?.messages.beginClean(.apply) else { return }
     defer { if discovery.credentialEpoch == credentialEpoch { busy = false } }
     do {
       let encoded = try JSONEncoder().encode(draft.reference)
@@ -71,7 +78,7 @@ extension TodoModel {
       let report = try JSONDecoder().decode(AttachmentBatchReport.self, from: JSONEncoder().encode(value))
       guard isCurrentCredential(credentialEpoch), profile == draft.profile else { return }
       // Once this sheet has closed, a committed apply still reaches the editor and the list, and nothing is shown.
-      if attachmentBatch?.id == draft.id { attachmentBatch?.report = report }
+      if attachmentBatch?.id == draft.id, attachmentBatch?.messages.succeed(messageTicket) == true { attachmentBatch?.report = report }
       if !dryRun {
         // The open editor's extra read is secondary: its failure cannot skip the committed apply's
         // catalog read-back, and the stream repairs the editor.
@@ -90,7 +97,8 @@ extension TodoModel {
     } catch {
       authorize(error, epoch: credentialEpoch, profile: draft.profile)
       guard isCurrentCredential(credentialEpoch), attachmentBatch?.id == draft.id else { return }
-      attachmentBatch?.error = describe(error, at: .attachmentBatch)
+      let failureNotice = describe(error, at: .attachmentBatch)
+      attachmentBatch?.messages.fail(failureNotice, messageTicket)
     }
   }
 }

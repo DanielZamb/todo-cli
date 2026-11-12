@@ -218,7 +218,7 @@ struct ImportView: View {
                     let scoped = url.startAccessingSecurityScopedResource()
                     defer { if scoped { url.stopAccessingSecurityScopedResource() } }
                     model.loadImport(data: try Data(contentsOf: url), name: url.lastPathComponent)
-                } catch { model.importError = "Cannot read this file. Choose a JSON array or NDJSON file." }
+                } catch { model.importMessages.publish("Cannot read this file. Choose a JSON array or NDJSON file.", kind: .file) }
             }
     }
     @ViewBuilder private func importRow(_ row: ImportSummary.Row, title: String, index: Int) -> some View {

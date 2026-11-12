@@ -328,7 +328,7 @@ struct Snapshots {
                                                       configuration: ManagedServerConfiguration(executable: "/fixture/Todo/Server/todo-server", database: "/fixture/todo.db", port: 4310)))
                 try await render("c7-settings-sign-out-failed", signOutSettings, width: 640, height: 560)
                 let importing = fixture(); importing.signedIn = true; importing.showingImport = true
-                importing.importFollowUpError = "The server rejected this request (HTTP 404)."
+                importing.importMessages.publish("The server rejected this request (HTTP 404).", kind: .followUp)
                 try await render("c7-import-follow-up-failed", ImportView(model: importing, compact: false), width: 760, height: 620)
                 let picker = fixture(); picker.signedIn = true
                 picker.dependencies.picker = .init(profile: "work", root: picker.tasks[0], direction: .dependsOn)
@@ -931,7 +931,7 @@ struct Snapshots {
                 }
                 let fullFrames = ImportFrameCapture()
                 let compactFrames = ImportFrameCapture()
-                if state == "error" { model.importError = "Cannot read this file. Choose a JSON array or NDJSON file." }
+                if state == "error" { model.importMessages.publish("Cannot read this file. Choose a JSON array or NDJSON file.", kind: .file) }
                 try await render("import-\(state)", ZStack {
                     WorkspaceSnapshot(model: model)
                     Color.black.opacity(0.12)

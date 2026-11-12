@@ -46,7 +46,7 @@ func snapshotListCreateConfirmationRestoreAndReloadAgainstScratchServer() async 
     model.importCloseMissing = true
     await model.previewImport()
     #expect(model.importReport?.totals.created == 1)
-    model.importError = "Old import error"
+    model.importMessages.publish("Old import error", kind: .run)
     await model.confirmSnapshotRestore()
     for _ in 0..<600 where model.restoreReloadCount == reloads || model.tasks.count != original { try await Task.sleep(for: .milliseconds(100)) }
     #expect(model.restoreReloadCount == reloads + 1)

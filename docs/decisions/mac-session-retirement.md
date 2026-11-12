@@ -229,11 +229,89 @@ message until a newer message, a credential change or a Profile change. That
 residual case belongs to the Opus Mac UI seat, which may add a dismiss control
 or a time limit.
 
-The sibling states each belong to one surface, and the ready path writes none
-of them: `editorError`, `quickAddError`, `searchError`, `taskLoadError`,
-`snapshotError`, `diagnosticsError`, `importError`, `historyError`,
-`profileDeletionError` and `deletionNotice`. Each is set and cleared by its own
-surface's actions, by a Profile activation, or by the Snapshot reload reset.
+### Surface-local messages (MAC-C1-S1-15)
+
+MAC-C1-S1-15 showed that the rule stopped at the main window. In one open
+Import report, follow-up A's success, finishing after a newer follow-up B had
+failed, cleared B's error and opened Quick Add. The ruling of 2026-11-12:
+moving a message into a surface does not exempt it from the rule.
+
+Every surface-local message is now kept by one helper,
+[SurfaceMessages](../../apps/macos/Sources/SurfaceMessages.swift), the same
+type that keeps the main window's `message`. Each surface instance holds its
+own value, so a new instance starts a new sequence. Within it:
+
+- An action takes a ticket at its start (`begin`): its kind, a generation of
+  that kind, and the sequence mark.
+- On success (`succeed`) it clears only a message of its own kind that already
+  existed at its mark.
+- On failure (`fail`) it publishes only while it is still the newest of its
+  kind.
+- A newer action of the same kind supersedes an older one still pending. The
+  older one's data result still applies if it committed something, but it
+  presents nothing: no message, no clearing, no feedback, no opening or
+  closing.
+- `beginClean` and `restart` start an action on a clean surface by ending what
+  is shown now. That is always older than the action.
+- Nothing saves or restores a message. The picker's background refresh used to
+  save its notice, reload and put the notice back. It now reloads without
+  clearing anything.
+
+| Field (surface instance) | Kinds | May set it | May clear it |
+| --- | --- | --- | --- |
+| `message` (main window; Settings shows it under Sign out while `messageKind == .signOut`) | `MessageKind` | The table above, by `publishMessage` and the newest of a follow-up's kind | Rule 2 and rule 4; Dismiss |
+| Dependency picker `failure` (`DependencyPicker.id`) | `reload`, `link`, `followUp` | A reload's failure, a link or unlink failure, or a follow-up failure, each only while newest of its kind | A link's start (an earlier `link` or `reload` notice); opening, a direction change or the person's Reload on success (`reload` and `link` from before its mark); a link's success (`link` from before its mark); a follow-up's success (`followUp` from before its mark); closing the picker. A link's read-back and the background refresh clear nothing. |
+| Import `importError` and `importFollowUpError` (`importInstance`) | `file`, `run`, `followUp` | Reading the file (`file`); a preview or apply failure (`run`); a follow-up failure (`followUp`), each only while newest of its kind | A preview or apply start (`file` and `run`); a run's success (`run` from before its mark); a follow-up's success (`followUp` from before its mark); closing or resetting Import |
+| Quick-add `quickAddError` and `parseError` (`quickAddInstance`) | `create`, `parse` | A create failure or a parse failure, each only while newest of its kind | A create start (`create`) or a parse start (`parse`); a success of the same kind from before its mark; opening quick-add |
+| Editor `editorError` (`TaskDraft.opening`) | `general`, `save`, `write`, `conflict`, `series`, `seriesSave`, `attachment` | Synchronous checks (`general`: validation, transition and delete conflict text, Attachment input checks); a Save, Move, Copy or transfer failure; a conflict definitions reload failure; a Series open or save failure; an Attachment write failure. Each asynchronous one only while newest of its kind. | Save, write and Series save start clean; a Series open starts by ending `series`; a success of the same kind from before its mark; a new editor opening; accepting a conflict |
+| Editor `historyError` (the open editor) | `load` | A History load failure while newest | A History load start; its success; opening an editor |
+| Batch edit `error`, with `report` (`BatchEditDraft.id`) | `reload`, `apply` | A target reload, preview or apply failure while newest | A reload, preview or apply start (clean); its success. The report appears only when the run succeeds as newest. |
+| Attachment batch `error`, with `report` (`AttachmentBatchDraft.id`) | `reload`, `apply` | As Batch edit | As Batch edit |
+| Dependency batch `failure`, with `report` (`DependencyBatchDraft.id`) | `reload`, `run` | A target reload failure, or a preview or apply failure, each only while newest of its kind | A reload's success (`reload` and `run` from before its mark); a run's success (`run` from before its mark); closing the dialog |
+| Delete confirmation `failure` (`DependencyDelete.id`) | `reload`, `delete` | A preview reload failure, or a delete refusal, conflict or unreadable reply, each only while newest of its kind | A reload's success (`reload` and `delete` from before its mark: an earlier refusal becomes the review text); closing the confirmation |
+| Dependency graph `failure` (`DependencyGraphState`, with `request`) | `read` | A graph read failure while newest | Its success (`read` from before its mark); closing the graph |
+| Settings `profileDeletionError` (the Delete Profile prompt) | `delete` | A Profile deletion refusal or failure while newest | A new prompt; "Delete Tasks too…"; a Profile activation |
+| Settings `snapshotError` | `list`, `write` | A Snapshot list failure, or a create, preview or restore failure, each only while newest of its kind | A list start (clean), including the list a create or restore runs after it succeeds; a preview's success (`write` from before its mark) |
+
+Same-kind actions that are gated cannot interleave: Import apply (`busy`),
+Batch edit and Attachment batch apply (`busy`), Dependency batch run
+(`pending`), delete (`busy` and `pending`), editor Save (`busy`), quick-add
+create (`busy`), Profile deletion and Snapshot writes (`busy`). The control
+for those is that a second start while the first is held sends no second
+request.
+
+These stay outside the helper:
+
+- **Search notices.** `searchFailure` in the picker and the graph, and the
+  main list's `searchError` and `taskLoadError`, are governed by the Task
+  search generation that the formal search model checks.
+- **Discovery.** `discovery.error` is governed by the discovery model's
+  identity and generation, which the discovery formal check pins.
+- **Statuses and confirmations, not action messages:**
+  - `diagnosticsError` is a poll status, guarded by its generation.
+  - `renderError` is the graph web view's render status.
+  - `exportError` is the result of the Diagnostics export panel, kept in view
+    state.
+  - `deletionNotice` is the main window's quiet confirmation, read once by the
+    list.
+
+The controls run against the compiled scratch server. In each control below,
+the first action is held and the newer one runs before it is released.
+
+- **Three orders.** Older success after newer failure; older failure after
+  newer success; older success after newer success. These run for:
+  - Import report and picker follow-ups;
+  - picker link;
+  - Snapshot list;
+  - History;
+  - the editor's conflict definitions reload.
+- **Across kinds.** A run failure published while the Dependency batch was
+  reloading survives that reload's success. A delete refusal published while
+  the confirmation was reloading survives that reload's success.
+- **Gated surfaces.** For each one listed above, a second start while the first
+  is held sends no second request.
+- **The helper itself.** `SurfaceMessagesTests` checks the three orders,
+  own-kind clearing, and instance isolation.
 
 The controls run against the compiled scratch server with the in-memory
 SessionVault. They are the seat's three probes unchanged; the eleven

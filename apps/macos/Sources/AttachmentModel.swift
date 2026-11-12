@@ -17,7 +17,7 @@ extension TodoModel {
     let credentialEpoch = discovery.credentialEpoch
     guard canWrite, let draft = editor, conflict == nil else { return }
     busy = true
-    editorError = nil
+    let attachmentTicket = editorMessages.beginClean(.attachment)
     defer { if discovery.credentialEpoch == credentialEpoch { busy = false } }
     do {
       var attachmentDraft = draft
@@ -34,14 +34,14 @@ extension TodoModel {
         if let latest { editor = editor?.acceptingAttachmentChange(latest) }
         await refreshAfterWrite("Task changed", presenting: .editor(draft.opening))
         guard isCurrentCredential(credentialEpoch), profile == draft.base.profile_id, editor?.opening == draft.opening else { return }
-        editorError = "Task changed. Your draft is preserved. Retry the Attachment action."
+        editorMessages.fail("Task changed. Your draft is preserved. Retry the Attachment action.", attachmentTicket)
       }
     } catch {
       authorize(error, epoch: credentialEpoch, profile: draft.base.profile_id)
       guard isCurrentCredential(credentialEpoch) else { return }
       // A closed editor shows nothing; its error would otherwise reach whatever editor opens next.
       guard profile == draft.base.profile_id, editor?.opening == draft.opening else { return }
-      editorError = describe(error, at: .editor)
+      editorMessages.fail(describe(error, at: .editor), attachmentTicket)
     }
   }
 

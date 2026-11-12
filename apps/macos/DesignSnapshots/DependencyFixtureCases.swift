@@ -77,8 +77,8 @@ import TodoAPI
         case "delete-changed-empty": model.dependencies.deletion?.edges = []; model.dependencies.deletion?.changed = true
         case "delete-loading": model.dependencies.deletion?.loading = true; model.dependencies.deletion?.fingerprint = nil
         case "delete-pending": model.dependencies.deletion?.pending = true
-        case "delete-refused": model.dependencies.deletion?.failure = .project(try failure("has_dependencies", details: ["task_id": root.id, "dependencies": [["profile_id": "work", "dependent_id": root.id, "blocker_id": blocker.id]], "flag": "--with-dependencies"]), context: .delete)
-        case "delete-conflict": model.dependencies.deletion?.changed = true; model.dependencies.deletion?.failure = .project(.init(message: "Agent copy", code: "occ_conflict", exitCode: 4, exitMeaning: "Conflict"), context: .delete)
+        case "delete-refused": let refusal = DependencyNotice.project(try failure("has_dependencies", details: ["task_id": root.id, "dependencies": [["profile_id": "work", "dependent_id": root.id, "blocker_id": blocker.id]], "flag": "--with-dependencies"]), context: .delete); model.dependencies.deletion?.messages.publish(refusal, kind: .delete)
+        case "delete-conflict": model.dependencies.deletion?.changed = true; model.dependencies.deletion?.messages.publish(.project(.init(message: "Agent copy", code: "occ_conflict", exitCode: 4, exitMeaning: "Conflict"), context: .delete), kind: .delete)
         case "delete-offline": model.connection = .offline
         default: break
         }
