@@ -301,10 +301,25 @@ final class TodoModel {
         case showDiscovery(DiscoveryShowIntent)
     }
     var pendingNavigation: EditorNavigation?
-    var deletionNotice: String?
+    enum NoticeKind: Hashable { case notice }
+    /// The main window's quiet confirmation ("Task added", "Task deleted", a Profile switch after
+    /// deletion) under the one message rule: each notice has a sequence, and its timer ends only
+    /// the notice that existed when it started, never a newer one that replaced it.
+    var noticeMessages = SurfaceMessages<NoticeKind, String>()
+    var deletionNotice: String? {
+        get { noticeMessages.value }
+        set { if let newValue { noticeMessages.publish(newValue, kind: .notice) } else { noticeMessages.end() } }
+    }
+    /// Ends the confirmation only if it is still the one shown at `mark` (its timer's start).
+    func expireNotice(since mark: Int) { noticeMessages.clear([.notice], since: mark) }
     var focusEditorTitle = false
     /// The open editor. A different opening starts a new message surface.
-    var editor: TaskDraft? { didSet { if editor?.opening != oldValue?.opening { editorMessages = .init() } } }
+    var editor: TaskDraft? { didSet { if editor?.opening != oldValue?.opening { editorMessages = .init(); attachmentInputMessages = .init() } } }
+    enum AttachmentInputKind: Hashable { case open, paste, drop }
+    /// The Attachments section's own caption (opening, pasting or dropping something the section
+    /// itself refuses) under the one message rule, one instance per editor opening.
+    var attachmentInputMessages = SurfaceMessages<AttachmentInputKind, String>()
+    var attachmentInputError: String? { attachmentInputMessages.value }
     enum EditorMessageKind: Hashable { case general, save, conflict, write, series, seriesSave, attachment }
     /// The editor opening's messages under the one message rule (SurfaceMessages).
     var editorMessages = SurfaceMessages<EditorMessageKind, String>()

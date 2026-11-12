@@ -271,6 +271,9 @@ own value, so a new instance starts a new sequence. Within it:
 | Delete confirmation `failure` (`DependencyDelete.id`) | `reload`, `delete` | A preview reload failure, or a delete refusal, conflict or unreadable reply, each only while newest of its kind | A reload's success (`reload` and `delete` from before its mark: an earlier refusal becomes the review text); closing the confirmation |
 | Dependency graph `failure` (`DependencyGraphState`, with `request`) | `read` | A graph read failure while newest | Its success (`read` from before its mark); closing the graph |
 | Settings `profileDeletionError` (the Delete Profile prompt) | `delete` | A Profile deletion refusal or failure while newest | A new prompt; "Delete Tasks too…"; a Profile activation |
+| Editor Attachments caption `attachmentInputError` (the editor opening; was the view's own `error`) | `open`, `paste`, `drop` | Opening an Attachment the section refuses or cannot open; a paste with no image; a drop whose file cannot be read or is over 20 MiB. A drop only while it is the newest drop of that opening and its credential is current. | A new open or a paste with an image (its own kind); a drop that completes (`drop` from before its mark); a new editor opening |
+| Diagnostics export caption (`ClientDiagnosticsView`, view state) | `export` | An export that fails, while it is the newest export | A newer export's success (`export` from before its mark); signing out |
+| Main-window quiet confirmation `deletionNotice` (the main window) | `notice` | "Task added" for a Task the view filters out (newest create only), "Task deleted", a Profile switch after deletion | Its own three-second timer, which ends only the confirmation that existed when it started (`expireNotice(since:)`); a cancelled timer ends nothing |
 | Settings `snapshotError` | `list`, `write` | A Snapshot list failure, or a create, preview or restore failure, each only while newest of its kind | A list start (clean), including the list a create or restore runs after it succeeds; a preview's success (`write` from before its mark) |
 
 **What a Reload clears** (ruled 2026-11-12). A Reload the person asks for clears the
@@ -370,10 +373,9 @@ These stay outside the helper:
 - **Statuses and confirmations, not action messages:**
   - `diagnosticsError` is a poll status, guarded by its generation.
   - `renderError` is the graph web view's render status.
-  - `exportError` is the result of the Diagnostics export panel, kept in view
-    state.
-  - `deletionNotice` is the main window's quiet confirmation, read once by the
-    list.
+  - `taskIDCopyFeedback` ("Copied") is governed by its own timer: a new copy
+    cancels the older timer before it can clear, and opening an editor clears
+    it.
 
 The controls run against the compiled scratch server. In each control below,
 the first action is held and the newer one runs before it is released.

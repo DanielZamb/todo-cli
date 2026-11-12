@@ -15,7 +15,11 @@ struct ClientDiagnosticsView: View {
     let compact: Bool
     @State private var document: ClientDiagnosticsDocument?
     @State private var exporting = false
-    @State private var exportError: String?
+    private enum ExportKind: Hashable { case export }
+    /// The export caption under the one message rule: each export takes a ticket; a newer export
+    /// supersedes an older one; a success ends an earlier failure; signing out ends it.
+    @State private var exportMessages = SurfaceMessages<ExportKind, String>()
+    @State private var exportTicket: SurfaceMessages<ExportKind, String>.Ticket?
     @State private var expanded: Set<String>
     init(model: TodoModel, compact: Bool, initiallyExpanded: Set<String> = []) {
         self.model = model; self.compact = compact; _expanded = State(initialValue: initiallyExpanded)
@@ -135,24 +139,28 @@ struct ClientDiagnosticsView: View {
                 }
                 HStack {
                     Button("Export client metadata…") {
+                        let ticket = exportMessages.begin(.export)
+                        exportTicket = ticket
                         Task {
                             do {
-                                guard let data = try await model.clientDiagnostics.exportMetadata(), model.clientDiagnostics.isOwnerSession else { return }
+                                guard let data = try await model.clientDiagnostics.exportMetadata(), model.clientDiagnostics.isOwnerSession, exportMessages.isNewest(ticket) else { return }
                                 document = .init(data: data); exporting = true
-                            } catch { exportError = "Client metadata could not be exported." }
+                            } catch { exportMessages.fail("Client metadata could not be exported.", ticket) }
                         }
                     }.disabled(!model.clientDiagnostics.isOwnerSession).accessibilityIdentifier("client-diagnostics-export")
                     Spacer(minLength: 0)
                 }
-                if let exportError { Text(exportError).foregroundStyle(.red) }
+                if let exportError = exportMessages.value { Text(exportError).foregroundStyle(.red) }
                 Text("Metadata only. Saved on this Mac. Two rotating files, at most \(ClientDiagnosticsRecorder.journalFileLimit / 1_048_576) MiB each. Cleared on sign out.").foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }.font(.caption).padding(4).frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityIdentifier("client-diagnostics")
         .fileExporter(isPresented: $exporting, document: document, contentType: .json, defaultFilename: "Todo-client-diagnostics") { result in
-            if case .failure = result { exportError = "Client metadata could not be exported." }
+            if let ticket = exportTicket {
+                if case .failure = result { exportMessages.fail("Client metadata could not be exported.", ticket) } else { exportMessages.succeed(ticket) }
+            }
             document = nil
         }
-        .onChange(of: model.signedIn) { _, signedIn in if !signedIn { exporting = false; document = nil; exportError = nil } }
+        .onChange(of: model.signedIn) { _, signedIn in if !signedIn { exporting = false; document = nil; exportMessages = .init(); exportTicket = nil } }
     }
     private func category(_ row: ClientDiagnosticActionSummary) -> some View {
         VStack(alignment: .leading, spacing: 2) {

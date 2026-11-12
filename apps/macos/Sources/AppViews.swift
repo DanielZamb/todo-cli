@@ -694,10 +694,13 @@ struct TaskListView: View {
                     .background(.regularMaterial, in: Capsule()).padding(16).accessibilityIdentifier("task-notice")
             }
         }
-        .task(id: model.deletionNotice) {
+        // Each confirmation gets its own three seconds: the timer is keyed by the notice's sequence,
+        // and a cancelled timer (a newer notice replaced it) ends nothing.
+        .task(id: model.noticeMessages.sequence) {
             guard model.deletionNotice != nil else { return }
-            defer { model.deletionNotice = nil }
-            try? await Task.sleep(for: .seconds(3))
+            let mark = model.noticeMessages.mark
+            do { try await Task.sleep(for: .seconds(3)) } catch { return }
+            model.expireNotice(since: mark)
         }
     }
     private func compactState(_ message: String, action: String, perform: @escaping () -> Void) -> some View {
