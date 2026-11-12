@@ -176,10 +176,10 @@ extension TodoModel {
             dependencies.picker?.failure = nil
             await searchDependencyCandidates()
         } catch {
+            authorize(error, epoch: epoch, profile: picker.profile)
             guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == id, dependencies.picker?.reloadRequest == request else { return }
             dependencies.picker?.failure = dependencyNotice(error, context: .link)
             dependencies.picker?.loading = false
-            handleAuthorization(error, credentialEpoch: epoch)
         }
     }
     func searchDependencyCandidates() async {
@@ -199,10 +199,10 @@ extension TodoModel {
             dependencies.picker?.searchFailure = nil
             dependencies.picker?.loading = false
         } catch {
+            authorize(error, epoch: epoch, profile: picker.profile)
             guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.searchRequest == request, dependencies.picker?.id == picker.id, dependencies.picker?.text == picker.text else { return }
             dependencies.picker?.loading = false
             dependencies.picker?.searchFailure = dependencyNotice(error, context: .search)
-            handleAuthorization(error, credentialEpoch: epoch)
         }
     }
     func toggleDependency(_ candidate: TaskSnapshot) async {
@@ -244,7 +244,7 @@ extension TodoModel {
             guard signedIn, profile == picker.profile, isCurrentCredential(epoch) else { return }
             // Once this picker has closed, a committed edge still reaches the list and the picker shows nothing.
             guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == picker.id else {
-                if report.outcome != "unchanged" { await refreshAfterWrite("Dependencies updated") }
+                if report.outcome != "unchanged" { await refreshAfterWrite("Dependencies updated", presenting: false) }
                 return
             }
             await reloadDependencyPicker()
@@ -253,13 +253,13 @@ extension TodoModel {
             dependencies.picker?.warnings = report.warnings.map { $0.notice }
             if report.outcome != "unchanged" { await refreshAfterWrite("Dependencies updated") }
         } catch {
+            authorize(error, epoch: epoch, profile: picker.profile)
             guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == picker.id else { return }
             var notice = dependencyNotice(error, context: dependent.status == "done" ? .linkDone : .link)
             notice.attemptTitle = candidate.title
             notice.attemptVerb = remove ? "remove" : "add"
             dependencies.picker?.failure = notice
             dependencies.picker?.requiresReload = notice.failure?.code == "occ_conflict"
-            handleAuthorization(error, credentialEpoch: epoch)
         }
     }
     func currentDependencyScope(profile expected: String, epoch: Int, run: Int) -> Bool {

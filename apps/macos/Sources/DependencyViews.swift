@@ -246,10 +246,10 @@ extension TodoModel {
             if !dependencies.initial.contains(where: { $0.id == task.id }) { dependencies.initial.append(task) }
             quickAdd = true
         } catch {
+            authorize(error, epoch: epoch, profile: selectedProfile)
             guard isCurrentCredential(epoch), profile == selectedProfile else { return }
             guard surface.map(isShowing) ?? true else { return }
             publishMessage(describe(error), kind: .dependencyFollowUp, surface: surface)
-            handleAuthorization(error, credentialEpoch: epoch)
         }
     }
 }

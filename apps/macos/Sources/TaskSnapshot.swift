@@ -91,6 +91,8 @@ enum MetadataKind: String, Identifiable {
 
 struct TaskDraft: Identifiable {
     let id: String
+    /// Identity of this editor opening. A draft rebuilt for the same opening keeps it.
+    var opening = UUID()
     var base: TaskSnapshot
     var title: String
     var description: String

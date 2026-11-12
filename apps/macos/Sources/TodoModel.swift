@@ -145,15 +145,28 @@ final class TodoModel {
     /// The sheet or dialog instance that raised the message. Each opening is a new instance;
     /// the message ends when that instance closes. Discovery Show is not one: its dialog closes
     /// before the request, so its error belongs to the main window.
-    enum MessageSurface: Hashable { case dependencyPicker(UUID), importSheet(UUID), deleteDialog(UUID) }
+    enum MessageSurface: Hashable { case dependencyPicker(UUID), importSheet(UUID), deleteDialog(UUID), editor(UUID), quickAdd(UUID), batchEdit(UUID), attachmentBatch(UUID), dependencyBatch(UUID) }
     /// Whether the instance that started some work is still the one showing.
     func isShowing(_ surface: MessageSurface) -> Bool {
         switch surface {
         case .dependencyPicker(let id): dependencies.picker?.id == id
         case .importSheet(let id): showingImport && importInstance == id
         case .deleteDialog(let id): dependencies.deletion?.id == id
+        case .editor(let opening): editor?.opening == opening
+        case .quickAdd(let id): quickAdd && quickAddInstance == id
+        case .batchEdit(let id): batchEdit?.id == id
+        case .attachmentBatch(let id): attachmentBatch?.id == id
+        case .dependencyBatch(let id): dependencies.batch?.id == id
         }
     }
+    /// Steps 1 and 2 of the order every asynchronous completion follows (ownership, authorization,
+    /// data, presentation). If the credential and Profile the work began under are still current,
+    /// a 401 ends the Session whether or not the surface it came from is still showing.
+    func authorize(_ error: Error, epoch: Int, profile expected: String) {
+        guard discovery.credentialEpoch == epoch, profile == expected else { return }
+        handleAuthorization(error, credentialEpoch: epoch)
+    }
+
     /// The newest message. Each one has a kind and a sequence number that only grows.
     var message: String? { didSet {
         if message == nil { messageKind = nil; messageSurface = nil } else { messageSequence += 1; messageKind = pendingMessageKind; messageSurface = pendingMessageSurface }
@@ -178,7 +191,9 @@ final class TodoModel {
     /// A closed sheet or dialog ends the message it raised.
     func endMessage(raisedBy surface: MessageSurface) { if message != nil, messageSurface == surface { message = nil } }
     var taskLoadError: String?
-    var quickAdd = false
+    var quickAdd = false { didSet { if quickAdd && !oldValue { quickAddInstance = UUID(); parseGeneration += 1 } } }
+    /// Identity of the current quick-add; renewed each time it opens.
+    @ObservationIgnored private(set) var quickAddInstance = UUID()
     var newTitle = ""
     var quickAddError: String?
     enum EditorNavigation {
@@ -318,6 +333,8 @@ final class TodoModel {
         if !dryRun && importReport?.dry_run != true { return }
         let requestedProfile = profile
         let requestedGeneration = importGeneration
+        // The Import instance this preview or apply belongs to; its report and error show only there.
+        let surface: MessageSurface? = showingImport ? .importSheet(importInstance) : nil
         busy = true
         importError = nil
         defer { if discovery.credentialEpoch == credentialEpoch { busy = false } }
@@ -334,7 +351,7 @@ final class TodoModel {
             let report = try decode(ImportSummary.self, response.ok.body.json)
             guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
             // A reopened Import has a new generation; the previous sheet's committed apply still reaches the list.
-            guard importGeneration == requestedGeneration else { if !dryRun { await refreshAfterWrite("Import applied") }; return }
+            guard importGeneration == requestedGeneration, surface.map(isShowing) ?? true else { if !dryRun { await refreshAfterWrite("Import applied", presenting: false) }; return }
             if report.items.contains(where: { $0.error?.hasMalformedDependencyError == true }) {
                 importReport = nil
                 throw DependencyGraphReply.ProtocolError.incompatible
@@ -342,9 +359,9 @@ final class TodoModel {
             importReport = report
             if !dryRun { await refreshAfterWrite("Import applied") }
         } catch {
+            authorize(error, epoch: credentialEpoch, profile: requestedProfile)
             guard isCurrentCredential(credentialEpoch) else { return }
-            guard profile == requestedProfile, importGeneration == requestedGeneration else { return }
-            handleAuthorization(error, credentialEpoch: credentialEpoch)
+            guard profile == requestedProfile, importGeneration == requestedGeneration, surface.map(isShowing) ?? true else { return }
             importError = describe(error, at: .importTasks)
         }
     }
@@ -929,6 +946,8 @@ final class TodoModel {
         let creationProfile = profile
         let initialDependencies = dependencies.initial.map(\.id)
         let removedFields = removedQuickAddFields
+        // The quick-add instance this creation belongs to; nil when created outside quick-add.
+        let surface: MessageSurface? = quickAdd ? .quickAdd(quickAddInstance) : nil
         busy = true
         quickAddError = nil
         defer { if discovery.credentialEpoch == credentialEpoch { busy = false } }
@@ -947,22 +966,28 @@ final class TodoModel {
             let wire = try response.ok.body.json
             guard isCurrentCredential(credentialEpoch), profile == creationProfile else { return false }
             let task = try TaskSnapshot.decode(wire)
-            dependencies.latestWarnings = try (wire.dependency_warnings ?? []).map { try decode(DependencyWarning.self, $0).notice }
-            newTitle = ""
-            removedQuickAddFields = []
-            dependencies.initial = []
-            quickAdd = false
-            if openEditor {
-                if hasUnsavedEditor { pendingNavigation = .edit(task) }
-                else { beginEditing(task, focusTitle: true) }
+            // A closed or reopened quick-add keeps the newer draft: the created Task reaches the
+            // list, and nothing is cleared, closed, opened or announced for the old instance.
+            let showing = surface.map(isShowing) ?? true
+            if showing {
+                dependencies.latestWarnings = try (wire.dependency_warnings ?? []).map { try decode(DependencyWarning.self, $0).notice }
+                newTitle = ""
+                removedQuickAddFields = []
+                dependencies.initial = []
+                quickAdd = false
+                if openEditor {
+                    if hasUnsavedEditor { pendingNavigation = .edit(task) }
+                    else { beginEditing(task, focusTitle: true) }
+                }
             }
-            await refreshAfterWrite("Task added")
+            await refreshAfterWrite("Task added", presenting: showing)
             guard isCurrentCredential(credentialEpoch), profile == creationProfile else { return false }
-            announce("Task added to \(profileName)")
+            if showing { announce("Task added to \(profileName)") }
             return true
         } catch {
-            guard isCurrentCredential(credentialEpoch), profile == creationProfile else { return false }
-            quickAddError = describe(error, at: .quickAdd); handleAuthorization(error, credentialEpoch: credentialEpoch); return false }
+            authorize(error, epoch: credentialEpoch, profile: creationProfile)
+            guard isCurrentCredential(credentialEpoch), profile == creationProfile, surface.map(isShowing) ?? true else { return false }
+            quickAddError = describe(error, at: .quickAdd); return false }
     }
 
     @discardableResult
@@ -1214,10 +1239,12 @@ final class TodoModel {
                 deletionNotice = "Task deleted"
             }
             // The committed delete reaches the editor and the list even if this confirmation has closed.
-            if dependencies.deletion?.id == preview.id { dependencies.deletion = nil }
+            let showing = dependencies.deletion?.id == preview.id
+            if showing { dependencies.deletion = nil }
             endMessage(raisedBy: .deleteDialog(preview.id))
-            await refreshAfterWrite("Task deleted", clearing: .delete, since: mark)
+            await refreshAfterWrite("Task deleted", clearing: .delete, since: mark, presenting: showing)
         } catch {
+            authorize(error, epoch: credentialEpoch, profile: deletionProfile)
             guard isCurrentCredential(credentialEpoch) else { return }
             guard profile == deletionProfile, dependencies.deletion?.id == preview.id else { return }
             if error is DependencyGraphReply.ProtocolError {
@@ -1230,7 +1257,6 @@ final class TodoModel {
             let notice = dependencyNotice(error, context: .delete)
             dependencies.deletion?.failure = notice
             if notice.failure?.code == "has_dependencies" || notice.failure?.code == "occ_conflict" { await reloadDependencyDelete(changed: true) }
-            handleAuthorization(error, credentialEpoch: credentialEpoch)
         }
     }
 
@@ -1309,6 +1335,7 @@ final class TodoModel {
                 activateProfile(task.profile_id)
                 if task.deleted_at == nil {
                     var moved = task.id == draft.id ? draft.merging(task, choices: [:]) : TaskDraft(task)
+                    moved.opening = draft.opening
                     moved.project = task.project_id
                     moved.projectName = nil
                     moved.tagNames = []
@@ -1317,6 +1344,7 @@ final class TodoModel {
                 }
             } else {
                 editor = task.deleted_at != nil ? nil : intent.mergesFields ? TaskDraft(task) : draft.merging(task, choices: [:])
+                editor?.opening = draft.opening
                 await refreshAfterWrite("Task updated")
                 guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
             }
@@ -1396,10 +1424,10 @@ final class TodoModel {
             series = definition
             showingSeries = presenting
         } catch {
+            authorize(error, epoch: credentialEpoch, profile: requestedProfile)
             guard isCurrentCredential(credentialEpoch) else { return }
-            guard !Task.isCancelled, seriesGeneration == request, profile == requestedProfile, editor?.id == draft.id else { return }
+            guard !Task.isCancelled, seriesGeneration == request, profile == requestedProfile, editor?.opening == draft.opening else { return }
             editorError = describe(error, at: .editor)
-            handleAuthorization(error, credentialEpoch: credentialEpoch)
         }
     }
 
@@ -1448,7 +1476,9 @@ final class TodoModel {
 
     /// `kind` and `writeMark` name the write whose success this read-back confirms: its
     /// earlier error of that kind and older connection messages end; nothing newer does.
-    func refreshAfterWrite(_ accepted: String, clearing kind: MessageKind? = nil, since writeMark: Int? = nil) async {
+    /// `presenting` is false when the surface that made the write has gone: a failed read-back then
+    /// raises no message of its own and is left to the ordinary connection recovery.
+    func refreshAfterWrite(_ accepted: String, clearing kind: MessageKind? = nil, since writeMark: Int? = nil, presenting: Bool = true) async {
         let credentialEpoch = discovery.credentialEpoch
         let mark = writeMark ?? messageMark
         catalogStale = true
@@ -1459,7 +1489,7 @@ final class TodoModel {
             clearMessage(Set([MessageKind.connection] + (kind.map { [$0] } ?? [])), since: mark)
         case .failed:
             if signedIn {
-                publishMessage(accepted + ". The live view is reconnecting.", kind: .connection)
+                if presenting { publishMessage(accepted + ". The live view is reconnecting.", kind: .connection) }
                 connect()
             }
         case .superseded:
@@ -1521,6 +1551,7 @@ final class TodoModel {
             parsedTask = value
             parsedInput = text
         } catch {
+            authorize(error, epoch: credentialEpoch, profile: requestedProfile)
             guard isCurrentCredential(credentialEpoch), profile == requestedProfile, run == parseGeneration else { return }
             parseError = describe(error, at: .parse)
         }

@@ -141,10 +141,10 @@ extension TodoModel {
             discovery.appliedSnapshot = snapshot
             discovery.phase = snapshot.profiles.isEmpty && snapshot.matches.isEmpty ? .empty : .showing
         } catch {
+            if discovery.credentialEpoch == identity.credentialEpoch { handleAuthorization(error, credentialEpoch: identity.credentialEpoch) }
             guard canPublishDiscovery(identity) else { return }
             discovery.error = describe(error, at: .discovery)
             discovery.phase = .error
-            handleAuthorization(error, credentialEpoch: identity.credentialEpoch)
         }
     }
 
@@ -189,10 +189,10 @@ extension TodoModel {
             beginEditing(task)
             return true
         } catch {
+            if discovery.credentialEpoch == intent.identity.credentialEpoch { handleAuthorization(error, credentialEpoch: intent.identity.credentialEpoch) }
             guard canShowDiscovery(intent) else { return false }
             discovery.showIntent = nil
             publishMessage(describe(error), kind: .discoveryShow)
-            handleAuthorization(error, credentialEpoch: intent.identity.credentialEpoch)
             return false
         }
     }

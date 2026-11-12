@@ -45,6 +45,7 @@ extension TaskDraft {
 
     func merging(_ latest: TaskSnapshot, choices: [String: Bool]) -> Self {
         var merged = Self(latest)
+        merged.opening = opening
         for field in changedFields where choices[field] != false {
             switch field {
             case "title": merged.title = title

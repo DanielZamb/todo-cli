@@ -25,7 +25,7 @@ extension TodoModel {
       let result = try await operation(client, attachmentDraft)
       guard isCurrentCredential(credentialEpoch), profile == draft.base.profile_id else { return }
       // Once this editor has closed, an accepted Attachment change still reaches the list and nothing is shown.
-      guard editor?.id == draft.id else { if case .accepted = result { await refreshAfterWrite("Attachment updated") }; return }
+      guard editor?.opening == draft.opening else { if case .accepted = result { await refreshAfterWrite("Attachment updated", presenting: false) }; return }
       switch result {
       case .accepted(let task):
         editor = editor?.acceptingAttachmentChange(task)
@@ -33,14 +33,14 @@ extension TodoModel {
       case .conflict(let latest):
         if let latest { editor = editor?.acceptingAttachmentChange(latest) }
         await refreshAfterWrite("Task changed")
-        guard isCurrentCredential(credentialEpoch), profile == draft.base.profile_id, editor?.id == draft.id else { return }
+        guard isCurrentCredential(credentialEpoch), profile == draft.base.profile_id, editor?.opening == draft.opening else { return }
         editorError = "Task changed. Your draft is preserved. Retry the Attachment action."
       }
     } catch {
+      authorize(error, epoch: credentialEpoch, profile: draft.base.profile_id)
       guard isCurrentCredential(credentialEpoch) else { return }
-      handleAuthorization(error, credentialEpoch: credentialEpoch)
       // A closed editor shows nothing; its error would otherwise reach whatever editor opens next.
-      guard profile == draft.base.profile_id, editor?.id == draft.id else { return }
+      guard profile == draft.base.profile_id, editor?.opening == draft.opening else { return }
       editorError = describe(error, at: .editor)
     }
   }

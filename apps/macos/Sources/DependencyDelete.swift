@@ -48,10 +48,10 @@ extension TodoModel {
             dependencies.deletion?.loading = false
             dependencies.deletion?.failure = nil
         } catch {
+            authorize(error, epoch: epoch, profile: deletion.profile)
             guard currentDependencyDelete(deletion, epoch: epoch, request: request) else { return }
             dependencies.deletion?.loading = false
             dependencies.deletion?.failure = dependencyNotice(error, context: .delete)
-            handleAuthorization(error, credentialEpoch: epoch)
         }
     }
     private func currentDependencyDelete(_ deletion: DependencyDelete, epoch: Int, request: Int) -> Bool {

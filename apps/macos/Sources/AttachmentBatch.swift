@@ -44,9 +44,9 @@ extension TodoModel {
       attachmentBatch?.selected.formIntersection(Set(values.map(\.id)))
       attachmentBatch?.report = nil
     } catch {
+      authorize(error, epoch: credentialEpoch, profile: draft.profile)
       guard isCurrentCredential(credentialEpoch), attachmentBatch?.id == draft.id else { return }
       attachmentBatch?.error = describe(error, at: .attachmentBatch)
-      handleAuthorization(error, credentialEpoch: credentialEpoch)
     }
     if isCurrentCredential(credentialEpoch), attachmentBatch?.id == draft.id { attachmentBatch?.loading = false }
   }
@@ -78,12 +78,12 @@ extension TodoModel {
           guard isCurrentCredential(credentialEpoch), profile == draft.profile else { return }
           if self.editor?.id == editor.id { self.editor = self.editor?.acceptingAttachmentChange(try TaskSnapshot.decode(wire)) }
         }
-        await refreshAfterWrite("Attachments updated")
+        await refreshAfterWrite("Attachments updated", presenting: attachmentBatch?.id == draft.id)
       }
     } catch {
+      authorize(error, epoch: credentialEpoch, profile: draft.profile)
       guard isCurrentCredential(credentialEpoch), attachmentBatch?.id == draft.id else { return }
       attachmentBatch?.error = describe(error, at: .attachmentBatch)
-      handleAuthorization(error, credentialEpoch: credentialEpoch)
     }
   }
 }

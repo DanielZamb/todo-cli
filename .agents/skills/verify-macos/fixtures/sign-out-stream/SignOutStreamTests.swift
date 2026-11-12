@@ -82,6 +82,7 @@ private struct Control {
         ]
         var receipts: [[String: Any]] = []
         for item in cases {
+            let mark = try await control.call("mark")["t"] as? Double ?? 0
             let journal = evidence.appendingPathComponent("journal-\(item.name)")
             try FileManager.default.createDirectory(at: journal, withIntermediateDirectories: true)
             let model = TodoModel(configuration: .init(server: URL(string: proxy)!, initialProfile: "work", vaultService: "memory-sign-out-\(item.name)-\(UUID())"), clientDiagnostics: ClientDiagnosticsRecorder(journalDirectory: journal))
@@ -94,6 +95,12 @@ private struct Control {
                 let primed = try await control.call("write/1/prime-\(item.name)")
                 let title = try #require((primed["titles"] as? [String])?.first)
                 try await wait(30) { model.lastSequence != nil && model.tasks.contains { $0.title == title } }
+            } else {
+                // Without a stored cursor the first stream replays the Profile's whole History. Let the
+                // model consume it to the server's head first: the proxy counts forwarded frames, and
+                // frames still buffered when sign-out begins would otherwise be counted twice.
+                let history = (try await control.call("ops/work/0")["ids"] as? [String]) ?? []
+                if let head = history.last { try await wait(120) { model.lastSequence == head } }
             }
             try await Task.sleep(for: .seconds(3))
             let before = try await subscribers()
@@ -128,7 +135,7 @@ private struct Control {
             try await Task.sleep(for: .seconds(5))
             let unauthorizedLater = try await control.call("unauthorized")["count"] as? Int ?? -1
             await sampler.stop()
-            let delivered = (try await control.call("delivered/\(cursor)")["ids"] as? [String]) ?? []
+            let delivered = (try await control.call("delivered/\(cursor)/\(mark)")["ids"] as? [String]) ?? []
             let expected = (try await control.call("ops/work/\(cursor)")["ids"] as? [String]) ?? []
             let probe = try await control.call("probe", probe: credential)["status"] as? Int ?? -1
             let doubled = Dictionary(grouping: delivered, by: { $0 }).filter { $0.value.count > 1 }.keys.sorted()

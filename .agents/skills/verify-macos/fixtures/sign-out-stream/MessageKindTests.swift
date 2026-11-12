@@ -460,6 +460,24 @@ private actor ScriptGate: ClientTransport {
     }
     // MARK: surface instances (rule 7, MAC-C1-S1-11)
 
+    /// Mode 3: a current-credential 401 after close ends the Session. Mode 4: a failed read-back
+    /// after close raises no message and hands over to connection recovery (a new stream request).
+    private func closedOutcome(_ mode: Int, _ model: TodoModel, _ gate: ScriptGate, _ vault: SessionVault, streams: Int, _ label: String) async throws -> Bool {
+        if mode == 3 {
+            try await wait("expired") { !model.signedIn }
+            let stored = try vault.load()
+            #expect(!model.signedIn && stored == nil, "\(label): a closed surface's 401 still ends the Session")
+            return true
+        }
+        if mode == 4 {
+            #expect(model.message == nil, "\(label): no message from a closed surface's read-back: \(model.message ?? "")")
+            try await wait("recovery stream") { await gate.streamCount > streams }
+            return true
+        }
+        return false
+    }
+    private func closedStep(_ mode: Int, fail label: String) -> Step { mode == 1 ? .holdThenFail(503, label) : mode == 3 ? .holdThenFail(401, "expired") : .hold }
+
     private func pickerFor(_ model: TodoModel, _ task: TaskSnapshot) { model.dependencies.picker = .init(profile: "work", root: task, direction: .dependsOn) }
 
     @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [false, true])
@@ -567,7 +585,7 @@ private actor ScriptGate: ClientTransport {
         await finish(model, gate, vault)
     }
 
-    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [0, 1, 2])
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [0, 1, 2, 3, 4])
     func batchEditAfterCloseStillReachesTheListAndShowsNothing(mode: Int) async throws {
         // mode 0: late success after close; 1: late failure after close; 2: late success after reopen.
         let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
@@ -577,14 +595,16 @@ private actor ScriptGate: ClientTransport {
         let wanted = model.batchEdit!.value
         await model.applyBatchEdit(dryRun: true)
         try #require(model.batchEdit?.report?.dry_run == true)
-        await gate.next("tasks.batchEdit", mode == 1 ? .holdThenFail(503, "OLD closed-sheet batch failed") : .hold)
+        await gate.next("tasks.batchEdit", closedStep(mode, fail: "OLD closed-sheet batch failed"))
         let apply = Task { await model.applyBatchEdit(dryRun: false) }
         try await wait("batch held") { await gate.isHeld("tasks.batchEdit") }
         model.batchEdit = nil
         if mode == 2 { model.batchEdit = .init(profile: "work") }
         let newer = model.batchEdit?.id
-        let reads = await gate.count("tasks.list")
+        let reads = await gate.count("tasks.list"), streams = await gate.streamCount
+        if mode == 4 { await gate.next("tasks.list", .fail(503, "catalog read failed")) }
         await gate.release("tasks.batchEdit"); await apply.value
+        if try await closedOutcome(mode, model, gate, vault, streams: streams, "batch edit") { await finish(model, gate, vault); return }
         #expect(model.batchEdit?.id == newer && model.batchEdit?.report == nil && model.batchEdit?.error == nil, "mode \(mode)")
         #expect(model.message == nil, "mode \(mode)")
         if mode != 1 {
@@ -607,7 +627,7 @@ private actor ScriptGate: ClientTransport {
         (task?.attachments ?? []).contains { if case .link(let url) = $0.location { return url.absoluteString == link }; return false }
     }
 
-    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [0, 1, 2])
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [0, 1, 2, 3, 4])
     func attachmentBatchAfterCloseReachesListAndEditorAndShowsNothing(mode: Int) async throws {
         // mode 0: late success after close; 1: late failure after close; 2: late success after reopen.
         let gate = ScriptGate(); let (model, vault, source) = try await live(gate)
@@ -624,14 +644,16 @@ private actor ScriptGate: ClientTransport {
         await model.applyAttachmentBatch(dryRun: true)
         try #require(model.attachmentBatch?.report != nil)
         model.beginEditing(model.tasks.first { $0.id == target.id }!)
-        await gate.next("tasks.attachMany", mode == 1 ? .holdThenFail(503, "OLD closed-sheet attach failed") : .hold)
+        await gate.next("tasks.attachMany", closedStep(mode, fail: "OLD closed-sheet attach failed"))
         let apply = Task { await model.applyAttachmentBatch(dryRun: false) }
         try await wait("attach held") { await gate.isHeld("tasks.attachMany") }
         model.attachmentBatch = nil
         if mode == 2 { model.attachmentBatch = .init(profile: "work", reference: reference) }
         let newer = model.attachmentBatch?.id
-        let reads = await gate.count("tasks.list")
+        let reads = await gate.count("tasks.list"), streams = await gate.streamCount
+        if mode == 4 { await gate.next("tasks.list", .fail(503, "catalog read failed")) }
         await gate.release("tasks.attachMany"); await apply.value
+        if try await closedOutcome(mode, model, gate, vault, streams: streams, "attachment batch") { await finish(model, gate, vault); return }
         #expect(model.attachmentBatch?.id == newer && model.attachmentBatch?.report == nil && model.attachmentBatch?.error == nil, "mode \(mode)")
         #expect(model.message == nil && model.editorError == nil, "mode \(mode)")
         if mode != 1 {
@@ -642,7 +664,7 @@ private actor ScriptGate: ClientTransport {
         await finish(model, gate, vault)
     }
 
-    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [0, 1, 2])
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [0, 1, 2, 3, 4])
     func dependencyBatchAfterCloseReachesListAndShowsNothing(mode: Int) async throws {
         let gate = ScriptGate(); let (model, vault, root) = try await live(gate)
         let target = try await secondTask(model, gate, vault)
@@ -652,14 +674,16 @@ private actor ScriptGate: ClientTransport {
         model.dependencies.batch?.selected = [target.id]
         await model.previewDependencyBatch()
         try #require(model.dependencies.batch?.report?.dry_run == true)
-        await gate.next("tasks.batchDepend", mode == 1 ? .holdThenFail(503, "OLD closed-dialog batch failed") : .hold)
+        await gate.next("tasks.batchDepend", closedStep(mode, fail: "OLD closed-dialog batch failed"))
         let apply = Task { await model.applyDependencyBatch() }
         try await wait("batch held") { await gate.isHeld("tasks.batchDepend") }
         model.dependencies.batch = nil
         if mode == 2 { model.dependencies.batch = .init(profile: "work", root: rootNow, direction: .dependsOn) }
         let newer = model.dependencies.batch?.id
-        let reads = await gate.count("tasks.list")
+        let reads = await gate.count("tasks.list"), streams = await gate.streamCount
+        if mode == 4 { await gate.next("tasks.list", .fail(503, "catalog read failed")) }
         await gate.release("tasks.batchDepend"); await apply.value
+        if try await closedOutcome(mode, model, gate, vault, streams: streams, "dependency batch") { await finish(model, gate, vault); return }
         #expect(model.dependencies.batch?.id == newer && model.dependencies.batch?.report == nil && model.dependencies.batch?.failure == nil, "mode \(mode)")
         #expect(model.message == nil, "mode \(mode)")
         if mode != 1 {
@@ -669,25 +693,98 @@ private actor ScriptGate: ClientTransport {
         await finish(model, gate, vault)
     }
 
-    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [0, 1, 2])
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [0, 1, 2, 3, 4, 5])
     func editorAttachmentAfterCloseReachesListAndShowsNothing(mode: Int) async throws {
         let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
         let other = try await secondTask(model, gate, vault)
         let link = "https://example.test/editor-" + UUID().uuidString
         model.beginEditing(model.tasks.first { $0.id == task.id }!)
-        await gate.next("tasks.attach", mode == 1 ? .holdThenFail(503, "OLD closed-editor attach failed") : .hold)
+        // Mode 5: the editor closes and reopens on the same Task, and the old attach fails late.
+        await gate.next("tasks.attach", mode == 5 ? .holdThenFail(503, "OLD same-Task editor attach failed") : closedStep(mode, fail: "OLD closed-editor attach failed"))
         let attach = Task { await model.attachLink(link) }
         try await wait("attach held") { await gate.isHeld("tasks.attach") }
         model.editor = nil
         if mode == 2 { model.beginEditing(model.tasks.first { $0.id == other.id }!) }
+        if mode == 5 { model.beginEditing(model.tasks.first { $0.id == task.id }!) }
         let newer = model.editor?.id
-        let reads = await gate.count("tasks.list")
+        let reads = await gate.count("tasks.list"), streams = await gate.streamCount
+        if mode == 4 { await gate.next("tasks.list", .fail(503, "catalog read failed")) }
         await gate.release("tasks.attach"); await attach.value
+        if try await closedOutcome(mode, model, gate, vault, streams: streams, "editor attachment") { await finish(model, gate, vault); return }
+        if mode == 5 {
+            #expect(model.editor?.id == task.id && model.editorError == nil, "the reopened editor on the same Task keeps no error from the old opening")
+            await finish(model, gate, vault); return
+        }
         #expect(model.editor?.id == newer && model.editorError == nil && model.message == nil, "mode \(mode)")
         if mode == 2 { #expect(!hasLink(model.editor?.base, link), "the newer editor is untouched") }
         if mode != 1 {
             #expect(await gate.count("tasks.list") > reads, "mode \(mode): the accepted change's read-back ran")
             #expect(hasLink(model.tasks.first { $0.id == task.id }, link), "mode \(mode): the list shows it")
+        }
+        await finish(model, gate, vault)
+    }
+    // MARK: quick-add, Delete and the picker toggle (instances, 401 and failed read-back after close)
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [0, 1, 3, 4])
+    func quickAddCompletionsBelongToTheirOpening(mode: Int) async throws {
+        // 0: late success after close-then-reopen; 1: late failure after close-then-reopen;
+        // 3: 401 after close; 4: failed read-back after close.
+        let gate = ScriptGate(); let (model, vault, _) = try await live(gate)
+        let title = "Old quick add " + UUID().uuidString
+        model.quickAdd = true; model.newTitle = title
+        await gate.next("tasks.create", closedStep(mode, fail: "OLD quick add failed"))
+        let create = Task { await model.create(openEditor: true) }
+        try await wait("create held") { await gate.isHeld("tasks.create") }
+        model.quickAdd = false
+        let reopen = mode == 0 || mode == 1
+        if reopen { model.quickAdd = true; model.newTitle = "Newer draft" }
+        let reads = await gate.count("tasks.list"), streams = await gate.streamCount
+        if mode == 4 { await gate.next("tasks.list", .fail(503, "catalog read failed")) }
+        await gate.release("tasks.create"); _ = await create.value
+        if try await closedOutcome(mode, model, gate, vault, streams: streams, "quick add") { await finish(model, gate, vault); return }
+        #expect(model.quickAdd && model.newTitle == "Newer draft" && model.quickAddError == nil, "mode \(mode): the newer draft is untouched")
+        #expect(model.editor == nil && model.message == nil, "mode \(mode): nothing opens and nothing is announced")
+        if mode == 0 {
+            #expect(await gate.count("tasks.list") > reads, "the created Task's read-back ran")
+            #expect(model.tasks.contains { $0.title == title }, "the list shows the created Task")
+        }
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [3, 4])
+    func deleteAfterCloseUnauthorizedOrFailedReadBack(mode: Int) async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        await model.openDependencyDelete(task)
+        try await wait("delete preview") { model.dependencies.deletion?.acceptedFromVersion != nil }
+        await gate.next("tasks.delete", closedStep(mode, fail: "unused"))
+        let delete = Task { await model.deleteTask(task) }
+        try await wait("delete held") { await gate.isHeld("tasks.delete") }
+        model.closeDependencyDelete()
+        let streams = await gate.streamCount
+        if mode == 4 { await gate.next("tasks.list", .fail(503, "catalog read failed")) }
+        await gate.release("tasks.delete"); await delete.value
+        _ = try await closedOutcome(mode, model, gate, vault, streams: streams, "delete")
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [0, 1, 3, 4])
+    func pickerToggleAfterCloseReachesListAndShowsNothing(mode: Int) async throws {
+        let gate = ScriptGate(); let (model, vault, root) = try await live(gate)
+        let candidate = try await secondTask(model, gate, vault)
+        await model.openDependencyPicker(model.tasks.first { $0.id == root.id }!)
+        try await wait("picker loaded") { model.dependencies.picker?.loading == false && model.dependencies.picker?.candidates.contains { $0.id == candidate.id } == true }
+        await gate.next("tasks.depend", closedStep(mode, fail: "OLD closed-picker link failed"))
+        let toggle = Task { await model.toggleDependency(model.dependencies.picker!.candidates.first { $0.id == candidate.id }!) }
+        try await wait("depend held") { await gate.isHeld("tasks.depend") }
+        model.closeDependencyPicker()
+        let reads = await gate.count("tasks.list"), streams = await gate.streamCount
+        if mode == 4 { await gate.next("tasks.list", .fail(503, "catalog read failed")) }
+        await gate.release("tasks.depend"); await toggle.value
+        if try await closedOutcome(mode, model, gate, vault, streams: streams, "picker toggle") { await finish(model, gate, vault); return }
+        #expect(model.dependencies.picker == nil && model.message == nil, "mode \(mode)")
+        if mode == 0 {
+            #expect(await gate.count("tasks.list") > reads, "the committed edge's read-back ran")
+            #expect(model.tasks.first { $0.id == root.id }?.depends_on?.contains(candidate.id) == true, "the list shows it")
         }
         await finish(model, gate, vault)
     }

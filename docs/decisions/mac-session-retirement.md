@@ -154,6 +154,38 @@ which ends the message before it resets the scope.
 Import sheet, and applies nothing unless that instance is still showing.
 Closing an instance ends only a message that instance raised.
 
+Every asynchronous completion follows one order (MAC-C1-S1-12 and S1-13):
+
+1. Ownership. If the credential or Profile it began under is no longer current,
+   it is dropped: no state, no request, no message.
+2. Authorization. A 401 under the current credential is handled
+   (`authorize(_:epoch:profile:)`, then `handleAuthorization`), whether or not
+   the surface is still showing.
+3. Data. A committed result is applied and read back whether or not the
+   surface is showing.
+4. Presentation. A message, report, feedback, error field, or closing or
+   opening of a surface happens only if the same instance is still showing.
+
+A read-back for a closed instance runs `refreshAfterWrite(presenting: false)`.
+If it fails, it raises no message of its own. It calls `connect()`, and the
+ordinary connection recovery takes over: the list shows "Reconnecting" and
+then returns to live, or shows Offline with the connection's own message. It
+never shows "Tasks updated. The live view is reconnecting."
+
+Instances added: an editor opening (`TaskDraft.opening`, new on each
+`beginEditing` and kept when a save rebuilds the draft), so closing and
+reopening the editor on the same Task is a new instance; quick-add
+(`quickAddInstance`, renewed on open, which also advances the parse
+generation); and the Batch edit, Attachment batch and Dependency batch drafts.
+A late quick-add success from a closed instance still creates the Task and
+reads it back. It does not clear the newer draft, close it, open the editor or
+announce. Its failure fills no error.
+
+Save, Move, Copy, transition, Series save and conflict reloads already handle
+authorization once the credential is confirmed current. Their editor cannot
+close while they run, because closing the inspector is disabled while `busy`.
+Settings and Diagnostics raise no `message`.
+
 Before this change, seven committed writes skipped their read-back once their
 surface had closed: Batch edit, Attachment batch, Dependency batch, picker link
 or unlink, Delete, Import apply after a reopen, and the editor's Attachment
