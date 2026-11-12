@@ -12,6 +12,7 @@ export const recordingLimits = {
   batchBytes: 131072,
   batchEvents: 128,
   queueBytes: 1048576,
+  pendingBatches: 1024,
   appBytes: 32 * 1024 * 1024,
   totalBytes: 256 * 1024 * 1024,
   retentionMs: 7 * 86400000,

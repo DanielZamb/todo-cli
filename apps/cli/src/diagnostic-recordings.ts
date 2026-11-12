@@ -8,6 +8,7 @@ import {
   RecordingRunList,
   RecordingShow,
   type RecordingStatus,
+  recordingRefusalMessage,
   validateRecordingBatch,
 } from "@todo/domain";
 import { CommandError } from "@todo/domain/commands";
@@ -56,7 +57,12 @@ const request = <S extends Schema.ConstraintDecoder<unknown>>(
           "auth_required",
           "Recordings require an active owner Session",
         );
-      if (response.status === 400) throw invalid();
+      if (response.status === 400) {
+        const reason = recordingRefusalMessage(
+          await response.json().catch(() => null),
+        );
+        throw reason ? new CommandError(2, "invalid_args", reason) : invalid();
+      }
       if (!response.ok)
         throw new CommandError(1, "server_error", "Recording request failed");
       return Schema.decodeUnknownSync(schema)(await response.json());

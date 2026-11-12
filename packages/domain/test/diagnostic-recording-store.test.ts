@@ -111,7 +111,12 @@ it("bounds private storage, deduplicates retries, recovers and counts expired/ev
     await store.flush();
     expect(store.ingest(one).duplicate).toBe(true);
     now++;
-    store.ingest(batch("22222222-2222-4222-8222-222222222222"));
+    store.ingest(
+      validateRecordingBatch({
+        ...batch("22222222-2222-4222-8222-222222222222"),
+        events: [{ ...event, sequence: 2 }],
+      }),
+    );
     await store.flush();
     expect(store.status().bytes).toBeLessThanOrEqual(4096);
     expect(store.status().loss.capacity_events).toBe(1);

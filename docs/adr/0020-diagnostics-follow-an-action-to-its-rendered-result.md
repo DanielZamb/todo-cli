@@ -111,9 +111,14 @@ at most 32 MiB across its runs, the server retains at most seven days, and the
 total is at most 256 MiB. Electron main and renderer share one app quota.
 Oldest segments go first; expiration, capacity losses, corrupt/orphan segments,
 queue drops and storage failures are counted and returned with every read.
-The implementation additionally caps segment count and the pending queue.
+The implementation additionally caps segment count and the pending queue:
+4,096 retained segments, 1 MiB pending encoded data and 1,024 pending batches.
+Run manifests reference only retained or pending batches, at most 5,120 runs.
+Event fingerprints have at most 655,360 retained/pending references.
+Cleanup never waits for the whole queue to drain.
 An unreferenced expiry timer removes idle records without a later request;
 filesystem failures are counted and retried with a one-minute minimum interval.
+Other journal activity preserves an already scheduled backoff timer.
 An empty private SQLite lease file grants one writer per directory; it contains
 no recordings or Task data and releases its OS lock when a process dies.
 Three filesystem blocks are reserved for the lease and atomic status replacement.
@@ -131,7 +136,12 @@ The explicit HttpApi group under /diagnostics/profiler accepts batches up to
 The ingestion response awaits that queue asynchronously and acknowledges stored
 data only after the atomic file write. Clients retain batches until a stored
 receipt and retry failed/uncertain deliveries.
-A batch UUID deduplicates retained retries. No synchronous filesystem operation
+A batch UUID deduplicates retained retries. Within a run, a producer sequence
+may repeat only with identical event content. Conflicting content is refused
+with an allowlisted recovery message before admission, including import/dry run.
+A fully retained identical event batch is a no-op. Pending data is not called
+stored. Legacy contradictory files and repeated contradictory action phases
+produce a refusal instead of a summary that hides observations. No synchronous filesystem operation
 runs during ingestion. JSON parsing/schema validation and bounded admission still
 use the server thread and must be measured. Exports page one bounded batch at a
 time; NDJSON CLI export follows pages. No arbitrary path is accepted over HTTP.
@@ -142,6 +152,8 @@ for deadline fractions. Loss counts remain visible beside those samples.
 Comparison requires matching contract, app, workload/script/environment hashes,
 release/debug configuration, render capability and concurrency; dev/unknown
 identities cannot establish comparable runs. Different build ids are expected.
+Refusals name only an allowlisted missing/different condition, with no uploaded
+value. The CLI preserves the safe message and exits 2 for validation or usage.
 Ordinary always-on runs may omit benchmark comparison context; they remain
 inspectable and exportable, but comparison refuses them.
 

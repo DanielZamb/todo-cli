@@ -1,0 +1,44 @@
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { diagnosticFixture } from "../../../../apps/server/scripts/diagnostic-fixture.ts";
+import { event } from "../../../../packages/domain/test/fixtures/diagnostic-recording.ts";
+const evidence = resolve(process.argv[2] ?? "docs/evidence/ui-speed/recordings-correction/compiled");
+mkdirSync(evidence, {recursive: true});
+const fixture = await diagnosticFixture(true, 1);
+const run = randomUUID();
+const comparison = {fixture_hash:"c".repeat(64),script_hash:"d".repeat(64),environment_hash:"e".repeat(64),configuration:"release",render_stage:"layout_complete",concurrency:1};
+const batch = (id = run) => ({schema_version:1,batch_id:randomUUID(),run:{run_id:id,app:"macos",build_id:event.build_id,contract_id:event.contract_id,comparison},events:[{...event,run_id:id}]});
+const headers = {Authorization:`Bearer ${fixture.credential}`,"Content-Type":"application/json"};
+const post = (body:unknown, dry=false) => fetch(fixture.url+`/diagnostics/profiler/ingest${dry?"?dry_run=true":""}`,{method:"POST",headers,body:JSON.stringify(body)});
+const cli = (args:string[]) => {
+ const r=spawnSync(resolve(".scratch/bin/todo"),["--profile","work","diagnostics",...args,"--server",fixture.url,"--format","json"],{env:fixture.env,encoding:"utf8"});
+ assert.equal(r.stderr,""); return {exit:r.status,body:JSON.parse(r.stdout)};
+};
+const results:object[]=[]; const failures:string[]=[];
+try {
+ assert.equal((await post(batch())).status,200);
+ const other = batch(randomUUID()); other.run.comparison={...comparison,environment_hash:"f".repeat(64)};
+ assert.equal((await post(other)).status,200);
+ const response=await fetch(fixture.url+`/diagnostics/profiler/compare?before=${run}&after=${other.run.run_id}`,{headers});
+ const body=await response.json(); const compared=cli(["compare","--before",run,"--after",other.run.run_id]);
+ results.push({case:"comparison reason",status:response.status,body,cli:compared});
+ assert.equal(response.status,400); assert.equal(compared.exit,2); assert.equal(compared.body.exit_meaning,"validation or usage");
+ if(body.message!=="Recording comparison refused: environment differs."||compared.body.message!==body.message) failures.push("safe environment refusal lost");
+ const conflicting={...batch(),events:[{...event,run_id:run,action_id:randomUUID()},{...event,run_id:run,sequence:2,monotonic_ms:18,name:"ui.result.committed",duration_ms:8,outcome:"completed",correct:true,render_stage:"layout_complete"}]};
+ const rejected=await post(conflicting); const rejection=await rejected.json();
+ const file=join(fixture.scratch,"conflicting.json"); writeFileSync(file,JSON.stringify(conflicting),{mode:0o600});
+ const imported=cli(["import","--file",file]); const preview=cli(["import","--file",file,"--dry-run"]);
+ const shown=cli(["show","--run",run]);
+ results.push({case:"conflicting sequence",status:rejected.status,body:rejection,imported,preview,shown});
+ if(rejected.status!==400||imported.exit!==2||preview.exit!==2)failures.push("conflicting sequence accepted through HTTP/import");
+ if(imported.body.message!=="Recording sequence conflicts; resend the original data or begin a new run.")failures.push("sequence recovery reason lost");
+ if(shown.body.summary[0]?.starts!==1||shown.body.summary[0]?.completed_samples!==0||shown.body.summary[0]?.fraction_by_20_ms!==0||shown.body.summary[0]?.fraction_by_300_ms!==0)failures.push("conflict improved deadline accounting");
+ const identical=await post(batch()); const duplicate=await identical.json();
+ assert.equal(identical.status,200); if(!duplicate.duplicate)failures.push("identical event not a no-op");
+ const task=await fetch(fixture.url+"/profiles/work/tasks",{headers}); assert.equal(task.status,200); assert.equal((await task.json()).length,1);
+ writeFileSync(join(evidence,"result.json"),JSON.stringify({result:failures.length?"FAIL":"PASS",failures,results},null,2));
+ assert.deepEqual(failures,[]);
+} finally {await fixture.close();}

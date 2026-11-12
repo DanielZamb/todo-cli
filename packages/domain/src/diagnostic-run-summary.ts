@@ -4,10 +4,13 @@ import {
   summarizeInteractions,
 } from "./client-diagnostics.ts";
 import type { RecordingBatch } from "./diagnostic-recordings.ts";
+import { uniqueRecordingEvents } from "./recording-event-identity.ts";
+import type { recordingRefusals } from "./recording-refusal.ts";
 
 export function recordingObservations(
   events: readonly DiagnosticEvent[],
 ): DiagnosticObservation[] {
+  events = uniqueRecordingEvents(events);
   const clockUnknown = recordingClockDiscontinuities(events) > 0;
   const actions = new Map<
     string,
@@ -124,33 +127,40 @@ export function recordingObservations(
 export function summarizeRecording(events: readonly DiagnosticEvent[]) {
   return analyzeRecording(events).summary;
 }
+export function recordingComparisonRefusal(
+  before: RecordingBatch["run"],
+  after: RecordingBatch["run"],
+): keyof typeof recordingRefusals | undefined {
+  const a = before.comparison,
+    b = after.comparison;
+  if (!a || !b) return "missing_comparison";
+  if (before.build_id === "dev" || after.build_id === "dev")
+    return "unknown_build";
+  if (before.contract_id === "unknown" || after.contract_id === "unknown")
+    return "unknown_contract";
+  if (a.configuration === "unknown" || b.configuration === "unknown")
+    return "unknown_configuration";
+  if (
+    [a.render_stage, b.render_stage].some(
+      (stage) => stage === "unknown" || stage === "unavailable",
+    )
+  )
+    return "unknown_render_stage";
+  if (before.app !== after.app) return "app_mismatch";
+  if (before.contract_id !== after.contract_id) return "contract_mismatch";
+  if (a.fixture_hash !== b.fixture_hash) return "fixture_mismatch";
+  if (a.script_hash !== b.script_hash) return "script_mismatch";
+  if (a.environment_hash !== b.environment_hash) return "environment_mismatch";
+  if (a.configuration !== b.configuration) return "configuration_mismatch";
+  if (a.render_stage !== b.render_stage) return "render_stage_mismatch";
+  if (a.concurrency !== b.concurrency) return "concurrency_mismatch";
+  return undefined;
+}
 export function recordingsComparable(
   before: RecordingBatch["run"],
   after: RecordingBatch["run"],
 ) {
-  const a = before.comparison,
-    b = after.comparison;
-  if (!a || !b) return false;
-  return (
-    before.app === after.app &&
-    before.contract_id === after.contract_id &&
-    before.contract_id !== "unknown" &&
-    before.build_id !== "dev" &&
-    after.build_id !== "dev" &&
-    a.configuration !== "unknown" &&
-    a.render_stage !== "unknown" &&
-    a.render_stage !== "unavailable" &&
-    (
-      [
-        "fixture_hash",
-        "script_hash",
-        "environment_hash",
-        "configuration",
-        "render_stage",
-        "concurrency",
-      ] as const
-    ).every((key) => a[key] === b[key])
-  );
+  return recordingComparisonRefusal(before, after) === undefined;
 }
 
 export function recordingClockDiscontinuities(
@@ -181,6 +191,7 @@ export function analyzeRecording(
   events: readonly DiagnosticEvent[],
   recovered = false,
 ) {
+  events = uniqueRecordingEvents(events);
   const clock_discontinuities = recordingClockDiscontinuities(events),
     sequence_gaps = recordingSequenceGaps(events);
   const roles = new Set(events.map((event) => event.process_role));

@@ -1,7 +1,9 @@
 import { BadRequest, BearerCredential, TodoApi, Unauthorized } from "@todo/api";
 import {
   exitStatus,
+  RecordingRefusal,
   recordingLimits,
+  recordingRefusalMessage,
   validateRecordingBatch,
 } from "@todo/domain";
 import type { DiagnosticRecordings } from "@todo/domain/diagnostic-recordings";
@@ -21,6 +23,18 @@ const refusal = (status: number) =>
     },
     { status, headers: { "cache-control": "no-store" } },
   );
+const safeRefusalMessage = (
+  response: HttpServerResponse.HttpServerResponse,
+) => {
+  if (response.body._tag !== "Uint8Array") return undefined;
+  try {
+    return recordingRefusalMessage(
+      JSON.parse(new TextDecoder().decode(response.body.body)),
+    );
+  } catch {
+    return undefined;
+  }
+};
 export const recordingGuard =
   (store: OperationStore) =>
   <E, R>(effect: Effect.Effect<HttpServerResponse.HttpServerResponse, E, R>) =>
@@ -60,7 +74,9 @@ export const recordingGuard =
                   {
                     generated_at: new Date().toISOString(),
                     code: "invalid_args",
-                    message: "Invalid recording request",
+                    message:
+                      safeRefusalMessage(response) ??
+                      "Invalid recording request",
                     ...exitStatus(2),
                   },
                   { status: 400 },
@@ -92,9 +108,12 @@ export const recordingRoutes = (
         Effect.andThen(
           Effect.tryPromise({
             try: run,
-            catch: () =>
+            catch: (error) =>
               new BadRequest({
-                message: "Recording unavailable or runs are not comparable",
+                message:
+                  error instanceof RecordingRefusal
+                    ? error.message
+                    : "Recording unavailable",
               }),
           }),
         ),
@@ -135,8 +154,13 @@ export const recordingRoutes = (
           yield* owner;
           const receipt = yield* Effect.try({
             try: () => recordings.ingest(batch, query.dry_run === "true"),
-            catch: () =>
-              new BadRequest({ message: "Invalid recording metadata" }),
+            catch: (error) =>
+              new BadRequest({
+                message:
+                  error instanceof RecordingRefusal
+                    ? error.message
+                    : "Invalid recording metadata",
+              }),
           });
           if (
             query.dry_run === "true" ||

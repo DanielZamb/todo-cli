@@ -22,3 +22,9 @@ The internal queue admits work without synchronous I/O. The HTTP acknowledgement
 awaits persistence asynchronously; retain local batches until a stored receipt. Explicit export cursors can expire under oldest-first
 rotation. Losses, clock discontinuities and restart uncertainty invalidate a
 complete-performance claim. Normal Diagnostics polling never reads this journal.
+
+The private identity maps are independently bounded by 4096 retained plus 1024
+pending batches, at most 5120 manifests and 655360 event references. The continuous
+admission test retains one segment and one pending write through 1001 runs,
+with at most two manifests/event identities. Failed expiry has a 60000 ms minimum
+retry and other status writes cannot shorten or postpone that timer.

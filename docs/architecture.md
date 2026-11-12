@@ -372,8 +372,12 @@ accepts always-on metadata recording in each app and owner-only loopback
 ingestion. The private recording store is a sibling diagnostic-recordings
 directory beside the configured database, outside todo.db and database Snapshots.
 It has 0700 directories, 0600 atomic segments, 32 MiB per app, seven-day retention,
-a 256 MiB total ceiling, 4096 segments and a 1 MiB pending queue. Oldest segments
-expire first with visible event/loss counts, including idle-time expiration. A private empty SQLite lease
+a 256 MiB total ceiling, 4096 segments, a 1 MiB pending queue and 1024 pending
+batches. At most 5120 retained/pending run manifests and 655360 event references
+are kept, independently of queue idleness. Producer-sequence fingerprints
+refuse contradictory payloads; exact retained duplicates are no-ops. Oldest segments
+expire first with visible event/loss counts, including idle-time expiration.
+Failed expiry retries wait at least a minute, without rearming on other activity. A private empty SQLite lease
 serializes journal ownership across processes without storing recordings in
 SQLite; process death releases the lease. No Task write depends on this store.
 The explicit HttpApi profiler group accepts strict 128 KiB / 128-event batches;

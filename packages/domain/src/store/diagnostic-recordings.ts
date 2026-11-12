@@ -13,7 +13,6 @@ import {
 } from "node:fs/promises";
 import { join } from "node:path";
 import { Schema } from "effect";
-import type { DiagnosticEvent } from "../client-diagnostics.ts";
 import {
   type RecordingBatch,
   RecordingLoss,
@@ -24,8 +23,15 @@ import {
 } from "../diagnostic-recordings.ts";
 import {
   analyzeRecording,
-  recordingsComparable,
+  recordingComparisonRefusal,
 } from "../diagnostic-run-summary.ts";
+
+import { RecordingRefusal } from "../recording-refusal.ts";
+import {
+  RecordingEventIndex,
+  readRecordingEvents,
+  recordingEventFingerprints,
+} from "./recording-event-index.ts";
 
 type Segment = {
   name: string;
@@ -50,6 +56,9 @@ const pause = () => new Promise<void>((r) => setImmediate(r));
 export class DiagnosticRecordings {
   private entries: Segment[] = [];
   private readonly recoveredRuns = new Set<string>();
+  private readonly eventIndex = new RecordingEventIndex();
+  private readonly pendingRuns = new Map<string, string>();
+  private expiryBackingOff = false;
   private readonly pendingIds = new Map<string, string>();
   private readonly manifests = new Map<string, string>();
   private readonly seen = new Map<string, string>();
@@ -128,6 +137,8 @@ export class DiagnosticRecordings {
           if (name !== store.filename(stored.received, batch.batch_id))
             throw new Error("Invalid segment");
           await chmod(join(directory, name), 0o600);
+          if (store.seen.has(batch.batch_id))
+            throw new Error("Duplicate segment");
           if (!store.acceptManifest(batch)) throw new Error("Invalid run");
           store.entries.push({
             name,
@@ -139,6 +150,11 @@ export class DiagnosticRecordings {
             digest: store.digest(batch),
           });
           store.seen.set(batch.batch_id, store.digest(batch));
+          store.eventIndex.retain(
+            batch.batch_id,
+            recordingEventFingerprints(batch),
+            true,
+          );
         } catch {
           await unlink(join(directory, name));
           store.loss.corrupt_segments++;
@@ -147,6 +163,7 @@ export class DiagnosticRecordings {
       }
       for (const entry of store.entries)
         store.recoveredRuns.add(entry.run.run_id);
+      store.trimIdentity();
       store.available = true;
       await store.prune();
       await store.save();
@@ -237,19 +254,26 @@ export class DiagnosticRecordings {
       this.loss.storage_failures++;
     });
   }
-  private armExpiry(minimumDelay = 1) {
+  private armExpiry() {
+    if (this.expiryBackingOff && this.expiry) return;
     clearTimeout(this.expiry);
     const first = this.entries[0];
     if (!this.available || !first) return;
     const delay = Math.max(
-      minimumDelay,
+      this.expiryBackingOff ? 60000 : 1,
       first.received + recordingLimits.retentionMs - this.time() + 1,
     );
     this.expiry = setTimeout(
       () => {
         this.schedule(async () => {
+          this.expiry = undefined;
           try {
             if (await this.prune()) await this.save();
+            this.expiryBackingOff = false;
+          } catch {
+            this.loss.storage_failures++;
+            this.expiryBackingOff = true;
+            await this.save();
           } finally {
             this.armExpiry();
           }
@@ -299,17 +323,22 @@ export class DiagnosticRecordings {
     const previous =
       this.seen.get(batch.batch_id) ?? this.pendingIds.get(batch.batch_id);
     if (previous && previous !== digest)
-      throw new Error("Conflicting batch id");
+      throw new RecordingRefusal("batch_conflict");
     const bytes =
       new TextEncoder().encode(JSON.stringify(batch)).byteLength + 64;
+    const items = recordingEventFingerprints(batch);
     const duplicate =
-      this.seen.has(batch.batch_id) || this.pendingIds.has(batch.batch_id);
+      this.seen.has(batch.batch_id) ||
+      this.pendingIds.has(batch.batch_id) ||
+      this.eventIndex.check(items);
     const known = this.manifests.get(batch.run.run_id);
     if (known && known !== JSON.stringify(batch.run))
-      throw new Error("Incompatible run metadata");
+      throw new RecordingRefusal("run_conflict");
     const accepted =
       this.available &&
-      (duplicate || this.queued + bytes <= recordingLimits.queueBytes);
+      (duplicate ||
+        (this.queued + bytes <= recordingLimits.queueBytes &&
+          this.pendingIds.size < recordingLimits.pendingBatches));
     if (!dryRun) {
       if (duplicate) this.loss.duplicate_batches++;
       else if (!accepted) {
@@ -320,6 +349,8 @@ export class DiagnosticRecordings {
         this.acceptManifest(batch);
         this.queued += bytes;
         this.pendingIds.set(batch.batch_id, digest);
+        this.pendingRuns.set(batch.batch_id, batch.run.run_id);
+        this.eventIndex.retain(batch.batch_id, items);
         const received = this.time();
         this.schedule(async () => {
           try {
@@ -348,13 +379,16 @@ export class DiagnosticRecordings {
               digest,
             });
             this.seen.set(batch.batch_id, digest);
+            this.eventIndex.commit(batch.batch_id);
           } catch {
+            this.eventIndex.forget(batch.batch_id);
             this.loss.storage_failures++;
             this.loss.dropped_batches++;
             this.loss.dropped_events += batch.events.length;
           } finally {
             this.queued -= bytes;
             this.pendingIds.delete(batch.batch_id);
+            this.pendingRuns.delete(batch.batch_id);
             this.trimIdentity();
             await this.save();
           }
@@ -366,7 +400,7 @@ export class DiagnosticRecordings {
       accepted,
       durability: dryRun
         ? "validated"
-        : duplicate && this.seen.has(batch.batch_id)
+        : duplicate && !this.pendingIds.has(batch.batch_id)
           ? "stored"
           : accepted
             ? "queued"
@@ -393,9 +427,11 @@ export class DiagnosticRecordings {
     this.seen.clear();
     for (const e of this.entries) this.seen.set(e.batch, e.digest);
     const retained = new Set<string>(this.entries.map((e) => e.run.run_id));
+    for (const id of this.pendingRuns.values()) retained.add(id);
     for (const id of this.manifests.keys())
-      if (!retained.has(id) && this.pendingIds.size === 0)
-        this.manifests.delete(id);
+      if (!retained.has(id)) this.manifests.delete(id);
+    for (const id of this.recoveredRuns)
+      if (!retained.has(id)) this.recoveredRuns.delete(id);
   }
   private async prune(incoming?: {
     app: RecordingBatch["run"]["app"];
@@ -438,6 +474,7 @@ export class DiagnosticRecordings {
       if (!victim) break;
       await unlink(join(this.directory, victim.name));
       this.entries.splice(this.entries.indexOf(victim), 1);
+      this.eventIndex.forget(victim.batch);
       bytes -= victim.bytes;
       totals.set(
         victim.run.app,
@@ -504,9 +541,9 @@ export class DiagnosticRecordings {
   export(run: string, cursor?: string) {
     return this.query(async () => {
       const entries = this.entries.filter((e) => e.run.run_id === run);
-      if (!entries.length) throw new Error("Recording unavailable");
+      if (!entries.length) throw new RecordingRefusal("missing_run");
       const index = cursor ? entries.findIndex((e) => e.batch === cursor) : 0;
-      if (index < 0) throw new Error("Export cursor expired");
+      if (index < 0) throw new RecordingRefusal("expired_cursor");
       const entry = entries[index];
       const batches = entry
         ? [
@@ -526,22 +563,10 @@ export class DiagnosticRecordings {
   private async showUnsafe(id: string) {
     const entries = this.entries.filter((e) => e.run.run_id === id);
     const first = entries[0];
-    if (!first) throw new Error("Recording unavailable");
-    const events: DiagnosticEvent[] = [];
-    const seen = new Set<string>();
-    for (const e of entries) {
-      const batch = validateRecordingBatch(
-        JSON.parse(await this.read(e.name)).batch,
-      );
-      for (const event of batch.events) {
-        const key = `${event.process_role}:${event.sequence}`;
-        if (!seen.has(key)) {
-          events.push(event);
-          seen.add(key);
-        }
-      }
-      await pause();
-    }
+    if (!first) throw new RecordingRefusal("missing_run");
+    const events = await readRecordingEvents(entries, (name) =>
+      this.read(name),
+    );
     const analysis = analyzeRecording(events, this.recoveredRuns.has(id));
     const all = analysis.summary.map((row) =>
       Schema.decodeUnknownSync(RecordingSummaryRow)(row),
@@ -562,8 +587,8 @@ export class DiagnosticRecordings {
     return this.query(async () => {
       const a = await this.showUnsafe(before),
         b = await this.showUnsafe(after);
-      if (!recordingsComparable(a.run, b.run))
-        throw new Error("Runs are not comparable");
+      const refusal = recordingComparisonRefusal(a.run, b.run);
+      if (refusal) throw new RecordingRefusal(refusal);
       return {
         generated_at: new Date().toISOString(),
         before: a,

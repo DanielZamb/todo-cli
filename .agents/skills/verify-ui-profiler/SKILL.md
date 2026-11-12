@@ -42,7 +42,7 @@ For filesystem retention, permissions, restart/orphan recovery, conflicting
 retries, clock discontinuities and disk faults, run:
 
 ```sh
-pnpm --filter @todo/domain test diagnostic-recordings.test.ts diagnostic-recording-store.test.ts diagnostic-event-types.test.ts diagnostic-labels.test.ts
+pnpm --filter @todo/domain test diagnostic-recording-corrections.test.ts diagnostic-recordings.test.ts diagnostic-recording-store.test.ts diagnostic-event-types.test.ts diagnostic-labels.test.ts
 pnpm --filter @todo/server test diagnostic-recordings.test.ts diagnostics.test.ts
 ```
 
@@ -78,3 +78,34 @@ temporaries from this checkout and record freed bytes.
 verify.ts and benchmark.ts are invoked with Bun as above. The checkout-local
 .claude/skills/verify-ui-profiler link registers this skill; fresh Claude discovery
 is a separate integration receipt, not claimed by this command.
+
+## Recording correction controls
+
+Run the compiled boundary/import controls after building the same-source cache:
+
+```sh
+bun .agents/skills/verify-ui-profiler/scripts/corrections.ts "$PWD/docs/evidence/ui-speed/recording-corrections-new"
+```
+
+They require literal owner HTTP 400 / CLI exit 2 with an allowlisted reason,
+reject conflicting sequence data through import and dry run, keep both deadline
+fractions at zero, and prove a retained identical event is a no-op. The domain
+controls cover pending acknowledgements, legacy contradictory files, repeated
+action phases, every comparison condition, and 1,001 admissions without a drain.
+The quota control's second segment now uses a genuinely different event, since
+an identical event is a no-op; its byte/eviction assertions remain unchanged.
+
+For a permanent real unlink failure in the same event loop as Task reads:
+
+```sh
+bun build --compile .agents/skills/verify-ui-profiler/scripts/expiry-server.ts --outfile .scratch/bin/expiry-fault-server
+bun .agents/skills/verify-ui-profiler/scripts/expiry-cost.ts "$PWD/docs/evidence/ui-speed/expiry-cost-new"
+```
+
+The verification-only entry replaces its own scratch segment with a directory,
+then runs the real server. Five AB/BA pairs last 6.5 seconds per cell, long enough
+for two real failed timer attempts. It asserts all 15 Task titles, both load
+boundaries and two counted failures. No native app or CPU pressure is involved.
+A difference inside pair variation is inconclusive, never proof of zero cost.
+The fake-clock control additionally proves no retry for 59,999 ms, a retry at
+60,000 ms, normal scheduling after recovery and no reset by other journal work.
