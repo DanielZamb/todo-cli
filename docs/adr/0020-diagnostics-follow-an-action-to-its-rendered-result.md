@@ -176,7 +176,8 @@ The declared version-1 `run.admission` object carries policy `whole_batch`,
 refused_batches, unadmitted_events and incomplete. Counts are cumulative refused
 submission attempts, not inferred missing actions. Null means the count is
 unknown. Refusal marks survive data rotation and complete data eviction; they
-expire only after seven days with no retained or pending data for that run.
+expire only when the mark is more than seven days old and no retained or pending
+data for that run remains.
 Markers use separate 0600 metadata files, charged to the app quota, with an
 atomic replacement allowance. An explicit admission_bytes status field exposes
 the metadata charge. There are at most 5120 retained, pending or marked run

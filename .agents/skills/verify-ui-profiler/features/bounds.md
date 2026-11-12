@@ -28,3 +28,13 @@ pending batches, at most 5120 manifests and 655360 event references. The continu
 admission test retains one segment and one pending write through 1001 runs,
 with at most two manifests/event identities. Failed expiry has a 60000 ms minimum
 retry and other status writes cannot shorten or postpone that timer.
+
+The combined retained/pending/marked run set is at most 5120 identities. A mark
+has at most 2048 encoded bytes and a charged filesystem block, plus an atomic
+replacement allowance. Marks survive data eviction and expire only when more
+than seven days old with no retained or pending data. At capacity, refuse a new run rather than
+forget an existing mark. Repeated refusals coalesce to one metadata job per run.
+Metadata write failure has no retry loop; shutdown attempts remaining dirty marks
+once after the queue drains. An unavailable metadata store cannot publish a
+complete-looking run. Forced-GC lease-liveness controls distinguish an idle
+process from a retained store; the crash fixture must keep its store alive.

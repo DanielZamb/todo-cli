@@ -1,9 +1,11 @@
 # Private Diagnostics recordings
 
-The correction after the d1541167 review addresses S1-1 through S1-4. The
-contract remains cf81754585ee1525358bfe8a3357ff83a2024f8a350fe7a6d493afc9c61f7668.
-The correction evidence and current gates are in the final section below. The
-original delivery sections describe d1541167 and retain their original receipts.
+The latest correction addresses C1 and C2 from the review of 3cf1e3b0. Whole-batch
+refusals now leave a durable incomplete-run mark, and public reducers preserve
+separate runs. The contract is now
+55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8.
+The final section records this correction and its gates. Earlier sections retain
+the d1541167 delivery and S1-1 through S1-4 correction receipts as history.
 
 U06 and U07a implement the accepted recording policy in ADR-0020. Recording
 files are separate from the Task database. Owner-authenticated loopback HTTP
@@ -543,6 +545,7 @@ files or processes were touched.
 
 CLI SHA-256: 6da82544e5c7d1631ad1dc7765457d4b46d647505d129d1c68f3a7297abe2959.
 Server SHA-256: c3e1eda775875675c3daf8bd825b2c659a8029be4f7e2f62bb0aca95b9765009.
+
 Expiry verification entry SHA-256: 3f5cd7b66d390f24f38158cbcf1fcf4382f7980371d92f5561f39c9a9cb5d9e0.
 
 All four requested findings have executable red/green controls and are ready for
@@ -550,4 +553,281 @@ the seat's re-check. No independent correction verdict is claimed here. Native
 client integration, held PNG rendering, fresh Claude discovery, quiet-machine
 confirmation, hardware power-loss durability and allocation accounting remain
 as stated in the original delivery; none was performed or claimed by this fix.
+
+## C1 and C2 correction of 3cf1e3b0
+
+C1 uses whole-batch refusal. A conflicting submission admits no events and leaves
+a content-free mark on its run before HTTP acknowledges the refusal. Its response
+says "Whole batch refused; no events were admitted", names the safe conflict
+class and instructs the producer to retry the non-conflicting events unchanged
+with a new batch id. A retry containing the valid slow start/result succeeds.
+The mark remains because a successful subset retry cannot establish that all
+omitted facts arrived.
+
+The version-1 `run.admission` object declares policy `whole_batch`,
+`refused_batches`, `unadmitted_events` and `incomplete`. Counts describe refused
+submission attempts, not invented missing actions. Null means unknown, including
+arithmetic overflow. The accepted 8 ms action still has one known start after a
+three-event refusal, but both all-start deadline fractions become null and its
+evidence becomes incomplete. Retrying the omitted 10000 ms action gives two
+known starts and p99 10000 ms; neither fraction becomes 1. An unrelated clean run
+keeps its fraction 1. Comparing marked and clean runs returns HTTP 400 / CLI
+exit 2 with "Recording comparison refused: a run is incomplete because admission
+facts are missing."
+
+Each opaque run's mark is stored outside todo.db in a 0600 file in the existing
+0700 private directory. Atomic writes use the same recording writer queue.
+Markers survive restart, segment rotation and complete data eviction, and remain
+listable/exportable without events. An empty marked batch is explicitly valid.
+Import preserves the mark, including JSON/NDJSON and no-write dry run. Applying
+snapshots merges counts by maximum rather than adding the same exported refusal
+on every page. This is a lower bound across imports. Unknown stays unknown; a
+zero, older or identical snapshot cannot clear uncertainty. Marks expire only
+when more than seven days old and no retained or pending data for their run remains.
+
+Marks have a 2048-byte encoded bound, one filesystem-block charge each and an
+atomic replacement allowance in the existing per-app and total quotas.
+`status.admission_bytes` reports that charge; `status.bytes` keeps its existing
+segment meaning. At most 5120 identities are retained across data, pending work
+and marks. At capacity a new run is refused and its producer retains the batch;
+an older run's mark is never forgotten to make room. Repeated refusals coalesce
+to one metadata job per run. The 1000-refusal control observes one queued job and
+counts 1000 refused submissions and 1000 unadmitted events. There is no retry loop
+on metadata I/O failure. Shutdown makes one bounded persistence attempt per
+remaining dirty mark after draining work, while rejecting new admissions.
+
+If storage cannot persist the mark, HTTP returns 500 rather than a definitive
+400 or successful admission acknowledgement. The CLI exits 1, runtime failure,
+with the exact allowlisted instruction to keep the entire batch and retry when
+storage is available. It never echoes arbitrary server errors. The compiled
+unwritable-directory control observes that response and exactly one successful
+Task through the normal Task path. The server preservation control also checks
+exactly one TaskCreated entry. The recovery unit
+control restores storage, shuts down, reopens and finds the mark and null fraction.
+Unreadable private metadata refuses summary queries instead of publishing a
+complete-looking empty run. The server preservation control now asserts that
+literal safe BadRequest while retaining all Task-body, count and History checks.
+Loss counters for failed opens remain covered by the domain controls.
+
+C2 partitions mixed-run input and scopes every key by run. Action, latest-clock,
+crash, sequence and phase keys include run identity and producer. Analysis merges
+only aggregate diagnostic counts and concatenates separate run rows. Uncertainty
+applies to affected rows only. The shared-identity control gives independent
+8 ms and 400 ms rows, with fractions 1/1 and 0/0, rather than one 8 ms row.
+Pending ages remain 0 and 499 ms; a crash or clock reversal in one run cannot
+alter the other's outcomes or deadline fraction.
+
+| Exported input path | Mixed-run rule and control |
+| --- | --- |
+| recordingEventKey, uniqueRecordingEvents | Run/producer/sequence key; action phase keys also include run. Identical facts are idempotent; contradictory content refuses. |
+| recordingObservations | Run/producer/action state; per-run clock validity and per-producer ages/crashes. Two rendered observations survive. |
+| recordingClockDiscontinuities, recordingSequenceGaps | Run/producer keys; independent sequence restarts do not create false gaps or reversed clocks. |
+| analyzeRecording, summarizeRecording | Partition by run; return separate rows and accept a run-keyed admission map for external refusal uncertainty. |
+| summarizeInteractions | Its existing grouping already includes run; mixed observations keep two rows. |
+| validateRecordingBatch | Explicitly one run per batch; mixed-run events refuse at the boundary. |
+| CLI import | Full-file uniqueness preflight already used run keys. Mutable admission state is excluded from immutable run identity; two runs sharing action/sequence ids import and show 8/400 ms separately. |
+| HTTP/CLI compare | Single-run show calls remain isolated; marked run descriptors refuse complete comparison before any conditions are scored. |
+
+The consumer search covers apps/cli, apps/electron and apps/macos TypeScript,
+TSX and Swift source for all exported event reducers. Only CLI import directly
+uses uniqueRecordingEvents in this checkout. No native consumer was exercised.
+Raw events cannot contain a server-side refusal that was never admitted. Future
+Electron/Mac local export reducers must preserve run.admission and pass its map
+to analyzeRecording/summarizeRecording, or use the server's masked summaries.
+This client integration is owed, not claimed by the shared reducer tests.
+
+### Contract and red evidence
+
+The new declared mark and charged metadata field change the contract from
+`cf81754585ee1525358bfe8a3357ff83a2024f8a350fe7a6d493afc9c61f7668` to
+`55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8`.
+The generator updates every TypeScript pin and OpenAPI/Swift sources. Existing
+keys, their meanings, Task/JSON goldens and mismatch behavior remain unchanged.
+`./scripts/swift-slot.sh apps/macos/scripts/generate-api.sh` exited 0. It was the
+only Swift operation. A redundant second queued pass was canceled before taking
+the slot or starting Swift, exit 143; the successful first output and subsequent
+contract checks prove generation is current. No other unit's holder was stopped.
+Native compilation, app recording/UI behavior and client adoption remain owed.
+
+Evidence is local and ignored under docs/evidence/ui-speed/recordings-completeness.
+E below is its absolute path, C is "$PWD/.scratch/bin", P is
+".agents/skills/verify-ui-profiler/scripts". Seat sources are byte-identical
+copies at .scratch/recordings-correction-s1; cmp exits 0 and source hashes are in
+witness-sources.sha256. Both unchanged witnesses ran red before production edits.
+The compiled identity witness exited 1 with C1/C2 failures, and the real HTTP
+witness exited 1 with perfect fractions after refusal and restart. Own focused
+admission and mixed-run tests also exited 1 before fixes.
+
+After the fix, the unchanged real HTTP witness exits 0 and preserves uncertainty
+across restart. The unchanged identity process still exits 1, with exactly two
+old narrow assertions expecting fraction 0 rather than null. Its C1 and C2 class
+cases and the other nine cases pass. The raw process failure is retained as
+witness-identity-release.exit/json, not relabeled green. The production regression
+tests and compiled CLI controls assert the new null-fraction policy literally.
+
+The first two full domain runs exited 1 at "releases writer ownership after a
+process crash" while its isolated 20-test file passed. A new forced-GC child
+control proves why. Both children are alive, but an empty timer allows the store
+and SQLite lease to be collected; the contender then opens with zero failures.
+Capturing the store in the timer retains the lease and the contender records one
+failure. The crash fixture now captures its store until killed. Production lease
+logic and the ownership assertions did not change. The full domain suite then
+passes all 447 tests. The first server run also exposed the old expectation of
+an available runs body after a failed metadata open. That now safely refuses;
+the updated test asserts the exact refusal. One intermediate test edit expected
+the CLI-style code instead of the typed HTTP BadRequest tag; its setup failure
+is retained in server-last, and the corrected expectation retains the error
+shape already used by this endpoint.
+
+### Current commands and receipts
+
+The executable implementation is committed through f963bbeed176e433f16dc584bdf8fa07bbc17d3c.
+Subsequent commits correct the two verification fixtures described above.
+Frozen cache head is cfd962499c9f2822013969f85263a97540369b26, source hash
+97338f951d4d510089c87a84343002a2da3fc6ec72207a9b57441fd5a1018e61.
+product-source-unchanged exits 0 for all domain, CLI and server production source
+between those heads, so the earlier compiled release controls use the same
+implementation. Each cache source hash was compiled once. Later report-only
+changes do not affect executable inputs.
+
+| Command | Real exit | Receipt under E |
+| --- | ---: | --- |
+| bun build --compile .scratch/recordings-correction-s1/identity.ts --outfile "$C/recordings-identity-class" | 0 before and after | witness-build, witness-build-release |
+| HOME="$PWD/.scratch/recordings-correction-s1/home" "$C/recordings-identity-class" | 1 before; 1 after with the two superseded zero-fraction assertions only | red-identity, witness-identity-release |
+| HOME="$PWD/.scratch/recordings-correction-s1/home" TMPDIR="$PWD/.scratch/recordings-correction-s1/tmp/" bun .scratch/recordings-correction-s1/refusal-http.ts | 1 before; 0 after | red-http, witness-http-release |
+| pnpm --filter @todo/domain test recording-admission.test.ts recording-run-isolation.test.ts | 0, six literal controls | complete-unit-final |
+| Focused admission and mixed-run controls before fixes | 1 each | red-admission, red-reducers |
+| Recovered-storage shutdown control before fix | 1 | red-shutdown, lost mark after restart |
+| bun "$P/admission-fault.ts" "$E/fault-green" | 1 before; 0 after | red-fault, fault-green; 500, CLI 1, Task count 1 |
+| bun "$P/lease-liveness.ts" | 0 | lease-liveness, two live children with contender failures 0 and 1 |
+| pnpm --filter @todo/domain test | 1, 1 before lifetime correction; 0 after | domain-release, domain-retry, domain-last; 447 tests |
+| pnpm --filter @todo/domain test diagnostic-recording-store.test.ts | 0 | lease-control, 20 tests |
+| pnpm --filter @todo/server test | 1 for superseded query expectation; 1 for wrong test tag; 0 after | server-release, server-last, server-final; 38 tests |
+| pnpm typecheck | 0 | types-release |
+| bun --bun node_modules/typescript/bin/tsc --noEmit -p .agents/skills/verify-ui-profiler/tsconfig.json | 0 | harness-types-last |
+| ./scripts/swift-slot.sh apps/macos/scripts/generate-api.sh | 0; redundant queued pass canceled, 143 | generate-api, generate-api-final |
+| bun packages/api/scripts/openapi.ts --check | 0 | contract-release; new 55c6d138… id |
+| bun apps/server/scripts/scratch-diagnostics.ts build | 0 | build-measured; matching cache above |
+| bun "$P/completeness.ts" "$E/compiled-release" | 0 | completeness-release; transfer, eviction, 8/400 ms CLI isolation |
+| bun "$P/corrections.ts" "$E/corrections-release" | 0 | corrections-release |
+| TODO_PROFILER_STRESS=1 bun "$P/verify.ts" "$E/producer-stress-release" | 0 | producer-stress-release; 700 accepted, 585 retained segments, 7370 capacity events, zero storage failures |
+| TODO_DIAGNOSTICS_NO_SWIFT=1 .agents/skills/verify-diagnostics/scripts/verify.sh "$E/diagnostics-release" | 0 | diagnostics-release; terminal PNG HOLD |
+| TODO_SERVER_BINARY="$C/todo-server" TODO_SEED_BINARY="$C/seed" .agents/skills/verify-server-api/scripts/verify.sh "$E/api-release" | 0 | api-release |
+| .agents/skills/verify-auth/scripts/verify.sh "$E/auth-release" | 0 | auth-release |
+| TODO_CLI_BINARY="$C/todo" .agents/skills/verify-cli/scripts/verify.sh "$E/cli-release" | 0 | cli-release; 80 tests |
+| bun build --compile apps/server/scripts/diagnostic-fault-cli.ts --outfile "$C/diagnostic-fault-cli"; bun build --compile apps/server/scripts/verify-diagnostic-faults.ts --outfile "$C/verify-diagnostic-faults"; "$C/verify-diagnostic-faults" "$E/faults-release" | 0 each | fault-cli-build-release, fault-driver-build-release, faults-release; 47 cases |
+| bun apps/server/scripts/verify-diagnostic-payload-budget.ts "$E/payload-release" | 0 | payload-release; 10000 requests, 200 clients, 306 operations through three clients |
+| TODO_PROFILER_PAIRS=10 bun "$P/benchmark.ts" "$E/ingestion-16"; TODO_PROFILER_PAIRS=10 TODO_PROFILER_EVENTS=128 bun "$P/benchmark.ts" "$E/ingestion-128" | 0 each | ingestion-16, ingestion-128 |
+| bun build --compile "$P/expiry-server.ts" --outfile "$C/expiry-fault-server"; bun "$P/expiry-cost.ts" "$E/expiry-cost" | 0 each | expiry-build-release, expiry-cost |
+
+The no-Swift recipe's terminal PNG render is owed by a unit holding the Swift
+slot. The payload control keeps both limits, 49152 and 65536 pretty JSON bytes,
+and uses the default spawnSync buffer. The 700-batch recording stress holds
+33550336 allocated bytes, with data at 33546240 bytes and no storage failures.
+The completeness control independently verifies marked-run eviction and metadata
+charges. The new admission fields reject title, Profile id/name, path, search
+text and token injection before storage, with no private value echoed.
+
+No Task store, projection or formal
+mapping changed; formal-input-delta exits 0 for both mapped source files. Neither
+formal command was rerun and no pin was renewed. The seat's prior formal passes
+remain historical evidence. No real Profile/database, native app, Keychain,
+installation, push, timeout, worker cap or tracked measurement ceiling changed.
+
+### Correction cost
+
+No Task request receives another span, synchronous filesystem operation or
+dependency on the recording queue. The Task store, projection and Task route
+code are unchanged. Ingestion still performs bounded JSON/schema validation,
+identity hashing and admission on the shared event loop, at most 128 events and
+131072 encoded bytes. New run bookkeeping is bounded by 5120 identities. Disk
+I/O is asynchronous on the private queue; the ingest response waits for its
+durability, while Task writes do not await it. A refusal adds one small atomic
+metadata write and status update, coalesced for that run, outside the Task path.
+This does not make synchronous ingestion work free or remove shared CPU/I/O
+contention. JavaScript allocation counts were not measured.
+
+The same compiled server serves 15 literal Tasks in both modes. Each size uses
+ten alternating AB/BA pairs of 100 reads per cell, with one concurrent upload per
+enabled read. There are 2000 successful reads and 1000 accepted ingestions per
+size. The 16-event case actually sends 9892300 bytes; the 128-event case sends
+74869100. Both end with zero storage failures. raw.json retains every latency,
+handler interval, accepted count, byte count, driver CPU, server CPU/RSS and load
+at the start and end of each run. No failure or warmup pair was omitted.
+
+| Concurrent batch | Baseline p50 median [range], ms | Enabled p50 median [range], ms | Paired difference median [range], ms | Ingest handler p50 median [range], ms | Boundary one-minute load |
+| --- | --- | --- | --- | --- | --- |
+| 16 events | 0.2984 [0.2785, 0.4639] | 0.3181 [0.3076, 0.3920] | +0.0199 [-0.0720, +0.0557] | 0.7085 [0.6820, 0.7820] | 3.35 to 3.40 |
+| 128 events | 0.3064 [0.2875, 0.4995] | 0.3613 [0.3255, 0.4615] | +0.0464 [-0.0706, +0.1399] | 1.4495 [1.3570, 1.8660] | 3.37 to 3.40 |
+
+| Pair | 16-event paired p50 difference, ms | 128-event paired p50 difference, ms |
+| --- | ---: | ---: |
+| 1 | -0.0720 | -0.0706 |
+| 2 | +0.0557 | +0.0496 |
+| 3 | +0.0263 | +0.0432 |
+| 4 | +0.0027 | +0.0660 |
+| 5 | +0.0157 | +0.0641 |
+| 6 | +0.0196 | +0.0201 |
+| 7 | +0.0202 | +0.0323 |
+| 8 | +0.0142 | +0.0302 |
+| 9 | +0.0267 | +0.0597 |
+| 10 | +0.0291 | +0.1399 |
+
+Both comparisons are inconclusive within pair variation, not proof of no
+overhead. The generator used 173.5 and 277.4 CPU ms across the corresponding
+cells, with outputs checked throughout. No bottleneck profile was taken for this
+correction, so these end-to-end observations cannot identify a limiting stage or
+support a speedup claim. They measure ingestion contention, not app capture or
+physical rendering. The tracked quiet-host ceiling is unchanged. A quiet-machine
+confirmation under the unchanged ceiling is owed at integration.
+
+The permanent real unlink-failure control also passes five alternating pairs,
+6.5 seconds per cell, with two actual failures counted, a single retained segment
+and 2887 successful literal Task reads. Baseline p50 median is 0.7181 ms, range
+0.5538 to 0.7885; failed-expiry median is 0.6082 ms, range 0.5409 to 0.7126.
+Paired differences are +0.0121, -0.1772, +0.0544, -0.2205 and -0.0329 ms,
+median -0.0329 and range -0.2205 to +0.0544. This is also inconclusive. Its
+raw.json retains both load boundaries per cell. The fake-clock regression keeps
+the literal 59999/60000 ms minimum-backoff checks.
+
+### Final gate and cleanup
+
+The exact standing-order-27 command,
+`/usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check`, exits 0 on the first
+current root run. The disk guard ran first with 44.1 GB free. Type checks,
+contract validation and lint pass, followed by 447 domain, 80 CLI, 38 server and
+168 Electron tests with one existing Electron skip. Lint reports warnings and
+informational findings without an error. Root boundary load is 2.31 to 4.07.
+Receipts are root.log, root.exit, disk-root and root-load-start/end. No other
+measurement or compiled recipe from this worker ran during the check.
+
+The final same-source compiled replay also exits 0 for each of completeness.ts,
+admission-fault.ts, the no-Swift Diagnostics recipe and verify-server-api.
+Receipts are completeness-frozen, fault-frozen, diagnostics-frozen and api-frozen
+with their .exit files and result.json. They use the frozen source-hash cache
+above. API generation is current; only documentation changes follow these gates.
+
+New domain modules and their jobs are recording-admission.ts for the versioned
+mark and pure admission policy, store/recording-admissions.ts for bounded private
+run-state persistence, store/recording-files.ts for the existing atomic files and
+writer lease, and store/recording-queries.ts for run reads/export/comparison.
+The writer queue remains in store/diagnostic-recordings.ts. Its one added comment
+explains why the coordinated budget/queue module crosses the structure skill's
+600-line review threshold. No suppression was added. The brief's single-worker
+restriction precludes the no-comments skill's child reviewer; the comment diff
+was checked directly, without claiming an independent comment review.
+
+Cleanup checks lsof before removing only this worktree's closed Bun compile
+temporaries. It removes 27 files, 2393874432 allocated bytes, with zero open-file
+skips. cleanup.json, cleanup.log and cleanup.exit preserve the paths, sizes and
+real exit 0. The last disk guard exits 0 with 42.7 GB free, above the 30 GB soft
+floor. All owned recipe servers and scratch databases were stopped/removed by
+their helpers; no other unit's files or processes were touched.
+
+Final CLI SHA-256: b91fa40478d1c482429134bfacbde3bf77aba0f209db9c542683d1a5b0886cbe.
+Final server SHA-256: 8833af1c39a2c14446ecbbf704f0b227c5ce1717731c5073b3f2d4ad788f6b45.
+Both C1/C2 corrections are ready for the seat's re-check. No independent verdict
+is claimed. Client adoption, native compilation/UI proof, terminal PNG rendering,
+fresh Claude discovery, quiet-machine confirmation, hardware power-loss proof
+and allocation accounting remain unproven as stated above.
 
