@@ -48,11 +48,28 @@ itself prove starvation. Historical records without these fields remain unknown.
 
 ## Pointer and native highlight phases
 
-The press remains the primary input timestamp. A release records
-`ui.input.released` with that same opaque action id and the release's native
-input time. Keep the association if layout finishes while the button is held.
-A command handler invoked on release must still inherit its press. A second
-release, a foreign window and an old recording scope must not append a record.
+The press is kept as the input timestamp of `ui.input.observed`. A release
+records `ui.input.released` with that same opaque action id, the release time
+and `releaseSource`. When the release comes before the handler, the platform
+performed the action on release: its duration, input queue and pending or
+failed age run from the release, and press to release is `holdMS`. A command
+handler invoked on press keeps the press. Keep the association if layout
+finishes while the button is held. A second release, a foreign window and an
+old recording scope must not append a record.
+
+SwiftUI's Task list is an `NSOutlineView` that selects on release inside its own
+tracking loop, which takes the mouse-up, so the local monitor never sees a row
+click's release. For a pointer selection in an outline view with no observed
+mouse-up, the click's first native selection notification (changing or
+committed) is the release, with `releaseSource: nativeSelection`; a later
+mouse-up adds nothing. An observed mouse-up stays `releaseSource: mouseUp`.
+A plain `NSTableView` selects on press, so its notifications never stand in.
+
+Each selection's `ui.layout.committed` carries `selectionContext`: the release
+source, the list's row count (group headers included), whether a catalog
+refresh ran between input and layout, process uptime, and the current journal
+file size and this process's journal bytes. Journals written before these
+fields read as before, with the fields absent.
 
 Observe the public `NSTableView` and `NSOutlineView` selection notifications
 from the Task table associated with the current input. They produce

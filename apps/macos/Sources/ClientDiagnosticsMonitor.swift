@@ -77,6 +77,7 @@ struct ClientDiagnosticInputReceipt {
         let scope: Int
         var action: UUID?
         var released: Double?
+        var releaseSource = ClientDiagnosticReleaseSource.mouseUp
         var recorded = false
     }
     private final class NativeSelectionTrace {
@@ -227,6 +228,7 @@ struct ClientDiagnosticInputReceipt {
                 if let id = begin(.taskSelection, surface: .inspector, identity: task, startHandler: false) {
                     selection = (id, task)
                     nativeSelection = NativeSelectionTrace(action: id, scope: recorder.scopeToken, kind: .pointer, table: table(view))
+                    recorder.annotateSelection(id, listRows: table(view)?.numberOfRows)
                 }
                 if hasSurface(.inspector, identity: task) { selected(task) }
                 return
@@ -246,6 +248,7 @@ struct ClientDiagnosticInputReceipt {
             if let id = begin(.keyboardSelection, surface: .inspector, startHandler: false) {
                 selection = (id, nil)
                 nativeSelection = NativeSelectionTrace(action: id, scope: recorder.scopeToken, kind: .keyboard, table: table)
+                recorder.annotateSelection(id, listRows: table.numberOfRows)
             }
         }
     }
@@ -253,10 +256,10 @@ struct ClientDiagnosticInputReceipt {
         guard let press = pointer, let id = press.action, let released = press.released, !press.recorded, press.scope == recorder.scopeToken else { return }
         var event = ClientDiagnosticEvent(name: .inputReleased, run: recorder.run)
         event.actionID = id; event.traceID = id; event.inputKind = .pointer; event.mode = mode
-        event.inputMS = released; event.durationMS = released - press.time
+        event.inputMS = released; event.durationMS = released - press.time; event.releaseSource = press.releaseSource
         if nativeSelection?.action == id { event.nativeSelectionNotifications = nativeSelection?.capabilities }
         recorder.record(event, ifScope: press.scope); pointer?.recorded = true
-        if press.scope == recorder.scopeToken { recorder.inputReleased(id, atMS: released) }
+        if press.scope == recorder.scopeToken { recorder.inputReleased(id, atMS: released, source: press.releaseSource) }
     }
     private func nativeSelectionChanged(tableID: ObjectIdentifier?, changing: Bool) {
         guard recorder.isOwnerSession, let trace = nativeSelection, trace.scope == recorder.scopeToken,
@@ -268,6 +271,17 @@ struct ClientDiagnosticInputReceipt {
         var event = ClientDiagnosticEvent(name: name, run: recorder.run)
         event.actionID = trace.action; event.traceID = trace.action; event.inputKind = trace.kind; event.mode = mode
         recorder.record(event, ifScope: trace.scope)
+        // SwiftUI's list is an NSOutlineView that selects on release inside its own tracking loop,
+        // which takes the mouse-up, so this monitor never sees it. The click's first native
+        // selection notification (changing or committed, whichever comes first) stands in for the
+        // release, and the record says it was derived.
+        if trace.kind == .pointer, table is NSOutlineView, let press = pointer, press.action == trace.action, press.scope == recorder.scopeToken, press.released == nil {
+            let now = ProcessInfo.processInfo.systemUptime * 1000
+            guard now >= press.time else { return }
+            pointer?.released = now; pointer?.releaseSource = .nativeSelection
+            lastInput?.releasedAt = now
+            recordRelease()
+        }
     }
     @discardableResult func begin(_ category: ClientDiagnosticAction, surface: ClientDiagnosticSurface = .main, identity: String? = nil, startHandler: Bool = true) -> UUID? {
         guard recorder.isOwnerSession else { return nil }

@@ -29,6 +29,7 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
     private var dropped = 0
     private var journalFailures = 0
     private var journalBytesWritten = 0
+    private var journalFileBytes = 0
     private var recorded = 0
     private var refreshCounts: [UUID: Int] = [:]
     private struct Request: Sendable {
@@ -74,6 +75,11 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
         /// release, so the interaction starts there. The press stays in `started` and the record.
         var released: Double?
         var holdMS: Double?
+        var releaseSource: ClientDiagnosticReleaseSource?
+        var listRows: Int?
+        var refreshInFlight = false
+        /// Pending and failed ages follow the duration: from the release when it started the interaction.
+        var interactionStart: Double { released ?? started }
     }
     private var requests: [UUID: Request] = [:]
     private var actions: [UUID: Action] = [:]
@@ -209,11 +215,12 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
             directoryPrepared = true
         }
         let current = directory.appendingPathComponent("current.ndjson"), previous = directory.appendingPathComponent("previous.ndjson")
-        let size = (try? FileManager.default.attributesOfItem(atPath: current.path)[.size] as? NSNumber)?.intValue ?? 0
+        var size = (try? FileManager.default.attributesOfItem(atPath: current.path)[.size] as? NSNumber)?.intValue ?? 0
         if routine && size + line.count > fileLimit * 3 / 4 { return false }
         if size + line.count > fileLimit {
             try? FileManager.default.removeItem(at: previous)
             try FileManager.default.moveItem(at: current, to: previous)
+            size = 0
         }
         let descriptor = open(current.path, O_WRONLY | O_CREAT | O_APPEND | O_NOFOLLOW, 0o600)
         guard descriptor >= 0 else { throw CocoaError(.fileWriteUnknown) }
@@ -228,6 +235,8 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
                 offset += written
             }
         }
+        let fileBytes = size + line.count
+        lock.withLock { journalFileBytes = fileBytes }
         return true
     }
     public func flush() async { await withCheckedContinuation { continuation in writer.async { continuation.resume() } } }
@@ -240,12 +249,12 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
                 actions.removeValue(forKey: oldest.key)
                 if oldest.value.observedInput {
                     incomplete[oldest.value.key, default: 0] += 1
-                    incompleteAge[oldest.value.key] = max(incompleteAge[oldest.value.key] ?? 0, now - oldest.value.started)
+                    incompleteAge[oldest.value.key] = max(incompleteAge[oldest.value.key] ?? 0, now - oldest.value.interactionStart)
                 } else { unproven[oldest.value.key, default: 0] += 1 }
                 dropped += 1
             }
             let start = inputMS.map { min(now, max(0, $0)) } ?? now
-            actions[id] = Action(key: .init(category: category, mode: mode, inputKind: inputKind), observedInput: inputMS != nil, started: start)
+            actions[id] = Action(key: .init(category: category, mode: mode, inputKind: inputKind), observedInput: inputMS != nil, started: start, refreshInFlight: !refreshCounts.isEmpty)
             var record = event(.inputObserved); record.actionID = id; record.action = category; record.mode = mode; record.inputKind = inputKind; record.inputMS = inputMS == nil ? nil : start; record.traceID = id
             appendLocked(record)
             return id
@@ -253,14 +262,31 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
     }
     /// Records the pointer release of an action's press. Before the handler starts, the release
     /// becomes the interaction's start; afterwards the action was performed on press and keeps it.
-    public func inputReleased(_ id: UUID?, atMS released: Double) {
+    /// `source` says whether the release was an observed mouse-up or derived from the list's
+    /// native selection notification.
+    public func inputReleased(_ id: UUID?, atMS released: Double, source: ClientDiagnosticReleaseSource = .mouseUp) {
         guard let id else { return }
         lock.withLock {
             guard let action = actions[id], action.observedInput, released >= action.started, released <= clock() else { return }
             actions[id]?.holdMS = released - action.started
+            actions[id]?.releaseSource = source
             if action.handler == nil { actions[id]?.released = released }
         }
     }
+    /// The number of rows in the list a selection was made in, for its layout record.
+    public func annotateSelection(_ id: UUID?, listRows: Int?) {
+        guard let id else { return }
+        lock.withLock { if actions[id] != nil { actions[id]?.listRows = listRows } }
+    }
+    /// Milliseconds since this process started, from the kernel's process start time.
+    static let processStartEpochMS: Double? = {
+        var info = kinfo_proc(), size = MemoryLayout<kinfo_proc>.stride
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()]
+        guard sysctl(&mib, UInt32(mib.count), &info, &size, nil, 0) == 0 else { return nil }
+        let start = info.kp_proc.p_un.__p_starttime
+        return Double(start.tv_sec) * 1000 + Double(start.tv_usec) / 1000
+    }()
+    static func processUptimeMS() -> Double? { processStartEpochMS.map { max(0, Date().timeIntervalSince1970 * 1000 - $0) } }
     public func handlerStarted(_ id: UUID?) {
         guard let id else { return }
         lock.withLock {
@@ -298,6 +324,10 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
             var record = event(.layoutCommitted); record.actionID = id; record.action = action.key.category; record.mode = action.key.mode; record.inputKind = action.key.inputKind; record.traceID = id; record.outcome = .applied; record.durationMS = duration
             record.renderStage = "layout_complete"
             record.actionPhases = .init(inputQueueMS: action.observedInput ? handler - start : nil, handlerWallMS: publication - handler, requestUnionMS: requests.values.contains(where: { $0.action == id }) ? nil : Self.union(action.requests), publicationToLayoutMS: now - publication, holdMS: action.holdMS)
+            if action.key.category == .taskSelection || action.key.category == .keyboardSelection {
+                record.selectionContext = .init(releaseSource: action.releaseSource, listRows: action.listRows, refreshInFlight: action.refreshInFlight || !refreshCounts.isEmpty,
+                                                processUptimeMS: Self.processUptimeMS(), journalFileBytes: journalFileBytes, journalBytesWritten: journalBytesWritten)
+            }
             appendLocked(record)
         }
     }
@@ -306,7 +336,7 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
         lock.withLock {
             guard authorized else { return }
             guard let action = actions.removeValue(forKey: id) else { dropped += 1; return }
-            let age = max(0, clock() - action.started)
+            let age = max(0, clock() - action.interactionStart)
             if outcome == .superseded { superseded[action.key, default: 0] += 1 }
             else if outcome != .drag {
                 if action.observedInput {
@@ -324,6 +354,7 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
             guard authorized else { return nil }
             if refreshCounts.count >= 256 { refreshCounts.removeAll(); dropped += 1 }
             let id = UUID(); refreshCounts[id] = 0
+            for key in actions.keys { actions[key]?.refreshInFlight = true }
             var record = event(.refreshStarted); record.refreshID = id; record.actionID = ClientDiagnosticContext.actionID; record.trigger = trigger
             appendLocked(record)
             return id
@@ -414,7 +445,7 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
                 let samples = (latencies[key] ?? []).sorted(), current = actions.values.filter { $0.key == key }
                 let pending = current.filter(\.observedInput)
                 func quantile(_ q: Double) -> Double? { samples.isEmpty ? nil : samples[max(0, Int(ceil(Double(samples.count) * q)) - 1)] }
-                return .init(action: key.category, mode: key.mode, inputKind: key.inputKind, unprovenCount: (unproven[key] ?? 0) + current.filter { !$0.observedInput }.count, p50MS: quantile(0.5), p90MS: quantile(0.9), p99MS: quantile(0.99), maxMS: samples.last, count: samples.count, supersededCount: superseded[key] ?? 0, incompleteCount: pending.count + (incomplete[key] ?? 0), oldestIncompleteMS: max(incompleteAge[key] ?? 0, pending.map { max(0, now - $0.started) }.max() ?? 0))
+                return .init(action: key.category, mode: key.mode, inputKind: key.inputKind, unprovenCount: (unproven[key] ?? 0) + current.filter { !$0.observedInput }.count, p50MS: quantile(0.5), p90MS: quantile(0.9), p99MS: quantile(0.99), maxMS: samples.last, count: samples.count, supersededCount: superseded[key] ?? 0, incompleteCount: pending.count + (incomplete[key] ?? 0), oldestIncompleteMS: max(incompleteAge[key] ?? 0, pending.map { max(0, now - $0.interactionStart) }.max() ?? 0))
             }.sorted { $0.id < $1.id }
             let selection = result.actions.filter { $0.action == .taskSelection || $0.action == .keyboardSelection }
             result.completedSelections = selection.reduce(0) { $0 + $1.count }; result.incompleteSelections = selection.reduce(0) { $0 + $1.incompleteCount }
@@ -435,7 +466,7 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
                 let current = actions.values.filter { $0.key == key && $0.observedInput }
                 let count = current.count + (incomplete[key] ?? 0)
                 guard count > 0 else { return nil }
-                return .init(action: key.category, count: count, ageMS: max(incompleteAge[key] ?? 0, current.map { max(0, now - $0.started) }.max() ?? 0))
+                return .init(action: key.category, count: count, ageMS: max(incompleteAge[key] ?? 0, current.map { max(0, now - $0.interactionStart) }.max() ?? 0))
             }
         }
     }

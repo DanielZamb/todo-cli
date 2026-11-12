@@ -360,6 +360,23 @@ public struct ClientDiagnosticNativeSelectionNotifications: Codable, Sendable {
         self.committed = committed ? .observed : .unavailable
     }
 }
+/// Where a pointer release time came from. SwiftUI's list (an NSOutlineView) selects on release
+/// inside its own tracking loop, which takes the mouse-up, so a row click's release is the first
+/// native selection notification of that click rather than an observed mouse-up.
+public enum ClientDiagnosticReleaseSource: String, Codable, Sendable { case mouseUp, nativeSelection }
+/// Carried by each selection's layout record so the owner's journal can be compared with the
+/// measurement harness rows.
+public struct ClientDiagnosticSelectionContext: Codable, Sendable {
+    public var releaseSource: ClientDiagnosticReleaseSource?
+    /// Rows in the list the selection was made in, group headers included.
+    public var listRows: Int?
+    /// A catalog refresh was running at some point between the input and the layout.
+    public var refreshInFlight: Bool
+    public var processUptimeMS: Double?
+    /// Size of the current journal file as last written, and bytes this process has written.
+    public var journalFileBytes: Int
+    public var journalBytesWritten: Int
+}
 public struct ClientDiagnosticEvent: Codable, Sendable, Identifiable {
     public let id: UUID
     public let run: UUID
@@ -389,6 +406,8 @@ public struct ClientDiagnosticEvent: Codable, Sendable, Identifiable {
     public var hostLoad1m: Double?
     public var inputMS: Double?
     public var nativeSelectionNotifications: ClientDiagnosticNativeSelectionNotifications?
+    public var releaseSource: ClientDiagnosticReleaseSource?
+    public var selectionContext: ClientDiagnosticSelectionContext?
     public var availability: ClientDiagnosticAvailability?
     public var actionPhases: ClientDiagnosticActionPhases?
     public var phases: ClientDiagnosticRequestPhases?

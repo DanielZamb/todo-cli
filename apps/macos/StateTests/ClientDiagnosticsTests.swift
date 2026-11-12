@@ -29,12 +29,29 @@ private final class DiagnosticTickCounter: @unchecked Sendable {
 }
 @MainActor private final class DiagnosticActivity { var active = false }
 
+/// Three root items for an NSOutlineView, the class SwiftUI's List uses on macOS.
+@MainActor private final class DiagnosticOutlineRows: NSObject, NSOutlineViewDataSource {
+    let items: [NSString] = ["Synthetic Task 0", "Synthetic Task 1", "Synthetic Task 2"]
+    func outlineView(_ outlineView: NSOutlineView, numberOfChildrenOfItem item: Any?) -> Int { item == nil ? items.count : 0 }
+    func outlineView(_ outlineView: NSOutlineView, child index: Int, ofItem item: Any?) -> Any { items[index] }
+    func outlineView(_ outlineView: NSOutlineView, isItemExpandable item: Any) -> Bool { false }
+    func outlineView(_ outlineView: NSOutlineView, objectValueFor tableColumn: NSTableColumn?, byItem item: Any?) -> Any? { item }
+}
+
 @MainActor private final class DiagnosticPointerFixture {
-    let table = NSTableView(frame: NSRect(x: 0, y: 0, width: 320, height: 140))
+    let table: NSTableView
     let window: NSWindow
     private let rows = DiagnosticSelectionRows()
-    init(monitor: ClientDiagnosticsMonitor) {
-        table.addTableColumn(NSTableColumn(identifier: .init("task"))); table.dataSource = rows; table.headerView = nil; table.rowHeight = 28; table.reloadData()
+    private let outlineRows = DiagnosticOutlineRows()
+    init(monitor: ClientDiagnosticsMonitor, outline: Bool = false) {
+        let frame = NSRect(x: 0, y: 0, width: 320, height: 140)
+        let column = NSTableColumn(identifier: .init("task"))
+        if outline {
+            let view = NSOutlineView(frame: frame); view.addTableColumn(column); view.outlineTableColumn = column; view.dataSource = outlineRows; table = view
+        } else {
+            table = NSTableView(frame: frame); table.addTableColumn(column); table.dataSource = rows
+        }
+        table.headerView = nil; table.rowHeight = 28; table.reloadData()
         window = NSWindow(contentRect: table.frame, styleMask: [.borderless], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false; window.contentView = table
         let marker = ClientDiagnosticNativeView(frame: table.bounds); marker.monitor = monitor; marker.task = "synthetic-selection"; table.addSubview(marker); monitor.register(marker)
@@ -119,6 +136,154 @@ private final class DiagnosticTickCounter: @unchecked Sendable {
         #expect((phases["inputQueueMS"] as? Double ?? 9_999) <= layoutAt - up * 1000 + 1, "release to handler, not press to handler")
         let summary = try #require((await recorder.snapshot()).actions.first { $0.action == .taskSelection })
         #expect(abs(try #require(summary.p50MS) - duration) < 0.001, "the category summary uses the release")
+        recorder.clear(); await recorder.flush()
+    }
+    @Test @MainActor func anOutlineRowClickWhoseMouseUpTheListTakesIsReleasedAtTheFirstNativeSelection() async throws {
+        // SwiftUI's list is an NSOutlineView that selects on release inside its own tracking loop,
+        // which takes the mouse-up, so the local monitor never sees it. The first native selection
+        // notification stands in for the release, and the record says it was derived.
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: root); recorder.authorizeOwnerSession(true)
+        let source = NotificationCenter(), monitor = ClientDiagnosticsMonitor(recorder: recorder, notifications: source)
+        let fixture = DiagnosticPointerFixture(monitor: monitor, outline: true); defer { monitor.stop(); fixture.close() }
+        monitor.start()
+        let down = ProcessInfo.processInfo.systemUptime - 0.4
+        monitor.input(try fixture.mouse(.leftMouseDown, row: 1, time: down))
+        let action = try #require(monitor.selectionAction)
+        let before = ProcessInfo.processInfo.systemUptime * 1000
+        source.post(name: NSOutlineView.selectionIsChangingNotification, object: fixture.table)
+        let after = ProcessInfo.processInfo.systemUptime * 1000
+        source.post(name: NSOutlineView.selectionDidChangeNotification, object: fixture.table)
+        monitor.selected("synthetic-selection")
+        recorder.resultPublished(action); recorder.layoutCommitted(action)
+        let layoutAt = ProcessInfo.processInfo.systemUptime * 1000
+        monitor.input(try fixture.mouse(.leftMouseUp, row: 1, time: ProcessInfo.processInfo.systemUptime))
+        let records = (await recorder.snapshot()).recent
+        let releases = records.filter { $0.name == .inputReleased && $0.actionID == action }
+        #expect(releases.count == 1, "one release; the late mouse-up changes nothing")
+        let released = try #require(releases.first)
+        let fields = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(released)) as? [String: Any])
+        #expect(fields["releaseSource"] as? String == "nativeSelection")
+        let at = try #require(released.inputMS)
+        #expect(at >= before && at <= after, "released at the first native notification: \(at) in \(before)...\(after)")
+        #expect(abs(try #require(released.durationMS) - (at - down * 1000)) < 0.001, "press to derived release is the hold")
+        let layout = try #require(records.first { $0.name == .layoutCommitted && $0.actionID == action })
+        #expect(try #require(layout.durationMS) <= layoutAt - at + 1, "measured from the derived release")
+        let layoutFields = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(layout)) as? [String: Any])
+        let phases = try #require(layoutFields["actionPhases"] as? [String: Any])
+        #expect(abs((phases["holdMS"] as? Double ?? -1) - (at - down * 1000)) < 0.001)
+        #expect((phases["inputQueueMS"] as? Double ?? 9_999) <= layoutAt - at + 1, "derived release to handler")
+        let context = try #require(layoutFields["selectionContext"] as? [String: Any])
+        #expect(context["releaseSource"] as? String == "nativeSelection")
+        recorder.clear(); await recorder.flush()
+    }
+    @Test @MainActor func aMouseUpSeenBeforeTheNativeSelectionStaysTheRelease() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: root); recorder.authorizeOwnerSession(true)
+        let source = NotificationCenter(), monitor = ClientDiagnosticsMonitor(recorder: recorder, notifications: source)
+        let fixture = DiagnosticPointerFixture(monitor: monitor, outline: true); defer { monitor.stop(); fixture.close() }
+        monitor.start()
+        let down = ProcessInfo.processInfo.systemUptime - 0.4, up = down + 0.15
+        monitor.input(try fixture.mouse(.leftMouseDown, row: 1, time: down))
+        let action = try #require(monitor.selectionAction)
+        monitor.input(try fixture.mouse(.leftMouseUp, row: 1, time: up))
+        source.post(name: NSOutlineView.selectionIsChangingNotification, object: fixture.table)
+        source.post(name: NSOutlineView.selectionDidChangeNotification, object: fixture.table)
+        monitor.selected("synthetic-selection")
+        recorder.resultPublished(action); recorder.layoutCommitted(action)
+        let records = (await recorder.snapshot()).recent
+        let releases = records.filter { $0.name == .inputReleased && $0.actionID == action }
+        #expect(releases.count == 1)
+        let released = try #require(releases.first)
+        let fields = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(released)) as? [String: Any])
+        #expect(fields["releaseSource"] as? String == "mouseUp")
+        #expect(abs(try #require(released.inputMS) - up * 1000) < 0.001)
+        let layout = try #require(records.first { $0.name == .layoutCommitted && $0.actionID == action })
+        let layoutFields = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(layout)) as? [String: Any])
+        #expect((layoutFields["selectionContext"] as? [String: Any])?["releaseSource"] as? String == "mouseUp")
+        recorder.clear(); await recorder.flush()
+    }
+    @Test func pendingAndFailedAgesRunFromTheReleaseOfAReleasePerformedAction() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let clock = DiagnosticTestClock(); clock.set(1000)
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: root, clock: { clock.read() }); recorder.authorizeOwnerSession(true)
+        let id = try #require(recorder.beginAction(.taskSelection, inputMS: 1000, mode: .full, inputKind: .pointer))
+        clock.set(1400); recorder.inputReleased(id, atMS: 1400)
+        clock.set(1500)
+        #expect(recorder.incompleteSnapshot().first { $0.action == .taskSelection }?.ageMS == 100, "pending age from the release")
+        #expect((await recorder.snapshot()).actions.first { $0.action == .taskSelection }?.oldestIncompleteMS == 100)
+        clock.set(1600); recorder.endAction(id, outcome: .failed)
+        let ended = try #require((await recorder.snapshot()).recent.first { $0.name == .actionEnded && $0.actionID == id })
+        #expect(ended.durationMS == 200, "failed age from the release")
+        #expect((await recorder.snapshot()).actions.first { $0.action == .taskSelection }?.oldestIncompleteMS == 200)
+        // An action performed on press keeps the press: its release came after the handler.
+        let pressed = try #require(recorder.beginAction(.openSettings, inputMS: 1600, mode: .full, inputKind: .pointer))
+        clock.set(1650); recorder.handlerStarted(pressed)
+        clock.set(1700); recorder.inputReleased(pressed, atMS: 1700)
+        clock.set(1800)
+        #expect(recorder.incompleteSnapshot().first { $0.action == .openSettings }?.ageMS == 200, "pending age from the press")
+        recorder.clear(); await recorder.flush()
+    }
+    @Test @MainActor func aSelectionRecordCarriesWhatTheHarnessRowsCompare() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: root); recorder.authorizeOwnerSession(true)
+        let source = NotificationCenter(), monitor = ClientDiagnosticsMonitor(recorder: recorder, notifications: source)
+        let fixture = DiagnosticPointerFixture(monitor: monitor, outline: true); defer { monitor.stop(); fixture.close() }
+        monitor.start()
+        func click(_ row: Int) throws -> UUID {
+            monitor.input(try fixture.mouse(.leftMouseDown, row: row, time: ProcessInfo.processInfo.systemUptime - 0.2))
+            let action = try #require(monitor.selectionAction)
+            source.post(name: NSOutlineView.selectionIsChangingNotification, object: fixture.table)
+            source.post(name: NSOutlineView.selectionDidChangeNotification, object: fixture.table)
+            monitor.selected("synthetic-selection")
+            recorder.resultPublished(action); recorder.layoutCommitted(action)
+            return action
+        }
+        func context(_ action: UUID) async throws -> [String: Any] {
+            let layout = try #require((await recorder.snapshot()).recent.first { $0.name == .layoutCommitted && $0.actionID == action })
+            let fields = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(layout)) as? [String: Any])
+            return try #require(fields["selectionContext"] as? [String: Any])
+        }
+        let refresh = recorder.refreshStarted(.activation)
+        let during = try await context(try click(1))
+        #expect(during["listRows"] as? Int == 3)
+        #expect(during["refreshInFlight"] as? Bool == true)
+        #expect((during["processUptimeMS"] as? Double ?? 0) > 0)
+        #expect(during["journalFileBytes"] is Int && during["journalBytesWritten"] is Int)
+        recorder.refreshFinished(refresh, outcome: .applied, durationMS: 10)
+        await recorder.flush()
+        let quiet = try await context(try click(2))
+        #expect(quiet["refreshInFlight"] as? Bool == false)
+        #expect((quiet["journalFileBytes"] as? Int ?? 0) > 0, "the journal size after the first click's records were written")
+        recorder.clear(); await recorder.flush()
+    }
+    @Test func aJournalWrittenByTheInstalledBuildStillReads() async throws {
+        // Lines encoded by the installed e3593e77 build's ClientDiagnosticEvent (no hold, no release
+        // source, no selection context), then appended to by this build.
+        let installed = #"""
+{"action":{"inventory_id":"I07","subtype":"task.selection.pointer"},"actionID":"6A1B3C4D-0000-4000-8000-000000000002","epochMS":1794485519875.831,"id":"F5289B2D-FCB7-4DA8-B1F7-A049A03785C6","inputKind":"pointer","inputMS":1000,"mode":"full","monotonicMS":1000,"name":"ui.input.observed","run":"6A1B3C4D-0000-4000-8000-000000000001","traceID":"6A1B3C4D-0000-4000-8000-000000000002"}
+{"action":{"inventory_id":"I07","subtype":"task.selection.pointer"},"actionID":"6A1B3C4D-0000-4000-8000-000000000002","durationMS":224,"epochMS":1794485519875.8499,"id":"BE7D1ED5-0941-491A-90D9-1F7AE228C35F","inputKind":"pointer","mode":"full","monotonicMS":1224,"name":"ui.action.started","run":"6A1B3C4D-0000-4000-8000-000000000001","traceID":"6A1B3C4D-0000-4000-8000-000000000002"}
+{"action":{"inventory_id":"I07","subtype":"task.selection.pointer"},"actionID":"6A1B3C4D-0000-4000-8000-000000000002","actionPhases":{"handlerWallMS":60,"inputQueueMS":224,"publicationToLayoutMS":191,"requestUnionMS":0},"durationMS":475,"epochMS":1794485519875.851,"id":"2E45884C-E0DF-4682-B090-ECB177B6628A","inputKind":"pointer","mode":"full","monotonicMS":1475,"name":"ui.layout.committed","outcome":"applied","renderStage":"layout_complete","run":"6A1B3C4D-0000-4000-8000-000000000001","traceID":"6A1B3C4D-0000-4000-8000-000000000002"}
+{"action":{"inventory_id":"I07","subtype":"task.selection.pointer"},"actionID":"6A1B3C4D-0000-4000-8000-000000000002","durationMS":762,"epochMS":1794485519875.868,"id":"EC3F33A4-105E-41C8-8BB7-1BBEEDC88B38","monotonicMS":2000,"name":"ui.action.ended","outcome":"superseded","run":"6A1B3C4D-0000-4000-8000-000000000001"}
+"""#
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        func journalRecords(_ directory: URL) throws -> [ClientDiagnosticEvent] {
+            try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil).filter { $0.pathExtension == "ndjson" }
+                .flatMap { try Data(contentsOf: $0).split(separator: 10).map { try JSONDecoder().decode(ClientDiagnosticEvent.self, from: Data($0)) } }
+        }
+        try Data((installed + "\n").utf8).write(to: root.appendingPathComponent("current.ndjson"))
+        let old = try journalRecords(root)
+        #expect(old.count == 4)
+        let layout = try #require(old.first { $0.name == .layoutCommitted })
+        #expect(layout.actionPhases?.inputQueueMS == 224 && layout.actionPhases?.handlerWallMS == 60 && layout.actionPhases?.publicationToLayoutMS == 191)
+        #expect(layout.actionPhases?.holdMS == nil)
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: root); recorder.authorizeOwnerSession(true)
+        let id = recorder.beginAction(.taskSelection, inputMS: ProcessInfo.processInfo.systemUptime * 1000 - 50, mode: .full, inputKind: .pointer)
+        recorder.handlerStarted(id); recorder.resultPublished(id); recorder.layoutCommitted(id)
+        await recorder.flush()
+        let all = try journalRecords(root)
+        #expect(all.count >= 7, "the installed lines and this build's lines read together: \(all.count)")
+        #expect(all.filter { $0.name == .layoutCommitted }.count == 2)
         recorder.clear(); await recorder.flush()
     }
     @Test @MainActor func unavailableNativeNotificationsAreExplicitAndScopeChangesDiscardTheOldRelease() async throws {
