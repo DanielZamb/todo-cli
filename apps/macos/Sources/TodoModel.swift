@@ -203,7 +203,7 @@ final class TodoModel {
     /// Same-kind hand-offs for different Tasks merge into one message (D2); other kinds replace.
     private var mainMessages = SurfaceMessages<MessageKind, String>(merge: { kind, parts in
         switch kind {
-        case .dependencyLink: "Couldn't change \(parts.count) Dependencies: \(MergedFailureWording.names(parts.map(\.subject))). " + MergedFailureWording.reason(codes: parts.map(\.reasonCode), texts: parts.map(\.reasonText), differing: "Open each Task's Dependencies to see why.")
+        case .dependencyLink: "Couldn't change \(parts.count) Dependencies: \(MergedFailureWording.names(parts.map(\.subject))). " + MergedFailureWording.reason(codes: parts.map(\.reasonCode), differing: "Open each Task's Dependencies to see why.")
         case .quickAdd: "Couldn't add \(parts.count) Tasks: \(MergedFailureWording.names(parts.map(\.subject)))."
         default: nil
         }

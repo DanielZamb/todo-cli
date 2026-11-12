@@ -167,10 +167,24 @@ protocol SurfaceTicket { var isNewest: Bool { get }; var target: AnyHashable? { 
 /// Tasks read as one message naming them, up to three, then "and N more".
 enum MergedFailureWording {
     static let namedLimit = 3
-    /// The closing sentence: the shared reason once when every part was refused with the same
-    /// code (compared by code, not by sentence), otherwise `differing`.
-    static func reason(codes: [String?], texts: [String?], differing: String) -> String {
-        if let first = codes.first, let code = first, codes.allSatisfy({ $0 == code }), let text = texts.first, let sentence = text { return sentence }
+    /// Plural sentences for the refusal codes two links can realistically share (D2 ruling,
+    /// 2026-11-12: a merged message never carries a singular reason). A code without one uses the
+    /// caller's "try each" fallback. Final words are the Opus Mac UI seat's.
+    static let pluralReasons: [String: String] = [
+        "dependency_cycle": "Each would create a loop. Choose other Tasks.",
+        "too_many_dependencies": "Each would give a Task more than 13 direct Dependencies. Choose fewer.",
+        "blocked": "Done Tasks can only depend on done or cancelled Tasks.",
+        "dependency_profile_mismatch": "Each Task and its Dependency must be in the same Profile.",
+        "occ_conflict": "These Tasks changed. Reload their Dependencies before trying again.",
+        "not_found": "These Tasks are no longer available.",
+        "forbidden": "Your credential can't update Dependencies.",
+        "connection": "The server could not be reached. Try again when it is available.",
+        "unavailable": "The server could not be reached. Try again when it is available.",
+    ]
+    /// The closing sentence: when every part was refused with the same code (compared by code, not
+    /// by sentence) and that code has a plural sentence, that sentence; otherwise `differing`.
+    static func reason(codes: [String?], differing: String) -> String {
+        if let first = codes.first, let code = first, codes.allSatisfy({ $0 == code }), let plural = pluralReasons[code] { return plural }
         return differing
     }
     static func names(_ subjects: [String?]) -> String {

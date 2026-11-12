@@ -96,11 +96,23 @@ import Testing
         #expect(MergedFailureWording.names(["A", "B", "C", "D", "E"]) == "\u{201C}A\u{201D}, \u{201C}B\u{201D}, \u{201C}C\u{201D} and 2 more")
         #expect(MergedFailureWording.names(["A", "B"]) == "\u{201C}A\u{201D} and \u{201C}B\u{201D}")
     }
-    @Test func aSharedRefusalIsSaidOnceAndDifferentOnesKeepTheGenericClose() {
-        // Compared by code, not by sentence: the same code with differently worded sentences is one reason.
-        #expect(MergedFailureWording.reason(codes: ["dependency_cycle", "dependency_cycle"], texts: ["Each would create a cycle.", "Different words."], differing: "Try each again to see why.") == "Each would create a cycle.")
-        #expect(MergedFailureWording.reason(codes: ["dependency_cycle", "occ_conflict"], texts: ["Same words.", "Same words."], differing: "Try each again to see why.") == "Try each again to see why.")
-        #expect(MergedFailureWording.reason(codes: [nil, nil], texts: ["A", "B"], differing: "generic") == "generic")
+    @Test func aSharedRefusalIsSaidOnceInThePluralAndDifferentOnesKeepTheGenericClose() {
+        // Compared by code, not by sentence.
+        #expect(MergedFailureWording.reason(codes: ["dependency_cycle", "dependency_cycle"], differing: "fallback") == "Each would create a loop. Choose other Tasks.")
+        #expect(MergedFailureWording.reason(codes: ["dependency_cycle", "occ_conflict"], differing: "fallback") == "fallback")
+        #expect(MergedFailureWording.reason(codes: [nil, nil], differing: "fallback") == "fallback")
+    }
+    /// Every code a link can be refused with: the merged closing sentence is that code's plural
+    /// sentence or the fallback, never the single-Task sentence the picker shows for one refusal.
+    @Test(arguments: ["dependency_cycle", "too_many_dependencies", "blocked", "blocks_done_task", "dependency_profile_mismatch", "occ_conflict", "not_found", "validation", "invalid_args", "forbidden", "unauthorized", "unavailable", "connection"])
+    func aMergedReasonIsNeverTheSingleTaskSentence(_ code: String) {
+        let singular: [String] = ["This Dependency would create a loop.", "A Task can't depend on itself.", "A Task can have at most 13 direct Dependencies.", "A done Task can only depend on done or cancelled Tasks.",
+                                  "This Task blocks done Tasks and can't be reopened.", "A Task and its Dependency must be in the same Profile.", "This Task changed. Reload its Dependencies before trying again.", "Task not found.",
+                                  "Check this Dependency and try again.", "Your Session ended. Sign in again.", "Couldn't update Dependencies. Try again."]
+        let reason = MergedFailureWording.reason(codes: [code, code], differing: "fallback")
+        #expect(reason == "fallback" || reason == MergedFailureWording.pluralReasons[code], "\(code): \(reason)")
+        #expect(!singular.contains { reason.contains($0) }, "\(code): no single-Task sentence: \(reason)")
+        #expect(!reason.hasPrefix("This ") && !reason.hasPrefix("A "), "\(code): no singular subject: \(reason)")
     }
 }
 
