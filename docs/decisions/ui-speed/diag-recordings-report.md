@@ -1,5 +1,10 @@
 # Private Diagnostics recordings
 
+The correction after the d1541167 review addresses S1-1 through S1-4. The
+contract remains cf81754585ee1525358bfe8a3357ff83a2024f8a350fe7a6d493afc9c61f7668.
+The correction evidence and current gates are in the final section below. The
+original delivery sections describe d1541167 and retain their original receipts.
+
 U06 and U07a implement the accepted recording policy in ADR-0020. Recording
 files are separate from the Task database. Owner-authenticated loopback HTTP
 and CLI commands share the same schemas and frozen-run reducer. App capture,
@@ -324,4 +329,225 @@ The local audit found no new suppression or source comments in the implementatio
 no independent review is claimed. The coordinator's correctness seat reviews
 this delivery. Existing JSON keys, Task/export goldens, mismatch behavior and
 business transaction models remain intact.
+
+
+## Recording review correction, 2026-11-12
+
+The seat found three P2 defects and one P3. Product corrections are f53213a3;
+b1ce3f3c repairs the verification entry's argument handling and scratch guard;
+39d9ad40 preflights the whole CLI input before uploading. There is no HTTP schema
+change. The contract check proves the same full id stated above, and generated
+OpenAPI/Swift sources are unchanged from d1541167. No Swift command was run.
+
+### Conflicting observations and imports
+
+The chosen rule is refusal before admission. Run, producer and sequence identify
+an event; a canonical content fingerprint must match every retained or pending
+copy. Different content returns HTTP 400 and CLI exit 2 with the static message
+"Recording sequence conflicts; resend the original data or begin a new run."
+The whole batch is refused, including any completion it contains. The seat's
+one start plus a conflicting start/completion therefore stays at one unfinished
+start, zero duration samples and both deadline fractions zero. It cannot turn
+into a perfect completed run. Refusal was chosen because producer data is
+contradictory and no duration or denominator can be invented to repair it.
+
+Fully retained identical events are no-ops, including reordered JSON keys.
+Mixed batches deduplicate identical events in their observations. A second batch
+whose events are still pending is queued and cannot claim stored durability.
+The pending/stored fingerprint reference counts are separate. Existing batch-id
+content comparisons remain, and a conflicting batch-id retry has its own safe
+recovery message. The existing per-batch unique-sequence validation remains.
+
+Legacy files may already contain contradictory data. Export retains their raw
+metadata for inspection, while show/compare refuse instead of silently choosing
+a payload and producing a score. The public pure reducer applies the same rule.
+The related-pattern audit also found repeated conflicting phases for one action:
+two different results could keep the faster first one. That now refuses with an
+action-phase message. One input followed by its handler, and one handler end
+followed by its rendered result, remain valid distinct phases of one action.
+
+Import and dry run validate every local batch and all cross-batch event/run
+identities before the first POST. A fresh NDJSON file with contradictory batches
+is refused locally in both modes and creates no server run. Conflicts with an
+already stored run are refused by the server in apply and dry-run modes. The
+compiled controls assert the HTTP body, one CLI JSON object, empty stderr,
+exit 2, its unchanged meaning "validation or usage", and the resulting summary.
+
+### Expiry and identity bounds
+
+The previous report incorrectly claimed the one-minute failure backoff. The
+callback still used armExpiry's one-millisecond default. The retained red
+control observed 1 instead of 60000. The callback now counts the failure and
+enters backoff. Its existing timer is preserved across other status writes,
+so they cannot shorten or postpone the retry. The next background attempt is
+at least 60000 ms later; success restores normal expiry scheduling. There is
+one unreferenced expiry timer, not an immediate retry loop. The literal test
+checks no retry for 59999 ms, retry at 60000, a concurrent failed upload without
+rearming the timer, counted failures, and normal scheduling after recovery.
+
+Manifests now reference actual retained segments or pending batches, using a
+batch-to-run map. Cleanup no longer waits for the entire pending queue to empty.
+The 1001-run witness keeps one 4096-byte segment and one pending write, with at
+most two manifests and two event identities on every iteration. A separate
+literal test admits 1024 pending batches and refuses the 1025th before the
+encoded queue reaches one MiB. The caps are now stated in ADR-0020 and the skill:
+
+| State | Upper bound |
+| --- | ---: |
+| Retained segments / batch digests | 4096 |
+| Pending batches / run references | 1024 |
+| Encoded pending data | 1048576 bytes |
+| Retained or pending run manifests | 5120 |
+| Retained or pending event fingerprint references | 655360 |
+| Recovered-run flags | 4096 initially, trimmed with identity cleanup |
+
+The event bound is (4096 + 1024) times 128 events. Fixed-length digests and
+bounded run/role/sequence keys prevent variable content retention in that index.
+These are cardinality bounds, not measured JavaScript heap bytes. Every evicted
+segment or failed pending write releases its fingerprint references. Startup
+rejects/counts duplicate batch-id files instead of overwriting their identity
+bookkeeping. Original byte/age/file-mode and Task isolation caps remain.
+
+### Safe comparison explanations
+
+Shared allowlisted messages identify missing comparison context, unknown build,
+contract, configuration or render capability, and mismatched app, contract,
+fixture, script, environment, configuration, render capability or concurrency.
+No uploaded condition value, dynamic error text, path or credential is returned.
+The HTTP sanitizer and CLI accept only an exact message from this allowlist;
+unknown decoding/errors stay generic. The environment-only control now returns
+"Recording comparison refused: environment differs." in HTTP and the CLI.
+Its HTTP status remains 400; the CLI still exits 2 for validation or usage.
+Missing/expired runs and expired export cursors have safe recovery messages too.
+Unauthenticated/refused-auth callers still take the owner guard first.
+
+### Audit of the three related shapes
+
+| Location | Rule and result |
+| --- | --- |
+| Store batch UUID and manifest keys | Full canonical decoded metadata/digest comparison precedes reuse. Contradictions refuse; duplicate files at recovery are counted corrupt. |
+| Event index, stored-event reader and public reducer | Producer sequence content is compared; exact duplicates are no-ops. Pending data is not stored data. No first-payload selection on conflict. |
+| Reducer action keys | One action intentionally joins different phases. Repeated conflicting phases now refuse; a result can supersede its handler end. |
+| Clocks, sequence positions and run-list grouping | These aggregate validated observations, not competing payloads. Clock/gap uncertainty stays visible, and run event totals describe retained wire data. |
+| Expiry timer | One timer, explicit failed state, at least one minute per automatic retry, preserved across other journal activity, cleared at close. |
+| Queue/save promises and CLI HTTP/export loops | No automatic failure retry. Work is serialized, failures counted or returned, export advances one bounded cursor or stops. saveLater coalesces status work. |
+| Manifests and recovered-run flags | Trim by actual retained/pending references on completion/rotation, never global queue idleness. |
+| Fingerprint/digest indexes | Release per failed batch or removed segment; maximum follows explicit segment and pending-batch caps. |
+
+No Task store/projection, model or formal coverage pin changed. The source delta
+check for those mapped inputs exits 0; their previous seat-proven formal receipts
+remain applicable. There is no pin renewal or changed atomicity assumption here.
+
+### Current measurements
+
+Ingestion adds bounded canonical serialization and at most 128 event hashes to
+the existing metadata-validation/admission work. There is no new Task-handler
+journal I/O dependency or synchronous disk write. Allocations were not counted.
+Both ten-pair comparisons use the same compiled server and verify 2000 Task
+responses plus 1000 uploads per batch-size cell, with both load boundaries.
+
+| Condition | Task p50 baseline median [range] ms | With condition median [range] ms | Paired difference median [range] ms |
+| --- | --- | --- | --- |
+| Permanent failed expiry, 5 AB/BA pairs | 0.7151 [0.7023, 1.4809] | 0.7185 [0.6517, 1.0561] | -0.0634 [-0.4247, 0.0634] |
+| 16-event ingestion, 10 AB/BA pairs | 0.3021 [0.2755, 0.4119] | 0.3074 [0.3015, 0.3754] | 0.0075 [-0.0365, 0.0424] |
+| 128-event ingestion, 10 AB/BA pairs | 0.2954 [0.2894, 0.4289] | 0.3287 [0.3177, 0.3888] | 0.0318 [-0.0401, 0.0485] |
+
+All differences are inside pair-to-pair variation and are inconclusive. No Task
+cost from the failed expiry was distinguishable here, which is not a zero-cost
+or general starvation claim. The actual permanent unlink failure was a scratch
+segment replaced with a directory in the same process/event loop as the real
+server. Across ten 6.5-second cells, 2765 verified 15-Task responses succeeded
+and exactly two failed automatic attempts were counted. Driver CPU stayed below
+2.6 percent of a core. Boundary one-minute load ranged 1.77 to 2.63. The p99
+round medians were 7.1218 [3.8420, 7.5563] ms baseline and
+6.7974 [3.7940, 7.4338] with the fault. Paired p50 differences were
+[-0.424750, -0.070249, 0.063375, -0.063416, 0.000208] ms.
+
+Ingestion handler p50 including async persistence was 0.6215 [0.604, 0.665] ms
+for 16 events and 1.3585 [1.290, 1.414] for 128. Boundary loads were 2.56 and
+2.76. Every pair, raw duration, load boundary and loss status is retained in
+recordings-correction/ingestion-16, ingestion-128 and expiry-cost-2. The final
+server executable is byte-identical before and after the CLI-only preflight
+change; server-cli-delta.diff is empty. The measurement finished before the
+later CLI red control. A quiet-machine confirmation under the unchanged ceiling
+is owed at integration. No imposed CPU pressure, native app or owner input was
+used.
+
+### Correction commands and receipts
+
+Evidence root: docs/evidence/ui-speed/recordings-correction, local and ignored.
+In the table, E is "$PWD/docs/evidence/ui-speed/recordings-correction", C is
+"$PWD/.scratch/bin", and P is ".agents/skills/verify-ui-profiler/scripts".
+The executable source is 39d9ad40ffa1de56c924395b9301e3b071a8e0d9. Cache manifest
+source hash is 6c76ad6b3ad27e9fddbde3120a5c56c4359cd1895e3c8126b0e994471b7bf6de.
+The later report commit changes no executable source.
+
+| Command | Real exit | Receipt |
+| --- | ---: | --- |
+| pnpm --filter @todo/domain test diagnostic-recording-corrections.test.ts before fixes | 1 | red-core: no conflict refusal, 1 vs 60000 ms, 3 vs at-most-2 manifests |
+| bun "$P/corrections.ts" "$E/red-compiled" | 1 | HTTP/CLI reason and hidden-completion witnesses |
+| Focused pending, pure, action-phase and whole-import controls before their fixes | 1 each | red-pending-ack, red-pure, red-action-phase, red-import-preflight |
+| pnpm --filter @todo/domain test diagnostic-recording-corrections.test.ts | 0 | green-core-8, nine controls |
+| pnpm typecheck; bun --bun node_modules/typescript/bin/tsc --noEmit -p .agents/skills/verify-ui-profiler/tsconfig.json | 0 each | types-2, harness-types-3 |
+| bun packages/api/scripts/openapi.ts --check | 0 | contract.exit; same cf817545… id |
+| bun "$P/corrections.ts" "$E/compiled-final" | 0 | compiled-corrections.exit |
+| TODO_PROFILER_STRESS=1 bun "$P/verify.ts" "$E/producer" | 0 | producer.exit, 700 admitted, 585 retained segments, 7370 capacity events, zero storage failures |
+| TODO_DIAGNOSTICS_NO_SWIFT=1 .agents/skills/verify-diagnostics/scripts/verify.sh "$E/diagnostics" | 0 | diagnostics.exit; PNG remains HOLD |
+| TODO_SERVER_BINARY="$C/todo-server" TODO_SEED_BINARY="$C/seed" .agents/skills/verify-server-api/scripts/verify.sh "$E/server-api" | 0 | server-api.exit |
+| TODO_CLI_BINARY="$C/todo" .agents/skills/verify-cli/scripts/verify.sh "$E/cli" | 0 | cli.exit |
+| bun build --compile apps/server/scripts/diagnostic-fault-cli.ts --outfile "$C/diagnostic-fault-cli"; bun build --compile apps/server/scripts/verify-diagnostic-faults.ts --outfile "$C/verify-diagnostic-faults"; "$C/verify-diagnostic-faults" "$E/faults" | 0 each | faults.exit; all 47 cases |
+| bun build --compile "$P/expiry-server.ts" --outfile "$C/expiry-fault-server"; bun "$P/expiry-cost.ts" "$E/expiry-cost-2" | 0 each | expiry-build-2, expiry-cost-2 |
+| TODO_PROFILER_PAIRS=10 bun "$P/benchmark.ts" "$E/ingestion-16"; TODO_PROFILER_PAIRS=10 TODO_PROFILER_EVENTS=128 bun "$P/benchmark.ts" "$E/ingestion-128" | 0 each | ingestion-16, ingestion-128 |
+| /usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check, disk guard first | 1, then 0 unchanged | root.log/.exit, root-retry.log/.exit |
+
+The first expiry-cost setup exited 1 before measuring because its test-only flag
+reached the real server argument parser. The wrapper now consumes that flag and
+requires the fixture's scratch database/HOME before loading the server. The
+successful run is separate. One development test edit had a missing closing
+brace, and the first helper typecheck needed explicit inference annotations;
+those setup failures are retained, not attributed to product behavior. The
+quota test now uses a distinct event for its second segment, preserving all
+original byte/eviction assertions after identical events became no-ops.
+
+The first correction root run exited 1 on the existing auth-history fixture,
+"records one selected-Profile rejection for expired http show". The expected
+expired detail was invalid_credential after live cleanup removed the credential;
+its Unauthorized status and single rejection were correct. Boundary load rose
+from 3.01 to 5.42. The focused unchanged auth-history control passed all 12 tests
+with exit 0, and the compiled verify-cli recipe passed all 80 tests with exit 0.
+The exact root command is repeated without changing an assertion, timeout,
+worker cap or tracked recipe. Both root logs and boundary loads are retained.
+
+The unchanged root retry exited 0. It passed 441 domain, 38 server, 168 Electron
+and 80 CLI tests, with the same one existing Electron skip; type checks, lint
+and contract checks passed. The guard ran first with 51.7 GB free, above the
+30 GB soft floor. Retry boundary load was 3.55 to 4.28. No other measurement or
+compiled recipe from this worker ran during either root check. No assertion,
+timeout, worker cap, standing recipe or business-code pin was weakened.
+
+The source-delta proof for formal inputs exits 0, so neither formal command nor
+pin renewal was required for this correction. The seat's unchanged-input
+formal passes at d1541167 remain the evidence; this report does not claim a new
+formal execution. Full Task/JSON goldens and existing client/server mismatch
+behavior remain unchanged and pass the root/CLI recipes.
+
+The compiled verification entry also refuses a missing scratch database before
+loading main: actual exit 1, no files in its new scratch HOME. The initial shell
+cleanup request was rejected before execution for rm -rf syntax. Cleanup then
+used only its newly created directory with an explicit prefix check, and closed
+Bun temporaries in this worktree after lsof checks. It removed 19 closed files,
+1,684,578,304 allocated bytes, with zero open-file skips. Receipt cleanup.json
+and cleanup.exit are retained. The last disk guard reported 50.8 GB free.
+Owned servers and scratch data were removed by their recipes. No other unit's
+files or processes were touched.
+
+CLI SHA-256: 6da82544e5c7d1631ad1dc7765457d4b46d647505d129d1c68f3a7297abe2959.
+Server SHA-256: c3e1eda775875675c3daf8bd825b2c659a8029be4f7e2f62bb0aca95b9765009.
+Expiry verification entry SHA-256: 3f5cd7b66d390f24f38158cbcf1fcf4382f7980371d92f5561f39c9a9cb5d9e0.
+
+All four requested findings have executable red/green controls and are ready for
+the seat's re-check. No independent correction verdict is claimed here. Native
+client integration, held PNG rendering, fresh Claude discovery, quiet-machine
+confirmation, hardware power-loss durability and allocation accounting remain
+as stated in the original delivery; none was performed or claimed by this fix.
 
