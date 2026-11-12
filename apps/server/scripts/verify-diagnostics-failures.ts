@@ -27,10 +27,13 @@ export const verifyHttpFailures = Effect.scoped(
     yield* store.auth.setupOwner("diagnostics failure fixture");
     const session = yield* store.auth.signIn("diagnostics failure fixture");
     const layer = HttpRouter.serve(
-      HttpRouter.add(
-        "GET",
-        "/fixture-defect",
-        Effect.die(new Error("private fixture defect")),
+      Layer.mergeAll(
+        HttpRouter.add("GET", "/fixture-never", Effect.never),
+        HttpRouter.add(
+          "GET",
+          "/fixture-defect",
+          Effect.die(new Error("private fixture defect")),
+        ),
       ),
       { middleware: diagnosticsMiddleware(store.diagnostics) },
     ).pipe(
@@ -62,6 +65,44 @@ export const verifyHttpFailures = Effect.scoped(
     );
     assert.equal(snapshot.latency.routes[0]?.count, 2);
     assert.ok(!JSON.stringify(snapshot).includes("private fixture"));
+    const controller = new AbortController();
+    const requestId = "44444444-4444-4444-8444-444444444444";
+    const aborted = fetch(base + "/fixture-never", {
+      signal: controller.signal,
+      headers: { "X-Todo-Request": requestId },
+    }).catch(() => null);
+    for (
+      let attempt = 0;
+      attempt < 100 &&
+      !store.diagnostics.profiler
+        .details()
+        .active.some((x) => x.request_id === requestId);
+      attempt++
+    )
+      yield* Effect.sleep("10 millis");
+    assert.ok(
+      store.diagnostics.profiler
+        .details()
+        .active.some((x) => x.request_id === requestId),
+    );
+    controller.abort();
+    yield* Effect.promise(() => aborted);
+    for (
+      let attempt = 0;
+      attempt < 100 &&
+      !store.diagnostics.profiler
+        .details()
+        .recent.some((x) => x.request_id === requestId && x.stage === "entry");
+      attempt++
+    )
+      yield* Effect.sleep("10 millis");
+    assert.equal(
+      store.diagnostics.profiler
+        .details()
+        .recent.find((x) => x.request_id === requestId && x.stage === "entry")
+        ?.outcome,
+      "cancelled",
+    );
     return {
       result: "PASS",
       statuses: [404, 500],

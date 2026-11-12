@@ -25,6 +25,16 @@ hosted XCTest, signed Electron, a Keychain flow, or an installer.
 
 ## Gotchas
 
+The server admits observations newest first. Only the two terminal chart
+consumers reverse a copy before plotting, so the oldest value is at the left
+and the newest at the right. JSON and NDJSON preserve server order. Run
+`pnpm --filter @todo/cli test top.test.ts` after chart changes. Through the
+production topPanes renderer, both Operations and Latency must render newest-first
+input [8, 4, 1] as the literal rising line ▁▄█, plus empty, single-value and
+60-value controls. Frozen inputs catch in-place mutation. JSON/NDJSON controls
+keep [8, 4, 1] after rendering. Run these direction controls alongside the
+compiled CLI/PTY recipe.
+
 The non-TTY top command falls back to diagnostics. Follow must emit only NDJSON.
 Visual evidence and keyboard interaction need their own proof alongside HTTP.
 Coordinator approval is required for visual L1.

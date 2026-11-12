@@ -124,6 +124,12 @@ registration without checking a fresh Claude session.
 
 ## Helpers
 
+After recorder changes also run the compiled
+[Diagnostics fault controls](../verify-diagnostics/features/faults.md).
+They throw during receipt, delivery, transport and teardown and require one
+ready frame and the three exact durable operation IDs, in order, without
+duplicates. The teardown assertion waits for the actual release call.
+
 Executable `scripts/verify.sh <absolute-evidence-directory> <absolute-cli-path>`
 resolves its own checkout and runs the full recipe. Executable
 `scripts/provenance.py <source-cli> <scratch> <evidence>` records the copied

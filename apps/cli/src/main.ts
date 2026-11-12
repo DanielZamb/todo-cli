@@ -46,6 +46,7 @@ import {
   inputLimits,
   LookupQuery,
   LookupResponse,
+  observeDiagnostic,
   ProfileDeletionReport,
   ProfileListResponse,
   parseQuickAdd,
@@ -60,6 +61,7 @@ import {
   TaskStatus,
   taskLookupError,
   Version,
+  withDiagnosticRoot,
 } from "@todo/domain";
 import { attachmentInput } from "@todo/domain/attachment-input";
 import { attachmentCopyStats } from "@todo/domain/attachment-store";
@@ -266,7 +268,23 @@ const withStore = <A, E, R>(
     return yield* Effect.acquireUseRelease(
       openStore({ path }),
       (store) =>
-        use(store).pipe(
+        (() => {
+          observeDiagnostic(store.diagnostics.profiler, () =>
+            store.diagnostics.profiler.configure({
+              enabled: process.env.TODO_DIAGNOSTICS_RECORDING !== "0",
+              build_id: BUILD_ID,
+              contract_id: CONTRACT_ID,
+            }),
+          );
+          return withDiagnosticRoot(
+            {
+              recorder: store.diagnostics.profiler,
+              role: "cli",
+              stage: "command",
+            },
+            use(store),
+          );
+        })().pipe(
           Effect.catch((error) =>
             Effect.gen(function* () {
               if (
@@ -2027,12 +2045,25 @@ const diagnostics = Command.make(
       process.env.TODO_SERVER_URL || "http://127.0.0.1:4310",
     ),
     follow: bool("follow"),
+    detail: bool("detail"),
   },
   (input) =>
     Effect.gen(function* () {
       const cfg = yield* root;
+      if (input.follow && input.detail)
+        return yield* Effect.fail(
+          new CommandError(
+            2,
+            "invalid_args",
+            "--detail is a one-shot sample and cannot be combined with --follow",
+          ),
+        );
       const credential = yield* io(() => loadCredential(cfg));
-      const snapshot = diagnosticsRead(input.server, credential).pipe(
+      const snapshot = diagnosticsRead(
+        input.server,
+        credential,
+        input.detail,
+      ).pipe(
         Effect.flatMap((snapshot) =>
           write(diagnosticsOutput(snapshot, cfg.format, input.follow)),
         ),

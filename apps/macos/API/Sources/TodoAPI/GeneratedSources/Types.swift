@@ -613,8 +613,14 @@ extension APIProtocol {
     ///
     /// - Remark: HTTP `GET /diagnostics`.
     /// - Remark: Generated from `#/paths//diagnostics/get(diagnostics.snapshot)`.
-    public func diagnostics_period_snapshot(headers: Operations.diagnostics_period_snapshot.Input.Headers = .init()) async throws -> Operations.diagnostics_period_snapshot.Output {
-        try await diagnostics_period_snapshot(Operations.diagnostics_period_snapshot.Input(headers: headers))
+    public func diagnostics_period_snapshot(
+        query: Operations.diagnostics_period_snapshot.Input.Query = .init(),
+        headers: Operations.diagnostics_period_snapshot.Input.Headers = .init()
+    ) async throws -> Operations.diagnostics_period_snapshot.Output {
+        try await diagnostics_period_snapshot(Operations.diagnostics_period_snapshot.Input(
+            query: query,
+            headers: headers
+        ))
     }
     /// - Remark: HTTP `GET /snapshots`.
     /// - Remark: Generated from `#/paths//snapshots/get(snapshots.list)`.

@@ -547,6 +547,7 @@ const Credentials = HttpApiGroup.make("credentials")
 const Diagnostics = HttpApiGroup.make("diagnostics")
   .add(
     HttpApiEndpoint.get("snapshot", "/diagnostics", {
+      query: { detail: Schema.optionalKey(Schema.Literal("true")) },
       success: HttpApiSchema.WithHeaders(DiagnosticsSnapshot, {
         "cache-control": Schema.Literal("no-store"),
       }),

@@ -14,6 +14,12 @@ import { Authentication } from "../auth/auth.ts";
 import { type AuthorizedRead, checkedRead } from "../auth/authorized-read.ts";
 import { DependencyError, Edge, RejectionDetails } from "../dependencies.ts";
 import {
+  beginDiagnosticSpan,
+  diagnosticSpan,
+  diagnosticSync,
+  finishDiagnosticSpan,
+} from "../diagnostic-context.ts";
+import {
   Profile,
   Project,
   seriesForTask,
@@ -98,7 +104,10 @@ class AttachmentCleanupError extends Error {
 }
 
 const attempt = <A>(run: () => A) =>
-  Effect.try({ try: run, catch: (cause) => new StoreError(cause) });
+  Effect.try({
+    try: () => diagnosticSync("domain", run),
+    catch: (cause) => new StoreError(cause),
+  });
 const identity = Schema.Struct({ actor: ActorId, profile: ProfileId });
 const commandEnvelope = Schema.Struct({
   ...identity.fields,
@@ -297,17 +306,26 @@ export class OperationStore {
   }
 
   private transaction<A>(run: () => A): A {
-    const result = this.db
-      .transaction(() => {
-        const writing = this.writing;
-        this.writing = true;
-        try {
-          return run();
-        } finally {
-          this.writing = writing;
-        }
-      })
-      .immediate();
+    const waiting = beginDiagnosticSpan("writer_lock_wait");
+    let entered = false;
+    let result: A;
+    try {
+      result = this.db
+        .transaction(() => {
+          entered = true;
+          finishDiagnosticSpan(waiting, "completed");
+          const writing = this.writing;
+          this.writing = true;
+          try {
+            return run();
+          } finally {
+            this.writing = writing;
+          }
+        })
+        .immediate();
+    } finally {
+      if (!entered) finishDiagnosticSpan(waiting, "failed");
+    }
     if (!this.writing && this.attachmentCleanupRequested) {
       this.attachmentCleanupRequested = false;
       this.cleanupAttachmentsSync();
@@ -635,20 +653,25 @@ export class OperationStore {
     input: Pick<Append, "actor" | "profile">,
     entry: Omit<OpLogEntry, "seq" | "actor" | "profile">,
   ): OpLogEntry {
-    const result = this.db
-      .query(
-        "INSERT INTO op_log(actor,profile,entity_version,event,from_version,to_version,outcome,reason) VALUES (?,?,?,?,?,?,?,?)",
-      )
-      .run(
-        input.actor,
-        input.profile,
-        entry.event.entity_version,
-        json(entry.event),
-        entry.from_version,
-        entry.to_version,
-        entry.outcome,
-        entry.reason,
-      );
+    const result = diagnosticSync(
+      "database",
+      () =>
+        this.db
+          .query(
+            "INSERT INTO op_log(actor,profile,entity_version,event,from_version,to_version,outcome,reason) VALUES (?,?,?,?,?,?,?,?)",
+          )
+          .run(
+            input.actor,
+            input.profile,
+            entry.event.entity_version,
+            json(entry.event),
+            entry.from_version,
+            entry.to_version,
+            entry.outcome,
+            entry.reason,
+          ),
+      { statement: "store.write" },
+    );
     return Schema.decodeUnknownSync(OpLogEntry)({
       ...entry,
       seq: Number(result.lastInsertRowid),
@@ -1148,7 +1171,13 @@ export class OperationStore {
           outcome: "committed",
           reason: null,
         });
-        applyEvent(this.db, event, input.profile);
+        diagnosticSync(
+          "projection",
+          () => {
+            applyEvent(this.db, event, input.profile);
+          },
+          { statement: "store.projection" },
+        );
         if (event.kind === "TaskPurged") {
           this.searchWords.clearAll();
           this.queueAttachmentCleanup(event.task_id);

@@ -70,7 +70,7 @@ export const taskRequest = (
       case "diagnostics":
         return {
           _tag: "diagnostics",
-          snapshot: (yield* http.diagnostics.snapshot()).body,
+          snapshot: (yield* http.diagnostics.snapshot({ query: {} })).body,
         };
       case "snapshots":
         return { _tag: "snapshots", ...(yield* http.snapshots.list()) };

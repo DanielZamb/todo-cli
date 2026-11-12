@@ -4,6 +4,9 @@ import { join } from "node:path";
 import { Effect, Schema } from "effect";
 import type { AuthError } from "../auth/model.ts";
 import { CredentialInfo } from "../auth/model.ts";
+import { boundDiagnostics } from "../diagnostic-budget.ts";
+import { DiagnosticRecorder } from "../diagnostic-context.ts";
+import { observeDiagnostic } from "../diagnostic-guard.ts";
 import {
   type DiagnosticClient,
   DiagnosticOperation,
@@ -92,6 +95,7 @@ class RequestRing {
 }
 
 export class Diagnostics {
+  profiler = new DiagnosticRecorder();
   private readonly started = Date.now();
   private readonly monotonicStart = performance.now();
   private readonly requests = new RequestRing(2048);
@@ -189,7 +193,7 @@ export class Diagnostics {
     this.previousAt = time;
     this.previousSeq = seq;
   }
-  read(input: { credential: string }) {
+  read(input: { credential: string; detail?: boolean }) {
     return Effect.gen({ self: this }, function* () {
       yield* this.owner(input);
       const generation = yield* this.snapshots.generation();
@@ -197,7 +201,7 @@ export class Diagnostics {
       const snapshots = yield* this.snapshots.list();
       const pending = yield* this.scheduled.pendingReminders();
       return yield* Effect.try({
-        try: () => this.snapshot(snapshots, pending),
+        try: () => this.snapshot(snapshots, pending, input.detail ?? false),
         catch: (cause) => new StoreError(cause),
       });
     });
@@ -205,6 +209,7 @@ export class Diagnostics {
   private snapshot(
     snapshots: typeof SnapshotList.Type,
     pending: number,
+    detail: boolean,
   ): DiagnosticsSnapshot {
     const now = Date.now();
     const tables = this.db
@@ -223,12 +228,12 @@ export class Diagnostics {
       }));
     const profiles = this.db
       .query(
-        "SELECT id,name FROM profiles WHERE id NOT IN (SELECT profile FROM profile_deletions) ORDER BY name",
+        "SELECT id,name FROM profiles WHERE id NOT IN (SELECT profile FROM profile_deletions) ORDER BY name LIMIT 128",
       )
       .all();
     const deletedProfiles = this.db
       .query(
-        "SELECT p.id,p.name FROM profiles p JOIN profile_deletions d ON d.profile=p.id ORDER BY p.name",
+        "SELECT p.id,p.name FROM profiles p JOIN profile_deletions d ON d.profile=p.id ORDER BY p.name LIMIT 128",
       )
       .all();
     const operations = Schema.decodeUnknownSync(
@@ -253,13 +258,13 @@ export class Diagnostics {
         .get()?.bytes ?? 0;
     const entities = this.db
       .query(
-        "SELECT id AS profile, (SELECT count(*) FROM tasks WHERE profile_id=profiles.id) AS tasks, (SELECT count(*) FROM projects WHERE profile_id=profiles.id) AS projects, (SELECT count(*) FROM tags WHERE profile_id=profiles.id) AS tags, (SELECT count(*) FROM series WHERE json_extract(payload,'$.profile_id')=profiles.id) AS series, (SELECT count(*) FROM tasks WHERE profile_id=profiles.id AND json_extract(payload,'$.occurrence') IS NOT NULL) AS occurrences FROM profiles WHERE id NOT IN (SELECT profile FROM profile_deletions) ORDER BY id",
+        "SELECT id AS profile, (SELECT count(*) FROM tasks WHERE profile_id=profiles.id) AS tasks, (SELECT count(*) FROM projects WHERE profile_id=profiles.id) AS projects, (SELECT count(*) FROM tags WHERE profile_id=profiles.id) AS tags, (SELECT count(*) FROM series WHERE json_extract(payload,'$.profile_id')=profiles.id) AS series, (SELECT count(*) FROM tasks WHERE profile_id=profiles.id AND json_extract(payload,'$.occurrence') IS NOT NULL) AS occurrences FROM profiles WHERE id NOT IN (SELECT profile FROM profile_deletions) ORDER BY id LIMIT 128",
       )
       .all();
     const credentials = Schema.decodeUnknownSync(Schema.Array(CredentialInfo))(
       this.db
         .query(
-          "SELECT id,kind,name,profile,scope,created_at,expires_at,revoked_at FROM credentials WHERE revoked_at IS NULL AND julianday(expires_at)>julianday(?) ORDER BY kind,name,id",
+          "SELECT id,kind,name,profile,scope,created_at,expires_at,revoked_at FROM credentials WHERE revoked_at IS NULL AND julianday(expires_at)>julianday(?) ORDER BY kind,name,id LIMIT 128",
         )
         .all(instant(now)),
     ).map((value) => ({
@@ -268,18 +273,46 @@ export class Diagnostics {
         ? instant(this.lastUsed.get(value.id) ?? now)
         : null,
     }));
-    for (const id of this.lastUsed.keys())
-      if (!credentials.some((value) => value.id === id))
-        this.lastUsed.delete(id);
+    const usedIds = [...this.lastUsed.keys()];
+    if (usedIds.length) {
+      const activeUsed = new Set(
+        this.db
+          .query<{ id: string }, string[]>(
+            `SELECT id FROM credentials WHERE revoked_at IS NULL AND julianday(expires_at)>julianday(?) AND id IN (${usedIds.map(() => "?").join(",")})`,
+          )
+          .all(instant(now), ...usedIds)
+          .map((row) => row.id),
+      );
+      for (const id of usedIds)
+        if (!activeUsed.has(id)) this.lastUsed.delete(id);
+    }
     const since = performance.now() - 300000;
     const samples = this.requests.values(since);
-    const routes = [...new Set(samples.map((value) => value.route))]
-      .sort()
-      .map((route) => {
-        const durations = samples
-          .filter((value) => value.route === route)
-          .map((value) => value.duration)
-          .sort((a, b) => a - b);
+    const grouped = new Map<string, number[]>();
+    const routePriority = new Map<
+      string,
+      { important: boolean; order: number }
+    >();
+    for (const sample of samples) {
+      const route =
+        grouped.has(sample.route) || grouped.size < 64
+          ? sample.route
+          : "other routes";
+      const durations = grouped.get(route) ?? [];
+      durations.push(sample.duration);
+      grouped.set(route, durations);
+      routePriority.set(route, {
+        important:
+          (routePriority.get(route)?.important ?? false) ||
+          sample.duration >= 20 ||
+          sample.status >= 400,
+        order: sample.time,
+      });
+    }
+    const routes = [...grouped]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([route, values]) => {
+        const durations = values.sort((a, b) => a - b);
         return {
           route,
           count: durations.length,
@@ -303,83 +336,127 @@ export class Diagnostics {
           "SELECT count(*) AS count FROM op_log WHERE julianday(json_extract(event,'$.occurred_at'))>julianday(?)",
         )
         .get(instant(now - 60000))?.count ?? 0;
-    return Schema.decodeUnknownSync(DiagnosticsSnapshot)({
-      generated_at: instant(now),
-      poll_interval_ms: 1000,
-      runtime: {
-        version: "0.1.0",
-        started_at: instant(this.started),
-        uptime_seconds: (now - this.started) / 1000,
-        memory_bytes: process.memoryUsage.rss(),
-      },
-      profiles,
-      deleted_profiles: deletedProfiles,
-      storage: {
-        database_bytes: bytes(this.path),
-        wal_bytes: bytes(`${this.path}-wal`),
-        snapshot_bytes:
-          snapshotBytes +
-          snapshots.snapshots.reduce((total, value) => total + value.size, 0),
-        last_snapshot: snapshots.snapshots[0] ?? null,
-        restore_generation: this.restoreGeneration ?? "initial",
-        attachments:
-          this.db
-            .query<{ count: number }, []>(
-              "SELECT count(*) AS count FROM tasks, json_each(tasks.payload, '$.attachments')",
-            )
-            .get()?.count ?? 0,
-        attachment_store_bytes: directoryBytes(this.attachmentRoot),
-        external_id_tasks:
-          this.db
-            .query<{ count: number }, []>(
-              "SELECT count(*) AS count FROM tasks WHERE external_id IS NOT NULL",
-            )
-            .get()?.count ?? 0,
-        tables,
-        entities,
-      },
-      operations: {
-        total: counts?.total ?? 0,
-        committed: counts?.committed ?? 0,
-        rejected: counts?.rejected ?? 0,
-        window_seconds: 60,
-        per_second: rate / 60,
-        samples: this.throughput.values(),
-        recent: operations,
-      },
-      clients: [...this.clients.values()],
-      credentials,
-      errors: this.errors
-        .values(since)
-        .reverse()
-        .map((value) => ({
-          id: value.id,
-          route: value.route,
-          time: instant(this.started + value.time - this.monotonicStart),
-          code:
-            value.status === 409
-              ? "conflict"
-              : value.status === 401
-                ? "unauthorized"
-                : value.status === 403
-                  ? "forbidden"
-                  : value.status === 404
-                    ? "not_found"
-                    : value.status < 500
-                      ? "invalid_request"
-                      : "internal_error",
-        })),
-      latency: {
-        window_seconds: 300,
-        capacity: 2048,
-        routes,
-        samples: samples.slice(-60).map((value) => value.duration),
-      },
-      scheduler: {
-        next_wake_at: this.nextWake === null ? null : instant(this.nextWake),
-        pending_reminders: pending,
-        last_reminder_fired: lastReminder,
-      },
-    });
+    const recorded = observeDiagnostic(this.profiler, () =>
+      this.profiler.snapshot(detail),
+    );
+    let profiler = recorded;
+    if (recorded) {
+      const profileCount =
+        tables.find((table) => table.name === "profiles")?.count ?? 0;
+      const deletedCount =
+        tables.find((table) => table.name === "profile_deletions")?.count ?? 0;
+      const credentialCount =
+        this.db
+          .query<{ count: number }, [string]>(
+            "SELECT count(*) AS count FROM credentials WHERE revoked_at IS NULL AND julianday(expires_at)>julianday(?)",
+          )
+          .get(instant(now))?.count ?? 0;
+      profiler = {
+        ...recorded,
+        omitted: {
+          ...recorded.omitted,
+          profiles: Math.max(0, profileCount - deletedCount - profiles.length),
+          deleted_profiles: Math.max(0, deletedCount - deletedProfiles.length),
+          entities: Math.max(0, profileCount - deletedCount - entities.length),
+          credentials: Math.max(0, credentialCount - credentials.length),
+        },
+      };
+    }
+    return Schema.decodeUnknownSync(DiagnosticsSnapshot)(
+      boundDiagnostics(
+        {
+          ...(profiler ? { profiler } : {}),
+          generated_at: instant(now),
+          poll_interval_ms: 1000,
+          runtime: {
+            version: "0.1.0",
+            started_at: instant(this.started),
+            uptime_seconds: (now - this.started) / 1000,
+            memory_bytes: process.memoryUsage.rss(),
+          },
+          profiles: Schema.decodeUnknownSync(
+            DiagnosticsSnapshot.fields.profiles,
+          )(profiles),
+          deleted_profiles: Schema.decodeUnknownSync(
+            DiagnosticsSnapshot.fields.deleted_profiles,
+          )(deletedProfiles),
+          storage: {
+            database_bytes: bytes(this.path),
+            wal_bytes: bytes(`${this.path}-wal`),
+            snapshot_bytes:
+              snapshotBytes +
+              snapshots.snapshots.reduce(
+                (total, value) => total + value.size,
+                0,
+              ),
+            last_snapshot: Schema.decodeUnknownSync(
+              DiagnosticsSnapshot.fields.storage.fields.last_snapshot,
+            )(snapshots.snapshots[0] ?? null),
+            restore_generation: this.restoreGeneration ?? "initial",
+            attachments:
+              this.db
+                .query<{ count: number }, []>(
+                  "SELECT count(*) AS count FROM tasks, json_each(tasks.payload, '$.attachments')",
+                )
+                .get()?.count ?? 0,
+            attachment_store_bytes: directoryBytes(this.attachmentRoot),
+            external_id_tasks:
+              this.db
+                .query<{ count: number }, []>(
+                  "SELECT count(*) AS count FROM tasks WHERE external_id IS NOT NULL",
+                )
+                .get()?.count ?? 0,
+            tables,
+            entities: Schema.decodeUnknownSync(
+              DiagnosticsSnapshot.fields.storage.fields.entities,
+            )(entities),
+          },
+          operations: {
+            total: counts?.total ?? 0,
+            committed: counts?.committed ?? 0,
+            rejected: counts?.rejected ?? 0,
+            window_seconds: 60,
+            per_second: rate / 60,
+            samples: this.throughput.values(),
+            recent: operations,
+          },
+          clients: [...this.clients.values()],
+          credentials,
+          errors: this.errors
+            .values(since)
+            .reverse()
+            .map((value) => ({
+              id: value.id,
+              route: value.route,
+              time: instant(this.started + value.time - this.monotonicStart),
+              code:
+                value.status === 409
+                  ? "conflict"
+                  : value.status === 401
+                    ? "unauthorized"
+                    : value.status === 403
+                      ? "forbidden"
+                      : value.status === 404
+                        ? "not_found"
+                        : value.status < 500
+                          ? "invalid_request"
+                          : "internal_error",
+            })),
+          latency: {
+            window_seconds: 300,
+            capacity: 2048,
+            routes,
+            samples: samples.slice(-60).map((value) => value.duration),
+          },
+          scheduler: {
+            next_wake_at:
+              this.nextWake === null ? null : instant(this.nextWake),
+            pending_reminders: pending,
+            last_reminder_fired: lastReminder,
+          },
+        },
+        { latency: samples.slice(-60), routes: routePriority },
+      ),
+    );
   }
 }

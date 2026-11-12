@@ -44,8 +44,11 @@ try:
     for key in [b'\t', b'\t', b'\t', b'\x1b[B', b'\x1b[B']:
         os.write(master, key)
         collect(.1)
-    previous = re.search(r'GET /health\s+n=(\d+)', frame())
-    expected = int(previous.group(1)) + 1 if previous else 1
+    baseline = subprocess.run([binary, '--profile', 'work', 'diagnostics', '--server', server, '--format', 'json'], capture_output=True, text=True, timeout=15)
+    assert baseline.returncode == 0, baseline.stderr
+    previous = next((route['count'] for route in json.loads(baseline.stdout)['latency']['routes'] if route['route'] == 'GET /health'), 0)
+    expected = previous + 1
+    evidence.joinpath('top-health-baseline.json').write_text(json.dumps(dict(previous=previous, expected=expected)) + '\n')
     health = subprocess.run(['curl', '--silent', '--show-error', '--max-time', '5', server + '/health'], capture_output=True, text=True)
     assert health.returncode == 0
     assert json.loads(health.stdout).get('service') == 'todo-server'

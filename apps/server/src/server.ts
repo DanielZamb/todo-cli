@@ -24,15 +24,19 @@ import {
   ClientReads,
   DependencyCommands,
   type DependencyError,
+  type DiagnosticRecorder,
   Discovery,
+  diagnosticSpan,
   type EdgeCommandResult,
   type EdgeReport,
   ExpectedVersion,
   exitStatus,
   Instant,
+  observeDiagnostic,
   ProfileId,
   parseQuickAdd,
   QuickAddInput,
+  provideDiagnosticContext,
   readGraphQuery,
   SnapshotError,
   TaskId,
@@ -56,8 +60,9 @@ import {
   type TaskCommandResult,
   TaskCommands,
 } from "@todo/domain/store";
-import { Effect, Layer, Option, Redacted, Schema } from "effect";
+import { Effect, Exit, Layer, Option, Redacted, Schema, Stream } from "effect";
 import {
+  HttpBody,
   HttpEffect,
   HttpRouter,
   HttpServerRequest,
@@ -264,7 +269,10 @@ export const allowedHostsFrom = (value: string | undefined) =>
       .filter(Boolean),
   );
 export const diagnosticsMiddleware =
-  (diagnostics: OperationStore["diagnostics"]) =>
+  (
+    diagnostics: OperationStore["diagnostics"],
+    profiler = diagnostics.profiler,
+  ) =>
   <E, R>(
     httpEffect: Effect.Effect<HttpServerResponse.HttpServerResponse, E, R>,
   ) =>
@@ -272,18 +280,120 @@ export const diagnosticsMiddleware =
       const query = request.url.indexOf("?");
       const path = query === -1 ? request.url : request.url.slice(0, query);
       const route = `${request.method} ${knownRoutes.find((value) => value.pattern.test(path))?.path ?? "unmatched"}`;
-      const start = performance.now();
-      HttpEffect.appendPreResponseHandlerUnsafe(request, (_, response) => {
+      const root = observeDiagnostic(
+        profiler,
+        () =>
+          profiler.root({
+            trace: request.headers["x-todo-trace"],
+            request: request.headers["x-todo-request"],
+            action: request.headers["x-todo-action"],
+          }),
+        "start",
+      );
+      const start = root?.monotonic_ms ?? performance.now();
+      const entry = root
+        ? observeDiagnostic(
+            profiler,
+            () => profiler.start(root, "entry"),
+            "start",
+          )
+        : undefined;
+      let handed = false;
+      const handoffResponse = (
+        response: HttpServerResponse.HttpServerResponse,
+      ) => {
+        if (handed) return response;
+        handed = true;
         const end = performance.now();
-        diagnostics.request(route, end - start, response.status, end);
-        return Effect.succeed(response);
-      });
-      return httpEffect;
+        observeDiagnostic(profiler, () =>
+          diagnostics.request(route, end - start, response.status, end),
+        );
+        const handoff = root
+          ? observeDiagnostic(
+              profiler,
+              () => profiler.start(root, "response_handoff"),
+              "start",
+            )
+          : undefined;
+        observeDiagnostic(profiler, () => profiler.end(handoff, "completed"));
+        observeDiagnostic(profiler, () =>
+          profiler.end(
+            entry,
+            response.status === 499
+              ? "cancelled"
+              : response.status === 409
+                ? "conflicted"
+                : response.status >= 500
+                  ? "failed"
+                  : response.status >= 400
+                    ? "refused"
+                    : "completed",
+            end,
+          ),
+        );
+        const body = response.body;
+        const accepted =
+          root && body._tag === "Stream"
+            ? HttpServerResponse.setBody(
+                response,
+                HttpBody.stream(
+                  body.stream.pipe(
+                    Stream.tap((chunk) =>
+                      Effect.sync(() =>
+                        observeDiagnostic(profiler, () =>
+                          profiler.transport(root.request_id, chunk),
+                        ),
+                      ),
+                    ),
+                  ),
+                  body.contentType,
+                  body.contentLength,
+                ),
+              )
+            : response;
+        const joined = root
+          ? HttpServerResponse.setHeader(
+              accepted,
+              "x-todo-request",
+              root.request_id,
+            )
+          : accepted;
+        const timing =
+          !root || response.status === 401 || response.status === 403
+            ? undefined
+            : observeDiagnostic(profiler, () =>
+                profiler.serverTiming(root, end - start),
+              );
+        return timing
+          ? HttpServerResponse.setHeader(joined, "server-timing", timing)
+          : joined;
+      };
+      HttpEffect.appendPreResponseHandlerUnsafe(request, (_, response) =>
+        Effect.succeed(handoffResponse(response)),
+      );
+      return provideDiagnosticContext(
+        root ? { recorder: profiler, envelope: root } : undefined,
+        diagnosticSpan("handler", httpEffect),
+      ).pipe(
+        Effect.map(handoffResponse),
+        Effect.onExit((exit) =>
+          Effect.sync(() => {
+            if (Exit.isFailure(exit))
+              observeDiagnostic(profiler, () =>
+                profiler.end(
+                  entry,
+                  Exit.hasInterrupts(exit) ? "cancelled" : "failed",
+                ),
+              );
+          }),
+        ),
+      );
     });
 
 export const serverLayer = (options: {
   readonly path: string;
   readonly port: number;
+  readonly profiler?: DiagnosticRecorder;
   readonly allowedHosts?: ReadonlySet<string>;
 }) =>
   Layer.unwrap(
@@ -336,6 +446,15 @@ export const serverLayer = (options: {
             return yield* taskResult(result);
           });
       const diagnostics = store.diagnostics;
+      const profiler = options.profiler ?? diagnostics.profiler;
+      diagnostics.profiler = profiler;
+      observeDiagnostic(profiler, () =>
+        profiler.configure({
+          enabled: process.env.TODO_DIAGNOSTICS_RECORDING !== "0",
+          build_id: BUILD_ID,
+          contract_id: CONTRACT_ID,
+        }),
+      );
       const attachments = new AttachmentCommands(store);
       const reads = new ClientReads(store);
       const discovery = new Discovery(store);
@@ -447,10 +566,13 @@ export const serverLayer = (options: {
         "diagnostics",
         (handlers) =>
           handlers.handleAll({
-            snapshot: () =>
+            snapshot: ({ query }) =>
               Effect.gen(function* () {
                 const body = yield* translate(
-                  diagnostics.read({ credential: yield* BearerCredential }),
+                  diagnostics.read({
+                    credential: yield* BearerCredential,
+                    detail: query.detail === "true",
+                  }),
                 );
                 return HttpApiSchema.withHeaders({
                   headers: { "cache-control": "no-store" },
@@ -1070,7 +1192,10 @@ export const serverLayer = (options: {
       );
       return HttpRouter.serve(routes, {
         middleware: (effect) =>
-          diagnosticsMiddleware(diagnostics)(
+          diagnosticsMiddleware(
+            diagnostics,
+            profiler,
+          )(
             rejectForeignRequests(options.allowedHosts)(
               rejectUnknownQuery(effect),
             ),

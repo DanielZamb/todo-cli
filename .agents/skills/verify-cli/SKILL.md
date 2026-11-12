@@ -113,6 +113,12 @@ Use `/maintain-verification-skill` when commands or this feature map change.
 
 ## Server diagnostics
 
+After recorder changes also run the compiled
+[Diagnostics fault controls](../verify-diagnostics/features/faults.md).
+They compare complete normalized stdout, stderr and exit codes for successful
+reads and stale edits, then require a successful durable add with a throwing
+configure/root/start/end/authorization recorder.
+
 `todo diagnostics --format json`, `--follow` NDJSON and `todo top` use the
 owner-only HTTP read instead of opening SQLite. Follow errors go to stderr in
 the shared JSON error shape. Each stdout line uses `todo schema diagnostics`.

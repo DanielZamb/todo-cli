@@ -1,10 +1,11 @@
+import { randomUUID } from "node:crypto";
 import {
   BadRequest,
   BearerCredential,
   type ChangeEvent,
   TodoApi,
 } from "@todo/api";
-import { DiagnosticClient } from "@todo/domain";
+import { DiagnosticClient, DiagnosticFrameId, DiagnosticStreamId, diagnosticContext, observeDiagnostic } from "@todo/domain";
 import type { OperationStore } from "@todo/domain/store";
 import { Effect, Schema, Stream } from "effect";
 import { HttpApiBuilder, HttpApiSchema } from "effect/http-api";
@@ -16,6 +17,44 @@ export const changesLayer = (store: OperationStore) =>
       stream: ({ params, headers }) =>
         Effect.gen(function* () {
           const credential = yield* BearerCredential;
+          const scope = diagnosticContext();
+          const profiler = scope?.recorder ?? store.diagnostics.profiler;
+          const streamId = observeDiagnostic(profiler, () =>
+            Schema.decodeUnknownSync(DiagnosticStreamId)(randomUUID()),
+          );
+          let generation = "initial";
+          const observe = (event: typeof ChangeEvent.Type) =>
+            observeDiagnostic(profiler, () => {
+              if (
+                event.event !== "operation" ||
+                !scope ||
+                !streamId ||
+                !profiler.enabled
+              )
+                return;
+              const frame_id = Schema.decodeUnknownSync(DiagnosticFrameId)(
+                randomUUID(),
+              );
+              const commit_receipt = profiler.commitReceipt(
+                event.data.seq,
+                generation,
+              );
+              profiler.delivery(
+                scope.envelope,
+                streamId,
+                frame_id,
+                commit_receipt,
+                "commit_seen",
+                null,
+              );
+              profiler.awaitTransport(event.data.seq, {
+                ...scope.envelope,
+                name: "stream.delivery",
+                stream_id: streamId,
+                frame_id,
+                commit_receipt,
+              });
+            });
           const header = headers["last-event-id"];
           const after = header === undefined ? 0 : Number(header);
           if (
@@ -49,6 +88,7 @@ export const changesLayer = (store: OperationStore) =>
           );
           const authorize = translate(store.auth.recheckRead(read));
           const initial = yield* translate(store.snapshots.generation());
+          generation = initial.generation;
           const reset =
             authority.fields.after > initial.seq ||
             (initial.generation !== "initial" &&
@@ -62,6 +102,7 @@ export const changesLayer = (store: OperationStore) =>
               Effect.gen(function* () {
                 yield* Effect.sleep("250 millis");
                 const current = yield* translate(store.snapshots.generation());
+                generation = current.generation;
                 const events: Array<typeof ChangeEvent.Type> = [];
                 if (current.generation !== state.generation) {
                   events.push({
@@ -103,7 +144,10 @@ export const changesLayer = (store: OperationStore) =>
                   yield* authorize;
                 return [events, { ...state, cursor }] as const;
               }),
-          ).pipe(Stream.flattenIterable);
+          ).pipe(
+            Stream.flattenIterable,
+            Stream.tap((event) => Effect.sync(() => observe(event))),
+          );
           const greeting: Array<typeof ChangeEvent.Type> = [
             { event: "ready", data: null },
             ...(reset
@@ -131,7 +175,18 @@ export const changesLayer = (store: OperationStore) =>
                       reset ? undefined : authority.fields.header,
                     ),
                   ),
-                  (id) => Effect.sync(() => store.diagnostics.disconnect(id)),
+                  (id) =>
+                    Effect.sync(() => {
+                      observeDiagnostic(profiler, () =>
+                        store.diagnostics.disconnect(id),
+                      );
+                      if (scope?.envelope.request_id)
+                        observeDiagnostic(profiler, () =>
+                          profiler.releaseStream(
+                            scope.envelope.request_id ?? "",
+                          ),
+                        );
+                    }),
                 );
                 return Stream.concat(
                   Stream.fromIterable(greeting),
@@ -140,7 +195,9 @@ export const changesLayer = (store: OperationStore) =>
                   Stream.tap((event) =>
                     Effect.sync(() => {
                       if ("id" in event)
-                        store.diagnostics.delivered(id, event.id);
+                        observeDiagnostic(profiler, () =>
+                          store.diagnostics.delivered(id, event.id),
+                        );
                     }),
                   ),
                 );
