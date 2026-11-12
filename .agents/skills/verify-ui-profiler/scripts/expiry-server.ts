@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import { mkdir, readdir, rm } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { DiagnosticRecordings } from "../../../../packages/domain/src/store/diagnostic-recordings.ts";
 import { recordingLimits, validateRecordingBatch } from "../../../../packages/domain/src/diagnostic-recordings.ts";
 import { event, uuid } from "../../../../packages/domain/test/fixtures/diagnostic-recording.ts";
+assert.ok(process.env.TODO_DB);
+assert.ok(basename(dirname(process.env.TODO_DB)).startsWith("todo-diag-joins-"));
+assert.equal(process.env.HOME, join(dirname(process.env.TODO_DB), "home"));
 if (process.argv.includes("--expiry-fault")) {
-  assert.ok(process.env.TODO_DB);
   const directory = join(dirname(process.env.TODO_DB), "owned-expiry-fault");
   let now = Date.now();
   const recordings = await DiagnosticRecordings.open(directory, {now: () => now});
@@ -20,4 +22,5 @@ if (process.argv.includes("--expiry-fault")) {
   assert.equal(recordings.status().loss.storage_failures,1);
   process.once("exit",() => process.stderr.write(`expiry-final:${JSON.stringify(recordings.status())}\n`));
 }
+process.argv = process.argv.filter(argument => argument !== "--expiry-fault");
 await import("../../../../apps/server/src/main.ts");
