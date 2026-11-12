@@ -79,7 +79,7 @@ try:
         (sources / Path(file).name).write_bytes(data)
         hashes[file] = hashlib.sha256(data).hexdigest()
     shutil.copyfile(fixtures / 'auth-epoch/SessionVault.swift', sources / 'SessionVault.swift')
-    for name in ['SignOutStreamTests.swift', 'SignOutNoticeTests.swift', 'SeatSignOutNoticeTests.swift']:
+    for name in ['SignOutStreamTests.swift', 'SignOutNoticeTests.swift', 'SeatSignOutNoticeTests.swift', 'CredentialTransitionCancellationTests.swift', 'SeatRestoreCancellationBoundaryTests.swift']:
         shutil.copyfile(fixtures / 'sign-out-stream' / name, tests / name)
     shutil.copyfile(root / 'apps/macos/Package.resolved', package / 'Package.resolved')
     api = str(root / 'apps/macos/API')
@@ -239,11 +239,21 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
     proxy_url = f'http://127.0.0.1:{proxy.server_port}'
     (evidence / 'endpoints.json').write_text(json.dumps({'server': url, 'proxy': proxy_url, 'database': str(scratch / 'scratch.db')}) + '\n')
     test_env = dict(env, TODO_SIGN_OUT_STREAM='1', TODO_SIGN_OUT_PROXY=proxy_url, TODO_SIGN_OUT_SERVER=url, TODO_SIGN_OUT_EVIDENCE=str(evidence), SEAT_SERVER=url, SEAT_EVIDENCE=str(evidence))
-    exit_code = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SignOutStreamTests', '--skip', 'SeatSignOutNoticeTests'], 'tests.log', test_env)
+    exit_code = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SignOutStreamTests', '--skip', 'SeatSignOutNoticeTests|SeatRestoreCancellationBoundaryTests'], 'tests.log', test_env)
     # The seat's unchanged probe runs alone: its teardown invalidates its URLSession while
     # the model can still reconnect, and an exception there would hide the other suites.
     seat_exit = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatSignOutNoticeTests'], 'seat-tests.log', test_env)
-    exit_code = exit_code or seat_exit
+    restore_exit = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatRestoreCancellationBoundaryTests'], 'seat-restore-tests.log', test_env)
+    # Coordinator ruling (second seat), 2026-11-11: after the probe's second, uncancelled restore
+    # the intended state is not busy and signed in. Line 52 (!signedIn) is the one expected
+    # difference; retryAllowed (53) and retried (54) carry MAC-C1-S1-08 and must pass.
+    issues = re.findall(r'recorded an issue at (SeatRestoreCancellationBoundaryTests\.swift:\d+)', (evidence / 'seat-restore-tests.log').read_text())
+    seat_restore = dict(exit=restore_exit, issues=issues, expected_difference='SeatRestoreCancellationBoundaryTests.swift:52 after a successful second restore (ruling 2026-11-11)')
+    if restore_exit != 0 and issues == ['SeatRestoreCancellationBoundaryTests.swift:52']: restore_exit = 0
+    seat_restore['accepted'] = restore_exit == 0
+    (evidence / 'seat-restore.json').write_text(json.dumps(seat_restore, indent=2) + '\n')
+    exit_code = exit_code or seat_exit or restore_exit
+
     with lock:
         (evidence / 'proxy-requests.json').write_text(json.dumps(requests, indent=1) + '\n')
         (evidence / 'proxy-streams.json').write_text(json.dumps(streams, indent=1) + '\n')

@@ -43,7 +43,31 @@ defer adopts the installed epoch before that read. Vault failures before
 installation retain the original ownership. These boundaries are distinct from
 transport cancellation and from retiring a real credential scope.
 
-## Sign-out reply boundary
+## Cancellation after an await
+
+MAC-C1-S1-08 is older than this correction. Restore was cancelled after
+loading the stored Session, while its Profile read was pending, and that read
+then succeeded. `discoverProfiles` returns normally when cancelled, so restore's
+next guard returned before its cancellation cleanup. Busy cleared, but
+`restored` stayed true and `canRestore` false: the stored Session remained,
+Retry Session was hidden and a second restore sent no request.
+
+After every await in restore and sign-in, `stillOwns(epoch)` now decides. When
+another credential has taken over it returns false, and the caller returns
+without touching state it no longer owns. When the same epoch's task is
+cancelled it throws `CancellationError`, so the caller runs the cleanup a
+thrown cancellation runs. Restore makes Retry Session available again. Sign-in
+returns false without a message and releases busy. Sign-out has one await. Its
+early return is the superseded epoch. A cancelled sign-out reaches the catch,
+reconnects without a message, and completes locally only after a 204.
+
+The controls cancel at each await before the request, during it with the reply
+dropped, after a successful reply and after a failed reply. The awaits are
+restore's health and Profile reads; sign-in's health, sign-in and second health
+requests and its Profile read; and sign-out's request. Each then requires a
+second restore or sign-in to run and succeed, or the still-signed-in model to
+reconnect.
+
 
 Only the documented 204 reply proves revocation. Before this correction the
 model discarded the reply, so a 409 or any other status that the bearer

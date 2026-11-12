@@ -71,3 +71,11 @@ subscriber after a failed sign-out and zero after a revoked one. Require no
 further 401 after settling. Two controlled-transport suites cover a 204 seen
 after cancellation and 200 or 409 replies. Passing a pre-fix commit such as
 2ce2abcf must fail.
+
+The same package also runs the message-ownership suite against the scratch
+server, the cancellation matrix for every await of restore, sign-in and
+sign-out, and the seat's unchanged probes. Each seat probe runs in its own
+invocation. In the restore probe, only line 52 may fail. It expects the model to
+stay signed out after a successful second restore, and the ruling of 2026-11-11
+replaced that expectation with "signed in". seat-restore.json records the issues.
+Any other issue fails the run.

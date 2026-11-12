@@ -310,6 +310,16 @@ final class TodoModel {
         }
     }
 
+    /// After an await in restore or sign-in. False when another credential took over:
+    /// the caller returns without touching state it no longer owns. A cancelled task
+    /// with the same epoch throws, so it reaches the caller's cancellation cleanup
+    /// instead of an early return that skips it.
+    private func stillOwns(_ credentialEpoch: Int) throws -> Bool {
+        guard discovery.credentialEpoch == credentialEpoch else { return false }
+        if Task.isCancelled { throw CancellationError() }
+        return true
+    }
+
     func restore() async {
         var credentialEpoch = discovery.credentialEpoch
         guard !restored, !busy, !signedIn else { return }
@@ -324,7 +334,7 @@ final class TodoModel {
                 credentialEpoch = discovery.credentialEpoch
                 busy = true
                 try await discoverProfiles()
-                guard isCurrentCredential(credentialEpoch) else { return }
+                guard try stillOwns(credentialEpoch) else { return }
                 signedIn = true
                 connect()
             }
@@ -355,15 +365,15 @@ final class TodoModel {
             guard try await checkServerContract() else { return false }
             let response = try await client.signIn_period_signIn(body: .json(.init(passphrase: passphrase)))
             let session = try response.ok.body.json
-            guard isCurrentCredential(credentialEpoch) else { return false }
-            guard try await checkServerContract(), isCurrentCredential(credentialEpoch) else { return false }
+            guard try stillOwns(credentialEpoch) else { return false }
+            guard try await checkServerContract(), try stillOwns(credentialEpoch) else { return false }
             try vault.save(session.credential)
             replaceCredential(session.credential)
             credentialEpoch = discovery.credentialEpoch
             busy = true
             message = nil
             try await discoverProfiles()
-            guard isCurrentCredential(credentialEpoch) else { return false }
+            guard try stillOwns(credentialEpoch) else { return false }
             signedIn = true
             restored = true
             canRestore = false
