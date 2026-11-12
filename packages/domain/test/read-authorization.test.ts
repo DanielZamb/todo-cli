@@ -6,7 +6,7 @@ import type { AccessRequest } from "@todo/domain";
 import { ClientReads, ProfileId, readGraph, Task, TaskId } from "@todo/domain";
 import type { OperationStore } from "@todo/domain/store";
 import { openStore, TaskCommands } from "@todo/domain/store";
-import { Effect, Schema } from "effect";
+import { Cause, Effect, Exit, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { expectTypeOf } from "vitest";
 import { actor, created, taskInput, time, work } from "./store-fixtures.ts";
@@ -191,7 +191,7 @@ it.effect(
 );
 
 it.effect(
-  "Profile summaries return only the checked set after a hook inserts a Profile",
+  "Profile summaries refuse a write after the check and a fresh check sees new Profiles",
   () =>
     Effect.acquireUseRelease(
       Effect.sync(() => mkdtempSync(join(tmpdir(), "todo-checked-profiles-"))),
@@ -223,14 +223,19 @@ it.effect(
                 },
               });
               try {
-                expect(
-                  (yield* new ClientReads(store).profiles(credential)).map(
-                    (p) => [p.id, p.name, p.visible_task_count],
-                  ),
-                ).toEqual([["work", "Work", 0]]);
+                const result = yield* Effect.exit(
+                  new ClientReads(store).profiles(credential),
+                );
+                expect(Exit.isFailure(result)).toBe(true);
+                if (Exit.isFailure(result)) {
+                  const error = Cause.squash(result.cause);
+                  expect(Reflect.get(Object(error), "_tag")).toBe("StoreError");
+                  expect(String(Reflect.get(Object(error), "cause"))).toBe(
+                    "Error: Invalid read authority",
+                  );
+                }
                 expect(calls).toBe(2);
                 expect((yield* store.profiles()).map((p) => p.id)).toEqual([
-                  "late",
                   "work",
                 ]);
               } finally {
@@ -238,6 +243,15 @@ it.effect(
                   value: used,
                 });
               }
+              yield* store.putProfile(late);
+              expect(
+                (yield* new ClientReads(store).profiles(credential)).map(
+                  (p) => [p.id, p.name, p.visible_task_count],
+                ),
+              ).toEqual([
+                ["late", "Late", 0],
+                ["work", "Work", 0],
+              ]);
             }),
           (store) => Effect.orDie(store.close()),
         ),

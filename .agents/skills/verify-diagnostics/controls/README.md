@@ -38,5 +38,16 @@ one-argument constructor edit. It never renews a pin.
 
 The source inputs used for the first run and their generated reusable versions
 are recorded in the ignored strict-diagnostics-control-sources.json receipt.
-The first paired run exceeded the coordinator's 5 ms median / 50 ms maximum
-writer-lock hold limits. Further qualification is held pending that ruling.
+The coordinator accepted the measured IMMEDIATE hold cost and withdrew the
+absolute timing limits. Timings are evidence, not a load-sensitive test gate.
+
+`build-scope-driver.mjs`, `structural.mjs` and `sensitivity.mjs` prove one physical
+transaction, synchronous materialization with real Snapshot manifests, exact
+refusals and rejected-authentication History, and rejection of forged or retained
+owner values. The structural controller pauses a read, attempts a write from
+another process, and checks admission using files. The write must wait until
+the read returns and then commit while the reader process remains alive. Compare
+only durations within each process: Bun's hrtime epoch is process-local.
+Sensitivity removes the port check, moves materialization after scope closure,
+or bypasses the owner lifetime check in isolated builds. Each must fail its
+literal behavioral assertion; the restored source must pass.

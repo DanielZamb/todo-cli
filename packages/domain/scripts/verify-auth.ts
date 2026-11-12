@@ -686,8 +686,8 @@ const program = Effect.acquireUseRelease(
               Schema.decodeUnknownSync(Profile)({
                 id: "work",
                 name: "Work",
-                created_at: instant(time),
-                updated_at: instant(time),
+                created_at: instant(new Date(time).toISOString()),
+                updated_at: instant(new Date(time).toISOString()),
               }),
             );
             yield* scoped.auth.setupOwner("compiled scope passphrase");
