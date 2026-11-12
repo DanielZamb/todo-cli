@@ -376,7 +376,8 @@ final class TodoModel {
         busy = true
         defer { if discovery.credentialEpoch == credentialEpoch { busy = false } }
         do {
-            _ = try await client.credentials_period_signOut()
+            // Only the documented 204 proves revocation; any other reply keeps the Session.
+            _ = try await client.credentials_period_signOut().noContent
             // The server has revoked the credential, so cancellation must not
             // leave the model signed in with it.
             guard discovery.credentialEpoch == credentialEpoch else { return }
