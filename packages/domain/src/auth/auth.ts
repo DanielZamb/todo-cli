@@ -881,23 +881,25 @@ export class Authentication<Read> {
       readonly profile: ProfileId;
     }) => Effect.Effect<A, StoreError | AuthError>,
   ) =>
-    this.perform("mutate", input.profile, (time) => {
-      const request = parse(AccessRequest, input);
-      const credential = this.requireCredential(
-        request,
-        time,
-        "write",
-        request.profile,
-      );
-      const result = Effect.runSyncExit(
-        operation({
-          actor: Schema.decodeUnknownSync(ActorId)(credential.id),
-          profile: request.profile,
-        }),
-      );
-      if (Exit.isFailure(result)) throw Cause.squash(result.cause);
-      return result.value;
-    });
+    Effect.contextWith<never, A, AuthError | StoreError, never>((context) =>
+      this.perform("mutate", input.profile, (time) => {
+        const request = parse(AccessRequest, input);
+        const credential = this.requireCredential(
+          request,
+          time,
+          "write",
+          request.profile,
+        );
+        const result = Effect.runSyncExitWith(context)(
+          operation({
+            actor: Schema.decodeUnknownSync(ActorId)(credential.id),
+            profile: request.profile,
+          }),
+        );
+        if (Exit.isFailure(result)) throw Cause.squash(result.cause);
+        return result.value;
+      }),
+    );
 
   readonly revert = (input: AccessRequest & { readonly seq: Sequence }) =>
     this.perform("revert", input.profile, (time) => {
