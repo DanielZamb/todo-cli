@@ -343,8 +343,19 @@ of publishing.
 - **Kept, because they are data or the person's request, not permission:**
   `dryRun`, `erased`, `retry`, `changed`, `firstOccurrence` and `openEditor`.
   `openEditor` is applied only after the live newest check.
-- **Control.** `SourcePresentationRuleTests` fails if a removed parameter or
-  pattern returns.
+- **Control.** `SourcePresentationRuleTests` is a tripwire for the removed
+  names and patterns, not a proof of the rule. As the seat recorded, it does not
+  catch:
+  - a differently named Bool;
+  - a captured local holding a permission;
+  - a closure capturing a snapshot;
+  - a nested parameter list that evades its function pattern.
+
+  The rule's guarantees come from the API and the behavioural controls:
+  - `PresentationTicket` can only be made from a real ticket;
+  - `ReadBackOwner` is asked when a read-back publishes;
+  - the read-back sweep, the S1-16 and S1-17 interleavings and the seat's
+    probes exercise it.
 
 **Supersession is per target** (D1, ruled 2026-11-12, correcting S1-16 for
 candidate 8). An action is superseded only by a newer action of the same kind on
