@@ -244,7 +244,8 @@ export class OperationStore {
       this.diagnostics = new Diagnostics(
         this.db,
         path,
-        (input) => this.auth.requireOwner(input),
+        (input, use) =>
+          this.auth.withOwnerRead(input, Schema.Struct({}), {}, use),
         this.snapshots,
         this.scheduled,
         this.attachmentRoot,

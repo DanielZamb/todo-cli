@@ -1,5 +1,81 @@
 # Server projection reads
 
+## Diagnostics IMMEDIATE lock-hold limit exceeded
+
+The coordinator approved the one-argument Diagnostics constructor wiring change at 70b60e221f3b59fa5fb0a7aa8813b5dd624a64ae. It is implemented exactly, with only the formatter's line break. Diagnostics now validates a genuine owner authority at its port before its first statement and materializes generation, real Snapshot manifests, pending reminders and its metrics inside the same lease. The transaction mode remains IMMEDIATE. `requireOwner` remains because the HTTP and CLI Snapshot write helpers still use it; Diagnostics has no unscoped owner callback.
+
+**Required stop.** The paired lock-hold measurements exceed the coordinator's 5 ms median / 50 ms maximum limits. No deferred transaction or cheaper count has been introduced. This is not an installable delivery and final qualification remains pending.
+
+### Paired measurement
+
+Before is the immutable 70b60e22 source; after is that source plus the approved Diagnostics conversion. Each fixture has ten warmups per arm followed by 200 paired reads per arm. The first arm alternates on every pair. All 800 timed reads succeed synchronously through Effect.runSync. There is no deliberate wait in these measurements. The timer starts inside the physical transaction callback after SQLite admission and ends after IMMEDIATE returns from COMMIT. Nested savepoints are not double-counted. The following numbers are the longest continuous writer-lock hold per request, in milliseconds.
+
+| Fixture | Source | Median | 99th percentile | Maximum |
+| --- | --- | ---: | ---: | ---: |
+| Owner-shaped | 70b60e22 | 3.59 | 4.26 | 4.54 |
+| Owner-shaped | Checked owner scope | 25.34 | 28.98 | 29.70 |
+| Retained Snapshots | 70b60e22 | 3.67 | 8.06 | 8.48 |
+| Retained Snapshots | Checked owner scope | 31.39 | 58.51 | 66.31 |
+
+The baseline uses three physical IMMEDIATE transactions for credential checking, Snapshot listing and pending reminders. Its cumulative median hold per read is 3.68 ms on the owner fixture and 4.16 ms on the Snapshot fixture. The new path has one physical transaction, so its cumulative hold equals the continuous hold above. Total read latency is essentially unchanged: owner medians 25.61/25.40 ms before/after; retained-Snapshot medians 31.49/31.44 ms. This is a change in how long materialization holds the writer lock, not a latency improvement.
+
+The owner fixture is n178-p8-large1-h2048: 1,427 Tasks, 2,695,765 bytes of Task payload and 3,480 operations, with no internal checkpoints. The second fixture copies it, then makes sixteen accepted Task edits and real takeSnapshot calls, retaining sixteen checkpoint states totaling 43,841,718 bytes. It also makes eight real filesystem Snapshots totaling 504,987,648 bytes; its current database is 63,131,648 bytes. These are synthetic retained owner-sized states, not a claim about the owner's real database. Warmups and the fixed-state body controls are excluded from timing summaries.
+
+Both fixtures have 200 equal normalized body-hash pairs. Timing comparisons normalize only runtime Clock/RSS observations for hashing; actual timed RSS collection remains native. A separate full-body control fixes Clock and RSS inputs and requires exact body equality. Host one-minute load was 3.20–3.39 on ten logical CPUs while other workers were running. Both arms used identical runtime, data, SQLite settings and driver instrumentation. No native app, Swift or real HOME/database was used.
+
+### Proposal requiring review
+
+Use a dedicated deferred owner read scope for Diagnostics, with one credential check, one SQL snapshot and the same failed-authentication write outside the read transaction as Discovery. This must have guarded Snapshot-list and pending-reminder read paths that bypass OperationStore.transaction and its attachment-cleanup exit path. Snapshot preparation/recovery and concurrent filesystem changes also need explicit review: simply replacing IMMEDIATE with deferred around the existing callbacks is unsafe. The ordinary Snapshot and mutation transaction modes would stay unchanged. This is a proposal, not an implemented mode change.
+
+Optimizing only the Snapshot byte total cannot meet the limit: the owner-shaped fixture already holds the lock for 25.34 ms with zero internal checkpoints. Grouped metadata queries may reduce materialization cost, but would need a separate measured comparison and cannot be assumed to solve the lock issue. The dedicated read boundary is the recommended next step, subject to the coordinator's ruling on cleanup and filesystem consistency.
+
+### Constructor and source mapping evidence
+
+Each binary constructed the store sequentially on the exact same scratch database for each fixture. Both traces contain the same ten executed statements/bindings and zero credential lookups; the database SHA-256 remains unchanged. The trace hash is 92d57c245d990bf32b7a484ab531c183b88722f12602198938ea3d86af53b772 on both fixtures and both sides. It records statement execution through the Bun database API, including exec statement batches. The exact constructor source comparison independently permits only the approved callback argument change. Construction stores that closure and does not call it.
+
+The following hashes cover the mapped member slices including signatures and boundary whitespace. Nine covered members are byte-identical. The constructor differs only by the approved closure argument. Four cache capture/preparation statements also remain byte-identical. No coverage pin has been renewed, because the unit is not final.
+
+| Covered function | Before SHA-256 | After SHA-256 |
+| --- | --- | --- |
+| OperationStore.constructor | 2a69e09f15ab2df5d6fabe899467829a93bc940e19917447be36729bded20c18 | 0a2b509138fe541e9dca4a224c19858b91e80dbc63e650a1cf034802647f4c0c |
+| OperationStore.transaction | 2d180d81b4cd58d917cfd5516a74809070c856e3f899d2022cc6a37f2c2a9ac4 | identical |
+| OperationStore.record | 17e0f7d9e8f2cd448f28bcc6652a10ccb149dd18b3333e1b989346cf21825ab7 | identical |
+| OperationStore.recordRejection | f4451159996a47567fcd2cb3f353901b18bfcae06a7d3d221b862a124365e49f | identical |
+| OperationStore.validate | 44bd31ec46d7609c7cfefe0b6542a7da9c7ebc52a03c2030085920b32cb57ffe | identical |
+| OperationStore.appendSync | 0d03e81034c9e6b53dd00ac0a1e2a93a784080a5566d5bc8b9cef2a13552e305 | identical |
+| OperationStore.append | 81581c42bd5c3a67d4fead74aa52de20551d78a7083f9adbaee3a381d6d9e3d3 | identical |
+| OperationStore.historySync | 09fb760f98f2842fd771ad043c1360e36fc9c03a703fead830f9bd6ff4fb0f94 | identical |
+| OperationStore.takeSnapshot | 20245f26c5c805cdf2d04383de3238d854776e81169cbe7a3d6b97d2cdc97678 | identical |
+| OperationStore.rebuild | 663a9e17d796aecb01321cb1c151fad5045c78c91d3ca5eb893add89bc65ba61 | identical |
+
+| Cache statement | SHA-256, identical before/after |
+| --- | --- |
+| `const search = store.searchWords.read(selected.profile);` | 8bcd38d482d0dd09a0dfa602c0ebdabc93f504bee4573e9301b065d6cb46801c |
+| `const search = this.store.searchWords.read(selected.profile);` | 95f71f3ffb7baf48954bf14811b38085f5b571c9c4ed5617c405f34074579c79 |
+| `prepare: (text) => store.searchWords.words(search, text),` | c249d4474b02901f815c404a5aaad117cf0477507b63660434564008bca1f6b8 |
+| `prepare: (text) => this.store.searchWords.words(search, text),` | 6ba1861742d72aea0c46abb6303ac1a5dc88d9d279956c0c24c754c2b9b596b9 |
+
+### Commands and real exits
+
+| Command/control | Exit | Evidence under docs/evidence/ui-speed/server-reads/ |
+| --- | ---: | --- |
+| `pnpm --filter @todo/domain test diagnostics-scope.test.ts` before implementation | 1, intended literal lease assertion | strict-diagnostics-red.log |
+| `pnpm --filter @todo/domain test diagnostics-scope.test.ts diagnostics.test.ts` after implementation | 0, six tests including a real Snapshot list | strict-diagnostics-green.log |
+| Fixture builder, sixteen internal/eight filesystem Snapshots | 0 | strict-diagnostics-fixture.log; strict-diagnostics-fixture-sizes.json |
+| Compiled before and after domain driver builds | 0 / 0 | strict-diagnostics-build-before.log; strict-diagnostics-build-after.log |
+| Paired 200-read-per-arm measurements, both fixtures | 0, functional/body assertions pass | strict-diagnostics-holds.log; strict-diagnostics-holds/result.json |
+| Literal 5 ms median / 50 ms maximum threshold assertion | 1, required stop | strict-diagnostics-threshold.log |
+| Constructor traces on the exact same database, file hash unchanged | 0 | strict-diagnostics-constructor-same-db.log; .json |
+| Initial function-hash helper using the unavailable TypeScript compiler API | 1 | strict-diagnostics-wiring-review.log |
+| Corrected exact member-boundary hash/argument comparison | 0 | strict-diagnostics-wiring-review-2.log; strict-diagnostics-wiring-review.json |
+| `pnpm --filter @todo/domain typecheck` | 0 | strict-diagnostics-types.log |
+
+Reusable fixture, driver, builder, paired controller and mapping inputs are retained under .agents/skills/verify-diagnostics/controls/. The first-run source hashes and generated reusable versions are recorded in strict-diagnostics-control-sources.json. Bulk samples, complete traces, database hashes and private fixture manifests remain ignored locally.
+
+The writer-attempt control, all Diagnostics refusal/History and port-sensitivity controls, and the preceding checkpoint's remaining final gates are not yet proven. Work stopped at the explicit timing threshold. The exact frame table, final per-route holds, eight-read comparison, compiled recipes, proof renewal/checks, generated contract and exact order-27 root check are still pending. No pin, ADR, transaction mode, installation or remote branch changed.
+
+## Earlier strict-scope checkpoint
+
 ## Strict scope checkpoint: mapped constructor review required
 
 The owner chose B and lifted the product hold for this restructuring. This is an implementation checkpoint, not a completed or installable delivery. The experiment was parked on exp/sync-patches at ab1b4bd57b594f477075eef5e287c226355adcd6 and belongs to SYNC-EXP now. Its nine-line handoff is in the orchestrator reports directory. This worker stays on perf/server-reads.

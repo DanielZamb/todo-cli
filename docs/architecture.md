@@ -225,9 +225,11 @@ its supplied text without looking up Tags or Projects. Their credential lookup
 and classification are the only statements. CLI name resolution selects the
 active id after name reuse; a deleted HTTP id remains unavailable.
 
-This strict-scope checkpoint is incomplete. Diagnostics still materializes after
-its owner check. Converting its constructor callback awaits the AtomicCAS mapped
-source review described in the server-read report. It is not qualified to install.
+This strict-scope checkpoint is incomplete. Diagnostics now materializes inside
+the approved checked owner callback under the existing IMMEDIATE transaction.
+Its paired writer-lock hold measurements exceed the coordinator's limits, so
+qualification is stopped pending review of a separate read boundary. The current
+transaction mode has not changed and this checkpoint is not qualified to install.
 
 Task History selects relevant event rows in SQL before decoding OpLogEntry.
 SSE catch-up selects only committed rows for its Profile and cursor. Full History
