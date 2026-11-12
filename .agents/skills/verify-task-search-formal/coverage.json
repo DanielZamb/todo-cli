@@ -77,7 +77,7 @@
         "catalogSignalRevision and full-read debt",
         "lastCatalogReadAt and activation age"
       ],
-      "sha256": "ddae10742f25760596ae5ee2d25ecd3340798cb40976065844cdecbd42918390"
+      "sha256": "c831e40778591eb9e762f705ccd661f2951aed16d148501a29b99dbed7b6a39f"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -371,5 +371,17 @@
       }
     ],
     "review": "MAC-C1-S1-16: a ticket carries its instance's generation table, so supersession holds after a surface closes. TodoModel: handOff(_:kind:from:) is the only closed-surface hand-off and refuses a ticket that is not the newest; quick-add create gates its clear, capsule and hand-off on the newest ticket; refreshAfterWrite gains presents (false for a superseded action, read-back unchanged). refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged; searchError, taskLoadError and the picker and graph searchFailure stay outside the helper."
+  },
+  "readBackOwnerReview": {
+    "product": "896f44a522c2059deab7fce95a3c9bcf17e6853f",
+    "controls": "check-swift passed on 896f44a5: docs/evidence/discovery-formal/swift-rAa2cK",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "ddae10742f25760596ae5ee2d25ecd3340798cb40976065844cdecbd42918390",
+        "to": "c831e40778591eb9e762f705ccd661f2951aed16d148501a29b99dbed7b6a39f"
+      }
+    ],
+    "review": "MAC-C1-S1-17: refreshAfterWrite takes a ReadBackOwner (main window or surface instance, each with a ticket) asked when it publishes; presents:/presenting: removed; create, Save and Delete choose the owner by branch before the read-back and ask the ticket after it; openSeries split into openSeries/loadSeries; reloadDependencyPicker split into reload/refresh; the editor write's transfer report and announcement check ticket and opening live; transition editor text only into an editor showing that Task. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged; searchError, taskLoadError and the picker and graph searchFailure stay outside the helper."
   }
 }

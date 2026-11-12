@@ -5,7 +5,7 @@
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "16c59f74737043201861cebcfbf5f4dbdada154d",
+  "productionSyncCommit": "896f44a522c2059deab7fce95a3c9bcf17e6853f",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -157,7 +157,7 @@
         "signOut start, failure and commit",
         "followChanges reconnect retry from Offline and sign-out notice"
       ],
-      "sha256": "ddae10742f25760596ae5ee2d25ecd3340798cb40976065844cdecbd42918390",
+      "sha256": "c831e40778591eb9e762f705ccd661f2951aed16d148501a29b99dbed7b6a39f",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -193,7 +193,7 @@
       "functions": [
         "changeAttachment captured epoch and publication"
       ],
-      "sha256": "8cb348f0b03e6df8533aab9d8ddec3c9b5b763d92232dc7c881c6fbfb0c6124a",
+      "sha256": "1f89b513ce7ce0d7858a6b4f849201a11ab6340825e53c963d5af2e2c0cedfed",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -202,7 +202,7 @@
         "reloadBatchEditTargets",
         "applyBatchEdit"
       ],
-      "sha256": "d07191cf5cd731020e293c622e9fa2c361ce5ef8648d6d83ba6792bfb50e9e3c",
+      "sha256": "cfb66b139f0b8b163ecfe498f6e095d4063590ed5599df0be1ffbfc7afdf99c0",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -211,7 +211,7 @@
         "reloadAttachmentTargets",
         "applyAttachmentBatch"
       ],
-      "sha256": "71e0dc626b9b48a4a25e5bb786002e6cf8689d2087b488361b67e4262f7ff3b0",
+      "sha256": "842b82cf442cb3e67b2bba1d50486ba4fb5bea8bd53e25495329eeebdc83c105",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     }
   ],
@@ -225,7 +225,7 @@
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "63fd7f957368c82a22bc538b7feec73cbdc6fabc",
+  "previousProductionSyncCommit": "16c59f74737043201861cebcfbf5f4dbdada154d",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -503,5 +503,32 @@
       }
     ],
     "review": "MAC-C1-S1-16: a ticket carries its instance's generation table, so supersession holds after a surface closes. TodoModel: handOff(_:kind:from:) is the only closed-surface hand-off and refuses a ticket that is not the newest; quick-add create gates its clear, capsule and hand-off on the newest ticket; refreshAfterWrite gains presents (false for a superseded action, read-back unchanged). No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed; requestDiscovery, showDiscoveryMatch and discovery.error are untouched (discovery stays outside the helper, see docs/decisions/mac-session-retirement.md)."
+  },
+  "readBackOwnerReview": {
+    "product": "896f44a522c2059deab7fce95a3c9bcf17e6853f",
+    "controls": "check-swift passed on 896f44a5: docs/evidence/discovery-formal/swift-rAa2cK",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "ddae10742f25760596ae5ee2d25ecd3340798cb40976065844cdecbd42918390",
+        "to": "c831e40778591eb9e762f705ccd661f2951aed16d148501a29b99dbed7b6a39f"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentModel.swift",
+        "from": "8cb348f0b03e6df8533aab9d8ddec3c9b5b763d92232dc7c881c6fbfb0c6124a",
+        "to": "1f89b513ce7ce0d7858a6b4f849201a11ab6340825e53c963d5af2e2c0cedfed"
+      },
+      {
+        "path": "apps/macos/Sources/BatchEdit.swift",
+        "from": "d07191cf5cd731020e293c622e9fa2c361ce5ef8648d6d83ba6792bfb50e9e3c",
+        "to": "cfb66b139f0b8b163ecfe498f6e095d4063590ed5599df0be1ffbfc7afdf99c0"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentBatch.swift",
+        "from": "71e0dc626b9b48a4a25e5bb786002e6cf8689d2087b488361b67e4262f7ff3b0",
+        "to": "842b82cf442cb3e67b2bba1d50486ba4fb5bea8bd53e25495329eeebdc83c105"
+      }
+    ],
+    "review": "MAC-C1-S1-17: refreshAfterWrite takes a ReadBackOwner (main window or surface instance, each with a ticket) asked when it publishes; presents:/presenting: removed; create, Save and Delete choose the owner by branch before the read-back and ask the ticket after it; openSeries split into openSeries/loadSeries; reloadDependencyPicker split into reload/refresh; the editor write's transfer report and announcement check ticket and opening live; transition editor text only into an editor showing that Task. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed; requestDiscovery, showDiscoveryMatch and discovery.error are untouched (discovery stays outside the helper, see docs/decisions/mac-session-retirement.md)."
   }
 }
