@@ -47,3 +47,27 @@ without a default-current value. Replacing a credential disconnects old streams
 and invalidates request generations. refreshConflictDefinitions checks its epoch
 before publishing success or failure. SessionVault itself remains unchanged and
 its native behavior remains under HOLD.
+
+## Sign-out transitions during HOLD
+
+Run from the checkout root with a fresh absolute evidence path and an optional
+source commit:
+
+```sh
+scripts/swift-slot.sh .agents/skills/verify-macos/scripts/verify-sign-out-stream.py "$PWD/.scratch/sign-out-stream/<run>" HEAD
+```
+
+It copies the production model sources with the in-memory SessionVault, starts
+the compiled scratch server and a proxy that touches only DELETE /auth/session.
+It drives seven transitions: a 503 reply, a reply dropped before the server, a
+cancelled sign-out before the server, a reply dropped after revocation, a
+cancelled sign-out after revocation, a normal 204, and a 503 on a model with no
+stored cursor. Five CLI writes are committed while the stream is disconnected.
+Read sign-out-stream.json. It holds the server subscriber counts, the operation
+ids delivered across reconnects against the committed op_log ids, every
+connection state, the message, 401 counts and the old Session's server status.
+Require exit 0, no skipped or doubled ids, no `offline` state, and exactly one
+subscriber after a failed sign-out and zero after a revoked one. Require no
+further 401 after settling. Two controlled-transport suites cover a 204 seen
+after cancellation and 200 or 409 replies. Passing a pre-fix commit such as
+2ce2abcf must fail.

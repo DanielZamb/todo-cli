@@ -43,6 +43,40 @@ defer adopts the installed epoch before that read. Vault failures before
 installation retain the original ownership. These boundaries are distinct from
 transport cancellation and from retiring a real credential scope.
 
+## Sign-out reply boundary
+
+Only the documented 204 reply proves revocation. Before this correction the
+model discarded the reply, so a 409 or any other status that the bearer
+middleware does not raise counted as revocation. The app then deleted the
+stored Session and signed out locally while the server kept it. A failed
+sign-out's notice also lasted only until its own reconnect cleared every
+message, a few milliseconds later. The notice now survives the first ready
+event of that reconnect. A later Offline state replaces it. Cancellation shows
+nothing.
+
+What the owner sees, measured through the production model and transport on a
+compiled scratch server
+([verify-sign-out-stream.py](../../.agents/skills/verify-macos/scripts/verify-sign-out-stream.py)):
+
+| Server revoked | Reply seen | Case | Owner sees | Server subscribers before / during / after 3 s |
+| --- | --- | --- | --- | --- |
+| No | Yes | HTTP 503 | Stays signed in; Reconnecting, then live; "The server rejected this request (HTTP 503)." remains. No Offline state. | 1 / 0 / 1 |
+| No | No | Connection dropped before the server | Stays signed in; Reconnecting, then live; "Couldn't reach the server or read its response…" remains. | 1 / 0 / 1 |
+| No | No | Task cancelled before the server | Stays signed in; Reconnecting, then live; no message. | 1 / 0 / 1 |
+| Yes | No | Reply dropped after the server revoked | Reconnecting, then the sign-in screen with "Your Session ended. Sign in again." One 401, none in the next 5 s. | 1 / 0 / 0 |
+| Yes | No | Task cancelled after the server revoked | Same as the dropped reply: one 401, then signed out. | 1 / 0 / 0 |
+| Yes | Yes | 204 | Sign-in screen, no message, no 401. | 1 / – / 0 |
+| Yes | Yes, after cancellation | Controlled transport | Sign-in screen; stored Session removed; no reconnect. | – |
+| No | Yes, 200 or 409 | Controlled transport | Stays signed in, Session kept, message shown. | – |
+
+In every case where the Session survives, five CLI writes committed while
+the stream was disconnected arrive exactly once, by operation id, with none
+skipped. This also holds for a model with no stored cursor. Busy and Diagnostics
+loading are false afterwards. The same harness fails at 2ce2abcf: the failed
+sign-out's message is lost, a cancelled sign-out never reconnects, a
+revocation reply after cancellation leaves the model signed in, and a 200 or
+409 reply signs out locally.
+
 ## Close admission before invalidation
 
 [ScopedTransport](../../apps/macos/API/Sources/TodoAPI/ScopedTransport.swift)
