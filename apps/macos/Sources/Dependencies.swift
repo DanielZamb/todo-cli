@@ -57,7 +57,8 @@ struct DependencyPicker: Identifiable {
         guard kind == .link else { return nil }
         let verbs = Set(parts.map(\.value.attemptVerb))
         let verb = verbs.count == 1 ? verbs.first! : "change"
-        return DependencyNotice(message: "Couldn't \(verb) \(parts.count) Dependencies: \(MergedFailureWording.names(parts.map(\.subject))). Try each again to see why.")
+        let reason = MergedFailureWording.reason(codes: parts.map(\.reasonCode), texts: parts.map(\.reasonText), differing: "Try each again to see why.")
+        return DependencyNotice(message: "Couldn't \(verb) \(parts.count) Dependencies: \(MergedFailureWording.names(parts.map(\.subject))). \(reason)")
     })
     var operationFailure: DependencyNotice? { messages.value }
     var searchFailure: DependencyNotice?
@@ -315,10 +316,10 @@ extension TodoModel {
                 // failure is not silent. A superseded link hands off nothing (S1-16). Both Tasks, the
                 // dependent first, whatever the picker's direction (candidate 8 ruling 2).
                 let attempt = remove ? "stop “\(dependent.title)” depending on “\(blocker.title)”" : "make “\(dependent.title)” depend on “\(blocker.title)”"
-                handOff("Couldn't \(attempt). " + notice.message, kind: .dependencyLink, from: linkTicket, subject: candidate.title)
+                handOff("Couldn't \(attempt). " + notice.message, kind: .dependencyLink, from: linkTicket, subject: candidate.title, reasonCode: notice.failure?.code, reasonText: notice.message)
                 return
             }
-            if dependencies.picker?.messages.fail(notice, linkTicket, subject: candidate.title) == true {
+            if dependencies.picker?.messages.fail(notice, linkTicket, subject: candidate.title, reasonCode: notice.failure?.code, reasonText: notice.message) == true {
                 dependencies.picker?.requiresReload = notice.failure?.code == "occ_conflict"
             }
         }

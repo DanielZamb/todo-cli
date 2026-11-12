@@ -29,6 +29,10 @@ struct SurfaceMessages<Kind: Hashable, Value> {
         let subject: String?
         let value: Value
         let sequence: Int
+        /// The refusal's code and sentence, so a merge can say a shared reason once (D2 ruling:
+        /// compared by code, not by sentence).
+        var reasonCode: String? = nil
+        var reasonText: String? = nil
     }
     private(set) var parts: [Part] = []
     private(set) var kind: Kind?
@@ -37,9 +41,9 @@ struct SurfaceMessages<Kind: Hashable, Value> {
     /// a new value with a new table, so a ticket from an earlier instance is never newest here.
     private let generations = Generations()
     /// How this surface merges same-kind parts; nil for a kind that does not merge.
-    private let merge: (@Sendable (Kind, [(subject: String?, value: Value)]) -> Value?)?
+    private let merge: (@Sendable (Kind, [Part]) -> Value?)?
 
-    init(merge: (@Sendable (Kind, [(subject: String?, value: Value)]) -> Value?)? = nil) { self.merge = merge }
+    init(merge: (@Sendable (Kind, [Part]) -> Value?)? = nil) { self.merge = merge }
 
     struct TargetKey: Hashable { let kind: Kind; let target: AnyHashable }
     /// Shared by an instance and its tickets; used on the main actor only.
@@ -72,7 +76,7 @@ struct SurfaceMessages<Kind: Hashable, Value> {
     var value: Value? {
         guard let kind, let last = parts.last else { return nil }
         if parts.count == 1 { return last.value }
-        return merge?(kind, parts.map { ($0.subject, $0.value) }) ?? last.value
+        return merge?(kind, parts) ?? last.value
     }
 
     /// The sequence an action notes at its start (for producers that do not take a ticket).
@@ -116,19 +120,19 @@ struct SurfaceMessages<Kind: Hashable, Value> {
     }
 
     /// A failure: publishes only while the action is still the newest of its kind (on its target).
-    @discardableResult mutating func fail(_ value: Value, _ ticket: Ticket, subject: String? = nil) -> Bool {
+    @discardableResult mutating func fail(_ value: Value, _ ticket: Ticket, subject: String? = nil, reasonCode: String? = nil, reasonText: String? = nil) -> Bool {
         guard isNewest(ticket) else { return false }
-        publish(value, kind: ticket.kind, target: ticket.target, subject: subject)
+        publish(value, kind: ticket.kind, target: ticket.target, subject: subject, reasonCode: reasonCode, reasonText: reasonText)
         return true
     }
 
     /// Publishes a message. A same-kind message for another target merges with the one showing
     /// when this surface merges that kind; otherwise the newest replaces it.
-    mutating func publish(_ value: Value, kind: Kind, target: AnyHashable? = nil, subject: String? = nil) {
+    mutating func publish(_ value: Value, kind: Kind, target: AnyHashable? = nil, subject: String? = nil, reasonCode: String? = nil, reasonText: String? = nil) {
         sequence += 1
-        let part = Part(target: target, subject: subject, value: value, sequence: sequence)
+        let part = Part(target: target, subject: subject, value: value, sequence: sequence, reasonCode: reasonCode, reasonText: reasonText)
         let merges = kind == self.kind && target != nil && parts.allSatisfy { $0.target != nil }
-            && merge?(kind, [(subject, value), (subject, value)]) != nil
+            && merge?(kind, [part, part]) != nil
         if merges {
             parts.removeAll { $0.target == target }
             parts.append(part)
@@ -163,6 +167,12 @@ protocol SurfaceTicket { var isNewest: Bool { get }; var target: AnyHashable? { 
 /// Tasks read as one message naming them, up to three, then "and N more".
 enum MergedFailureWording {
     static let namedLimit = 3
+    /// The closing sentence: the shared reason once when every part was refused with the same
+    /// code (compared by code, not by sentence), otherwise `differing`.
+    static func reason(codes: [String?], texts: [String?], differing: String) -> String {
+        if let first = codes.first, let code = first, codes.allSatisfy({ $0 == code }), let text = texts.first, let sentence = text { return sentence }
+        return differing
+    }
     static func names(_ subjects: [String?]) -> String {
         let named = subjects.compactMap { $0 }.map { "\u{201C}\($0)\u{201D}" }
         let shown = Array(named.prefix(namedLimit))

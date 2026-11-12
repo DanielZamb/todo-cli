@@ -96,5 +96,11 @@ import Testing
         #expect(MergedFailureWording.names(["A", "B", "C", "D", "E"]) == "\u{201C}A\u{201D}, \u{201C}B\u{201D}, \u{201C}C\u{201D} and 2 more")
         #expect(MergedFailureWording.names(["A", "B"]) == "\u{201C}A\u{201D} and \u{201C}B\u{201D}")
     }
+    @Test func aSharedRefusalIsSaidOnceAndDifferentOnesKeepTheGenericClose() {
+        // Compared by code, not by sentence: the same code with differently worded sentences is one reason.
+        #expect(MergedFailureWording.reason(codes: ["dependency_cycle", "dependency_cycle"], texts: ["Each would create a cycle.", "Different words."], differing: "Try each again to see why.") == "Each would create a cycle.")
+        #expect(MergedFailureWording.reason(codes: ["dependency_cycle", "occ_conflict"], texts: ["Same words.", "Same words."], differing: "Try each again to see why.") == "Try each again to see why.")
+        #expect(MergedFailureWording.reason(codes: [nil, nil], texts: ["A", "B"], differing: "generic") == "generic")
+    }
 }
 
