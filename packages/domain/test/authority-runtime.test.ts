@@ -122,6 +122,16 @@ it.effect(
                   );
                   const direct = [
                     {
+                      name: "diagnostics",
+                      authority: owner,
+                      invoke: (value: unknown) =>
+                        Reflect.apply(
+                          Reflect.get(store.diagnostics, "readWithin"),
+                          store.diagnostics,
+                          [value],
+                        ),
+                    },
+                    {
                       name: "managed-image",
                       authority: read,
                       invoke: (value: unknown) =>

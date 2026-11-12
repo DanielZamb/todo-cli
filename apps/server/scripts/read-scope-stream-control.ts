@@ -233,6 +233,20 @@ async function run(binary: string, cli: string, scenario: string) {
     let reader = await connect(credential, profile, String(initialCursor));
     assert.equal((await next(reader)).raw, "event: ready\ndata: null\n\n");
     if (scenario === "never-created") {
+      const initialized = spawnSync(
+        resolve(cli),
+        ["--db", path, "--profile", profile, "--format", "json", "init"],
+        {
+          env: { ...process.env, HOME: home },
+          encoding: "utf8",
+          timeout: 10000,
+        },
+      );
+      assert.equal(
+        initialized.status,
+        0,
+        initialized.stdout + initialized.stderr,
+      );
       cliWrite(profile, uuids[0] ?? "", "First write creates Profile");
       const event = await next(reader);
       assert.equal(event.event, "operation");

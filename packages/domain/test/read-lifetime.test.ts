@@ -120,6 +120,14 @@ const ports = (
     ["snapshot-list", store.snapshots.listRead(values.owner)],
     ["snapshot-show", store.snapshots.showRead(values.owner)],
     [
+      "diagnostics",
+      Reflect.apply(
+        Reflect.get(store.diagnostics, "readWithin"),
+        store.diagnostics,
+        [values.owner],
+      ),
+    ],
+    [
       "profiles",
       attempt(() =>
         Reflect.apply(Reflect.get(projection, "profiles"), projection, [
@@ -232,6 +240,98 @@ for (const transition of [
         }
       }),
     ),
+  );
+}
+
+for (const transition of [
+  "commit",
+  "rollback",
+  "interruption",
+  "failure",
+  "restore",
+  "Purge",
+  "expiry",
+  "revocation",
+  "Profile deletion",
+  "unrelated request",
+]) {
+  it.effect(
+    `the terminal port refuses its permission after ${transition}`,
+    () =>
+      fixture((store, credential, _token, snapshot) =>
+        Effect.gen(function* () {
+          const deletion = yield* store.auth.deleteProfile({
+            credential,
+            profile: work.id,
+            options: { with_tasks: true, dry_run: false },
+          });
+          expect(deletion.outcome).toBe("deleted");
+          let retained: unknown;
+          yield* Effect.exit(
+            store.auth.withStreamRead(
+              { credential, profile: work.id },
+              Schema.Struct({}),
+              {},
+              { after: 0, generation: "initial" },
+              (result) => {
+                if (result.kind !== "terminal")
+                  return Effect.die("Expected terminal permission");
+                retained = result.read;
+                if (transition === "interruption") return Effect.interrupt;
+                if (transition === "rollback" || transition === "failure")
+                  return Effect.fail(new StoreError(new Error(transition)));
+                return Effect.void;
+              },
+            ),
+          );
+          expect(retained).toBeDefined();
+          if (transition === "restore")
+            yield* store.snapshots.restore(snapshot, { dryRun: false });
+          if (transition === "expiry") yield* TestClock.adjust("8 days");
+          if (transition === "revocation")
+            yield* store.auth.signOut({ credential });
+          const personal = Schema.decodeUnknownSync(ProfileId)("personal");
+          const commands = new TaskCommands(store);
+          if (transition === "Purge") {
+            const id = Schema.decodeUnknownSync(TaskId)("ab-terminal-purge");
+            yield* commands.create(
+              { credential, profile: personal },
+              { title: "Later purge" },
+              { task_id: id },
+            );
+            yield* commands.delete(
+              { credential, profile: personal, task_id: id },
+              { from_version: version(1) },
+            );
+            yield* commands.purge(
+              { credential, profile: personal, task_id: id },
+              { from_version: version(2) },
+            );
+          }
+          if (transition === "unrelated request")
+            expect(
+              yield* commands.list({ credential, profile: personal }),
+            ).toEqual([]);
+          const db = Reflect.get(store, "db"),
+            original = db.query.bind(db);
+          let queries = 0;
+          Object.defineProperty(db, "query", {
+            configurable: true,
+            value: (...args: unknown[]) => {
+              queries++;
+              return Reflect.apply(original, db, args);
+            },
+          });
+          try {
+            yield* refused(
+              Reflect.apply(store.terminalChangesRead, store, [retained]),
+            );
+            expect(queries).toBe(0);
+          } finally {
+            Object.defineProperty(db, "query", { value: original });
+          }
+        }),
+      ),
   );
 }
 
