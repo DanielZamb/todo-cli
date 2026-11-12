@@ -228,6 +228,15 @@ final class TodoModel {
     }
     func isNewestMessage(_ ticket: SurfaceMessages<MessageKind, String>.Ticket) -> Bool { mainMessages.isNewest(ticket) }
     func publishMessage(_ text: String, kind: MessageKind, surface: MessageSurface? = nil) { pendingMessageKind = kind; pendingMessageSurface = surface; message = text }
+    /// The only way a surface's completion reaches the main window after its surface closed
+    /// (MAC-C1-S1-16): it hands off only if the action is still the newest of its kind in its
+    /// instance. A superseded action presents nothing anywhere. Returns whether it handed off.
+    @discardableResult
+    func handOff<Kind, Value>(_ text: String, kind: MessageKind, from ticket: SurfaceMessages<Kind, Value>.Ticket) -> Bool {
+        guard ticket.isNewest else { return false }
+        publishMessage(text, kind: kind)
+        return true
+    }
     /// A success started at `mark` clears the current message only if it is one of `kinds`
     /// and already existed when the action started. A newer message always survives.
     func clearMessage(_ kinds: Set<MessageKind>, since mark: Int) {
@@ -1078,8 +1087,11 @@ final class TodoModel {
                 }
             }
             // A showing quick-add closes itself on success, so its read-back belongs to the main window.
-            await refreshAfterWrite("Task added", presenting: showing ? nil : surface)
+            await refreshAfterWrite("Task added", presenting: showing ? nil : surface, presents: createTicket.isNewest)
             guard isCurrentCredential(credentialEpoch), profile == creationProfile else { return false }
+            // A superseded create presents nothing anywhere (S1-16): no clearing of an earlier
+            // hand-off, no announcement, no "Task added" capsule. Its Task still reached the list.
+            guard createTicket.isNewest else { return false }
             clearMessage([.quickAdd], since: mark)
             if showing { announce("Task added to \(profileName)") }
             // A Task the current view filters out (no date in Today, say) is confirmed quietly.
@@ -1092,8 +1104,9 @@ final class TodoModel {
             guard isCurrentCredential(credentialEpoch), profile == creationProfile else { return false }
             if surface.map(isShowing) ?? true { quickAddMessages.fail(describe(error, at: .quickAdd), createTicket); return false }
             // The quick-add that started this was closed during the create (Escape is not gated by
-            // busy): hand one named message to the main window, so the failure is not silent.
-            publishMessage("Couldn't add “\(title)”. " + describe(error), kind: .quickAdd)
+            // busy): the newest create of that instance hands one named message to the main window,
+            // so the failure is not silent. A superseded create hands off nothing (S1-16).
+            handOff("Couldn't add “\(title)”. " + describe(error), kind: .quickAdd, from: createTicket)
             return false }
     }
 
@@ -1611,7 +1624,9 @@ final class TodoModel {
     /// `presenting` is the surface instance that made the write (nil: the main window). It is checked
     /// after the read-back's await, not before: if that instance is no longer showing, a failed
     /// read-back raises no message of its own and is left to the ordinary connection recovery.
-    func refreshAfterWrite(_ accepted: String, clearing kind: MessageKind? = nil, since writeMark: Int? = nil, presenting surface: MessageSurface? = nil) async {
+    /// `presents` is false for an action that was superseded: its read-back still runs, but it
+    /// raises no message of its own (S1-16).
+    func refreshAfterWrite(_ accepted: String, clearing kind: MessageKind? = nil, since writeMark: Int? = nil, presenting surface: MessageSurface? = nil, presents: Bool = true) async {
         let credentialEpoch = discovery.credentialEpoch
         let mark = writeMark ?? messageMark
         catalogStale = true
@@ -1622,7 +1637,7 @@ final class TodoModel {
             clearMessage(Set([MessageKind.connection] + (kind.map { [$0] } ?? [])), since: mark)
         case .failed:
             if signedIn {
-                if surface.map(isShowing) ?? true { publishMessage(accepted + ". The live view is reconnecting.", kind: .connection) }
+                if presents, surface.map(isShowing) ?? true { publishMessage(accepted + ". The live view is reconnecting.", kind: .connection) }
                 connect()
             }
         case .superseded:

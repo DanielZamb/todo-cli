@@ -15,19 +15,36 @@ import Foundation
 /// - Nothing older replaces or clears something newer; nothing saves or restores a message.
 ///
 /// A new surface instance starts with a new value of this type.
+///
+/// Supersession is decided first and is final (MAC-C1-S1-16): a ticket carries its instance's
+/// generation table, so it can still answer `isNewest` after its surface has closed. An action
+/// superseded while its surface was open presents nothing anywhere: not in the surface, not as a
+/// hand-off to the main window, not as a quiet confirmation.
 struct SurfaceMessages<Kind: Hashable, Value> {
     private(set) var value: Value?
     private(set) var kind: Kind?
     private(set) var sequence = 0
-    private var newest: [Kind: Int] = [:]
-    /// A new surface instance is a new value; a ticket from an earlier instance is never newest.
-    private let instance = UUID()
+    /// The instance's newest generation per kind. A new surface instance is a new value with a new
+    /// table, so a ticket from an earlier instance is never newest here.
+    private let generations = Generations()
+
+    /// Shared by an instance and its tickets; used on the main actor only.
+    final class Generations: @unchecked Sendable {
+        fileprivate var newest: [Kind: Int] = [:]
+    }
 
     struct Ticket: Equatable {
         let kind: Kind
         let generation: Int
         let mark: Int
-        fileprivate let instance: UUID
+        fileprivate let generations: Generations
+        /// Whether no newer action of this kind has started in this ticket's instance, whether or
+        /// not that instance is still showing. Every presentation, in the surface or handed off
+        /// to the main window, requires it.
+        var isNewest: Bool { generations.newest[kind] == generation }
+        static func == (lhs: Self, rhs: Self) -> Bool {
+            lhs.kind == rhs.kind && lhs.generation == rhs.generation && lhs.mark == rhs.mark && lhs.generations === rhs.generations
+        }
     }
 
     /// The sequence an action notes at its start (for producers that do not take a ticket).
@@ -35,13 +52,13 @@ struct SurfaceMessages<Kind: Hashable, Value> {
 
     /// Starts an action of `kind`; any older pending action of the same kind is superseded.
     mutating func begin(_ kind: Kind) -> Ticket {
-        let generation = (newest[kind] ?? 0) + 1
-        newest[kind] = generation
-        return Ticket(kind: kind, generation: generation, mark: sequence, instance: instance)
+        let generation = (generations.newest[kind] ?? 0) + 1
+        generations.newest[kind] = generation
+        return Ticket(kind: kind, generation: generation, mark: sequence, generations: generations)
     }
 
     /// Whether the action is still the newest of its kind, and so may present.
-    func isNewest(_ ticket: Ticket) -> Bool { ticket.instance == instance && newest[ticket.kind] == ticket.generation }
+    func isNewest(_ ticket: Ticket) -> Bool { ticket.generations === generations && ticket.isNewest }
     /// Starts an action that presents a clean surface at once (ends whatever was shown, then begins).
     mutating func beginClean(_ kind: Kind) -> Ticket {
         end()

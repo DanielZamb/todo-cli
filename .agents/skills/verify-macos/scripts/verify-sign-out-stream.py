@@ -79,7 +79,7 @@ try:
         (sources / Path(file).name).write_bytes(data)
         hashes[file] = hashlib.sha256(data).hexdigest()
     shutil.copyfile(fixtures / 'auth-epoch/SessionVault.swift', sources / 'SessionVault.swift')
-    for name in ['SignOutStreamTests.swift', 'SignOutNoticeTests.swift', 'SeatSignOutNoticeTests.swift', 'CredentialTransitionCancellationTests.swift', 'SeatRestoreCancellationBoundaryTests.swift', 'MessageKindTests.swift', 'SeatMessageInterleavingTests.swift', 'SeatMessageScopeObservationTests.swift', 'SeatRestoreCancellationCorrectedTests.swift', 'SeatSurfaceLifetimeTests.swift', 'SeatSurfaceClassTests.swift', 'SeatCandidate7Gate.swift', 'SeatCandidate7InlineInterleavingTests.swift']:
+    for name in ['SignOutStreamTests.swift', 'SignOutNoticeTests.swift', 'SeatSignOutNoticeTests.swift', 'CredentialTransitionCancellationTests.swift', 'SeatRestoreCancellationBoundaryTests.swift', 'MessageKindTests.swift', 'SeatMessageInterleavingTests.swift', 'SeatMessageScopeObservationTests.swift', 'SeatRestoreCancellationCorrectedTests.swift', 'SeatSurfaceLifetimeTests.swift', 'SeatSurfaceClassTests.swift', 'SeatCandidate7Gate.swift', 'SeatCandidate7InlineInterleavingTests.swift', 'SeatCandidate7bBoundaryTests.swift']:
         shutil.copyfile(fixtures / 'sign-out-stream' / name, tests / name)
     shutil.copyfile(root / 'apps/macos/Package.resolved', package / 'Package.resolved')
     api = str(root / 'apps/macos/API')
@@ -252,39 +252,46 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
     proxy_url = f'http://127.0.0.1:{proxy.server_port}'
     (evidence / 'endpoints.json').write_text(json.dumps({'server': url, 'proxy': proxy_url, 'database': str(scratch / 'scratch.db')}) + '\n')
     test_env = dict(env, TODO_SIGN_OUT_STREAM='1', TODO_SIGN_OUT_PROXY=proxy_url, TODO_SIGN_OUT_SERVER=url, TODO_SIGN_OUT_EVIDENCE=str(evidence), SEAT_SERVER=url, SEAT_EVIDENCE=str(evidence))
-    exit_code = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SignOutStreamTests', '--skip', 'SeatSignOutNoticeTests|SeatRestoreCancellationBoundaryTests|SeatMessageInterleavingTests|SeatMessageScopeObservationTests|SeatRestoreCancellationCorrectedTests|SeatSurfaceLifetimeTests|SeatSurfaceClassTests|SeatCandidate7InlineInterleavingTests'], 'tests.log', test_env)
-    # The seat's unchanged probe runs alone: its teardown invalidates its URLSession while
-    # the model can still reconnect, and an exception there would hide the other suites.
-    seat_exit = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatSignOutNoticeTests'], 'seat-tests.log', test_env)
-    restore_exit = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatRestoreCancellationBoundaryTests'], 'seat-restore-tests.log', test_env)
-    # Coordinator ruling (second seat), 2026-11-11: after the probe's second, uncancelled restore
-    # the intended state is not busy and signed in. Line 52 (!signedIn) is the one expected
-    # difference; retryAllowed (53) and retried (54) carry MAC-C1-S1-08 and must pass.
-    issues = re.findall(r'recorded an issue at (SeatRestoreCancellationBoundaryTests\.swift:\d+)', (evidence / 'seat-restore-tests.log').read_text())
-    seat_restore = dict(exit=restore_exit, issues=issues, expected_difference='SeatRestoreCancellationBoundaryTests.swift:52 after a successful second restore (ruling 2026-11-11)')
-    if restore_exit != 0 and issues == ['SeatRestoreCancellationBoundaryTests.swift:52']: restore_exit = 0
-    seat_restore['accepted'] = restore_exit == 0
-    (evidence / 'seat-restore.json').write_text(json.dumps(seat_restore, indent=2) + '\n')
-    interleaving_exit = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatMessageInterleavingTests'], 'seat-interleaving-tests.log', test_env)
-    seat_others = {}
-    for suite in ['SeatRestoreCancellationCorrectedTests', 'SeatMessageScopeObservationTests', 'SeatSurfaceLifetimeTests', 'SeatSurfaceClassTests', 'SeatCandidate7InlineInterleavingTests']:
-        seat_others[suite] = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', suite], f'{suite}.log', test_env)
-    # Coordinator ruling 3 (second seat), 2026-11-12: "The two `#require(model.message)` lines
-    # (SeatSurfaceLifetimeTests.swift:85 and SeatMessageScopeObservationTests.swift:42) are expected
-    # differences under my ruling 3: the follow-up failure now lives in the surface that offered it
-    # (the picker's notice, the Import report's error), so `model.message` is nil there by design."
-    # A probe run is accepted only if that line is its sole issue; the probes stay byte-identical.
-    # Counterpart controls: MessageKindTests.olderPickerSuccessLeavesTheNewerPickerAndItsError and
-    # whatEndsAFollowUpFailureShownInItsSurface.
-    ruled = {'SeatSurfaceLifetimeTests': 'SeatSurfaceLifetimeTests.swift:85', 'SeatMessageScopeObservationTests': 'SeatMessageScopeObservationTests.swift:42'}
-    seat_ruling3 = {}
-    for suite, line in ruled.items():
-        found = re.findall(r'recorded an issue at (' + suite + r'\.swift:\d+)', (evidence / f'{suite}.log').read_text())
-        sole = seat_others[suite] != 0 and found == [line]
-        seat_ruling3[suite] = dict(exit=seat_others[suite], issues=found, expected_difference=line + ' (ruling 3, 2026-11-12: the follow-up failure lives in the surface that offered it)', accepted=sole or seat_others[suite] == 0)
-        if sole: seat_others[suite] = 0
-    (evidence / 'seat-ruling3.json').write_text(json.dumps(seat_ruling3, indent=2) + '\n')
-    exit_code = exit_code or seat_exit or restore_exit or interleaving_exit or int(any(seat_others.values()))
+    # SIGN_OUT_STREAM_ONLY=<swift test filter> runs only those suites against the same server and
+    # proxy: a short, targeted run while the shared Swift slot is scarce. Its status is TARGETED-*,
+    # never PASS; the full proof is the run without it.
+    only = os.environ.get('SIGN_OUT_STREAM_ONLY')
+    if only:
+        exit_code = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', only], 'targeted-tests.log', test_env)
+    else:
+        exit_code = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SignOutStreamTests', '--skip', 'SeatSignOutNoticeTests|SeatRestoreCancellationBoundaryTests|SeatMessageInterleavingTests|SeatMessageScopeObservationTests|SeatRestoreCancellationCorrectedTests|SeatSurfaceLifetimeTests|SeatSurfaceClassTests|SeatCandidate7InlineInterleavingTests|SeatCandidate7bBoundaryTests'], 'tests.log', test_env)
+        # The seat's unchanged probe runs alone: its teardown invalidates its URLSession while
+        # the model can still reconnect, and an exception there would hide the other suites.
+        seat_exit = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatSignOutNoticeTests'], 'seat-tests.log', test_env)
+        restore_exit = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatRestoreCancellationBoundaryTests'], 'seat-restore-tests.log', test_env)
+        # Coordinator ruling (second seat), 2026-11-11: after the probe's second, uncancelled restore
+        # the intended state is not busy and signed in. Line 52 (!signedIn) is the one expected
+        # difference; retryAllowed (53) and retried (54) carry MAC-C1-S1-08 and must pass.
+        issues = re.findall(r'recorded an issue at (SeatRestoreCancellationBoundaryTests\.swift:\d+)', (evidence / 'seat-restore-tests.log').read_text())
+        seat_restore = dict(exit=restore_exit, issues=issues, expected_difference='SeatRestoreCancellationBoundaryTests.swift:52 after a successful second restore (ruling 2026-11-11)')
+        if restore_exit != 0 and issues == ['SeatRestoreCancellationBoundaryTests.swift:52']: restore_exit = 0
+        seat_restore['accepted'] = restore_exit == 0
+        (evidence / 'seat-restore.json').write_text(json.dumps(seat_restore, indent=2) + '\n')
+        interleaving_exit = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatMessageInterleavingTests'], 'seat-interleaving-tests.log', test_env)
+        seat_others = {}
+        for suite in ['SeatRestoreCancellationCorrectedTests', 'SeatMessageScopeObservationTests', 'SeatSurfaceLifetimeTests', 'SeatSurfaceClassTests', 'SeatCandidate7InlineInterleavingTests', 'SeatCandidate7bBoundaryTests']:
+            seat_others[suite] = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', suite], f'{suite}.log', test_env)
+        # Coordinator ruling 3 (second seat), 2026-11-12: "The two `#require(model.message)` lines
+        # (SeatSurfaceLifetimeTests.swift:85 and SeatMessageScopeObservationTests.swift:42) are expected
+        # differences under my ruling 3: the follow-up failure now lives in the surface that offered it
+        # (the picker's notice, the Import report's error), so `model.message` is nil there by design."
+        # A probe run is accepted only if that line is its sole issue; the probes stay byte-identical.
+        # Counterpart controls: MessageKindTests.olderPickerSuccessLeavesTheNewerPickerAndItsError and
+        # whatEndsAFollowUpFailureShownInItsSurface.
+        ruled = {'SeatSurfaceLifetimeTests': 'SeatSurfaceLifetimeTests.swift:85', 'SeatMessageScopeObservationTests': 'SeatMessageScopeObservationTests.swift:42'}
+        seat_ruling3 = {}
+        for suite, line in ruled.items():
+            found = re.findall(r'recorded an issue at (' + suite + r'\.swift:\d+)', (evidence / f'{suite}.log').read_text())
+            sole = seat_others[suite] != 0 and found == [line]
+            seat_ruling3[suite] = dict(exit=seat_others[suite], issues=found, expected_difference=line + ' (ruling 3, 2026-11-12: the follow-up failure lives in the surface that offered it)', accepted=sole or seat_others[suite] == 0)
+            if sole: seat_others[suite] = 0
+        (evidence / 'seat-ruling3.json').write_text(json.dumps(seat_ruling3, indent=2) + '\n')
+        exit_code = exit_code or seat_exit or restore_exit or interleaving_exit or int(any(seat_others.values()))
 
     with lock:
         (evidence / 'proxy-requests.json').write_text(json.dumps(requests, indent=1) + '\n')
@@ -298,5 +305,5 @@ finally:
     if safe:
         shutil.rmtree(scratch)
     (evidence / 'cleanup.json').write_text(json.dumps({'serverStopped': server is None or server.poll() is not None, 'scratchRemoved': not scratch.exists()}) + '\n')
-    (evidence / 'result.json').write_text(json.dumps({'source': source, 'exit': exit_code, 'status': 'PASS' if exit_code == 0 else 'FAIL', 'nativeAppLaunched': False, 'keychainAccess': False}) + '\n')
+    (evidence / 'result.json').write_text(json.dumps({'source': source, 'exit': exit_code, 'status': ('TARGETED-' if os.environ.get('SIGN_OUT_STREAM_ONLY') else '') + ('PASS' if exit_code == 0 else 'FAIL'), 'filter': os.environ.get('SIGN_OUT_STREAM_ONLY'), 'nativeAppLaunched': False, 'keychainAccess': False}) + '\n')
 raise SystemExit(exit_code)

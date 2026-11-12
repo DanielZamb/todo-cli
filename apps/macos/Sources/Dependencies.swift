@@ -274,8 +274,10 @@ extension TodoModel {
             }
             // Data: a committed edge reaches the list whether or not the picker is still showing.
             guard signedIn, profile == picker.profile, isCurrentCredential(epoch) else { return }
-            clearMessage([.dependencyLink], since: mark)
-            if report.outcome != "unchanged" { await refreshAfterWrite("Dependencies updated", presenting: .dependencyPicker(picker.id)) }
+            // Presentation in the main window too: only the newest link of this picker may clear
+            // an earlier hand-off (a superseded one presents nothing anywhere).
+            if linkTicket.isNewest { clearMessage([.dependencyLink], since: mark) }
+            if report.outcome != "unchanged" { await refreshAfterWrite("Dependencies updated", presenting: .dependencyPicker(picker.id), presents: linkTicket.isNewest) }
         } catch {
             authorize(error, epoch: epoch, profile: picker.profile)
             guard signedIn, profile == picker.profile, isCurrentCredential(epoch) else { return }
@@ -284,8 +286,9 @@ extension TodoModel {
             notice.attemptVerb = remove ? "remove" : "add"
             guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == picker.id else {
                 // The picker can be closed while a link is pending (Close and Escape are not gated):
-                // hand one named message to the main window, so the failure is not silent.
-                publishMessage("Couldn't \(remove ? "remove" : "add") the Dependency on “\(candidate.title)”. " + notice.message, kind: .dependencyLink)
+                // the newest link of that picker hands one named message to the main window, so the
+                // failure is not silent. A superseded link hands off nothing (S1-16).
+                handOff("Couldn't \(remove ? "remove" : "add") the Dependency on “\(candidate.title)”. " + notice.message, kind: .dependencyLink, from: linkTicket)
                 return
             }
             if dependencies.picker?.messages.fail(notice, linkTicket) == true {

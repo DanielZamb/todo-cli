@@ -273,6 +273,32 @@ own value, so a new instance starts a new sequence. Within it:
 | Settings `profileDeletionError` (the Delete Profile prompt) | `delete` | A Profile deletion refusal or failure while newest | A new prompt; "Delete Tasks too…"; a Profile activation |
 | Settings `snapshotError` | `list`, `write` | A Snapshot list failure, or a create, preview or restore failure, each only while newest of its kind | A list start (clean), including the list a create or restore runs after it succeeds; a preview's success (`write` from before its mark) |
 
+**Supersession is final** (MAC-C1-S1-16, ruled 2026-11-12). A hand-off to the
+main window is a presentation like any other. Every completion checks, in
+order:
+
+1. ownership;
+2. authorization;
+3. data;
+4. whether it is still the newest of its kind in its instance;
+5. only then, where to present: in the surface if it is still showing; as a
+   named main-window message if the surface closed and a hand-off is ruled for
+   it; otherwise nowhere.
+
+An action superseded while its surface was open presents nothing anywhere,
+whether its surface is still open or has closed, and whether it succeeded or
+failed. A ticket carries its instance's generation table (`Ticket.isNewest`), so
+the check still works after the surface closed. The hand-off goes only through
+`handOff(_:kind:from:)`, which refuses a ticket that is not the newest. The
+ruled hand-offs are:
+
+- a picker link that fails after its picker closed;
+- a quick-add create that fails after its quick-add closed.
+
+A superseded action also clears no earlier hand-off and raises no "Task added"
+capsule. Its read-back runs but raises no "… The live view is reconnecting."
+message (`refreshAfterWrite(presents:)`).
+
 Same-kind actions that are gated cannot interleave: Import apply (`busy`),
 Batch edit and Attachment batch apply (`busy`), Dependency batch run
 (`pending`), delete (`busy` and `pending`), editor Save (`busy`), quick-add

@@ -1179,4 +1179,78 @@ private actor ScriptGate: ClientTransport {
         #expect(model.dependencies.deletion?.failure?.message == refusal, "the reload's success leaves the newer refusal: \(model.dependencies.deletion?.failure?.message ?? "nil")")
         await finish(model, gate, vault)
     }
+
+    // MARK: MAC-C1-S1-16: supersession is final, in the surface and in the hand-off after close
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil),
+          arguments: [false, true], [[false, false], [false, true], [true, false], [true, true]])
+    func aSupersededLinkPresentsNothingAnywhereAndOnlyTheNewestHandsOff(_ olderFails: Bool, _ newer: [Bool]) async throws {
+        // newer[0]: the newer link fails; newer[1]: the picker closes before the newer link finishes.
+        let newerFails = newer[0], closeFirst = newer[1]
+        let gate = ScriptGate(); let (model, vault, rootSeed) = try await live(gate)
+        let older = try await secondTask(model, gate, vault), newerTask = try await secondTask(model, gate, vault)
+        // Blocks: each candidate is its own dependent. The newer Task already depends on the root,
+        // so its toggle is a removal (tasks.undepend) and can be held apart from the older add.
+        let credential = try #require(try vault.load())
+        _ = try await todoClient(server: url, credential: credential).tasks_period_depend(path: .init(profile: "work", task: newerTask.id), body: .json(.init(blocker_id: rootSeed.id, from_version: newerTask.row_version))).ok
+        await model.refreshAfterWrite("Seeded")
+        let root = model.tasks.first { $0.id == rootSeed.id }!
+        model.dependencies.picker = .init(profile: "work", root: root, direction: .blocks)
+        await model.reloadDependencyPicker()
+        try #require(model.dependencies.picker?.checked(newerTask.id) == true)
+        let newerNow = model.tasks.first { $0.id == newerTask.id }!
+        await gate.next("tasks.depend", olderFails ? .holdThenFail(503, "OLDER link failed") : .hold)
+        let olderRun = Task { await model.toggleDependency(older) }
+        try await wait("older held") { await gate.isHeld("tasks.depend") }
+        if closeFirst {
+            await gate.next("tasks.undepend", newerFails ? .holdThenFail(503, "NEWER link failed") : .hold)
+            let newerRun = Task { await model.toggleDependency(newerNow) }
+            try await wait("newer held") { await gate.isHeld("tasks.undepend") }
+            model.closeDependencyPicker()
+            await gate.release("tasks.undepend"); await newerRun.value
+        } else {
+            if newerFails { await gate.next("tasks.undepend", .fail(503, "NEWER link failed")) }
+            await model.toggleDependency(newerNow)
+            model.closeDependencyPicker()
+        }
+        let afterNewer = model.message
+        await gate.release("tasks.depend"); await olderRun.value
+        let label = "older \(olderFails ? "fails" : "succeeds"), newer \(newerFails ? "fails" : "succeeds"), closed \(closeFirst ? "before" : "after") the newer finished"
+        #expect(model.message?.contains(older.title) != true, "\(label): the superseded link presents nothing: \(model.message ?? "nil")")
+        #expect(model.message == afterNewer, "\(label): the superseded link neither publishes nor clears: \(model.message ?? "nil")")
+        if newerFails && closeFirst {
+            #expect(model.message?.contains(newerTask.title) == true && model.messageKind == .dependencyLink, "\(label): the newest link hands off: \(model.message ?? "nil")")
+        } else {
+            #expect(model.message == nil, "\(label): \(model.message ?? "nil")")
+        }
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [false, true], [false, true])
+    func aSupersededCreateHandsOffNothingAndShowsNoCapsule(_ olderFails: Bool, _ superseded: Bool) async throws {
+        // A create is gated by busy, so a newer create cannot start while one is pending (the gated
+        // test); this control begins the newer ticket directly to prove the newest check governs the
+        // hand-off and the capsule, with the newest (not superseded) case as its pair.
+        let gate = ScriptGate(); let (model, vault, _) = try await live(gate)
+        model.selectedView = "today"; await model.refreshAfterWrite("Today")
+        model.quickAdd = true; model.newTitle = "Quiet create " + UUID().uuidString
+        let title = model.newTitle
+        await gate.next("tasks.create", olderFails ? .holdThenFail(503, "OLDER create failed") : .hold)
+        let create = Task { await model.create(openEditor: false) }
+        try await wait("create held") { await gate.isHeld("tasks.create") }
+        model.quickAdd = false
+        if superseded { _ = model.quickAddMessages.begin(.create) }
+        model.deletionNotice = nil
+        await gate.release("tasks.create"); _ = await create.value
+        let label = "older \(olderFails ? "fails" : "succeeds"), \(superseded ? "superseded" : "newest")"
+        if superseded {
+            #expect(model.message == nil && model.deletionNotice == nil, "\(label): nothing presented: \(model.message ?? model.deletionNotice ?? "nil")")
+        } else if olderFails {
+            #expect(model.message?.contains(title) == true && model.messageKind == .quickAdd, "\(label): the newest create hands off: \(model.message ?? "nil")")
+        } else {
+            #expect(model.deletionNotice == "Task added", "\(label): a Task outside Today is confirmed quietly")
+        }
+        await finish(model, gate, vault)
+    }
 }
+
