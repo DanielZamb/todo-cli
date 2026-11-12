@@ -1,8 +1,8 @@
 # Private Diagnostics recordings
 
-The latest correction addresses C1 and C2 from the review of 3cf1e3b0. Whole-batch
-refusals now leave a durable incomplete-run mark, and public reducers preserve
-separate runs. The contract is now
+The latest correction addresses C3 and C4 from the review of 241306a2. Marked
+data publication, retry, recovery and expiry now share an explicit lifecycle;
+the C1 and C2 controls remain green. The contract remains
 55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8.
 The final section records this correction and its gates. Earlier sections retain
 the d1541167 delivery and S1-1 through S1-4 correction receipts as history.
@@ -904,5 +904,187 @@ new refusal cannot be deleted with its predecessor, and a new data job cannot
 inherit a forgotten mark. Other errors retain their counters and minimum
 one-minute backoff. The byte, run, queue, event and age caps remain in force.
 
-Gates, contract proof, costs and the final head are recorded below after execution.
+### C3/C4 implementation cost
 
+The qualifier is copied into the same atomic segment as its data. The genuine
+export adds 116 encoded bytes per marked segment; maximum safe counters add
+146. With the existing wrapper bound this is 210 bytes, below the unchanged
+256-byte recovery allowance. Filesystem rounding remains charged to the same
+32 MiB/app and 256 MiB total caps. Clean segments keep the old encoding.
+encoding-cost.json and encoding-cost.exit retain the actual calculation, exit 0.
+This does not duplicate an event list or rewrite a run's entire retained history.
+
+There is at most one additional durable admission snapshot per marked run, under
+the same 5120 identity bound. Weak receipt identity flags retain neither completed
+requests nor event payloads. Heap bytes and allocation counts were not measured.
+No synchronous filesystem work, recording wait or new span was added to Task
+handlers. Upload parsing, hashing and bounded metadata work still share the
+event loop; private I/O remains asynchronous and can contend with other work.
+
+Ten alternating AB/BA pairs per size use one compiled server, 15 literal Tasks,
+100 reads/cell and one concurrent marked upload per enabled read. Each size
+checks 2000 reads and 1000 accepted uploads. Actual uploaded bytes are 10008300
+and 74985100. Both end with zero storage failures and 40960 charged checkpoint
+bytes. The 16-event run retains 1000 segments and 12288000 data bytes. The
+128-event run retains 430 segments and 33464320 data bytes, with 72960 explicitly
+counted capacity-evicted events. No warmup pair or failure was dropped.
+
+| Concurrent upload | Baseline p50 median [range], ms | Enabled p50 median [range], ms | Paired difference median [range], ms | Ingest handler p50 median [range], ms | Boundary one-minute load |
+| --- | --- | --- | --- | --- | --- |
+| 16 marked events | 0.2970 [0.2672, 0.3897] | 0.3049 [0.2943, 0.3609] | 0.0083 [-0.0288, 0.0321] | 0.6455 [0.6360, 0.7020] | 3.85 to 3.92 |
+| 128 marked events | 0.3142 [0.3068, 0.4684] | 0.3159 [0.3070, 0.3974] | -0.0008 [-0.0710, 0.0180] | 1.3945 [1.3010, 1.4510] | 3.85 to 3.85 |
+
+| Pair | 16-event paired p50 difference, ms | 128-event paired p50 difference, ms |
+| --- | ---: | ---: |
+| 1 | -0.0288 | -0.0710 |
+| 2 | 0.0194 | 0.0180 |
+| 3 | 0.0018 | 0.0120 |
+| 4 | 0.0157 | 0.0128 |
+| 5 | -0.0027 | -0.0016 |
+| 6 | 0.0177 | 0.0001 |
+| 7 | 0.0148 | 0.0019 |
+| 8 | -0.0002 | -0.0062 |
+| 9 | -0.0002 | -0.0083 |
+| 10 | 0.0321 | -0.0021 |
+
+Both differences are inconclusive within pair variation, not proof of no
+overhead. Driver CPU across all cells is 154.1 and 241.0 ms respectively;
+raw.json retains every latency, both load boundaries of every run, bytes,
+accepted counts, server CPU/RSS and status. No limiting-stage profile was taken,
+so these observations cannot identify a bottleneck or support a speedup claim.
+The tracked quiet-host ceiling is unchanged. A quiet-machine confirmation under
+the unchanged ceiling is owed at integration.
+
+The separate permanent real unlink-failure drive exits 0 with 2861 checked
+Task reads and exactly two counted failures across five alternating pairs,
+6.5 seconds per cell. Baseline p50 median [range] is 0.5648 [0.4228, 0.7749] ms;
+failed-expiry is 0.8332 [0.8077, 0.9579] ms. Paired differences are
+0.1738, 0.5130, 0.2429, 0.4104, 0.0411 ms, median
+0.2429 and range [0.0411, 0.5130] ms. This comparison is
+also inconclusive within pair variation. Raw samples and load boundaries remain
+in expiry-cost/raw.json. The literal 59999/60000 ms unit controls remain green.
+
+
+
+### C3/C4 contract, controls and receipts
+
+The contract does not change. Before and after this correction it is
+`55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8`.
+The canonical contract check exits 0, and a literal identity assertion exits 0.
+No API schema, TypeScript pin, Swift source, existing JSON key or golden changes.
+No Swift command was run. Task store/projection, shared event/reducer/identity
+sources and the event index are byte-identical to 241306a2, as are the API,
+generated client and CLI golden inputs. preserved-inputs exits 0. No formal pin
+was renewed and neither formal command was rerun for these unchanged mappings.
+
+The executable implementation is cdbf77268c0c749c482cc2a14a605a62ab01016a. The
+following commit c674e6ddd9cca3cf88b9b2482deecde27dda1092 only sorts two test
+imports. Its cache source hash is
+46826df140affbb7fb91e806a8b6f895fe8012b8d11442221f5d4f5c55be6a05.
+Recompiling that hash produces byte-identical CLI, server and seed binaries;
+binaries-identical exits 0. This preserves the compiled and measurement receipts
+at the final implementation. Later report/feature-map changes affect no runtime
+input. Each source hash was compiled once.
+
+The unchanged C3/C4 probes are copied into .scratch/recordings-correction2-s1.
+Their cmp receipts and the seat's corrected identity source match, all exit 0;
+seat-sources.sha256 records the copies. C3 and C4 each exit 1 before the fix and
+0 after it. C3 now reports an empty initial summary and zero data bytes, then
+HTTP 200 on exact retry and an incomplete run after SIGKILL/restart. Its raw
+`stored_segments_after_500` counter is 1 because its loose digit-prefix filter
+also counts the deliberately created numeric-UUID blocking directory. The red
+counter was 2 for one data file plus that blocker. Neither probe was edited.
+The precise 13-digit timestamp/file-extension checks in our literal and compiled
+controls assert zero committed data files on the failed admission. C4's three
+list queries and fresh-run show succeed; its expired state and 4096-byte charge
+are gone. The corrected 13-case identity witness passes without the obsolete
+zero-versus-null expectations.
+
+The initial three literal regressions fail before the fix. The two unlink-race
+controls fail before their repairs. Two additional receipt regressions fail on
+committed cdbf7726's predecessor: a later failed refusal incorrectly invalidates
+a committed receipt, and a pending exact duplicate incorrectly acknowledges its
+failed shared data write. The final 19-case durability file passes, as do all
+51 adjacent admission, correction and store controls. Four real HTTP/compiled
+CLI controls reproduce those concurrent request timings and pass. A helper
+TypeScript setup error declared a union of Promises rather than a Promise of the
+outcome union; helper-types-3 retains that exit 1 and helper-types-4 exits 0.
+No production assertion or timeout was weakened.
+
+In the table, E is "$PWD/docs/evidence/ui-speed/recordings-durability", C is
+"$PWD/.scratch/bin", and P is ".agents/skills/verify-ui-profiler/scripts".
+Receipts are the named .log/.exit files under E; result.json is inside each
+recipe's directory. Intermediate passing runs are retained separately. Only
+final same-source runs are counted below.
+
+| Command | Real exit | Receipt |
+| --- | ---: | --- |
+| sh scripts/disk-guard.sh | 0 before compile batches and measurements | disk-final-build, disk-cost |
+| bun build --compile .scratch/recordings-correction2-s1/fault-recovery.ts --outfile "$C/recordings-fault-recovery"; same for expiry-unpersisted.ts and identity-corrected.ts | 0 each | fault-build-final, expiry-build-final, identity-build-final |
+| HOME="$PWD/.scratch/recordings-correction2-s1/home" TMPDIR="$PWD/.scratch/recordings-correction2-s1/tmp/" "$C/recordings-fault-recovery" | 1 before, 0 after | red-c3, final-c3 |
+| HOME="$PWD/.scratch/recordings-correction2-s1/home" "$C/recordings-expiry-unpersisted" | 1 before, 0 after | red-c4, final-c4 |
+| HOME="$PWD/.scratch/recordings-correction2-s1/home" "$C/recordings-identity-corrected" | 0, all 13 cases | identity-final |
+| pnpm --filter @todo/domain test recording-durability.test.ts | 1 before each repair; 0 after | red-unit, red-race, red-active-race, red-ack-race, red-receipts; lifecycle-files and green-receipts |
+| pnpm --filter @todo/domain test recording-durability.test.ts recording-admission.test.ts diagnostic-recording-corrections.test.ts diagnostic-recording-store.test.ts | 0, 51 controls | green-receipts |
+| pnpm --filter @todo/domain test | 0, 466 tests | domain-final |
+| pnpm --filter @todo/server test | 0, 38 tests | server-final |
+| pnpm typecheck | 0 | types-2 |
+| bun --bun node_modules/typescript/bin/tsc --noEmit -p .agents/skills/verify-ui-profiler/tsconfig.json | 0 final | helper-types-4 |
+| bun packages/api/scripts/openapi.ts --check | 0 | contract-final |
+| bun apps/server/scripts/scratch-diagnostics.ts build | 0 | build-final, build-retry; byte-identical executable proof above |
+| bun build --compile "$P/durability-server.ts" --outfile "$C/durability-server" | 0 | lifecycle-build-2 |
+| bun "$P/durability.ts" "$E/lifecycle-final" | 0, 16 producer/import cases | lifecycle-final |
+| bun "$P/durability-concurrency.ts" "$E/concurrency" | 0, four concurrent producer/import cases | concurrency |
+| bun "$P/completeness.ts" "$E/completeness-final"; bun "$P/corrections.ts" "$E/corrections-final"; bun "$P/admission-fault.ts" "$E/admission-fault-final" | 0 each | completeness-final, corrections-final, admission-fault-final |
+| TODO_PROFILER_STRESS=1 bun "$P/verify.ts" "$E/producer-final" | 0 | producer-final; 700 accepted, 585 retained segments, 7370 capacity events, zero storage failures |
+| TODO_DIAGNOSTICS_NO_SWIFT=1 .agents/skills/verify-diagnostics/scripts/verify.sh "$E/diagnostics-final" | 0 | diagnostics-final; terminal PNG HOLD |
+| TODO_SERVER_BINARY="$C/todo-server" TODO_SEED_BINARY="$C/seed" .agents/skills/verify-server-api/scripts/verify.sh "$E/api-final" | 0 | api-final |
+| .agents/skills/verify-auth/scripts/verify.sh "$E/auth-final" | 0 | auth-final |
+| TODO_CLI_BINARY="$C/todo" .agents/skills/verify-cli/scripts/verify.sh "$E/cli-final" | 0, 80 tests | cli-final |
+| bun build --compile apps/server/scripts/diagnostic-fault-cli.ts --outfile "$C/diagnostic-fault-cli"; bun build --compile apps/server/scripts/verify-diagnostic-faults.ts --outfile "$C/verify-diagnostic-faults"; "$C/verify-diagnostic-faults" "$E/faults-final" | 0 each | fault-cli-build-final, fault-driver-build-final, faults-final; 47 cases |
+| bun apps/server/scripts/verify-diagnostic-payload-budget.ts "$E/payload-final" | 0 | payload-final; 10000 requests, 200 clients, 306 operations through three clients; both byte caps hold |
+| /usr/bin/lockf -k /tmp/todo-ui-profiler-benchmark.lock env TODO_PROFILER_MARKED=1 TODO_PROFILER_PAIRS=10 bun "$P/benchmark.ts" "$E/marked-16"; same with TODO_PROFILER_EVENTS=128 and "$E/marked-128" | 0 each | marked-16, marked-128 |
+| bun build --compile "$P/expiry-server.ts" --outfile "$C/expiry-fault-server"; /usr/bin/lockf -k /tmp/todo-ui-profiler-benchmark.lock bun "$P/expiry-cost.ts" "$E/expiry-cost" | 0 each | expiry-server-build-final, expiry-cost |
+
+No new domain module is added. RecordingAdmissions owns current/durable mark
+state and its expiry; DiagnosticRecordings owns the single writer queue, ordered
+publication and weak receipt facts. The HTTP adapter supplies the requesting
+receipt's required qualifier to that shared guard. No domain rule was copied
+into the adapter. New reusable harnesses stay under verify-ui-profiler and the
+literal controls stay under packages/domain/test. No children, push, native app,
+Keychain, installation or real Todo data were used. The existing single queue
+comment remains the only added explanatory production comment from the earlier
+correction; the single-worker restriction still precludes a delegated comment
+review. Client integration, terminal PNG rendering, native compilation/UI proof,
+fresh Claude discovery, allocation counts and power-loss proof remain unclaimed.
+
+### C3/C4 root gate and cleanup
+
+The first exact locked root run exits 1 at Biome's import-order check in the new
+test file, before tests execute. root.log/.exit preserve it. lint-detail identifies
+the sole error: readdir must sort before readFile. lint-fix exits 0 and changes
+only those two imports. No assertion, timeout, worker cap or tracked recipe
+changes. Rebuilt CLI, server and seed hashes are identical to the measured and
+compiled artifacts, as recorded above.
+
+With the disk guard first, the unchanged command
+`/usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check` then exits 0.
+root-retry.log/.exit pass the contract, type checks, lint, 466 domain, 80 CLI,
+38 server and 168 Electron tests with the same one existing Electron skip.
+Boundary one-minute load is 2.66 to 4.95. The disk guard exits 0 with 44.6 GB free.
+The initial lint-only run's load is 2.81 to 4.34, with 45.0 GB free. No own timed
+measurement or other compiled recipe ran during either root command. Both runs
+use the standing command exactly; there is no supplementary worker-capped run.
+
+Cleanup checks lsof before deleting only this worktree's closed Bun temporaries.
+It removes 25 files, 2216550400 allocated bytes, with zero open-file skips and
+real exit 0. cleanup.json lists paths and sizes; cleanup.log/.exit and disk-final
+retain the receipts. Final free space is 43.6 GB, above the 30 GB soft floor.
+All owned fixture servers and scratch data were stopped/removed by their helpers;
+the owned-binary process check is empty. No other unit's files or processes were
+touched. Evidence remains local and ignored.
+
+Final CLI SHA-256: b91fa40478d1c482429134bfacbde3bf77aba0f209db9c542683d1a5b0886cbe.
+Final server SHA-256: ecf91579ec099b6b2d3897214bc1aa520dc84086e9fc1727d471dc719b21cb84.
+Verification-only durability server SHA-256: 0eabb813a219590dd5bfedbfc00e99d214465829dd6b7359c3ef463ca41866b8.
+C3 and C4 are ready for the seat's re-check. No independent verdict is claimed.

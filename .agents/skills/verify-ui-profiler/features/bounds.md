@@ -38,3 +38,11 @@ Metadata write failure has no retry loop; shutdown attempts remaining dirty mark
 once after the queue drains. An unavailable metadata store cannot publish a
 complete-looking run. Forced-GC lease-liveness controls distinguish an idle
 process from a retained store; the crash fixture must keep its store alive.
+
+The durability cross product tests three data-file states against four mark-file
+states, including missing and partial files. Marked segments carry their own
+qualifier and recover a missing checkpoint before queries open. Expiry ignores
+only ENOENT and rechecks newer state and active references after unlink. Both
+unlink races have literal controls. Per-run durable snapshots have the same
+5120 identity bound; weak receipt identity flags retain no completed requests.
+Pending duplicates cannot acknowledge a failed shared data write.

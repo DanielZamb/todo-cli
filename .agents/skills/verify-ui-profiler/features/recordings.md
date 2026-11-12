@@ -31,3 +31,9 @@ the run admission map into their summaries. Mixed-run reducers and CLI import
 keep independent 8 ms and 400 ms actions with shared action/producer/sequence
 identities. admission-fault.ts checks the safe retain-and-retry instruction on a
 storage failure while a Task write still succeeds exactly once.
+
+durability.ts drives sixteen producer/import crash and I/O-failure cases from a
+genuine marked export. durability-concurrency.ts adds four held-write controls
+through real HTTP and compiled CLI import. Every exact retry settles one action;
+restart/export is absent or marked. A later failed refusal cannot reverse an
+already durable acknowledgement, and pending duplicates share the data outcome.
