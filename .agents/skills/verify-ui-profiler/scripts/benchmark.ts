@@ -19,7 +19,7 @@ try {
     for(let index=0;index<100;index++) {
       const action_id=randomUUID();
       const event={schema_version:1,run_id:id,process_role:"macos",build_id:"a".repeat(40),contract_id:"b".repeat(64),category:{inventory_id:"I07",subtype:"task.selection.pointer"},mode:"full",input_kind:"pointer",workload:"warm",sequence:index*eventCount,monotonic_ms:index,clock_unit:"ms",trace_id:randomUUID(),span_id:randomUUID(),action_id,name:"ui.action.started"};
-      const batch={schema_version:1,batch_id:randomUUID(),run:{run_id:id,app:"macos",build_id:event.build_id,contract_id:event.contract_id,comparison:{fixture_hash:"c".repeat(64),script_hash:"d".repeat(64),environment_hash:"e".repeat(64),configuration:"release",render_stage:"layout_complete",concurrency:1}},events:Array.from({length:eventCount},(_,i)=>({...event,sequence:index*16+i,action_id:randomUUID()}))};
+      const batch={schema_version:1,batch_id:randomUUID(),run:{run_id:id,app:"macos",build_id:event.build_id,contract_id:event.contract_id,comparison:{fixture_hash:"c".repeat(64),script_hash:"d".repeat(64),environment_hash:"e".repeat(64),configuration:"release",render_stage:"layout_complete",concurrency:1}},events:Array.from({length:eventCount},(_,i)=>({...event,sequence:index*eventCount+i,action_id:randomUUID()}))};
       const text=JSON.stringify(batch);
       const started=performance.now();
       const task=fetch(fixture.url+"/profiles/work/tasks",{headers}).then(async response=>{assert.equal(response.status,200);const tasks=await response.json();task_ms.push(performance.now()-started);assert.equal(tasks.length,15);task_handler_ms.push(Number(/todo-handler;dur=([0-9.]+)/u.exec(response.headers.get("server-timing")??"")?.[1]));});

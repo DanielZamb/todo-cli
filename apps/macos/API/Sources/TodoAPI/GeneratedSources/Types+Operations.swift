@@ -47090,7 +47090,7 @@ public enum Operations {
                             }
                         }
                         /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/requestBody/json/run/comparison`.
-                        public var comparison: Operations.profiler_period_ingest.Input.Body.jsonPayload.runPayload.comparisonPayload
+                        public var comparison: Operations.profiler_period_ingest.Input.Body.jsonPayload.runPayload.comparisonPayload?
                         /// Creates a new `runPayload`.
                         ///
                         /// - Parameters:
@@ -47104,7 +47104,7 @@ public enum Operations {
                             app: Operations.profiler_period_ingest.Input.Body.jsonPayload.runPayload.appPayload,
                             build_id: Swift.String,
                             contract_id: Swift.String,
-                            comparison: Operations.profiler_period_ingest.Input.Body.jsonPayload.runPayload.comparisonPayload
+                            comparison: Operations.profiler_period_ingest.Input.Body.jsonPayload.runPayload.comparisonPayload? = nil
                         ) {
                             self.run_id = run_id
                             self.app = app
@@ -47138,7 +47138,7 @@ public enum Operations {
                                 Swift.String.self,
                                 forKey: .contract_id
                             )
-                            self.comparison = try container.decode(
+                            self.comparison = try container.decodeIfPresent(
                                 Operations.profiler_period_ingest.Input.Body.jsonPayload.runPayload.comparisonPayload.self,
                                 forKey: .comparison
                             )
@@ -47157,7 +47157,11 @@ public enum Operations {
                             try container.encode(self.app, forKey: .app)
                             try container.encode(self.build_id, forKey: .build_id)
                             try container.encode(self.contract_id, forKey: .contract_id)
-                            try container.encode(self.comparison, forKey: .comparison)
+                            if self.comparison == nil && _explicitNullKeys.contains(CodingKeys.comparison.stringValue) {
+                                try container.encodeNil(forKey: .comparison)
+                            } else {
+                                try container.encodeIfPresent(self.comparison, forKey: .comparison)
+                            }
                         }
                     }
                     /// - Remark: Generated from `#/paths/diagnostics/profiler/ingest/POST/requestBody/json/run`.
@@ -68905,7 +68909,7 @@ public enum Operations {
                                     }
                                 }
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/GET/responses/200/content/json/runsPayload/run/comparison`.
-                                public var comparison: Operations.profiler_period_runs.Output.Ok.Body.jsonPayload.runsPayloadPayload.runPayload.comparisonPayload
+                                public var comparison: Operations.profiler_period_runs.Output.Ok.Body.jsonPayload.runsPayloadPayload.runPayload.comparisonPayload?
                                 /// Creates a new `runPayload`.
                                 ///
                                 /// - Parameters:
@@ -68919,7 +68923,7 @@ public enum Operations {
                                     app: Operations.profiler_period_runs.Output.Ok.Body.jsonPayload.runsPayloadPayload.runPayload.appPayload,
                                     build_id: Swift.String,
                                     contract_id: Swift.String,
-                                    comparison: Operations.profiler_period_runs.Output.Ok.Body.jsonPayload.runsPayloadPayload.runPayload.comparisonPayload
+                                    comparison: Operations.profiler_period_runs.Output.Ok.Body.jsonPayload.runsPayloadPayload.runPayload.comparisonPayload? = nil
                                 ) {
                                     self.run_id = run_id
                                     self.app = app
@@ -68953,7 +68957,7 @@ public enum Operations {
                                         Swift.String.self,
                                         forKey: .contract_id
                                     )
-                                    self.comparison = try container.decode(
+                                    self.comparison = try container.decodeIfPresent(
                                         Operations.profiler_period_runs.Output.Ok.Body.jsonPayload.runsPayloadPayload.runPayload.comparisonPayload.self,
                                         forKey: .comparison
                                     )
@@ -68972,7 +68976,11 @@ public enum Operations {
                                     try container.encode(self.app, forKey: .app)
                                     try container.encode(self.build_id, forKey: .build_id)
                                     try container.encode(self.contract_id, forKey: .contract_id)
-                                    try container.encode(self.comparison, forKey: .comparison)
+                                    if self.comparison == nil && _explicitNullKeys.contains(CodingKeys.comparison.stringValue) {
+                                        try container.encodeNil(forKey: .comparison)
+                                    } else {
+                                        try container.encodeIfPresent(self.comparison, forKey: .comparison)
+                                    }
                                 }
                             }
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/GET/responses/200/content/json/runsPayload/run`.
@@ -69771,7 +69779,7 @@ public enum Operations {
                                 }
                             }
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/GET/responses/200/content/json/run/comparison`.
-                            public var comparison: Operations.profiler_period_show.Output.Ok.Body.jsonPayload.runPayload.comparisonPayload
+                            public var comparison: Operations.profiler_period_show.Output.Ok.Body.jsonPayload.runPayload.comparisonPayload?
                             /// Creates a new `runPayload`.
                             ///
                             /// - Parameters:
@@ -69785,7 +69793,7 @@ public enum Operations {
                                 app: Operations.profiler_period_show.Output.Ok.Body.jsonPayload.runPayload.appPayload,
                                 build_id: Swift.String,
                                 contract_id: Swift.String,
-                                comparison: Operations.profiler_period_show.Output.Ok.Body.jsonPayload.runPayload.comparisonPayload
+                                comparison: Operations.profiler_period_show.Output.Ok.Body.jsonPayload.runPayload.comparisonPayload? = nil
                             ) {
                                 self.run_id = run_id
                                 self.app = app
@@ -69819,7 +69827,7 @@ public enum Operations {
                                     Swift.String.self,
                                     forKey: .contract_id
                                 )
-                                self.comparison = try container.decode(
+                                self.comparison = try container.decodeIfPresent(
                                     Operations.profiler_period_show.Output.Ok.Body.jsonPayload.runPayload.comparisonPayload.self,
                                     forKey: .comparison
                                 )
@@ -69838,7 +69846,11 @@ public enum Operations {
                                 try container.encode(self.app, forKey: .app)
                                 try container.encode(self.build_id, forKey: .build_id)
                                 try container.encode(self.contract_id, forKey: .contract_id)
-                                try container.encode(self.comparison, forKey: .comparison)
+                                if self.comparison == nil && _explicitNullKeys.contains(CodingKeys.comparison.stringValue) {
+                                    try container.encodeNil(forKey: .comparison)
+                                } else {
+                                    try container.encodeIfPresent(self.comparison, forKey: .comparison)
+                                }
                             }
                         }
                         /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/GET/responses/200/content/json/run`.
@@ -71121,7 +71133,7 @@ public enum Operations {
                                     }
                                 }
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/export/GET/responses/200/content/json/batchesPayload/run/comparison`.
-                                public var comparison: Operations.profiler_period_export.Output.Ok.Body.jsonPayload.batchesPayloadPayload.runPayload.comparisonPayload
+                                public var comparison: Operations.profiler_period_export.Output.Ok.Body.jsonPayload.batchesPayloadPayload.runPayload.comparisonPayload?
                                 /// Creates a new `runPayload`.
                                 ///
                                 /// - Parameters:
@@ -71135,7 +71147,7 @@ public enum Operations {
                                     app: Operations.profiler_period_export.Output.Ok.Body.jsonPayload.batchesPayloadPayload.runPayload.appPayload,
                                     build_id: Swift.String,
                                     contract_id: Swift.String,
-                                    comparison: Operations.profiler_period_export.Output.Ok.Body.jsonPayload.batchesPayloadPayload.runPayload.comparisonPayload
+                                    comparison: Operations.profiler_period_export.Output.Ok.Body.jsonPayload.batchesPayloadPayload.runPayload.comparisonPayload? = nil
                                 ) {
                                     self.run_id = run_id
                                     self.app = app
@@ -71169,7 +71181,7 @@ public enum Operations {
                                         Swift.String.self,
                                         forKey: .contract_id
                                     )
-                                    self.comparison = try container.decode(
+                                    self.comparison = try container.decodeIfPresent(
                                         Operations.profiler_period_export.Output.Ok.Body.jsonPayload.batchesPayloadPayload.runPayload.comparisonPayload.self,
                                         forKey: .comparison
                                     )
@@ -71188,7 +71200,11 @@ public enum Operations {
                                     try container.encode(self.app, forKey: .app)
                                     try container.encode(self.build_id, forKey: .build_id)
                                     try container.encode(self.contract_id, forKey: .contract_id)
-                                    try container.encode(self.comparison, forKey: .comparison)
+                                    if self.comparison == nil && _explicitNullKeys.contains(CodingKeys.comparison.stringValue) {
+                                        try container.encodeNil(forKey: .comparison)
+                                    } else {
+                                        try container.encodeIfPresent(self.comparison, forKey: .comparison)
+                                    }
                                 }
                             }
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/runs/{run}/export/GET/responses/200/content/json/batchesPayload/run`.
@@ -92878,7 +92894,7 @@ public enum Operations {
                                     }
                                 }
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/before/run/comparison`.
-                                public var comparison: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.beforePayload.runPayload.comparisonPayload
+                                public var comparison: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.beforePayload.runPayload.comparisonPayload?
                                 /// Creates a new `runPayload`.
                                 ///
                                 /// - Parameters:
@@ -92892,7 +92908,7 @@ public enum Operations {
                                     app: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.beforePayload.runPayload.appPayload,
                                     build_id: Swift.String,
                                     contract_id: Swift.String,
-                                    comparison: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.beforePayload.runPayload.comparisonPayload
+                                    comparison: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.beforePayload.runPayload.comparisonPayload? = nil
                                 ) {
                                     self.run_id = run_id
                                     self.app = app
@@ -92926,7 +92942,7 @@ public enum Operations {
                                         Swift.String.self,
                                         forKey: .contract_id
                                     )
-                                    self.comparison = try container.decode(
+                                    self.comparison = try container.decodeIfPresent(
                                         Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.beforePayload.runPayload.comparisonPayload.self,
                                         forKey: .comparison
                                     )
@@ -92945,7 +92961,11 @@ public enum Operations {
                                     try container.encode(self.app, forKey: .app)
                                     try container.encode(self.build_id, forKey: .build_id)
                                     try container.encode(self.contract_id, forKey: .contract_id)
-                                    try container.encode(self.comparison, forKey: .comparison)
+                                    if self.comparison == nil && _explicitNullKeys.contains(CodingKeys.comparison.stringValue) {
+                                        try container.encodeNil(forKey: .comparison)
+                                    } else {
+                                        try container.encodeIfPresent(self.comparison, forKey: .comparison)
+                                    }
                                 }
                             }
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/before/run`.
@@ -93876,7 +93896,7 @@ public enum Operations {
                                     }
                                 }
                                 /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/after/run/comparison`.
-                                public var comparison: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.afterPayload.runPayload.comparisonPayload
+                                public var comparison: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.afterPayload.runPayload.comparisonPayload?
                                 /// Creates a new `runPayload`.
                                 ///
                                 /// - Parameters:
@@ -93890,7 +93910,7 @@ public enum Operations {
                                     app: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.afterPayload.runPayload.appPayload,
                                     build_id: Swift.String,
                                     contract_id: Swift.String,
-                                    comparison: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.afterPayload.runPayload.comparisonPayload
+                                    comparison: Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.afterPayload.runPayload.comparisonPayload? = nil
                                 ) {
                                     self.run_id = run_id
                                     self.app = app
@@ -93924,7 +93944,7 @@ public enum Operations {
                                         Swift.String.self,
                                         forKey: .contract_id
                                     )
-                                    self.comparison = try container.decode(
+                                    self.comparison = try container.decodeIfPresent(
                                         Operations.profiler_period_compare.Output.Ok.Body.jsonPayload.afterPayload.runPayload.comparisonPayload.self,
                                         forKey: .comparison
                                     )
@@ -93943,7 +93963,11 @@ public enum Operations {
                                     try container.encode(self.app, forKey: .app)
                                     try container.encode(self.build_id, forKey: .build_id)
                                     try container.encode(self.contract_id, forKey: .contract_id)
-                                    try container.encode(self.comparison, forKey: .comparison)
+                                    if self.comparison == nil && _explicitNullKeys.contains(CodingKeys.comparison.stringValue) {
+                                        try container.encodeNil(forKey: .comparison)
+                                    } else {
+                                        try container.encodeIfPresent(self.comparison, forKey: .comparison)
+                                    }
                                 }
                             }
                             /// - Remark: Generated from `#/paths/diagnostics/profiler/compare/GET/responses/200/content/json/after/run`.

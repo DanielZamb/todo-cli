@@ -128,15 +128,18 @@ export function recordingsComparable(
   before: RecordingBatch["run"],
   after: RecordingBatch["run"],
 ) {
+  const a = before.comparison,
+    b = after.comparison;
+  if (!a || !b) return false;
   return (
     before.app === after.app &&
     before.contract_id === after.contract_id &&
     before.contract_id !== "unknown" &&
     before.build_id !== "dev" &&
     after.build_id !== "dev" &&
-    before.comparison.configuration !== "unknown" &&
-    before.comparison.render_stage !== "unknown" &&
-    before.comparison.render_stage !== "unavailable" &&
+    a.configuration !== "unknown" &&
+    a.render_stage !== "unknown" &&
+    a.render_stage !== "unavailable" &&
     (
       [
         "fixture_hash",
@@ -146,7 +149,7 @@ export function recordingsComparable(
         "render_stage",
         "concurrency",
       ] as const
-    ).every((key) => before.comparison[key] === after.comparison[key])
+    ).every((key) => a[key] === b[key])
   );
 }
 

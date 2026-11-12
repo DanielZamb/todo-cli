@@ -1,3 +1,4 @@
+import { Database } from "bun:sqlite";
 import { createHash } from "node:crypto";
 import { constants } from "node:fs";
 import {
@@ -55,6 +56,7 @@ export class DiagnosticRecordings {
   private queued = 0;
   private loss = zero();
   private available = false;
+  private lease: Database | undefined;
   private blockBytes = 4096;
   private tail: Promise<void> = Promise.resolve();
   private statsQueued = false;
@@ -85,6 +87,8 @@ export class DiagnosticRecordings {
         throw new Error("Private directory required");
       await chmod(directory, 0o700);
       store.blockBytes = Math.max(4096, (await statfs(directory)).bsize);
+      if (!(await store.acquireLease()))
+        throw new Error("Recording writer already active");
       try {
         store.loss = Schema.decodeUnknownSync(RecordingLoss)(
           JSON.parse(await store.read("status.json")),
@@ -101,7 +105,7 @@ export class DiagnosticRecordings {
           store.loss.corrupt_segments++;
       }
       for (const name of (await readdir(directory)).sort()) {
-        if (name === "status.json") continue;
+        if (name === "status.json" || name === "writer.lock") continue;
         if (!/^\d{13}-[a-f0-9-]{36}\.json$/iu.test(name)) {
           await unlink(join(directory, name));
           store.loss.corrupt_segments++;
@@ -146,9 +150,45 @@ export class DiagnosticRecordings {
       await store.prune();
       await store.save();
     } catch {
+      store.available = false;
       store.loss.storage_failures++;
+      store.releaseLease();
     }
     return store;
+  }
+  private async acquireLease() {
+    const path = join(this.directory, "writer.lock");
+    const file = await open(
+      path,
+      constants.O_RDWR | constants.O_CREAT | constants.O_NOFOLLOW,
+      0o600,
+    );
+    await file.close();
+    await chmod(path, 0o600);
+    const lease = new Database(path);
+    try {
+      lease.exec("PRAGMA busy_timeout=0");
+      lease.query("PRAGMA journal_mode=MEMORY").get();
+      lease.exec("BEGIN EXCLUSIVE");
+      this.lease = lease;
+      return true;
+    } catch {
+      lease.close();
+      return false;
+    }
+  }
+  async close() {
+    await this.flush();
+    this.available = false;
+    this.releaseLease();
+  }
+  private releaseLease() {
+    try {
+      this.lease?.close();
+    } catch {
+      this.loss.storage_failures++;
+    }
+    this.lease = undefined;
   }
   private charge(bytes: number) {
     return Math.ceil(bytes / this.blockBytes) * this.blockBytes;
@@ -268,7 +308,7 @@ export class DiagnosticRecordings {
               length > appCap ||
               length >
                 (this.options.totalBytes ?? recordingLimits.totalBytes) -
-                  2 * this.blockBytes
+                  3 * this.blockBytes
             )
               throw new Error("Capacity");
             const name = this.filename(received, batch.batch_id);
@@ -360,7 +400,7 @@ export class DiagnosticRecordings {
       const overTotal =
         bytes + (incoming?.bytes ?? 0) >
         (this.options.totalBytes ?? recordingLimits.totalBytes) -
-          2 * this.blockBytes;
+          3 * this.blockBytes;
       const overSegments =
         this.entries.length + Number(!!incoming) > recordingLimits.segments;
       const victim =

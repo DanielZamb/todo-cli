@@ -112,6 +112,9 @@ total is at most 256 MiB. Electron main and renderer share one app quota.
 Oldest segments go first; expiration, capacity losses, corrupt/orphan segments,
 queue drops and storage failures are counted and returned with every read.
 The implementation additionally caps segment count and the pending queue.
+An empty private SQLite lease file grants one writer per directory; it contains
+no recordings or Task data and releases its OS lock when a process dies.
+Three filesystem blocks are reserved for the lease and atomic status replacement.
 A disk or recorder failure must never fail a Task request or write.
 Client-local journal implementation and app UI integration belong to their units.
 
@@ -137,6 +140,8 @@ for deadline fractions. Loss counts remain visible beside those samples.
 Comparison requires matching contract, app, workload/script/environment hashes,
 release/debug configuration, render capability and concurrency; dev/unknown
 identities cannot establish comparable runs. Different build ids are expected.
+Ordinary always-on runs may omit benchmark comparison context; they remain
+inspectable and exportable, but comparison refuses them.
 
 The joined server read path now records history decoding, Task materialization,
 response schema/JSON encoding, and a bounded first-use marker per route. SQLite

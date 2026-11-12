@@ -8,6 +8,7 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { expect, it } from "@effect/vitest";
 import { validateRecordingBatch } from "../src/diagnostic-recordings.ts";
 import {
@@ -118,6 +119,7 @@ it("bounds private storage, deduplicates retries, recovers and counts expired/ev
       expect((await stat(join(root, "recordings", f))).mode & 0o777).toBe(
         0o600,
       );
+    await store.close();
     const again = await DiagnosticRecordings.open(join(root, "recordings"), {
       now: () => now,
     });
@@ -126,6 +128,7 @@ it("bounds private storage, deduplicates retries, recovers and counts expired/ev
     expect((await again.runs()).runs).toEqual([]);
     expect(again.status().loss.expired_events).toBe(1);
     await writeFile(join(root, "recordings", "orphan.tmp"), "bad");
+    await again.close();
     const recovered = await DiagnosticRecordings.open(join(root, "recordings"));
     expect(recovered.status().loss.corrupt_segments).toBe(1);
     expect(await readdir(join(root, "recordings"))).not.toContain("orphan.tmp");
@@ -276,6 +279,7 @@ it("recovers every accepted UUID spelling including uppercase batch ids", async 
     const store = await DiagnosticRecordings.open(root);
     store.ingest(value);
     await store.flush();
+    await store.close();
     const reopened = await DiagnosticRecordings.open(root);
     expect((await reopened.runs()).runs).toHaveLength(1);
     expect(reopened.ingest(value).duplicate).toBe(true);
@@ -380,6 +384,7 @@ it("counts a failed action without inventing a rendered completion", () => {
 it("compares declared conditions independently of JSON property order", () => {
   const original = batch().run;
   const c = original.comparison;
+  if (!c) throw new Error("The controlled fixture needs comparison metadata");
   const reordered = {
     ...original,
     comparison: {
@@ -413,6 +418,70 @@ it("recognizes an equivalent batch with reordered JSON keys as a retry", async (
       store.ingest(validateRecordingBatch(reverse(batch()))).duplicate,
     ).toBe(true);
   } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+it("stores ordinary always-on runs without inventing benchmark conditions", async () => {
+  const root = await mkdtemp(join(tmpdir(), "todo-recording-uncontrolled-"));
+  try {
+    const value = batch();
+    const { comparison: _comparison, ...run } = value.run;
+    const normal = validateRecordingBatch({ ...value, run });
+    const store = await DiagnosticRecordings.open(root);
+    expect(store.ingest(normal).accepted).toBe(true);
+    await store.flush();
+    expect((await store.runs()).runs).toHaveLength(1);
+    expect(recordingsComparable(normal.run, normal.run)).toBe(false);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+it("allows only one journal writer for a directory", async () => {
+  const root = await mkdtemp(join(tmpdir(), "todo-recording-writer-"));
+  try {
+    const first = await DiagnosticRecordings.open(root);
+    const second = await DiagnosticRecordings.open(root);
+    expect(first.ingest(batch()).accepted).toBe(true);
+    expect(
+      second.ingest(batch("BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB")).accepted,
+    ).toBe(false);
+    await first.flush();
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+it("releases writer ownership after a process crash", async () => {
+  const root = await mkdtemp(join(tmpdir(), "todo-recording-writer-crash-"));
+  const child = Bun.spawn(
+    [
+      process.execPath,
+      fileURLToPath(
+        new URL("./fixtures/diagnostic-writer.ts", import.meta.url),
+      ),
+      root,
+    ],
+    { stdout: "pipe", stderr: "pipe" },
+  );
+  try {
+    const output = child.stdout.getReader();
+    const ready = await output.read();
+    expect(new TextDecoder().decode(ready.value)).toBe("0\n");
+    output.releaseLock();
+    const blocked = await DiagnosticRecordings.open(root);
+    expect(blocked.ingest(batch()).accepted).toBe(false);
+    await blocked.close();
+    child.kill("SIGKILL");
+    await child.exited;
+    const next = await DiagnosticRecordings.open(root);
+    expect(next.ingest(batch()).accepted).toBe(true);
+    await next.flush();
+    expect(next.status().loss.storage_failures).toBe(0);
+    expect((await next.runs()).runs[0]?.events).toBe(1);
+    await next.close();
+  } finally {
+    child.kill();
+    await child.exited;
     await rm(root, { recursive: true, force: true });
   }
 });

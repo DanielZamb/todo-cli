@@ -51260,13 +51260,7 @@
                         "additionalProperties": false
                       }
                     },
-                    "required": [
-                      "run_id",
-                      "app",
-                      "build_id",
-                      "contract_id",
-                      "comparison"
-                    ],
+                    "required": ["run_id", "app", "build_id", "contract_id"],
                     "additionalProperties": false
                   },
                   "events": {
@@ -58859,8 +58853,7 @@
                               "run_id",
                               "app",
                               "build_id",
-                              "contract_id",
-                              "comparison"
+                              "contract_id"
                             ],
                             "additionalProperties": false
                           },
@@ -59122,13 +59115,7 @@
                           "additionalProperties": false
                         }
                       },
-                      "required": [
-                        "run_id",
-                        "app",
-                        "build_id",
-                        "contract_id",
-                        "comparison"
-                      ],
+                      "required": ["run_id", "app", "build_id", "contract_id"],
                       "additionalProperties": false
                     },
                     "summary": {
@@ -59676,8 +59663,7 @@
                               "run_id",
                               "app",
                               "build_id",
-                              "contract_id",
-                              "comparison"
+                              "contract_id"
                             ],
                             "additionalProperties": false
                           },
@@ -67639,8 +67625,7 @@
                             "run_id",
                             "app",
                             "build_id",
-                            "contract_id",
-                            "comparison"
+                            "contract_id"
                           ],
                           "additionalProperties": false
                         },
@@ -68104,8 +68089,7 @@
                             "run_id",
                             "app",
                             "build_id",
-                            "contract_id",
-                            "comparison"
+                            "contract_id"
                           ],
                           "additionalProperties": false
                         },

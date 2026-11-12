@@ -443,7 +443,7 @@ export const serverLayer = (options: {
             join(dirname(resolve(options.path)), "diagnostic-recordings"),
           ),
         ),
-        (value) => Effect.promise(() => value.flush()),
+        (value) => Effect.promise(() => value.close()),
       );
       const cacheHygiene = yield* taskSearchCacheHygiene(store);
       yield* cacheHygiene.run.pipe(Effect.forkScoped);

@@ -29,16 +29,18 @@ export const RecordingRun = Schema.Struct({
   app: RecordingApp,
   build_id: DiagnosticEvent.members[0].fields.build_id,
   contract_id: DiagnosticEvent.members[0].fields.contract_id,
-  comparison: Schema.Struct({
-    fixture_hash: hash,
-    script_hash: hash,
-    environment_hash: hash,
-    configuration: Schema.Literals(["release", "debug", "unknown"]),
-    render_stage: RenderStage,
-    concurrency: Schema.Int.check(
-      Schema.isBetween({ minimum: 1, maximum: 1024 }),
-    ),
-  }),
+  comparison: Schema.optionalKey(
+    Schema.Struct({
+      fixture_hash: hash,
+      script_hash: hash,
+      environment_hash: hash,
+      configuration: Schema.Literals(["release", "debug", "unknown"]),
+      render_stage: RenderStage,
+      concurrency: Schema.Int.check(
+        Schema.isBetween({ minimum: 1, maximum: 1024 }),
+      ),
+    }),
+  ),
 });
 export const RecordingBatch = Schema.Struct({
   schema_version: Schema.Literal(1),
