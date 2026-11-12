@@ -28,6 +28,7 @@ export * from "./interaction-categories.ts";
 export * from "./limits.ts";
 export * from "./profile-commands.ts";
 export * from "./quick-add.ts";
+export { uniqueRecordingEvents } from "./recording-event-identity.ts";
 export * from "./recording-refusal.ts";
 export * from "./recurrence.ts";
 export * from "./snapshots.ts";

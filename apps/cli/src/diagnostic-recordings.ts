@@ -5,10 +5,12 @@ import {
   RecordingCompare,
   RecordingExport,
   RecordingReceipt,
+  RecordingRefusal,
   RecordingRunList,
   RecordingShow,
   type RecordingStatus,
   recordingRefusalMessage,
+  uniqueRecordingEvents,
   validateRecordingBatch,
 } from "@todo/domain";
 import { CommandError } from "@todo/domain/commands";
@@ -116,7 +118,7 @@ export const recordingCommand = (
               .split("\n")
               .map((line) => JSON.parse(line));
           }
-          return values
+          const batches = values
             .flatMap((value) => {
               const page = Schema.decodeUnknownOption(RecordingExport, {
                 onExcessProperty: "error",
@@ -126,8 +128,21 @@ export const recordingCommand = (
                 : [validateRecordingBatch(value)];
             })
             .map(validateRecordingBatch);
+          uniqueRecordingEvents(batches.flatMap((batch) => batch.events));
+          const runs = new Map<string, string>();
+          for (const batch of batches) {
+            const manifest = JSON.stringify(batch.run),
+              previous = runs.get(batch.run.run_id);
+            if (previous && previous !== manifest)
+              throw new RecordingRefusal("run_conflict");
+            runs.set(batch.run.run_id, manifest);
+          }
+          return batches;
         },
-        catch: invalid,
+        catch: (error) =>
+          error instanceof RecordingRefusal
+            ? new CommandError(2, "invalid_args", error.message)
+            : invalid(),
       });
       let status: typeof RecordingStatus.Type | undefined;
       let accepted = 0,

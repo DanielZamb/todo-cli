@@ -88,7 +88,8 @@ bun .agents/skills/verify-ui-profiler/scripts/corrections.ts "$PWD/docs/evidence
 ```
 
 They require literal owner HTTP 400 / CLI exit 2 with an allowlisted reason,
-reject conflicting sequence data through import and dry run, keep both deadline
+reject conflicting sequence data through import and dry run, preflight conflicts
+across the entire local file before any POST, keep both deadline
 fractions at zero, and prove a retained identical event is a no-op. The domain
 controls cover pending acknowledgements, legacy contradictory files, repeated
 action phases, every comparison condition, and 1,001 admissions without a drain.

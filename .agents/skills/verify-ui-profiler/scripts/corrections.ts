@@ -36,6 +36,12 @@ try {
  if(rejected.status!==400||imported.exit!==2||preview.exit!==2)failures.push("conflicting sequence accepted through HTTP/import");
  if(imported.body.message!=="Recording sequence conflicts; resend the original data or begin a new run.")failures.push("sequence recovery reason lost");
  if(shown.body.summary[0]?.starts!==1||shown.body.summary[0]?.completed_samples!==0||shown.body.summary[0]?.fraction_by_20_ms!==0||shown.body.summary[0]?.fraction_by_300_ms!==0)failures.push("conflict improved deadline accounting");
+ const fresh=batch(randomUUID()); const badFresh={...batch(fresh.run.run_id),events:[{...event,run_id:fresh.run.run_id,action_id:randomUUID()}]};
+ const ndjson=join(fixture.scratch,"conflicting.ndjson");writeFileSync(ndjson,`${JSON.stringify(fresh)}\n${JSON.stringify(badFresh)}\n`,{mode:0o600});
+ const dryFile=cli(["import","--file",ndjson,"--dry-run"]); const applyFile=cli(["import","--file",ndjson]);
+ const afterFile=cli(["runs"]);
+ results.push({case:"whole-file conflict preflight",dryFile,applyFile,afterFile});
+ if(dryFile.exit!==2||applyFile.exit!==2||afterFile.body.runs.some((r:{run:{run_id:string}})=>r.run.run_id===fresh.run.run_id))failures.push("whole-file conflicts were not refused before posting");
  const identical=await post(batch()); const duplicate=await identical.json();
  assert.equal(identical.status,200); if(!duplicate.duplicate)failures.push("identical event not a no-op");
  const task=await fetch(fixture.url+"/profiles/work/tasks",{headers}); assert.equal(task.status,200); assert.equal((await task.json()).length,1);
