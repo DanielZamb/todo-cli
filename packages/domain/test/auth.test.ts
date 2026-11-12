@@ -12,7 +12,7 @@ import {
   StartSeriesRequest,
 } from "@todo/domain";
 import { type OperationStore, openStore, StoreError } from "@todo/domain/store";
-import { Effect, Schema } from "effect";
+import { Clock, Effect, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { RRuleTemporal } from "rrule-temporal";
 import { migrationSql } from "../src/store/0002.ts";
@@ -61,6 +61,54 @@ const denial = <A>(effect: Effect.Effect<A, AuthError | StoreError>) =>
       ? [error.code, error.detail]
       : ["unexpected", "StoreError"];
   });
+
+const clockCases: ReadonlyArray<readonly [string, string]> = [
+  ["1970-01-01T00:00:00.000Z", "1970-01-08T00:00:00.000Z"],
+  ["9999-01-01T00:00:00.000Z", "9999-01-08T00:00:00.000Z"],
+];
+for (const [current, expires] of clockCases) {
+  it.effect(
+    `keeps the caller's Clock through nested mutations at ${current}`,
+    () =>
+      usingStore((store) =>
+        Effect.gen(function* () {
+          yield* TestClock.setTime(Date.parse(current));
+          yield* store.putProfile(work);
+          yield* store.auth.setupOwner("scratch clock passphrase");
+          const session = yield* store.auth.signIn("scratch clock passphrase");
+          expect([session.created_at, session.expires_at]).toEqual([
+            current,
+            expires,
+          ]);
+          const request = { credential: session.credential, profile };
+          const result = yield* store.auth.mutate(request, () =>
+            Effect.gen(function* () {
+              const time = new Date(
+                yield* Clock.currentTimeMillis,
+              ).toISOString();
+              expect(time).toBe(current);
+              const data = yield* store.auth.read(request);
+              const nested = yield* store.auth.mutate(request, () =>
+                Clock.currentTimeMillis.pipe(
+                  Effect.map((value) => new Date(value).toISOString()),
+                ),
+              );
+              return [time, data.tasks.length, nested];
+            }),
+          );
+          expect(result).toEqual([current, 0, current]);
+          yield* TestClock.setTime(Date.parse(expires));
+          expect(yield* denial(store.auth.read(request))).toEqual([
+            "auth",
+            "expired",
+          ]);
+          expect(
+            yield* denial(store.auth.mutate(request, () => Effect.void)),
+          ).toEqual(["auth", "expired"]);
+        }),
+      ),
+  );
+}
 
 describe("owner, Sessions and Access Tokens", () => {
   it.effect(
