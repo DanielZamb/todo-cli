@@ -124,14 +124,17 @@ it.effect(
         expect(
           history.filter((row) => row.event.kind === "TaskCreated"),
         ).toHaveLength(1);
-        const recordings = yield* Effect.promise(async () =>
-          (
-            await fetch(`${base}/diagnostics/profiler/runs`, { headers })
-          ).json(),
+        const recordings = yield* Effect.promise(() =>
+          fetch(`${base}/diagnostics/profiler/runs`, { headers }),
         );
-        expect(recordings.status.loss.storage_failures).toBeGreaterThanOrEqual(
-          1,
-        );
+        expect(recordings.status).toBe(400);
+        expect(yield* Effect.promise(() => recordings.json())).toMatchObject({
+          code: "invalid_args",
+          message:
+            "Recording admission metadata is unavailable; no complete summary can be shown.",
+          exit_code: 2,
+          exit_meaning: "validation or usage",
+        });
       }),
     ),
 );
