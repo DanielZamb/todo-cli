@@ -91,3 +91,14 @@ The old table-only subscription produced zero. The helper saves the row-marker
 ancestor classes and notification names without Task content. The standalone
 table/manual-post controls still prove correlation and exclusion, but cannot
 establish this production hierarchy or physical pointer delivery.
+
+## Whose layout completes an action
+
+A layout completes an action only on a surface marker that was present when the
+action's result was published, or that registered within `resultWindowMS`
+(2 s) after it, such as a sheet the result opens. A later, unrelated layout of
+the same kind of surface is not the action's result: the action stays
+unfinished and is reported with its age. Save is measured on the main window,
+where its result shows once the inspector closes. Choosing the Profile already
+shown starts no Profile switch; a switch is ready only when the new Profile's
+catalog has arrived and the stream is live.

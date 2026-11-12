@@ -536,6 +536,14 @@ final class TodoModel {
         deletionNotice = "\"\(deletedName)\" was deleted. Switched to \(next.name)."
     }
 
+    /// Whether choosing `value` starts a Profile switch.
+    /// Choosing the Profile already shown starts nothing (and so is not timed).
+    func profileSwitchStarts(_ value: String) -> Bool { value != profile }
+    /// Whether a switch to `value` has finished: the new Profile's catalog has arrived and the
+    /// stream is live. The state right after the switch (same connection, not yet loading) does not
+    /// count; it used to complete the switch at once, timed at about 0 ms.
+    func profileSwitchSettled(_ value: String) -> Bool { profile == value && catalogReady && connection == .live && !loading }
+
     func changeProfile(_ value: String) {
         let value = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty, editor == nil, !busy else { return }

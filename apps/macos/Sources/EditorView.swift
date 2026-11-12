@@ -107,7 +107,7 @@ struct EditorView: View {
                                         } ?? true))
                             )
                     } else {
-                        Button("Save changes") { model.clientDiagnosticsUI.perform(.save, surface: .inspector) { await model.save() } }
+                        Button("Save changes") { model.clientDiagnosticsUI.perform(.save, surface: .main) { await model.save() } }
                             .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
                             .disabled(
                                 !model.canWrite || draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty

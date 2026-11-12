@@ -467,7 +467,8 @@ struct TaskListView: View {
         }
     }
     private func requestProfile(_ profile: String) {
-        model.clientDiagnosticsUI.perform(.profileSwitch, ready: { model.profile == profile && model.connection == .live && !model.loading }) { _ = await model.navigate(.profile(profile)) }
+        guard model.profileSwitchStarts(profile) else { return }
+        model.clientDiagnosticsUI.perform(.profileSwitch, ready: { model.profileSwitchSettled(profile) }) { _ = await model.navigate(.profile(profile)) }
     }
     var sidebar: some View {
         VStack(spacing: 0) {

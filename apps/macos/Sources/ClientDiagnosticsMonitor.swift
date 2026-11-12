@@ -61,10 +61,14 @@ struct ClientDiagnosticInputReceipt {
         var ready = false
         var waiting: (() -> Bool)?
         var validate: (() -> Bool)?
+        /// When the result was published; a layout counts only on a surface present by then.
+        var publishedAt: Double?
     }
     private final class Region {
         weak var view: ClientDiagnosticNativeView?
-        init(_ view: ClientDiagnosticNativeView) { self.view = view }
+        /// When this marker first registered.
+        let attachedAt: Double
+        init(_ view: ClientDiagnosticNativeView, at time: Double) { self.view = view; attachedAt = time }
     }
     @ObservationIgnored private var regions: [ObjectIdentifier: Region] = [:]
     @ObservationIgnored private var pending: [UUID: Pending] = [:]
@@ -172,7 +176,8 @@ struct ClientDiagnosticInputReceipt {
     }
     func register(_ view: ClientDiagnosticNativeView) {
         guard recorder.isEnabled else { return }
-        regions[ObjectIdentifier(view)] = Region(view)
+        let key = ObjectIdentifier(view)
+        if regions[key]?.view !== view { regions[key] = Region(view, at: ProcessInfo.processInfo.systemUptime * 1000) }
         if let value = view.mode { mode = value }
     }
     func attached(_ view: ClientDiagnosticNativeView) {
@@ -311,6 +316,7 @@ struct ClientDiagnosticInputReceipt {
     func publish(_ id: UUID?, validate: (() -> Bool)? = nil) {
         guard let id, pending[id] != nil else { return }
         pending[id]?.ready = true; pending[id]?.validate = validate
+        if pending[id]?.publishedAt == nil { pending[id]?.publishedAt = ProcessInfo.processInfo.systemUptime * 1000 }
         recorder.resultPublished(id)
     }
     func awaitResult(_ id: UUID?, predicate: @escaping () -> Bool) { if let id { pending[id]?.waiting = predicate } }
@@ -348,20 +354,26 @@ struct ClientDiagnosticInputReceipt {
         }
         publishReadyActions()
     }
-    private func hasSurface(_ surface: ClientDiagnosticSurface, identity: String?) -> Bool {
+    private func hasSurface(_ surface: ClientDiagnosticSurface, identity: String?, presentBy deadline: Double? = nil) -> Bool {
         regions.values.contains {
+            if let deadline, $0.attachedAt > deadline { return false }
             guard let view = $0.view, view.surface == surface, identity == nil || view.identity == identity, view.window?.isVisible == true, !view.isHiddenOrHasHiddenAncestor, view.bounds.width > 0, view.bounds.height > 0 else { return false }
             var ancestor: NSView? = view
             while let current = ancestor { if current.needsLayout { return false }; ancestor = current.superview }
             return true
         }
     }
-    private func commitOpportunity() {
+    /// A layout completes an action only on a surface that was present when the action's result
+    /// was published, or that appeared within this bound after it (a sheet or window the result
+    /// opens). Otherwise the action stays unfinished: a later, unrelated layout of the same kind of
+    /// surface (the next inspector half an hour after a Save closed the last) is not its result.
+    var resultWindowMS: Double = 2000
+    func commitOpportunity() {
         guard recorder.isOwnerSession else { return }
         publishReadyActions()
         for (id, item) in pending where item.ready && item.validate?() != false {
             guard item.scope == recorder.scopeToken else { continue }
-            guard hasSurface(item.surface, identity: item.identity) else { continue }
+            guard hasSurface(item.surface, identity: item.identity, presentBy: item.publishedAt.map { $0 + resultWindowMS }) else { continue }
             if item.surface == .inspector {
                 var event = ClientDiagnosticEvent(name: .inspectorCommitted, run: recorder.run); event.actionID = id
                 if nativeSelection?.action == id { event.nativeSelectionNotifications = nativeSelection?.capabilities }
