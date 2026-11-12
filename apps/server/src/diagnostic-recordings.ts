@@ -187,7 +187,7 @@ export const recordingRoutes = (
             return receipt;
           yield* Effect.promise(() => recordings.flush());
           yield* owner;
-          if (!recordings.admissionDurable(batch.run.run_id))
+          if (!recordings.admissionDurable(batch.run.run_id, receipt.admission))
             return yield* Effect.fail(admissionFailure());
           return recordings.settledReceipt(
             receipt,

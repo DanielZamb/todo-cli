@@ -15,6 +15,7 @@ type State = {
   updated_at: number;
   run: typeof RecordingRun.Type;
   dirty: boolean;
+  durable: RecordingAdmission | undefined;
 };
 const max = (a: number | null, b: number | null) =>
   a === null || b === null ? null : Math.max(a, b);
@@ -52,6 +53,20 @@ export class RecordingAdmissions {
   }
   state(id: string) {
     return this.states.get(id)?.run.admission ?? emptyRecordingAdmission();
+  }
+  durable(id: string) {
+    return this.states.get(id)?.durable ?? emptyRecordingAdmission();
+  }
+  covers(id: string, required: RecordingAdmission) {
+    if (!admissionIncomplete(required)) return true;
+    const stored = this.durable(id);
+    const includes = (actual: number | null, expected: number | null) =>
+      actual === null || (expected !== null && actual >= expected);
+    return (
+      admissionIncomplete(stored) &&
+      includes(stored.refused_batches, required.refused_batches) &&
+      includes(stored.unadmitted_events, required.unadmitted_events)
+    );
   }
   describe(run: typeof RecordingRun.Type) {
     return {
@@ -106,6 +121,7 @@ export class RecordingAdmissions {
       updated_at: now,
       run: { ...recordingRunDefinition(run), admission },
       dirty: true,
+      durable: this.states.get(run.run_id)?.durable,
     });
   }
   async load(
@@ -127,7 +143,11 @@ export class RecordingAdmissions {
         !admissionIncomplete(value.run.admission)
       )
         throw new Error("Invalid admission state");
-      this.states.set(value.run.run_id, { ...value, dirty: false });
+      this.states.set(value.run.run_id, {
+        ...value,
+        dirty: false,
+        durable: value.run.admission,
+      });
       await chmod(join(directory, name), 0o600);
     }
   }
@@ -144,6 +164,8 @@ export class RecordingAdmissions {
     if (Buffer.byteLength(text) > 2048)
       throw new Error("Admission state limit");
     await write(`${id}.admission.json`, text);
+    const current = this.states.get(id);
+    if (current) current.durable = value.run.admission;
     if (this.states.get(id) === value) value.dirty = false;
   }
   oldest(active: ReadonlySet<string>) {
@@ -177,6 +199,8 @@ export class RecordingAdmissions {
             throw error;
         }
         retained = active();
+        const current = this.states.get(id);
+        if (current) current.durable = undefined;
         if (this.states.get(id) === state) {
           if (retained.has(id)) state.dirty = true;
           else this.states.delete(id);

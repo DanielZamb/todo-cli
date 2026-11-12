@@ -203,6 +203,24 @@ their run admission map to analyzeRecording/summarizeRecording, or use the serve
 already masked summaries. CLI import preserves this metadata; the native client
 integration must preserve it too.
 
+Marked data segments retain their qualifying admission snapshot in the same
+atomic file. A run checkpoint is written before new qualifying data, within one
+writer job. A failed checkpoint cannot publish that data. Startup reconstructs
+a missing checkpoint from marked segments before exposing recording queries.
+The checkpoint also preserves refusals with no admitted events and survives data
+eviction. An explicit retry requeues dirty checkpoint state even when unchanged.
+Receipts acknowledge their own durable mark and stored facts. A later uncommitted
+refusal cannot turn an already committed batch into a failed admission, and a
+pending duplicate cannot acknowledge a failed shared data write. Per-run durable
+snapshots remain bounded; receipt identity bookkeeping uses weak references.
+
+Expiry of an already absent inactive checkpoint succeeds and releases its
+charge. After asynchronous unlink, recheck the state version and current data
+references. A new refusal or pending data admission retains a dirty checkpoint
+for ordered persistence. Other errors keep their counted failure and minimum
+one-minute backoff. The joint lifecycle table and executable controls are in the
+DIAG-CORE recordings report. Process-crash tests do not claim power-loss proof.
+
 ## Still proposed
 
 Cross-clock calibration, physical presentation proof, richer profiler terminal

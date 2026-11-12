@@ -155,6 +155,7 @@ docs/decisions/ui-speed/diag-recordings-report.md:
 pnpm --filter @todo/domain test recording-durability.test.ts
 bun build --compile .agents/skills/verify-ui-profiler/scripts/durability-server.ts --outfile .scratch/bin/durability-server
 bun .agents/skills/verify-ui-profiler/scripts/durability.ts "$PWD/docs/evidence/ui-speed/recording-durability-new"
+bun .agents/skills/verify-ui-profiler/scripts/durability-concurrency.ts "$PWD/docs/evidence/ui-speed/recording-durability-concurrency-new"
 ```
 
 The verification-only server requires its owned scratch HOME/database. It uses
@@ -168,3 +169,8 @@ Permanent mark-write failure and one data-write failure also preserve the
 literal Task read and recover on explicit retry. The unit cross product covers
 present, absent and partial data with present, absent, partial and corrupt marks,
 then export, eviction and expiry. Two races cover refusal/new data during unlink.
+Four additional real HTTP/CLI controls hold a data write while a second request
+arrives. A later failed refusal leaves the first committed request successful;
+two pending exact duplicates both refuse to acknowledge a failed shared write.
+An explicit retry then settles one action. Set TODO_PROFILER_MARKED=1 on the
+existing benchmark to measure this marked-data path; its default is unchanged.

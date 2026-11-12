@@ -312,3 +312,91 @@ for (const dataState of dataStates)
         await rm(root, { recursive: true, force: true });
       }
     });
+
+it("acknowledges committed facts against their own mark when a later refusal fails", async () => {
+  const root = await mkdtemp(join(tmpdir(), "todo-durability-ack-"));
+  const store = await DiagnosticRecordings.open(root),
+    batch = make(true);
+  const original: unknown = Reflect.get(store, "atomic");
+  if (typeof original !== "function")
+    throw new Error("Missing atomic file boundary");
+  let entered = () => {},
+    release = () => {};
+  const written = new Promise<void>((resolve) => (entered = resolve)),
+    gate = new Promise<void>((resolve) => (release = resolve));
+  Reflect.set(store, "atomic", async (name: string, text: string) => {
+    await original.call(store, name, text);
+    if (/^\d{13}-/u.test(name)) {
+      entered();
+      await gate;
+    }
+  });
+  try {
+    const receipt = store.ingest(batch);
+    await written;
+    const blocker = join(root, `${batch.run.run_id}.admission.json.tmp`);
+    await mkdir(blocker);
+    expect(() =>
+      store.ingest(
+        validateRecordingBatch({
+          ...batch,
+          batch_id: randomUUID(),
+          events: [{ ...batch.events[0], action_id: randomUUID() }],
+        }),
+      ),
+    ).toThrow("Whole batch refused");
+    release();
+    await store.flush();
+    expect(store.admissionDurable(batch.run.run_id)).toBe(false);
+    expect(store.admissionDurable(batch.run.run_id, receipt.admission)).toBe(
+      true,
+    );
+    const settled = store.settledReceipt(
+      receipt,
+      batch.batch_id,
+      batch.run.run_id,
+    );
+    expect(settled.accepted).toBe(true);
+    expect(settled.admission.refused_batches).toBe(1);
+    expect(
+      (await store.show(batch.run.run_id)).run.admission?.refused_batches,
+    ).toBe(2);
+    await rm(blocker, { recursive: true });
+  } finally {
+    release();
+    await store.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+it("does not acknowledge a pending exact duplicate when the shared data write fails", async () => {
+  const root = await mkdtemp(join(tmpdir(), "todo-durability-pending-"));
+  const store = await DiagnosticRecordings.open(root),
+    batch = make(true);
+  const original: unknown = Reflect.get(store, "atomic");
+  if (typeof original !== "function")
+    throw new Error("Missing atomic file boundary");
+  Reflect.set(store, "atomic", async (name: string, text: string) => {
+    if (/^\d{13}-/u.test(name))
+      throw Object.assign(new Error("Data write failed"), { code: "EIO" });
+    await original.call(store, name, text);
+  });
+  try {
+    const first = store.ingest(batch),
+      duplicate = store.ingest(batch);
+    expect(duplicate.duplicate).toBe(true);
+    await store.flush();
+    expect(
+      store.settledReceipt(first, batch.batch_id, batch.run.run_id).accepted,
+    ).toBe(false);
+    expect(
+      store.settledReceipt(duplicate, batch.batch_id, batch.run.run_id)
+        .accepted,
+    ).toBe(false);
+    expect(store.status().segments).toBe(0);
+    expect((await store.show(batch.run.run_id)).summary).toEqual([]);
+  } finally {
+    await store.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});

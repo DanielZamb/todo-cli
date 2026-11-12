@@ -9,6 +9,7 @@ import { diagnosticFixture } from "../../../../apps/server/scripts/diagnostic-fi
 const directory=resolve(process.argv[2] ?? "docs/evidence/ui-speed/recordings/cost");mkdirSync(directory,{recursive:true});
 const eventCount=Number(process.env.TODO_PROFILER_EVENTS ?? 16);assert.ok(eventCount===16||eventCount===128);
 const pairCount=Number(process.env.TODO_PROFILER_PAIRS ?? 5);assert.ok(pairCount===5||pairCount===10);
+const marked=process.env.TODO_PROFILER_MARKED==="1";
 const fixture=await diagnosticFixture(true,15);
 const serverCPU=()=>spawnSync("ps",["-p",String(fixture.server.pid),"-o","cputime=,rss="],{encoding:"utf8"}).stdout.trim();
 const headers={Authorization:`Bearer ${fixture.credential}`,"Content-Type":"application/json"};
@@ -19,7 +20,7 @@ try {
     for(let index=0;index<100;index++) {
       const action_id=randomUUID();
       const event={schema_version:1,run_id:id,process_role:"macos",build_id:"a".repeat(40),contract_id:"b".repeat(64),category:{inventory_id:"I07",subtype:"task.selection.pointer"},mode:"full",input_kind:"pointer",workload:"warm",sequence:index*eventCount,monotonic_ms:index,clock_unit:"ms",trace_id:randomUUID(),span_id:randomUUID(),action_id,name:"ui.action.started"};
-      const batch={schema_version:1,batch_id:randomUUID(),run:{run_id:id,app:"macos",build_id:event.build_id,contract_id:event.contract_id,comparison:{fixture_hash:"c".repeat(64),script_hash:"d".repeat(64),environment_hash:"e".repeat(64),configuration:"release",render_stage:"layout_complete",concurrency:1}},events:Array.from({length:eventCount},(_,i)=>({...event,sequence:index*eventCount+i,action_id:randomUUID()}))};
+      const batch={schema_version:1,batch_id:randomUUID(),run:{run_id:id,app:"macos",build_id:event.build_id,contract_id:event.contract_id,...(marked?{admission:{schema_version:1,policy:"whole_batch",refused_batches:1,unadmitted_events:3,incomplete:true}}:{}),comparison:{fixture_hash:"c".repeat(64),script_hash:"d".repeat(64),environment_hash:"e".repeat(64),configuration:"release",render_stage:"layout_complete",concurrency:1}},events:Array.from({length:eventCount},(_,i)=>({...event,sequence:index*eventCount+i,action_id:randomUUID()}))};
       const text=JSON.stringify(batch);
       const started=performance.now();
       const task=fetch(fixture.url+"/profiles/work/tasks",{headers}).then(async response=>{assert.equal(response.status,200);const tasks=await response.json();task_ms.push(performance.now()-started);assert.equal(tasks.length,15);task_handler_ms.push(Number(/todo-handler;dur=([0-9.]+)/u.exec(response.headers.get("server-timing")??"")?.[1]));});
@@ -35,5 +36,5 @@ try {
   const p=(values:number[],q:number)=>[...values].sort((a,b)=>a-b)[Math.ceil(values.length*q)-1]??null;
   const pairs=Array.from({length:pairCount},(_,pair)=>{const a=results.find(r=>r.pair===pair&&!r.enabled);const b=results.find(r=>r.pair===pair&&r.enabled);assert.ok(a&&b);return {pair,baseline_p50_ms:p(a.task_ms,.5),enabled_p50_ms:p(b.task_ms,.5),baseline_p99_ms:p(a.task_ms,.99),enabled_p99_ms:p(b.task_ms,.99),difference_p50_ms:(p(b.task_ms,.5)??0)-(p(a.task_ms,.5)??0),baseline_handler_p50_ms:p(a.task_handler_ms,.5),enabled_handler_p50_ms:p(b.task_handler_ms,.5),ingest_handler_p50_ms:p(b.ingest_ms,.5),ingest_handler_p99_ms:p(b.ingest_ms,.99)};});
   const diffs=pairs.map(p=>p.difference_p50_ms);const variation=Math.max(...diffs)-Math.min(...diffs);
-  writeFileSync(join(directory,"result.json"),JSON.stringify({result:"PASS",conditions:"ambient busy-host; no imposed CPU pressure",pairs,paired_difference_median_ms:median(diffs),paired_difference_range_ms:[Math.min(...diffs),Math.max(...diffs)],verdict:Math.abs(median(diffs))<=variation?"inconclusive":"difference exceeds pair variation",task_requests:pairCount*200,ingestions:pairCount*100,events:pairCount*100*eventCount},null,2));
+  writeFileSync(join(directory,"result.json"),JSON.stringify({result:"PASS",conditions:"ambient busy-host; no imposed CPU pressure",marked_ingestion:marked,pairs,paired_difference_median_ms:median(diffs),paired_difference_range_ms:[Math.min(...diffs),Math.max(...diffs)],verdict:Math.abs(median(diffs))<=variation?"inconclusive":"difference exceeds pair variation",task_requests:pairCount*200,ingestions:pairCount*100,events:pairCount*100*eventCount},null,2));
 }finally{await fixture.close();}

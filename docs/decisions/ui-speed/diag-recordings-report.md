@@ -895,6 +895,8 @@ export from a refused run.
 | Other unlink error | Unchanged | Retained in state | Counted failure, no false successful cleanup | Automatic retry after at least 60000 ms | Existing literal backoff and real expiry recipes |
 | New refusal arrives during old unlink | Unchanged | New state retained dirty | New counts survive | Persist newer state | Refusal/unlink race unit |
 | New qualifying data arrives during old unlink | Pending | State retained dirty after fresh active-reference check | No clean publication | Data job first restores checkpoint | Active/unlink race unit |
+| Later refusal fails after this batch's data commit | Committed with this batch's qualifier | This batch's durable mark retained; later update dirty | First request succeeds with its durable qualifier; later request gets 500 and retains its own facts | Later refusal retries independently | Acknowledgement race unit and four-case compiled concurrency drive |
+| Pending exact duplicate shares a failed data write | Absent | Failed-submission mark retained | Neither receipt acknowledges stored events | Exact retry commits one action | Pending-duplicate unit and compiled concurrency drive |
 
 Expiry treats only ENOENT as successful removal. It checks both the state
 version and current retained/pending references after asynchronous unlink. A

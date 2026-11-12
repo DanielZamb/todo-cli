@@ -12,7 +12,10 @@ import {
   recordingLimits,
   validateRecordingBatch,
 } from "../diagnostic-recordings.ts";
-import { recordingRunDefinition } from "../recording-admission.ts";
+import {
+  type RecordingAdmission,
+  recordingRunDefinition,
+} from "../recording-admission.ts";
 import { RecordingRefusal } from "../recording-refusal.ts";
 
 import { RecordingAdmissions } from "./recording-admissions.ts";
@@ -50,6 +53,9 @@ const pause = () => new Promise<void>((r) => setImmediate(r));
 export class DiagnosticRecordings {
   private entries: Segment[] = [];
   private readonly admissionJobs = new Set<string>();
+  private readonly storedDuplicates = new WeakSet<
+    typeof RecordingReceipt.Type
+  >();
   private readonly admissions = new RecordingAdmissions(() => this.blockBytes);
   private readonly recoveredRuns = new Set<string>();
   private readonly eventIndex = new RecordingEventIndex();
@@ -357,8 +363,13 @@ export class DiagnosticRecordings {
       throw error;
     }
   }
-  admissionDurable(id: string) {
-    return this.available && !this.admissions.dirty(id);
+  admissionDurable(id: string, required?: RecordingAdmission) {
+    return (
+      this.available &&
+      (required
+        ? this.admissions.covers(id, required)
+        : !this.admissions.dirty(id))
+    );
   }
   private activeRuns() {
     return new Set([
@@ -433,6 +444,7 @@ export class DiagnosticRecordings {
       this.seen.has(batch.batch_id) ||
       this.pendingIds.has(batch.batch_id) ||
       this.eventIndex.check(items);
+    const storedDuplicate = duplicate && !this.pendingIds.has(batch.batch_id);
     const marked = this.admissions.base(run.run_id);
     const known =
       this.manifests.get(batch.run.run_id) ??
@@ -524,7 +536,7 @@ export class DiagnosticRecordings {
         });
       }
     }
-    return {
+    const receipt: typeof RecordingReceipt.Type = {
       generated_at: new Date().toISOString(),
       accepted,
       durability: dryRun
@@ -542,6 +554,8 @@ export class DiagnosticRecordings {
       admission: this.admissions.state(run.run_id),
       status: this.status(),
     };
+    if (storedDuplicate) this.storedDuplicates.add(receipt);
+    return receipt;
   }
   settledReceipt(
     receipt: typeof RecordingReceipt.Type,
@@ -549,13 +563,13 @@ export class DiagnosticRecordings {
     run?: string,
   ): typeof RecordingReceipt.Type {
     const stored =
-      this.seen.has(id) ||
-      (receipt.duplicate && !!run && !this.admissions.dirty(run));
+      (this.seen.has(id) || this.storedDuplicates.has(receipt)) &&
+      (!run || this.admissions.covers(run, receipt.admission));
     return {
       ...receipt,
       accepted: stored,
       durability: stored ? "stored" : "dropped",
-      admission: run ? this.admissions.state(run) : receipt.admission,
+      admission: run ? this.admissions.durable(run) : receipt.admission,
       status: this.status(),
     };
   }

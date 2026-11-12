@@ -396,3 +396,14 @@ per run. Marked summaries withhold all-start fractions and complete comparisons.
 Exports/imports carry the mark even without events. Mixed-run event reducers
 partition their action, clock, crash and gap state by run; clients reducing export
 raw events must preserve the run admission context.
+
+Each marked segment stores its admission snapshot with its events. The single
+recording writer first persists the run checkpoint, then atomically publishes
+the qualifying segment. Missing checkpoints recover from those segments at
+startup; partial temporaries are removed and corrupt published metadata refuses
+queries. Mark-only checkpoints survive data eviction. Exact retries retry dirty
+state, including duplicate batches. Acknowledgements use the requesting batch's
+durable qualifier and retained-event evidence, independently of newer refusals.
+Weak receipt bookkeeping retains no completed requests. Expiry accepts ENOENT
+and rechecks newer state and active references after unlink, preserving dirty
+state if another admission arrived during the I/O.
