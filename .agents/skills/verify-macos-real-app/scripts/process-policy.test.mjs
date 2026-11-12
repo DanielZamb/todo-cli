@@ -9,5 +9,7 @@ try {
   for (const key of hostile.filter(key => !['HOME', 'CFFIXED_USER_HOME', 'PATH'].includes(key))) assert(!(key in env), key);
   assert(!env.PATH.includes('/untrusted'));
   for (const name of ['node', 'bun', 'git', 'xcrun', 'xcodebuild', 'codesign']) assert(command([name])[0].startsWith('/'));
+  const compiled = command(['bun', 'build', '--compile', '/private/tmp/probe.mjs', '--outfile', '/private/tmp/probe']);
+  for (const flag of ['--no-env-file', '--config=/dev/null', '--no-macros', '--no-compile-autoload-dotenv', '--no-compile-autoload-bunfig', '--no-compile-autoload-tsconfig', '--no-compile-autoload-package-json']) assert(compiled.includes(flag), flag);
   console.log('PASS: explicit child environment ignores every hostile parent setting');
 } finally { for (const [key, value] of old) if (value === undefined) delete process.env[key]; else process.env[key] = value; }

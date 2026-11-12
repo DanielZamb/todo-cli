@@ -37,6 +37,8 @@ class ExplicitProcess(Original):
         if argv[:2] == ['node', 'apps/macos/scripts/graph-resources.mjs']:
             argv = ['node', str(root / '.agents/skills/verify-macos-real-app/scripts/bundle-graph.mjs'), *argv[2:]]
         name = argv[0]
+        if argv[:2] == ['bun', 'build'] and '--compile' in argv:
+            argv[2:2] = ['--no-env-file', '--config=/dev/null', '--no-macros', '--no-compile-autoload-dotenv', '--no-compile-autoload-bunfig', '--no-compile-autoload-tsconfig', '--no-compile-autoload-package-json']
         if name == 'git': argv = ['/usr/bin/git', '-c', 'core.fsmonitor=false', '-c', 'core.hooksPath=/dev/null', '-c', 'credential.helper=', *argv[1:]]
         elif name in settings['tools']: argv[0] = settings['tools'][name]
         elif not Path(name).is_absolute():

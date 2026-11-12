@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
+import { bunCompileSafetyOptions } from './bun-policy.mjs';
 const node = fs.realpathSync(process.execPath);
 const system = { sh: '/bin/sh', ps: '/bin/ps', git: '/usr/bin/git', xcrun: '/usr/bin/xcrun', xcodebuild: '/usr/bin/xcodebuild', codesign: '/usr/bin/codesign', screencapture: '/usr/sbin/screencapture', ruby: '/usr/bin/ruby', lsof: '/usr/sbin/lsof', lockf: '/usr/bin/lockf' };
 const candidates = { bun: [path.join(os.userInfo().homedir, '.bun/bin/bun'), '/opt/homebrew/bin/bun', '/usr/local/bin/bun'], pnpm: [path.join(path.dirname(node), 'pnpm'), '/opt/homebrew/bin/pnpm', '/usr/local/bin/pnpm'] };
@@ -25,6 +26,7 @@ export function environment(home, temporary, values = {}) {
 }
 export function command(argv) {
   let [program, ...args] = argv;
+  if (program === 'bun' && args[0] === 'build' && args.includes('--compile')) return [executable('bun'), 'build', ...bunCompileSafetyOptions, ...args.slice(1)];
   if (program === 'git' || program === '/usr/bin/git') return ['/usr/bin/git', '-c', 'core.fsmonitor=false', '-c', 'core.hooksPath=/dev/null', '-c', 'core.excludesFile=/dev/null', '-c', 'credential.helper=', ...args];
   if (program.endsWith('.mjs')) return [node, path.resolve(program), ...args];
   if (program.endsWith('.sh')) return ['/bin/sh', path.resolve(program), ...args];

@@ -7,10 +7,46 @@
 #include <string.h>
 
 #include <stdlib.h>
+#include <stdio.h>
+#include <pthread.h>
+#include <sys/event.h>
 #include <sys/proc_info.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+struct parent_exit_watch { int queue; pid_t parent; };
+static void *watch_parent_exit(void *raw) {
+    struct parent_exit_watch watch = *(struct parent_exit_watch *)raw; free(raw);
+    struct kevent event;
+    for (;;) {
+        int result = kevent(watch.queue, NULL, 0, &event, 1, NULL);
+        if (result < 0 && errno == EINTR) continue;
+        if (result == 1 && event.filter == EVFILT_PROC && event.ident == (uintptr_t)watch.parent && (event.fflags & NOTE_EXIT)) {
+            static const char message[] = "parent-exit-watch stopped: expected parent exited\n";
+            write(STDERR_FILENO, message, sizeof(message) - 1); _exit(80);
+        }
+        _exit(78);
+    }
+}
+int verification_watch_parent_exit(void) {
+    static int installed;
+    if (installed) return -1;
+    pid_t parent = getppid(); if (parent <= 1) return -1;
+    int queue = kqueue(); if (queue < 0) return -1;
+    if (fcntl(queue, F_SETFD, FD_CLOEXEC)) { close(queue); return -1; }
+    struct kevent change;
+    EV_SET(&change, (uintptr_t)parent, EVFILT_PROC, EV_ADD | EV_ONESHOT, NOTE_EXIT, 0, NULL);
+    if (kevent(queue, &change, 1, NULL, 0, NULL) || getppid() != parent) { close(queue); return -1; }
+    struct parent_exit_watch *watch = malloc(sizeof(*watch));
+    if (!watch) { close(queue); return -1; }
+    *watch = (struct parent_exit_watch){ .queue = queue, .parent = parent };
+    pthread_t thread;
+    if (pthread_create(&thread, NULL, watch_parent_exit, watch)) { free(watch); close(queue); return -1; }
+    pthread_detach(thread); installed = 1;
+    dprintf(STDOUT_FILENO, "parent-exit-watch active: pid=%d parent=%d\n", getpid(), parent);
+    return 0;
+}
 
 static pid_t child_pid;
 static uint64_t child_start_sec, child_start_usec;

@@ -1,6 +1,16 @@
 # Mac verification app V01 safety correction
 
-Status: draft correction, qualification incomplete. The coordinator accepted
+Status: blocked on disk preflight, qualification incomplete. After the latest
+Swift-slot release, the small Bun configuration and parent-exit controls were
+completed without a Swift job. Available space then fell from about 30.4 GiB
+to 29.93 GiB, below the required 30 GiB floor. No retained own .scratch/DerivedData
+or compiled helper remained to prune. A larger app/state/offscreen build was not
+started. The exact sample is in
+disk-block-qualification.json. All seven findings remain open pending the
+single frozen-head qualification; visible readback is explicitly pending while
+the owner is active and V02 remains held.
+
+The coordinator accepted
 exactly `(allow file-read-data (literal "/"))` and rejected the supervisor
 proposal. The profile now contains that literal rule. The coordinator released
 the latest Swift-slot hold after its seat reported. No Swift job was running
@@ -122,12 +132,29 @@ proof, so this source draft cannot produce a complete visible receipt yet.
 The no-build audit during the hold found another MV-S1-1 case to qualify.
 Local Bun help reports that standalone .env and bunfig.toml autoloading default
 to true, matching [Bun's documented standalone configuration behavior](https://bun.sh/docs/compiler/executables).
-The inherited environment alone therefore does not establish the claimed
-configuration boundary. bun-config-control.mjs now defines synthetic runtime
-and compiler configuration probes. Its default-loading red is written but
-unrun, as is the explicit no-autoload/no-config policy. That policy has not
-yet been wired into compiler invocations. No credential, network or owner-data
-probe is needed for these controls; they use scratch markers only.
+The inherited environment alone did not establish the configuration boundary.
+After release, all four synthetic runtime/compiler .env/bunfig probes failed
+their literal safety assertions at 1 before the correction. They then passed
+at 0 with explicit no-config/no-env/no-macro and no-compile-autoload options.
+The shared process-policy boundary now supplies those flags for every named
+Bun compile; the production recipe adapter supplies the same flags. Its unit
+test failed first at 1, then passed at 0. The Node inheritance-removal control
+still fails for inheritance, with its newly required policy module copied into
+the scratch control. Evidence: bun-config-red, bun-config-green,
+bun-policy-unit-red.json and bun-policy-node-reds.json. These controls use only
+scratch markers; no credential, network or owner-data probe is involved.
+
+The compiled parent-death control also failed first: killing its owned relay
+left the compiled scratch server's inherited pipe open, and the matching test
+failed at 1. The test-only server wrapper now installs an in-process kqueue
+NOTE_EXIT watcher for its actual kernel parent before production server code.
+The C thread exits that server on parent death independently of its JS loop.
+The corrected test closes the pipe and matches the explicit parent-exit marker
+at exit 0. Evidence: parent-death-red and parent-death-green-2. The initial
+green attempt stopped at a missing stdio declaration; that failed receipt is
+retained at parent-death-green and excluded. All helpers and fixtures were
+closed and removed. These receipts belong to dirty development from
+a67fbe731b044a2635d40377dcecddd3ee4e6973, not a qualified frozen runtime head.
 
 ## Seven findings and current evidence
 

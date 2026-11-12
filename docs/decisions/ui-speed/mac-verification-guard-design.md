@@ -96,7 +96,7 @@ reusable input/control, not evidence of execution unless its receipt exists.
 | Direct file reads | Correct manifest coexists with arbitrary path reads by a shared screen | Deny general file reads except scratch, own bundle and system resources; synthetic outside-file control |
 | Outbound sockets | Health is safe but later generated calls reach another port | Same sandbox inherited for lifetime, origin check and unrelated live listener; network-rule red control |
 | Subprocesses | A checked path is resolved through inherited PATH/config | Absolute immediate executable paths and environments built from scratch; policy test and inheritance red |
-| Compiled Bun configuration | The binary reintroduces environment/configuration from its working directory despite a fresh inherited environment | bun-config-control's scratch .env/bunfig cases; explicit no-autoload/no-config compiler policy is written but must follow the default-loading red before being wired |
+| Compiled Bun configuration | The binary reintroduces environment/configuration from its working directory despite a fresh inherited environment | Four scratch runtime/compiler .env/bunfig controls each failed first at exit 1 and passed at exit 0 after the explicit no-autoload/no-config compile flags were wired into both recipe paths; frozen-head qualification remains pending |
 | Local owner input | Modifier/key-up/drag type is absent from the mask | Literal full exposed NSEvent type list; delivered type 10/12 controls and modifier-mask removal |
 | Global owner input | Local monitor cannot see another application's events | Global monitor installed before a window; unavailable permission/registration refuses; independent HID watch |
 | Busy UI thread | Main-thread timers cannot run to notice owner activity | 50 ms background Dispatch timer samples combined-session-any-event and IOKit HID idle; busy-main injected-HID control/red |
@@ -228,7 +228,12 @@ establish that its server child exits or that scratch flags were restored.
 ParentRelay.c and parent-death-driver.mjs are the failing-first input for that
 class: kill only an owned relay parent, require the compiled server's inherited
 pipe to close, and clean a baseline orphan only through the dedicated process
-group created by that test. This control is written and unrun during the Swift
-hold. The server-side parent-exit mechanism remains to be implemented after the
-red. The full recipe and visible runner require parentDeathCleanup; neither can
-claim a complete recipe without it. No external supervisor is selected.
+group created by that test. The original compiled server stayed alive after its
+relay parent was killed, producing the matching failing test at exit 1. The
+server now starts an in-process kqueue parent-exit watcher before importing the
+production entry point. Its detached thread exits independently of the JavaScript
+loop. The repeated control observed the explicit parent-exit marker and pipe
+closure, and passed at exit 0. These component receipts belong to a dirty
+a67fbe73 development tree; frozen-head qualification remains pending. The full
+recipe and visible runner require parentDeathCleanup; neither can claim a
+complete recipe without it. No external supervisor is selected.

@@ -1,5 +1,5 @@
-// Wire this into compiler invocations only after the default-loading red has
-// been recorded. Explicit false settings also document the runtime contract.
+// Default-loading reds precede this policy. Explicit false settings define
+// the standalone executable's configuration contract.
 export const bunCompileSafetyOptions = [
   '--no-env-file', '--config=/dev/null', '--no-macros',
   '--no-compile-autoload-dotenv', '--no-compile-autoload-bunfig',

@@ -34,6 +34,7 @@ export async function qualifyParentDeath({ evidence, fixture, relay, sourceHead,
     const matching = run(assertion, { env: tools, encoding: 'utf8' });
     commands.push({ argv: command(assertion), environment: tools, exit: matching.status, stdout: matching.stdout, stderr: matching.stderr });
     assert.equal(closed, !before); assert.equal(matching.status, before ? 1 : 0);
+    if (!before) assert((stdout + stderr).includes('parent-exit-watch stopped: expected parent exited'), 'An unrelated early server exit is not the parent-death proof');
     result.matchingTestExit = matching.status; result.status = before ? 'EXPECTED_RED' : 'PASS_COMPONENT';
   } catch (error) { result.error = error.stack; throw error; }
   finally {

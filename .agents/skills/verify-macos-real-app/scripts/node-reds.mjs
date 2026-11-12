@@ -12,6 +12,7 @@ try {
     ['receipt-stages.mjs', 'receipt-stages.test.mjs', "scope === 'visible' && requiredStages.every(stage => result[stage])", "scope !== 'visible-only'"],
     ['process-policy.mjs', 'process-policy.test.mjs', 'const result = { HOME:', 'const result = { ...process.env, HOME:'],
   ]) {
+    if (module === 'process-policy.mjs') fs.copyFileSync(path.resolve('.agents/skills/verify-macos-real-app/scripts/bun-policy.mjs'), directory + '/bun-policy.mjs');
     const sourcePath = path.resolve('.agents/skills/verify-macos-real-app/scripts', module);
     const source = fs.readFileSync(sourcePath, 'utf8'); assert(source.includes(before));
     const mutant = directory + '/' + module; fs.writeFileSync(mutant, source.replace(before, after));
