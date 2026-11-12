@@ -16,6 +16,14 @@ struct VerificationManifest: Decodable {
     let build: String
     let profile: String
     let session: String
+    let ownerHome: String
+    let boundaryPath: String
+    let boundarySHA256: String
+    let outsideSentinel: String
+    let probePort: Int
+    let preflightPath: String
+    let preflightLibraryPath: String
+    let preflightSHA256: String
 }
 
 struct VerificationRefusal: LocalizedError {
@@ -25,6 +33,8 @@ struct VerificationRefusal: LocalizedError {
 
 @_silgen_name("verification_temporary_bind")
 func bindTemporaryDirectory(_ fd: Int32)
+@_silgen_name("verification_boundary_check")
+func verificationBoundaryCheck(_ root: UnsafePointer<CChar>, _ owner: UnsafePointer<CChar>, _ outside: UnsafePointer<CChar>, _ port: Int32, _ otherPort: Int32, _ role: UnsafePointer<CChar>) -> Int32
 
 @_silgen_name("verification_seal_register")
 private func sealRegister(_ fd: Int32, _ flags: UInt32) -> Int32
@@ -44,12 +54,13 @@ final class ScratchDescriptor {
     let path: String
     private(set) var initial: stat
     let directory: Bool
+    let privateMode: Bool
     let immutableContents: Bool
     private var sealed = false
     private var protection: UInt32 = 0
 
     init(fd: Int32, path: String, device: dev_t?, directory: Bool, privateMode: Bool = false, immutableContents: Bool = false) throws {
-        self.fd = fd; self.path = path; self.directory = directory; self.immutableContents = immutableContents
+        self.fd = fd; self.path = path; self.directory = directory; self.privateMode = privateMode; self.immutableContents = immutableContents
         var info = stat()
         do {
             try verificationRequire(fd >= 0 && fstat(fd, &info) == 0, "A scratch descriptor could not be inspected.")
@@ -80,11 +91,16 @@ final class ScratchDescriptor {
         protection = UInt32(UF_APPEND); sealed = true
     }
     func unseal() { if sealed { _ = fchflags(fd, initial.st_flags); sealed = false } }
+    func requireUsage(directory: Bool, privateMode: Bool, immutable: Bool) throws {
+        try verify()
+        try verificationRequire(self.directory == directory && (!privateMode || self.privateMode) && (!immutable || immutableContents), "A cached scratch descriptor must retain every requested type and protection.")
+    }
     func verify() throws {
         var now = stat(), named = stat()
         try verificationRequire(fstat(fd, &now) == 0 && lstat(path, &named) == 0, "An accepted scratch object disappeared.")
         try verificationRequire(now.st_dev == initial.st_dev && now.st_ino == initial.st_ino && named.st_dev == now.st_dev && named.st_ino == now.st_ino && named.st_mode & S_IFMT == (directory ? S_IFDIR : S_IFREG), "An accepted scratch object was replaced.")
         try verificationRequire(now.st_uid == getuid() && (directory || now.st_nlink == 1), "An accepted scratch object changed ownership or acquired a hard link.")
+        try verificationRequire(!privateMode || now.st_mode & 0o077 == 0, "An accepted private scratch object became accessible to another user.")
         var actual = [CChar](repeating: 0, count: Int(MAXPATHLEN))
         try verificationRequire(fcntl(fd, F_GETPATH, &actual) == 0 && String(cString: actual) == path, "An accepted scratch directory or file was renamed.")
         try verificationRequire(!sealed || now.st_flags & protection == protection, "An accepted scratch protection was removed.")
@@ -130,7 +146,7 @@ final class ScratchFiles {
         objects[path] = root
     }
     func open(_ path: String, directory: Bool = false, privateMode: Bool = false, immutable: Bool = false, create: Bool = false, writable: Bool = false) throws -> ScratchDescriptor {
-        if let existing = objects[path] { try existing.verify(); return existing }
+        if let existing = objects[path] { try existing.requireUsage(directory: directory, privateMode: privateMode, immutable: immutable); return existing }
         try verificationRequire(path.hasPrefix(root.path + "/"), "Every accepted path must stay inside the scratch root.")
         let suffix = String(path.dropFirst(root.path.count + 1))
         let parts = suffix.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
@@ -140,7 +156,7 @@ final class ScratchFiles {
             let final = index == parts.count - 1
             let isDirectory = !final || directory
             let current = parent.path + "/" + part
-            if let existing = objects[current] { try existing.verify(); parent = existing; continue }
+            if let existing = objects[current] { try existing.requireUsage(directory: isDirectory, privateMode: final && privateMode, immutable: final && immutable); parent = existing; continue }
             if isDirectory && create { _ = mkdirat(parent.fd, part, 0o700) }
             let flags = (writable ? O_RDWR : O_RDONLY) | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK | (isDirectory ? O_DIRECTORY : 0)
             var fd = openat(parent.fd, part, flags)
@@ -253,18 +269,22 @@ func verificationChildCleanup()
     static var serverLog: ScratchDescriptor?
     static func require(_ condition: Bool, _ message: String) throws { try verificationRequire(condition, message) }
 
-    static func check(expectedContract: String? = nil, visible: Bool = false, expectedServerSHA256: String? = nil, expectedCLISHA256: String? = nil) throws {
+    static func check(expectedContract: String? = nil, visible: Bool = false, expectedServerSHA256: String? = nil, expectedCLISHA256: String? = nil, expectedBoundarySHA256: String? = nil, expectedPreflightSHA256: String? = nil, beforeSandbox: (@MainActor (Data) throws -> Void)? = nil) throws {
         let environment = ProcessInfo.processInfo.environment
         guard let path = environment["TODO_VERIFICATION_MANIFEST"] else { throw VerificationRefusal(message: "A private launch manifest is required.") }
         guard let slash = path.lastIndex(of: "/") else { throw VerificationRefusal(message: "A canonical manifest path is required.") }
         let rootPath = String(path.prefix(through: slash)).dropLast()
         let storage = try ScratchFiles(String(rootPath)); files = storage
         do {
+            try require(path == storage.root.path + "/manifest.json", "The owned server and app must read the same fixed manifest path.")
             runClaim = try VerificationClaim(storage: storage, consumed: true)
             if visible { machineClaim = try VerificationClaim.machine() }
             let input = try storage.open(path, privateMode: true, immutable: true)
             try input.seal()
             let manifest = try JSONDecoder().decode(VerificationManifest.self, from: input.data())
+            guard let owner = getpwuid(getuid()), let ownerPath = owner.pointee.pw_dir else { throw VerificationRefusal(message: "The real home path could not be isolated.") }
+            try require(manifest.ownerHome == String(cString: ownerPath), "Boundary probes must use the actual owner home metadata.")
+            try require((1...65535).contains(manifest.probePort) && manifest.outsideSentinel.hasPrefix("/private/tmp/todo-mac-verify-") && !manifest.outsideSentinel.contains(".."), "Boundary controls require an owned scratch sentinel and port.")
             try require(manifest.root == storage.root.path, "The manifest must name its own scratch root.")
             try require(expectedContract == nil || manifest.contract == expectedContract, "The manifest contract does not match this client.")
             let home = try storage.open(manifest.home, directory: true, privateMode: true)
@@ -279,15 +299,34 @@ func verificationChildCleanup()
             _ = try storage.open(manifest.database + "-shm", create: true)
             let server = try storage.open(manifest.serverPath, immutable: true), cli = try storage.open(manifest.cliPath, immutable: true)
             try server.seal(); try cli.seal()
+            try require(manifest.boundaryPath == manifest.root + "/boundary.dylib", "The server boundary library must use its fixed scratch path.")
+            let boundary = try storage.open(manifest.boundaryPath, immutable: true)
+            try boundary.seal()
+            let boundaryHash = try boundary.digest()
+            try require(manifest.boundarySHA256 == expectedBoundarySHA256 && boundaryHash == manifest.boundarySHA256, "The server boundary library must match the frozen build through its opened descriptor.")
+            try require(manifest.preflightPath == manifest.root + "/owner-preflight" && manifest.preflightLibraryPath == manifest.root + "/libCredentialTrap.dylib", "The metadata child and its library must use their fixed scratch paths.")
+            let preflight = try storage.open(manifest.preflightPath, immutable: true)
+            let preflightLibrary = try storage.open(manifest.preflightLibraryPath, immutable: true)
+            try preflight.seal(); try preflightLibrary.seal()
+            try require(try preflight.digest() == manifest.preflightSHA256 && manifest.preflightSHA256 == expectedPreflightSHA256, "The metadata executable must match the frozen build through its opened descriptor.")
+            try require(try preflightLibrary.digest() == manifest.boundarySHA256, "The metadata child's library must match the checked boundary library.")
             try require(manifest.serverSHA256 == expectedServerSHA256 && manifest.cliSHA256 == expectedCLISHA256, "The manifest binary hashes must match this qualification build, not values chosen by the manifest.")
             try require(try server.digest() == manifest.serverSHA256 && cli.digest() == manifest.cliSHA256, "The compiled server or CLI hash does not match the manifest.")
             guard let destination = URLComponents(string: manifest.serverURL), destination.scheme == "http", destination.host == "127.0.0.1", let port = destination.port, (1...65535).contains(port), destination.user == nil, destination.password == nil, destination.query == nil, destination.fragment == nil, destination.path.isEmpty else { throw VerificationRefusal(message: "The server must be an explicit http://127.0.0.1 loopback port.") }
+            try require(manifest.probePort != port, "A negative network control must never target the chosen server port.")
             try require(manifest.serverPID == 0, "Attaching to an existing server is forbidden; the guard must start its own child.")
             try require(manifest.session.hasPrefix("ses_") && !manifest.profile.isEmpty, "A scratch owner Session and Profile are required.")
             let log = try storage.open(manifest.root + "/server.log", create: true, writable: true)
             serverLog = log
             try storage.audit(); try storage.verify(); try storage.protectDirectories()
+            if visible {
+                try require(beforeSandbox != nil, "A visible run requires the owned metadata-child validator.")
+                let state = try ownedPreflight(manifest, executable: preflight, storage: storage)
+                try beforeSandbox!(state)
+            }
             try ScratchSandbox.install(root: manifest.root, executable: manifest.serverPath, serverURL: manifest.serverURL)
+            let boundaryStatus = manifest.root.withCString { root in manifest.ownerHome.withCString { owner in manifest.outsideSentinel.withCString { outside in "app".withCString { role in verificationBoundaryCheck(root, owner, outside, Int32(port), Int32(manifest.probePort), role) } } } }
+            try require(boundaryStatus == 0, "The app sandbox boundary checks failed.")
             let process = Process()
             process.executableURL = URL(fileURLWithPath: server.path)
             process.arguments = []
@@ -316,8 +355,49 @@ func verificationChildCleanup()
             if let serverLog, (try? serverLog.recordOwnedWrite()) != nil, let data = try? serverLog.data(limit: 65_536) {
                 FileHandle.standardError.write(Data("owned-server-log\n".utf8) + data)
             }
-            stop(); throw error
+            stop()
+            if let refusal = error as? VerificationRefusal { throw refusal }
+            let failure = error as NSError
+            throw VerificationRefusal(message: "The checked scratch operation failed (\(failure.domain), code \(failure.code)).")
         }
+    }
+    private static func ownedPreflight(_ manifest: VerificationManifest, executable: ScratchDescriptor, storage: ScratchFiles) throws -> Data {
+        let process = Process(), pipe = Pipe()
+        let log = try storage.open(manifest.root + "/preflight.log", create: true, writable: true)
+        process.executableURL = URL(fileURLWithPath: executable.path)
+        process.arguments = []
+        process.currentDirectoryURL = URL(fileURLWithPath: manifest.root)
+        process.environment = ["HOME": manifest.home, "CFFIXED_USER_HOME": manifest.home, "TMPDIR": manifest.root + "/tmp", "LANG": "C", "LC_ALL": "C"]
+        process.standardInput = FileHandle.nullDevice
+        process.standardOutput = pipe
+        process.standardError = FileHandle(fileDescriptor: log.fd, closeOnDealloc: false)
+        FileHandle.standardError.write(Data("owned-preflight-process ".utf8) + (try JSONSerialization.data(withJSONObject: ["executable": executable.path, "arguments": [], "environment": process.environment!], options: .sortedKeys)) + Data("\n".utf8))
+        try storage.verify(); try process.run(); child = process; childRegister(process.processIdentifier)
+        try pipe.fileHandleForWriting.close()
+        defer { try? pipe.fileHandleForReading.close() }
+        let fd = pipe.fileHandleForReading.fileDescriptor
+        let flags = fcntl(fd, F_GETFL)
+        try require(flags >= 0 && fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0, "The owned metadata pipe could not be bounded.")
+        let started = ProcessInfo.processInfo.systemUptime
+        var output = Data(), bytes = [UInt8](repeating: 0, count: 4096), ended = false
+        while !ended || process.isRunning {
+            try require(ProcessInfo.processInfo.systemUptime - started <= 5, "The owned metadata child timed out.")
+            let count = ended ? 0 : read(fd, &bytes, bytes.count)
+            try require(count >= 0 || errno == EAGAIN || errno == EINTR, "The owned metadata pipe could not be read.")
+            if count > 0 {
+                output.append(contentsOf: bytes.prefix(count))
+            } else if count == 0 { ended = true }
+            try require(output.count <= 65_536, "The owned metadata child output exceeded its limit.")
+            if !ended || process.isRunning { Thread.sleep(forTimeInterval: 0.01) }
+        }
+        process.waitUntilExit()
+        FileHandle.standardError.write(Data("owned-preflight-output\n".utf8) + output)
+        try require(process.terminationReason == .exit && process.terminationStatus == 0, "The owned metadata child refused or failed.")
+        try storage.verify(); try storage.audit()
+        let records = String(decoding: output, as: UTF8.self).split(separator: "\n").filter { $0.hasPrefix("owner-preflight ") }
+        try require(records.count == 1, "The owned metadata child must return exactly one snapshot.")
+        child = nil
+        return Data(records[0].dropFirst(16).utf8)
     }
     static func verifyOwnedChild(port: UInt16? = nil) throws {
         guard let child, let database else { throw VerificationRefusal(message: "No owned scratch server exists.") }

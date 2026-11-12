@@ -23,8 +23,8 @@ real exit. This proves in-process posted-event handling; it does not establish
 WindowServer delivery or physical input.
 
 An unmarked event in the verification window uses the same monitor and stops
-the app. Input elsewhere in the session updates the idle clock, checked every
-100 ms. The pure clock predicate has quiet/recent-input fixtures and an inverted
+the app. Input elsewhere in the session updates the combined-session and HID idle
+signals, sampled on a separate queue every 50 ms. The pure clock predicate has quiet/recent-input fixtures and an inverted
 scratch-source red control. An offscreen NSApplication event loop also runs
 with the local monitor removed; its expected-exit test must fail. No keyboard
 content or pointer location is recorded.
@@ -34,3 +34,8 @@ content or pointer location is recorded.
 Never post globally or target either production app. A real-input abort is a
 stopped run. Capture its receipt and tell the coordinator; do not retry
 automatically. Every later visible run needs a fresh successful preflight.
+
+The strict-profile frontmost and permission queries currently refuse startup.
+The C diagnostic can register a global monitor, but has not established global
+keyboard delivery. No visible readback or interruption from this correction is
+qualified yet.

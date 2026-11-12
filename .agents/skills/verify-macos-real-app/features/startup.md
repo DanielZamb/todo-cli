@@ -14,9 +14,11 @@ private manifest fail before a window appears.
 
 ## Driving it with the V01 helper
 
-Run verify.mjs with --guards-only. Read guards.json. Valid input exits 0; every
+Run verify.mjs with --guards-only. Read guard-matrix.json and class-reds.json. Valid input exits 0; every
 bad case exits 78 with its exact plain-language reason. A wrong port must not
 cause a request to an unrelated listener.
+That scope always records completeRecipe=false. Cached descriptor constraints,
+hard links, component symlinks and swaps have separate controls.
 
 ## Gotchas
 

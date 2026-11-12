@@ -12,7 +12,7 @@ enum VerificationEntry {
         credentialTrapReady()
         do {
             try verificationRequire(CommandLine.arguments.contains("--check-manifest") || VerificationBuild.visibleAllowed, "Visible launches are held pending coordinator release.")
-            try LaunchGuard.check(expectedContract: TodoContract.id, visible: !CommandLine.arguments.contains("--check-manifest"), expectedServerSHA256: VerificationBuild.serverSHA256, expectedCLISHA256: VerificationBuild.cliSHA256)
+            try LaunchGuard.check(expectedContract: TodoContract.id, visible: !CommandLine.arguments.contains("--check-manifest"), expectedServerSHA256: VerificationBuild.serverSHA256, expectedCLISHA256: VerificationBuild.cliSHA256, expectedBoundarySHA256: VerificationBuild.boundarySHA256, expectedPreflightSHA256: VerificationBuild.preflightSHA256, beforeSandbox: OwnerIdle.acceptOwnedPreflight)
             if CommandLine.arguments.contains("--check-manifest") {
                 print("manifest accepted; no window constructed")
                 exit(0)

@@ -18,6 +18,22 @@ export async function runRegressions(c) {
   }
   await check('valid-owned-child', undefined, 0);
   await check('public-task-readback', undefined, 0, native + '/boundary', ['read-tasks']);
+  await check('owned-metadata-child-headless', undefined, 0, native + '/boundary', ['owned-metadata']);
+  await check('stale-owned-metadata-child', undefined, 78, native + '/boundary', ['stale-metadata']);
+  await check('missing-owned-metadata-validator', undefined, 78, native + '/boundary', ['missing-metadata-validator']);
+  for (const [mode, expected] of [['valid', 0], ['recent', 78], ['unknown', 78], ['stale', 78], ['future', 78], ['expired', 78], ['renamed-mac', 78], ['renamed-electron', 78]]) {
+    const value = execute([native + '/owner-policy', mode], 'owner-policy-' + mode);
+    assert.equal(value.status, expected, value.stderr);
+    rows.push({ name: 'owner-policy-' + mode, expectedExit: expected, exit: value.status });
+  }
+  for (const mode of ['type', 'immutable', 'private', 'changed-private']) {
+    const f = await fixture();
+    try {
+      const value = execute([native + '/cache', f.directory, mode], 'cache-' + mode, f.env);
+      assert.equal(value.status, 0, value.stderr);
+      rows.push({ name: 'cached-descriptor-' + mode, exit: value.status });
+    } finally { f.dispose(); }
+  }
   await check('missing-manifest', f => environment(f.directory + '/home', f.directory + '/tmp'));
   await check('wrong-home', f => ({ ...f.env, HOME: tools + '/home' }));
   await check('wrong-fixed-home', f => ({ ...f.env, CFFIXED_USER_HOME: tools + '/home' }));
@@ -37,11 +53,14 @@ export async function runRegressions(c) {
     ['dotdot-database', m => m.database = m.root + '/home/../scratch.db'],
     ['outside-database', m => m.database = tools + '/outside.db'],
     ['invalid-session', m => m.session = 'tok_not_a_session'],
+    ['metadata-hash', m => m.preflightSHA256 = '0'.repeat(64)],
+    ['metadata-path', m => m.preflightPath = m.root + '/todo'],
+    ['metadata-library-path', m => m.preflightLibraryPath = m.boundaryPath],
   ]) await check(name, f => { edit(f.manifest); f.write(); });
   await check('changed-binary-and-self-declared-hash', f => {
     fs.appendFileSync(f.manifest.serverPath, 'changed'); f.manifest.serverSHA256 = c.binaryProvenance.sha256.cli; f.write();
   });
-  const regulars = ['manifest.json', 'todo-server', 'todo', 'scratch.db', 'scratch.db-wal', 'scratch.db-shm', '.instance-lock', 'server.log'];
+  const regulars = ['manifest.json', 'todo-server', 'todo', 'boundary.dylib', 'owner-preflight', 'libCredentialTrap.dylib', 'preflight.log', 'scratch.db', 'scratch.db-wal', 'scratch.db-shm', '.instance-lock', 'server.log'];
   for (const name of regulars) {
     await check('hardlink-' + name, f => {
       const file = f.directory + '/' + name; if (!fs.existsSync(file)) fs.writeFileSync(file, '');
@@ -61,7 +80,7 @@ export async function runRegressions(c) {
       const target = f.directory + '/' + name;
       const directory = ['home', 'tmp'].includes(name);
       if (!fs.existsSync(target)) fs.writeFileSync(target, 'owned');
-      const child = await asynchronous([native + '/files', f.directory, target, '--wait', '--protect', ...(directory ? ['--directory'] : []), ...(['manifest.json', 'todo', 'todo-server'].includes(name) ? ['--immutable'] : [])], 'swap-protected-' + name, f.env);
+      const child = await asynchronous([native + '/files', f.directory, target, '--wait', '--protect', ...(directory ? ['--directory'] : []), ...(['manifest.json', 'todo', 'todo-server', 'boundary.dylib', 'owner-preflight', 'libCredentialTrap.dylib'].includes(name) ? ['--immutable'] : [])], 'swap-protected-' + name, f.env);
       for (let n = 0; n < 500 && !child.output().includes('descriptor opened'); n++) { assert.equal(child.child.exitCode, null); await pause(10); }
       assert(child.output().includes('descriptor opened'));
       let denied = false;
@@ -127,12 +146,13 @@ export async function runRegressions(c) {
       const owned = tools + '/foreign-' + place; fs.mkdirSync(owned); fs.mkdirSync(owned + '/home'); fs.mkdirSync(owned + '/tmp');
       fs.copyFileSync(f.manifest.database, owned + '/other.db', fs.constants.COPYFILE_EXCL);
       const marker = 'HOME=' + f.manifest.home + ' TODO_DB=' + f.manifest.database + ' ';
-      const placement = {}; let executable = f.manifest.serverPath;
+      const placement = {}; let executable = f.directory + '/todo-server-production';
+      fs.copyFileSync(c.binaryProvenance.cache + '/todo-server-production', executable, fs.constants.COPYFILE_EXCL);
       const env = environment(owned + '/home', owned + '/tmp', { TODO_DB: owned + '/other.db', TODO_PORT: new URL(f.manifest.serverURL).port });
       if (place === 'environment') env.REVIEW_EXPECTED_MARKERS = marker;
       if (place === 'arguments') placement.argv0 = marker;
       if (place === 'working-directory') { placement.cwd = owned + '/' + marker; fs.mkdirSync(placement.cwd, { recursive: true }); }
-      if (place === 'executable-path') { executable = owned + '/' + marker + '/server'; fs.mkdirSync(path.dirname(executable), { recursive: true }); fs.copyFileSync(f.manifest.serverPath, executable, fs.constants.COPYFILE_EXCL); }
+      if (place === 'executable-path') { executable = owned + '/' + marker + '/server'; fs.mkdirSync(path.dirname(executable), { recursive: true }); fs.copyFileSync(c.binaryProvenance.cache + '/todo-server-production', executable, fs.constants.COPYFILE_EXCL); }
       foreignChild = await asynchronous([executable], 'foreign-process-' + place, env, false, placement);
       // A public health response proves this is a running compiled server, not inert marker text.
       let ready = false;
@@ -164,19 +184,11 @@ export async function runRegressions(c) {
   build([c.guardFile, 'apps/macos/VerificationApp/OwnerIdle.swift', inputDriver], native + '/input-types', 'build-delivered-input');
   for (const type of ['key', 'modifier']) { const value = execute([native + '/input-types', tools + '/input-request', type], 'delivered-' + type); assert.equal(value.status, 80, value.stderr); assert(value.stderr.includes('posted test input detected (type ' + (type === 'modifier' ? 12 : 10) + ')')); rows.push({ name: 'delivered-' + type, exit: value.status }); }
   const hold = await fixture(); try {
-    const first = await asynchronous([native + '/boundary', 'hold'], 'first-instance', hold.env);
-    for (let n = 0; n < 1000 && !first.output().includes('manifest accepted'); n++) { assert.equal(first.child.exitCode, null); await pause(10); }
-    assert(first.output().includes('manifest accepted'));
-    const second = execute([native + '/guard'], 'second-instance', hold.env); assert.equal(second.status, 78);
-    assert.equal((await first.done).status, 0);
-    const reused = execute([native + '/guard'], 'reused-run', hold.env); assert.equal(reused.status, 78);
-    rows.push({ name: 'second-and-reused-instance', first: 0, second: 78, reused: 78 });
+    const value = execute(['/bin/sh', c.slot, process.execPath, '.agents/skills/verify-macos-real-app/scripts/concurrent-probes.mjs', 'root', hold.directory, native + '/boundary', native + '/guard'], 'root-instance-group');
+    assert.equal(value.status, 0, value.stderr); rows.push({ name: 'second-and-reused-instance', ...JSON.parse(value.stdout) });
   } finally { hold.dispose(); }
-  const machine = await asynchronous([native + '/boundary', 'machine-lock'], 'machine-first');
-  for (let n = 0; n < 1000 && !machine.output().includes('machine lock accepted'); n++) { assert.equal(machine.child.exitCode, null); await pause(10); }
-  assert(machine.output().includes('machine lock accepted'));
-  const other = execute([native + '/boundary', 'machine-lock'], 'machine-second'); assert.equal(other.status, 78);
-  assert.equal((await machine.done).status, 0); rows.push({ name: 'machine-visible-lock-without-window', first: 0, second: 78 });
+  const machine = execute(['/bin/sh', c.slot, process.execPath, '.agents/skills/verify-macos-real-app/scripts/concurrent-probes.mjs', 'machine', tools, native + '/boundary', native + '/guard'], 'machine-instance-group');
+  assert.equal(machine.status, 0, machine.stderr); rows.push({ name: 'machine-visible-lock-without-window', ...JSON.parse(machine.stdout) });
   await check('credential-service-denial-and-sandbox-http', undefined, 0, native + '/boundary', ['policy']);
   stages.guardMatrix = true; stages.inputBoundary = true; stages.instanceLocks = true;
   fs.writeFileSync(evidence + '/guard-matrix.json', JSON.stringify({ sourceHead: c.sourceHead, controls: rows, HTTPObservations: hits, originalCredentialCalls: false }, null, 2));

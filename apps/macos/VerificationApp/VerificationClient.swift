@@ -6,7 +6,7 @@ import TodoAPI
 
 private final class VerificationMetrics: VerificationHTTP, @unchecked Sendable {
     let recorder: ClientDiagnosticsRecorder
-    init(_ recorder: ClientDiagnosticsRecorder) { self.recorder = recorder }
+    init(_ recorder: ClientDiagnosticsRecorder) { self.recorder = recorder; super.init() }
     private func interval(_ start: Date?, _ end: Date?) -> Double? {
         guard let start, let end else { return nil }
         return max(0, end.timeIntervalSince(start) * 1000)

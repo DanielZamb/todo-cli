@@ -1,0 +1,11 @@
+import { dlopen, FFIType } from 'bun:ffi';
+import fs from 'node:fs';
+const home = process.env.HOME;
+if (!home?.startsWith('/private/tmp/todo-mac-verify-') || !home.endsWith('/home')) process.exit(78);
+const root = home.slice(0, -5);
+const manifest = JSON.parse(fs.readFileSync(root + '/manifest.json', 'utf8'));
+if (manifest.root !== root || manifest.boundaryPath !== root + '/boundary.dylib' || manifest.home !== home || process.env.TODO_DB !== manifest.database || process.env.TMPDIR !== root + '/tmp' || Number(process.env.TODO_PORT) !== Number(new URL(manifest.serverURL).port)) process.exit(78);
+const library = dlopen(manifest.boundaryPath, { verification_boundary_check: { args: [FFIType.cstring, FFIType.cstring, FFIType.cstring, FFIType.i32, FFIType.i32, FFIType.cstring], returns: FFIType.i32 } });
+const c = value => Buffer.from(value + '\0');
+if (library.symbols.verification_boundary_check(c(root), c(manifest.ownerHome), c(manifest.outsideSentinel), Number(process.env.TODO_PORT), manifest.probePort, c('server')) !== 0) process.exit(78);
+await import('../../../../apps/server/src/main.ts');

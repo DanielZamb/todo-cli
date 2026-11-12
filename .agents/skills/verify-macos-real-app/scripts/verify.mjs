@@ -13,13 +13,18 @@ import { receipt } from './receipt-stages.mjs';
 import { generateGuardMutants } from './guard-mutants.mjs';
 import { runRegressions } from './regressions.mjs';
 import { runClassReds } from './class-reds.mjs';
+import { reservedPorts, qualifyBoundaryProfiles } from './boundary-profiles.mjs';
+import { credentialSweep } from './credential-sweep.mjs';
+import { qualifyServerBoundary } from './server-boundary.mjs';
+import { qualifyPreflightHelper } from './preflight-helper-component.mjs';
+import { qualifyParentDeath } from './parent-death.mjs';
 
 process.umask(0o077);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
-if (!process.argv.includes('--slot-owned')) {
+if (!process.argv.includes('--clean-owned')) {
   const bootstrap = fs.realpathSync(fs.mkdtempSync('/tmp/todo-mac-verify-tool-'));
   fs.mkdirSync(bootstrap + '/home'); fs.mkdirSync(bootstrap + '/tmp');
-  const result = run(['/bin/sh', root + '/scripts/swift-slot.sh', executable('node'), ...process.argv.slice(1), '--slot-owned'], { cwd: root, env: environment(bootstrap + '/home', bootstrap + '/tmp'), stdio: 'inherit' });
+  const result = run([executable('node'), ...process.argv.slice(1), '--clean-owned'], { cwd: root, env: environment(bootstrap + '/home', bootstrap + '/tmp'), stdio: 'inherit' });
   fs.rmSync(bootstrap, { recursive: true }); process.exit(result.status ?? 1);
 }
 const evidence = process.argv[2];
@@ -28,7 +33,18 @@ fs.mkdirSync(evidence, { recursive: true, mode: 0o700 });
 const tools = fs.realpathSync(fs.mkdtempSync('/tmp/todo-mac-verify-tools-'));
 fs.mkdirSync(tools + '/home'); fs.mkdirSync(tools + '/tmp');
 const base = environment(tools + '/home', tools + '/tmp');
-const commands = [], stages = {}, fixtures = new Set(), activeChildren = new Set();
+const commands = [], stages = {}, fixtures = new Set(), activeChildren = new Set(), swiftPrograms = new Set();
+function job(argv) {
+ const expanded = command(argv);
+ if (expanded[0] === '/bin/sh' && expanded[1] === root + '/scripts/swift-slot.sh') {
+  assert(!fs.existsSync(evidence + '/swift-hold'), 'Coordinator holds the Swift slot; no new Swift job started');
+  return argv;
+ }
+ const isSwift = expanded[0] === executable('xcodebuild') || (expanded[0] === executable('xcrun') && expanded[1].startsWith('swift')) || swiftPrograms.has(expanded[0]);
+ if (!isSwift) return argv;
+ assert(!fs.existsSync(evidence + '/swift-hold'), 'Coordinator holds the Swift slot; no new Swift job started');
+ return ['/bin/sh', root + '/scripts/swift-slot.sh', ...expanded];
+}
 const hash = file => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 let sourceHead, template, result = { status: 'FAIL', visibleLaunchHeld: true, visibleReadback: false, appLaunchAttempted: false };
 function record(argv, name, env, value, secret = false) {
@@ -39,6 +55,7 @@ function record(argv, name, env, value, secret = false) {
   return value;
 }
 function execute(argv, name, env = base, input, secret = false) {
+  argv = job(argv);
   const value = run(argv, { cwd: root, env, input, encoding: 'utf8', maxBuffer: 128 * 1024 * 1024, timeout: 1200000 });
   return record(argv, name, env, value, secret);
 }
@@ -46,8 +63,9 @@ function must(argv, name, env = base, input, secret = false) {
   const value = execute(argv, name, env, input, secret); assert.equal(value.status, 0, name + ': ' + value.stderr?.slice(-1800)); return value.stdout;
 }
 async function asynchronous(argv, name, env = base, adversarial = false, placement = {}) {
-  const expanded = command(argv);
-  if (adversarial) assert([native + '/guard', native + '/http'].includes(expanded[0]), 'Only compiled safety probes accept deliberate hostile configuration');
+  const raw = command(argv);
+  argv = job(argv); const expanded = command(argv);
+  if (adversarial) assert([native + '/guard', native + '/http'].includes(raw[0]), 'Only compiled safety probes accept deliberate hostile configuration');
   const options = { cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'], ...placement };
   assert(Object.keys(placement).every(key => ['cwd', 'argv0'].includes(key)));
   const child = adversarial ? adversarialSpawn(expanded[0], expanded.slice(1), options) : start(argv, options);
@@ -68,17 +86,22 @@ function build(sources, output, name, objects = [], overrides = {}) {
   if (!sources.includes('apps/macos/VerificationApp/ScratchSandbox.swift')) sources = [...sources, 'apps/macos/VerificationApp/ScratchSandbox.swift'];
   if (!sources.includes('apps/macos/VerificationApp/VerificationDefaults.swift')) sources = [...sources, 'apps/macos/VerificationApp/VerificationDefaults.swift'];
   sources = sources.map(source => overrides[source] ?? source);
-  must([...swift, ...sources, ...objects.filter(value => value !== childObject), '-L' + tools, '-lCredentialTrap', '-Xlinker', '-u', '-Xlinker', '_todo_verification_trap_ready', '-Xlinker', '-rpath', '-Xlinker', tools, '-framework', 'IOKit', '-o', output], name); }
+  must([...swift, ...sources, ...objects.filter(value => value !== childObject), '-L' + tools, '-lCredentialTrap', '-Xlinker', '-u', '-Xlinker', '_todo_verification_trap_ready', '-Xlinker', '-rpath', '-Xlinker', tools, '-framework', 'IOKit', '-o', output], name); swiftPrograms.add(path.resolve(output)); }
 let binaryProvenance;
 async function fixture() {
   const directory = fs.realpathSync(fs.mkdtempSync('/tmp/todo-mac-verify-case-')); fixtures.add(directory);
   for (const name of ['todo', 'todo-server', 'scratch.db']) fs.copyFileSync(template + '/' + name, directory + '/' + name, fs.constants.COPYFILE_FICLONE | fs.constants.COPYFILE_EXCL);
   fs.cpSync(template + '/home', directory + '/home', { recursive: true, errorOnExist: true, force: false }); fs.mkdirSync(directory + '/tmp');
-  const chosen = await port();
-  const manifest = { root: directory, home: directory + '/home', serverURL: 'http://127.0.0.1:' + chosen, serverPath: directory + '/todo-server', cliPath: directory + '/todo', serverSHA256: binaryProvenance.sha256.server, cliSHA256: binaryProvenance.sha256.cli, serverPID: 0, database: directory + '/scratch.db', contract: binaryProvenance.contract, build: sourceHead.slice(0, 8), profile: 'verify', session: fs.readFileSync(tools + '/session', 'utf8').trim() };
+  const ports = await reservedPorts(), chosen = ports.port;
+  const outside = fs.realpathSync(fs.mkdtempSync('/tmp/todo-mac-verify-outside-'));
+  fs.writeFileSync(outside + '/sentinel', 'synthetic only', { mode: 0o600 });
+  fs.copyFileSync(tools + '/boundary-pristine.dylib', directory + '/boundary.dylib', fs.constants.COPYFILE_EXCL);
+  fs.copyFileSync(tools + '/boundary-pristine.dylib', directory + '/libCredentialTrap.dylib', fs.constants.COPYFILE_EXCL);
+  fs.copyFileSync(tools + '/owner-preflight', directory + '/owner-preflight', fs.constants.COPYFILE_EXCL);
+  const manifest = { preflightPath: directory + '/owner-preflight', preflightLibraryPath: directory + '/libCredentialTrap.dylib', preflightSHA256: binaryProvenance.sha256.preflight, ownerHome: os.userInfo().homedir, boundaryPath: directory + '/boundary.dylib', boundarySHA256: binaryProvenance.sha256.boundary, outsideSentinel: outside + '/sentinel', probePort: ports.otherPort, root: directory, home: directory + '/home', serverURL: 'http://127.0.0.1:' + chosen, serverPath: directory + '/todo-server', cliPath: directory + '/todo', serverSHA256: binaryProvenance.sha256.server, cliSHA256: binaryProvenance.sha256.cli, serverPID: 0, database: directory + '/scratch.db', contract: binaryProvenance.contract, build: sourceHead.slice(0, 8), profile: 'verify', session: fs.readFileSync(tools + '/session', 'utf8').trim() };
   const file = directory + '/manifest.json'; fs.writeFileSync(file, JSON.stringify(manifest), { mode: 0o600 });
   const env = environment(directory + '/home', directory + '/tmp', { TODO_VERIFICATION_MANIFEST: file });
-  return { directory, manifest, file, env, write: () => fs.writeFileSync(file, JSON.stringify(manifest), { mode: 0o600 }), dispose: () => { fs.rmSync(directory, { recursive: true }); fixtures.delete(directory); } };
+  return { directory, manifest, file, env, write: () => fs.writeFileSync(file, JSON.stringify(manifest), { mode: 0o600 }), dispose: () => { ports.close(); fs.rmSync(outside, { recursive: true }); fs.rmSync(directory, { recursive: true }); fixtures.delete(directory); } };
 }
 try {
   must(['sh', 'scripts/disk-guard.sh'], 'disk'); assert(fs.statfsSync(root).bavail * fs.statfsSync(root).bsize >= 30 * 1024 ** 3);
@@ -88,24 +111,33 @@ try {
   result.development = Boolean(dirty.trim()); stages.frozenSource = !result.development;
   const inputs = must(['git', 'ls-files', 'apps/cli', 'apps/server', 'packages', 'pnpm-lock.yaml'], 'binary-inputs').trim().split('\n');
   const digest = createHash('sha256').update(sourceHead); for (const file of inputs) digest.update(file).update(fs.readFileSync(file));
+  digest.update(fs.readFileSync('.agents/skills/verify-macos-real-app/scripts/server-entry.mjs'));
   const sourceHash = digest.digest('hex'), cache = path.join(root, '.scratch/bin', sourceHash); fs.mkdirSync(cache, { recursive: true });
-  for (const [entry, name] of [['apps/cli/src/main.ts', 'todo'], ['apps/server/src/main.ts', 'todo-server']]) {
+  must(['xcrun', 'clang', '-dynamiclib', 'apps/macos/VerificationApp/CredentialTrap.c', 'apps/macos/VerificationApp/ChildProof.c', 'apps/macos/VerificationApp/BoundaryProof.c', '-framework', 'Security', '-framework', 'IOKit', '-framework', 'CoreFoundation', '-framework', 'Foundation', '-install_name', '@rpath/libCredentialTrap.dylib', '-o', tools + '/libCredentialTrap.dylib'], 'build-native-credential-trap');
+  fs.copyFileSync(tools + '/libCredentialTrap.dylib', tools + '/boundary-pristine.dylib');
+  must(['xcrun', 'clang', '-fobjc-arc', '.agents/skills/verify-macos-real-app/scripts/OwnerPreflightHelper.m', '-L' + tools, '-lCredentialTrap', '-Wl,-rpath,@executable_path', '-framework', 'AppKit', '-framework', 'ApplicationServices', '-o', tools + '/owner-preflight'], 'build-owned-metadata-helper');
+  for (const [entry, name] of [['apps/cli/src/main.ts', 'todo'], ['.agents/skills/verify-macos-real-app/scripts/server-entry.mjs', 'todo-server'], ['apps/server/src/main.ts', 'todo-server-production']]) {
     if (!fs.existsSync(cache + '/' + name)) must(['bun', 'build', '--compile', path.join(root, entry), '--define', 'TODO_BUILD_ID=' + JSON.stringify(sourceHead.slice(0, 8)), '--outfile', cache + '/' + name], 'compile-' + name);
   }
   const contract = fs.readFileSync('packages/api/src/contract.ts', 'utf8').match(/CONTRACT_ID\s*=\s*"([a-f0-9]+)"/)[1];
-  binaryProvenance = { sourceHead, sourceHash, cache: path.relative(root, cache), contract, sha256: { cli: hash(cache + '/todo'), server: hash(cache + '/todo-server') } };
+  binaryProvenance = { sourceHead, sourceHash, cache: path.relative(root, cache), contract, sha256: { cli: hash(cache + '/todo'), server: hash(cache + '/todo-server'), productionServer: hash(cache + '/todo-server-production'), boundary: hash(tools + '/boundary-pristine.dylib'), preflight: hash(tools + '/owner-preflight') } };
   fs.writeFileSync(evidence + '/binary-provenance.json', JSON.stringify(binaryProvenance, null, 2));
-  fs.writeFileSync(bindings, 'enum VerificationBuild { static let visibleAllowed = false; static let serverSHA256 = "' + binaryProvenance.sha256.server + '"; static let cliSHA256 = "' + binaryProvenance.sha256.cli + '"; static let contract = "' + contract + '" }\n');
+  fs.writeFileSync(bindings, 'enum VerificationBuild { static let visibleAllowed = false; static let serverSHA256 = "' + binaryProvenance.sha256.server + '"; static let cliSHA256 = "' + binaryProvenance.sha256.cli + '"; static let boundarySHA256 = "' + binaryProvenance.sha256.boundary + '"; static let preflightSHA256 = "' + binaryProvenance.sha256.preflight + '"; static let contract = "' + contract + '" }\n');
   fs.writeFileSync(evidence + '/generated-bindings.json', JSON.stringify({ sourceHead, sha256: hash(bindings), ...binaryProvenance.sha256 }, null, 2)); stages.compiledBinaries = true;
-  must(['xcrun', 'clang', '-dynamiclib', 'apps/macos/VerificationApp/CredentialTrap.c', 'apps/macos/VerificationApp/ChildProof.c', '-framework', 'Security', '-framework', 'IOKit', '-framework', 'CoreFoundation', '-framework', 'Foundation', '-install_name', '@rpath/libCredentialTrap.dylib', '-o', tools + '/libCredentialTrap.dylib'], 'build-native-credential-trap');
   must(['xcrun', 'clang', '-c', 'apps/macos/VerificationApp/ChildProof.c', '-o', childObject], 'child-proof');
   must(['xcrun', 'clang', '-c', '.agents/skills/verify-macos-real-app/scripts/SandboxPolicyCheck.c', '-o', policyObject], 'policy-proof');
+  build([guardFile, bindings, 'apps/macos/VerificationApp/OwnerIdle.swift', 'apps/macos/VerificationApp/ScratchSandbox.swift', 'apps/macos/VerificationApp/VerificationDefaults.swift', '.agents/skills/verify-macos-real-app/scripts/NativeBoundaryProbe.swift'], native + '/boundary', 'build-boundary', [childObject, policyObject]);
+  const protocol = fs.readFileSync('apps/macos/Sources/TodoModel.swift', 'utf8').match(/@MainActor protocol SessionStorage \{[\s\S]*?\n\}/)[0];
+  fs.writeFileSync(tools + '/SessionStorage.swift', 'import Foundation\n' + protocol + '\n');
+  build([guardFile, tools + '/SessionStorage.swift', 'apps/macos/VerificationApp/MemorySessionVault.swift', '.agents/skills/verify-macos-real-app/scripts/MemoryProbe.swift'], native + '/memory', 'build-memory');
+  must([native + '/memory'], 'memory-session');
   build([guardFile, bindings, '.agents/skills/verify-macos-real-app/scripts/BootstrapProbe.swift'], native + '/bootstrap', 'build-bootstrap');
   build([guardFile, bindings, '.agents/skills/verify-macos-real-app/scripts/GuardProbe.swift'], native + '/guard', 'build-guard');
   build([guardFile, '.agents/skills/verify-macos-real-app/scripts/FileProbe.swift'], native + '/files', 'build-files');
+  build([guardFile, '.agents/skills/verify-macos-real-app/scripts/CacheProbe.swift'], native + '/cache', 'build-cache');
   build([guardFile, '.agents/skills/verify-macos-real-app/scripts/HTTPProbe.swift'], native + '/http', 'build-http');
-  build([guardFile, bindings, 'apps/macos/VerificationApp/OwnerIdle.swift', 'apps/macos/VerificationApp/ScratchSandbox.swift', 'apps/macos/VerificationApp/VerificationDefaults.swift', '.agents/skills/verify-macos-real-app/scripts/NativeBoundaryProbe.swift'], native + '/boundary', 'build-boundary', [childObject, policyObject]);
   build([guardFile, 'apps/macos/VerificationApp/OwnerIdle.swift', '.agents/skills/verify-macos-real-app/scripts/LocalInputProbe.swift'], native + '/input', 'build-input');
+  build([guardFile, 'apps/macos/VerificationApp/OwnerIdle.swift', '.agents/skills/verify-macos-real-app/scripts/OwnerPolicyProbe.swift'], native + '/owner-policy', 'build-owner-policy');
   template = fs.realpathSync(fs.mkdtempSync('/tmp/todo-mac-verify-template-')); fixtures.add(template);
   fs.mkdirSync(template + '/home'); fs.mkdirSync(template + '/tmp');
   for (const name of ['todo', 'todo-server']) fs.copyFileSync(cache + '/' + name, template + '/' + name, fs.constants.COPYFILE_FICLONE | fs.constants.COPYFILE_EXCL);
@@ -113,22 +145,29 @@ try {
   for (const name of ['init', 'login', 'alpha', 'beta']) must([native + '/bootstrap', template, name], 'bootstrap-' + name, templateEnv, name === 'init' || name === 'login' ? 'scratch verification passphrase\n' : undefined);
   const session = must([native + '/bootstrap', template, 'session'], 'bootstrap-session', templateEnv, undefined, true).trim();
   fs.writeFileSync(tools + '/session', session, { mode: 0o600 });
-  await runRegressions({ root, tools, native, evidence, base, execute, must, asynchronous, fixture, port, pause, build, swift, childObject, policyObject, guardFile, bindings, stages, binaryProvenance, sourceHead });
+  await qualifyBoundaryProfiles(evidence + '/root-boundary-profiles');
+  await qualifyServerBoundary({ evidence: evidence + '/server-boundary-profiles', fixture, sourceHead, development: result.development });
+  await qualifyPreflightHelper(evidence + '/preflight-helper');
+  await runRegressions({ root, tools, native, evidence, base, execute, must, asynchronous, fixture, port, pause, build, swift, slot: root + '/scripts/swift-slot.sh', childObject, policyObject, guardFile, bindings, stages, binaryProvenance, sourceHead });
   await runClassReds({ tools, native, evidence, base, execute, must, fixture, port, build, guardFile, bindings, policyObject, sourceHead });
   must(['node', '.agents/skills/verify-macos-real-app/scripts/node-reds.mjs', evidence + '/node-reds.json'], 'node-reds');
   if (process.argv.includes('--focus-regressions')) {
     assert(process.argv.includes('--development'));
     must(['node', '.agents/skills/verify-macos-real-app/scripts/receipt-stages.test.mjs'], 'receipt-stages');
   } else {
+  must(['xcrun', 'clang', '.agents/skills/verify-macos-real-app/scripts/ParentRelay.c', '-o', tools + '/parent-relay'], 'build-parent-relay');
+  const parentDeath = await qualifyParentDeath({ evidence: evidence + '/parent-death', fixture, relay: tools + '/parent-relay', sourceHead });
+  assert.equal(parentDeath.status, 'PASS_COMPONENT'); stages.parentDeathCleanup = true;
   const mutants = generateGuardMutants(root, tools);
   build([mutants.generated, bindings], native + '/mutants', 'build-guard-mutants');
   const red = [];
   for (const value of [{ index: 'baseline' }, ...mutants.variants]) {
+    assert(!fs.existsSync(evidence + '/swift-hold'), 'Coordinator holds new Swift jobs');
     const f = await fixture();
     try {
       if (value.index === 'baseline') must([native + '/mutants', 'baseline'], 'mutant-baseline', f.env);
       else {
-        const failure = execute(['node', '.agents/skills/verify-macos-real-app/scripts/expect-exit.mjs', '0', f.directory, native + '/mutants', String(value.index)], 'red-guard-' + value.index);
+        const failure = execute(['node', '.agents/skills/verify-macos-real-app/scripts/expect-exit.mjs', '0', f.directory, '/bin/sh', root + '/scripts/swift-slot.sh', native + '/mutants', String(value.index)], 'red-guard-' + value.index);
         assert.equal(failure.status, 1); const observed = JSON.parse(failure.stdout); assert.equal(observed.exit, 78);
         const message = value.original.match(/, "([^"\n]+)"\)/)?.[1];
         assert(message && observed.stderr.includes(message), 'Mutant failed at an unrelated guard: ' + value.index);
@@ -141,42 +180,56 @@ try {
   must(['node', '.agents/skills/verify-macos-real-app/scripts/generate-credential-traps.mjs', sdk, tools + '/CredentialSymbols.inc', tools], 'credential-census');
   assert.equal(fs.readFileSync(tools + '/CredentialSymbols.inc', 'utf8'), fs.readFileSync('apps/macos/VerificationApp/CredentialSymbols.inc', 'utf8'), 'Review and commit changed SDK bindings before qualification');
   fs.copyFileSync(tools + '/credential-export-census.json', evidence + '/credential-export-census.json');
-  const trapSource = fs.readFileSync('apps/macos/VerificationApp/CredentialTrap.c', 'utf8');
-  fs.writeFileSync(tools + '/CredentialTrap.c', trapSource);
-  const library = tools + '/libCredentialTrap.dylib';
-  const trapBuild = () => must(['xcrun', 'clang', '-dynamiclib', tools + '/CredentialTrap.c', 'apps/macos/VerificationApp/ChildProof.c', '-framework', 'Security', '-framework', 'IOKit', '-framework', 'CoreFoundation', '-framework', 'Foundation', '-install_name', '@rpath/libCredentialTrap.dylib', '-o', library], 'build-trap');
-  trapBuild();
-  must(['xcrun', 'clang', '.agents/skills/verify-macos-real-app/scripts/TrapProbe.c', '-L' + tools, '-lCredentialTrap', '-framework', 'Security', '-Wl,-rpath,' + tools, '-o', native + '/trap'], 'build-trap-probe');
-  const names = [...fs.readFileSync(tools + '/CredentialSymbols.inc', 'utf8').matchAll(/TRAP\((\w+)\)/g)].map(x => x[1]);
-  const traps = [];
-  for (const name of names) { const value = execute([native + '/trap', name], 'trap-' + name); assert.equal(value.status, 79); traps.push({ name, exit: value.status }); }
-  fs.writeFileSync(evidence + '/traps.json', JSON.stringify({ sourceHead, controls: traps }, null, 2)); stages.credentialBoundary = true;
-  const trapRed = [];
-  for (const name of names) {
-    fs.writeFileSync(tools + '/CredentialSymbols.inc', names.filter(value => value !== name).map(value => 'TRAP(' + value + ')').join('\n') + '\n');
-    trapBuild();
-    const failure = execute(['node', '.agents/skills/verify-macos-real-app/scripts/expect-exit.mjs', '79', template, native + '/trap', name], 'red-trap-' + name);
-    assert.equal(failure.status, 1); const observed = JSON.parse(failure.stdout); assert.equal(observed.exit, 1);
-    trapRed.push({ removed: name, matchingTestExit: 1, observed, originalCredentialCall: false });
-  }
-  fs.writeFileSync(evidence + '/trap-reds.json', JSON.stringify({ sourceHead, controls: trapRed }, null, 2)); stages.credentialRedControls = true;
+  const credentialResult = credentialSweep(evidence + '/credentials');
+  assert.equal(credentialResult.status, 'PASS_COMPONENT');
+  stages.credentialBoundary = true; stages.credentialRedControls = true;
   must(['node', '.agents/skills/verify-macos-real-app/scripts/receipt-stages.test.mjs'], 'receipt-stages');
   if (!process.argv.includes('--guards-only')) {
     must(['sh', 'scripts/disk-guard.sh'], 'disk-before-build'); assert(fs.statfsSync(root).bavail * fs.statfsSync(root).bsize >= 30 * 1024 ** 3);
     const resolved = 'apps/macos/VerificationApp/TodoVerification.xcodeproj/project.xcworkspace/xcshareddata/swiftpm'; fs.mkdirSync(resolved, { recursive: true });
     fs.copyFileSync('apps/macos/Todo.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', resolved + '/Package.resolved');
+    assert(stages.frozenSource && stages.guardMatrix && stages.guardRedControls && stages.credentialBoundary && stages.credentialRedControls, 'No app build/visible authority before the entire matrix passes on a frozen head');
+    const nativeBindingSHA256 = hash(bindings);
+    fs.writeFileSync(bindings, fs.readFileSync(bindings, 'utf8').replace('visibleAllowed = false', 'visibleAllowed = true'));
+    fs.writeFileSync(evidence + '/app-bindings.json', JSON.stringify({ sourceHead, nativeBindingSHA256, appBindingSHA256: hash(bindings), guardMatrixGreen: true }, null, 2));
     must(['xcodebuild', '-project', 'apps/macos/VerificationApp/TodoVerification.xcodeproj', '-scheme', 'TodoVerification', '-configuration', 'Release', '-destination', 'platform=macOS', '-derivedDataPath', '.scratch/mac-verification/DerivedData', '-disableAutomaticPackageResolution', '-skipPackageUpdates', ...(process.argv.includes('--fresh-build') ? ['clean', 'build'] : ['build']), 'CODE_SIGNING_ALLOWED=NO', 'CODE_SIGNING_REQUIRED=NO', 'ONLY_ACTIVE_ARCH=YES', 'TODO_NODE_BINARY=' + executable('node')], 'build-app'); stages.builtApp = true;
     const app = path.join(root, '.scratch/mac-verification/DerivedData/Build/Products/Release/TodoVerification.app');
     must(['codesign', '--force', '--sign', '-', '--identifier', 'local.todo.verification', '--timestamp=none', app], 'adhoc-identity');
     must(['node', '.agents/skills/verify-macos-real-app/scripts/audit.mjs', app, evidence], 'audit'); stages.artifactAudit = true;
+    must(['node', '.agents/skills/verify-macos-real-app/scripts/production-source-preservation.mjs', evidence + '/production-source', path.join(root, 'docs/evidence/mac-verification-app/symbols-ab989410')], 'production-source-preservation'); stages.productionPreservation = true;
+    must(['sh', 'scripts/disk-guard.sh'], 'disk-before-root-check');
+    must(['/usr/bin/lockf', '-k', '/tmp/todo-pnpm-check.lock', executable('pnpm'), 'check'], 'root-check'); stages.rootCheck = true;
+    assert(!fs.existsSync(evidence + '/swift-hold'), 'Coordinator holds new Swift jobs; production reruns remain held');
+    must(['node', '.agents/skills/verify-macos-real-app/scripts/production-proofs.mjs', evidence + '/production', evidence], 'production-suites'); stages.productionSuites = true;
+    swiftPrograms.add(app + '/Contents/MacOS/TodoVerification');
     const f = await fixture(); try {
       must([app + '/Contents/MacOS/TodoVerification', '--check-manifest'], 'built-app-guard', f.env);
-      const held = execute([app + '/Contents/MacOS/TodoVerification'], 'visible-held', f.env); assert.equal(held.status, 78); assert(held.stderr.includes('Visible launches are held'));
     } finally { f.dispose(); }
+    if (!process.argv.includes('--headless')) {
+      const readerBindings = tools + '/ReaderBindings.swift';
+      fs.writeFileSync(readerBindings, 'enum VerificationReaderBuild { static let appBundlePath = ' + JSON.stringify(app) + ' }\n');
+      const windowObject = tools + '/window-id.o';
+      must(['xcrun', 'clang', '-c', '.agents/skills/verify-macos-real-app/scripts/AXWindowID.c', '-o', windowObject], 'build-window-id');
+      build([guardFile, readerBindings, '.agents/skills/verify-macos-real-app/scripts/ReaderSandbox.swift', '.agents/skills/verify-macos-real-app/scripts/AXRead.swift'], native + '/axread', 'build-accessibility-reader', [windowObject]);
+      const preflight = await fixture(), visible = await fixture();
+      try {
+        assert(stages.frozenSource && stages.parentDeathCleanup && stages.artifactAudit);
+        const configuration = tools + '/visible.json';
+        const executablePath = app + '/Contents/MacOS/TodoVerification';
+        fs.writeFileSync(configuration, JSON.stringify({ sourceHead, repository: root, frozenSource: true, guardMatrixGreen: true, artifactAudit: true, parentDeathQualified: true, evidence: evidence + '/visible', app: executablePath, appSHA256: hash(executablePath), reader: native + '/axread', readerSHA256: hash(native + '/axread'), preflightRoot: preflight.directory, root: visible.directory, preflightEnvironment: preflight.env, appEnvironment: visible.env }), { mode: 0o600 });
+        const group = execute(['/bin/sh', root + '/scripts/swift-slot.sh', executable('node'), '.agents/skills/verify-macos-real-app/scripts/visible-run.mjs', configuration], 'visible-group');
+        const seen = JSON.parse(fs.readFileSync(evidence + '/visible/result.json', 'utf8'));
+        result.appLaunchAttempted = seen.appLaunchAttempted;
+        for (const key of ['ownerPreflight', 'visibleLaunch', 'accessibilityReadback', 'visibleInputStop']) stages[key] = seen[key] === true;
+        result.visibleReadback = stages.accessibilityReadback; result.visibleLaunchHeld = !stages.visibleLaunch;
+        assert.equal(group.status, 0, seen.error); assert.equal(seen.status, 'PASS_VISIBLE_COMPONENT');
+      } finally { preflight.dispose(); visible.dispose(); }
+    }
   }
   }
   assert.equal(must(['git', 'rev-parse', 'HEAD'], 'head-after').trim(), sourceHead);
-  result.status = process.argv.includes('--focus-regressions') ? 'PASS_DIAGNOSTIC' : 'PASS_HEADLESS';
+  if (!result.development) assert.equal(must(['git', 'status', '--porcelain', '--untracked-files=normal'], 'status-after').trim(), '', 'The frozen checkout changed during qualification');
+  result.status = process.argv.includes('--focus-regressions') ? 'PASS_DIAGNOSTIC' : stages.visibleInputStop ? 'PASS' : 'PASS_HEADLESS';
 } catch (error) { result.error = error.stack; process.exitCode = 1; }
 finally {
   try {
@@ -184,7 +237,7 @@ finally {
     for (const directory of fixtures) fs.rmSync(directory, { recursive: true }); fs.rmSync(tools, { recursive: true }); stages.cleanup = true;
   }
   catch (error) { result.cleanupError = error.message; result.retainedTools = tools; result.status = 'FAIL'; process.exitCode = 1; }
-  Object.assign(result, receipt(stages, process.argv.includes('--guards-only') ? 'guards-only' : 'headless'));
+  Object.assign(result, receipt(stages, process.argv.includes('--guards-only') ? 'guards-only' : stages.visibleInputStop ? 'visible' : 'headless'));
   result.commands = commands.length;
   fs.writeFileSync(evidence + '/result.json', JSON.stringify(result, null, 2)); console.log(JSON.stringify(result));
 }

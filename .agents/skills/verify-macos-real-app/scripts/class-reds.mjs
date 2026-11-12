@@ -19,14 +19,21 @@ export async function runClassReds(c) {
       'modifier-mask-removed': 'Owner input type 12 is missing.',
       'memory-defaults-removed': 'Standard defaults must resolve only to memory',
       'local-monitor-removed': 'own event delivered type 12',
-      'outside-file-read-allowed': 'An outside scratch sentinel was readable.',
-      'outside-file-write-allowed': 'An outside scratch sentinel was writable.',
-      'unrelated-network-allowed': 'An unrelated loopback listener was reachable.',
+      'outside-file-read-allowed': 'The app sandbox boundary checks failed.',
+      'outside-file-write-allowed': 'The app sandbox boundary checks failed.',
+      'unrelated-network-allowed': 'The app sandbox boundary checks failed.',
       'unapproved-exec-allowed': 'The exec control returned 0 instead of the sandbox denial.',
-      'credential-brokers-allowed': 'A credential or settings broker remains reachable:',
+      'credential-brokers-allowed': 'The app sandbox boundary checks failed.',
+      'owned-server-exec-denied': 'The checked scratch operation failed (',
     };
+    const expectedFailedRow = { 'outside-file-read-allowed': 'outside-sentinel', 'outside-file-write-allowed': 'outside-write', 'unrelated-network-allowed': 'off-loopback', 'credential-brokers-allowed': 'broker' }[label];
+    if (expectedFailedRow) {
+      const kernelRows = value.stdout.split('\n').filter(line => line.startsWith('boundary-proof ')).map(line => JSON.parse(line.slice(15)));
+      assert(kernelRows.some(row => row.label === expectedFailedRow && row.passed === false), label + ' did not reach its matching boundary check');
+    }
     if (reasons[label]) assert(value.stderr.includes(reasons[label]), label + ' failed before its matching assertion: ' + value.stderr);
     if (label === 'HID-stop-removed' || label === 'local-monitor-removed') assert.equal(value.status, 1);
+    if (label === 'owned-server-exec-denied') assert.equal(value.status, 78, 'An unrelated credential trap is not the exec-denial control');
     // This is the literal matching assertion used by the baseline; run it in a separate process.
     const assertion = execute(['node', '-e', 'require("node:assert/strict").equal(Number(process.argv[1]), Number(process.argv[2]))', String(value.status), String(expected)], label + '-matching-test');
     assert.equal(assertion.status, 1, label + ' unexpectedly passed');
@@ -45,10 +52,25 @@ export async function runClassReds(c) {
     build([guardFile, owner, '.agents/skills/verify-macos-real-app/scripts/InputCoverageProbe.swift'], native + '/no-local-monitor', 'build-no-local-monitor', [], { [owner]: file });
     expected(native + '/no-local-monitor', [tools + '/red-input', 'modifier'], 80, 'local-monitor-removed');
   }
+  for (const [label, before, after, mode] of [
+    ['metadata-age-check-removed', 'now >= state.uptimeSeconds && now - state.uptimeSeconds <= maximumAge', 'true', 'stale'],
+    ['frontmost-id-check-removed', ' && state.frontmostBundleID != "local.todo.Todo" && state.frontmostBundleID != "dev.todo.electron"', '', 'renamed-mac'],
+  ]) {
+    const file = variant(owner, before, after, label);
+    build([guardFile, owner, '.agents/skills/verify-macos-real-app/scripts/OwnerPolicyProbe.swift'], native + '/' + label, 'build-' + label, [], { [owner]: file });
+    const value = execute([native + '/' + label, mode], label + '-observed'); assert.equal(value.status, 0, value.stderr);
+    expected(native + '/' + label, [mode], 78, label);
+  }
   {
     const file = variant(defaults, 'method_exchangeImplementations(original, replacement)', '// mutation: leave ambient standard defaults selected', 'memory-defaults-removed');
     build([guardFile, bindings, owner, probe], native + '/no-memory-defaults', 'build-no-memory-defaults', [policyObject], { [defaults]: file });
     expected(native + '/no-memory-defaults', ['defaults'], 0, 'memory-defaults-removed');
+  }
+  {
+    const memory = 'apps/macos/VerificationApp/MemorySessionVault.swift';
+    const file = variant(memory, 'func save(_ credential: String) throws { self.credential = credential }', 'func save(_ credential: String) throws {}', 'memory-session-save-removed');
+    build([guardFile, tools + '/SessionStorage.swift', file, '.agents/skills/verify-macos-real-app/scripts/MemoryProbe.swift'], native + '/no-memory-save', 'build-no-memory-save');
+    expected(native + '/no-memory-save', [], 0, 'memory-session-save-removed');
   }
   const sentinel = tools + '/outside-sandbox-sentinel'; fs.writeFileSync(sentinel, 'synthetic');
   const listener = http.createServer((request, response) => response.end('scratch'));
@@ -64,12 +86,12 @@ export async function runClassReds(c) {
       ['credential-brokers-allowed', '(deny mach-lookup)', '(allow mach-lookup)', 'policy'],
       ['scratch-files-denied', '(allow file-read* file-write* (subpath \\(literal(root))))', '(allow file-read* (subpath \\(literal(root))))', 'sandbox'],
       ['owned-server-exec-denied', '(allow process-exec (literal \\(literal(executable))))', '', 'sandbox'],
-      ['owned-server-network-denied', '(allow network-outbound (remote ip "localhost:\\(port)"))', '', 'sandbox'],
+      ['owned-server-network-denied', '(allow network-outbound (remote ip4 "localhost:\\(port)"))', '', 'sandbox'],
     ]) {
       const file = variant(sandbox, before, after, label);
       build([guardFile, bindings, owner, probe], native + '/' + label, 'build-' + label, [policyObject], { [sandbox]: file });
       const f = await fixture(); try { expected(native + '/' + label, mode === 'sandbox' ? args : ['policy'], 0, label, f.env); } finally { f.dispose(); }
-      assert.equal(fs.readFileSync(sentinel, 'utf8'), label === 'outside-file-write-allowed' ? 'must remain untouched' : 'synthetic');
+      assert.equal(fs.readFileSync(sentinel, 'utf8'), 'synthetic');
       fs.writeFileSync(sentinel, 'synthetic');
     }
   } finally { await new Promise(resolve => listener.close(resolve)); }

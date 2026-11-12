@@ -41,7 +41,18 @@ private func trueExecution(_ directory: UnsafePointer<CChar>) -> Int32
                 withExtendedLifetime(claim) { Thread.sleep(forTimeInterval: 2) }; return
             }
             defer { LaunchGuard.stop() }
-            try LaunchGuard.check(expectedContract: VerificationBuild.contract, expectedServerSHA256: VerificationBuild.serverSHA256, expectedCLISHA256: VerificationBuild.cliSHA256)
+            let metadataOnly = ["owned-metadata", "stale-metadata"].contains(mode)
+            var validator: (@MainActor (Data) throws -> Void)?
+            if metadataOnly {
+                validator = { (data: Data) in
+                    if mode == "stale-metadata" { Thread.sleep(forTimeInterval: 3) }
+                    let state = try JSONDecoder().decode(OwnerPreflight.self, from: data)
+                    try OwnerIdle.validateFresh(state, now: ProcessInfo.processInfo.systemUptime, maximumAge: 2)
+                    try verificationRequire(state.frontmostBundleID != "unknown" && state.frontmostBundleName != "unknown", "The owned metadata snapshot has no frontmost identity.")
+                    print("owned metadata read headlessly; no window or owner-idle authority")
+                }
+            }
+            try LaunchGuard.check(expectedContract: VerificationBuild.contract, visible: metadataOnly || mode == "missing-metadata-validator", expectedServerSHA256: VerificationBuild.serverSHA256, expectedCLISHA256: VerificationBuild.cliSHA256, expectedBoundarySHA256: VerificationBuild.boundarySHA256, expectedPreflightSHA256: VerificationBuild.preflightSHA256, beforeSandbox: validator)
             let manifest = LaunchGuard.accepted!
             if mode == "sandbox" {
                 let outside = CommandLine.arguments[2]

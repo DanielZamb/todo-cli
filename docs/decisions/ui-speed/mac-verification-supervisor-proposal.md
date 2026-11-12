@@ -1,6 +1,6 @@
 # Proposed ownership outside the app sandbox
 
-Status: proposed, not implemented. The coordinator asked for this proposal if
+Status: rejected by the coordinator on 2026-11-12, not implemented. The accepted decision is the literal read-only root-directory rule in ADR-0021. The remainder records the rejected proposal. The coordinator asked for this proposal if
 no compliant startup allowance exists. Visible execution and V02 remain held.
 The application profile has not been relaxed.
 

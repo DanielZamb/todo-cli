@@ -32,10 +32,21 @@ page states that managed-server controls are unavailable. A credential trap
 must fail the run before any Security credential function executes, and the
 built artifact must be audited for credential references and forbidden paths.
 Use ephemeral HTTP sessions without credential/cookie/cache/proxy stores or
-redirect following. Start the sandbox before child execution and health.
+redirect following. Start the sandbox before compiled-server execution and health.
+The profile allows reading the root directory's entry list through exactly
+`(allow file-read-data (literal "/"))` because native executable startup opens
+that public directory, and this rule grants no descendant access.
 Deny credential brokers, including framework-mediated credential and cloud
 services; enumerate actual linked credential imports and trap each before use.
 Do not parse process listings or execute curl for validation.
+
+Frontmost identity is read by a separate, build-pinned native metadata child
+owned by the app before the app installs its profile. That child installs its
+own restrictive profile before its fixed read-only LaunchServices query, denies
+all networking and further execution, returns only bounded JSON through an
+owned pipe and exits. It passes no broker handle to the app. The app and server
+keep LaunchServices and TCC denied. Fresh metadata and live session/HID checks
+are required before a window. The child is not a server supervisor.
 
 A visible run requires the owner to have been idle for at least one minute
 and neither installed Todo app to be frontmost. Stop immediately when owner

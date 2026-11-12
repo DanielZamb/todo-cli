@@ -11,13 +11,15 @@ seeded Tasks, but the independent review disproved its isolation. It does not
 qualify this revision. All seven review findings remain open until the new
 frozen-head controls and required reviews pass. V02 and visible launches are held.
 
-The coordinator lifted the earlier Swift-slot hold. A new seat hold may arrive;
-finish the current Swift job and start none until released. Qualification is
-now blocked on native server startup requiring root-directory data access.
-Do not add that out-of-scratch permission. Read the [report](../../../docs/decisions/ui-speed/mac-verification-app-report.md)
-and [supervisor proposal](../../../docs/decisions/ui-speed/mac-verification-supervisor-proposal.md)
-before changing ownership. No full or visible helper run is qualified
-for this correction.
+Honor the coordinator's current Swift-slot hold. Finish an existing Swift job
+and start none until released. The coordinator accepted exactly
+`(allow file-read-data (literal "/"))` for native executable startup and rejected
+the supervisor proposal. Do not widen that rule. The same protected-path and
+network controls must pass inside both the app and its inherited server child.
+Read the [report](../../../docs/decisions/ui-speed/mac-verification-app-report.md)
+and [guard design](../../../docs/decisions/ui-speed/mac-verification-guard-design.md)
+for the current evidence. No full or visible helper run is qualified for this
+correction.
 
 ## Launch
 
@@ -28,12 +30,14 @@ absolute evidence directory and run:
 node .agents/skills/verify-macos-real-app/scripts/verify.mjs "$PWD/docs/evidence/mac-verification-app/new" --fresh-build
 ```
 
-The current helper is headless only. It builds the separate verification app,
-seals only that bundle ad hoc, audits it and runs --check-manifest. Its generated
-build bindings set visibleAllowed=false. No current helper option releases that
-gate. A headless success is PASS_HEADLESS with completeRecipe=false.
---guards-only also remains incomplete. --development permits a dirty diagnostic;
---focus-regressions requires it and cannot qualify any frozen implementation.
+The visible phase is written but remains unqualified. Before a full run, prove
+the abrupt-parent-exit cleanup control, regenerate the project after the Swift
+hold and freeze the implementation. The helper keeps visibleAllowed=false
+during native controls, then permits a visible artifact only after a clean
+frozen head and the whole guard matrix pass. It builds the separate app once,
+seals it ad hoc, audits it and runs --check-manifest before any visible phase.
+--headless and --guards-only remain incomplete. --development permits a dirty
+diagnostic; --focus-regressions requires it and cannot qualify a frozen head.
 
 Every Swift action runs inside scripts/swift-slot.sh. The helper compiles the
 CLI and server from the recorded committed head, pins their hashes in the test
@@ -49,6 +53,14 @@ regular-file link. It retains descriptors, hashes them, seals immutable inputs
 and protects existing directory entries. Scratch HOME, Foundation HOME and both
 temporary-directory APIs must agree. The manifest, CLI/server, database, WAL,
 shared memory, journal directory and instance locks use this boundary.
+
+Frontmost identity comes from a separate, hash-pinned native child before the
+app installs its own profile. That child's policy denies networking, further
+execution, credential brokers and owner files; only its fixed read-only query
+can use LaunchServices. It exits after bounded JSON through an owned pipe and
+passes no broker handle. The app and server keep LaunchServices/TCC denied.
+Check a fresh handoff, then keep the background HID watch running during server
+startup and recheck live idle signals before a window.
 
 serverPID must be zero. The guard starts the pinned compiled server itself,
 inside its sandbox, with exactly HOME, CFFIXED_USER_HOME, TMPDIR, TODO_DB,
@@ -93,15 +105,20 @@ for actual qualification state and pending work. Do not substitute older receipt
 The coordinator has authorized visible V01 once the whole guard matrix is
 green. That condition is currently unmet. Every visible launch then needs
 neither installed Todo app frontmost and both session and HID idle signals of
-at least 60 seconds. Monitoring permissions must already exist; no prompt is
-requested. Install local/global monitors and the background HID watch before
-creating a window. Unavailable monitoring refuses startup.
+at least 60 seconds. Accessibility readback permission must already exist for
+the driver; no prompt is requested. Install local/global monitors and the
+background HID watch before creating a window. Missing monitor registration or
+an unavailable HID signal refuses or stops the run. The app keeps TCC denied,
+so registration does not establish delivery of every global keyboard event.
+The independent HID signal remains required.
 
 Read only the verification app resolved by local.todo.verification and the owned
 PID. AXRead.swift must independently find V01 seeded Task alpha and V01 seeded
 Task beta in that application's own window, and save its window capture locally.
-Never enumerate or read the production app's windows. The currently held helper
-does not perform this stage; it needs requalification after release.
+Never enumerate or read the production app's windows. The new reader/capture
+phase has not been compiled or executed yet. It requires the existing readback
+permissions, a compiled fixed app-bundle path and the owned app PID. Its capture
+command accepts only the window ID returned by that application's AX window.
 
 The local monitor includes every exposed keyboard, mouse, gesture and tablet
 event type. A separate background timer samples session-any-event and HID idle
@@ -122,8 +139,10 @@ existing evidence. Before retiring superseded build outputs, require lsof to
 show no open file, preserve required symbol inputs by hash and record free disk
 before/after. Keep at least the 30 GiB soft floor.
 
-The former production-proofs wrapper is disabled because it forwarded ambient
-configuration and DYLD injection. Do not run it. The required production state
-and offscreen reruns need an explicitly linked, isolated replacement; historical
-receipts retain their original source-head attribution. Do not silently claim
-those suites were rerun on this correction.
+The production-proofs replacement explicitly links the isolation library,
+clears inherited configuration and runs the original state/offscreen recipes
+through a launcher adapter. Its C memory-defaults and temporary-directory
+component has passed; the Swift suites have not yet run on this correction.
+The adapter substitutes the verified local resource copier for the recipe's
+resource command and records the expanded arguments, environment and exits.
+Historical receipts retain their original source-head attribution.

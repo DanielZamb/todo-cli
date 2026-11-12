@@ -16,6 +16,7 @@ end
 target.source_build_phase.add_file_reference(group.new_file('BuildBindings.generated.swift'))
 trap.source_build_phase.add_file_reference(group.new_file('CredentialTrap.c'))
 trap.source_build_phase.add_file_reference(group.new_file('ChildProof.c'))
+trap.source_build_phase.add_file_reference(group.new_file('BoundaryProof.c'))
 trap.add_system_framework('Security')
 trap.add_system_framework('IOKit')
 trap.add_system_framework('CoreFoundation')

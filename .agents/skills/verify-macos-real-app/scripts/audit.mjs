@@ -3,14 +3,27 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
-import { environment, run as safeRun, start as safeStart } from './process-policy.mjs';
+import { command, environment, run as safeRun, start as safeStart } from './process-policy.mjs';
+const [app, evidence, production] = process.argv.slice(2);
+assert(app && evidence, 'audit.mjs <verification-app> <evidence> [production-executable]');
+const commands = [];
+function record(argv, value) {
+  commands.push({ argv: command(argv), environment: clean, exit: value.status, signal: value.signal, error: value.error?.message });
+  fs.writeFileSync(path.join(evidence, 'audit-commands.json'), JSON.stringify(commands, null, 2));
+}
 const scratch = fs.realpathSync(fs.mkdtempSync('/tmp/todo-mac-verify-audit-'));
 fs.mkdirSync(scratch + '/home', { mode: 0o700 }); fs.mkdirSync(scratch + '/tmp', { mode: 0o700 });
 const clean = environment(scratch + '/home', scratch + '/tmp');
 process.on('exit', () => fs.rmSync(scratch, { recursive: true, force: true }));
-function safeExec(program, args, options = {}) { const value = safeRun([program, ...args], { ...options, env: clean, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }); assert.equal(value.status, 0, value.stderr); return value.stdout; }
-const [app, evidence, production] = process.argv.slice(2);
-assert(app && evidence, 'audit.mjs <verification-app> <evidence> [production-executable]');
+function safeExec(program, args, options = {}) {
+  let argv = [program, ...args];
+  if (program === 'xcrun' && args[0].startsWith('swift')) {
+    assert(!fs.existsSync(path.join(evidence, 'swift-hold')), 'Coordinator holds new Swift jobs');
+    argv = ['/bin/sh', path.resolve('scripts/swift-slot.sh'), ...command(argv)];
+  }
+  const value = safeRun(argv, { ...options, env: clean, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  record(argv, value); assert.equal(value.status, 0, value.stderr); return value.stdout;
+}
 const binary = path.join(app, 'Contents/MacOS/TodoVerification');
 const library = path.join(app, 'Contents/Frameworks/libCredentialTrap.dylib');
 const run = (command, args) => safeExec(command, args, { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
@@ -18,8 +31,11 @@ const symbols = run('xcrun', ['nm', '-u', binary]);
 const linked = run('xcrun', ['otool', '-L', binary]);
 fs.writeFileSync(path.join(evidence, 'verification-imports.txt'), symbols);
 fs.writeFileSync(path.join(evidence, 'verification-linked.txt'), linked);
-const isCredential = name => /^(SecAccess|SecACL|SecItem|SecIdentity|SecKey|SecPassword|SecPKCS12|SecCertificate|SecTrust|SecImport|SecExport|SecCopyErrorMessageString|Authorization|SOS)/.test(name) || (/^Sec/.test(name) && /Credential|Keychain|Password|Passkey|PassKey/.test(name));
-const importedCredentials = value => [...value.matchAll(/\b_([A-Za-z][A-Za-z0-9_]*)/g)].map(row => row[1]).filter(isCredential);
+const sdk = run('xcrun', ['--show-sdk-path']).trim();
+const securityTBD = fs.readFileSync(path.join(sdk, 'System/Library/Frameworks/Security.framework/Versions/A/Security.tbd'), 'utf8');
+const exportedSecurity = new Set([...securityTBD.matchAll(/_([A-Za-z0-9_$]+)/g)].map(row => row[1]));
+const importedCredentials = value => value.split('\n').map(line => line.match(/\bU\s+(\S+)$/)?.[1]).filter(Boolean).map(name => name.startsWith('_') ? name.slice(1) : name).filter(name => exportedSecurity.has(name));
+
 assert.deepEqual(importedCredentials(symbols), [], 'Verification app imports a credential function outside the credential trap');
 assert(linked.includes('@rpath/libCredentialTrap.dylib'));
 const bindings = new Set([...fs.readFileSync('apps/macos/VerificationApp/CredentialSymbols.inc', 'utf8').matchAll(/TRAP\((\w+)\)/g)].map(row => row[1]));
@@ -34,10 +50,12 @@ assert(verificationSources.includes('URLSessionConfiguration.ephemeral'));
 assert(verificationSources.includes('clientFactory: { server, credential in factory.client('));
 assert(fs.existsSync(library));
 async function relevant(file) {
-  const child = safeStart(['xcrun', 'nm', '-j', file], { env: clean });
+  const argv = ['xcrun', 'nm', '-j', file];
+  const child = safeStart(argv, { env: clean });
   const lines = readline.createInterface({ input: child.stdout });
   const selected = [];
-  const exit = new Promise((resolve, reject) => { child.on('error', reject); child.on('close', code => code === 0 ? resolve() : reject(new Error('nm failed: ' + code))); });
+  let stderr = ''; child.stderr.on('data', value => stderr += value);
+  const exit = new Promise((resolve, reject) => { child.on('error', reject); child.on('close', (status, signal) => { record(argv, { status, signal }); status === 0 ? resolve() : reject(new Error('nm failed: ' + status + ': ' + stderr)); }); });
   for await (const line of lines) if (/MemorySessionVault|VerificationManifest|ServerLifecycle|configureVerificationKeychain|SessionVault|ScratchSandbox|credentialTrapReady|TodoVerificationApp/.test(line)) selected.push(line);
   await exit;
   return selected.join('\n');

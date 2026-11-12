@@ -11,6 +11,11 @@ struct OwnerPreflight: Codable {
     let frontmostBundleName: String
     let idleSeconds: Double
     let hidIdleSeconds: Double
+    let uptimeSeconds: Double
+    init(frontmostBundleID: String, frontmostName: String, frontmostBundleName: String, idleSeconds: Double, hidIdleSeconds: Double, uptimeSeconds: Double = ProcessInfo.processInfo.systemUptime) {
+        self.frontmostBundleID = frontmostBundleID; self.frontmostName = frontmostName; self.frontmostBundleName = frontmostBundleName
+        self.idleSeconds = idleSeconds; self.hidIdleSeconds = hidIdleSeconds; self.uptimeSeconds = uptimeSeconds
+    }
 }
 
 final class OwnerInputWatch: @unchecked Sendable {
@@ -38,24 +43,36 @@ final class OwnerInputWatch: @unchecked Sendable {
     private static var localMonitor: Any?
     private static var globalMonitor: Any?
     private static var watch: OwnerInputWatch?
+    private static var preflight: OwnerPreflight?
 
-    static func snapshot() -> OwnerPreflight {
-        let front = NSWorkspace.shared.frontmostApplication
-        return OwnerPreflight(frontmostBundleID: front?.bundleIdentifier ?? "unknown", frontmostName: front?.localizedName ?? "unknown", frontmostBundleName: front?.bundleURL?.lastPathComponent ?? "unknown",
-            idleSeconds: CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: CGEventType(rawValue: UInt32.max)!), hidIdleSeconds: verificationHIDIdleSeconds())
-    }
     static func validate(_ state: OwnerPreflight) throws {
         try LaunchGuard.require(state.frontmostBundleID != "unknown" && state.frontmostBundleName != "unknown", "The frontmost application could not be identified.")
-        try LaunchGuard.require(state.frontmostBundleName != "Todo.app" && state.frontmostBundleName != "Todo Electron.app", "The owner's Todo app is frontmost.")
+        try LaunchGuard.require(state.frontmostBundleName != "Todo.app" && state.frontmostBundleName != "Todo Electron.app" && state.frontmostBundleID != "local.todo.Todo" && state.frontmostBundleID != "dev.todo.electron", "The owner's Todo app is frontmost.")
         try LaunchGuard.require(state.idleSeconds >= 60 && state.hidIdleSeconds >= 60, "The owner must be idle on both session and HID signals for one minute.")
     }
+    static func validateFresh(_ state: OwnerPreflight, now: Double, maximumAge: Double) throws {
+        try LaunchGuard.require(now >= state.uptimeSeconds && now - state.uptimeSeconds <= maximumAge, "The owned metadata snapshot must be fresh.")
+    }
     static func requireIdle() throws {
-        let state = snapshot()
-        FileHandle.standardError.write(Data("preflight ".utf8) + (try JSONEncoder().encode(state)) + Data("\n".utf8))
-        try validate(state)
-        try LaunchGuard.require(AXIsProcessTrusted() && CGPreflightListenEventAccess(), "Global owner-input monitoring permission is unavailable; no prompt was requested.")
-        started = ProcessInfo.processInfo.systemUptime
+        guard let state = preflight else { throw VerificationRefusal(message: "A result from the owned metadata child is required.") }
+        let now = ProcessInfo.processInfo.systemUptime
+        try validateFresh(state, now: now, maximumAge: 10)
+        let session = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: CGEventType(rawValue: UInt32.max)!)
+        let hid = verificationHIDIdleSeconds()
+        try LaunchGuard.require(session >= 60 && hid >= 60, "Owner input arrived after the owned preflight.")
         installMonitors(requireGlobal: true)
+    }
+    static func acceptOwnedPreflight(_ data: Data) throws {
+        let state = try JSONDecoder().decode(OwnerPreflight.self, from: data)
+        FileHandle.standardError.write(Data("preflight ".utf8) + (try JSONEncoder().encode(state)) + Data("\n".utf8))
+        let now = ProcessInfo.processInfo.systemUptime
+        try validateFresh(state, now: now, maximumAge: 2)
+        try validate(state)
+        let session = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: CGEventType(rawValue: UInt32.max)!)
+        let hid = verificationHIDIdleSeconds()
+        try LaunchGuard.require(session >= 60 && hid >= 60, "Owner input arrived during the metadata handoff.")
+        preflight = state; started = now
+        watch = OwnerInputWatch(started: now)
     }
     nonisolated static func stop(_ source: String) -> Never {
         FileHandle.standardError.write(Data(("Todo Verification stopped: " + source + ".\n").utf8))
@@ -72,7 +89,7 @@ final class OwnerInputWatch: @unchecked Sendable {
         if requireGlobal && globalMonitor == nil {
             globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: inputMask) { _ in stop("owner input detected by the global monitor") }
             guard globalMonitor != nil else { stop("global input monitor could not be installed") }
-            watch = OwnerInputWatch(started: began)
+            if watch == nil { watch = OwnerInputWatch(started: began) }
         }
     }
     static func monitor(interruptionRequest: URL, requireGlobal: Bool = false) -> Timer {
