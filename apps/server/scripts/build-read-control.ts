@@ -31,6 +31,59 @@ const result = await Bun.build({
                     { cwd: root, encoding: "utf8" },
                   )
                 : readFileSync(args.path, "utf8");
+            if (
+              variant === "after" &&
+              process.env.READ_SCOPE_OBSERVER === "1"
+            ) {
+              if (path === "packages/domain/src/auth/auth.ts") {
+                contents = contents.replace(
+                  "    this.projection = new ClientProjection(db);",
+                  `    const query = db.query.bind(db);
+    Object.defineProperty(db, "query", { configurable: true, value: (sql, ...args) => {
+      const observer = globalThis[Symbol.for("todo.read-control.scope")];
+      if (observer) observer.statements.push(sql);
+      return query(sql, ...args);
+    }});
+    this.projection = new ClientProjection(db);`,
+                );
+                contents = contents.replace(
+                  "    return transaction(run);",
+                  `    let start = 0;
+    try { return transaction(() => { if (!nested) start = performance.now(); return run(); }); }
+    finally { if (start) globalThis[Symbol.for("todo.read-control.scope")]?.holds.push(performance.now() - start); }`,
+                );
+              }
+              if (path === "apps/server/src/server.ts")
+                contents = contents.replace(
+                  "const start = performance.now();",
+                  `const start = performance.now(); globalThis[Symbol.for("todo.read-control.scope")] = { statements: [], holds: [] };`,
+                );
+            }
+            if (
+              variant === "after" &&
+              process.env.READ_ABSENT_MUTANT &&
+              path === "packages/domain/src/auth/auth.ts"
+            ) {
+              const marker =
+                /if \(!absent\)\s+throw new StoreError\(new Error\("Invalid read authority"\)\);/;
+              assert.ok(marker.test(contents));
+              contents = contents.replace(
+                marker,
+                process.env.READ_ABSENT_MUTANT === "404"
+                  ? 'throw new AuthError("profile_deleted", credential.id);'
+                  : 'return operation(bindRead(this.db, Schema.decodeUnknownSync(ProfileId)("work"), request.credential, parsed, credential, this.presentProfile(Schema.decodeUnknownSync(ProfileId)("work"))));',
+              );
+            }
+            if (
+              process.env.READ_CONTROL_DETERMINISTIC_IDS === "1" &&
+              path === "packages/domain/src/store/snapshots.ts"
+            ) {
+              assert.ok(contents.includes("randomUUID()"));
+              contents = contents.replaceAll(
+                "randomUUID()",
+                `(globalThis[Symbol.for("todo.read-control.uuid")] = (globalThis[Symbol.for("todo.read-control.uuid")] ?? 0) + 1, "00000000-0000-4000-8000-" + String(globalThis[Symbol.for("todo.read-control.uuid")]).padStart(12, "0"))`,
+              );
+            }
             contents = contents.replaceAll(
               "event: JSON.parse(row.event)",
               `event: (${counter} = (${counter} ?? 0) + 1, JSON.parse(row.event))`,
@@ -53,6 +106,10 @@ const result = await Bun.build({
               "server-timing": "todo-handler;dur=" + (end - start),
               "x-todo-request": request.headers["x-todo-request"] ?? "",
               "x-control-history-decodes": String((${counter} ?? 0) - decodes),
+              ...(${process.env.READ_SCOPE_OBSERVER === "1"} ? {
+                "x-control-statements": JSON.stringify(globalThis[Symbol.for("todo.read-control.scope")]?.statements ?? []),
+                "x-control-lock-holds": JSON.stringify(globalThis[Symbol.for("todo.read-control.scope")]?.holds ?? []),
+              } : {}),
             }));`,
               );
             }

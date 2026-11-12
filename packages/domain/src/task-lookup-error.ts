@@ -50,10 +50,7 @@ export const taskLookupError = Effect.fn(function* (
         Effect.succeed(undefined),
       ),
     );
-  const authority =
-    resolved === undefined
-      ? undefined
-      : yield* store.auth.checkRead(resolved.read, "read");
+  const authority = resolved === undefined ? undefined : resolved.selection;
   return authorizedTaskLookupError(
     resolved?.profile,
     authority?.fields.task_id ?? "",
@@ -62,7 +59,7 @@ export const taskLookupError = Effect.fn(function* (
   );
 });
 
-function authorizedTaskLookupError(
+export function authorizedTaskLookupError(
   profile: Pick<Profile, "id" | "name"> | undefined,
   task_id: string,
   transport: "cli" | "http",

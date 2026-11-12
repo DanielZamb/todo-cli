@@ -1,6 +1,11 @@
 import type { Database } from "bun:sqlite";
 import { Schema } from "effect";
-import { type AuthorizedRead, readAuthority } from "../auth/authorized-read.ts";
+import {
+  type AuthorizedRead,
+  type AuthorizedTerminalRead,
+  consumeTerminalRead,
+  readAuthority,
+} from "../auth/authorized-read.ts";
 import { OpLogEntry } from "../events.ts";
 import type { ProfileId, TaskId } from "../ids.ts";
 
@@ -95,3 +100,17 @@ export const committedHistory = (
       ),
     }))
     .deferred();
+
+export const terminalHistory = (db: Database, read: AuthorizedTerminalRead) => {
+  const value = consumeTerminalRead(read, db);
+  return {
+    cursor: value.fields.through,
+    entries: decode(
+      db
+        .query<{ event: string }, [string, number, number]>(
+          "SELECT * FROM op_log WHERE profile=? AND outcome='committed' AND seq>? AND seq<=? ORDER BY seq",
+        )
+        .all(value.profile, value.fields.after, value.fields.through),
+    ),
+  };
+};

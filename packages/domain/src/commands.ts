@@ -2,6 +2,7 @@ import { Clock, Effect, Schema } from "effect";
 import { resolveAttachments } from "./attachment-input.ts";
 import { copyAttachments, removeWrittenImage } from "./attachment-store.ts";
 import type { AttachmentInput } from "./attachments.ts";
+import { readRequest } from "./auth/authorized-read.ts";
 import { type AccessRequest, AuthError } from "./auth/model.ts";
 import { isInboxTask } from "./client-reads.ts";
 import type { DependencyError, Edge, VersionChange } from "./dependencies.ts";
@@ -152,14 +153,35 @@ export const readTasks = Effect.fn(function* (
   });
   const fields = { filters: { ...filters } };
   const search = store.searchWords.read(selected.profile);
-  const { read, data } = yield* store.auth.readState(
+  const {
+    selection: authority,
+    data,
+    graph,
+  } = yield* store.auth.withState(
     selected,
     Schema.Struct({ filters: TaskFilters }),
     fields,
+    (read, data) =>
+      Effect.gen(function* () {
+        const selection = yield* store.auth.checkRead(read, "read");
+        const graph = yield* store.graphRead(read);
+        return { selection, data, graph };
+      }),
+    (selection) =>
+      Effect.succeed({
+        selection,
+        data: {
+          profiles: [],
+          tasks: [],
+          series: [],
+          projects: [],
+          tags: [],
+          history: [],
+        },
+        graph: { tasks: [], edges: [] },
+      }),
   );
-  const authority = yield* store.auth.checkRead(read, "read");
   const checkedFilters = authority.fields.filters;
-  const graph = yield* store.graphRead(read);
   const ordered = graph.tasks
     .filter((t) => t.deleted_at === null)
     .sort(
@@ -355,14 +377,28 @@ export class TaskCommands {
       };
       const search = this.store.searchWords.read(selected.profile);
       return Effect.gen({ self: this }, function* () {
-        const { read, data: view } = yield* this.store.auth.readMetadata(
+        const {
+          selection: authority,
+          data: view,
+          graph,
+        } = yield* this.store.auth.withMetadata(
           selected,
           TaskListFields,
           fields,
+          (read, data) =>
+            Effect.gen({ self: this }, function* () {
+              const selection = yield* this.store.auth.checkRead(read, "read");
+              const graph = yield* this.store.graphRead(read);
+              return { selection, data, graph };
+            }),
+          (selection) =>
+            Effect.succeed({
+              selection,
+              data: { projects: [], tags: [] },
+              graph: { tasks: [], edges: [] },
+            }),
         );
-        const authority = yield* this.store.auth.checkRead(read, "read");
         const filters = authority.fields.filters;
-        const graph = yield* this.store.graphRead(read);
         const tasks = graph.tasks.filter((task) => task.deleted_at === null);
         const context =
           graph.edges.length ||
@@ -390,6 +426,50 @@ export class TaskCommands {
     });
   }
 
+  readonly withOne = <
+    S extends Schema.ConstraintDecoder<{ readonly task_id: TaskId }>,
+    A,
+    B = never,
+  >(
+    request: AccessRequest,
+    schema: S,
+    fields: S["Type"],
+    operation: (
+      read: import("./auth/authorized-read.ts").AuthorizedRead<
+        Readonly<S["Type"]>
+      >,
+      task: TaskRead | null,
+    ) => Effect.Effect<A, StoreError | AuthError>,
+    absent?: (
+      selection: import("./auth/auth.ts").AbsentRead<S["Type"]>,
+    ) => Effect.Effect<B, StoreError | AuthError>,
+  ) =>
+    this.store.auth.withMetadata(
+      request,
+      schema,
+      fields,
+      (read, data) =>
+        Effect.gen({ self: this }, function* () {
+          const authority = yield* this.store.auth.checkRead(read, "read");
+          const graph = yield* this.store.graphRead(read);
+          const tasks = filterTaskRecords(
+            graph.tasks.filter((task) => task.deleted_at === null),
+            {},
+            data,
+            undefined,
+            graph.edges.length ? graph : undefined,
+          );
+          const task =
+            tasks.find(
+              (task) =>
+                task.profile_id === authority.profile &&
+                task.id === authority.fields.task_id,
+            ) ?? null;
+          return yield* operation(read, task);
+        }),
+      absent,
+    );
+
   readonly readOne = <
     S extends Schema.ConstraintDecoder<{ readonly task_id: TaskId }>,
   >(
@@ -397,31 +477,16 @@ export class TaskCommands {
     schema: S,
     fields: S["Type"],
   ) =>
-    Effect.gen({ self: this }, function* () {
-      const { read, data } = yield* this.store.auth.readMetadata(
-        request,
-        schema,
-        fields,
-      );
-      const authority = yield* this.store.auth.checkRead(read, "read");
-      const graph = yield* this.store.graphRead(read);
-      const tasks = filterTaskRecords(
-        graph.tasks.filter((task) => task.deleted_at === null),
-        {},
-        data,
-        undefined,
-        graph.edges.length ? graph : undefined,
-      );
-      return {
-        read,
-        task:
-          tasks.find(
-            (task) =>
-              task.profile_id === authority.profile &&
-              task.id === authority.fields.task_id,
-          ) ?? null,
-      };
-    });
+    this.withOne(
+      request,
+      schema,
+      fields,
+      (read, task) =>
+        this.store.auth
+          .checkRead(read, "read")
+          .pipe(Effect.map((selection) => ({ selection, task }))),
+      (selection) => Effect.succeed({ selection, task: null }),
+    );
 
   readonly get = (request: Target) =>
     this.readOne(request, Schema.Struct({ task_id: TaskId }), {
@@ -1205,14 +1270,15 @@ export const mutateTask = Effect.fn(function* (
   const data = yield* readTasks(store, request);
   if (!Number.isSafeInteger(expected) || expected < 1)
     return yield* Effect.gen(function* () {
-      const { read, data: checked } = yield* store.auth.readState(
-        request,
-        Schema.Struct({ id: Schema.String }),
-        { id },
-      );
-      const authority = yield* store.auth.checkRead(read, "read");
+      const { selection: authority, data: checked } =
+        yield* store.auth.readState(
+          request,
+          Schema.Struct({ id: Schema.String }),
+          { id },
+        );
       const task = checked.tasks.find(
         (task) =>
+          authority.kind === "read" &&
           task.profile_id === authority.profile &&
           task.id === authority.fields.id,
       );
@@ -1464,14 +1530,13 @@ const transferMetadata = Effect.fn(function* (
   destinationProfile: ProfileId,
   source: AccessRequest,
 ) {
-  const { read, data } = yield* store.auth.readState(
+  const { selection: authority, data } = yield* store.auth.readState(
     source,
     Schema.Struct({ task: Task, destination: ProfileId }),
     { task: sourceTask, destination: destinationProfile },
   );
-  const authority = yield* store.auth.checkRead(read, "read");
   const { task, destination } = authority.fields;
-  const { data: target, read: targetRead } = yield* store.auth.readState(
+  const { data: target, selection: targetRead } = yield* store.auth.readState(
     { credential: authority.credential, profile: destination },
     Schema.Struct({}),
     {},
@@ -1484,7 +1549,7 @@ const transferMetadata = Effect.fn(function* (
         data.tags.filter((tag) => tag.id === id).map((tag) => tag.name),
       ),
     },
-    targetRead,
+    readRequest(targetRead),
     target,
   );
 });
@@ -1758,15 +1823,14 @@ export const revertTask = (
   options: RevertTask,
 ): Effect.Effect<TaskCommandResult, StoreError | AuthError> =>
   Effect.gen(function* () {
-    const { read, data } = yield* store.auth.readState(
+    const { selection: authority, data } = yield* store.auth.readState(
       source,
       Schema.Struct({ task_id: TaskId, input: RevertTask }),
       { task_id: source.task_id, input: options },
     );
-    const authority = yield* store.auth.checkRead(read, "read");
     const request = Object.freeze({
       credential: authority.credential,
-      profile: authority.profile,
+      profile: readRequest(authority).profile,
       task_id: authority.fields.task_id,
     });
     const input = authority.fields.input;

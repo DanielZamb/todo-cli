@@ -2256,12 +2256,13 @@ function snapshotReadUse<
     const cfg = yield* root;
     yield* withStore(cfg, "authenticate", (store) =>
       Effect.gen(function* () {
-        const read = yield* store.auth.ownerRead(
-          { credential: yield* io(() => loadCredential(cfg)) },
+        const credential = yield* io(() => loadCredential(cfg));
+        const result = yield* store.auth.withOwnerRead(
+          { credential },
           fieldsSchema,
           fields,
+          (read) => use(store, read, iso(nowInstant())),
         );
-        const result = yield* use(store, read, iso(nowInstant()));
         yield* response(
           cfg.format,
           schema,

@@ -133,22 +133,26 @@ export const readGraphQuery = (
   request: AccessRequest & { readonly task_id: TaskId },
   generated_at: Instant,
 ) =>
-  Effect.gen(function* () {
-    const read = yield* store.auth.authorizeRead(
-      request,
-      Schema.Struct({ task_id: TaskId, generated_at: Instant }),
-      { task_id: request.task_id, generated_at },
-    );
-    const authority = yield* store.auth.checkRead(read, "read");
-    return {
-      read,
-      graph: queryGraph(
-        yield* store.graphRead(read),
-        authority.fields.task_id,
-        authority.fields.generated_at,
-      ),
-    };
-  });
+  store.auth.withRead(
+    request,
+    Schema.Struct({ task_id: TaskId, generated_at: Instant }),
+    { task_id: request.task_id, generated_at },
+    (read) =>
+      Effect.gen(function* () {
+        const selection = yield* store.auth.checkRead(read, "read");
+        const graph = yield* store.graphRead(read);
+        return {
+          selection,
+          graph: queryGraph(
+            graph,
+            selection.fields.task_id,
+            selection.fields.generated_at,
+          ),
+        };
+      }),
+    "read",
+    (selection) => Effect.succeed({ selection, graph: null }),
+  );
 
 export const readGraph = (...args: Parameters<typeof readGraphQuery>) =>
   readGraphQuery(...args).pipe(Effect.map((result) => result.graph));

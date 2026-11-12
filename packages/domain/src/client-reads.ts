@@ -89,7 +89,7 @@ export class ClientReads {
     at?: Instant,
   ) =>
     Effect.gen({ self: this }, function* () {
-      const { read, data } = yield* this.store.auth.readCatalog(
+      const { selection: authority, data } = yield* this.store.auth.readCatalog(
         request,
         Schema.Struct({
           name: PlanningViewName,
@@ -97,7 +97,7 @@ export class ClientReads {
         }),
         { name, ...(at === undefined ? {} : { at }) },
       );
-      const selected = (yield* this.store.auth.checkRead(read, "read")).fields;
+      const selected = authority.fields;
       const now =
         selected.at ??
         Schema.decodeUnknownSync(Instant)(

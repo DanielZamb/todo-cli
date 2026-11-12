@@ -1,6 +1,7 @@
 import { Effect, Option, Schema } from "effect";
 import { AttachmentCommands } from "./attachment-commands.ts";
 import { validateAttachmentInputs } from "./attachment-input.ts";
+import { readRequest } from "./auth/authorized-read.ts";
 import type { AccessRequest } from "./auth/model.ts";
 import { type TaskCommandResult, TaskCommands } from "./commands.ts";
 import { DependencyCommands } from "./dependency-commands.ts";
@@ -42,18 +43,22 @@ const executeImport = Effect.fn(function* (
   options: ImportRequest,
 ) {
   const commands = new TaskCommands(store);
-  const { read } = yield* store.auth.readState(
+  const { authority, graph } = yield* store.auth.withRead(
     source,
     Schema.Struct({ input: ImportRequest }),
     { input: options },
+    (read) =>
+      Effect.gen(function* () {
+        const authority = yield* store.auth.checkRead(read, "read");
+        const graph = yield* store.graphRead(read);
+        return { authority, graph };
+      }),
+    "read",
+    (authority) =>
+      Effect.succeed({ authority, graph: { tasks: [], edges: [] } }),
   );
-  const authority = yield* store.auth.checkRead(read, "read");
-  const request = Object.freeze({
-      credential: authority.credential,
-      profile: authority.profile,
-    }),
+  const request = readRequest(authority),
     input = authority.fields.input;
-  const graph = yield* store.graphRead(read);
   const initial = graph.tasks;
   const dependencyPlan = planImportDependencies(
     graph,
@@ -334,7 +339,14 @@ const executeImport = Effect.fn(function* (
               );
               changed_fields.push("status");
             }
-            const currentBlockers = (yield* store.graphRead(read)).edges
+            const currentBlockers = (yield* store.auth.withRead(
+              request,
+              Schema.Struct({}),
+              {},
+              (read) => store.graphRead(read),
+              "read",
+              () => Effect.succeed({ tasks: [], edges: [] }),
+            )).edges
               .filter((edge) => edge.dependent_id === task.id)
               .map((edge) => edge.blocker_id);
             const removed = currentBlockers.filter(

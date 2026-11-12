@@ -4,11 +4,50 @@ import {
   type ChangeEvent,
   TodoApi,
 } from "@todo/api";
-import { DiagnosticClient } from "@todo/domain";
-import type { OperationStore } from "@todo/domain/store";
+import { AuthError, DiagnosticClient, ProfileId } from "@todo/domain";
+import { type OperationStore, StoreError } from "@todo/domain/store";
 import { Effect, Schema, Stream } from "effect";
 import { HttpApiBuilder, HttpApiSchema } from "effect/http-api";
 import { translate } from "./errors.ts";
+
+type Connection = { active: boolean };
+type Cursor = { cursor: number; generation: string };
+class TerminalPermission {
+  #used = false;
+  readonly #connection: Connection;
+  readonly #state: Cursor;
+  readonly #profile: string;
+  readonly #read: Parameters<OperationStore["terminalChangesRead"]>[0];
+  constructor(
+    connection: Connection,
+    state: Cursor,
+    profile: string,
+    read: Parameters<OperationStore["terminalChangesRead"]>[0],
+  ) {
+    if (new.target !== TerminalPermission)
+      throw new StoreError(new Error("Invalid terminal permission"));
+    this.#connection = connection;
+    this.#state = Object.freeze({ ...state });
+    this.#profile = profile;
+    this.#read = read;
+    Object.freeze(this);
+  }
+  consume(connection: Connection, state: Cursor, profile: string) {
+    if (
+      !this.#connection.active ||
+      this.#used ||
+      connection !== this.#connection ||
+      state.cursor !== this.#state.cursor ||
+      state.generation !== this.#state.generation ||
+      profile !== this.#profile
+    )
+      throw new StoreError(new Error("Invalid terminal permission"));
+    this.#used = true;
+    return this.#read;
+  }
+}
+Object.freeze(TerminalPermission.prototype);
+Object.freeze(TerminalPermission);
 
 export const changesLayer = (store: OperationStore) =>
   HttpApiBuilder.group(TodoApi, "changes", (handlers) =>
@@ -23,8 +62,8 @@ export const changesLayer = (store: OperationStore) =>
             !Number.isSafeInteger(after)
           )
             return yield* new BadRequest({ message: "Invalid Last-Event-ID" });
-          const read = yield* translate(
-            store.auth.subscribe(
+          const { subscription, initial } = yield* translate(
+            store.auth.withRead(
               { credential, profile: params.profile },
               Schema.Struct({
                 after: Schema.Number,
@@ -42,66 +81,142 @@ export const changesLayer = (store: OperationStore) =>
                   ? {}
                   : { kind: headers["x-todo-client"] }),
               },
+              (read) =>
+                Effect.gen(function* () {
+                  const selection = yield* store.auth.checkRead(read, "read");
+                  const initial = yield* store.snapshots.generation();
+                  return {
+                    subscription: {
+                      credential: selection.credential,
+                      requested: String(selection.profile),
+                      fields: selection.fields,
+                    },
+                    initial,
+                  };
+                }),
+              "authenticate",
+              (selection) =>
+                Effect.succeed({
+                  subscription: {
+                    credential: selection.credential,
+                    requested: selection.requested,
+                    fields: selection.fields,
+                  },
+                  initial: selection.snapshot,
+                }),
             ),
           );
-          const authority = yield* translate(
-            store.auth.checkRead(read, "read"),
-          );
-          const authorize = translate(store.auth.recheckRead(read));
-          const initial = yield* translate(store.snapshots.generation());
+          const connection: Connection = { active: true };
           const reset =
-            authority.fields.after > initial.seq ||
+            subscription.fields.after > initial.seq ||
             (initial.generation !== "initial" &&
-              authority.fields.generation !== initial.generation);
+              subscription.fields.generation !== initial.generation);
           const operations = Stream.unfold(
             {
-              cursor: reset ? initial.restore_seq : authority.fields.after,
+              cursor: reset ? initial.restore_seq : subscription.fields.after,
               generation: initial.generation,
             },
             (state) =>
               Effect.gen(function* () {
                 yield* Effect.sleep("250 millis");
-                const current = yield* translate(store.snapshots.generation());
-                const events: Array<typeof ChangeEvent.Type> = [];
-                if (current.generation !== state.generation) {
-                  events.push({
-                    event: "reload",
-                    data: {
-                      generation: current.generation,
-                      seq: current.restore_seq,
-                    },
-                  });
-                  return [
-                    events,
+                if ("terminal" in state) {
+                  yield* translate(
+                    store.auth.authenticate({
+                      credential: subscription.credential,
+                      profile: Schema.decodeUnknownSync(ProfileId)(
+                        subscription.requested,
+                      ),
+                      access: "read",
+                    }),
+                  );
+                  return yield* translate(
+                    Effect.fail(new AuthError("profile_deleted")),
+                  );
+                }
+                return yield* translate(
+                  store.auth.withStreamRead(
                     {
-                      cursor: current.restore_seq,
-                      generation: current.generation,
+                      credential: subscription.credential,
+                      profile: Schema.decodeUnknownSync(ProfileId)(
+                        subscription.requested,
+                      ),
                     },
-                  ] as const;
-                }
-                const { entries, cursor } = yield* translate(
-                  store.changesRead(read, state.cursor),
+                    Schema.Struct({}),
+                    {},
+                    { after: state.cursor, generation: state.generation },
+                    (result) =>
+                      Effect.gen(function* () {
+                        const current =
+                          result.kind === "absent"
+                            ? result.selection.snapshot
+                            : yield* store.snapshots.generation();
+                        const events: Array<typeof ChangeEvent.Type> = [];
+                        if (current.generation !== state.generation) {
+                          events.push({
+                            event: "reload",
+                            data: {
+                              generation: current.generation,
+                              seq: current.restore_seq,
+                            },
+                          });
+                          return [
+                            events,
+                            {
+                              cursor: current.restore_seq,
+                              generation: current.generation,
+                            },
+                          ] as const;
+                        }
+                        const batch =
+                          result.kind === "absent"
+                            ? {
+                                entries: [],
+                                cursor: Math.max(state.cursor, current.seq),
+                              }
+                            : result.kind === "active"
+                              ? yield* store.changesRead(
+                                  result.read,
+                                  state.cursor,
+                                )
+                              : yield* Effect.suspend(() => {
+                                  const permission = new TerminalPermission(
+                                    connection,
+                                    state,
+                                    subscription.requested,
+                                    result.read,
+                                  );
+                                  return store.terminalChangesRead(
+                                    permission.consume(
+                                      connection,
+                                      state,
+                                      subscription.requested,
+                                    ),
+                                  );
+                                });
+                        for (const entry of batch.entries) {
+                          if (
+                            entry.outcome === "committed" &&
+                            entry.profile === subscription.requested
+                          )
+                            events.push({
+                              id: String(entry.seq),
+                              event: "operation",
+                              data: entry,
+                            });
+                        }
+                        return [
+                          events,
+                          {
+                            ...state,
+                            cursor: batch.cursor,
+                            ...(result.kind === "terminal"
+                              ? { terminal: true }
+                              : {}),
+                          },
+                        ] as const;
+                      }),
+                  ),
                 );
-                for (const entry of entries) {
-                  if (
-                    entry.outcome === "committed" &&
-                    entry.profile === authority.profile
-                  )
-                    events.push({
-                      id: String(entry.seq),
-                      event: "operation",
-                      data: entry,
-                    });
-                }
-                if (
-                  !events.some(
-                    (event) =>
-                      event.event === "operation" &&
-                      event.data.event.kind === "ProfileDeleted",
-                  )
-                )
-                  yield* authorize;
-                return [events, { ...state, cursor }] as const;
               }),
           ).pipe(Stream.flattenIterable);
           const greeting: Array<typeof ChangeEvent.Type> = [
@@ -122,16 +237,22 @@ export const changesLayer = (store: OperationStore) =>
             headers: { "cache-control": "no-store" },
             body: Stream.unwrap(
               Effect.gen(function* () {
-                const kind = authority.fields.kind;
+                const kind = subscription.fields.kind;
                 const id = yield* Effect.acquireRelease(
                   Effect.sync(() =>
                     store.diagnostics.connect(
-                      authority.profile,
+                      Schema.decodeUnknownSync(ProfileId)(
+                        subscription.requested,
+                      ),
                       kind ?? "unknown",
-                      reset ? undefined : authority.fields.header,
+                      reset ? undefined : subscription.fields.header,
                     ),
                   ),
-                  (id) => Effect.sync(() => store.diagnostics.disconnect(id)),
+                  (id) =>
+                    Effect.sync(() => {
+                      connection.active = false;
+                      store.diagnostics.disconnect(id);
+                    }),
                 );
                 return Stream.concat(
                   Stream.fromIterable(greeting),

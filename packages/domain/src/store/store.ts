@@ -11,7 +11,11 @@ import { Effect, Option, Schema } from "effect";
 import { eraseTaskAttachments } from "../attachment-store.ts";
 import { validAttachmentLocation } from "../attachments.ts";
 import { Authentication } from "../auth/auth.ts";
-import { type AuthorizedRead, checkedRead } from "../auth/authorized-read.ts";
+import {
+  type AuthorizedRead,
+  type AuthorizedTerminalRead,
+  checkedRead,
+} from "../auth/authorized-read.ts";
 import { DependencyError, Edge, RejectionDetails } from "../dependencies.ts";
 import {
   Profile,
@@ -51,7 +55,7 @@ import {
 } from "./dependency-validation.ts";
 import { Diagnostics } from "./diagnostics.ts";
 import { StoreError } from "./error.ts";
-import { committedHistory } from "./history-reads.ts";
+import { committedHistory, terminalHistory } from "./history-reads.ts";
 import { redactTaskHistory } from "./purge.ts";
 import { ScheduledWork } from "./scheduled-work.ts";
 import { searchCacheEvents } from "./search-cache-events.ts";
@@ -568,6 +572,9 @@ export class OperationStore {
     checkedRead(read, "read", this.db).pipe(
       Effect.flatMap((value) => this.graph(value.profile)),
     );
+
+  readonly terminalChangesRead = (read: AuthorizedTerminalRead) =>
+    attempt(() => terminalHistory(this.db, read));
 
   private historySync(after: number): OpLogEntry[] {
     return this.db

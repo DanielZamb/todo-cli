@@ -80,10 +80,15 @@ const result = await Bun.build({
                   "import {boundaryAfterCheck} from " +
                   JSON.stringify(hooks) +
                   ";\n" +
-                  source.replace(
-                    "Object.freeze(this);",
-                    "boundaryAfterCheck(); Object.freeze(this);",
-                  ),
+                  source
+                    .replace(
+                      "Object.freeze(this);",
+                      "boundaryAfterCheck(); Object.freeze(this);",
+                    )
+                    .replace(
+                      'if (classification.kind === "absent") {',
+                      'if (classification.kind === "absent") { boundaryAfterCheck();',
+                    ),
                 loader: "ts",
               };
             }

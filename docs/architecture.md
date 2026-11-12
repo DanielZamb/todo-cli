@@ -196,8 +196,9 @@ a search retry timer. See [ADR-0015](adr/0015-search-text-retention-and-recovery
 ## Agent discovery contract
 
 HTTP Task reads load Profile-filtered projection rows. Task lists authenticate
-and load metadata, then read the Profile's Tasks and Dependencies in one SQLite
-read transaction. Planning views use a Profile catalog without History or Series.
+and materialize metadata, Tasks and Dependencies in one checked SQLite callback.
+Search CPU work and response encoding run afterward on owned rows and selectors.
+Planning views use a Profile catalog without History or Series.
 Project and Tag counts use grouped projection queries. Profile counts use one
 grouped query for the credential's authorized, active Profiles inside the existing
 immediate authorization transaction. Directory counts share its existing deferred
@@ -207,9 +208,26 @@ atomic event/projection writes remain authoritative. Reads do not replay the log
 Credential checks create read authorities inside the authentication module.
 Profile, scope, parsed fields and database identity live in ECMAScript private
 fields. Query ports validate the genuine instance, exact prototype, authority
-kind and database before consuming its values. Copies, subclasses and mutation
-cannot grant access; refusal uses the existing generic storage error. The
-authority, its payload and its class/prototype are frozen.
+kind, database, live transaction lease, failed-scope ancestry, expiry and the
+credential check's write serial before SQL or image access. Commit, rollback,
+interruption and failure end the lease. Failed nested scopes invalidate their
+values without ending Discovery's outer snapshot. A later checked scope verifies
+credentials again and requires the original restore generation. Copies,
+subclasses, mutation and retained values cannot grant access; refusal uses the
+existing generic storage error. The authority, its payload and its
+class/prototype are frozen. Ordinary readers return data and plain selectors.
+
+One classifier runs in the credential-check snapshot after credential and scope
+validation. It distinguishes active, tombstoned and never-created identifiers.
+Only an active Profile receives a query authority. Never-created results contain
+no Profile id or authority and use literals for empty replies; Quick-add parses
+its supplied text without looking up Tags or Projects. Their credential lookup
+and classification are the only statements. CLI name resolution selects the
+active id after name reuse; a deleted HTTP id remains unavailable.
+
+This strict-scope checkpoint is incomplete. Diagnostics still materializes after
+its owner check. Converting its constructor callback awaits the AtomicCAS mapped
+source review described in the server-read report. It is not qualified to install.
 
 Task History selects relevant event rows in SQL before decoding OpLogEntry.
 SSE catch-up selects only committed rows for its Profile and cursor. Full History
@@ -252,6 +270,16 @@ SSE id. Only that Profile's committed operations appear, so gaps in ids are
 normal: rejected attempts and other Profiles are skipped.
 
 The route rereads `op_log` every 250 ms and checks the credential on each pass.
+Each poll checks and materializes in one transaction and retains plain
+subscription selectors between polls. A never-created identifier is classified
+again on every poll, so a later CLI creation starts normal ordered delivery.
+An already connected, still-valid owner Session has a private one-shot terminal
+permission through the committed `ProfileDeleted` sequence, followed by the
+existing failure and close sequence. Revoked or expired credentials receive no
+terminal batch. A deletion-revoked scoped Token closes as revoked; a still-valid
+unscoped Token closes on Profile deletion without that batch. The base's terminal
+batch for these credentials is intentionally removed under the owner's ruling.
+Exact frame qualification remains pending in this checkpoint.
 That is how a `todo edit` from the CLI process reaches an open desktop app.
 There is no file watcher and no IPC between the two processes. Reconnect with
 `Last-Event-ID: <seq>` to resume after that id, and save cursors per Profile.

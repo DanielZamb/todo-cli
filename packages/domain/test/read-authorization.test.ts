@@ -271,7 +271,7 @@ it.effect(
                 profile: work.id,
               };
               const fields = { filters: { prefix: "aa", tags: ["one"] } };
-              const { read } = yield* store.auth.readMetadata(
+              const { selection: read } = yield* store.auth.readMetadata(
                 request,
                 Schema.Struct({
                   filters: Schema.Struct({
@@ -283,6 +283,8 @@ it.effect(
               );
               fields.filters.prefix = "ff";
               fields.filters.tags.push("two");
+              if (read.kind !== "read")
+                throw new Error("Expected a present Profile");
               expect(read.profile).toBe("work");
               expect(read.scope).toBe("read-only");
               expect(read.fields).toEqual({

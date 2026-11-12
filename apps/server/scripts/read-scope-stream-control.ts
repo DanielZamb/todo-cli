@@ -1,0 +1,372 @@
+import { Database } from "bun:sqlite";
+import assert from "node:assert/strict";
+import { spawn, spawnSync } from "node:child_process";
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { setTimeout as pause } from "node:timers/promises";
+import { Schema } from "effect";
+
+const Fixture = Schema.Struct({
+  path: Schema.String,
+  controller: Schema.String,
+  shortToken: Schema.String,
+  credentials: Schema.Struct({
+    owner: Schema.String,
+    work: Schema.String,
+    unscoped: Schema.String,
+  }),
+});
+const [before, after, cliBefore, cliAfter, manifest, output] =
+  process.argv.slice(2);
+assert.ok(before && after && cliBefore && cliAfter && manifest && output);
+const fixture = Schema.decodeUnknownSync(Fixture)(
+  JSON.parse(readFileSync(manifest, "utf8")),
+);
+assert.ok(fixture.path.startsWith(`${resolve(".scratch")}/`));
+const initialTime = Date.parse("2026-11-11T18:00:00Z");
+const uuids = [
+  "00000000-0000-4000-8000-000000000011",
+  "00000000-0000-4000-8000-000000000012",
+  "00000000-0000-4000-8000-000000000013",
+];
+type Frame = {
+  raw: string;
+  event: string;
+  id: string | undefined;
+  data: unknown;
+};
+async function* frames(response: Response): AsyncGenerator<Frame> {
+  const reader = response.body?.getReader();
+  assert.ok(reader);
+  let pending = "";
+  const decoder = new TextDecoder();
+  try {
+    while (true) {
+      const row = await reader.read();
+      if (row.done) return;
+      pending += decoder.decode(row.value, { stream: true });
+      for (
+        let end = pending.indexOf("\n\n");
+        end >= 0;
+        end = pending.indexOf("\n\n")
+      ) {
+        const raw = pending.slice(0, end + 2);
+        pending = pending.slice(end + 2);
+        const fields = Object.fromEntries(
+          raw
+            .trimEnd()
+            .split("\n")
+            .map((line) => {
+              const colon = line.indexOf(":");
+              return [line.slice(0, colon), line.slice(colon + 1).trimStart()];
+            }),
+        );
+        assert.ok(fields.event);
+        yield {
+          raw,
+          event: fields.event,
+          id: fields.id,
+          data: JSON.parse(fields.data ?? "null"),
+        };
+      }
+    }
+  } finally {
+    await reader.cancel().catch(() => {});
+  }
+}
+const scenarios = [
+  "never-created",
+  "ordering-reconnect",
+  "restore",
+  "revoke-token",
+  "revoke-session",
+  "expire-token",
+  "expire-session",
+  "delete-owner",
+  "delete-scoped",
+  "delete-unscoped",
+  "delete-revoked-token",
+  "delete-revoked-session",
+  "delete-expired-token",
+  "delete-expired-session",
+];
+async function run(binary: string, cli: string, scenario: string) {
+  const directory = mkdtempSync(join(tmpdir(), "todo-stream-scope-"));
+  const path = join(directory, "scratch.db"),
+    clock = join(directory, "clock"),
+    gate = join(directory, "gate");
+  copyFileSync(fixture.path, path);
+  writeFileSync(clock, String(initialTime));
+  writeFileSync(gate, "open");
+  const home = join(directory, "home");
+  mkdirSync(join(home, ".todo-cli"), { recursive: true, mode: 0o700 });
+  writeFileSync(
+    join(home, ".todo-cli", "session_control.json"),
+    JSON.stringify({ token: fixture.credentials.owner }),
+    { mode: 0o600 },
+  );
+  const child = spawn(resolve(binary), [], {
+    env: {
+      ...process.env,
+      HOME: home,
+      TODO_DB: path,
+      READ_CONTROL_CLOCK_FILE: clock,
+      READ_CONTROL_POLL_GATE: gate,
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  let log = "";
+  child.stdout.on("data", (chunk: Buffer) => {
+    log += chunk.toString();
+  });
+  child.stderr.on("data", (chunk: Buffer) => {
+    log += chunk.toString();
+  });
+  const controllers: AbortController[] = [],
+    received: Frame[] = [];
+  try {
+    const deadline = performance.now() + 30000;
+    while (!/Listening on http:\/\/127.0.0.1:\d+/.test(log)) {
+      assert.equal(child.exitCode, null, log);
+      assert.ok(performance.now() < deadline, log);
+      await pause(20);
+    }
+    const base = log.match(/Listening on (http:\/\/127.0.0.1:\d+)/)?.[1];
+    assert.ok(base);
+    const request = async (
+      method: string,
+      route: string,
+      body?: unknown,
+      credential = fixture.credentials.owner,
+      expected = 200,
+    ): Promise<unknown> => {
+      const response: Response = await fetch(base + route, {
+        method,
+        headers: {
+          Authorization: `Bearer ${credential}`,
+          "Content-Type": "application/json",
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+      const text = await response.text();
+      assert.equal(response.status, expected, `${route}: ${text}`);
+      return text === "" ? null : JSON.parse(text);
+    };
+    const metadata = new Database(path, { readonly: true });
+    const initialCursor =
+      metadata
+        .query<{ seq: number }, []>(
+          "SELECT coalesce(max(seq),0) AS seq FROM op_log",
+        )
+        .get()?.seq ?? 0;
+    metadata.close();
+    const connect = async (
+      credential: string,
+      profile: string,
+      cursor: string,
+    ) => {
+      const controller = new AbortController();
+      controllers.push(controller);
+      const response = await fetch(`${base}/profiles/${profile}/events`, {
+        signal: AbortSignal.any([
+          controller.signal,
+          AbortSignal.timeout(15000),
+        ]),
+        headers: {
+          Authorization: `Bearer ${credential}`,
+          "Last-Event-ID": cursor,
+          "X-Todo-Generation": "initial",
+        },
+      });
+      assert.equal(response.status, 200);
+      return frames(response);
+    };
+    const next = async (reader: AsyncGenerator<Frame>) => {
+      const row = await reader.next();
+      assert.equal(row.done, false, `${scenario}: unexpected close`);
+      assert.ok(row.value);
+      received.push(row.value);
+      return row.value;
+    };
+    const cliWrite = (profile: string, id: string, title: string) => {
+      const result = spawnSync(
+        resolve(cli),
+        [
+          "--db",
+          path,
+          "--profile",
+          profile,
+          "--credential-profile",
+          "control",
+          "--format",
+          "json",
+          "add",
+          title,
+        ],
+        {
+          env: { ...process.env, HOME: home, READ_CONTROL_UUID: id },
+          encoding: "utf8",
+          timeout: 10000,
+        },
+      );
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+      assert.ok(result.stdout.includes(id), result.stdout);
+    };
+    const credential =
+      scenario.includes("expired-token") || scenario === "expire-token"
+        ? fixture.shortToken
+        : (scenario.includes("scoped") && !scenario.includes("unscoped")) ||
+            scenario === "revoke-token"
+          ? fixture.credentials.work
+          : scenario.includes("unscoped") || scenario === "delete-revoked-token"
+            ? fixture.credentials.unscoped
+            : fixture.credentials.owner;
+    const profile = scenario === "never-created" ? "never-created" : "work";
+    let reader = await connect(credential, profile, String(initialCursor));
+    assert.equal((await next(reader)).raw, "event: ready\ndata: null\n\n");
+    if (scenario === "never-created") {
+      cliWrite(profile, uuids[0] ?? "", "First write creates Profile");
+      const event = await next(reader);
+      assert.equal(event.event, "operation");
+      const data = Schema.decodeUnknownSync(
+        Schema.Struct({
+          profile: Schema.String,
+          event: Schema.Struct({
+            kind: Schema.String,
+            task: Schema.Struct({ id: Schema.String, title: Schema.String }),
+          }),
+        }),
+      )(event.data);
+      assert.deepEqual(
+        [
+          data.profile,
+          data.event.kind,
+          data.event.task.id,
+          data.event.task.title,
+        ],
+        [
+          "never-created",
+          "TaskCreated",
+          uuids[0],
+          "First write creates Profile",
+        ],
+      );
+    } else if (scenario === "ordering-reconnect") {
+      cliWrite("work", uuids[0] ?? "", "First ordered Task");
+      const first = await next(reader);
+      cliWrite("personal", uuids[1] ?? "", "Private unrelated Task");
+      cliWrite("work", uuids[2] ?? "", "Second ordered Task");
+      const second = await next(reader);
+      assert.ok(Number(second.id) > Number(first.id) + 1);
+      controllers.at(-1)?.abort();
+      await reader.return(undefined);
+      reader = await connect(credential, "work", first.id ?? "");
+      assert.equal((await next(reader)).event, "ready");
+      assert.equal((await next(reader)).raw, second.raw);
+    } else if (scenario === "restore") {
+      writeFileSync(gate, "closed");
+      const saved = Schema.decodeUnknownSync(
+        Schema.Struct({ id: Schema.String }),
+      )(
+        await request("POST", "/snapshots", { reason: "stream scope restore" }),
+      );
+      cliWrite("work", uuids[0] ?? "", "Rolled back by restore");
+      await request("POST", `/snapshots/${saved.id}/restore`, {
+        dry_run: false,
+      });
+      cliWrite("work", uuids[2] ?? "", "After restore");
+      writeFileSync(gate, "open");
+      assert.equal((await next(reader)).event, "reload");
+      assert.equal((await next(reader)).event, "operation");
+    } else {
+      writeFileSync(gate, "closed");
+      cliWrite("work", uuids[0] ?? "", "Pending before terminal transition");
+      if (scenario.includes("revoked-token") || scenario === "revoke-token")
+        await request(
+          "DELETE",
+          `/auth/tokens/${scenario === "revoke-token" ? "work" : "unscoped"}`,
+          undefined,
+          fixture.controller,
+          204,
+        );
+      if (scenario.includes("revoked-session") || scenario === "revoke-session")
+        await request(
+          "DELETE",
+          "/auth/session",
+          undefined,
+          fixture.credentials.owner,
+          204,
+        );
+      if (scenario.includes("expired-token") || scenario === "expire-token")
+        writeFileSync(clock, String(initialTime + 1000));
+      if (scenario.includes("expired-session") || scenario === "expire-session")
+        writeFileSync(clock, String(initialTime + 7 * 86400000));
+      if (scenario.startsWith("delete-"))
+        await request(
+          "DELETE",
+          "/profiles/work",
+          { with_tasks: true, dry_run: false },
+          fixture.controller,
+        );
+      writeFileSync(gate, "open");
+      while (true) {
+        const row = await reader.next();
+        if (row.done) break;
+        received.push(row.value);
+      }
+      assert.equal(received.at(-1)?.event, "effect/http-api/stream/failure");
+    }
+    return received.map((frame) => frame.raw);
+  } finally {
+    for (const controller of controllers) controller.abort();
+    if (child.exitCode === null && child.signalCode === null) {
+      const done = new Promise<void>((resolve) =>
+        child.once("exit", () => resolve()),
+      );
+      child.kill("SIGTERM");
+      await done;
+    }
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+mkdirSync(output, { recursive: true });
+const results = [];
+for (const scenario of scenarios) {
+  const old = await run(before, cliBefore, scenario),
+    current = await run(after, cliAfter, scenario);
+  const approved =
+    scenario.startsWith("delete-") && scenario !== "delete-owner";
+  if (approved) {
+    assert.ok(
+      old.some((raw) => raw.includes('"kind":"ProfileDeleted"')),
+      scenario,
+    );
+    assert.deepEqual(current, [old[0], old.at(-1)], scenario);
+  } else assert.deepEqual(current, old, scenario);
+  const result = {
+    scenario,
+    approvedTerminalDifference: approved,
+    before: old,
+    after: current,
+  };
+  writeFileSync(
+    join(output, `${scenario}.json`),
+    JSON.stringify(result, null, 2),
+  );
+  results.push({
+    scenario,
+    approvedTerminalDifference: approved,
+    beforeFrames: old.length,
+    afterFrames: current.length,
+  });
+  writeFileSync(join(output, "result.json"), JSON.stringify(results, null, 2));
+  console.log(`${scenario}: ${old.length}/${current.length} frames`);
+}

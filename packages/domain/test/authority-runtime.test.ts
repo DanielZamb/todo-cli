@@ -15,61 +15,11 @@ import { openStore, TaskCommands } from "@todo/domain/store";
 import { Cause, Effect, Exit, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { taskHistory } from "../src/store/history-reads.ts";
+import {
+  counterfeitAuthority as counterfeit,
+  authorityModes as modes,
+} from "./authority-fixtures.ts";
 import { actor, created, taskInput, time, work } from "./store-fixtures.ts";
-
-const modes = [
-  "clone",
-  "spread",
-  "assign",
-  "prototype",
-  "json",
-  "subclass",
-  "subclass-copy",
-  "proxy",
-  "field",
-];
-const counterfeit = (value: object, mode: string): unknown => {
-  if (mode === "field")
-    return Object.assign(value, {
-      profile: "personal",
-      fields: { task_id: "foreign" },
-    });
-  if (mode === "subclass" || mode === "subclass-copy") {
-    const base = Reflect.get(Object.getPrototypeOf(value), "constructor");
-    const derived = Reflect.apply(
-      Function("Base", "return class Derived extends Base {}"),
-      undefined,
-      [base],
-    );
-    if (mode === "subclass-copy") {
-      const copy = Object.create(Reflect.get(derived, "prototype"));
-      Object.defineProperty(copy, "profile", { value: "personal" });
-      return copy;
-    }
-    return Reflect.construct(derived, [
-      "read",
-      "personal",
-      "fake",
-      {},
-      { scope: "read-only" },
-    ]);
-  }
-  if (mode === "proxy") return new Proxy(value, { get: () => "personal" });
-  const clone = structuredClone(value);
-  if (mode === "spread") return { ...value };
-  if (mode === "assign")
-    return Object.assign({}, value, {
-      profile: "personal",
-      fields: { task_id: "foreign" },
-    });
-  if (mode === "prototype")
-    return Object.setPrototypeOf(clone, Object.getPrototypeOf(value));
-  if (mode === "json") {
-    const decoded: unknown = JSON.parse(JSON.stringify(value));
-    return decoded;
-  }
-  return clone;
-};
 
 it.effect(
   "every query port refuses copied or mutated authority values without returning data",
@@ -115,295 +65,328 @@ it.effect(
                 profile: work.id,
                 task_id: Schema.decodeUnknownSync(TaskId)("task-1"),
               };
-              const read = yield* store.auth.authorizeRead(
-                request,
-                Schema.Struct({ task_id: TaskId }),
-                { task_id: request.task_id },
-              );
               const snapshot = yield* store.snapshots.create(
                 "runtime authority fixture",
               );
-              const owner = yield* store.auth.ownerRead(
-                { credential },
-                Schema.Struct({ snapshot: Schema.String }),
-                { snapshot: snapshot.id },
-              );
-              const commands = new TaskCommands(store),
-                reads = new ClientReads(store),
-                discovery = new Discovery(store),
-                attachments = new AttachmentCommands(store);
-              const profiles = yield* store.auth.profilesRead(
-                { credential: token.credential },
-                Schema.Struct({}),
-                {},
-              );
-              const projection = Reflect.get(store.auth, "projection");
-              const database = Reflect.get(store, "db");
-              expect(Object.keys(read)).toEqual([]);
-              expect(structuredClone(read)).toEqual({});
-              const authorityConstructor = Reflect.get(
-                Object.getPrototypeOf(read),
-                "constructor",
-              );
-              expect(
-                Reflect.set(authorityConstructor, "inspect", () => ({
-                  profile: "personal",
-                })),
-              ).toBe(false);
-              expect(
-                Reflect.set(Object.getPrototypeOf(read), "profile", "personal"),
-              ).toBe(false);
-              const failures: string[] = [];
-              const attempts: Array<{
-                mode: string;
-                port: string;
-                refused: string;
-              }> = [];
-              const originalQuery: (...args: unknown[]) => unknown =
-                Reflect.get(store.auth, "queryWithin");
-              const originalProfiles = store.auth.profilesRead.bind(store.auth);
-              const direct = [
-                {
-                  name: "subscription",
-                  authority: read,
-                  invoke: (value: unknown) =>
-                    Reflect.apply(store.auth.checkRead, store.auth, [
-                      value,
-                      "read",
-                    ]),
-                },
-                {
-                  name: "graph",
-                  authority: read,
-                  invoke: (value: unknown) =>
-                    Reflect.apply(store.graphRead, store, [value]),
-                },
-                {
-                  name: "changes",
-                  authority: read,
-                  invoke: (value: unknown) =>
-                    Reflect.apply(store.changesRead, store, [value, 0]),
-                },
-                {
-                  name: "snapshot-list",
-                  authority: owner,
-                  invoke: (value: unknown) =>
-                    Reflect.apply(store.snapshots.listRead, store.snapshots, [
-                      value,
-                    ]),
-                },
-                {
-                  name: "snapshot-show",
-                  authority: owner,
-                  invoke: (value: unknown) =>
-                    Reflect.apply(store.snapshots.showRead, store.snapshots, [
-                      value,
-                    ]),
-                },
-                ...["metadata", "tasks", "catalog", "projects", "tags"].map(
-                  (name) => ({
-                    name: "projection-" + name,
-                    authority: read,
-                    invoke: (value: unknown) =>
-                      Effect.try({
-                        try: () =>
-                          Reflect.apply(
-                            Reflect.get(projection, name),
-                            projection,
-                            [value],
-                          ),
-                        catch: (cause) => cause,
-                      }),
-                  }),
-                ),
-                {
-                  name: "projection-profiles",
-                  authority: profiles.read,
-                  invoke: (value: unknown) =>
-                    Effect.try({
-                      try: () =>
+              yield* store.auth.readSnapshot(() =>
+                Effect.gen(function* () {
+                  const read = yield* store.auth.authorizeRead(
+                    request,
+                    Schema.Struct({ task_id: TaskId }),
+                    { task_id: request.task_id },
+                  );
+                  const owner = yield* store.auth.ownerRead(
+                    { credential },
+                    Schema.Struct({ snapshot: Schema.String }),
+                    { snapshot: snapshot.id },
+                  );
+                  const commands = new TaskCommands(store),
+                    reads = new ClientReads(store),
+                    discovery = new Discovery(store),
+                    attachments = new AttachmentCommands(store);
+                  const profiles = yield* store.auth.profilesRead(
+                    { credential: token.credential },
+                    Schema.Struct({}),
+                    {},
+                  );
+                  const projection = Reflect.get(store.auth, "projection");
+                  const database = Reflect.get(store, "db");
+                  expect(Object.keys(read)).toEqual([]);
+                  expect(structuredClone(read)).toEqual({});
+                  const authorityConstructor = Reflect.get(
+                    Object.getPrototypeOf(read),
+                    "constructor",
+                  );
+                  expect(
+                    Reflect.set(authorityConstructor, "inspect", () => ({
+                      profile: "personal",
+                    })),
+                  ).toBe(false);
+                  expect(
+                    Reflect.set(
+                      Object.getPrototypeOf(read),
+                      "profile",
+                      "personal",
+                    ),
+                  ).toBe(false);
+                  const failures: string[] = [];
+                  const attempts: Array<{
+                    mode: string;
+                    port: string;
+                    refused: string;
+                  }> = [];
+                  const originalQuery: (...args: unknown[]) => unknown =
+                    Reflect.get(store.auth, "queryWithin");
+                  const originalProfiles = store.auth.profilesRead.bind(
+                    store.auth,
+                  );
+                  const direct = [
+                    {
+                      name: "managed-image",
+                      authority: read,
+                      invoke: (value: unknown) =>
                         Reflect.apply(
-                          Reflect.get(projection, "profiles"),
-                          projection,
+                          Reflect.get(attachments, "imageWithin"),
+                          attachments,
+                          [value, created.task],
+                        ),
+                    },
+                    {
+                      name: "subscription",
+                      authority: read,
+                      invoke: (value: unknown) =>
+                        Reflect.apply(store.auth.checkRead, store.auth, [
+                          value,
+                          "read",
+                        ]),
+                    },
+                    {
+                      name: "graph",
+                      authority: read,
+                      invoke: (value: unknown) =>
+                        Reflect.apply(store.graphRead, store, [value]),
+                    },
+                    {
+                      name: "changes",
+                      authority: read,
+                      invoke: (value: unknown) =>
+                        Reflect.apply(store.changesRead, store, [value, 0]),
+                    },
+                    {
+                      name: "snapshot-list",
+                      authority: owner,
+                      invoke: (value: unknown) =>
+                        Reflect.apply(
+                          store.snapshots.listRead,
+                          store.snapshots,
                           [value],
                         ),
-                      catch: (cause) => cause,
-                    }),
-                },
-                {
-                  name: "task-history",
-                  authority: read,
-                  invoke: (value: unknown) =>
-                    Effect.try({
-                      try: () =>
-                        Reflect.apply(taskHistory, undefined, [
-                          database,
-                          value,
-                        ]),
-                      catch: (cause) => cause,
-                    }),
-                },
-              ];
-              expect(
-                (yield* store.graphRead(read)).tasks.map((task) => task.id),
-              ).toEqual(["task-1"]);
-              expect(
-                (yield* store.changesRead(read, 0)).entries.map(
-                  (entry) => entry.profile,
-                ),
-              ).toEqual(["work", "work"]);
-              expect((yield* store.snapshots.showRead(owner)).id).toBe(
-                snapshot.id,
-              );
-              for (const mode of modes) {
-                for (const port of direct) {
-                  let operation: Effect.Effect<unknown, unknown>;
-                  try {
-                    operation = port.invoke(counterfeit(port.authority, mode));
-                  } catch (error) {
-                    if (
-                      error instanceof TypeError ||
-                      Reflect.get(Object(error), "_tag") === "StoreError"
-                    ) {
+                    },
+                    {
+                      name: "snapshot-show",
+                      authority: owner,
+                      invoke: (value: unknown) =>
+                        Reflect.apply(
+                          store.snapshots.showRead,
+                          store.snapshots,
+                          [value],
+                        ),
+                    },
+                    ...["metadata", "tasks", "catalog", "projects", "tags"].map(
+                      (name) => ({
+                        name: "projection-" + name,
+                        authority: read,
+                        invoke: (value: unknown) =>
+                          Effect.try({
+                            try: () =>
+                              Reflect.apply(
+                                Reflect.get(projection, name),
+                                projection,
+                                [value],
+                              ),
+                            catch: (cause) => cause,
+                          }),
+                      }),
+                    ),
+                    {
+                      name: "projection-profiles",
+                      authority: profiles.read,
+                      invoke: (value: unknown) =>
+                        Effect.try({
+                          try: () =>
+                            Reflect.apply(
+                              Reflect.get(projection, "profiles"),
+                              projection,
+                              [value],
+                            ),
+                          catch: (cause) => cause,
+                        }),
+                    },
+                    {
+                      name: "task-history",
+                      authority: read,
+                      invoke: (value: unknown) =>
+                        Effect.try({
+                          try: () =>
+                            Reflect.apply(taskHistory, undefined, [
+                              database,
+                              value,
+                            ]),
+                          catch: (cause) => cause,
+                        }),
+                    },
+                  ];
+                  expect(
+                    (yield* store.graphRead(read)).tasks.map((task) => task.id),
+                  ).toEqual(["task-1"]);
+                  expect(
+                    (yield* store.changesRead(read, 0)).entries.map(
+                      (entry) => entry.profile,
+                    ),
+                  ).toEqual(["work", "work"]);
+                  expect((yield* store.snapshots.showRead(owner)).id).toBe(
+                    snapshot.id,
+                  );
+                  for (const mode of modes) {
+                    for (const port of direct) {
+                      let operation: Effect.Effect<unknown, unknown>;
+                      try {
+                        operation = port.invoke(
+                          counterfeit(port.authority, mode),
+                        );
+                      } catch (error) {
+                        if (
+                          error instanceof TypeError ||
+                          Reflect.get(Object(error), "_tag") === "StoreError"
+                        ) {
+                          attempts.push({
+                            mode,
+                            port: port.name,
+                            refused: "construction",
+                          });
+                          continue;
+                        }
+                        throw error;
+                      }
+                      const result = yield* Effect.exit(operation);
                       attempts.push({
                         mode,
                         port: port.name,
-                        refused: "construction",
+                        refused: Exit.isFailure(result) ? "port" : "none",
                       });
-                      continue;
+                      if (
+                        Exit.isSuccess(result) ||
+                        Reflect.get(
+                          Object(Cause.squash(result.cause)),
+                          "_tag",
+                        ) !== "StoreError"
+                      )
+                        failures.push(mode + ":" + port.name);
                     }
-                    throw error;
-                  }
-                  const result = yield* Effect.exit(operation);
-                  attempts.push({
-                    mode,
-                    port: port.name,
-                    refused: Exit.isFailure(result) ? "port" : "none",
-                  });
-                  if (
-                    Exit.isSuccess(result) ||
-                    Reflect.get(Object(Cause.squash(result.cause)), "_tag") !==
-                      "StoreError"
-                  )
-                    failures.push(mode + ":" + port.name);
-                }
-                Object.defineProperty(store.auth, "queryWithin", {
-                  configurable: true,
-                  value: (...args: unknown[]) => {
-                    const callback = args[3];
-                    if (typeof callback !== "function")
-                      throw Error("Missing query callback");
-                    const wrapped = (value: object) =>
-                      Reflect.apply(callback, undefined, [
-                        counterfeit(value, mode),
-                      ]);
-                    return Reflect.apply(originalQuery, store.auth, [
-                      ...args.slice(0, 3),
-                      wrapped,
-                      ...args.slice(4),
-                    ]);
-                  },
-                });
-                Object.defineProperty(store.auth, "profilesRead", {
-                  configurable: true,
-                  value: (...args: Parameters<typeof originalProfiles>) =>
-                    originalProfiles(...args).pipe(
-                      Effect.map((result) => ({
-                        ...result,
-                        read: counterfeit(result.read, mode),
-                      })),
-                    ),
-                });
-                const queries: Array<
-                  [string, Effect.Effect<unknown, unknown>]
-                > = [
-                  ["metadata", store.auth.metadata(request)],
-                  ["catalog", store.auth.catalog(request)],
-                  ["projects", reads.projects(request)],
-                  ["tags", reads.tags(request)],
-                  ["history", reads.history(request)],
-                  [
-                    "full-state",
-                    store.auth.readState(request, Schema.Struct({}), {}),
-                  ],
-                  ["list", commands.list(request)],
-                  ["show", commands.get(request)],
-                  ["graph-query", readGraph(store, request, time)],
-                  ["view", reads.view(request, "inbox", time)],
-                  [
-                    "image",
-                    attachments.image(
-                      request,
-                      Schema.decodeUnknownSync(
-                        Schema.NonEmptyString.pipe(
-                          Schema.brand("AttachmentId"),
-                        ),
-                      )("image"),
-                    ),
-                  ],
-                  [
-                    "lookup",
-                    discovery.lookup(token.credential, { prefix: "aa" }),
-                  ],
-                ];
-                try {
-                  for (const [name, operation] of queries) {
-                    const result = yield* Effect.exit(operation);
-                    attempts.push({
-                      mode,
-                      port: name,
-                      refused: Exit.isFailure(result) ? "query" : "none",
+                    Object.defineProperty(store.auth, "queryWithin", {
+                      configurable: true,
+                      value: (...args: unknown[]) => {
+                        const callback = args[3];
+                        if (typeof callback !== "function")
+                          throw Error("Missing query callback");
+                        const wrapped = (value: object) =>
+                          Reflect.apply(callback, undefined, [
+                            counterfeit(value, mode),
+                          ]);
+                        return Reflect.apply(originalQuery, store.auth, [
+                          ...args.slice(0, 3),
+                          wrapped,
+                          ...args.slice(4),
+                        ]);
+                      },
                     });
-                    if (
-                      Exit.isSuccess(result) ||
-                      Reflect.get(
-                        Object(Cause.squash(result.cause)),
-                        "_tag",
-                      ) !== "StoreError"
-                    )
-                      failures.push(mode + ":" + name);
+                    Object.defineProperty(store.auth, "profilesRead", {
+                      configurable: true,
+                      value: (...args: Parameters<typeof originalProfiles>) =>
+                        originalProfiles(...args).pipe(
+                          Effect.map((result) => ({
+                            ...result,
+                            read: counterfeit(result.read, mode),
+                          })),
+                        ),
+                    });
+                    const queries: Array<
+                      [string, Effect.Effect<unknown, unknown>]
+                    > = [
+                      ["metadata", store.auth.metadata(request)],
+                      ["catalog", store.auth.catalog(request)],
+                      ["projects", reads.projects(request)],
+                      ["tags", reads.tags(request)],
+                      ["history", reads.history(request)],
+                      [
+                        "full-state",
+                        store.auth.readState(request, Schema.Struct({}), {}),
+                      ],
+                      ["list", commands.list(request)],
+                      ["show", commands.get(request)],
+                      ["graph-query", readGraph(store, request, time)],
+                      ["view", reads.view(request, "inbox", time)],
+                      [
+                        "image",
+                        attachments.image(
+                          request,
+                          Schema.decodeUnknownSync(
+                            Schema.NonEmptyString.pipe(
+                              Schema.brand("AttachmentId"),
+                            ),
+                          )("image"),
+                        ),
+                      ],
+                      [
+                        "lookup",
+                        discovery.lookup(token.credential, { prefix: "aa" }),
+                      ],
+                    ];
+                    try {
+                      for (const [name, operation] of queries) {
+                        const result = yield* Effect.exit(operation);
+                        attempts.push({
+                          mode,
+                          port: name,
+                          refused: Exit.isFailure(result) ? "query" : "none",
+                        });
+                        if (
+                          Exit.isSuccess(result) ||
+                          Reflect.get(
+                            Object(Cause.squash(result.cause)),
+                            "_tag",
+                          ) !== "StoreError"
+                        )
+                          failures.push(mode + ":" + name);
+                      }
+                    } finally {
+                      Object.defineProperty(store.auth, "queryWithin", {
+                        value: originalQuery,
+                      });
+                      Object.defineProperty(store.auth, "profilesRead", {
+                        value: originalProfiles,
+                      });
+                    }
                   }
-                } finally {
-                  Object.defineProperty(store.auth, "queryWithin", {
-                    value: originalQuery,
-                  });
-                  Object.defineProperty(store.auth, "profilesRead", {
-                    value: originalProfiles,
-                  });
-                }
-              }
-              const wrongKindOperation: Effect.Effect<unknown, unknown> =
-                Reflect.apply(store.graphRead, store, [owner]);
-              const wrongKind = yield* Effect.exit(wrongKindOperation);
-              expect(Exit.isFailure(wrongKind)).toBe(true);
-              yield* Effect.acquireUseRelease(
-                openStore({ path: join(directory, "other.db") }),
-                (other) =>
-                  Effect.gen(function* () {
-                    const result = yield* Effect.exit(other.graphRead(read));
-                    expect(Exit.isFailure(result)).toBe(true);
-                    if (Exit.isFailure(result))
-                      expect(
-                        Reflect.get(Object(Cause.squash(result.cause)), "_tag"),
-                      ).toBe("StoreError");
-                  }),
-                (other) => Effect.orDie(other.close()),
+                  const wrongKindOperation: Effect.Effect<unknown, unknown> =
+                    Reflect.apply(store.graphRead, store, [owner]);
+                  const wrongKind = yield* Effect.exit(wrongKindOperation);
+                  expect(Exit.isFailure(wrongKind)).toBe(true);
+                  yield* Effect.acquireUseRelease(
+                    openStore({ path: join(directory, "other.db") }),
+                    (other) =>
+                      Effect.gen(function* () {
+                        const result = yield* Effect.exit(
+                          other.graphRead(read),
+                        );
+                        expect(Exit.isFailure(result)).toBe(true);
+                        if (Exit.isFailure(result))
+                          expect(
+                            Reflect.get(
+                              Object(Cause.squash(result.cause)),
+                              "_tag",
+                            ),
+                          ).toBe("StoreError");
+                      }),
+                    (other) => Effect.orDie(other.close()),
+                  );
+                  if (process.env.TODO_AUTHORITY_EVIDENCE)
+                    writeFileSync(
+                      process.env.TODO_AUTHORITY_EVIDENCE,
+                      JSON.stringify(
+                        {
+                          modes,
+                          ports: direct.map((port) => port.name),
+                          attempts,
+                          failures,
+                        },
+                        null,
+                        2,
+                      ),
+                    );
+                  expect(failures).toEqual([]);
+                }),
               );
-              if (process.env.TODO_AUTHORITY_EVIDENCE)
-                writeFileSync(
-                  process.env.TODO_AUTHORITY_EVIDENCE,
-                  JSON.stringify(
-                    {
-                      modes,
-                      ports: direct.map((port) => port.name),
-                      attempts,
-                      failures,
-                    },
-                    null,
-                    2,
-                  ),
-                );
-              expect(failures).toEqual([]);
             }),
           (store) => Effect.orDie(store.close()),
         ),

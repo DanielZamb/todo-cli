@@ -10,7 +10,13 @@ type Raw = {
 const active = new Set<Raw>();
 const changed = new WeakSet<Raw>();
 const mode = process.env.READ_BOUNDARY_MODE ?? "off";
-const counters = { checks: 0, mutations: 0, ports: 0, overlap: 0 };
+const counters = {
+  checks: 0,
+  mutations: 0,
+  ports: 0,
+  overlap: 0,
+  waitsOutsideLease: 0,
+};
 const fields = new Map<string, number>();
 const routes = new Map<string, number>();
 const names = new WeakMap<Raw, string>();
@@ -115,13 +121,29 @@ export const installBoundaryHooks = (store: OperationStore) => {
       ),
   });
   const graph = store.graph.bind(store);
+  const withRead = store.auth.withRead.bind(store.auth);
+  if (process.env.READ_BOUNDARY_INTERLEAVE === "1")
+    Object.defineProperty(store.auth, "withRead", {
+      configurable: true,
+      value: (...args: Parameters<typeof withRead>) =>
+        withRead(...args).pipe(
+          Effect.tap(() =>
+            Effect.gen(function* () {
+              if (Reflect.get(store, "db").inTransaction)
+                throw new Error(
+                  "Interleaving hook must run after the read lease",
+                );
+              counters.waitsOutsideLease++;
+              yield* Effect.sleep("20 millis");
+            }),
+          ),
+        ),
+    });
   Object.defineProperty(store, "graph", {
     value: (...args: Parameters<typeof graph>) =>
       Effect.gen(function* () {
         counters.ports++;
         if (mode === "port") mutate();
-        if (process.env.READ_BOUNDARY_INTERLEAVE === "1")
-          yield* Effect.sleep("20 millis");
         return yield* graph(...args);
       }),
     configurable: true,

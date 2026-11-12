@@ -180,6 +180,7 @@ try {
     );
     if (mode === "credential" || mode === "port")
       assert.ok(counters.mutations > 0);
+    if (mode !== "authority") assert.equal(counters.waitsOutsideLease, 20);
     results.push({ mode, pairs: 10, responses: 20, counters });
     writeFileSync(
       join(evidence, "result.json"),

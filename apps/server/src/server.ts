@@ -19,6 +19,7 @@ import {
 } from "@todo/api";
 import {
   type AuthAction,
+  authorizedTaskLookupError,
   batchDepend,
   batchEditTasks,
   ClientReads,
@@ -315,6 +316,26 @@ export const serverLayer = (options: {
             ),
           );
         });
+      const missingBoundTask = (
+        selection: {
+          readonly profileInfo: {
+            readonly id: ProfileId;
+            readonly name: string;
+          } | null;
+          readonly fields: { readonly task_id: string };
+        } & (
+          | { readonly kind: "read"; readonly profile: ProfileId }
+          | { readonly kind: "absent" }
+        ),
+      ) =>
+        new NotFound(
+          authorizedTaskLookupError(
+            selection.profileInfo ?? undefined,
+            selection.fields.task_id,
+            "http",
+            selection.kind === "read" ? selection.profile : "",
+          ),
+        );
       const taskResultFor =
         (params: { profile: ProfileId; task?: TaskId }, action: AuthAction) =>
         (result: TaskCommandResult) =>
@@ -515,7 +536,11 @@ export const serverLayer = (options: {
             }),
           attachmentImage: ({ params }) =>
             Effect.gen(function* () {
-              const { read, image } = yield* translate(
+              const {
+                selection: authority,
+                image,
+                taskExists,
+              } = yield* translate(
                 attachments.imageRead(
                   {
                     credential: yield* BearerCredential,
@@ -525,26 +550,10 @@ export const serverLayer = (options: {
                   params.attachment,
                 ),
               );
-              const authority = yield* translate(
-                store.auth.checkRead(read, "read"),
-              );
               if (image) return image;
-              const task = yield* translate(
-                commands.get({
-                  credential: authority.credential,
-                  profile: authority.profile,
-                  task_id: authority.fields.task_id,
-                }),
-              );
               return yield* Effect.fail(
-                task === null
-                  ? yield* missingTask(
-                      {
-                        profile: authority.profile,
-                        task: authority.fields.task_id,
-                      },
-                      "read",
-                    )
+                !taskExists
+                  ? missingBoundTask(authority)
                   : new NotFound({ message: "Managed image not found" }),
               );
             }),
@@ -616,28 +625,14 @@ export const serverLayer = (options: {
           graph: ({ params }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
-              const { read, graph } = yield* translate(
+              const { selection: authority, graph } = yield* translate(
                 readGraphQuery(
                   store,
                   { credential, profile: params.profile, task_id: params.task },
                   Schema.decodeUnknownSync(Instant)(new Date().toISOString()),
                 ),
               );
-              const authority = yield* translate(
-                store.auth.checkRead(read, "read"),
-              );
-              return (
-                graph ??
-                (yield* Effect.fail(
-                  yield* missingTask(
-                    {
-                      profile: authority.profile,
-                      task: authority.fields.task_id,
-                    },
-                    "read",
-                  ),
-                ))
-              );
+              return graph ?? (yield* Effect.fail(missingBoundTask(authority)));
             }),
           list: ({ params, query }) =>
             Effect.gen(function* () {
@@ -669,28 +664,14 @@ export const serverLayer = (options: {
           show: ({ params }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
-              const { read, task } = yield* translate(
+              const { selection: authority, task } = yield* translate(
                 commands.readOne(
                   { credential, profile: params.profile },
                   Schema.Struct({ task_id: TaskId }),
                   { task_id: params.task },
                 ),
               );
-              const authority = yield* translate(
-                store.auth.checkRead(read, "read"),
-              );
-              return (
-                task ??
-                (yield* Effect.fail(
-                  yield* missingTask(
-                    {
-                      profile: authority.profile,
-                      task: authority.fields.task_id,
-                    },
-                    "read",
-                  ),
-                ))
-              );
+              return task ?? (yield* Effect.fail(missingBoundTask(authority)));
             }),
           create: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -883,18 +864,18 @@ export const serverLayer = (options: {
             }),
           quickAdd: ({ params, payload }) =>
             Effect.gen(function* () {
-              const read = yield* translate(
-                store.auth.subscribe(
+              const authority = yield* translate(
+                store.auth.withRead(
                   {
                     credential: yield* BearerCredential,
                     profile: params.profile,
                   },
                   QuickAddInput,
                   payload,
+                  (read) => store.auth.checkRead(read, "read"),
+                  "authenticate",
+                  (selection) => Effect.succeed(selection),
                 ),
-              );
-              const authority = yield* translate(
-                store.auth.checkRead(read, "read"),
               );
               return yield* parseQuickAdd(authority.fields).pipe(
                 Effect.catchTag("QuickAddError", (error) =>
@@ -979,9 +960,16 @@ export const serverLayer = (options: {
         }),
       );
       const snapshotResult = <A>(
-        operation: Effect.Effect<A, import("@todo/domain/store").StoreError>,
+        operation: Effect.Effect<
+          A,
+          | import("@todo/domain/store").StoreError
+          | import("@todo/domain").AuthError
+        >,
       ) =>
         operation.pipe(
+          Effect.catchTag("AuthError", (error) =>
+            translate(Effect.fail(error)),
+          ),
           Effect.catchTag("StoreError", (error) => {
             const cause = error.cause;
             return Effect.fail(
@@ -1011,27 +999,29 @@ export const serverLayer = (options: {
           handlers.handleAll({
             list: () =>
               Effect.gen(function* () {
-                const read = yield* translate(
-                  store.auth.ownerRead(
-                    { credential: yield* BearerCredential },
+                const credential = yield* BearerCredential;
+                return yield* snapshotResult(
+                  store.auth.withOwnerRead(
+                    { credential },
                     Schema.Struct({}),
                     {},
+                    (read) => store.snapshots.listRead(read),
                   ),
                 );
-                return yield* snapshotResult(store.snapshots.listRead(read));
               }),
             create: ({ payload }) =>
               snapshotOwner(store.snapshots.create(payload.reason)),
             show: ({ params }) =>
               Effect.gen(function* () {
-                const read = yield* translate(
-                  store.auth.ownerRead(
-                    { credential: yield* BearerCredential },
+                const credential = yield* BearerCredential;
+                return yield* snapshotResult(
+                  store.auth.withOwnerRead(
+                    { credential },
                     Schema.Struct({ snapshot: Schema.String }),
                     { snapshot: params.snapshot },
+                    (read) => store.snapshots.showRead(read),
                   ),
                 );
-                return yield* snapshotResult(store.snapshots.showRead(read));
               }),
             restore: ({ params, payload }) =>
               snapshotOwner(

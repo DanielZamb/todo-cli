@@ -20,6 +20,7 @@ import {
   LabelAttachment,
   type UploadAttachment,
 } from "./attachments.ts";
+import type { AuthorizedRead } from "./auth/authorized-read.ts";
 import type { AccessRequest } from "./auth/model.ts";
 import { type TaskCommandResult, TaskCommands } from "./commands.ts";
 import { Task } from "./entities.ts";
@@ -464,15 +465,31 @@ export class AttachmentCommands {
   }
 
   readonly imageRead = (request: Target, id: AttachmentId) =>
+    new TaskCommands(this.store).withOne(
+      request,
+      Schema.Struct({ task_id: TaskId, attachment_id: AttachmentId }),
+      { task_id: request.task_id, attachment_id: id },
+      (read, task) => this.imageWithin(read, task),
+      (selection) =>
+        Effect.succeed({ selection, image: null, taskExists: false }),
+    );
+
+  private imageWithin = (
+    read: AuthorizedRead<{ task_id: TaskId; attachment_id: AttachmentId }>,
+    task: Pick<Task, "id" | "profile_id" | "attachments"> | null,
+  ) =>
     Effect.gen({ self: this }, function* () {
-      const { read, task } = yield* new TaskCommands(this.store).readOne(
-        request,
-        Schema.Struct({ task_id: TaskId, attachment_id: AttachmentId }),
-        { task_id: request.task_id, attachment_id: id },
-      );
-      const authority = yield* this.store.auth.checkRead(read, "read");
+      const selection = yield* this.store.auth.checkRead(read, "read");
+      if (
+        task !== null &&
+        (task.id !== selection.fields.task_id ||
+          task.profile_id !== selection.profile)
+      )
+        return yield* Effect.fail(
+          new StoreError(new Error("Invalid image selection")),
+        );
       const attachment = task?.attachments?.find(
-        (value) => value.id === authority.fields.attachment_id,
+        (value) => value.id === selection.fields.attachment_id,
       );
       const image =
         attachment === undefined
@@ -481,10 +498,10 @@ export class AttachmentCommands {
               readManagedImage(
                 this.store.attachmentRoot,
                 attachment,
-                authority.fields.task_id,
+                selection.fields.task_id,
               ),
             ).pipe(Effect.catch(() => Effect.succeed(null)));
-      return { read, image };
+      return { selection, image, taskExists: task !== null };
     });
 
   readonly image = (request: Target, id: AttachmentId) =>

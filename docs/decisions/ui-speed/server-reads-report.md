@@ -1,6 +1,80 @@
 # Server projection reads
 
-## Owner decision pending, product hold
+## Strict scope checkpoint: mapped constructor review required
+
+The owner chose B and lifted the product hold for this restructuring. This is an implementation checkpoint, not a completed or installable delivery. The experiment was parked on exp/sync-patches at ab1b4bd57b594f477075eef5e287c226355adcd6 and belongs to SYNC-EXP now. Its nine-line handoff is in the orchestrator reports directory. This worker stays on perf/server-reads.
+
+The exact clock fix 6b167266fc34c3304e30ed220bb652b4d17c05ab merged first as b8387edd4ddab47296ea1ef3648254138d2b6e06. Git resolved it without conflicts. Authentication.mutate retains both the caller context passed to runSyncExitWith and the private read-authority implementation. No other branch was merged here.
+
+### Required stop before changing a mapped body
+
+The continuing route audit found Diagnostics.read in packages/domain/src/store/diagnostics.ts. It awaits the owner check, then reads generation, Snapshot manifests, pending reminders and metrics after that check's transaction. The constructor supplies that check at packages/domain/src/store/store.ts as `(input) => this.auth.requireOwner(input)`. This is an additional ordinary read family beyond the earlier twelve-path authority audit. It does not take ReadAuthority today, so the new authority guard cannot fix this path by itself.
+
+The appropriate conversion is a checked owner callback: Diagnostics.read materializes its data inside withOwnerRead and validates the owner authority before its SQL or filesystem access. Its constructor port must become a generic callback rather than a function returning CredentialInfo. The concrete constructor callback change would be:
+
+```diff
+- (input) => this.auth.requireOwner(input),
++ (input, use) => this.auth.withOwnerRead(input, Schema.Struct({}), {}, use),
+```
+
+OperationStore.constructor is explicitly mapped by AtomicCAS. The coordinator instructed: "If the behaviour of any body mapped by AtomicCAS or the Task search cache proof has to change, stop and tell me before changing it." This checkpoint stops before that callback edit. Diagnostics source and that constructor body remain unchanged. No proof mapping has been renewed. The source comparison in docs/evidence/ui-speed/server-reads/strict-source-review.json proves seven reviewed regions and four cache capture/preparation statements still match ade8f941. Matcher, runner, cache accounting, invalidation and model files remain unchanged. Review of this proposed callback change is required before continuing it.
+
+### Implemented, subject to qualification
+
+A private lease surrounds the existing transaction runner and ends after commit or rollback, including interruption and failure. Nested checks share the physical lease and retain failed-scope ancestry, so a failed child cannot leave a usable authority while a successful outer Discovery snapshot continues. Private brand, exact prototype, origin and kind guards remain. Every existing authority-taking query and managed-image selection validates the live lease, expiry and write serial captured by the credential check. Any intervening write invalidates that value. A rechecked scope verifies credentials afresh inside its transaction and rejects a changed restore generation. Ordinary callbacks materialize rows synchronously and return data and bound plain selectors. Search matching and response encoding stay outside.
+
+Converted families include Task list/search and shared CLI materialization, Show and recovery selectors, graph, planning views, History, Snapshot list/Show, managed image bytes, Quick-add selectors, import preview and later graph refresh, transfer metadata, Revert and invalid-Version recovery, Discovery's deferred snapshot, and SSE polls. Transaction modes are unchanged. Profile summaries derive their visible set once; nested checks share one credential-row lookup. The counted domain control covers eleven ordinary reader variants including Discovery. CLI Profile-name resolution remains its own checked operation before the materializing helper; no authority crosses that boundary.
+
+The owner-approved absent-Profile treatment has one classifier in the credential-check snapshot, after the original credential and scope checks. Active Profiles get an authority; tombstones keep ADR-0010 refusal; never-created identifiers produce a distinct plain value with a requested string and no Profile id or authority. These values are neither cached nor retained by a stream. Empty results are built from literals. Quick-add only parses supplied text, including Tag and Project names; it performs no metadata lookup. An absent stream stores plain subscription input and classifies again each poll. A new CLI-created Profile can therefore acquire a real authority on a later poll.
+
+Before changing classification, the immutable e692 server captured all fourteen Profile-scoped read cases under ten credential classes and six identifier cases, 840 replies. They include none, expired/revoked Session, owner Session, unscoped Token, another-Profile Token, revoked Token, invalid credential, scoped reader and expired Token; identifiers include present, never-created, tombstoned, reused new id, reused display name and old id. All 840 matched the interim implementation byte for byte. Literal never-created replies and the status matrix are retained in packages/domain/test/fixtures/read-presence/. Active name reuse resolves to the new id through CLI resolution; the old HTTP id remains 404, including when its spelling is the reused display name. Unauthorized classes in this fixture show no new present/absent distinction. This observation does not decide whether never-created identifiers should keep these replies in a future unit.
+
+SSE now checks and queries in a fresh scope before every poll. Its private stream permission is bound to connection, Profile, generation and cursor; the terminal query is capped at ProfileDeleted and consumes its private terminal authority once. The approved policy removes the terminal operation batch for deleted-Profile Tokens and revoked/expired credentials, retaining it for a connected valid owner Session. The new frame-by-frame control, deterministic compiled CLI adapter and controllable test clock/poll gate are written and typechecked, but have not been run. Exact before/after frame tables are therefore not claimed yet.
+
+### Actual verification attempts so far
+
+All paths below are relative to docs/evidence/ui-speed/server-reads/. Logs retain real failures; none is a final-head gate receipt.
+
+| Command or control | Real exit | Evidence |
+| --- | --- | --- |
+| Initial retained-authority regression, before lease code | 1, expected returned-row failure | strict-lifetime-red.log |
+| First lifetime/authorization run | 1, test inspected Error text rather than tag | strict-initial-green.log |
+| First domain suite | 1, two late-expiry mappings corrected before authority construction | strict-domain-1.log |
+| Focused Discovery, lifetime and runtime guard tests | 0, nine tests | strict-focused-2.log |
+| First broad lifetime matrix | 1, synchronous Effect.try wrapper and invalid prefix fixture corrected | strict-matrix-1.log |
+| Broad lifetime matrix after those fixture fixes | 0, twelve tests | strict-matrix-2.log |
+| Domain after credential-cache refactor | 1, initial cache miss compared two undefined values; corrected | strict-domain-2.log |
+| Domain after cache-miss correction | 0, 406 tests | strict-domain-3.log |
+| Runtime and lifetime controls with image ports | 0, fifteen tests | strict-matrix-3.log |
+| In-scope expiry control using asynchronous TestClock.setTime | 1; replaced by a mutable synchronous Effect Clock | strict-matrix-4.log |
+| In-scope expiry and yielding search cancellation | 0, seventeen tests | strict-matrix-5.log |
+| Import freshness control without depends_on refresh | 1, fixture did not enter the later graph path | strict-matrix-6.log |
+| Import freshness control with literal depends_on empty list | 0, eighteen tests | strict-matrix-7.log |
+| Existing SSE unit suite | 0, four tests | strict-sse-unit-1.log |
+| Initial absent base capture | 1, read-only WAL copy opened before WAL initialization | strict-absent-base/capture.log |
+| Base captures after scratch WAL initialization | 0, 756 then 840 replies; none added explicitly as null | strict-absent-base/capture-2.log; capture-3.log |
+| Interim absent 840-pair comparison | 0 | strict-absent-base/head-a.log |
+| Initial 56-checkpoint comparison | 1, Snapshot missing error double-wrapped; StoreError now preserved | strict-control-56-a.log |
+| Corrected 56-checkpoint comparison | 0, 23,880 reply pairs, equal auth History/last-use | strict-control-56-b.log |
+| Audited rich lifecycle comparison | 0, 1,267 reply pairs, equal auth History/last-use | strict-control-rich-b.log |
+| Unchanged seat C1 compiled probe | 0 | strict-c1.log |
+| Unchanged retained-authority source comparison and compile | 0, 0 | cmp against seat source; strict-retained-build.log |
+| Unchanged retained-authority probe | 1, intended StoreError at first changesRead after authorizeRead commits | strict-retained.log |
+| Retained-probe refusal assertion | first 1 from premature asynchronous check; then 0 after process completion, no result rows file | strict-retained.log |
+| AtomicCAS/cache source-body review | 0, seven regions and four statements match | strict-source-review.log; .json |
+| Checkpoint formatting | 0 | strict-checkpoint-format.log |
+| Checkpoint workspace typecheck | 0 |  strict-checkpoint-types.log |
+
+Intermediate domain typecheck attempts 1, 6, 7 and 8 exited 1 for incomplete migration, an unused new helper, selector narrowing or a scripted parenthesis error; attempts 2, 3, 4, 5, 9, 10 and 11 exited 0. The classifier edit script initially failed to parse, exit 1, before changing source. Server typechecks 1 through 3, 6 and 7 exited 1 while reader/SSE migration and typed fixture inputs were incomplete; 4, 5, 8 and 9 exited 0. CLI typecheck exited 0. These are development attempts, not successful qualification of missing gates. Special control builds and probe builds exited 0; the C2 probe binary was built but its new-head run is pending.
+
+### Not proven at this checkpoint
+
+Diagnostics conversion awaits the mapped-body ruling. The full caller inventory needs its final pass. The new frame control, absent statement probe and its blanket-404/present-query mutation controls, legal-boundary HTTP interleaving and both mutation modes, final zero-decode sweep, final C1/C2/C3 probes, the compiled auth extension and affected recipes, AtomicCAS and Task search cache commands, root order-27 check, per-route lock holds and paired owner-shaped eight-read timings remain pending. The 57-fixture comparison must be repeated on the completed immutable product. The exact contract id is unchanged in source, but the final generated-contract gate has not run. No final timing or exact frame-parity claim is made. No ADR was changed, no native/Swift/Keychain/signing operation ran, no real database was used and no install, push or PR was made.
+
+Owned old evidence was compressed losslessly with SHA-256 receipts: 164 JSON files saved 2,630,712,597 bytes. The experiment handoff is nine lines. Current disk remains above the 30.5 GiB build threshold; large final builds have not begun.
+
+## Historical record
+## Historical owner-decision proposals
 
 The coordinator withdrew the transaction-lifetime ruling recorded in d542c64380c1cdb3ce1da69e61170ff869eba78b. The owner has not chosen A or B. Product source stays at a7e0ed0e64de3403d51511aa50fc4135a58d6c85. This update designs the two choices without implementing either, accepting S1-C3, changing architecture.md, or changing an ADR. The d542c643 audit is preserved below as the record of the withdrawn ruling.
 
