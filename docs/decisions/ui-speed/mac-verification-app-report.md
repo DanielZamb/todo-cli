@@ -1,12 +1,47 @@
 # Mac verification app V01 safety correction
 
-Status: qualification resumed after the coordinator reported 37 GiB free.
-The visible recipe remains pending while the owner uses the Mac. Before each
-large step, the helper now records the available bytes and a step budget above
-the 30 GiB floor; the credential sweep checks that budget before each rebuild.
-The generated Xcode project is being refreshed before freezing the runtime head.
-Final results and actual command exits will be retained under a fresh local
-evidence directory. No seven-finding closure is claimed before those results.
+Status: blocked again on the disk budget. The frozen runtime head is
+`ad79fe3a3456f5bd34574669e36ca27b7b1e53f0`. Its 102 native guard cases passed,
+as did the app-profile and inherited compiled-server literal-root baselines
+and both widening controls. All seven findings remain open pending the full
+qualification. No fresh app build, production rerun or visible launch occurred.
+
+Before class reds, available space was 32,315,027,456 bytes (30.096 GiB), below
+the 30 GiB floor plus that step's 0.5 GiB budget. The helper exited 1 and kept
+completeRecipe=false. The completed native cases and 133 command receipts
+are in `docs/evidence/mac-verification-app/frozen-ad79fe3a/`. The native guard
+matrix includes hard links/symlinks/swaps, foreign server markers and replacement,
+isolated HTTP, credential-broker denial, posted key/modifier stops at 80,
+background HID detection and the root/machine instance locks.
+
+The current cache and retained metadata helper were then retired only after
+supported lsof +D checks returned 1 with empty stdout and stderr. Their hashes
+and before/after samples are in retired-on-disk-stop.json. Available space after
+pruning was 32,719,163,392 bytes (30.472 GiB); no own .scratch, DerivedData or
+compiled helper remained. No subsequent build or test was started. The final
+report-only commit does not change the runtime sources; these receipts belong
+to the frozen runtime head above, not to that later documentation commit.
+
+Pending: frozen class reds, predicate inversions, the full 1,638-binding and
+individual-removal sweep, one fresh verification app and artifact audit,
+production suites and the final root check. Visible verification remains pending
+under the owner-use hold. Its final preflight was not run because the complete
+guard matrix is not green. V02 remains held and the skill remains draft.
+
+The helper now records available bytes and a step budget above the 30 GiB floor
+before every large step; the credential sweep checks before each rebuild.
+The generated verification Xcode project was refreshed successfully with the
+installed Homebrew Ruby, through the Swift slot and a clean environment. The
+initial system-Ruby attempt exited 1 because xcodeproj was unavailable there;
+the explicit Homebrew-Ruby retry exited 0. No dependency was added.
+
+| Frozen head / command | Real exit and result | Local evidence |
+| --- | --- | --- |
+| 40c37232: verify.mjs --fresh-build --headless | 1; 102 cases and 15 class reds passed, predicate 18 excluded after a lock-wait timeout | frozen-40c37232/result.json, class-reds.json and red-guard-18.log |
+| faba5b2c: verify.mjs --fresh-build --headless | 1; worker checkpoint for the readiness-floor correction | frozen-faba5b2c/result.json and swift-hold |
+| ad79fe3a: verify.mjs --fresh-build --headless | 1; 102 native cases passed, disk budget refused class-red compilation | frozen-ad79fe3a/result.json, guard-matrix.json, commands.json and disk-stages.json |
+| ad79fe3a: app-profile and compiled-server root controls | Baseline assertion 0; removed/subpath/read-star assertions 1; negative exits 78 or the expected startup SIGABRT | frozen-ad79fe3a/root-boundary-profiles and server-boundary-profiles |
+| ad79fe3a: posted key and modifier controls | 80 and 80; both matching marked input messages | frozen-ad79fe3a/delivered-key.log and delivered-modifier.log |
 
 The first frozen attempt at 40c372320289b790a8d95fe7d3fbbc1b3bfc3ffe passed
 102 native cases, 15 class removals, both root-rule widening controls and the
