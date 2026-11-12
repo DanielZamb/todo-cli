@@ -5,7 +5,7 @@
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "63fd7f957368c82a22bc538b7feec73cbdc6fabc",
+  "productionSyncCommit": "16c59f74737043201861cebcfbf5f4dbdada154d",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -157,7 +157,7 @@
         "signOut start, failure and commit",
         "followChanges reconnect retry from Offline and sign-out notice"
       ],
-      "sha256": "c580a4296637b3e1cdbe7168b6e47701883eb92fd2486b1c6648e646e1b84850",
+      "sha256": "ddae10742f25760596ae5ee2d25ecd3340798cb40976065844cdecbd42918390",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -225,7 +225,7 @@
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "e2d58e4f9a82219a8acac9920a668a53ddf2829f",
+  "previousProductionSyncCommit": "63fd7f957368c82a22bc538b7feec73cbdc6fabc",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -491,5 +491,17 @@
       }
     ],
     "review": "MAC-C1-S1-15 moves every surface-local message onto SurfaceMessages (tickets per kind, newest of a kind presents, success clears its own kind from before its mark). TodoModel: main message storage is the same helper; Import, quick-add (create and parse), editor, History, Profile deletion and Snapshot messages take tickets. BatchEdit and AttachmentBatch: reload and apply take tickets; reports present only for the newest. AttachmentModel: input checks publish through editorError's setter. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed; requestDiscovery, showDiscoveryMatch and discovery.error are untouched (discovery stays outside the helper, see docs/decisions/mac-session-retirement.md)."
+  },
+  "supersessionReview": {
+    "product": "16c59f74737043201861cebcfbf5f4dbdada154d",
+    "controls": "check-swift passed on 16c59f74: docs/evidence/discovery-formal/swift-s1NWYJ",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "c580a4296637b3e1cdbe7168b6e47701883eb92fd2486b1c6648e646e1b84850",
+        "to": "ddae10742f25760596ae5ee2d25ecd3340798cb40976065844cdecbd42918390"
+      }
+    ],
+    "review": "MAC-C1-S1-16: a ticket carries its instance's generation table, so supersession holds after a surface closes. TodoModel: handOff(_:kind:from:) is the only closed-surface hand-off and refuses a ticket that is not the newest; quick-add create gates its clear, capsule and hand-off on the newest ticket; refreshAfterWrite gains presents (false for a superseded action, read-back unchanged). No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed; requestDiscovery, showDiscoveryMatch and discovery.error are untouched (discovery stays outside the helper, see docs/decisions/mac-session-retirement.md)."
   }
 }
