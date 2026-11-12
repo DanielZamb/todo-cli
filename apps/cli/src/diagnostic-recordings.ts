@@ -66,8 +66,16 @@ const request = <S extends Schema.ConstraintDecoder<unknown>>(
         );
         throw reason ? new CommandError(2, "invalid_args", reason) : invalid();
       }
-      if (!response.ok)
-        throw new CommandError(1, "server_error", "Recording request failed");
+      if (!response.ok) {
+        const reason = recordingRefusalMessage(
+          await response.json().catch(() => null),
+        );
+        throw new CommandError(
+          1,
+          "server_error",
+          reason ?? "Recording request failed",
+        );
+      }
       return Schema.decodeUnknownSync(schema)(await response.json());
     },
     catch: (error) =>

@@ -116,6 +116,7 @@ The fake-clock control additionally proves no retry for 59,999 ms, a retry at
 ```sh
 pnpm --filter @todo/domain test recording-admission.test.ts recording-run-isolation.test.ts
 bun .agents/skills/verify-ui-profiler/scripts/completeness.ts "$PWD/docs/evidence/ui-speed/recording-completeness-new"
+bun .agents/skills/verify-ui-profiler/scripts/admission-fault.ts "$PWD/docs/evidence/ui-speed/recording-admission-fault-new"
 ```
 
 The compiled recipe requires a durable whole-batch refusal mark, a valid 10000 ms
@@ -127,6 +128,11 @@ allocated bytes. It also imports two runs with shared action/producer/sequence
 identities and checks their separate 8 ms and 400 ms summaries through the CLI.
 The unit controls cover clean termination plus restart, rotation, expiry,
 coalesced repeated refusals, all exported reducers and per-run uncertainty.
+The fault control makes only its private recording directory unwritable. HTTP
+returns 500 and the CLI exits 1 with the safe instruction to retain the entire
+batch, while one Task write still succeeds exactly once. After storage recovers,
+shutdown makes one bounded attempt to persist any outstanding mark. A failed
+attempt is counted and never becomes a retry loop.
 
 The earlier narrow witness's zero fractions after a refusal are superseded by
 null fractions: known starts can be counted, but the omitted facts make the

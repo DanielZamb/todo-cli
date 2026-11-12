@@ -185,11 +185,20 @@ export class DiagnosticRecordings {
   }
   async close() {
     this.closing = true;
+    clearTimeout(this.expiry);
     for (;;) {
       const tail = this.tail;
       await tail;
       if (tail === this.tail) break;
     }
+    if (this.available)
+      for (const id of this.admissions.ids())
+        if (this.admissions.dirty(id))
+          try {
+            await this.persistAdmission(id);
+          } catch {
+            this.loss.storage_failures++;
+          }
     this.available = false;
     clearTimeout(this.expiry);
     this.releaseLease();
@@ -220,6 +229,7 @@ export class DiagnosticRecordings {
     });
   }
   private armExpiry() {
+    if (this.closing) return;
     if (this.expiryBackingOff && this.expiry) return;
     clearTimeout(this.expiry);
     const received = Math.min(

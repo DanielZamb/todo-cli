@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { chmod, mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, it } from "@effect/vitest";
@@ -190,6 +190,50 @@ it("bounds repeated refusal work, preserves metadata privacy, and expires only t
       (await readdir(root)).some((name) => name.endsWith(".admission.json")),
     ).toBe(false);
   } finally {
+    await store.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+it("flushes a deferred refusal on shutdown after private storage recovers", async () => {
+  const root = await mkdtemp(join(tmpdir(), "todo-admission-recover-"));
+  const store = await DiagnosticRecordings.open(root);
+  try {
+    const a = start(),
+      first = batch(uuid, [
+        a,
+        complete(a, 2, 8),
+        {
+          ...a,
+          sequence: 3,
+          monotonic_ms: 30,
+          name: "process.terminated",
+          reason: "clean",
+        },
+      ]);
+    store.ingest(first);
+    await store.flush();
+    await chmod(root, 0o500);
+    expect(() =>
+      store.ingest(batch(uuid, [{ ...a, action_id: randomUUID() }])),
+    ).toThrow();
+    await store.flush();
+    expect(store.admissionDurable(uuid)).toBe(false);
+    await chmod(root, 0o700);
+    await store.close();
+    const reopened = await DiagnosticRecordings.open(root);
+    try {
+      expect((await reopened.show(uuid)).run.admission?.refused_batches).toBe(
+        1,
+      );
+      expect(
+        (await reopened.show(uuid)).summary[0]?.fraction_by_20_ms,
+      ).toBeNull();
+    } finally {
+      await reopened.close();
+    }
+  } finally {
+    await chmod(root, 0o700);
     await store.close();
     await rm(root, { recursive: true, force: true });
   }
