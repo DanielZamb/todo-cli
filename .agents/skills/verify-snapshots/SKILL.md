@@ -78,3 +78,34 @@ tombstone IDs and timestamps exactly with the saved SQLite file. schema.json
 records the literal versions and result. Purge IDs remain authoritative separately.
 
 The compiled attachments proof restores a pre-attachment Snapshot with no references, restores a missing image reference without recreating its bytes, and checks Purge erases copied bytes after commit while redacting every saved Snapshot path and label. `attachments.json` records those literal results.
+
+## Purge references and repair
+
+Read [the Task reference inventory](features/task-references.md). The compiled
+CLI drive now checks tagged Tasks, a Task that both depends on and blocks other
+Tasks, and a recurring Task with Project, description, External id and due time.
+Each restores twice after Delete and Purge. It checks exact surviving titles,
+foreign keys, absent private bytes and consistent manifest checksums, sizes and
+counts. `purge-cli-actions.json`, `purge-cli-result.json` and
+`task-reference-schema.json` retain the observations.
+
+By default the repair case injects an orphan into a redacted scratch copy and
+updates its checksum to reproduce the old row shape. For an independent
+compatibility proof, first compile the unchanged pre-fix CLI, retain its source
+commit and SHA-256, then select that binary when running the same recipe:
+
+```sh
+TODO_SNAPSHOT_BASE_CLI="$PWD/.scratch/bin/todo-base-6b167266" \
+  .agents/skills/verify-snapshots/scripts/verify.sh "$PWD/docs/evidence/f13/compiled-repair-new"
+```
+
+This must be an explicitly built scratch binary, never the installed CLI.
+The repair case then creates and Purges through that old CLI, requires its
+restore to exit 2, switches to the current compiled CLI, and requires restore
+to exit 0 twice. The result names whether it used the compiled base or the
+injected fixture. No binary is checked into Git.
+
+Run `pnpm --filter @todo/domain test test/snapshot-purge.test.ts` for the declared
+reference coverage guard, future-table control, already-absent Task repair,
+unexplained-orphan refusal, reminder/checkpoint replay and checksum-mismatch
+Purge refusal. `task_versions` and History retain content-free ids by design.

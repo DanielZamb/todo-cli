@@ -78,6 +78,12 @@ const purges = (db: Database) =>
         ? row.event.task_ids
         : [],
   );
+const redactCopy = (db: Database, ids: readonly TaskId[]) => {
+  for (const id of ids) {
+    redactTaskHistory(db, history(db), id);
+    db.query("DELETE FROM attachment_cleanup WHERE task_id=?").run(id);
+  }
+};
 const durable = (path: string, value: unknown) => {
   const temporary = `${path}.${randomUUID()}.tmp`;
   try {
@@ -316,7 +322,7 @@ export class Snapshots {
         copy
           .transaction(() => {
             migrate(copy);
-            for (const id of ids) redactTaskHistory(copy, history(copy), id);
+            redactCopy(copy, ids);
           })
           .immediate();
         compact(copy);
@@ -391,7 +397,7 @@ export class Snapshots {
           const ids = this.purgedIdsSync();
           copy
             .transaction(() => {
-              for (const id of ids) redactTaskHistory(copy, history(copy), id);
+              redactCopy(copy, ids);
             })
             .immediate();
           // Credentials and the owner passphrase are not point-in-time data.

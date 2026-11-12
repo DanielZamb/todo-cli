@@ -27,6 +27,30 @@ const resolved = (entry: OpLogEntry) =>
         };
 
 const taskReference = Schema.Struct({ id: TaskId });
+const quote = (value: string) => `"${value.replaceAll('"', '""')}"`;
+
+function deleteTaskReferences(db: Database, id: TaskId) {
+  for (const { name } of db
+    .query<{ name: string }, []>(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
+    )
+    .all()) {
+    for (const reference of db
+      .query<{ table: string; from: string; to: string | null }, []>(
+        `PRAGMA foreign_key_list(${quote(name)})`,
+      )
+      .all()) {
+      if (
+        reference.table === "tasks" &&
+        (reference.to === "id" || reference.to === null)
+      )
+        db.query(
+          `DELETE FROM ${quote(name)} WHERE ${quote(reference.from)}=?`,
+        ).run(id);
+    }
+  }
+}
+
 const references = (value: unknown, id: TaskId): boolean =>
   Array.isArray(value)
     ? value.some((value) => references(value, id))
@@ -241,12 +265,7 @@ export function redactTaskHistory(
       }),
       seq,
     );
-  if (
-    db.query("SELECT 1 FROM sqlite_master WHERE name='task_dependencies'").get()
-  )
-    db.query(
-      "DELETE FROM task_dependencies WHERE dependent_id=? OR blocker_id=?",
-    ).run(id, id);
+  deleteTaskReferences(db, id);
   db.query("DELETE FROM tasks WHERE id=?").run(id);
   for (const id of removedSeries)
     db.query("DELETE FROM series WHERE id=?").run(id);

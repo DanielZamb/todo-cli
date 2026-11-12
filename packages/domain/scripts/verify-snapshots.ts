@@ -10,6 +10,7 @@ import {
   SnapshotManifest,
   SnapshotRestoreReport,
 } from "../src/snapshots.ts";
+import { proveSnapshotPurgeCli } from "./snapshot-purge-cli-proof.ts";
 
 const [scratch, evidence] = Schema.decodeUnknownSync(
   Schema.Tuple([Schema.String, Schema.String]),
@@ -125,4 +126,10 @@ writeFileSync(
     null,
     2,
   ),
+);
+
+proveSnapshotPurgeCli(
+  join(scratch, "purge-cases"),
+  evidence,
+  join(scratch, "todo"),
 );

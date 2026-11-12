@@ -15,3 +15,8 @@ Run the parent skill's verify.sh. It observes raw Snapshot bytes and literal zer
 ## Gotchas
 
 A corrupt Snapshot blocks Purge until the owner repairs or discards it. Restore never ignores a checksum mismatch. The content-free Purge journal survives every restore.
+
+The compiled drive also restores tagged and recurring Tasks after Purge,
+removes both directions of a Purged Task's Dependencies and repairs an old
+damaged copy. See [Task references](task-references.md) for the schema inventory,
+structural-id exceptions, negative controls and the old-binary recipe.
