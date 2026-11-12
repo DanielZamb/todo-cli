@@ -35,7 +35,7 @@ final class TodoModel {
         return value
     }
     /// A Profile change ends a failed sign-out's notice, whichever path changes it.
-    var profile: String { didSet { if profile != oldValue { clearMessage(ownedBy: [.signOut]) } } }
+    var profile: String { didSet { if profile != oldValue { endMessage() } } }
     var tasks: [TaskSnapshot] = []
     var profiles: [DiscoveryEntry] = []
     var profileDeletion: ProfileDeletionPrompt?
@@ -130,16 +130,32 @@ final class TodoModel {
     var loading = false { didSet { reportClientAvailability() } }
     var connection = Connection.connecting { didSet { if connection == .offline { discoveryWentOffline(); dependenciesWentOffline() }; reportClientAvailability(); if connection == .live { scheduleEnvironmentRefresh() } } }
     var outdatedServerBuild: String?
-    /// Who put the current `message` there. Every clear names the owners it may clear,
-    /// so reaching ready or a successful write never erases a newer message from
-    /// something else, and a failed sign-out's notice is never brought back.
-    enum MessageOwner: Equatable { case general, connection, signOut }
-    var message: String? { didSet { messageOwner = pendingMessageOwner; pendingMessageOwner = .general } }
-    @ObservationIgnored private(set) var messageOwner = MessageOwner.general
-    @ObservationIgnored private var pendingMessageOwner = MessageOwner.general
-    func setMessage(_ text: String?, owner: MessageOwner) { pendingMessageOwner = owner; message = text }
-    /// Clears the message only when one of `owners` put it there.
-    func clearMessage(ownedBy owners: Set<MessageOwner>) { if message != nil, owners.contains(messageOwner) { message = nil } }
+    /// What produced the current `message`. See "Message ownership" in
+    /// docs/decisions/mac-session-retirement.md for the rule and the per-kind table.
+    enum MessageKind: Hashable {
+        case general, connection, restore, signIn, sessionEnded, signOut, transition, delete, dependencyFollowUp, discoveryShow
+        /// What a successful restore or sign-in makes untrue.
+        static let session: Set<MessageKind> = [.restore, .signIn, .sessionEnded, .connection]
+    }
+    /// The newest message. Each one has a kind and a sequence number that only grows.
+    var message: String? { didSet {
+        if message == nil { messageKind = nil } else { messageSequence += 1; messageKind = pendingMessageKind }
+        pendingMessageKind = .general
+    } }
+    @ObservationIgnored private(set) var messageKind: MessageKind?
+    @ObservationIgnored private(set) var messageSequence = 0
+    @ObservationIgnored private var pendingMessageKind = MessageKind.general
+    /// Noted by an action when it starts; its success may clear only messages up to this mark.
+    var messageMark: Int { messageSequence }
+    func publishMessage(_ text: String, kind: MessageKind) { pendingMessageKind = kind; message = text }
+    /// A success started at `mark` clears the current message only if it is one of `kinds`
+    /// and already existed when the action started. A newer message always survives.
+    func clearMessage(_ kinds: Set<MessageKind>, since mark: Int) {
+        guard message != nil, let kind = messageKind, kinds.contains(kind), messageSequence <= mark else { return }
+        message = nil
+    }
+    /// A credential or Profile change ends any message.
+    func endMessage() { if message != nil { message = nil } }
     var taskLoadError: String?
     var quickAdd = false
     var newTitle = ""
@@ -183,8 +199,8 @@ final class TodoModel {
         historyGeneration += 1
         seriesGeneration += 1
         serverErrors = [:]
+        if credential != value { endMessage() }
         credential = value
-        clearMessage(ownedBy: [.signOut])
         busy = false
         diagnosticsLoading = false
         // Their completions are rejected by the new epoch or Series generation,
@@ -322,6 +338,7 @@ final class TodoModel {
 
     func restore() async {
         var credentialEpoch = discovery.credentialEpoch
+        let mark = messageMark
         guard !restored, !busy, !signedIn else { return }
         busy = true
         canRestore = false
@@ -336,6 +353,7 @@ final class TodoModel {
                 try await discoverProfiles()
                 guard try stillOwns(credentialEpoch) else { return }
                 signedIn = true
+                clearMessage(MessageKind.session, since: mark)
                 connect()
             }
         } catch {
@@ -347,17 +365,18 @@ final class TodoModel {
                 return
             }
             if failure(error)?.status == 401 { expireSession(credentialEpoch: credentialEpoch) }
-            else if error is VaultError { message = describe(error) }
+            else if error is VaultError { publishMessage(describe(error), kind: .restore) }
             else {
                 restored = false
                 canRestore = true
-                message = describe(error)
+                publishMessage(describe(error), kind: .restore)
             }
         }
     }
 
     func signIn(_ passphrase: String) async -> Bool {
         var credentialEpoch = discovery.credentialEpoch
+        let mark = messageMark
         guard !busy else { return false }
         busy = true
         defer { if discovery.credentialEpoch == credentialEpoch { busy = false } }
@@ -371,17 +390,17 @@ final class TodoModel {
             replaceCredential(session.credential)
             credentialEpoch = discovery.credentialEpoch
             busy = true
-            message = nil
             try await discoverProfiles()
             guard try stillOwns(credentialEpoch) else { return false }
             signedIn = true
             restored = true
             canRestore = false
+            clearMessage(MessageKind.session, since: mark)
             connect()
             return true
         } catch {
             guard isCurrentCredential(credentialEpoch) else { return false }
-            message = describe(error)
+            publishMessage(describe(error), kind: .signIn)
             return false
         }
     }
@@ -416,11 +435,10 @@ final class TodoModel {
             editor = nil
             quickAdd = false
             newTitle = ""
-            message = nil
         } catch {
             guard discovery.credentialEpoch == credentialEpoch else { return }
             if !Task.isCancelled {
-                setMessage(describe(error), owner: .signOut)
+                publishMessage(describe(error), kind: .signOut)
                 handleAuthorization(error, credentialEpoch: credentialEpoch)
             }
             if signedIn { connect() }
@@ -475,7 +493,6 @@ final class TodoModel {
         conflict = nil
         history = []
         activateProfile(next.id)
-        message = nil
         deletionNotice = "\"\(deletedName)\" was deleted. Switched to \(next.name)."
     }
 
@@ -733,6 +750,8 @@ final class TodoModel {
         var openingAction = initialAction
         while !Task.isCancelled && generation == run {
             var sawReady = false
+            // Ready after this attempt may clear only connection messages older than the attempt.
+            let mark = messageMark
             let openedAt = ProcessInfo.processInfo.systemUptime
             do {
                 let healthy = try await ClientDiagnosticContext.$actionID.withValue(openingAction) {
@@ -765,7 +784,7 @@ final class TodoModel {
                             if !healthySnapshot || recovering {
                                 await refreshDependencyReads()
                                 guard generation == run, !Task.isCancelled else { return }
-                                clearMessage(ownedBy: [.connection])
+                                clearMessage([.connection], since: mark)
                             }
                             if discovery.phase == .offline { await requestDiscovery(retry: true) }
                             sawReady = true
@@ -846,7 +865,7 @@ final class TodoModel {
                 if failure(error)?.status == 404 {
                     do { try await leaveDeletedProfile(); if generation != run { return } } catch {
             guard isCurrentCredential(credentialEpoch) else { return }
-            message = describe(error) }
+            publishMessage(describe(error), kind: .connection) }
                 }
                 let cause: ClientDiagnosticReason
                 if case .closed? = error as? StreamError { cause = .cleanEnd } else { cause = ClientDiagnosticReason(error: error) }
@@ -864,7 +883,7 @@ final class TodoModel {
                 }
                 connection = .offline
                 loading = false
-                setMessage(describe(error), owner: .connection)
+                publishMessage(describe(error), kind: .connection)
                 attempt += 1
                 reconnectCount += 1
                 do { try await Task.sleep(for: .seconds(min(8, attempt))) } catch {
@@ -1104,6 +1123,7 @@ final class TodoModel {
 
     func transition(_ task: TaskSnapshot, action: String) async {
         let credentialEpoch = discovery.credentialEpoch
+        let mark = messageMark
         guard canWrite else { return }
         let requestedProfile = profile
         busy = true
@@ -1117,21 +1137,22 @@ final class TodoModel {
                 _ = await refresh(generation: generation)
                 guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
                 editorError = "The Task changed. Close and reopen it before trying that action again."
-                message = editorError
+                publishMessage(editorError!, kind: .transition)
                 return
             }
             _ = try response.ok.body.json
             if editor?.id == task.id { editor = nil }
-            await refreshAfterWrite("Task updated")
+            await refreshAfterWrite("Task updated", clearing: .transition, since: mark)
             guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
             announce("Task updated")
         } catch {
             guard isCurrentCredential(credentialEpoch) else { return }
-            message = describe(error, dependencyContext: action == "complete" ? .complete : .reopen); editorError = describe(error, at: .editor, dependencyContext: action == "complete" ? .complete : .reopen); handleAuthorization(error, credentialEpoch: credentialEpoch) }
+            publishMessage(describe(error, dependencyContext: action == "complete" ? .complete : .reopen), kind: .transition); editorError = describe(error, at: .editor, dependencyContext: action == "complete" ? .complete : .reopen); handleAuthorization(error, credentialEpoch: credentialEpoch) }
     }
 
     func deleteTask(_ task: TaskSnapshot) async {
         let credentialEpoch = discovery.credentialEpoch
+        let mark = messageMark
         guard canWrite else { return }
         guard let preview = dependencies.deletion, preview.profile == profile, preview.task.id == task.id, preview.task.row_version == task.row_version, let fromVersion = preview.acceptedFromVersion, let fingerprint = preview.fingerprint else {
             await openDependencyDelete(task)
@@ -1148,7 +1169,7 @@ final class TodoModel {
                 await reloadDependencyDelete(changed: true)
                 guard isCurrentCredential(credentialEpoch), profile == deletionProfile, dependencies.deletion?.id == preview.id else { return }
                 if editor?.id == task.id { editorError = "The Task changed. Close and reopen it before deleting." }
-                else { message = "The task changed before it could be deleted." }
+                else { publishMessage("The task changed before it could be deleted.", kind: .delete) }
                 return
             }
             let wire = try response.ok.body.json
@@ -1166,7 +1187,7 @@ final class TodoModel {
                 deletionNotice = "Task deleted"
             }
             dependencies.deletion = nil
-            await refreshAfterWrite("Task deleted")
+            await refreshAfterWrite("Task deleted", clearing: .delete, since: mark)
         } catch {
             guard isCurrentCredential(credentialEpoch) else { return }
             guard profile == deletionProfile, dependencies.deletion?.id == preview.id else { return }
@@ -1396,17 +1417,20 @@ final class TodoModel {
         if !profiles.contains(where: { $0.id == profile }), let first = profiles.first { profile = first.id }
     }
 
-    func refreshAfterWrite(_ accepted: String) async {
+    /// `kind` and `writeMark` name the write whose success this read-back confirms: its
+    /// earlier error of that kind and older connection messages end; nothing newer does.
+    func refreshAfterWrite(_ accepted: String, clearing kind: MessageKind? = nil, since writeMark: Int? = nil) async {
         let credentialEpoch = discovery.credentialEpoch
+        let mark = writeMark ?? messageMark
         catalogStale = true
         let result = await refresh(generation: generation, trigger: .ownWrite)
         guard isCurrentCredential(credentialEpoch) else { return }
         switch result {
         case .applied:
-            clearMessage(ownedBy: [.general, .connection])
+            clearMessage(Set([MessageKind.connection] + (kind.map { [$0] } ?? [])), since: mark)
         case .failed:
             if signedIn {
-                setMessage(accepted + ". The live view is reconnecting.", owner: .connection)
+                publishMessage(accepted + ". The live view is reconnecting.", kind: .connection)
                 connect()
             }
         case .superseded:
@@ -1605,7 +1629,7 @@ final class TodoModel {
         catalogStale = true
         searchError = nil
         searchPhase = .idle
-        message = "Your Session ended. Sign in again."
+        publishMessage("Your Session ended. Sign in again.", kind: .sessionEnded)
     }
 
     func checkServerContract() async throws -> Bool {
@@ -1634,7 +1658,7 @@ final class TodoModel {
             guard try await checkServerContract() else { return }
             if signedIn { connect() }
             else { restored = false; await restore() }
-        } catch { if isCurrentCredential(credentialEpoch) { message = describe(error) } }
+        } catch { if isCurrentCredential(credentialEpoch) { publishMessage(describe(error), kind: .connection) } }
     }
 
     func isCurrentCredential(_ credentialEpoch: Int) -> Bool {

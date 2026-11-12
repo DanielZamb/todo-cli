@@ -23,7 +23,8 @@ private actor NoticeGate: ClientTransport {
     func ready() { streams.last?.yield(Array("event: ready\ndata: {}\n\n".utf8)[...]) }
     func endStream() { streams.last?.finish() }
     var streamCount: Int { streams.count }
-    func stop() { streams.forEach { $0.finish() }; session.invalidateAndCancel() }
+    var stopped = false
+    func stop() { stopped = true; streams.forEach { $0.finish() }; session.invalidateAndCancel() }
     func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
         operations.append(operationID)
         if var queue = failures[operationID], !queue.isEmpty {
@@ -36,6 +37,8 @@ private actor NoticeGate: ClientTransport {
             streams.append(pair.continuation)
             return (HTTPResponse(status: .ok, headerFields: [.contentType: "text/event-stream", .cacheControl: "no-store"]), HTTPBody(pair.stream, length: .unknown))
         }
+        // A model torn down by its test may still have a queued request; never hand it to an invalidated session.
+        if stopped { throw CancellationError() }
         return try await base.send(request, body: body, baseURL: baseURL, operationID: operationID)
     }
 }

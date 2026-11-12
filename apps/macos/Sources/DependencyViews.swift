@@ -233,15 +233,17 @@ extension TodoModel {
         guard signedIn else { return }
         let epoch = discovery.credentialEpoch
         let selectedProfile = profile
+        let mark = messageMark
         do {
             let task = try await TaskSnapshot.decode(client.tasks_period_show(path: .init(profile: selectedProfile, task: id)).ok.body.json)
             guard isCurrentCredential(epoch), profile == selectedProfile else { return }
+            clearMessage([.dependencyFollowUp], since: mark)
             closeDependencyPicker()
             if !dependencies.initial.contains(where: { $0.id == task.id }) { dependencies.initial.append(task) }
             quickAdd = true
         } catch {
             guard isCurrentCredential(epoch), profile == selectedProfile else { return }
-            message = describe(error)
+            publishMessage(describe(error), kind: .dependencyFollowUp)
             handleAuthorization(error, credentialEpoch: epoch)
         }
     }

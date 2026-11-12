@@ -104,38 +104,57 @@ revocation reply after cancellation leaves the model signed in, and a 200 or
 
 MAC-C1-S1-07 showed that 475726d3 restored a saved sign-out notice by
 lifecycle generation alone, and that every ready event cleared any message.
-A newer error from the still-current credential could therefore be erased on
-ready and then replaced by the older notice. The model now records who set
-`message` (`general`, `connection` or `signOut`), and every clear names the
-owners it may clear. Nothing is saved or restored. The app shows the newest
-message. A failed sign-out's notice stays until a newer message replaces it, a
-later sign-out succeeds, or the credential or Profile changes. There is no
-dismiss control today. Adding one is a visible change for the Opus Mac UI
-seat.
+MAC-C1-S1-09 and MAC-C1-S1-10 then showed that owner categories alone do not
+give "newest message wins". An older write's read-back erased a newer
+Dependency follow-up error. A failed restore's error survived a successful
+Retry Session.
 
-| Writer | Owner | May overwrite or clear |
-| --- | --- | --- |
-| Stream ready after a failed or unhealthy connection | – | Clears only a `connection` message. Before this, it cleared every message. |
-| Stream failure that goes Offline | `connection` | Replaces any message: it is newer. |
-| Stream 404 that cannot leave a deleted Profile | `general` | Replaces any message. |
-| `refreshAfterWrite` applied | – | Clears `general` and `connection` messages, as before, but no longer a `signOut` notice. |
-| `refreshAfterWrite` failed ("… The live view is reconnecting.") | `connection` | Replaces any message. The reconnect's ready clears it. |
-| `signOut` failed (not cancelled) | `signOut` | Replaces any message. |
-| `signOut` succeeded, `signIn` start, `expireSession` | `general` or cleared | Clears or replaces any message. The credential ends. |
-| `replaceCredential` | – | Clears only a `signOut` notice. |
-| Any change of `profile` (switch, Discovery Show, transfer, deleted-Profile fallback, Snapshot reload) | – | Clears only a `signOut` notice. |
-| `leaveDeletedProfile` | cleared | Clears any message. The Profile ends. |
-| `restore` failure, `reconnectAfterUpdate` failure | `general` | Replaces any message. |
-| `transition` conflict or failure, `deleteTask` conflict | `general` | Replaces any message. |
-| Discovery Show failure, Dependency follow-up failure | `general` | Replaces any message. |
+The rule, as ruled on 2026-11-11:
+
+1. Every message carries the kind that produced it and a sequence number that
+   only grows (`publishMessage(_:kind:)`, `messageSequence`).
+2. An action that can clear messages notes `messageMark` when it starts. When it
+   succeeds, `clearMessage(_:since:)` may clear only a message that already
+   existed then. A message published after it began always survives.
+3. Of those, it clears only the kinds its success makes untrue (table below).
+4. A message also ends when a newer message replaces it, or when the credential
+   (`replaceCredential` with a different value) or the Profile (any change of
+   `profile`) changes.
+5. Nothing saves or restores a message. An older message never comes back.
+
+| Kind | Published by | Success that clears it | Reachable in ordinary use |
+| --- | --- | --- | --- |
+| `connection` | Stream failure that goes Offline; write accepted with "… The live view is reconnecting."; stream 404 that cannot leave a deleted Profile; update reconnect check failure | Ready after a later connection attempt; a successful restore, sign-in, or write read-back | Yes: the stream retries automatically, and the banner's Retry reconnects |
+| `restore` | Restore failure (server or stored-Session error) | Successful restore or sign-in | Yes: Retry Session or Sign in |
+| `signIn` | Sign-in failure | Successful sign-in or restore | Yes: Sign in again |
+| `sessionEnded` | A 401 that ends the Session | Successful sign-in or restore | Yes: the sign-in screen is shown |
+| `signOut` | Failed or rejected sign-out | A later successful sign-out (credential change) | Yes: Sign out again |
+| `transition` | Complete, Reopen or Cancel failure or conflict | A later successful transition and its read-back | Yes: the same row action |
+| `delete` | Delete conflict on a Task that is not open in the editor | A later successful delete and its read-back | Yes: Delete again after the preview reloads |
+| `dependencyFollowUp` | Dependency follow-up Task read failure | A later successful follow-up | Yes: the same picker action |
+| `discoveryShow` | Discovery Show failure | A later successful Show | Yes: Show from Look up Task |
+| `general` | Direct assignments only. No production writer remains. | Only rule 4 | Not used by production code |
+
+No refresh kind exists. Catalog and search failures publish to `searchError`
+and `taskLoadError`, which their own next read replaces, never to `message`.
+Every production kind has a natural success that clears it. There is still no
+dismiss control. A kind whose action the person never repeats keeps its
+message until a newer message, a credential change or a Profile change. That
+residual case belongs to the Opus Mac UI seat, which may add a dismiss control
+or a time limit.
 
 The sibling states each belong to one surface, and the ready path writes none
 of them: `editorError`, `quickAddError`, `searchError`, `taskLoadError`,
 `snapshotError`, `diagnosticsError`, `importError`, `historyError`,
 `profileDeletionError` and `deletionNotice`. Each is set and cleared by its own
-surface's actions, by a Profile activation, or by the Snapshot reload reset. A
-search refusal, an Attachment action or a Diagnostics failure therefore leaves
-`message`, including a failed sign-out's notice, unchanged.
+surface's actions, by a Profile activation, or by the Snapshot reload reset.
+
+The controls run against the compiled scratch server with the in-memory
+SessionVault. They are the seat's three probes unchanged; the eleven
+S1-07 mirror cases; and, for each kind, one interleaving and one recovery. In
+the interleaving, an action that clears that kind is held at its last await
+while a newer message of another kind is published, and the newer message must
+survive. In the recovery, the same kind's success clears its earlier message.
 
 ## Close admission before invalidation
 

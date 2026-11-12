@@ -172,12 +172,14 @@ extension TodoModel {
         let fullID = intent.match.task_id
         closeDiscovery()
         discovery.showIntent = intent
+        let mark = messageMark
         busy = true
         defer { if discovery.credentialEpoch == intent.identity.credentialEpoch { busy = false } }
         do {
             let task = try await TaskSnapshot.decode(client.tasks_period_show(path: .init(profile: sourceProfile, task: fullID)).ok.body.json)
             guard canShowDiscovery(intent) else { return false }
             discovery.showIntent = nil
+            clearMessage([.discoveryShow], since: mark)
             editor = nil
             conflict = nil
             activateProfile(sourceProfile)
@@ -189,7 +191,7 @@ extension TodoModel {
         } catch {
             guard canShowDiscovery(intent) else { return false }
             discovery.showIntent = nil
-            message = describe(error)
+            publishMessage(describe(error), kind: .discoveryShow)
             handleAuthorization(error, credentialEpoch: intent.identity.credentialEpoch)
             return false
         }

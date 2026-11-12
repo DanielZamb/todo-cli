@@ -79,7 +79,7 @@ try:
         (sources / Path(file).name).write_bytes(data)
         hashes[file] = hashlib.sha256(data).hexdigest()
     shutil.copyfile(fixtures / 'auth-epoch/SessionVault.swift', sources / 'SessionVault.swift')
-    for name in ['SignOutStreamTests.swift', 'SignOutNoticeTests.swift', 'SeatSignOutNoticeTests.swift', 'CredentialTransitionCancellationTests.swift', 'SeatRestoreCancellationBoundaryTests.swift']:
+    for name in ['SignOutStreamTests.swift', 'SignOutNoticeTests.swift', 'SeatSignOutNoticeTests.swift', 'CredentialTransitionCancellationTests.swift', 'SeatRestoreCancellationBoundaryTests.swift', 'MessageKindTests.swift', 'SeatMessageInterleavingTests.swift']:
         shutil.copyfile(fixtures / 'sign-out-stream' / name, tests / name)
     shutil.copyfile(root / 'apps/macos/Package.resolved', package / 'Package.resolved')
     api = str(root / 'apps/macos/API')
@@ -111,6 +111,9 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
         raise RuntimeError('Server readiness timed out')
     if run([cache['cli'], 'login', '--password-stdin', '--profile', 'work', '--format', 'json'], 'login.log', dict(env, TODO_SERVER_URL=url), 'scratch verification passphrase\n'):
         raise RuntimeError('CLI login failed')
+    for index in range(3):
+        if run([cache['cli'], 'add', f'Open scratch Task {index}', '--profile', 'work', '--format', 'json'], f'seed-task-{index}.log', dict(env, TODO_SERVER_URL=url)):
+            raise RuntimeError('CLI add failed')
 
     lock = threading.Lock()
     fault = {'mode': None, 'held': False, 'release': threading.Event()}
@@ -239,7 +242,7 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
     proxy_url = f'http://127.0.0.1:{proxy.server_port}'
     (evidence / 'endpoints.json').write_text(json.dumps({'server': url, 'proxy': proxy_url, 'database': str(scratch / 'scratch.db')}) + '\n')
     test_env = dict(env, TODO_SIGN_OUT_STREAM='1', TODO_SIGN_OUT_PROXY=proxy_url, TODO_SIGN_OUT_SERVER=url, TODO_SIGN_OUT_EVIDENCE=str(evidence), SEAT_SERVER=url, SEAT_EVIDENCE=str(evidence))
-    exit_code = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SignOutStreamTests', '--skip', 'SeatSignOutNoticeTests|SeatRestoreCancellationBoundaryTests'], 'tests.log', test_env)
+    exit_code = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SignOutStreamTests', '--skip', 'SeatSignOutNoticeTests|SeatRestoreCancellationBoundaryTests|SeatMessageInterleavingTests'], 'tests.log', test_env)
     # The seat's unchanged probe runs alone: its teardown invalidates its URLSession while
     # the model can still reconnect, and an exception there would hide the other suites.
     seat_exit = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatSignOutNoticeTests'], 'seat-tests.log', test_env)
@@ -252,7 +255,8 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
     if restore_exit != 0 and issues == ['SeatRestoreCancellationBoundaryTests.swift:52']: restore_exit = 0
     seat_restore['accepted'] = restore_exit == 0
     (evidence / 'seat-restore.json').write_text(json.dumps(seat_restore, indent=2) + '\n')
-    exit_code = exit_code or seat_exit or restore_exit
+    interleaving_exit = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatMessageInterleavingTests'], 'seat-interleaving-tests.log', test_env)
+    exit_code = exit_code or seat_exit or restore_exit or interleaving_exit
 
     with lock:
         (evidence / 'proxy-requests.json').write_text(json.dumps(requests, indent=1) + '\n')
