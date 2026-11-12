@@ -41,7 +41,7 @@ export async function runRegressions(c) {
   await check('changed-binary-and-self-declared-hash', f => {
     fs.appendFileSync(f.manifest.serverPath, 'changed'); f.manifest.serverSHA256 = c.binaryProvenance.sha256.cli; f.write();
   });
-  const regulars = ['manifest.json', 'todo-server', 'todo', 'scratch.db', 'scratch.db-wal', 'scratch.db-shm'];
+  const regulars = ['manifest.json', 'todo-server', 'todo', 'scratch.db', 'scratch.db-wal', 'scratch.db-shm', '.instance-lock', 'server.log'];
   for (const name of regulars) {
     await check('hardlink-' + name, f => {
       const file = f.directory + '/' + name; if (!fs.existsSync(file)) fs.writeFileSync(file, '');

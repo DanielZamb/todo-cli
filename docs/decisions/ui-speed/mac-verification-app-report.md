@@ -56,6 +56,7 @@ After the hold message no Swift job was running, and none was started.
 | node .agents/skills/verify-macos-real-app/scripts/process-policy.test.mjs | 0; every named hostile parent variable dropped | slot-hold-cleanup/node-reds.json records repeated baseline |
 | node .agents/skills/verify-macos-real-app/scripts/receipt-stages.test.mjs | 0; partial scopes and each missing required stage incomplete | slot-hold-cleanup/node-reds.json records repeated baseline |
 | node .agents/skills/verify-macos-real-app/scripts/node-reds.mjs <receipt> | 0; both baseline tests 0, each matching mutation test 1 | slot-hold-cleanup/node-reds.json |
+| sh scripts/disk-guard.sh; /usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check | 0; 0 at draft 1b82126459351a328ced63f5843b47a9cb68b9ca; domain 387, CLI 69, server 32, Electron 168 plus one existing skip; no Swift | slot-hold-cleanup/root-check.json and root-check.log |
 | node --check on changed Node helpers; git diff --check | 0 when last run; repeat before handoff | local tool execution |
 
 Development receipts record eceedba4 as their parent head and development=true;
@@ -63,7 +64,12 @@ their code was dirty and is not claimed byte-equal to that commit. In the sevent
 run the guard/mutant builds also straddled the stricter sandbox edit. This is
 explicitly disqualified diagnostic evidence. The added server log descriptor
 will expose the child startup reason on the next permitted run. No hidden
-retry, relaxed broker rule or visible launch followed that failure.
+retry, relaxed broker rule or visible launch followed that failure. The root
+check exercises TypeScript packages, not the pending native qualification.
+After that draft check, additional unrun native controls cover the claim/log
+files and require matching refusal reasons, so an unrelated crash cannot count
+as a successful red control. The sandbox permits reading the harmless true
+executable solely so its process-execution denial can be tested independently.
 
 ## Remaining work after the holds
 
@@ -179,3 +185,10 @@ before was 40,383,459,328 bytes (37.610 GiB); after was 45,082,894,336 bytes
 (41.987 GiB), reclaiming 4,699,435,008 bytes (4.377 GiB). Receipt:
 slot-hold-cleanup/receipt.json. Shared disk usage can change independently.
 No other worker's cache, production app, server or launchd state was touched.
+
+The separate closed apps/macos/DerivedData/V01Proof directory was subsequently
+retired after another empty lsof check. This reclaimed 1,095,606,272 bytes
+(1.020 GiB); free disk immediately before/after was 50.019/51.040 GiB. The
+other free-space increase was concurrent shared-disk activity, not attributed
+to this worker. Receipt: slot-hold-cleanup/state-proof-cleanup.json. Total
+reclaimed by these two recorded cleanups was 5,795,041,280 bytes (5.397 GiB).

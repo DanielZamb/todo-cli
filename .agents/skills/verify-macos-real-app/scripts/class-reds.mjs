@@ -15,10 +15,22 @@ export async function runClassReds(c) {
   }
   function expected(program, args, expected, label, env) {
     const value = execute([program, ...args], label, env);
+    const reasons = {
+      'modifier-mask-removed': 'Owner input type 12 is missing.',
+      'memory-defaults-removed': 'Standard defaults must resolve only to memory',
+      'local-monitor-removed': 'own event delivered type 12',
+      'outside-file-read-allowed': 'An outside scratch sentinel was readable.',
+      'outside-file-write-allowed': 'An outside scratch sentinel was writable.',
+      'unrelated-network-allowed': 'An unrelated loopback listener was reachable.',
+      'unapproved-exec-allowed': 'The exec control returned 0 instead of the sandbox denial.',
+      'credential-brokers-allowed': 'A credential or settings broker remains reachable:',
+    };
+    if (reasons[label]) assert(value.stderr.includes(reasons[label]), label + ' failed before its matching assertion: ' + value.stderr);
+    if (label === 'HID-stop-removed' || label === 'local-monitor-removed') assert.equal(value.status, 1);
     // This is the literal matching assertion used by the baseline; run it in a separate process.
     const assertion = execute(['node', '-e', 'require("node:assert/strict").equal(Number(process.argv[1]), Number(process.argv[2]))', String(value.status), String(expected)], label + '-matching-test');
     assert.equal(assertion.status, 1, label + ' unexpectedly passed');
-    reds.push({ label, observedExit: value.status, expectedExit: expected, matchingTestExit: assertion.status });
+    reds.push({ label, observedExit: value.status, expectedExit: expected, matchingTestExit: assertion.status, stdout: value.stdout, stderr: value.stderr });
   }
   for (const [label, before, after, mode, expectedExit] of [
     ['modifier-mask-removed', '.keyUp, .flagsChanged,', '.keyUp,', 'input-mask', 0],

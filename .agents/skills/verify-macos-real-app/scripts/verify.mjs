@@ -130,6 +130,8 @@ try {
       else {
         const failure = execute(['node', '.agents/skills/verify-macos-real-app/scripts/expect-exit.mjs', '0', f.directory, native + '/mutants', String(value.index)], 'red-guard-' + value.index);
         assert.equal(failure.status, 1); const observed = JSON.parse(failure.stdout); assert.equal(observed.exit, 78);
+        const message = value.original.match(/, "([^"\n]+)"\)/)?.[1];
+        assert(message && observed.stderr.includes(message), 'Mutant failed at an unrelated guard: ' + value.index);
         red.push({ ...value, matchingTestExit: failure.status, observed });
       }
     } finally { f.dispose(); }

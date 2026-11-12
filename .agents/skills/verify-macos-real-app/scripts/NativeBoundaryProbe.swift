@@ -50,7 +50,8 @@ private func trueExecution(_ directory: UnsafePointer<CChar>) -> Int32
                 let own = URL(fileURLWithPath: manifest.home + "/allowed-sentinel")
                 try Data("scratch".utf8).write(to: own)
                 try verificationRequire(try String(contentsOf: own, encoding: .utf8) == "scratch", "The scratch file allowance is missing.")
-                try verificationRequire(manifest.root.withCString { trueExecution($0) } == 1, "An unapproved executable was allowed.")
+                let execution = manifest.root.withCString { trueExecution($0) }
+                try verificationRequire(execution == 1, "The exec control returned \(execution) instead of the sandbox denial.")
                 let fd = socket(AF_INET, SOCK_STREAM, 0); defer { close(fd) }
                 var address = sockaddr_in(); address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size); address.sin_family = sa_family_t(AF_INET); address.sin_addr.s_addr = inet_addr("127.0.0.1"); address.sin_port = UInt16(CommandLine.arguments[3])!.bigEndian
                 let connected = withUnsafePointer(to: &address) { $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { connect(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size)) } }
