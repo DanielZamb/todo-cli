@@ -1,5 +1,516 @@
 # Server projection reads
 
+## Runtime authority repair, S1-C2
+
+Product: `ade8f941f3d15c61cffdb58d45114b4ababbcc5e`. Previous delivery: `1c5413cb94210b1ae00b6b70b90b6091ddfabf98`. Contract remains `78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289`. This section supersedes the earlier nominal-authority description; earlier measurements and attempts remain historical below.
+
+The unchanged seat probe reproduced the defect before the fix: compilation 0, execution 1, and direct graph/list returned personal Tasks ab-1, ab-3 and ab-5 under the work read-only Token. The first authority matrix failed before implementation. S1-C2 was introduced by the nominal authority implementation in the S1-C1 repair: its new query wrappers trusted copyable public fields. It is distinct from the inherited raw-request mutation hole. The unchanged S1-C1 probe was recompiled on this product and exits 0.
+
+This is an internal query-port authority defect; no ordinary remote HTTP exploit is claimed. The runtime class now lives inside [the credential-check module](../../../packages/domain/src/auth/auth.ts). A module-private Symbol and exact new.target check are required for construction; no mint function or class is exported. Profile, scope, credential, parsed fields, visible Profile rows and originating database are held through ECMAScript private fields. The payload and nested fields, instance, class and prototype are frozen. Each query port inspects the private brand, exact prototype, expected kind and database before accessing values. A WeakSet was unnecessary: private fields provide the brand and private storage together. Benign getters remain for introspection but query selectors never trust their public values. Copying a nominal TypeScript type grants no runtime authority.
+
+Graph, committed stream changes, metadata, catalog, Tasks, Projects, Tags, Profile counts, Task History, Snapshot list/Show, image selection, Discovery lookup and all read continuations use this guard. Subscription checks and every stream recheck validate the same authority. Discovery's visible Profile set is still derived once from the checked set and held privately. No public creation path was retained. Trusted lower storage functions used by writers/replay retain their existing MutationIdentity/event selectors; they are not authority-taking query ports. The audit below names those callers. Authentication perform and the mapped transaction/append/rebuild regions remain byte-identical to the previous delivery. Transaction modes, projection guards, public contract and error mapping are unchanged.
+
+### Fail-closed controls and the unchanged probe
+
+The matrix has 216 attempts: nine attacks across twelve direct ports and twelve upper queries. Attacks are structured clone, spread, Object.assign, prototype copy, JSON round-trip, subclass construction, subclass prototype copy, Proxy and genuine field mutation. All attempts refuse before returning rows; port/query failures assert StoreError, while constructor or frozen-field mutation is refused before a port can run. Genuine graph/changes/Snapshot reads have literal expected values; wrong-kind and cross-database authorities also fail. The class/prototype cannot be replaced. The HTTP hook substitutes a cloned authority at graphRead: twenty requests return exactly InternalError / Storage operation failed / exit_code 1 / runtime failure, status 500, with no Task data.
+
+The seat's C2 probe is kept byte-for-byte unchanged (cmp 0). It awaits forged graphRead without catching failure, then expects a successful Task list. Consequently the required generic StoreError ends its run with **exit 1**, before either result is returned or result.json is written. It cannot both exit 0 unchanged and require refused authorities to fail with StoreError. The companion refusal control exits 0 and asserts that exact rejection and absence of output data. This is an explicit limitation of the requested unchanged probe's success criterion; no product behavior was weakened to accommodate it.
+
+Both raw-request mutation modes pass all 1,267 lifecycle reply/status comparisons and equal auth evidence. Receipts prove actual Profile and Task/Attachment/Snapshot id, prefix and quick-add field mutation. The interleaving control passes ten pairs in each of three modes (60 responses) with ten proven overlaps per mode and only the respective literal Work/Personal Tasks. The full original differential passes all 57 fixtures: 23,880 original plus 1,267 lifecycle pairs, 25,147 replies per side, byte-identical and equal auth History/last-use.
+
+### Read timings on this product
+
+The full sweep uses the original e692 baseline and current product, 18 corners, two request orders, five paired alternating fresh-process repetitions per order, three passes: 360 processes and 8,640 validated HTTP 200 responses. Every current observation has zero operation decodes. Real clocks, ordinary scheduler and the timing lock were used after this worker's other checks stopped. One-minute load ranged 4.04 to 5.94 on 10 logical CPUs. No pressure workers were launched; other host work is uncontrolled. Values below are handler milliseconds, median [min, max]; warm is pass two. These are synthetic fixtures and handler intervals, not installed UI latency or p99.
+
+| Fixture | Warm /profiles e692 | Current | Warm eight-handler sum e692 | Current |
+| --- | --- | --- | --- | --- |
+| n15-p1-large0-h32 | 0.755 [0.664, 0.938] | 0.133 [0.128, 0.148] | 6.084 [4.326, 6.239] | 1.407 [1.277, 1.562] |
+| n15-p1-large0-h2048 | 11.933 [10.420, 12.270] | 0.133 [0.118, 0.184] | 93.116 [92.914, 95.599] | 1.195 [1.047, 1.358] |
+| n15-p1-large1-h32 | 0.986 [0.885, 1.053] | 0.136 [0.128, 0.190] | 8.199 [7.843, 10.025] | 3.448 [3.274, 3.586] |
+| n15-p1-large1-h2048 | 11.771 [11.170, 12.017] | 0.134 [0.125, 0.176] | 96.254 [95.816, 97.109] | 1.575 [1.532, 1.827] |
+| n15-p8-large0-h32 | 8.493 [7.909, 8.780] | 0.245 [0.235, 0.261] | 17.222 [16.452, 18.371] | 1.267 [1.240, 1.329] |
+| n15-p8-large0-h2048 | 94.024 [91.506, 99.887] | 0.253 [0.233, 0.258] | 181.327 [177.094, 190.728] | 1.419 [1.175, 1.483] |
+| n15-p8-large1-h32 | 13.744 [12.257, 15.335] | 0.265 [0.245, 0.343] | 27.341 [26.795, 30.484] | 3.733 [2.967, 4.448] |
+| n15-p8-large1-h2048 | 98.947 [96.585, 99.897] | 0.247 [0.238, 0.270] | 186.324 [183.856, 193.064] | 1.670 [1.642, 1.914] |
+| n178-p1-large0-h32 | 1.704 [1.671, 2.673] | 0.243 [0.226, 0.284] | 17.397 [16.634, 18.352] | 4.148 [4.135, 4.849] |
+| n178-p1-large0-h2048 | 16.420 [15.275, 18.679] | 0.237 [0.199, 0.446] | 127.003 [126.504, 129.628] | 4.155 [3.941, 5.806] |
+| n178-p1-large1-h32 | 1.975 [1.906, 2.011] | 0.211 [0.198, 0.248] | 19.489 [19.167, 21.554] | 6.289 [5.995, 6.380] |
+| n178-p1-large1-h2048 | 16.622 [15.894, 18.166] | 0.229 [0.209, 0.246] | 132.243 [127.571, 134.578] | 4.768 [4.590, 10.060] |
+| n178-p8-large0-h32 | 87.753 [86.461, 93.339] | 0.895 [0.863, 0.934] | 169.957 [168.469, 175.644] | 4.625 [4.388, 4.845] |
+| n178-p8-large0-h2048 | 195.882 [191.258, 197.791] | 0.814 [0.759, 0.845] | 369.864 [366.752, 373.794] | 4.390 [4.354, 4.450] |
+| n178-p8-large1-h32 | 89.146 [88.477, 94.165] | 0.999 [0.870, 1.349] | 174.627 [173.244, 180.740] | 8.138 [7.470, 11.898] |
+| n178-p8-large1-h2048 | 202.740 [195.248, 209.513] | 0.868 [0.849, 0.889] | 387.889 [377.475, 413.632] | 5.018 [4.821, 5.731] |
+| n178-p8-empty-large0-h2048 | 120.423 [120.339, 122.093] | 0.288 [0.281, 0.340] | 231.010 [225.219, 234.210] | 4.339 [4.203, 4.506] |
+| n178-p8-empty-large1-h2048 | 126.241 [125.515, 129.788] | 0.301 [0.284, 0.331] | 241.185 [234.502, 246.125] | 4.652 [4.568, 5.637] |
+
+The incremental guard comparison uses the preserved pre-C2 219749f2 binary versus ade8f941 on the 178-Task/eight-Profile/2234-operation owner-shaped fixture. Ten alternating pairs per request order give 20 pairs, 40 fresh processes and 960 validated responses. Both variants decode zero operations. Boundary one-minute loads range 2.53 to 2.66. All valid observations are retained.
+
+| Request order | Pre-C2 eight-handler sum | Current | Paired delta median |
+| --- | --- | --- | --- |
+| Profiles first | 4.812 [4.358, 5.254] | 4.841 [4.467, 5.150] | 0.073 |
+| Profiles last | 4.819 [4.570, 5.332] | 4.737 [4.553, 5.347] | -0.124 |
+
+Pooled paired warm eight-read delta is 0.034 ms, range [-0.721, 0.777]. A deterministic 10,000-resample paired-median bootstrap gives a 95% percentile interval [-0.115, 0.172] ms (seed 0x78a2be44). No incremental cost is distinguishable from this run's noise; this is not a proof of exactly zero CPU overhead. The comparison covers the observed eight-read sum, not tail or UI timing.
+
+| Fixture / route | First pass e692 | Current | Warm e692 | Current | Profiles-last warm e692 | Current |
+| --- | --- | --- | --- | --- | --- | --- |
+| n15-p1-large0-h32 / profiles | 2.514 [2.384, 2.807] | 1.481 [1.476, 1.509] | 0.755 [0.664, 0.938] | 0.133 [0.128, 0.148] | 0.484 [0.472, 2.275] | 0.129 [0.117, 0.134] |
+| n15-p1-large0-h32 / tags | 1.010 [0.945, 1.194] | 0.330 [0.322, 0.353] | 0.519 [0.487, 0.574] | 0.096 [0.089, 0.101] | 0.602 [0.546, 0.709] | 0.093 [0.091, 0.110] |
+| n15-p1-large0-h32 / tasks | 1.337 [1.281, 1.518] | 0.908 [0.877, 0.935] | 0.658 [0.629, 0.708] | 0.283 [0.254, 0.287] | 0.659 [0.633, 0.694] | 0.305 [0.282, 0.338] |
+| n15-p1-large0-h32 / overdue | 1.027 [0.953, 1.111] | 0.595 [0.568, 0.613] | 0.515 [0.507, 0.606] | 0.187 [0.180, 0.266] | 0.517 [0.484, 0.557] | 0.198 [0.188, 0.242] |
+| n15-p1-large0-h32 / projects | 0.703 [0.668, 0.777] | 0.191 [0.184, 0.196] | 0.488 [0.470, 0.625] | 0.071 [0.068, 0.094] | 0.516 [0.455, 0.602] | 0.080 [0.073, 0.085] |
+| n15-p1-large0-h32 / inbox | 0.601 [0.590, 0.630] | 0.281 [0.261, 0.294] | 0.546 [0.500, 0.623] | 0.234 [0.214, 0.299] | 0.568 [0.506, 0.580] | 0.239 [0.216, 0.312] |
+| n15-p1-large0-h32 / today | 0.685 [0.613, 0.692] | 0.223 [0.211, 0.284] | 0.478 [0.468, 0.513] | 0.206 [0.156, 0.238] | 0.465 [0.439, 0.493] | 0.196 [0.160, 0.235] |
+| n15-p1-large0-h32 / scheduled | 0.676 [0.615, 0.729] | 0.216 [0.207, 0.238] | 2.008 [0.470, 2.101] | 0.177 [0.154, 0.193] | 0.474 [0.437, 0.512] | 0.170 [0.156, 0.189] |
+| n15-p1-large0-h2048 / profiles | 15.725 [15.459, 16.769] | 1.536 [1.498, 1.637] | 11.933 [10.420, 12.270] | 0.133 [0.118, 0.184] | 12.401 [12.101, 14.105] | 0.111 [0.103, 0.147] |
+| n15-p1-large0-h2048 / tags | 14.348 [14.026, 14.984] | 0.348 [0.335, 0.379] | 11.283 [10.913, 12.353] | 0.090 [0.082, 0.132] | 11.071 [10.678, 11.830] | 0.083 [0.077, 0.116] |
+| n15-p1-large0-h2048 / tasks | 13.076 [12.774, 13.439] | 0.885 [0.806, 0.992] | 12.112 [11.729, 12.446] | 0.213 [0.201, 0.268] | 12.437 [11.099, 13.087] | 0.225 [0.224, 0.253] |
+| n15-p1-large0-h2048 / overdue | 11.385 [11.079, 12.138] | 0.569 [0.538, 0.605] | 10.865 [10.526, 11.879] | 0.153 [0.142, 0.174] | 12.164 [12.013, 12.745] | 0.149 [0.139, 0.166] |
+| n15-p1-large0-h2048 / projects | 12.770 [11.775, 14.348] | 0.195 [0.181, 0.210] | 11.966 [11.324, 12.505] | 0.073 [0.066, 0.084] | 10.975 [10.623, 11.184] | 0.081 [0.073, 0.126] |
+| n15-p1-large0-h2048 / inbox | 13.154 [11.586, 13.330] | 0.227 [0.220, 0.229] | 12.101 [10.567, 13.102] | 0.190 [0.166, 0.246] | 12.141 [12.102, 12.641] | 0.181 [0.167, 0.214] |
+| n15-p1-large0-h2048 / today | 10.871 [10.442, 11.128] | 0.173 [0.169, 0.187] | 11.212 [10.721, 12.000] | 0.157 [0.137, 0.174] | 10.892 [10.566, 12.758] | 0.138 [0.129, 0.157] |
+| n15-p1-large0-h2048 / scheduled | 12.193 [11.986, 12.448] | 0.179 [0.176, 0.192] | 12.763 [11.845, 13.116] | 0.148 [0.128, 0.237] | 12.357 [10.491, 12.796] | 0.141 [0.126, 0.218] |
+| n15-p1-large1-h32 / profiles | 2.915 [2.793, 3.068] | 1.514 [1.460, 1.569] | 0.986 [0.885, 1.053] | 0.136 [0.128, 0.190] | 0.836 [0.787, 0.852] | 0.173 [0.164, 0.200] |
+| n15-p1-large1-h32 / tags | 1.348 [1.273, 1.434] | 0.350 [0.321, 0.382] | 0.822 [0.764, 0.848] | 0.095 [0.091, 0.111] | 0.935 [0.903, 1.022] | 0.093 [0.092, 0.101] |
+| n15-p1-large1-h32 / tasks | 3.414 [3.336, 3.506] | 1.077 [1.001, 1.118] | 1.011 [0.957, 1.090] | 0.421 [0.389, 0.492] | 1.154 [1.086, 1.347] | 0.436 [0.379, 0.445] |
+| n15-p1-large1-h32 / overdue | 1.437 [1.384, 1.480] | 0.710 [0.688, 0.767] | 2.004 [1.837, 3.460] | 0.293 [0.280, 0.315] | 0.853 [0.794, 0.932] | 0.298 [0.285, 0.332] |
+| n15-p1-large1-h32 / projects | 1.056 [1.000, 1.133] | 0.206 [0.195, 0.229] | 0.967 [0.928, 1.116] | 0.077 [0.071, 0.094] | 1.926 [0.769, 2.006] | 0.080 [0.077, 0.084] |
+| n15-p1-large1-h32 / inbox | 1.032 [0.942, 1.049] | 0.389 [0.379, 0.439] | 0.893 [0.780, 0.959] | 0.301 [0.266, 0.314] | 1.009 [0.956, 1.881] | 0.318 [0.281, 0.342] |
+| n15-p1-large1-h32 / today | 2.310 [1.243, 2.583] | 0.322 [0.315, 0.353] | 0.840 [0.733, 0.867] | 1.751 [1.680, 1.854] | 0.991 [0.747, 1.096] | 1.761 [1.669, 1.957] |
+| n15-p1-large1-h32 / scheduled | 1.455 [1.182, 2.472] | 0.309 [0.297, 0.328] | 0.747 [0.740, 0.794] | 0.324 [0.281, 0.342] | 0.815 [0.684, 0.897] | 0.387 [0.346, 0.453] |
+| n15-p1-large1-h2048 / profiles | 16.281 [15.816, 17.444] | 1.525 [1.465, 1.569] | 11.771 [11.170, 12.017] | 0.134 [0.125, 0.176] | 11.461 [10.827, 12.330] | 0.114 [0.111, 0.119] |
+| n15-p1-large1-h2048 / tags | 12.995 [12.190, 13.867] | 0.339 [0.333, 0.344] | 13.373 [12.398, 13.923] | 0.087 [0.081, 0.113] | 11.706 [11.282, 13.612] | 0.087 [0.085, 0.094] |
+| n15-p1-large1-h2048 / tasks | 13.489 [12.762, 14.612] | 0.923 [0.916, 0.984] | 12.573 [11.717, 12.673] | 0.326 [0.297, 0.365] | 14.052 [11.470, 14.198] | 0.347 [0.327, 0.354] |
+| n15-p1-large1-h2048 / overdue | 13.538 [13.074, 13.925] | 0.675 [0.631, 0.687] | 12.233 [11.422, 12.378] | 0.248 [0.239, 0.273] | 12.017 [11.280, 12.249] | 0.252 [0.235, 0.345] |
+| n15-p1-large1-h2048 / projects | 13.607 [12.705, 14.590] | 0.185 [0.175, 0.213] | 11.298 [10.839, 12.565] | 0.066 [0.064, 0.081] | 11.141 [10.862, 12.235] | 0.088 [0.079, 0.113] |
+| n15-p1-large1-h2048 / inbox | 12.698 [11.592, 12.996] | 0.320 [0.313, 0.328] | 12.017 [11.373, 12.350] | 0.285 [0.255, 0.327] | 11.915 [11.804, 12.064] | 0.268 [0.257, 0.332] |
+| n15-p1-large1-h2048 / today | 12.964 [12.715, 13.662] | 0.271 [0.268, 0.276] | 12.123 [12.029, 12.601] | 0.225 [0.221, 0.255] | 11.210 [10.672, 12.337] | 0.243 [0.227, 0.258] |
+| n15-p1-large1-h2048 / scheduled | 12.755 [10.999, 13.199] | 0.289 [0.263, 0.312] | 11.289 [11.104, 11.777] | 0.220 [0.214, 0.237] | 12.099 [11.361, 13.432] | 0.236 [0.226, 0.245] |
+| n15-p8-large0-h32 / profiles | 13.136 [12.880, 14.648] | 1.682 [1.641, 1.754] | 8.493 [7.909, 8.780] | 0.245 [0.235, 0.261] | 8.772 [8.572, 9.291] | 0.227 [0.205, 0.322] |
+| n15-p8-large0-h32 / tags | 1.467 [1.356, 1.565] | 0.329 [0.318, 0.370] | 1.949 [1.005, 2.249] | 0.089 [0.084, 0.097] | 1.252 [1.129, 2.294] | 0.092 [0.084, 0.101] |
+| n15-p8-large0-h32 / tasks | 2.046 [1.959, 2.101] | 0.825 [0.819, 0.987] | 1.608 [1.519, 2.520] | 0.229 [0.222, 0.242] | 1.380 [1.312, 1.397] | 0.244 [0.230, 0.268] |
+| n15-p8-large0-h32 / overdue | 1.499 [1.403, 1.687] | 0.578 [0.559, 0.643] | 1.087 [1.041, 1.161] | 0.152 [0.143, 0.177] | 1.002 [0.960, 1.111] | 0.155 [0.147, 0.158] |
+| n15-p8-large0-h32 / projects | 1.224 [1.123, 1.432] | 0.186 [0.177, 0.218] | 0.959 [0.945, 1.131] | 0.069 [0.064, 0.073] | 0.975 [0.935, 1.011] | 0.074 [0.068, 0.129] |
+| n15-p8-large0-h32 / inbox | 1.091 [1.060, 1.532] | 0.242 [0.231, 0.262] | 1.014 [1.003, 1.277] | 0.182 [0.176, 0.209] | 1.191 [1.149, 1.210] | 0.182 [0.175, 0.228] |
+| n15-p8-large0-h32 / today | 1.082 [1.042, 1.517] | 0.186 [0.176, 0.189] | 0.967 [0.946, 1.246] | 0.143 [0.138, 0.166] | 1.040 [0.998, 1.061] | 0.165 [0.139, 0.189] |
+| n15-p8-large0-h32 / scheduled | 2.403 [1.108, 3.266] | 0.186 [0.178, 0.190] | 0.955 [0.944, 1.312] | 0.145 [0.136, 0.159] | 1.022 [1.002, 1.039] | 0.139 [0.131, 0.160] |
+| n15-p8-large0-h2048 / profiles | 102.263 [99.784, 110.891] | 1.776 [1.645, 2.749] | 94.024 [91.506, 99.887] | 0.253 [0.233, 0.258] | 97.616 [96.282, 111.773] | 0.204 [0.190, 0.226] |
+| n15-p8-large0-h2048 / tags | 12.898 [12.304, 13.542] | 0.367 [0.338, 0.890] | 12.761 [10.959, 13.658] | 0.102 [0.089, 0.143] | 12.185 [11.411, 12.981] | 0.094 [0.086, 0.112] |
+| n15-p8-large0-h2048 / tasks | 12.661 [11.908, 13.847] | 0.925 [0.793, 1.904] | 12.501 [11.629, 14.034] | 0.229 [0.214, 0.316] | 13.234 [11.480, 14.196] | 0.250 [0.225, 0.270] |
+| n15-p8-large0-h2048 / overdue | 13.275 [12.334, 14.699] | 0.603 [0.547, 1.589] | 12.049 [11.250, 12.627] | 0.177 [0.142, 0.204] | 12.579 [11.413, 12.933] | 0.151 [0.143, 0.159] |
+| n15-p8-large0-h2048 / projects | 12.612 [12.465, 13.080] | 0.199 [0.178, 0.338] | 12.425 [11.482, 13.936] | 0.082 [0.067, 0.089] | 11.801 [10.898, 13.340] | 0.073 [0.068, 0.086] |
+| n15-p8-large0-h2048 / inbox | 12.160 [11.015, 13.714] | 0.236 [0.224, 0.275] | 12.622 [12.127, 13.135] | 0.195 [0.171, 0.268] | 12.565 [11.774, 12.957] | 0.180 [0.166, 0.219] |
+| n15-p8-large0-h2048 / today | 12.510 [12.421, 13.709] | 0.176 [0.168, 0.196] | 11.797 [11.597, 13.359] | 0.142 [0.128, 0.192] | 11.659 [11.344, 13.216] | 0.140 [0.134, 0.158] |
+| n15-p8-large0-h2048 / scheduled | 11.681 [11.176, 14.730] | 0.173 [0.170, 0.189] | 12.892 [11.801, 13.601] | 0.141 [0.127, 0.174] | 13.319 [11.404, 28.023] | 0.138 [0.129, 0.205] |
+| n15-p8-large1-h32 / profiles | 17.432 [16.286, 18.756] | 1.760 [1.642, 2.306] | 13.744 [12.257, 15.335] | 0.265 [0.245, 0.343] | 11.510 [10.923, 13.500] | 0.267 [0.241, 0.300] |
+| n15-p8-large1-h32 / tags | 2.679 [2.567, 3.315] | 0.453 [0.318, 0.498] | 2.588 [1.368, 3.367] | 0.093 [0.088, 0.120] | 2.425 [1.509, 2.523] | 0.092 [0.088, 0.190] |
+| n15-p8-large1-h32 / tasks | 2.795 [2.522, 3.135] | 1.056 [0.875, 1.111] | 1.793 [1.734, 3.269] | 0.350 [0.332, 0.451] | 2.273 [1.841, 3.203] | 0.362 [0.340, 0.466] |
+| n15-p8-large1-h32 / overdue | 2.025 [1.688, 2.268] | 0.697 [0.622, 1.180] | 1.326 [1.255, 1.499] | 1.921 [0.312, 2.373] | 1.401 [1.331, 1.953] | 1.709 [0.260, 1.807] |
+| n15-p8-large1-h32 / projects | 1.553 [1.440, 1.769] | 0.207 [0.175, 0.440] | 1.264 [1.209, 1.591] | 0.175 [0.149, 0.343] | 1.424 [1.232, 1.715] | 0.139 [0.073, 0.149] |
+| n15-p8-large1-h32 / inbox | 2.835 [2.649, 3.095] | 0.399 [0.366, 0.489] | 4.434 [2.776, 4.865] | 0.433 [0.386, 0.755] | 4.262 [1.598, 5.119] | 0.361 [0.313, 1.858] |
+| n15-p8-large1-h32 / today | 1.565 [1.423, 1.817] | 0.319 [0.291, 0.519] | 1.665 [1.632, 1.692] | 0.314 [0.290, 0.345] | 1.802 [1.465, 4.671] | 0.256 [0.215, 0.370] |
+| n15-p8-large1-h32 / scheduled | 1.567 [1.458, 1.757] | 0.293 [0.276, 0.482] | 1.497 [1.293, 1.681] | 0.260 [0.221, 0.321] | 1.568 [1.298, 1.829] | 0.229 [0.209, 0.281] |
+| n15-p8-large1-h2048 / profiles | 110.268 [105.909, 119.552] | 1.623 [1.587, 1.841] | 98.947 [96.585, 99.897] | 0.247 [0.238, 0.270] | 99.541 [96.530, 102.873] | 0.209 [0.205, 0.242] |
+| n15-p8-large1-h2048 / tags | 14.485 [11.815, 14.532] | 0.351 [0.320, 0.399] | 12.136 [11.726, 14.087] | 0.095 [0.091, 0.160] | 13.151 [11.547, 13.483] | 0.109 [0.092, 0.129] |
+| n15-p8-large1-h2048 / tasks | 13.265 [12.908, 15.015] | 0.939 [0.875, 0.988] | 12.931 [12.280, 13.466] | 0.331 [0.317, 0.372] | 13.248 [12.245, 14.467] | 0.397 [0.328, 0.446] |
+| n15-p8-large1-h2048 / overdue | 13.348 [13.256, 15.424] | 0.649 [0.623, 2.025] | 12.091 [11.747, 13.748] | 0.243 [0.224, 0.280] | 12.477 [11.395, 14.137] | 0.267 [0.256, 0.410] |
+| n15-p8-large1-h2048 / projects | 12.141 [11.459, 13.731] | 0.174 [0.164, 0.325] | 13.680 [12.434, 14.140] | 0.071 [0.062, 0.101] | 12.535 [11.733, 14.684] | 0.082 [0.076, 0.153] |
+| n15-p8-large1-h2048 / inbox | 13.045 [12.735, 13.643] | 0.327 [0.299, 0.349] | 12.678 [11.482, 13.259] | 0.266 [0.249, 0.304] | 12.772 [12.640, 13.363] | 0.284 [0.257, 0.413] |
+| n15-p8-large1-h2048 / today | 11.830 [11.319, 13.163] | 0.261 [0.248, 0.321] | 12.886 [11.834, 13.933] | 0.225 [0.205, 0.270] | 11.628 [11.382, 13.906] | 0.251 [0.206, 0.286] |
+| n15-p8-large1-h2048 / scheduled | 12.203 [11.868, 12.371] | 0.258 [0.250, 0.274] | 12.830 [12.442, 13.087] | 0.231 [0.187, 0.235] | 13.037 [12.318, 13.990] | 0.222 [0.195, 0.298] |
+| n178-p1-large0-h32 / profiles | 4.193 [3.995, 5.254] | 1.694 [1.610, 1.765] | 1.704 [1.671, 2.673] | 0.243 [0.226, 0.284] | 1.702 [1.639, 1.832] | 0.202 [0.177, 0.231] |
+| n178-p1-large0-h32 / tags | 4.104 [4.049, 4.596] | 0.349 [0.341, 0.360] | 2.637 [1.681, 2.757] | 0.104 [0.100, 0.115] | 1.555 [1.509, 2.828] | 0.097 [0.091, 0.102] |
+| n178-p1-large0-h32 / tasks | 3.746 [3.627, 3.945] | 2.105 [2.096, 2.155] | 2.727 [2.543, 3.189] | 1.135 [1.095, 1.156] | 3.801 [2.836, 4.061] | 1.135 [1.087, 1.329] |
+| n178-p1-large0-h32 / overdue | 2.258 [2.234, 2.284] | 1.330 [1.207, 1.717] | 1.805 [1.765, 1.935] | 0.682 [0.658, 0.704] | 1.842 [1.737, 1.976] | 0.664 [0.640, 0.938] |
+| n178-p1-large0-h32 / projects | 3.352 [1.831, 3.862] | 0.257 [0.239, 0.289] | 2.728 [1.670, 3.369] | 0.085 [0.082, 0.177] | 1.612 [1.539, 1.679] | 0.100 [0.098, 0.133] |
+| n178-p1-large0-h32 / inbox | 2.533 [2.070, 3.610] | 0.810 [0.797, 2.674] | 1.968 [1.860, 3.197] | 0.724 [0.680, 1.089] | 1.962 [1.696, 2.926] | 0.734 [0.683, 0.805] |
+| n178-p1-large0-h32 / today | 1.784 [1.682, 1.901] | 1.015 [0.874, 2.753] | 1.775 [1.682, 1.987] | 0.597 [0.580, 0.809] | 2.804 [1.696, 3.042] | 0.614 [0.586, 0.696] |
+| n178-p1-large0-h32 / scheduled | 1.705 [1.632, 1.742] | 0.768 [0.680, 0.927] | 1.672 [1.571, 1.791] | 0.589 [0.571, 0.657] | 1.784 [1.692, 1.882] | 0.597 [0.565, 0.620] |
+| n178-p1-large0-h2048 / profiles | 20.574 [19.888, 21.630] | 1.621 [1.551, 1.643] | 16.420 [15.275, 18.679] | 0.237 [0.199, 0.446] | 16.006 [14.764, 17.496] | 0.217 [0.175, 0.234] |
+| n178-p1-large0-h2048 / tags | 17.258 [16.993, 20.794] | 0.356 [0.340, 0.369] | 15.463 [14.895, 16.747] | 0.102 [0.094, 0.122] | 16.709 [15.751, 19.206] | 0.097 [0.093, 0.121] |
+| n178-p1-large0-h2048 / tasks | 20.907 [19.240, 22.464] | 1.891 [1.805, 1.957] | 17.085 [16.233, 18.451] | 1.124 [1.068, 1.229] | 16.695 [15.215, 18.820] | 1.135 [1.080, 1.960] |
+| n178-p1-large0-h2048 / overdue | 16.996 [15.546, 17.535] | 1.311 [1.151, 1.456] | 15.641 [15.502, 16.597] | 0.637 [0.586, 0.722] | 15.246 [14.053, 18.698] | 0.715 [0.631, 2.034] |
+| n178-p1-large0-h2048 / projects | 17.413 [16.052, 17.661] | 0.268 [0.221, 0.277] | 15.936 [14.584, 16.639] | 0.096 [0.084, 0.130] | 17.267 [15.064, 18.915] | 0.103 [0.091, 0.139] |
+| n178-p1-large0-h2048 / inbox | 16.194 [14.831, 17.179] | 0.810 [0.796, 1.045] | 14.744 [14.594, 15.759] | 0.756 [0.650, 2.208] | 15.717 [14.255, 17.931] | 0.788 [0.660, 0.820] |
+| n178-p1-large0-h2048 / today | 15.358 [14.886, 16.053] | 0.700 [0.655, 0.744] | 15.465 [14.939, 15.669] | 0.623 [0.573, 0.687] | 15.240 [14.687, 16.133] | 0.602 [0.597, 0.632] |
+| n178-p1-large0-h2048 / scheduled | 16.244 [15.631, 16.446] | 0.661 [0.626, 0.714] | 16.473 [14.143, 17.188] | 0.591 [0.552, 0.633] | 15.458 [14.694, 17.849] | 0.615 [0.590, 0.776] |
+| n178-p1-large1-h32 / profiles | 5.865 [5.727, 6.992] | 1.647 [1.568, 1.680] | 1.975 [1.906, 2.011] | 0.211 [0.198, 0.248] | 2.144 [1.793, 2.880] | 0.212 [0.193, 0.227] |
+| n178-p1-large1-h32 / tags | 2.777 [2.643, 2.893] | 0.358 [0.341, 0.401] | 2.202 [2.025, 3.053] | 0.100 [0.095, 0.109] | 2.077 [1.910, 2.428] | 0.098 [0.093, 0.103] |
+| n178-p1-large1-h32 / tasks | 5.469 [5.206, 6.881] | 3.794 [3.663, 3.922] | 4.144 [3.043, 4.553] | 1.262 [1.191, 1.349] | 2.899 [2.827, 3.014] | 1.247 [1.211, 1.373] |
+| n178-p1-large1-h32 / overdue | 2.705 [2.651, 3.109] | 1.397 [1.363, 1.431] | 2.265 [1.995, 3.187] | 1.989 [0.812, 2.043] | 1.929 [1.913, 2.879] | 0.891 [0.750, 1.911] |
+| n178-p1-large1-h32 / projects | 5.088 [2.735, 5.528] | 0.246 [0.234, 0.254] | 1.926 [1.881, 2.380] | 0.149 [0.088, 0.190] | 1.977 [1.761, 3.014] | 0.113 [0.091, 0.174] |
+| n178-p1-large1-h32 / inbox | 2.582 [2.374, 3.243] | 0.928 [0.907, 0.947] | 2.122 [2.096, 3.149] | 1.044 [0.951, 1.970] | 2.108 [2.013, 3.255] | 2.067 [0.874, 2.140] |
+| n178-p1-large1-h32 / today | 2.141 [2.010, 3.173] | 0.737 [0.701, 0.818] | 2.178 [1.975, 3.170] | 0.780 [0.698, 0.886] | 1.966 [1.870, 2.035] | 0.829 [0.740, 0.928] |
+| n178-p1-large1-h32 / scheduled | 1.971 [1.808, 2.222] | 0.760 [0.719, 0.852] | 2.260 [1.908, 3.315] | 0.750 [0.699, 0.788] | 1.990 [1.868, 2.998] | 0.737 [0.716, 0.748] |
+| n178-p1-large1-h2048 / profiles | 20.136 [20.035, 20.880] | 1.781 [1.595, 1.886] | 16.622 [15.894, 18.166] | 0.229 [0.209, 0.246] | 15.647 [14.417, 17.180] | 0.185 [0.182, 0.226] |
+| n178-p1-large1-h2048 / tags | 19.019 [18.092, 19.384] | 0.416 [0.328, 0.489] | 17.319 [16.311, 17.731] | 0.105 [0.100, 0.132] | 15.922 [14.792, 18.041] | 0.099 [0.098, 0.119] |
+| n178-p1-large1-h2048 / tasks | 21.147 [20.924, 22.664] | 2.252 [1.938, 2.494] | 17.324 [16.709, 18.447] | 1.268 [1.170, 1.591] | 18.264 [16.056, 18.813] | 1.234 [1.161, 1.282] |
+| n178-p1-large1-h2048 / overdue | 17.333 [16.793, 18.384] | 1.524 [1.333, 2.591] | 15.086 [14.510, 16.518] | 0.755 [0.730, 2.845] | 15.016 [14.545, 15.769] | 0.738 [0.708, 0.904] |
+| n178-p1-large1-h2048 / projects | 15.760 [15.237, 16.772] | 0.278 [0.251, 0.313] | 16.083 [15.722, 17.087] | 0.100 [0.080, 0.382] | 15.174 [14.697, 16.319] | 0.110 [0.091, 0.127] |
+| n178-p1-large1-h2048 / inbox | 16.922 [15.920, 17.228] | 0.900 [0.892, 1.054] | 16.501 [14.651, 18.180] | 0.873 [0.765, 2.410] | 15.962 [14.725, 16.579] | 0.860 [0.766, 0.912] |
+| n178-p1-large1-h2048 / today | 16.655 [16.397, 17.148] | 0.784 [0.695, 0.963] | 15.273 [15.139, 15.612] | 0.710 [0.681, 0.976] | 16.262 [14.919, 16.844] | 0.697 [0.681, 0.727] |
+| n178-p1-large1-h2048 / scheduled | 16.306 [15.826, 17.489] | 0.739 [0.695, 0.860] | 16.216 [15.233, 17.659] | 0.730 [0.704, 1.507] | 15.133 [14.837, 17.428] | 0.707 [0.676, 0.768] |
+| n178-p8-large0-h32 / profiles | 102.639 [100.966, 106.563] | 2.550 [2.522, 2.596] | 87.753 [86.461, 93.339] | 0.895 [0.863, 0.934] | 88.066 [87.425, 91.858] | 0.757 [0.711, 0.856] |
+| n178-p8-large0-h32 / tags | 11.414 [11.199, 12.326] | 0.348 [0.336, 0.356] | 10.728 [10.491, 12.811] | 0.106 [0.104, 0.135] | 11.745 [11.047, 12.317] | 0.101 [0.096, 0.114] |
+| n178-p8-large0-h32 / tasks | 18.122 [16.717, 18.923] | 1.894 [1.726, 1.992] | 16.034 [15.705, 17.230] | 1.158 [1.025, 1.206] | 16.912 [16.825, 17.129] | 1.030 [1.007, 1.095] |
+| n178-p8-large0-h32 / overdue | 11.877 [11.003, 12.519] | 2.109 [1.530, 2.228] | 10.816 [10.112, 11.491] | 0.612 [0.568, 0.707] | 10.577 [10.023, 13.095] | 0.595 [0.555, 0.636] |
+| n178-p8-large0-h32 / projects | 11.955 [11.808, 13.819] | 0.313 [0.274, 0.383] | 10.580 [9.809, 11.693] | 0.083 [0.077, 0.092] | 10.904 [10.121, 11.445] | 0.087 [0.079, 0.103] |
+| n178-p8-large0-h32 / inbox | 10.642 [10.233, 12.091] | 0.806 [0.734, 0.903] | 11.337 [11.028, 11.765] | 0.654 [0.621, 0.726] | 12.129 [10.833, 13.329] | 0.637 [0.609, 0.793] |
+| n178-p8-large0-h32 / today | 11.633 [10.376, 12.907] | 0.687 [0.627, 0.696] | 11.149 [10.348, 11.499] | 0.548 [0.523, 0.602] | 11.153 [10.039, 11.606] | 0.535 [0.515, 0.598] |
+| n178-p8-large0-h32 / scheduled | 11.735 [10.392, 12.138] | 0.644 [0.613, 0.734] | 10.529 [10.001, 11.965] | 0.547 [0.532, 0.591] | 11.900 [10.483, 12.111] | 0.550 [0.534, 0.600] |
+| n178-p8-large0-h2048 / profiles | 201.621 [196.624, 202.221] | 2.346 [2.324, 2.449] | 195.882 [191.258, 197.791] | 0.814 [0.759, 0.845] | 195.873 [194.678, 198.848] | 0.773 [0.728, 0.807] |
+| n178-p8-large0-h2048 / tags | 25.059 [24.810, 25.339] | 0.351 [0.346, 0.385] | 23.471 [22.977, 24.593] | 0.096 [0.092, 0.101] | 25.458 [23.137, 26.751] | 0.105 [0.094, 0.116] |
+| n178-p8-large0-h2048 / tasks | 31.427 [31.019, 32.762] | 1.817 [1.762, 1.933] | 30.390 [28.443, 33.428] | 1.010 [1.004, 1.021] | 29.195 [28.762, 29.854] | 1.010 [1.006, 1.091] |
+| n178-p8-large0-h2048 / overdue | 24.506 [22.629, 26.303] | 1.061 [1.037, 1.130] | 24.381 [23.340, 25.191] | 0.570 [0.570, 0.593] | 24.203 [22.238, 25.313] | 0.602 [0.588, 0.649] |
+| n178-p8-large0-h2048 / projects | 23.725 [23.094, 24.799] | 0.197 [0.184, 0.200] | 23.958 [22.985, 24.522] | 0.077 [0.073, 0.081] | 23.335 [22.660, 24.398] | 0.084 [0.081, 0.093] |
+| n178-p8-large0-h2048 / inbox | 23.210 [22.645, 25.435] | 0.717 [0.694, 0.737] | 24.505 [23.948, 24.741] | 0.668 [0.649, 0.715] | 23.728 [23.034, 24.124] | 0.663 [0.635, 0.689] |
+| n178-p8-large0-h2048 / today | 23.636 [22.632, 24.288] | 0.593 [0.568, 0.657] | 23.976 [23.120, 25.299] | 0.573 [0.545, 0.606] | 24.327 [23.146, 24.817] | 0.559 [0.535, 0.670] |
+| n178-p8-large0-h2048 / scheduled | 23.148 [22.946, 24.338] | 0.603 [0.588, 0.604] | 23.953 [23.518, 24.723] | 0.586 [0.542, 0.632] | 24.090 [23.386, 26.568] | 0.575 [0.536, 0.589] |
+| n178-p8-large1-h32 / profiles | 102.091 [100.910, 107.344] | 2.544 [2.518, 2.689] | 89.146 [88.477, 94.165] | 0.999 [0.870, 1.349] | 90.711 [87.545, 92.734] | 0.895 [0.885, 1.044] |
+| n178-p8-large1-h32 / tags | 11.682 [10.714, 13.827] | 0.364 [0.334, 0.411] | 10.747 [10.186, 12.932] | 0.117 [0.096, 0.493] | 11.151 [10.471, 11.918] | 0.098 [0.091, 0.170] |
+| n178-p8-large1-h32 / tasks | 18.450 [17.087, 21.564] | 1.909 [1.833, 2.044] | 16.327 [15.751, 17.596] | 3.965 [3.562, 6.583] | 16.288 [15.989, 18.090] | 3.940 [3.712, 4.379] |
+| n178-p8-large1-h32 / overdue | 12.356 [11.922, 12.869] | 1.243 [1.182, 1.348] | 11.305 [10.954, 11.946] | 0.899 [0.815, 1.141] | 10.960 [10.066, 12.825] | 0.856 [0.799, 0.975] |
+| n178-p8-large1-h32 / projects | 11.257 [10.755, 11.831] | 0.214 [0.210, 0.241] | 11.581 [10.500, 13.298] | 0.124 [0.095, 0.144] | 11.792 [10.727, 12.152] | 0.106 [0.095, 0.155] |
+| n178-p8-large1-h32 / inbox | 11.789 [10.891, 12.840] | 0.898 [0.835, 0.908] | 11.621 [11.224, 13.161] | 0.814 [0.736, 0.872] | 11.059 [10.489, 12.858] | 0.778 [0.755, 0.825] |
+| n178-p8-large1-h32 / today | 11.665 [11.007, 11.869] | 0.756 [0.693, 0.796] | 11.469 [11.015, 12.509] | 0.655 [0.642, 0.711] | 11.849 [10.633, 12.297] | 0.654 [0.628, 0.701] |
+| n178-p8-large1-h32 / scheduled | 12.146 [10.766, 13.050] | 0.701 [0.666, 0.804] | 11.587 [10.527, 12.992] | 0.664 [0.643, 0.721] | 11.218 [10.703, 11.763] | 0.666 [0.645, 0.702] |
+| n178-p8-large1-h2048 / profiles | 205.445 [202.304, 213.735] | 2.381 [2.336, 2.768] | 202.740 [195.248, 209.513] | 0.868 [0.849, 0.889] | 201.510 [195.621, 204.101] | 0.814 [0.736, 0.925] |
+| n178-p8-large1-h2048 / tags | 25.438 [24.385, 26.944] | 0.379 [0.362, 0.401] | 25.693 [24.408, 26.770] | 0.101 [0.099, 0.119] | 24.176 [23.340, 24.938] | 0.113 [0.094, 0.119] |
+| n178-p8-large1-h2048 / tasks | 32.386 [29.793, 33.499] | 1.947 [1.889, 2.195] | 32.571 [29.664, 33.138] | 1.163 [1.102, 1.209] | 29.902 [29.135, 30.945] | 1.171 [1.116, 1.200] |
+| n178-p8-large1-h2048 / overdue | 25.377 [24.209, 27.431] | 1.218 [1.182, 1.302] | 25.809 [23.963, 27.887] | 0.702 [0.645, 0.800] | 23.889 [23.109, 26.441] | 0.673 [0.665, 0.753] |
+| n178-p8-large1-h2048 / projects | 25.341 [23.447, 27.180] | 0.233 [0.194, 0.301] | 26.030 [23.565, 27.114] | 0.080 [0.076, 0.094] | 24.882 [23.179, 27.797] | 0.090 [0.076, 0.120] |
+| n178-p8-large1-h2048 / inbox | 25.878 [23.921, 27.182] | 0.888 [0.830, 0.990] | 26.071 [24.494, 29.631] | 0.768 [0.725, 0.851] | 24.446 [23.120, 26.361] | 0.767 [0.758, 0.935] |
+| n178-p8-large1-h2048 / today | 24.453 [23.490, 26.343] | 0.745 [0.694, 0.781] | 24.457 [24.272, 34.256] | 0.651 [0.637, 0.707] | 24.816 [23.487, 25.609] | 0.649 [0.627, 0.838] |
+| n178-p8-large1-h2048 / scheduled | 24.884 [23.771, 28.202] | 0.721 [0.708, 0.737] | 25.373 [24.122, 27.501] | 0.722 [0.642, 1.177] | 24.641 [23.390, 25.475] | 0.682 [0.645, 1.122] |
+| n178-p8-empty-large0-h2048 / profiles | 130.892 [130.298, 139.590] | 1.756 [1.706, 1.782] | 120.423 [120.339, 122.093] | 0.288 [0.281, 0.340] | 125.035 [119.852, 126.882] | 0.257 [0.232, 0.295] |
+| n178-p8-empty-large0-h2048 / tags | 16.378 [13.904, 16.970] | 0.357 [0.347, 0.430] | 15.099 [14.753, 15.477] | 0.104 [0.096, 0.106] | 14.397 [14.175, 15.576] | 0.099 [0.097, 0.101] |
+| n178-p8-empty-large0-h2048 / tasks | 17.383 [16.612, 18.259] | 1.913 [1.829, 2.078] | 17.025 [16.557, 18.629] | 1.082 [1.066, 1.103] | 16.701 [15.438, 19.078] | 1.072 [1.038, 1.144] |
+| n178-p8-empty-large0-h2048 / overdue | 15.662 [15.468, 16.638] | 1.385 [1.193, 1.568] | 15.059 [14.133, 17.093] | 0.727 [0.603, 0.758] | 15.852 [13.797, 16.870] | 0.698 [0.615, 0.767] |
+| n178-p8-empty-large0-h2048 / projects | 17.330 [15.824, 17.692] | 0.255 [0.213, 0.266] | 15.456 [13.909, 15.966] | 0.093 [0.083, 0.235] | 15.220 [14.625, 16.007] | 0.102 [0.100, 0.108] |
+| n178-p8-empty-large0-h2048 / inbox | 14.539 [14.209, 17.534] | 0.826 [0.785, 0.847] | 16.051 [14.615, 16.845] | 0.754 [0.739, 0.915] | 14.584 [14.144, 15.713] | 0.734 [0.690, 0.793] |
+| n178-p8-empty-large0-h2048 / today | 15.659 [14.665, 15.812] | 0.641 [0.632, 0.686] | 14.992 [14.080, 15.642] | 0.629 [0.607, 0.711] | 15.574 [15.329, 15.999] | 0.597 [0.563, 0.634] |
+| n178-p8-empty-large0-h2048 / scheduled | 15.942 [14.156, 16.368] | 0.639 [0.608, 0.651] | 15.296 [14.247, 16.723] | 0.615 [0.595, 0.670] | 16.286 [15.617, 18.027] | 0.571 [0.569, 0.639] |
+| n178-p8-empty-large1-h2048 / profiles | 136.085 [134.553, 153.158] | 1.720 [1.676, 1.941] | 126.241 [125.515, 129.788] | 0.301 [0.284, 0.331] | 132.407 [125.081, 134.543] | 0.278 [0.254, 0.327] |
+| n178-p8-empty-large1-h2048 / tags | 15.915 [14.610, 16.732] | 0.342 [0.338, 0.563] | 15.260 [14.828, 16.175] | 0.104 [0.096, 0.270] | 16.088 [15.326, 16.711] | 0.102 [0.093, 0.149] |
+| n178-p8-empty-large1-h2048 / tasks | 19.294 [17.917, 20.403] | 1.954 [1.882, 2.265] | 16.885 [16.860, 20.959] | 1.195 [1.126, 1.722] | 17.655 [16.363, 19.349] | 1.185 [1.166, 1.319] |
+| n178-p8-empty-large1-h2048 / overdue | 16.903 [15.367, 18.079] | 1.475 [1.441, 1.705] | 16.731 [15.298, 17.157] | 0.767 [0.725, 1.030] | 16.047 [15.896, 17.198] | 0.834 [0.686, 0.904] |
+| n178-p8-empty-large1-h2048 / projects | 15.460 [14.886, 15.769] | 0.300 [0.253, 0.384] | 15.467 [14.193, 16.842] | 0.092 [0.085, 0.134] | 16.358 [15.203, 17.464] | 0.101 [0.089, 0.160] |
+| n178-p8-empty-large1-h2048 / inbox | 16.622 [16.174, 17.520] | 0.955 [0.842, 0.978] | 15.388 [15.024, 18.038] | 0.832 [0.818, 0.849] | 16.491 [15.773, 17.408] | 0.919 [0.740, 0.940] |
+| n178-p8-empty-large1-h2048 / today | 16.765 [15.186, 18.152] | 0.730 [0.671, 0.894] | 15.895 [15.610, 17.842] | 0.696 [0.675, 0.700] | 15.969 [14.773, 18.727] | 0.717 [0.636, 0.760] |
+| n178-p8-empty-large1-h2048 / scheduled | 15.432 [14.653, 18.892] | 0.702 [0.673, 0.802] | 16.088 [14.942, 17.404] | 0.699 [0.656, 0.726] | 16.262 [15.054, 17.507] | 0.717 [0.703, 0.858] |
+
+Cleanup removed 28 owned closed Bun runtime copies (2482504192 bytes), after lsof checks; the final pre-timing pass found no additional copies. Each driver awaited its owned children and removed scratch HOME/database files. No files outside this worktree's scratch/temporary proof directories were modified.
+
+
+### Current read-port caller audit
+
+The inventory contains 186 production call/validation/declaration sites across domain, CLI and server. Authority-taking queries validate before using Profile or id fields. Raw storage reads used by bootstrap, replay, mutation, recovery, scheduler and internal generation observation are listed with their trusted selectors. The earlier inventory below describes the previous implementation.
+
+| Production site | Read / validation | Source of Profile and ids |
+| --- | --- | --- |
+| `apps/server/src/server.ts:519` | `attachments.imageRead(` | Adapter supplies decoded fields before authorization; continuation/recovery consumes only validated private values. |
+| `apps/server/src/server.ts:529` | `store.auth.checkRead(read, "read"),` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `apps/server/src/server.ts:620` | `readGraphQuery(` | Adapter supplies decoded fields before authorization; continuation/recovery consumes only validated private values. |
+| `apps/server/src/server.ts:627` | `store.auth.checkRead(read, "read"),` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `apps/server/src/server.ts:673` | `commands.readOne(` | Adapter supplies decoded fields before authorization; continuation/recovery consumes only validated private values. |
+| `apps/server/src/server.ts:680` | `store.auth.checkRead(read, "read"),` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `apps/server/src/server.ts:887` | `store.auth.subscribe(` | Input boundary: captures and parses Profile, credential and fields before the credential-use hook; returns privately bound authority. |
+| `apps/server/src/server.ts:897` | `store.auth.checkRead(read, "read"),` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `apps/server/src/server.ts:960` | `return yield* translate(store.auth.listTokens({ credential }));` | Adapter supplies decoded fields before authorization; continuation/recovery consumes only validated private values. |
+| `apps/server/src/server.ts:1015` | `store.auth.ownerRead(` | Input boundary: captures and parses Profile, credential and fields before the credential-use hook; returns privately bound authority. |
+| `apps/server/src/server.ts:1021` | `return yield* snapshotResult(store.snapshots.listRead(read));` | Genuine owner authority validated at the port. Snapshot Show id is private fields.snapshot; List has no id. |
+| `apps/server/src/server.ts:1028` | `store.auth.ownerRead(` | Input boundary: captures and parses Profile, credential and fields before the credential-use hook; returns privately bound authority. |
+| `apps/server/src/server.ts:1034` | `return yield* snapshotResult(store.snapshots.showRead(read));` | Genuine owner authority validated at the port. Snapshot Show id is private fields.snapshot; List has no id. |
+| `apps/server/src/task-search-cache-hygiene.ts:6` | `let cursor = yield* store.searchCacheEvents();` | Internal generation/cursor/erasure state; no request Profile or id. |
+| `apps/server/src/task-search-cache-hygiene.ts:8` | `const current = yield* store.searchCacheEvents(cursor);` | Internal generation/cursor/erasure state; no request Profile or id. |
+| `apps/server/src/sse.ts:27` | `store.auth.subscribe(` | Private checked Profile and subscription fields. Changes cursor is the stream unfolding state; recheck validates the same authority. |
+| `apps/server/src/sse.ts:48` | `store.auth.checkRead(read, "read"),` | Private checked Profile and subscription fields. Changes cursor is the stream unfolding state; recheck validates the same authority. |
+| `apps/server/src/sse.ts:50` | `const authorize = translate(store.auth.recheckRead(read));` | Private checked Profile and subscription fields. Changes cursor is the stream unfolding state; recheck validates the same authority. |
+| `apps/server/src/sse.ts:51` | `const initial = yield* translate(store.snapshots.generation());` | Internal generation/cursor/erasure state; no request Profile or id. |
+| `apps/server/src/sse.ts:64` | `const current = yield* translate(store.snapshots.generation());` | Internal generation/cursor/erasure state; no request Profile or id. |
+| `apps/server/src/sse.ts:83` | `store.changesRead(read, state.cursor),` | Private checked Profile and subscription fields. Changes cursor is the stream unfolding state; recheck validates the same authority. |
+| `packages/domain/src/store/store.ts:209` | `const purged = this.snapshots.purgedIdsSync();` | Internal generation/cursor/erasure state; no request Profile or id. |
+| `packages/domain/src/store/store.ts:221` | `tasks: () => readTasks(this.db),` | Trusted bootstrap/write/replay storage: validated mutation/event/current-row ids. Query wrapper validates authority before using this lower port. |
+| `packages/domain/src/store/store.ts:268` | `tasks: readTasks(this.db).filter(` | Trusted bootstrap/write/replay storage: validated mutation/event/current-row ids. Query wrapper validates authority before using this lower port. |
+| `packages/domain/src/store/store.ts:414` | `const tasks = readTasks(this.db).filter(` | Trusted bootstrap/write/replay storage: validated mutation/event/current-row ids. Query wrapper validates authority before using this lower port. |
+| `packages/domain/src/store/store.ts:472` | `const before = readTasks(this.db).find((task) => task.id === target.id);` | Trusted bootstrap/write/replay storage: validated mutation/event/current-row ids. Query wrapper validates authority before using this lower port. |
+| `packages/domain/src/store/store.ts:550` | `readonly tasks = () => attempt(() => readTasks(this.db));` | Trusted bootstrap/write/replay storage: validated mutation/event/current-row ids. Query wrapper validates authority before using this lower port. |
+| `packages/domain/src/store/store.ts:556` | `tasks: new ClientProjection(this.db).tasksForMutation(profile),` | Trusted bootstrap/write/replay storage: validated mutation/event/current-row ids. Query wrapper validates authority before using this lower port. |
+| `packages/domain/src/store/store.ts:568` | `checkedRead(read, "read", this.db).pipe(` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/store/store.ts:569` | `Effect.flatMap((value) => this.graph(value.profile)),` | graphRead delegates with the Profile obtained from validated private authority. |
+| `packages/domain/src/store/store.ts:610` | `attempt(() => committedHistory(this.db, profile, after));` | Trusted bootstrap/write/replay storage: validated mutation/event/current-row ids. Query wrapper validates authority before using this lower port. |
+| `packages/domain/src/store/store.ts:613` | `checkedRead(read, "read", this.db).pipe(` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/store/store.ts:614` | `Effect.flatMap((value) => this.committedHistory(value.profile, after)),` | Trusted bootstrap/write/replay storage: validated mutation/event/current-row ids. Query wrapper validates authority before using this lower port. |
+| `packages/domain/src/store/store.ts:623` | `const state = this.snapshots.generationSync();` | Internal generation/cursor/erasure state; no request Profile or id. |
+| `packages/domain/src/store/store.ts:628` | `? searchCacheEvents(this.db, cursor.seq)` | Internal generation/cursor/erasure state; no request Profile or id. |
+| `packages/domain/src/store/store.ts:741` | `for (const id of this.snapshots.purgedIdsSync())` | Internal generation/cursor/erasure state; no request Profile or id. |
+| `packages/domain/src/store/store.ts:849` | `const purged = new Set(this.snapshots.purgedIdsSync());` | Internal generation/cursor/erasure state; no request Profile or id. |
+| `packages/domain/src/store/store.ts:1354` | `const tasks = readTasks(this.db);` | Trusted bootstrap/write/replay storage: validated mutation/event/current-row ids. Query wrapper validates authority before using this lower port. |
+| `packages/domain/src/store/store.ts:1366` | `const series = seriesForTask(before, readSeries(this.db));` | Trusted bootstrap/write/replay storage: validated mutation/event/current-row ids. Query wrapper validates authority before using this lower port. |
+| `packages/domain/src/store/store.ts:1531` | `return readTasks(this.db);` | Trusted bootstrap/write/replay storage: validated mutation/event/current-row ids. Query wrapper validates authority before using this lower port. |
+| `packages/domain/src/store/client-projection.ts:37` | `this.metadataAt(readAuthority(read, "read", this.db).profile);` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/store/client-projection.ts:39` | `this.tasksForMutation(readAuthority(read, "read", this.db).profile);` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/store/client-projection.ts:41` | `const value = readAuthority(read, "read", this.db);` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/store/client-projection.ts:43` | `...this.metadataAt(value.profile),` | Query entry validates private authority; nested trusted SQL helpers use the resulting private Profile or checked Profile set. |
+| `packages/domain/src/store/client-projection.ts:44` | `tasks: this.tasksForMutation(value.profile),` | Query entry validates private authority; nested trusted SQL helpers use the resulting private Profile or checked Profile set. |
+| `packages/domain/src/store/client-projection.ts:49` | `const profiles = readAuthority(read, "profiles", this.db).profiles;` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/store/client-projection.ts:74` | `const profile = readAuthority(read, "read", this.db).profile;` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/store/client-projection.ts:85` | `const profile = readAuthority(read, "read", this.db).profile;` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/task-lookup-error.ts:56` | `: yield* store.auth.checkRead(resolved.read, "read");` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/store/dependency-validation.ts:78` | `? readTasks(db).filter((task) => task.profile_id === profile)` | Trusted bootstrap/write/replay storage: validated mutation/event/current-row ids. Query wrapper validates authority before using this lower port. |
+| `packages/domain/src/store/snapshots.ts:274` | `checkedRead(read, "owner", this.db).pipe(Effect.flatMap(() => this.list()));` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/store/snapshots.ts:276` | `checkedRead(read, "owner", this.db).pipe(` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/store/snapshots.ts:287` | `generationSync() {` | Internal generation/cursor/erasure state; no request Profile or id. |
+| `packages/domain/src/store/snapshots.ts:302` | `readonly generation = () => attempt(() => this.generationSync());` | Internal generation/cursor/erasure state; no request Profile or id. |
+| `packages/domain/src/store/snapshots.ts:303` | `purgedIdsSync() {` | Internal generation/cursor/erasure state; no request Profile or id. |
+| `packages/domain/src/store/snapshots.ts:402` | `const ids = this.purgedIdsSync();` | Internal generation/cursor/erasure state; no request Profile or id. |
+| `packages/domain/src/store/snapshots.ts:498` | `generation: this.generationSync().generation,` | Internal generation/cursor/erasure state; no request Profile or id. |
+| `packages/domain/src/store/projection.ts:344` | `tasks: readTasks(db),` | Trusted bootstrap/write/replay storage: validated mutation/event/current-row ids. Query wrapper validates authority before using this lower port. |
+| `packages/domain/src/auth/auth.ts:123` | `try: () => readAuthority(read, kind, origin),` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/auth/auth.ts:908` | `profiles: (input) => this.profilesWithin(input, boundary),` | Authentication-owned boundary/internal read, using captured checked fields and private authority. |
+| `packages/domain/src/auth/auth.ts:910` | `this.profilesReadWithin(input, schema, fields, boundary),` | Authentication-owned boundary/internal read, using captured checked fields and private authority. |
+| `packages/domain/src/auth/auth.ts:912` | `this.projectionWithin(` | Authentication-owned boundary/internal read, using captured checked fields and private authority. |
+| `packages/domain/src/auth/auth.ts:914` | `(read) => this.projection.catalog(read),` | Query callback passes the genuine authority to the validating projection port. |
+| `packages/domain/src/auth/auth.ts:918` | `this.projectionWithin(` | Authentication-owned boundary/internal read, using captured checked fields and private authority. |
+| `packages/domain/src/auth/auth.ts:920` | `(read) => this.projection.metadata(read),` | Query callback passes the genuine authority to the validating projection port. |
+| `packages/domain/src/auth/auth.ts:924` | `this.profileSummariesWithin(input, boundary, false),` | Authentication-owned boundary/internal read, using captured checked fields and private authority. |
+| `packages/domain/src/auth/auth.ts:938` | `this.profilesWithin(input);` | Authentication-owned boundary/internal read, using captured checked fields and private authority. |
+| `packages/domain/src/auth/auth.ts:944` | `) => this.profilesReadWithin(input, schema, fields);` | Authentication-owned boundary/internal read, using captured checked fields and private authority. |
+| `packages/domain/src/auth/auth.ts:989` | `readonly read = (input: AccessRequest) => this.readWithin(input);` | Authentication-owned boundary/internal read, using captured checked fields and private authority. |
+| `packages/domain/src/auth/auth.ts:992` | `this.projectionWithin(input, (read) => this.projection.catalog(read));` | Query callback passes the genuine authority to the validating projection port. |
+| `packages/domain/src/auth/auth.ts:995` | `this.projectionWithin(input, (read) => this.projection.metadata(read));` | Query callback passes the genuine authority to the validating projection port. |
+| `packages/domain/src/auth/auth.ts:1002` | `this.queryWithin(input, schema, fields, (read) => {` | Authentication-owned boundary/internal read, using captured checked fields and private authority. |
+| `packages/domain/src/auth/auth.ts:1003` | `readAuthority(read, "read", this.db);` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/auth/auth.ts:1012` | `this.queryWithin(input, schema, fields, (read) => ({` | Authentication-owned boundary/internal read, using captured checked fields and private authority. |
+| `packages/domain/src/auth/auth.ts:1014` | `data: this.projection.metadata(read),` | Query callback passes the genuine authority to the validating projection port. |
+| `packages/domain/src/auth/auth.ts:1022` | `this.queryWithin(input, schema, fields, (read) => ({` | Authentication-owned boundary/internal read, using captured checked fields and private authority. |
+| `packages/domain/src/auth/auth.ts:1024` | `data: this.ports.read(readAuthority(read, "read", this.db).profile),` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/auth/auth.ts:1032` | `this.queryWithin(input, schema, fields, (read) => ({` | Authentication-owned boundary/internal read, using captured checked fields and private authority. |
+| `packages/domain/src/auth/auth.ts:1034` | `data: this.projection.catalog(read),` | Query callback passes the genuine authority to the validating projection port. |
+| `packages/domain/src/auth/auth.ts:1042` | `this.queryWithin(` | Authentication-owned boundary/internal read, using captured checked fields and private authority. |
+| `packages/domain/src/auth/auth.ts:1047` | `readAuthority(read, "read", this.db);` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/auth/auth.ts:1057` | `) => checkedRead(read, kind, this.db);` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/auth/auth.ts:1059` | `this.checkRead(read, "read").pipe(` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/auth/auth.ts:1086` | `this.queryWithin(` | Authentication-owned boundary/internal read, using captured checked fields and private authority. |
+| `packages/domain/src/auth/auth.ts:1090` | `(read) => taskHistory(this.db, read),` | Authentication-owned boundary/internal read, using captured checked fields and private authority. |
+| `packages/domain/src/auth/auth.ts:1094` | `this.projectionWithin(input, (read) => this.projection.projects(read));` | Query callback passes the genuine authority to the validating projection port. |
+| `packages/domain/src/auth/auth.ts:1097` | `this.projectionWithin(input, (read) => this.projection.tags(read));` | Query callback passes the genuine authority to the validating projection port. |
+| `packages/domain/src/auth/auth.ts:1100` | `this.profileSummariesWithin(input);` | Authentication-owned boundary/internal read, using captured checked fields and private authority. |
+| `packages/domain/src/auth/auth.ts:1128` | `return this.projection.profiles(` | Authority made from the single checked visible Profile set. Names, ids and count rows use that set. |
+| `packages/domain/src/auth/auth.ts:1140` | `) => this.queryWithin(input, EmptyRead, {}, read, boundary);` | Authentication-owned boundary/internal read, using captured checked fields and private authority. |
+| `packages/domain/src/auth/auth.ts:1197` | `return this.ports.read(` | Authentication-owned boundary/internal read, using captured checked fields and private authority. |
+| `packages/domain/src/auth/auth.ts:1198` | `readAuthority(` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `apps/cli/src/main.ts:708` | `const data = yield* readTasks(store, request);` | Adapter supplies typed fields before authorization. Shared reader binds them; Snapshot ports receive the genuine owner authority. |
+| `apps/cli/src/main.ts:796` | `const data = yield* readTasks(store, request, filters).pipe(` | Adapter supplies typed fields before authorization. Shared reader binds them; Snapshot ports receive the genuine owner authority. |
+| `apps/cli/src/main.ts:923` | `const data = yield* readTasks(store, request);` | Adapter supplies typed fields before authorization. Shared reader binds them; Snapshot ports receive the genuine owner authority. |
+| `apps/cli/src/main.ts:1104` | `const data = yield* readTasks(` | Adapter supplies typed fields before authorization. Shared reader binds them; Snapshot ports receive the genuine owner authority. |
+| `apps/cli/src/main.ts:1320` | `const data = yield* readTasks(store, request);` | Adapter supplies typed fields before authorization. Shared reader binds them; Snapshot ports receive the genuine owner authority. |
+| `apps/cli/src/main.ts:1445` | `const data = yield* readTasks(store, request);` | Adapter supplies typed fields before authorization. Shared reader binds them; Snapshot ports receive the genuine owner authority. |
+| `apps/cli/src/main.ts:1510` | `const data = yield* readTasks(store, request);` | Adapter supplies typed fields before authorization. Shared reader binds them; Snapshot ports receive the genuine owner authority. |
+| `apps/cli/src/main.ts:1563` | `const data = yield* readTasks(store, request);` | Adapter supplies typed fields before authorization. Shared reader binds them; Snapshot ports receive the genuine owner authority. |
+| `apps/cli/src/main.ts:1616` | `const graph = yield* readGraph(` | Adapter supplies typed fields before authorization. Shared reader binds them; Snapshot ports receive the genuine owner authority. |
+| `apps/cli/src/main.ts:1701` | `const data = yield* readTasks(store, request);` | Adapter supplies typed fields before authorization. Shared reader binds them; Snapshot ports receive the genuine owner authority. |
+| `apps/cli/src/main.ts:1750` | `const latest = yield* readTasks(store, request);` | Adapter supplies typed fields before authorization. Shared reader binds them; Snapshot ports receive the genuine owner authority. |
+| `apps/cli/src/main.ts:1774` | `const data = yield* readTasks(` | Adapter supplies typed fields before authorization. Shared reader binds them; Snapshot ports receive the genuine owner authority. |
+| `apps/cli/src/main.ts:1803` | `const data = yield* readTasks(` | Adapter supplies typed fields before authorization. Shared reader binds them; Snapshot ports receive the genuine owner authority. |
+| `apps/cli/src/main.ts:1839` | `const data = yield* readTasks(` | Adapter supplies typed fields before authorization. Shared reader binds them; Snapshot ports receive the genuine owner authority. |
+| `apps/cli/src/main.ts:2116` | `: new ClientReads(store).profiles(credential);` | Adapter supplies typed fields before authorization. Shared reader binds them; Snapshot ports receive the genuine owner authority. |
+| `apps/cli/src/main.ts:2207` | `.listRead(read)` | Genuine owner authority validated at the port. Snapshot Show id is private fields.snapshot; List has no id. |
+| `apps/cli/src/main.ts:2218` | `.showRead(read)` | Genuine owner authority validated at the port. Snapshot Show id is private fields.snapshot; List has no id. |
+| `apps/cli/src/main.ts:2259` | `const read = yield* store.auth.ownerRead(` | Input boundary: captures and parses Profile, credential and fields before the credential-use hook; returns privately bound authority. |
+| `packages/domain/src/store/diagnostics.ts:119` | `this.restoreGeneration = snapshots.generationSync().generation;` | Internal generation/cursor/erasure state; no request Profile or id. |
+| `packages/domain/src/store/diagnostics.ts:166` | `private generation(value: string) {` | Internal generation/cursor/erasure state; no request Profile or id. |
+| `packages/domain/src/store/diagnostics.ts:195` | `const generation = yield* this.snapshots.generation();` | Internal generation/cursor/erasure state; no request Profile or id. |
+| `packages/domain/src/store/diagnostics.ts:196` | `this.generation(generation.generation);` | Internal generation/cursor/erasure state; no request Profile or id. |
+| `packages/domain/src/store/diagnostics.ts:198` | `const pending = yield* this.scheduled.pendingReminders();` | Scheduler-owned rows/state, after owner Diagnostics authorization where exposed. |
+| `packages/domain/src/store/history-reads.ts:62` | `const value = readAuthority(read, "read", db);` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/attachment-store.ts:155` | `export function readManagedImage(` | Trusted storage helper: decoded current/source Task id and Attachment metadata; no caller request. |
+| `packages/domain/src/attachment-store.ts:209` | `const image = readManagedImage(root, attachment, task.id);` | Trusted storage helper: decoded current/source Task id and Attachment metadata; no caller request. |
+| `packages/domain/src/attachment-store.ts:225` | `const image = readManagedImage(root, attachment, source.id);` | Trusted storage helper: decoded current/source Task id and Attachment metadata; no caller request. |
+| `packages/domain/src/graph-queries.ts:137` | `const read = yield* store.auth.authorizeRead(` | Input boundary: captures and parses Profile, credential and fields before the credential-use hook; returns privately bound authority. |
+| `packages/domain/src/graph-queries.ts:142` | `const authority = yield* store.auth.checkRead(read, "read");` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/graph-queries.ts:146` | `yield* store.graphRead(read),` | Genuine authority; port validates private brand, exact prototype, kind and database. Profile comes only from its private payload. |
+| `packages/domain/src/graph-queries.ts:154` | `readGraphQuery(...args).pipe(Effect.map((result) => result.graph));` | Captured request at authorization boundary; graph selection uses private checked Profile and task_id. |
+| `packages/domain/src/attachment-commands.ts:56` | `const before = (yield* this.store.tasks()).find(` | Writer uses validated mutation/current Task ids; query selection uses private checked Task and Attachment fields. |
+| `packages/domain/src/attachment-commands.ts:468` | `const { read, task } = yield* new TaskCommands(this.store).readOne(` | Writer uses validated mutation/current Task ids; query selection uses private checked Task and Attachment fields. |
+| `packages/domain/src/attachment-commands.ts:473` | `const authority = yield* this.store.auth.checkRead(read, "read");` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/attachment-commands.ts:481` | `readManagedImage(` | Private checked fields.task_id and the selected authorized Task Attachment. |
+| `packages/domain/src/attachment-commands.ts:491` | `this.imageRead(request, id).pipe(Effect.map((result) => result.image));` | Writer uses validated mutation/current Task ids; query selection uses private checked Task and Attachment fields. |
+| `packages/domain/src/client-reads.ts:79` | `this.store.auth.profileSummaries({ credential });` | Boundary binds the supplied request. Planning uses private fields; History binds Task id before check; summaries use checked Profile set. |
+| `packages/domain/src/client-reads.ts:82` | `this.store.auth.projects(request);` | Boundary binds the supplied request. Planning uses private fields; History binds Task id before check; summaries use checked Profile set. |
+| `packages/domain/src/client-reads.ts:84` | `readonly tags = (request: AccessRequest) => this.store.auth.tags(request);` | Boundary binds the supplied request. Planning uses private fields; History binds Task id before check; summaries use checked Profile set. |
+| `packages/domain/src/client-reads.ts:92` | `const { read, data } = yield* this.store.auth.readCatalog(` | Input boundary: captures and parses Profile, credential and fields before the credential-use hook; returns privately bound authority. |
+| `packages/domain/src/client-reads.ts:100` | `const selected = (yield* this.store.auth.checkRead(read, "read")).fields;` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/client-reads.ts:152` | `this.store.auth.taskHistory(request);` | Boundary binds the supplied request. Planning uses private fields; History binds Task id before check; summaries use checked Profile set. |
+| `packages/domain/src/discovery.ts:40` | `this.store.auth.readSnapshot((auth) =>` | Credential is a primitive string. Directory Profiles come from checked summaries; lookup prefix and Profile set come from the private profiles authority. Per-Profile catalog/metadata reauthorize captured ids. |
+| `packages/domain/src/discovery.ts:42` | `const profiles = yield* auth.profileSummaries({ credential });` | Credential is a primitive string. Directory Profiles come from checked summaries; lookup prefix and Profile set come from the private profiles authority. Per-Profile catalog/metadata reauthorize captured ids. |
+| `packages/domain/src/discovery.ts:46` | `auth.metadata({ credential, profile: profile.id }).pipe(` | Credential is a primitive string. Directory Profiles come from checked summaries; lookup prefix and Profile set come from the private profiles authority. Per-Profile catalog/metadata reauthorize captured ids. |
+| `packages/domain/src/discovery.ts:55` | `yield* auth.profiles({ credential });` | Credential is a primitive string. Directory Profiles come from checked summaries; lookup prefix and Profile set come from the private profiles authority. Per-Profile catalog/metadata reauthorize captured ids. |
+| `packages/domain/src/discovery.ts:61` | `this.store.auth.readSnapshot((auth) =>` | Credential is a primitive string. Directory Profiles come from checked summaries; lookup prefix and Profile set come from the private profiles authority. Per-Profile catalog/metadata reauthorize captured ids. |
+| `packages/domain/src/discovery.ts:63` | `const { read } = yield* auth.profilesRead(` | Input boundary: captures and parses Profile, credential and fields before the credential-use hook; returns privately bound authority. |
+| `packages/domain/src/discovery.ts:68` | `const authority = yield* this.store.auth.checkRead(read, "profiles");` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/discovery.ts:74` | `auth.catalog({ credential, profile: profile.id }).pipe(` | Credential is a primitive string. Directory Profiles come from checked summaries; lookup prefix and Profile set come from the private profiles authority. Per-Profile catalog/metadata reauthorize captured ids. |
+| `packages/domain/src/discovery.ts:94` | `yield* auth.profiles({ credential });` | Credential is a primitive string. Directory Profiles come from checked summaries; lookup prefix and Profile set come from the private profiles authority. Per-Profile catalog/metadata reauthorize captured ids. |
+| `packages/domain/src/import-tasks.ts:45` | `const { read } = yield* store.auth.readState(` | Input boundary: captures and parses Profile, credential and fields before the credential-use hook; returns privately bound authority. |
+| `packages/domain/src/import-tasks.ts:50` | `const authority = yield* store.auth.checkRead(read, "read");` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/import-tasks.ts:56` | `const graph = yield* store.graphRead(read);` | Genuine authority; port validates private brand, exact prototype, kind and database. Profile comes only from its private payload. |
+| `packages/domain/src/import-tasks.ts:148` | `const tasks = (yield* store.auth.read(request)).tasks;` | Owned request reconstructed from private checked Profile/credential; Task ids and ImportItems are parsed owned fields. |
+| `packages/domain/src/import-tasks.ts:222` | `const data = yield* store.auth.read(request);` | Owned request reconstructed from private checked Profile/credential; Task ids and ImportItems are parsed owned fields. |
+| `packages/domain/src/import-tasks.ts:337` | `const currentBlockers = (yield* store.graphRead(read)).edges` | Genuine authority; port validates private brand, exact prototype, kind and database. Profile comes only from its private payload. |
+| `packages/domain/src/presentation.ts:39` | `const definition = seriesForTask(task, series);` | Pure presentation: decoded Task and Series; no database authorization input. |
+| `packages/domain/src/dependency-commands.ts:134` | `const graph = yield* this.store.graph(identity.profile);` | Trusted writer graph: MutationIdentity.profile/current Task Profile. Request queries use graphRead; raw graph stays internal to existing writer paths. |
+| `packages/domain/src/dependency-commands.ts:211` | `const updated = yield* this.store.graph(identity.profile);` | Trusted writer graph: MutationIdentity.profile/current Task Profile. Request queries use graphRead; raw graph stays internal to existing writer paths. |
+| `packages/domain/src/commands.ts:155` | `const { read, data } = yield* store.auth.readState(` | Input boundary: captures and parses Profile, credential and fields before the credential-use hook; returns privately bound authority. |
+| `packages/domain/src/commands.ts:160` | `const authority = yield* store.auth.checkRead(read, "read");` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/commands.ts:162` | `const graph = yield* store.graphRead(read);` | Genuine authority; port validates private brand, exact prototype, kind and database. Profile comes only from its private payload. |
+| `packages/domain/src/commands.ts:358` | `const { read, data: view } = yield* this.store.auth.readMetadata(` | Input boundary: captures and parses Profile, credential and fields before the credential-use hook; returns privately bound authority. |
+| `packages/domain/src/commands.ts:363` | `const authority = yield* this.store.auth.checkRead(read, "read");` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/commands.ts:365` | `const graph = yield* this.store.graphRead(read);` | Genuine authority; port validates private brand, exact prototype, kind and database. Profile comes only from its private payload. |
+| `packages/domain/src/commands.ts:401` | `const { read, data } = yield* this.store.auth.readMetadata(` | Input boundary: captures and parses Profile, credential and fields before the credential-use hook; returns privately bound authority. |
+| `packages/domain/src/commands.ts:406` | `const authority = yield* this.store.auth.checkRead(read, "read");` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/commands.ts:407` | `const graph = yield* this.store.graphRead(read);` | Genuine authority; port validates private brand, exact prototype, kind and database. Profile comes only from its private payload. |
+| `packages/domain/src/commands.ts:427` | `this.readOne(request, Schema.Struct({ task_id: TaskId }), {` | Shared read boundary or trusted mutation: selectors come from private bound fields, MutationIdentity, decoded event or current Task, as applicable. |
+| `packages/domain/src/commands.ts:641` | `const graph = yield* this.store.graph(identity.profile);` | Trusted writer graph: MutationIdentity.profile/current Task Profile. Request queries use graphRead; raw graph stays internal to existing writer paths. |
+| `packages/domain/src/commands.ts:710` | `const tasks = yield* this.store.tasks();` | Shared read boundary or trusted mutation: selectors come from private bound fields, MutationIdentity, decoded event or current Task, as applicable. |
+| `packages/domain/src/commands.ts:733` | `const edges = (yield* this.store.graph(` | Trusted writer graph: MutationIdentity.profile/current Task Profile. Request queries use graphRead; raw graph stays internal to existing writer paths. |
+| `packages/domain/src/commands.ts:784` | `: seriesForTask(before, yield* this.store.series());` | Shared read boundary or trusted mutation: selectors come from private bound fields, MutationIdentity, decoded event or current Task, as applicable. |
+| `packages/domain/src/commands.ts:794` | `seriesForTask(task, [seriesBefore]) !== null &&` | Shared read boundary or trusted mutation: selectors come from private bound fields, MutationIdentity, decoded event or current Task, as applicable. |
+| `packages/domain/src/commands.ts:1002` | `const before = (yield* this.store.tasks()).find(` | Shared read boundary or trusted mutation: selectors come from private bound fields, MutationIdentity, decoded event or current Task, as applicable. |
+| `packages/domain/src/commands.ts:1032` | `(yield* this.store.tasks()).find(` | Shared read boundary or trusted mutation: selectors come from private bound fields, MutationIdentity, decoded event or current Task, as applicable. |
+| `packages/domain/src/commands.ts:1157` | `const data = yield* readTasks(store, request);` | Shared read boundary or trusted mutation: selectors come from private bound fields, MutationIdentity, decoded event or current Task, as applicable. |
+| `packages/domain/src/commands.ts:1205` | `const data = yield* readTasks(store, request);` | Shared read boundary or trusted mutation: selectors come from private bound fields, MutationIdentity, decoded event or current Task, as applicable. |
+| `packages/domain/src/commands.ts:1208` | `const { read, data: checked } = yield* store.auth.readState(` | Input boundary: captures and parses Profile, credential and fields before the credential-use hook; returns privately bound authority. |
+| `packages/domain/src/commands.ts:1213` | `const authority = yield* store.auth.checkRead(read, "read");` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/commands.ts:1402` | `const before = (yield* store.tasks()).find(` | Shared read boundary or trusted mutation: selectors come from private bound fields, MutationIdentity, decoded event or current Task, as applicable. |
+| `packages/domain/src/commands.ts:1467` | `const { read, data } = yield* store.auth.readState(` | Input boundary: captures and parses Profile, credential and fields before the credential-use hook; returns privately bound authority. |
+| `packages/domain/src/commands.ts:1472` | `const authority = yield* store.auth.checkRead(read, "read");` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/commands.ts:1474` | `const { data: target, read: targetRead } = yield* store.auth.readState(` | Input boundary: captures and parses Profile, credential and fields before the credential-use hook; returns privately bound authority. |
+| `packages/domain/src/commands.ts:1511` | `const definition = seriesForTask(` | Shared read boundary or trusted mutation: selectors come from private bound fields, MutationIdentity, decoded event or current Task, as applicable. |
+| `packages/domain/src/commands.ts:1513` | `yield* store.series(),` | Shared read boundary or trusted mutation: selectors come from private bound fields, MutationIdentity, decoded event or current Task, as applicable. |
+| `packages/domain/src/commands.ts:1544` | `? (yield* store.history(entry.seq - 2)).find(` | Writer/Revert recovery: captured sequence, bound Task id or decoded committed event/current Task. |
+| `packages/domain/src/commands.ts:1714` | `const definition = seriesForTask(context.before, yield* store.series());` | Shared read boundary or trusted mutation: selectors come from private bound fields, MutationIdentity, decoded event or current Task, as applicable. |
+| `packages/domain/src/commands.ts:1741` | `const definition = seriesForTask(context.before, yield* store.series());` | Shared read boundary or trusted mutation: selectors come from private bound fields, MutationIdentity, decoded event or current Task, as applicable. |
+| `packages/domain/src/commands.ts:1761` | `const { read, data } = yield* store.auth.readState(` | Input boundary: captures and parses Profile, credential and fields before the credential-use hook; returns privately bound authority. |
+| `packages/domain/src/commands.ts:1766` | `const authority = yield* store.auth.checkRead(read, "read");` | Runtime inspection before consuming private Profile, scope, ids or parsed fields; rejects copies/wrong kind/database. |
+| `packages/domain/src/commands.ts:1807` | `const pair = (yield* store.history()).filter(` | Writer/Revert recovery: captured sequence, bound Task id or decoded committed event/current Task. |
+| `packages/domain/src/commands.ts:1908` | `(yield* store.tasks()).find(` | Shared read boundary or trusted mutation: selectors come from private bound fields, MutationIdentity, decoded event or current Task, as applicable. |
+
+### Commands and every recorded attempt
+
+All receipts below are local and ignored under `docs/evidence/ui-speed/server-reads/authority-runtime`. Normal binaries use source hash cc2c712bdc4dc30fe7116c31fd31745c3588ae23b21a952000f72d0c07bb54a6 and the product commit above. Their paths, binary hashes and fixed source manifest are retained locally. Sixteen compiled recipes below exit 0. The full Diagnostics recipe exits 1 after its owned Swift-lock wait was cancelled before Swift ran, to honor the explicit no-Swift limit. The same driver with only PNG rendering omitted exits 0; diagnostics-no-swift-3/scope.json records that scope and omission. Exact recipe argv, real exits and signals are in skills/summary.json. The complete cache command passed at docs/evidence/perf-cache/verify-ui6khv/result.json. AtomicCAS passed after review of byte-identical mapped bodies; no model was changed. Cache properties and hygiene controls proved intended failures/restoration/strict checks before stopping at stale mappings, then the full renewed gate passed.
+
+`pnpm --filter @todo/domain test authority-runtime.test.ts read-authorization.test.ts` exits 0. `pnpm typecheck` final exits 0. `bun build --compile .scratch/review-correction/authority-copy-probe.ts --outfile .scratch/bin/authority-copy-final` exits 0; `.scratch/bin/authority-copy-final` exits 1 with the required storage refusal; the no-data companion exits 0. The unchanged C2 probe typechecks with `pnpm exec tsc -p .scratch/review-correction/tsconfig.copy.json`, exit 0, demonstrating that runtime validation rather than nominal typing closes the defect. The S1-C1 probe compile and run both exit 0.
+
+`bun apps/server/scripts/build-read-control.ts after .scratch/bin/read-timing-after` and `bun apps/server/scripts/build-read-boundary.ts .scratch/bin/read-authority-boundary` exit 0. Both `read-control.ts` invocations use .scratch/bin/read-timing-before / .scratch/bin/read-timing-after with checkpoints/fixtures.json or rich-audited/fixtures.json respectively, and exit 0. Mutation invocations use READ_BOUNDARY_MODE=credential or port, READ_BOUNDARY_BINARY=$PWD/.scratch/bin/read-authority-boundary, .scratch/bin/read-timing-after as control and .scratch/bin/read-authority-boundary as candidate; both exit 0. All fixtures are under .scratch/server-reads. `bun apps/server/scripts/read-boundary-concurrency.ts .scratch/bin/read-authority-boundary .scratch/server-reads/rich-audited/fixtures.json <fresh-evidence>` exits 0; READ_BOUNDARY_REFUSAL_ONLY=1 on the same command also exits 0.
+
+`bun .agents/skills/verify-occ-atomicity/check.ts` exits 0. `bun .agents/skills/verify-task-search-cache/build-baseline.mjs ade8f941f3d15c61cffdb58d45114b4ababbcc5e --uncached` and `bun .agents/skills/verify-task-search-cache/verify.mjs ade8f941f3d15c61cffdb58d45114b4ababbcc5e` both exit 0. The oracle archives this exact immutable product and bypasses only its two preparation callbacks. No matcher/model was changed. The root check uses the normal frozen CLI/server overrides, a successful `sh scripts/disk-guard.sh`, then exactly `/usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check`; its receipt is root-10, exit 0 (392 domain, 69 CLI, 32 server, 168 Electron, one existing skip).
+
+Timing commands (both exit 0; COLD_ONLY for the full sweep is the 18 ids in .scratch/server-reads/corners.txt):
+
+```sh
+READ_CONTROL_REAL_TIME=1 COLD_PAIRS=5 COLD_FIRST= COLD_ONLY="$(cat .scratch/server-reads/corners.txt)" /usr/bin/lockf -k /tmp/todo-server-read-timing.lock bun .scratch/server-reads/harness/cold-path.ts ambient .scratch/server-reads/checkpoints docs/evidence/ui-speed/server-reads/authority-runtime/benchmark
+READ_CONTROL_REAL_TIME=1 COLD_PAIRS=10 COLD_FIRST= COLD_ONLY=n178-p8-empty-large1-h2048 /usr/bin/lockf -k /tmp/todo-server-read-timing.lock bun .scratch/server-reads/runtime-harness/cold-path.ts ambient .scratch/server-reads/checkpoints docs/evidence/ui-speed/server-reads/authority-runtime/overhead-final-3
+```
+
+| Compiled recipe command (fresh local evidence argument) | Real exit |
+| --- | ---: |
+| `sh .agents/skills/verify-op-log/scripts/verify.sh docs/evidence/ui-speed/server-reads/authority-runtime/skills/op-log` | 0 |
+| `sh .agents/skills/verify-auth/scripts/verify.sh docs/evidence/ui-speed/server-reads/authority-runtime/skills/auth` | 0 |
+| `sh .agents/skills/verify-recurrence/scripts/verify.sh docs/evidence/ui-speed/server-reads/authority-runtime/skills/recurrence` | 0 |
+| `sh .agents/skills/verify-server-api/scripts/verify.sh docs/evidence/ui-speed/server-reads/authority-runtime/skills/server-api` | 0 |
+| `sh .agents/skills/verify-server-api/scripts/verify-reads.sh docs/evidence/ui-speed/server-reads/authority-runtime/skills/server-reads` | 0 |
+| `sh .agents/skills/verify-profiles/scripts/verify.sh docs/evidence/ui-speed/server-reads/authority-runtime/skills/profiles` | 0 |
+| `sh .agents/skills/verify-filters/scripts/verify.sh docs/evidence/ui-speed/server-reads/authority-runtime/skills/filters` | 0 |
+| `sh .agents/skills/verify-snapshots/scripts/verify.sh docs/evidence/ui-speed/server-reads/authority-runtime/skills/snapshots` | 0 |
+| `sh .agents/skills/verify-sse/scripts/verify.sh docs/evidence/ui-speed/server-reads/authority-runtime/skills/sse .scratch/bin/cc2c712bdc4d-ade8f941f3d1/todo` | 0 |
+| `sh .agents/skills/verify-cli/scripts/verify.sh docs/evidence/ui-speed/server-reads/authority-runtime/skills/cli` | 0 |
+| `bun --define TODO_BUILD_ID="ade8f941" .agents/skills/verify-attachments/scripts/drive.ts docs/evidence/ui-speed/server-reads/authority-runtime/skills/attachments` | 0 |
+| `bun --define TODO_BUILD_ID="ade8f941" .agents/skills/verify-attachments/scripts/cli01.ts docs/evidence/ui-speed/server-reads/authority-runtime/skills/attachment-groups` | 0 |
+| `sh .agents/skills/verify-dag/scripts/verify.sh docs/evidence/ui-speed/server-reads/authority-runtime/skills/dag` | 0 |
+| `sh .agents/skills/verify-dag/scripts/verify-public.sh docs/evidence/ui-speed/server-reads/authority-runtime/skills/dag-public` | 0 |
+| `sh .agents/skills/verify-discovery/scripts/verify.sh docs/evidence/ui-speed/server-reads/authority-runtime/skills/discovery` | 0 |
+| `sh .agents/skills/verify-import/scripts/verify.sh docs/evidence/ui-speed/server-reads/authority-runtime/skills/import` | 0 |
+| `sh .agents/skills/verify-diagnostics/scripts/verify.sh docs/evidence/ui-speed/server-reads/authority-runtime/skills/diagnostics` | 1 |
+
+| Invocation / receipt | Real exit |
+| --- | ---: |
+| `atomicity-before-renewal` | 1 |
+| `atomicity-final` | 0 |
+| `benchmark` | 0 |
+| `boundary-build` | 0 |
+| `cache-baseline` | 0 |
+| `cache-check-before-renewal` | 1 |
+| `cache-final` | 0 |
+| `cache-hygiene-before-renewal` | 1 |
+| `cleanup-before-timing` | 0 |
+| `cleanup-final` | 0 |
+| `control-56` | 0 |
+| `control-rich` | 0 |
+| `delivery-disk` | 0 |
+| `diagnostics-no-swift-2` | 1 |
+| `diagnostics-no-swift-3` | 0 |
+| `diagnostics-no-swift` | 1 |
+| `doc-links-1` | 0 |
+| `doc-links-final` | 0 |
+| `domain-after-1` | 0 |
+| `domain-after-2` | 1 |
+| `domain-after-3` | 0 |
+| `domain-after-4` | 0 |
+| `domain-after-5` | 0 |
+| `domain-after-6` | 0 |
+| `domain-after-7` | 0 |
+| `domain-before` | 1 |
+| `domain-suite-1` | 0 |
+| `format-1` | 0 |
+| `format-2` | 1 |
+| `format-7` | 0 |
+| `format-9` | 0 |
+| `http-refusal-2` | 0 |
+| `http-refusal` | 1 |
+| `interleaving` | 0 |
+| `mutation-credential` | 0 |
+| `mutation-port` | 0 |
+| `overhead-final-2` | 70 |
+| `overhead-final-3` | 0 |
+| `overhead-final` | 1 |
+| `overhead-pilot` | 0 |
+| `product-build` | 0 |
+| `report-gen-1` | 1 |
+| `report-gen-2` | 0 |
+| `root-10-disk` | 0 |
+| `root-10` | 0 |
+| `s1-c1-build` | 0 |
+| `s1-c1-probe` | 0 |
+| `seat-after` | 1 |
+| `seat-before` | 1 |
+| `seat-build-after` | 0 |
+| `seat-build-before` | 0 |
+| `seat-build-final` | 0 |
+| `seat-final` | 1 |
+| `seat-refusal-final` | 0 |
+| `seat-source-compare` | 0 |
+| `seat-typecheck-final` | 0 |
+| `skills` | 1 |
+| `timing-analysis` | 0 |
+| `timing-build-final` | 0 |
+| `timing-build-pilot` | 0 |
+| `typecheck-1` | 1 |
+| `typecheck-2` | 0 |
+| `typecheck-3` | 1 |
+| `typecheck-4` | 0 |
+| `typecheck-5` | 1 |
+| `typecheck-6` | 0 |
+| `typecheck-7` | 0 |
+| `typecheck-8` | 0 |
+
+The no-Swift Diagnostics helper first used a scratch prefix refused by the seeder (exit 1); the next attempt omitted the seed binary needed by Purge (exit 1). The third attempt uses the required todo-s01-verify-* prefix and copies the frozen seed, without weakening any guard. The full Diagnostics rendering step is deliberately unproved. The timing rerun uses `.scratch/server-reads/runtime-harness/cold-path.ts`, copied from the prepared original harness with only the binary selectors and both-variant zero-decode assertion changed. Before selects .scratch/bin/authority-overhead-before (preserved 219749f2); after selects .scratch/bin/read-timing-after (ade8f941). The unused copied candidate was retired only after lsof showed no open file; its 90,695,522-byte hash receipt is retired-unused-copy.json.
+
+The HTTP refusal control first failed because its literal omitted the existing exit_code/exit_meaning fields; the corrected exact body passes. A positive changes assertion initially expected one Work operation, but issuing its Token also commits AuthChanged; the correct literal is two Work entries. Typecheck iterations caught a heterogeneous Effect union, unused locals and an unknown Effect context. Formatting caught a restricted local name, then passed after renaming. An exploratory source-body comparison named a nonexistent runner file (exit 1); the corrected comparison uses the protected manifest paths and passes. An rm-style command was rejected before execution; the final proof needs no removal and completed safely. Formatter iterations 3, 4 and 6 log an error, but their individual statuses were not captured because their wrappers continued into passing tests; their enclosing commands exit 0. Iterations 5 and 8 likewise lack individual status receipts, with no errors in their logs. The final formatter/root gates have captured exit 0. The paired five-pair pilot was exploratory. Incremental timing attempt 1 exits 1 after the copied candidate produced no startup output for 60 seconds (one unpaired baseline observation). A helper edit then failed its exact-string assertion; its shell continued into attempt 2, which was stopped before measurement and exits 70. The helper was corrected to use the identical already-proven compiled path; attempt 3 exits 0 with all 20 complete pairs. All failed/incomplete attempts are retained and excluded as incomplete experiments, not discarded valid pairs. Final timings above are the delivery comparison. One report-generator attempt failed on quoting a code fence (exit 1); the corrected generator exits 0. No failed attempt is counted as a pass.
+
+No children, native app, Swift, Keychain, signing, real Todo database, push, merge or PR was used. All Tasks, credentials, SQLite files, outputs and servers belong to scratch. No custom Python workaround supplied missing CLI behavior. No ADR was changed or contradicted. Direct no-comments review was used under the explicit no-children limit. Cleanup and process receipts are local; final disk and removed-runtime-copy counts are recorded in the timing/cleanup section above.
+
+## Prior delivery record
+
 ## Authorization revision after review
 
 Product: `219749f2ab4ed40fdf7f257c991385a2057bf215`. Base delivery reviewed: `98511eff3673239ae4edd6432a1c40c2f90f6080`. Contract remains `78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289`.

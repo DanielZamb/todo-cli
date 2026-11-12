@@ -1,9 +1,9 @@
 {
-  "confirmedCommit": "219749f2ab4ed40fdf7f257c991385a2057bf215",
+  "confirmedCommit": "ade8f941f3d15c61cffdb58d45114b4ababbcc5e",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "bfcc3d468f001ad316cc0be532b7663f526b2ca546618355baf032db7b3f0757",
+      "sha256": "f8d41a8b92fa499dd003ff38e2d206f8f1a0e9e5be6ac478a8ddc77103c9d765",
       "functions": [
         "OperationStore.constructor",
         "OperationStore.transaction",
@@ -108,7 +108,7 @@
     }
   ],
   "reviewedCandidate": false,
-  "review": "SERVER-READS authorization revision: constructor, transaction, historySync, record/rejection, validation, append, checkpoint and replay mapped bodies remain byte-identical to 98511eff. Imports and nominal read wrappers are outside the mapping. Body equality receipts precede renewal. No model, configuration, invariant or writer change.",
+  "review": "Runtime validation added to unmapped graphRead/changesRead wrappers; graph trusted projection method renamed. Constructor, transaction, historySync, record/rejection/validation/append and Snapshot/rebuild regions are byte-identical to 1c5413cb. Initial gate passed behavior and refused only the stale store hash. No model changes.",
   "integrationReview": {
     "base": "8ef210ff08532419123653757313c5ef97201e98",
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",

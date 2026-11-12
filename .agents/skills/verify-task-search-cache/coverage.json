@@ -1,6 +1,6 @@
 {
-  "productCommit": "219749f2ab4ed40fdf7f257c991385a2057bf215",
-  "scope": "Reviewed immutable 219749f2 authorization read boundaries; full cache command follows mapping renewal; no performance claim from these properties.",
+  "productCommit": "ade8f941f3d15c61cffdb58d45114b4ababbcc5e",
+  "scope": "Reviewed runtime read-authority guards; immutable product ade8f941; no performance claim from cache properties.",
   "seed": "0x5ea2c001",
   "files": [
     {
@@ -17,22 +17,22 @@
     },
     {
       "path": "commands.ts",
-      "sha256": "2d0858f602286357e546104bbf1ee026d6ce3b2458f0c7685b321b68d1ea6ef5"
+      "sha256": "13b86d95a9bfec3515eafc3b19d8f9ce7d2bc6b2cf3bd924aafbbba8e7c654ee"
     },
     {
       "path": "store/store.ts",
-      "sha256": "bfcc3d468f001ad316cc0be532b7663f526b2ca546618355baf032db7b3f0757"
+      "sha256": "f8d41a8b92fa499dd003ff38e2d206f8f1a0e9e5be6ac478a8ddc77103c9d765"
     },
     {
       "path": "store/snapshots.ts",
-      "sha256": "6c05980e3b6ad904a2a24d8f96f8e489589fd6f61aae47ddf092cbf224478e0d"
+      "sha256": "4ed23e32cffd61998f5cabd15616840d466ccbbe0e1d3d0e3121d730e2d827f9"
     },
     {
       "path": "store/search-cache-events.ts",
       "sha256": "4f0276e1953a56db0a31844c51faec02835eea134b04a06ed2ba6e9231d6d600"
     }
   ],
-  "review": "Read continuations bind Profile and parsed fields before hooks. Both list/readTasks memo tokens remain before authentication, with the same prepare callback position and exact source text. Matcher, work meter, runner, cache/accounting/admission, erasure and observer bodies are unchanged. Seven real cache controls failed their intended literal assertions and restored/typechecked before this mapping renewal; observer controls likewise restored and strictly checked. No model change.",
+  "review": "Read consumers validate private authority values; both memo tokens remain before authentication and both preparation callbacks are unchanged. Matcher, meter, runner, cache/accounting/admission, erasure and observer bodies are unchanged. All generated and hygiene mutation controls restored and typechecked before stale source hashes failed; full gate follows reviewed renewal. No model change.",
   "reviewedCandidate": true,
   "hygieneFiles": [
     {
@@ -41,7 +41,7 @@
     },
     {
       "path": "apps/server/src/server.ts",
-      "sha256": "05b5573d8f4234080b37fe5dd2aaea41cb53be76aeeeb9920e7d9c4651d62059"
+      "sha256": "4ce06502e8153da0e0962d7563bebfb9dded784e7cbf653845290400379abb93"
     },
     {
       "path": "packages/domain/src/store/search-cache-events.ts",
@@ -49,11 +49,11 @@
     },
     {
       "path": "packages/domain/src/store/snapshots.ts",
-      "sha256": "6c05980e3b6ad904a2a24d8f96f8e489589fd6f61aae47ddf092cbf224478e0d"
+      "sha256": "4ed23e32cffd61998f5cabd15616840d466ccbbe0e1d3d0e3121d730e2d827f9"
     },
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "bfcc3d468f001ad316cc0be532b7663f526b2ca546618355baf032db7b3f0757"
+      "sha256": "f8d41a8b92fa499dd003ff38e2d206f8f1a0e9e5be6ac478a8ddc77103c9d765"
     },
     {
       "path": "apps/cli/src/main.ts",
