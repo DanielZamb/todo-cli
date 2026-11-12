@@ -352,3 +352,12 @@ position. Query another Task for its sets.
 Reachability and Ready-set membership are computed outside node assembly, so
 the serialized report has O(n+m) content plus the requested root's sets.
 Shared ranking energy and unknown-energy tie behavior are unchanged.
+
+Read authorization owns and validates the request fields before the credential
+callback, then returns a frozen nominal read value containing its Profile,
+credential scope and parsed fields. Query continuations use that value. Task
+lists, Show, graph, History, planning views, Discovery, image reads, owner Snapshot
+reads and SSE keep their ids and filters through later callbacks and yields.
+Credential secrets are private fields rather than enumerable result properties.
+Profile counts consume the checked Profile rows and their ids once; they do not
+rediscover a visible set from the credential after checking it.

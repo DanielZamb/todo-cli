@@ -9,7 +9,7 @@ import { exitStatus } from "./exit-status.ts";
 import {
   ImportItem,
   type ImportReport,
-  type ImportRequest,
+  ImportRequest,
   type ImportRow,
 } from "./import.ts";
 import { planImportDependencies } from "./import-dependencies.ts";
@@ -38,12 +38,21 @@ const expectedVersionInput = Schema.Struct({
 
 const executeImport = Effect.fn(function* (
   store: OperationStore,
-  request: AccessRequest,
-  input: ImportRequest,
+  source: AccessRequest,
+  options: ImportRequest,
 ) {
   const commands = new TaskCommands(store);
-  yield* store.auth.read(request);
-  const graph = yield* store.graph(request.profile);
+  const { read } = yield* store.auth.readState(
+    source,
+    Schema.Struct({ input: ImportRequest }),
+    { input: options },
+  );
+  const request = Object.freeze({
+      credential: read.credential,
+      profile: read.profile,
+    }),
+    input = read.fields.input;
+  const graph = yield* store.graphRead(read);
   const initial = graph.tasks;
   const dependencyPlan = planImportDependencies(
     graph,
@@ -324,7 +333,7 @@ const executeImport = Effect.fn(function* (
               );
               changed_fields.push("status");
             }
-            const currentBlockers = (yield* store.graph(request.profile)).edges
+            const currentBlockers = (yield* store.graphRead(read)).edges
               .filter((edge) => edge.dependent_id === task.id)
               .map((edge) => edge.blocker_id);
             const removed = currentBlockers.filter(
@@ -581,10 +590,15 @@ const executeImport = Effect.fn(function* (
 
 export const importTasks = (
   store: OperationStore,
-  request: AccessRequest,
-  input: ImportRequest,
-) =>
-  input.dry_run
+  source: AccessRequest,
+  options: ImportRequest,
+) => {
+  const request = Object.freeze({
+    credential: source.credential,
+    profile: source.profile,
+  });
+  const input = structuredClone(options);
+  return input.dry_run
     ? // Authenticate before forking: a fork serializes the whole database.
       Effect.andThen(
         store.auth.authenticate({ ...request, access: "write" }),
@@ -601,3 +615,4 @@ export const importTasks = (
         );
         return yield* executeImport(store, request, input);
       });
+};

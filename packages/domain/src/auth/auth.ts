@@ -3,8 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { Cause, Clock, Effect, Exit, Schema } from "effect";
 import type { Profile } from "../entities.ts";
 import { type AppendResult, type AuthAction, Event } from "../events.ts";
-import type { TaskId } from "../ids.ts";
-import { ActorId, ProfileId, Sequence } from "../ids.ts";
+import { ActorId, ProfileId, Sequence, TaskId } from "../ids.ts";
 import type {
   DeleteProfile,
   ProfileDeletionResult,
@@ -15,6 +14,14 @@ import { StoreError } from "../store/error.ts";
 import { taskHistory } from "../store/history-reads.ts";
 import { changes, metadata } from "../store/projection.ts";
 import { Instant } from "../time.ts";
+
+import {
+  type AuthorizedRead,
+  bindOwnerRead,
+  bindProfiles,
+  bindRead,
+  freezeRead,
+} from "./authorized-read.ts";
 
 import {
   AccessRequest,
@@ -29,6 +36,8 @@ import {
   TokenOptions,
 } from "./model.ts";
 
+const EmptyRead = Schema.Struct({});
+const TaskReadFields = Schema.Struct({ task_id: TaskId });
 const credentialColumns =
   "id,kind,name,profile,scope,created_at,expires_at,revoked_at";
 const sha256 = (secret: string) =>
@@ -540,24 +549,41 @@ export class Authentication<Read> {
     });
 
   readonly resolveProfile = (input: ResolveProfileRequest) =>
+    this.resolveProfileRead(input, EmptyRead, {}).pipe(
+      Effect.map((result) => result.profile),
+    );
+
+  readonly resolveProfileRead = <S extends Schema.ConstraintDecoder<unknown>>(
+    input: ResolveProfileRequest,
+    schema: S,
+    fields: S["Type"],
+  ) =>
     Effect.suspend(() => {
+      const parsed = freezeRead(parse(schema, structuredClone(fields)));
+      const { credential, profile, action } = input;
+      const request = Object.freeze({ credential, profile, action });
       let selected: ProfileId | null = null;
       const rejection = new ResolvedProfileRejection(() => selected);
-      return this.perform(input.action, rejection, (time) => {
-        selected = this.resolvedProfileForHistory(input.profile);
-        const credential = this.requireCredential(input, time, "profiles");
+      return this.perform(request.action, rejection, (time) => {
+        selected = this.resolvedProfileForHistory(request.profile);
+        const credential = this.requireCredential(request, time, "profiles");
         const profiles = this.authorizedProfiles(credential);
         const profile =
-          profiles.find((row) => row.id === input.profile) ??
-          profiles.find((row) => row.name === input.profile);
+          profiles.find((row) => row.id === request.profile) ??
+          profiles.find((row) => row.name === request.profile);
         if (profile) selected = profile.id;
-        this.requireCredential(
-          input,
+        const info = this.requireCredential(
+          request,
           time,
           "read",
-          selected ?? parse(ProfileId, input.profile),
+          selected ?? parse(ProfileId, request.profile),
         );
-        return profile ? { id: profile.id, name: profile.name } : null;
+        return profile
+          ? {
+              profile: freezeRead({ id: profile.id, name: profile.name }),
+              read: bindRead(profile.id, request.credential, parsed, info),
+            }
+          : null;
       }).pipe(
         Effect.catchTag("AuthError", (error) =>
           error.detail === "profile_scope" || error.detail === "profile_deleted"
@@ -724,7 +750,11 @@ export class Authentication<Read> {
     operation: (
       reads: Pick<
         Authentication<Read>,
-        "profiles" | "catalog" | "profileSummaries" | "metadata"
+        | "profiles"
+        | "catalog"
+        | "profileSummaries"
+        | "metadata"
+        | "profilesRead"
       >,
     ) => Effect.Effect<A, AuthError | StoreError>,
   ) =>
@@ -740,16 +770,18 @@ export class Authentication<Read> {
           const result = Effect.runSyncExitWith(context)(
             operation({
               profiles: (input) => this.profilesWithin(input, boundary),
+              profilesRead: (input, schema, fields) =>
+                this.profilesReadWithin(input, schema, fields, boundary),
               catalog: (input) =>
                 this.projectionWithin(
                   input,
-                  (profile) => this.projection.catalog(profile),
+                  (read) => this.projection.catalog(read.profile),
                   boundary,
                 ),
               metadata: (input) =>
                 this.projectionWithin(
                   input,
-                  (profile) => this.projection.metadata(profile),
+                  (read) => this.projection.metadata(read.profile),
                   boundary,
                 ),
               profileSummaries: (input) =>
@@ -769,6 +801,34 @@ export class Authentication<Read> {
   readonly profiles = (input: { readonly credential: string }) =>
     this.profilesWithin(input);
 
+  readonly profilesRead = <S extends Schema.ConstraintDecoder<unknown>>(
+    input: { credential: string },
+    schema: S,
+    fields: S["Type"],
+  ) => this.profilesReadWithin(input, schema, fields);
+  private profilesReadWithin = <S extends Schema.ConstraintDecoder<unknown>>(
+    input: { credential: string },
+    schema: S,
+    fields: S["Type"],
+    boundary?: ReadBoundary,
+  ) =>
+    this.perform(
+      "read",
+      null,
+      (time) => {
+        const request = freezeRead(
+            parse(OwnerRequest, { credential: input.credential }),
+          ),
+          parsed = freezeRead(parse(schema, structuredClone(fields)));
+        const info = this.requireCredential(request, time, "profiles");
+        return {
+          read: bindProfiles(request.credential, parsed, info),
+          profiles: freezeRead(this.authorizedProfiles(info)),
+        };
+      },
+      boundary,
+    );
+
   private profilesWithin = (
     input: { readonly credential: string },
     boundary?: ReadBoundary,
@@ -786,30 +846,103 @@ export class Authentication<Read> {
   readonly read = (input: AccessRequest) => this.readWithin(input);
 
   readonly catalog = (input: AccessRequest) =>
-    this.projectionWithin(input, (profile) => this.projection.catalog(profile));
-
-  readonly metadata = (input: AccessRequest) =>
-    this.projectionWithin(input, (profile) =>
-      this.projection.metadata(profile),
+    this.projectionWithin(input, (read) =>
+      this.projection.catalog(read.profile),
     );
 
-  readonly authorizeRead = (input: AccessRequest) =>
-    this.projectionWithin(input, () => undefined);
+  readonly metadata = (input: AccessRequest) =>
+    this.projectionWithin(input, (read) =>
+      this.projection.metadata(read.profile),
+    );
+
+  readonly authorizeRead = <S extends Schema.ConstraintDecoder<unknown>>(
+    input: AccessRequest,
+    schema: S,
+    fields: S["Type"],
+  ) => this.queryWithin(input, schema, fields, (read) => read);
+
+  readonly readMetadata = <S extends Schema.ConstraintDecoder<unknown>>(
+    input: AccessRequest,
+    schema: S,
+    fields: S["Type"],
+  ) =>
+    this.queryWithin(input, schema, fields, (read) => ({
+      read,
+      data: this.projection.metadata(read.profile),
+    }));
+
+  readonly readState = <S extends Schema.ConstraintDecoder<unknown>>(
+    input: AccessRequest,
+    schema: S,
+    fields: S["Type"],
+  ) =>
+    this.queryWithin(input, schema, fields, (read) => ({
+      read,
+      data: this.ports.read(read.profile),
+    }));
+
+  readonly readCatalog = <S extends Schema.ConstraintDecoder<unknown>>(
+    input: AccessRequest,
+    schema: S,
+    fields: S["Type"],
+  ) =>
+    this.queryWithin(input, schema, fields, (read) => ({
+      read,
+      data: this.projection.catalog(read.profile),
+    }));
+
+  readonly subscribe = <S extends Schema.ConstraintDecoder<unknown>>(
+    input: AccessRequest,
+    schema: S,
+    fields: S["Type"],
+  ) =>
+    this.queryWithin(
+      input,
+      schema,
+      fields,
+      (read) => read,
+      undefined,
+      "authenticate",
+    );
+
+  readonly recheckRead = (read: AuthorizedRead) =>
+    this.authenticate({
+      credential: read.credential,
+      profile: read.profile,
+      access: "read",
+    });
+
+  readonly ownerRead = <S extends Schema.ConstraintDecoder<unknown>>(
+    input: { credential: string },
+    schema: S,
+    fields: S["Type"],
+  ) =>
+    this.perform("authenticate", null, (time) => {
+      const request = freezeRead(
+          parse(OwnerRequest, { credential: input.credential }),
+        ),
+        parsed = freezeRead(parse(schema, structuredClone(fields)));
+      const info = this.requireCredential(request, time, "owner");
+      return bindOwnerRead(request.credential, parsed, info);
+    });
 
   readonly taskHistory = (
     input: AccessRequest & { readonly task_id: TaskId },
   ) =>
-    this.projectionWithin(input, (profile) =>
-      taskHistory(this.db, profile, input.task_id),
+    this.queryWithin(
+      input,
+      TaskReadFields,
+      { task_id: input.task_id },
+      (read) => taskHistory(this.db, read.profile, read.fields.task_id),
     );
 
   readonly projects = (input: AccessRequest) =>
-    this.projectionWithin(input, (profile) =>
-      this.projection.projects(profile),
+    this.projectionWithin(input, (read) =>
+      this.projection.projects(read.profile),
     );
 
   readonly tags = (input: AccessRequest) =>
-    this.projectionWithin(input, (profile) => this.projection.tags(profile));
+    this.projectionWithin(input, (read) => this.projection.tags(read.profile));
 
   readonly profileSummaries = (input: { readonly credential: string }) =>
     this.profileSummariesWithin(input);
@@ -826,18 +959,21 @@ export class Authentication<Read> {
         "read",
         new ResolvedProfileRejection(() => selected),
         (time) => {
-          const credential = this.requireCredential(input, time, "profiles");
-          const profiles = this.authorizedProfiles(credential);
+          const request = freezeRead(
+            parse(OwnerRequest, { credential: input.credential }),
+          );
+          const credential = this.requireCredential(request, time, "profiles");
+          const profiles = freezeRead(this.authorizedProfiles(credential));
           for (const profile of checkProfiles ? profiles : []) {
             selected = profile.id;
             this.requireCredential(
-              input,
+              request,
               clock.currentTimeMillisUnsafe(),
               "read",
               profile.id,
             );
           }
-          return this.projection.profiles(credential.profile);
+          return this.projection.profiles(profiles);
         },
         boundary,
       );
@@ -845,17 +981,38 @@ export class Authentication<Read> {
 
   private projectionWithin = <A>(
     input: AccessRequest,
-    read: (profile: ProfileId) => A,
+    read: (read: AuthorizedRead) => A,
     boundary?: ReadBoundary,
+  ) => this.queryWithin(input, EmptyRead, {}, read, boundary);
+
+  private queryWithin = <S extends Schema.ConstraintDecoder<unknown>, A>(
+    input: AccessRequest,
+    schema: S,
+    fields: S["Type"],
+    operation: (read: AuthorizedRead<Readonly<S["Type"]>>) => A,
+    boundary?: ReadBoundary,
+    action: "read" | "authenticate" = "read",
   ) =>
     this.perform(
-      "read",
+      action,
       input.profile,
       (time) => {
-        const request = parse(AccessRequest, input);
-        const profile = request.profile;
-        this.requireCredential(request, time, "read", profile);
-        return read(profile);
+        const request = freezeRead(
+          parse(AccessRequest, {
+            credential: input.credential,
+            profile: input.profile,
+          }),
+        );
+        const parsed = freezeRead(parse(schema, structuredClone(fields)));
+        const credential = this.requireCredential(
+          request,
+          time,
+          "read",
+          request.profile,
+        );
+        return operation(
+          bindRead(request.profile, request.credential, parsed, credential),
+        );
       },
       boundary,
     );
@@ -865,9 +1022,21 @@ export class Authentication<Read> {
       "read",
       input.profile,
       (time) => {
-        const request = parse(AccessRequest, input);
-        this.requireCredential(request, time, "read", request.profile);
-        return this.ports.read(request.profile);
+        const request = freezeRead(
+          parse(AccessRequest, {
+            credential: input.credential,
+            profile: input.profile,
+          }),
+        );
+        const info = this.requireCredential(
+          request,
+          time,
+          "read",
+          request.profile,
+        );
+        return this.ports.read(
+          bindRead(request.profile, request.credential, {}, info).profile,
+        );
       },
       boundary,
     );

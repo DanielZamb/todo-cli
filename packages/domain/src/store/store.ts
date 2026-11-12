@@ -11,6 +11,7 @@ import { Effect, Option, Schema } from "effect";
 import { eraseTaskAttachments } from "../attachment-store.ts";
 import { validAttachmentLocation } from "../attachments.ts";
 import { Authentication } from "../auth/auth.ts";
+import type { AuthorizedRead } from "../auth/authorized-read.ts";
 import { DependencyError, Edge, RejectionDetails } from "../dependencies.ts";
 import {
   Profile,
@@ -563,6 +564,8 @@ export class OperationStore {
       }))(),
     );
 
+  readonly graphRead = (read: AuthorizedRead) => this.graph(read.profile);
+
   private historySync(after: number): OpLogEntry[] {
     return this.db
       .query<
@@ -602,6 +605,9 @@ export class OperationStore {
 
   readonly committedHistory = (profile: ProfileId, after: number) =>
     attempt(() => committedHistory(this.db, profile, after));
+
+  readonly changesRead = (read: AuthorizedRead, after: number) =>
+    this.committedHistory(read.profile, after);
 
   readonly searchCacheEvents = (cursor?: {
     readonly seq: number;

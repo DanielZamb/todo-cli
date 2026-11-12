@@ -279,6 +279,35 @@ async function sample(
       child.kill("SIGTERM");
       await ended;
     }
+    if (process.env.READ_BOUNDARY_BINARY === resolve(binary)) {
+      const matched = log.match(/BOUNDARY_COUNTERS (\{[^\n]+\})/);
+      assert.ok(matched, "Boundary server must publish its hook receipt");
+      const counters = Schema.decodeUnknownSync(
+        Schema.Struct({
+          checks: Schema.Number,
+          mutations: Schema.Number,
+          fields: Schema.Record(Schema.String, Schema.Number),
+          routes: Schema.Record(Schema.String, Schema.Number),
+        }),
+      )(JSON.parse(matched[1] ?? "null"));
+      assert.ok(
+        counters.checks > 0 && counters.mutations > 0,
+        "Hooks must execute, not merely compile",
+      );
+      for (const field of [
+        "params.profile",
+        "params.task",
+        "params.attachment",
+        "params.snapshot",
+        "query.prefix",
+        "payload.text",
+      ])
+        assert.ok((counters.fields[field] ?? 0) > 0, "No mutation of " + field);
+      writeFileSync(
+        join(evidence, fixture.id + ".hooks.json"),
+        JSON.stringify(counters, null, 2),
+      );
+    }
   }
 }
 

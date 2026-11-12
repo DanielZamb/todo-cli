@@ -463,20 +463,31 @@ export class AttachmentCommands {
     });
   }
 
-  readonly image = (request: Target, id: AttachmentId) =>
+  readonly imageRead = (request: Target, id: AttachmentId) =>
     Effect.gen({ self: this }, function* () {
-      const task = yield* new TaskCommands(this.store).get(request);
-      const attachment = task?.attachments?.find((value) => value.id === id);
-      return attachment === undefined
-        ? null
-        : yield* io(() =>
-            readManagedImage(
-              this.store.attachmentRoot,
-              attachment,
-              request.task_id,
-            ),
-          ).pipe(Effect.catch(() => Effect.succeed(null)));
+      const { read, task } = yield* new TaskCommands(this.store).readOne(
+        request,
+        Schema.Struct({ task_id: TaskId, attachment_id: AttachmentId }),
+        { task_id: request.task_id, attachment_id: id },
+      );
+      const attachment = task?.attachments?.find(
+        (value) => value.id === read.fields.attachment_id,
+      );
+      const image =
+        attachment === undefined
+          ? null
+          : yield* io(() =>
+              readManagedImage(
+                this.store.attachmentRoot,
+                attachment,
+                read.fields.task_id,
+              ),
+            ).pipe(Effect.catch(() => Effect.succeed(null)));
+      return { read, image };
     });
+
+  readonly image = (request: Target, id: AttachmentId) =>
+    this.imageRead(request, id).pipe(Effect.map((result) => result.image));
 }
 
 class AttachManyFailure extends StoreError {

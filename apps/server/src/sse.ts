@@ -4,8 +4,9 @@ import {
   type ChangeEvent,
   TodoApi,
 } from "@todo/api";
+import { DiagnosticClient } from "@todo/domain";
 import type { OperationStore } from "@todo/domain/store";
-import { Effect, Stream } from "effect";
+import { Effect, Schema, Stream } from "effect";
 import { HttpApiBuilder, HttpApiSchema } from "effect/http-api";
 import { translate } from "./errors.ts";
 
@@ -22,22 +23,36 @@ export const changesLayer = (store: OperationStore) =>
             !Number.isSafeInteger(after)
           )
             return yield* new BadRequest({ message: "Invalid Last-Event-ID" });
-          const authorize = translate(
-            store.auth.authenticate({
-              credential,
-              profile: params.profile,
-              access: "read",
-            }),
+          const read = yield* translate(
+            store.auth.subscribe(
+              { credential, profile: params.profile },
+              Schema.Struct({
+                after: Schema.Number,
+                header: Schema.optionalKey(Schema.String),
+                generation: Schema.optionalKey(Schema.String),
+                kind: Schema.optionalKey(DiagnosticClient.fields.kind),
+              }),
+              {
+                after,
+                ...(header === undefined ? {} : { header }),
+                ...(headers["x-todo-generation"] === undefined
+                  ? {}
+                  : { generation: headers["x-todo-generation"] }),
+                ...(headers["x-todo-client"] === undefined
+                  ? {}
+                  : { kind: headers["x-todo-client"] }),
+              },
+            ),
           );
-          yield* authorize;
+          const authorize = translate(store.auth.recheckRead(read));
           const initial = yield* translate(store.snapshots.generation());
           const reset =
-            after > initial.seq ||
+            read.fields.after > initial.seq ||
             (initial.generation !== "initial" &&
-              headers["x-todo-generation"] !== initial.generation);
+              read.fields.generation !== initial.generation);
           const operations = Stream.unfold(
             {
-              cursor: reset ? initial.restore_seq : after,
+              cursor: reset ? initial.restore_seq : read.fields.after,
               generation: initial.generation,
             },
             (state) =>
@@ -62,12 +77,12 @@ export const changesLayer = (store: OperationStore) =>
                   ] as const;
                 }
                 const { entries, cursor } = yield* translate(
-                  store.committedHistory(params.profile, state.cursor),
+                  store.changesRead(read, state.cursor),
                 );
                 for (const entry of entries) {
                   if (
                     entry.outcome === "committed" &&
-                    entry.profile === params.profile
+                    entry.profile === read.profile
                   )
                     events.push({
                       id: String(entry.seq),
@@ -104,13 +119,13 @@ export const changesLayer = (store: OperationStore) =>
             headers: { "cache-control": "no-store" },
             body: Stream.unwrap(
               Effect.gen(function* () {
-                const kind = headers["x-todo-client"];
+                const kind = read.fields.kind;
                 const id = yield* Effect.acquireRelease(
                   Effect.sync(() =>
                     store.diagnostics.connect(
-                      params.profile,
+                      read.profile,
                       kind ?? "unknown",
-                      reset ? undefined : header,
+                      reset ? undefined : read.fields.header,
                     ),
                   ),
                   (id) => Effect.sync(() => store.diagnostics.disconnect(id)),

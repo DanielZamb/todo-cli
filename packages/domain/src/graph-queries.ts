@@ -1,4 +1,4 @@
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
 import type { AccessRequest } from "./auth/model.ts";
 import type { GraphReport } from "./graph-contract.ts";
 import { graphEnergy } from "./graph-energy.ts";
@@ -10,9 +10,9 @@ import {
   type TaskGraph,
 } from "./graph-model.ts";
 import { topologicalOrder } from "./graph-order.ts";
-import type { TaskId } from "./ids.ts";
+import { TaskId } from "./ids.ts";
 import type { OperationStore } from "./store/store.ts";
-import type { Instant } from "./time.ts";
+import { Instant } from "./time.ts";
 
 export function graphShape(graph: TaskGraph):
   | {
@@ -128,16 +128,26 @@ export function queryGraph(
   return { ...fields, shape: shape.shape };
 }
 
-export const readGraph = (
+export const readGraphQuery = (
   store: OperationStore,
   request: AccessRequest & { readonly task_id: TaskId },
   generated_at: Instant,
 ) =>
   Effect.gen(function* () {
-    yield* store.auth.authorizeRead(request);
-    return queryGraph(
-      yield* store.graph(request.profile),
-      request.task_id,
-      generated_at,
+    const read = yield* store.auth.authorizeRead(
+      request,
+      Schema.Struct({ task_id: TaskId, generated_at: Instant }),
+      { task_id: request.task_id, generated_at },
     );
+    return {
+      read,
+      graph: queryGraph(
+        yield* store.graphRead(read),
+        read.fields.task_id,
+        read.fields.generated_at,
+      ),
+    };
   });
+
+export const readGraph = (...args: Parameters<typeof readGraphQuery>) =>
+  readGraphQuery(...args).pipe(Effect.map((result) => result.graph));

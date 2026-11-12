@@ -89,9 +89,17 @@ export class ClientReads {
     at?: Instant,
   ) =>
     Effect.gen({ self: this }, function* () {
-      const data = yield* this.store.auth.catalog(request);
+      const { read, data } = yield* this.store.auth.readCatalog(
+        request,
+        Schema.Struct({
+          name: PlanningViewName,
+          at: Schema.optionalKey(Instant),
+        }),
+        { name, ...(at === undefined ? {} : { at }) },
+      );
+      const selected = read.fields;
       const now =
-        at ??
+        selected.at ??
         Schema.decodeUnknownSync(Instant)(
           new Date(yield* Clock.currentTimeMillis).toISOString(),
         );
@@ -116,15 +124,15 @@ export class ClientReads {
           .map((task) => task.id),
       );
       const groups: PlanningView["groups"] =
-        name === "today"
+        selected.name === "today"
           ? [
               { name: "Overdue", tasks: rows(overdueIds) },
               { name: "Due today", tasks: rows(dueToday) },
               { name: "Scheduled today", tasks: rows(scheduledToday) },
             ]
-          : name === "overdue"
+          : selected.name === "overdue"
             ? [{ name: "Overdue", tasks: rows(overdueIds) }]
-            : name === "scheduled"
+            : selected.name === "scheduled"
               ? [
                   {
                     name: "Scheduled",
@@ -137,7 +145,7 @@ export class ClientReads {
                     tasks: tasks.filter(isInboxTask),
                   },
                 ];
-      return { name, now, groups };
+      return { name: selected.name, now, groups };
     });
 
   readonly history = (request: AccessRequest & { readonly task_id: TaskId }) =>

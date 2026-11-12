@@ -32,7 +32,8 @@ import {
   Instant,
   ProfileId,
   parseQuickAdd,
-  readGraph,
+  QuickAddInput,
+  readGraphQuery,
   SnapshotError,
   TaskId,
   type TaskMutationKind,
@@ -514,8 +515,8 @@ export const serverLayer = (options: {
             }),
           attachmentImage: ({ params }) =>
             Effect.gen(function* () {
-              const image = yield* translate(
-                attachments.image(
+              const { read, image } = yield* translate(
+                attachments.imageRead(
                   {
                     credential: yield* BearerCredential,
                     profile: params.profile,
@@ -527,14 +528,17 @@ export const serverLayer = (options: {
               if (image) return image;
               const task = yield* translate(
                 commands.get({
-                  credential: yield* BearerCredential,
-                  profile: params.profile,
-                  task_id: params.task,
+                  credential: read.credential,
+                  profile: read.profile,
+                  task_id: read.fields.task_id,
                 }),
               );
               return yield* Effect.fail(
                 task === null
-                  ? yield* missingTask(params, "read")
+                  ? yield* missingTask(
+                      { profile: read.profile, task: read.fields.task_id },
+                      "read",
+                    )
                   : new NotFound({ message: "Managed image not found" }),
               );
             }),
@@ -606,8 +610,8 @@ export const serverLayer = (options: {
           graph: ({ params }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
-              const graph = yield* translate(
-                readGraph(
+              const { read, graph } = yield* translate(
+                readGraphQuery(
                   store,
                   { credential, profile: params.profile, task_id: params.task },
                   Schema.decodeUnknownSync(Instant)(new Date().toISOString()),
@@ -615,7 +619,12 @@ export const serverLayer = (options: {
               );
               return (
                 graph ??
-                (yield* Effect.fail(yield* missingTask(params, "read")))
+                (yield* Effect.fail(
+                  yield* missingTask(
+                    { profile: read.profile, task: read.fields.task_id },
+                    "read",
+                  ),
+                ))
               );
             }),
           list: ({ params, query }) =>
@@ -648,15 +657,21 @@ export const serverLayer = (options: {
           show: ({ params }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
-              const task = yield* translate(
-                commands.get({
-                  credential,
-                  profile: params.profile,
-                  task_id: params.task,
-                }),
+              const { read, task } = yield* translate(
+                commands.readOne(
+                  { credential, profile: params.profile },
+                  Schema.Struct({ task_id: TaskId }),
+                  { task_id: params.task },
+                ),
               );
               return (
-                task ?? (yield* Effect.fail(yield* missingTask(params, "read")))
+                task ??
+                (yield* Effect.fail(
+                  yield* missingTask(
+                    { profile: read.profile, task: read.fields.task_id },
+                    "read",
+                  ),
+                ))
               );
             }),
           create: ({ params, payload }) =>
@@ -850,14 +865,17 @@ export const serverLayer = (options: {
             }),
           quickAdd: ({ params, payload }) =>
             Effect.gen(function* () {
-              yield* translate(
-                store.auth.authenticate({
-                  credential: yield* BearerCredential,
-                  profile: params.profile,
-                  access: "read",
-                }),
+              const read = yield* translate(
+                store.auth.subscribe(
+                  {
+                    credential: yield* BearerCredential,
+                    profile: params.profile,
+                  },
+                  QuickAddInput,
+                  payload,
+                ),
               );
-              return yield* parseQuickAdd(payload).pipe(
+              return yield* parseQuickAdd(read.fields).pipe(
                 Effect.catchTag("QuickAddError", (error) =>
                   Effect.fail(
                     new InvalidTask({
@@ -939,6 +957,23 @@ export const serverLayer = (options: {
             }),
         }),
       );
+      const snapshotResult = <A>(
+        operation: Effect.Effect<A, import("@todo/domain/store").StoreError>,
+      ) =>
+        operation.pipe(
+          Effect.catchTag("StoreError", (error) => {
+            const cause = error.cause;
+            return Effect.fail(
+              cause instanceof SnapshotError && cause.code === "not_found"
+                ? new NotFound({ message: cause.message })
+                : cause instanceof SnapshotError
+                  ? new InvalidTask({ message: cause.message })
+                  : new InternalError({
+                      message: "Snapshot operation failed",
+                    }),
+            );
+          }),
+        );
       const snapshotOwner = <A>(
         operation: Effect.Effect<A, import("@todo/domain/store").StoreError>,
       ) =>
@@ -946,31 +981,37 @@ export const serverLayer = (options: {
           yield* translate(
             store.auth.requireOwner({ credential: yield* BearerCredential }),
           );
-          return yield* operation.pipe(
-            Effect.catchTag("StoreError", (error) => {
-              const cause = error.cause;
-              return Effect.fail(
-                cause instanceof SnapshotError && cause.code === "not_found"
-                  ? new NotFound({ message: cause.message })
-                  : cause instanceof SnapshotError
-                    ? new InvalidTask({ message: cause.message })
-                    : new InternalError({
-                        message: "Snapshot operation failed",
-                      }),
-              );
-            }),
-          );
+          return yield* snapshotResult(operation);
         });
       const SnapshotsLive = HttpApiBuilder.group(
         TodoApi,
         "snapshots",
         (handlers) =>
           handlers.handleAll({
-            list: () => snapshotOwner(store.snapshots.list()),
+            list: () =>
+              Effect.gen(function* () {
+                const read = yield* translate(
+                  store.auth.ownerRead(
+                    { credential: yield* BearerCredential },
+                    Schema.Struct({}),
+                    {},
+                  ),
+                );
+                return yield* snapshotResult(store.snapshots.listRead(read));
+              }),
             create: ({ payload }) =>
               snapshotOwner(store.snapshots.create(payload.reason)),
             show: ({ params }) =>
-              snapshotOwner(store.snapshots.show(params.snapshot)),
+              Effect.gen(function* () {
+                const read = yield* translate(
+                  store.auth.ownerRead(
+                    { credential: yield* BearerCredential },
+                    Schema.Struct({ snapshot: Schema.String }),
+                    { snapshot: params.snapshot },
+                  ),
+                );
+                return yield* snapshotResult(store.snapshots.showRead(read));
+              }),
             restore: ({ params, payload }) =>
               snapshotOwner(
                 store.snapshots.restore(params.snapshot, {

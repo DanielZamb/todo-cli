@@ -127,3 +127,12 @@ serialized seed clone, preserving per-minute rejection policy.
 [verify-discovery](../verify-discovery/SKILL.md) additionally compiles and drives
 real CLI/HTTP action-attribution parity. No public read/profiles call is nested
 inside resolution, and no caller learns foreign metadata.
+
+## Bound read requests
+
+`pnpm --filter @todo/domain test read-authorization.test.ts` drives mutation of
+caller-owned Profile, Task id and filter fields during the real credential-use
+callback and graph read. It also proves owned frozen fields, nominal query-port
+types and a Profile inserted between discovery and count reads. Counts must use
+the checked Profile set. The HTTP and overlapping-request controls are documented
+in [verify-server-api](../verify-server-api/SKILL.md).

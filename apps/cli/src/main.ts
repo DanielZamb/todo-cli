@@ -20,6 +20,7 @@ import {
 } from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { BUILD_ID, CONTRACT_ID } from "@todo/api";
+import type { AuthorizedOwnerRead } from "@todo/domain";
 import {
   type AccessRequest,
   AttachManyItem,
@@ -2197,17 +2198,25 @@ const snapshotCommand = Command.make("snapshot").pipe(
         ),
     ).pipe(withGuide("snapshot create")),
     Command.make("list", {}, () =>
-      snapshotUse(SnapshotListResponse, (store, generated_at) =>
-        store.snapshots
-          .list()
-          .pipe(Effect.map((result) => ({ generated_at, ...result }))),
+      snapshotReadUse(
+        SnapshotListResponse,
+        Schema.Struct({}),
+        {},
+        (store, read, generated_at) =>
+          store.snapshots
+            .listRead(read)
+            .pipe(Effect.map((result) => ({ generated_at, ...result }))),
       ),
     ).pipe(withGuide("snapshot list")),
     Command.make("show", { id: Argument.String("snapshot-id") }, ({ id }) =>
-      snapshotUse(SnapshotResponse, (store, generated_at) =>
-        store.snapshots
-          .show(id)
-          .pipe(Effect.map((snapshot) => ({ generated_at, snapshot }))),
+      snapshotReadUse(
+        SnapshotResponse,
+        Schema.Struct({ snapshot: Schema.String }),
+        { snapshot: id },
+        (store, read, generated_at) =>
+          store.snapshots
+            .showRead(read)
+            .pipe(Effect.map((snapshot) => ({ generated_at, snapshot }))),
       ),
     ).pipe(withGuide("snapshot show")),
     Command.make(
@@ -2230,6 +2239,39 @@ const snapshotCommand = Command.make("snapshot").pipe(
   ]),
   withGuide("snapshot"),
 );
+function snapshotReadUse<
+  S extends Schema.ConstraintEncoder<unknown>,
+  F extends Schema.ConstraintDecoder<unknown>,
+>(
+  schema: S,
+  fieldsSchema: F,
+  fields: F["Type"],
+  use: (
+    store: OperationStore,
+    read: AuthorizedOwnerRead<Readonly<F["Type"]>>,
+    generatedAt: string,
+  ) => Effect.Effect<S["Type"], StoreError>,
+) {
+  return Effect.gen(function* () {
+    const cfg = yield* root;
+    yield* withStore(cfg, "authenticate", (store) =>
+      Effect.gen(function* () {
+        const read = yield* store.auth.ownerRead(
+          { credential: yield* io(() => loadCredential(cfg)) },
+          fieldsSchema,
+          fields,
+        );
+        const result = yield* use(store, read, iso(nowInstant()));
+        yield* response(
+          cfg.format,
+          schema,
+          result,
+          `# Snapshots\n\n${JSON.stringify(result, null, 2)}\n`,
+        );
+      }),
+    );
+  });
+}
 function snapshotUse<S extends Schema.ConstraintEncoder<unknown>>(
   schema: S,
   use: (

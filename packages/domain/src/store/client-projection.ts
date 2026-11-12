@@ -1,7 +1,7 @@
 import type { Database } from "bun:sqlite";
 import { Schema } from "effect";
 import { ProfileSummary, ProjectSummary, TagSummary } from "../client-reads.ts";
-import { Project, Tag, Task } from "../entities.ts";
+import { type Profile, Project, Tag, Task } from "../entities.ts";
 import type { ProfileId } from "../ids.ts";
 
 export class ClientProjection {
@@ -33,18 +33,29 @@ export class ClientProjection {
     tasks: this.tasks(profile),
   });
 
-  readonly profiles = (profile: ProfileId | null) =>
-    Schema.decodeUnknownSync(Schema.Array(ProfileSummary))(
-      this.db
-        .query(`SELECT p.*,
-        count(t.id) AS visible_task_count,
-        count(CASE WHEN t.status='open' THEN 1 END) AS open_task_count,
-        count(CASE WHEN t.status='open' AND t.due_at IS NULL AND t.scheduled_at IS NULL THEN 1 END) AS inbox_task_count
-        FROM profiles p LEFT JOIN tasks t ON t.profile_id=p.id AND t.deleted_at IS NULL
-        WHERE p.id NOT IN (SELECT profile FROM profile_deletions) AND (? IS NULL OR p.id=?)
-        GROUP BY p.id ORDER BY p.id`)
-        .all(profile, profile),
+  readonly profiles = (profiles: readonly Profile[]) => {
+    const counts = this.db
+      .query(`SELECT visible.value AS id,
+      count(t.id) AS visible_task_count,
+      count(CASE WHEN t.status='open' THEN 1 END) AS open_task_count,
+      count(CASE WHEN t.status='open' AND t.due_at IS NULL AND t.scheduled_at IS NULL THEN 1 END) AS inbox_task_count
+      FROM json_each(?) visible LEFT JOIN tasks t ON t.profile_id=visible.value AND t.deleted_at IS NULL
+      GROUP BY visible.value`)
+      .all(JSON.stringify(profiles.map((profile) => profile.id)));
+    const Count = Schema.Struct({
+      id: ProfileSummary.fields.id,
+      visible_task_count: ProfileSummary.fields.visible_task_count,
+      open_task_count: ProfileSummary.fields.open_task_count,
+      inbox_task_count: ProfileSummary.fields.inbox_task_count,
+    });
+    const rows = Schema.decodeUnknownSync(Schema.Array(Count))(counts);
+    return Schema.decodeUnknownSync(Schema.Array(ProfileSummary))(
+      profiles.map((profile) => ({
+        ...profile,
+        ...rows.find((row) => row.id === profile.id),
+      })),
     );
+  };
 
   readonly projects = (profile: ProfileId) =>
     Schema.decodeUnknownSync(Schema.Array(ProjectSummary))(

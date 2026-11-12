@@ -210,3 +210,26 @@ and cross-Profile id-prefix lookup matrix, credential no-leak properties, WAL
 snapshot tests and auth-failure rollback proof. Run its single command after
 changing these reads or their CLI/HTTP contracts. Existing Profile-scoped SSE
 and Task search behavior retain their current recipes.
+
+## Mutation after authorization
+
+`build-read-boundary.ts <scratch-binary>` builds the real server with verification
+hooks. It wraps decoded handler arguments, invokes mutations from the real
+credential-use callback or immediately after a checked value is constructed, and
+can yield at the graph port. Product sources and the HTTP contract are unchanged
+by this instrumentation. Both wall clocks use the parity fixture's fixed instant.
+
+Run `read-control.ts` with a normal candidate binary first and this instrumented
+binary second, the lifecycle fixture and a new evidence directory. Set
+`READ_BOUNDARY_MODE=credential` or `port`, and set `READ_BOUNDARY_BINARY` to the
+instrumented binary's absolute path. The comparator requires its emitted hook
+receipt and actual changes to Profile, Task, Attachment and Snapshot ids, prefix
+and quick-add text. It compares all statuses, raw reply bytes and auth evidence.
+The receipt lists every mutated field and handler shape; no credential is logged.
+
+`bun apps/server/scripts/read-boundary-concurrency.ts <scratch-binary>
+<fixture-manifest> <new-evidence-directory>` creates two literal Tasks and scoped
+Tokens in a fresh scratch database. It runs ten pairs of overlapping requests per
+mode on one server. Every pair must return only `aa-work` and `aa-personal` in
+its respective Profile. Hook counters must prove actual overlap and mutation.
+The driver stops its owned server and removes its scratch database and HOME.
