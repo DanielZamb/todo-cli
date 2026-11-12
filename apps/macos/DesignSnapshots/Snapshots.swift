@@ -309,6 +309,50 @@ struct Snapshots {
                 }
 
             }
+            if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C7_ONLY"] == "1" {
+                // Candidate 7 review states for the Opus Mac UI seat: the banner's two controls,
+                // the named hand-offs, the sign-out caption, the follow-up failure in its picker,
+                // the quick-add capsule and the hold rows of This client.
+                func banner(_ text: String, _ kind: TodoModel.MessageKind) -> TodoModel {
+                    let state = fixture(); state.signedIn = true; state.publishMessage(text, kind: kind); return state
+                }
+                let conflict = banner("The Task changed. Close and reopen it before trying that action again.", .transition)
+                try await render("c7-banner-dismiss", WorkspaceSnapshot(model: conflict), width: 1100, height: 720)
+                try await render("c7-compact-banner-dismiss", TaskListView(model: conflict, compactMode: true, referenceDate: referenceDate).compactContent, width: 393, height: 426)
+                try await render("c7-banner-reconnect", WorkspaceSnapshot(model: banner("Task saved. The live view is reconnecting.", .connection)), width: 1100, height: 720)
+                try await render("c7-banner-quick-add-failed", WorkspaceSnapshot(model: banner("Couldn't add “Ship the release”. The server rejected this request (HTTP 503).", .quickAdd)), width: 1100, height: 720)
+                try await render("c7-banner-dependency-failed", WorkspaceSnapshot(model: banner("Couldn't add the Dependency on “Review the interaction design”. This Dependency would create a loop. Choose another Task.", .dependencyLink)), width: 1100, height: 720)
+                let signOutSettings = SettingsView(
+                    model: banner("Couldn't sign out. The server rejected this request (HTTP 503).", .signOut), selectedTab: .general, notifications: NotificationSettingsState(authorization: "Allowed"),
+                    serverStatus: ManagedServerStatus(label: "fixture.todo.server", path: "/fixture/LaunchAgents/todo.plist", installed: true, loaded: true,
+                                                      configuration: ManagedServerConfiguration(executable: "/fixture/Todo/Server/todo-server", database: "/fixture/todo.db", port: 4310)))
+                try await render("c7-settings-sign-out-failed", signOutSettings, width: 640, height: 560)
+                let importing = fixture(); importing.signedIn = true; importing.showingImport = true
+                importing.importFollowUpError = "The server rejected this request (HTTP 404)."
+                try await render("c7-import-follow-up-failed", ImportView(model: importing, compact: false), width: 760, height: 620)
+                let picker = fixture(); picker.signedIn = true
+                picker.dependencies.picker = .init(profile: "work", root: picker.tasks[0], direction: .dependsOn)
+                picker.dependencies.picker?.failure = DependencyNotice(message: "The server rejected this request (HTTP 404).")
+                try await render("c7-picker-follow-up-failed", DependencyPickerView(model: picker), width: 560, height: 620)
+                let added = fixture(); added.signedIn = true; added.deletionNotice = "Task added"
+                try await render("c7-capsule-task-added", WorkspaceSnapshot(model: added), width: 1100, height: 720)
+                // This client: a row click with its release taken from the selection, and a
+                // pointer action whose release was not recorded.
+                let clock = C7ReviewClock()
+                let recorder = ClientDiagnosticsRecorder(journalDirectory: directory.appendingPathComponent("c7-recorder-\(mode)"), clock: { clock.now })
+                recorder.authorizeOwnerSession(true)
+                let click = recorder.beginAction(.taskSelection, inputMS: 1000, mode: .full, inputKind: .pointer)
+                clock.now = 1054; recorder.inputReleased(click, atMS: 1053.9, source: .nativeSelection)
+                clock.now = 1086; recorder.handlerStarted(click); clock.now = 1128; recorder.resultPublished(click); clock.now = 1321; recorder.layoutCommitted(click)
+                let settings = recorder.beginAction(.openSettings, inputMS: 2000, mode: .full, inputKind: .pointer)
+                clock.now = 2030; recorder.handlerStarted(settings); clock.now = 2040; recorder.resultPublished(settings); clock.now = 2190; recorder.layoutCommitted(settings)
+                let diagnostics = fixture(); diagnostics.signedIn = true
+                diagnostics.clientDiagnosticsUI.summary = await recorder.snapshot()
+                try await render("c7-this-client-holds", DiagnosticsView(model: diagnostics, live: false, initiallyExpanded: ["This client", "Interaction phases", "Recent activity"]), width: 1160, height: 1400)
+                try await render("c7-compact-this-client-holds", DiagnosticsView(model: diagnostics, live: false, initiallyExpanded: ["This client", "Interaction phases"]), width: 393, height: 1400)
+                recorder.clear()
+                continue
+            }
             if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" {
                 for compact in [true, false] {
                     for state in ["ready", "excerpt-trimmed", "typing", "requesting", "empty", "error", "budget-error", "initial-error", "offline", "prefix", "prefix-invalid", "detail", "quick-add", "copied", "copy-failed"] {
@@ -994,7 +1038,7 @@ struct Snapshots {
         try JSONEncoder().encode(importLayouts).write(to: directory.appendingPathComponent("import-layout.json"))
         try JSONEncoder().encode(transferLayouts).write(to: directory.appendingPathComponent("transfer-layout.json"))
         try JSONSerialization.data(withJSONObject: compactLayouts, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("compact-layout.json"))
-        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" ? 60 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 362))
+        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C7_ONLY"] == "1" ? 22 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" ? 60 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 362))
         if !ProcessInfo.processInfo.environment.contains(where: { $0.key.hasPrefix("TODO_SNAPSHOT_") && $0.key.hasSuffix("_ONLY") && $0.value == "1" }) {
             let discovery = try await DiscoverySnapshots.render(directory: directory)
             let dependencies = try await DependencyMatrixSnapshots.render(directory: directory)
@@ -1130,6 +1174,8 @@ private final class DiagnosticsLayoutReceipt {
 /// Renders a view for the design suite at a fixed 2x scale in generic (calibrated) RGB and tags it
 /// sRGB, independent of the capturing host's display scale and colour profile, so two runs of the
 /// same source give byte-identical PNGs. verify-design.py records this in result.json.
+final class C7ReviewClock: @unchecked Sendable { private let lock = NSLock(); private var value = 1000.0; var now: Double { get { lock.withLock { value } } set { lock.withLock { value = newValue } } } }
+
 @MainActor func snapshotBitmap(_ view: NSView) throws -> NSBitmapImageRep {
     let size = view.bounds.size
     let rep = try #require(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int((size.width * 2).rounded()), pixelsHigh: Int((size.height * 2).rounded()),

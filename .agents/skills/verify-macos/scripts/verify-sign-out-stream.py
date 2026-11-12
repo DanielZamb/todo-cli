@@ -269,6 +269,21 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
     seat_others = {}
     for suite in ['SeatRestoreCancellationCorrectedTests', 'SeatMessageScopeObservationTests', 'SeatSurfaceLifetimeTests', 'SeatSurfaceClassTests']:
         seat_others[suite] = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', suite], f'{suite}.log', test_env)
+    # Coordinator ruling 3 (second seat), 2026-11-12: "The two `#require(model.message)` lines
+    # (SeatSurfaceLifetimeTests.swift:85 and SeatMessageScopeObservationTests.swift:42) are expected
+    # differences under my ruling 3: the follow-up failure now lives in the surface that offered it
+    # (the picker's notice, the Import report's error), so `model.message` is nil there by design."
+    # A probe run is accepted only if that line is its sole issue; the probes stay byte-identical.
+    # Counterpart controls: MessageKindTests.olderPickerSuccessLeavesTheNewerPickerAndItsError and
+    # whatEndsAFollowUpFailureShownInItsSurface.
+    ruled = {'SeatSurfaceLifetimeTests': 'SeatSurfaceLifetimeTests.swift:85', 'SeatMessageScopeObservationTests': 'SeatMessageScopeObservationTests.swift:42'}
+    seat_ruling3 = {}
+    for suite, line in ruled.items():
+        found = re.findall(r'recorded an issue at (' + suite + r'\.swift:\d+)', (evidence / f'{suite}.log').read_text())
+        sole = seat_others[suite] != 0 and found == [line]
+        seat_ruling3[suite] = dict(exit=seat_others[suite], issues=found, expected_difference=line + ' (ruling 3, 2026-11-12: the follow-up failure lives in the surface that offered it)', accepted=sole or seat_others[suite] == 0)
+        if sole: seat_others[suite] = 0
+    (evidence / 'seat-ruling3.json').write_text(json.dumps(seat_ruling3, indent=2) + '\n')
     exit_code = exit_code or seat_exit or restore_exit or interleaving_exit or int(any(seat_others.values()))
 
     with lock:
