@@ -227,6 +227,26 @@ final class TodoModel {
         return present
     }
     func isNewestMessage(_ ticket: SurfaceMessages<MessageKind, String>.Ticket) -> Bool { mainMessages.isNewest(ticket) }
+    /// A ticket of any surface, type-erased; it can only be made from a real ticket, so it can never
+    /// carry a decision taken earlier (MAC-C1-S1-17).
+    struct PresentationTicket {
+        private let ticket: any SurfaceTicket
+        init<Kind, Value>(_ ticket: SurfaceMessages<Kind, Value>.Ticket) { self.ticket = ticket }
+        var isNewest: Bool { ticket.isNewest }
+    }
+    /// Who may present a read-back's outcome, asked when it publishes.
+    enum ReadBackOwner {
+        /// The main window: a row action, or a surface action that closed its own surface on success.
+        case mainWindow(PresentationTicket?)
+        /// A surface instance: only while it is still showing.
+        case surface(MessageSurface, PresentationTicket?)
+        @MainActor func mayPresent(in model: TodoModel) -> Bool {
+            switch self {
+            case .mainWindow(let ticket): ticket?.isNewest ?? true
+            case .surface(let surface, let ticket): (ticket?.isNewest ?? true) && model.isShowing(surface)
+            }
+        }
+    }
     func publishMessage(_ text: String, kind: MessageKind, surface: MessageSurface? = nil) { pendingMessageKind = kind; pendingMessageSurface = surface; message = text }
     /// The only way a surface's completion reaches the main window after its surface closed
     /// (MAC-C1-S1-16): it hands off only if the action is still the newest of its kind in its
@@ -441,14 +461,14 @@ final class TodoModel {
             let report = try decode(ImportSummary.self, response.ok.body.json)
             guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
             // A reopened Import has a new generation; the previous sheet's committed apply still reaches the list.
-            guard importGeneration == requestedGeneration, surface.map(isShowing) ?? true else { if !dryRun { await refreshAfterWrite("Import applied", presenting: surface ?? .importSheet(UUID())) }; return }
+            guard importGeneration == requestedGeneration, surface.map(isShowing) ?? true else { if !dryRun { await refreshAfterWrite("Import applied", owner: .surface(surface ?? .importSheet(UUID()), .init(ticket))) }; return }
             if report.items.contains(where: { $0.error?.hasMalformedDependencyError == true }) {
                 importReport = nil
                 throw DependencyGraphReply.ProtocolError.incompatible
             }
             importMessages.succeed(ticket)
             importReport = report
-            if !dryRun { await refreshAfterWrite("Import applied", presenting: surface) }
+            if !dryRun { await refreshAfterWrite("Import applied", owner: surface.map { .surface($0, .init(ticket)) } ?? .mainWindow(.init(ticket))) }
         } catch {
             authorize(error, epoch: credentialEpoch, profile: requestedProfile)
             guard isCurrentCredential(credentialEpoch) else { return }
@@ -1085,20 +1105,24 @@ final class TodoModel {
                     if hasUnsavedEditor { pendingNavigation = .edit(task) }
                     else { beginEditing(task, focusTitle: true) }
                 }
+                announce("Task added to \(profileName)")
+                // It closed its own quick-add, so its read-back belongs to the main window. Who may
+                // present is asked after the read-back, never carried across it (S1-17).
+                await refreshAfterWrite("Task added", owner: .mainWindow(.init(createTicket)))
+            } else {
+                await refreshAfterWrite("Task added", owner: surface.map { .surface($0, .init(createTicket)) } ?? .mainWindow(.init(createTicket)))
             }
-            // A showing quick-add closes itself on success, so its read-back belongs to the main window.
-            await refreshAfterWrite("Task added", presenting: showing ? nil : surface, presents: createTicket.isNewest)
             guard isCurrentCredential(credentialEpoch), profile == creationProfile else { return false }
-            // A superseded create presents nothing anywhere (S1-16): no clearing of an earlier
-            // hand-off, no announcement, no "Task added" capsule. Its Task still reached the list.
+            // Asked now, after the read-back: a superseded create presents nothing anywhere (S1-16):
+            // no clearing of an earlier hand-off, no "Task added" capsule. Its Task still reached the list.
             guard createTicket.isNewest else { return false }
             clearMessage([.quickAdd], since: mark)
-            if showing { announce("Task added to \(profileName)") }
             // A Task the current view filters out (no date in Today, say) is confirmed quietly.
             if !showsInCurrentView(task.id) { deletionNotice = "Task added" }
-            // The caller's view acts on true (dismisses itself or opens the Tasks window); only the
-            // instance that presented this completion may.
-            return showing
+            // The caller's view acts on true (dismisses itself or opens the Tasks window). Asked now:
+            // the newest create of the quick-add instance that is current; the view checks its own
+            // opening as well.
+            return quickAddMessages.isNewest(createTicket)
         } catch {
             authorize(error, epoch: credentialEpoch, profile: creationProfile)
             guard isCurrentCredential(credentialEpoch), profile == creationProfile else { return false }
@@ -1138,11 +1162,14 @@ final class TodoModel {
                 editor = nil
                 conflict = nil
                 writeIntent = nil
+                announce("Task saved")
+                // It closed its own editor, so its read-back belongs to the main window; who may present
+                // is asked after the read-back (S1-17).
+                await refreshAfterWrite("Task saved", owner: .mainWindow(.init(saveTicket)))
+            } else {
+                await refreshAfterWrite("Task saved", owner: .surface(.editor(draft.opening), .init(saveTicket)))
             }
-            // A showing editor closes itself on success, so its read-back belongs to the main window.
-            await refreshAfterWrite("Task saved", presenting: showing ? nil : .editor(draft.opening))
             guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return nil }
-            if showing { announce("Task saved") }
             return saved
         } catch {
             authorize(error, epoch: credentialEpoch, profile: requestedProfile)
@@ -1316,8 +1343,10 @@ final class TodoModel {
             if case .conflict = response {
                 _ = await refresh(generation: generation)
                 guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
-                editorError = "The Task changed. Close and reopen it before trying that action again."
-                publishMessage(editorError!, kind: .transition)
+                let text = "The Task changed. Close and reopen it before trying that action again."
+                // Asked now: only an editor showing this Task carries the text too (S1-17).
+                if editor?.id == task.id { editorError = text }
+                publishMessage(text, kind: .transition)
                 return
             }
             _ = try response.ok.body.json
@@ -1327,7 +1356,9 @@ final class TodoModel {
             announce("Task updated")
         } catch {
             guard isCurrentCredential(credentialEpoch) else { return }
-            publishMessage(describe(error, dependencyContext: action == "complete" ? .complete : .reopen), kind: .transition); editorError = describe(error, at: .editor, dependencyContext: action == "complete" ? .complete : .reopen); handleAuthorization(error, credentialEpoch: credentialEpoch) }
+            publishMessage(describe(error, dependencyContext: action == "complete" ? .complete : .reopen), kind: .transition)
+            if editor?.id == task.id { editorError = describe(error, at: .editor, dependencyContext: action == "complete" ? .complete : .reopen) }
+            handleAuthorization(error, credentialEpoch: credentialEpoch) }
     }
 
     func deleteTask(_ task: TaskSnapshot) async {
@@ -1372,9 +1403,15 @@ final class TodoModel {
             }
             // The committed delete reaches the editor and the list even if this confirmation has closed.
             let showing = dependencies.deletion?.id == preview.id
-            if showing { dependencies.deletion = nil }
             endMessage(raisedBy: .deleteDialog(preview.id))
-            await refreshAfterWrite("Task deleted", clearing: .delete, since: mark, presenting: showing ? nil : .deleteDialog(preview.id))
+            if showing {
+                dependencies.deletion = nil
+                // It closed its own confirmation, so its read-back belongs to the main window; who may
+                // present is asked after the read-back (S1-17).
+                await refreshAfterWrite("Task deleted", clearing: .delete, since: mark, owner: .mainWindow(.init(deleteTicket)))
+            } else {
+                await refreshAfterWrite("Task deleted", clearing: .delete, since: mark, owner: .surface(.deleteDialog(preview.id), .init(deleteTicket)))
+            }
         } catch {
             authorize(error, epoch: credentialEpoch, profile: deletionProfile)
             guard isCurrentCredential(credentialEpoch) else { return }
@@ -1446,7 +1483,7 @@ final class TodoModel {
                     tasks.removeAll { $0.id == task.id }
                     if let current = planning { planning = PlanningResult(name: current.name, groups: current.groups.map { .init(name: $0.name, tasks: $0.tasks.filter { $0.id != task.id }) }) }
                 }
-                await refreshAfterWrite("Task updated", presenting: .editor(draft.opening))
+                await refreshAfterWrite("Task updated", owner: .surface(.editor(draft.opening), .init(writeTicket)))
                 return
             }
             writeIntent = nil
@@ -1460,8 +1497,14 @@ final class TodoModel {
             showingHistory = false
             if let transfer = intent.transfer {
                 let name = profiles.first { $0.id == transfer.destination }?.name ?? transfer.destination
-                if transfer.kind == .move { editor = nil }
-                await refreshAfterWrite("Task updated", presenting: transfer.kind == .move ? nil : .editor(draft.opening))
+                // A Move closes its own editor, so its read-back belongs to the main window; a Copy's
+                // stays with its editor opening. Who may present is asked after the read-back (S1-17).
+                if transfer.kind == .move {
+                    editor = nil
+                    await refreshAfterWrite("Task updated", owner: .mainWindow(.init(writeTicket)))
+                } else {
+                    await refreshAfterWrite("Task updated", owner: .surface(.editor(draft.opening), .init(writeTicket)))
+                }
                 guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
                 if transfer.kind == .move {
                     tasks.removeAll { $0.id == task.id }
@@ -1469,8 +1512,10 @@ final class TodoModel {
                         planning = PlanningResult(name: current.name, groups: current.groups.map { .init(name: $0.name, tasks: $0.tasks.filter { $0.id != task.id }) })
                     }
                 }
-                // A newer editor opened during the read-back owns the inspector now.
-                guard editor == nil || editor?.opening == draft.opening else { return }
+                // Asked now: the newest write of this opening, and its surface. A Move closed its editor,
+                // so no newer editor may have opened since; a Copy's editor must still be the one
+                // showing (a Copy closed during its read-back reports nothing).
+                guard writeTicket.isNewest, transfer.kind == .move ? editor == nil : editor?.opening == draft.opening else { return }
                 transferResult = TaskTransferResult(kind: transfer.kind, task: task, profileName: name, removedDependencies: removedDependencies)
                 announce(transferResult?.message ?? "Task updated")
                 return
@@ -1490,10 +1535,13 @@ final class TodoModel {
             } else {
                 editor = task.deleted_at != nil ? nil : intent.mergesFields ? TaskDraft(task) : draft.merging(task, choices: [:])
                 editor?.opening = draft.opening
-                await refreshAfterWrite("Task updated", presenting: .editor(draft.opening))
+                await refreshAfterWrite("Task updated", owner: .surface(.editor(draft.opening), .init(writeTicket)))
                 guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
             }
             guard isCurrentCredential(credentialEpoch) else { return }
+            // Asked now, after any read-back: only the newest write of an opening that is still showing
+            // (or whose Task was deleted by this write) announces.
+            guard writeTicket.isNewest, editor == nil || editor?.opening == draft.opening else { return }
             announce("Task updated")
         } catch {
             authorize(error, epoch: credentialEpoch, profile: requestedProfile)
@@ -1535,10 +1583,20 @@ final class TodoModel {
         transferRequest = .init(kind: transfer.kind, task: draft.base)
     }
 
-    func openSeries(presenting: Bool = true) async {
+    /// Opens the Series sheet: loads the definition, then shows the sheet only if, at that moment,
+    /// this load is still the newest of its editor opening (S1-17: nothing decided before the
+    /// awaits is used after them).
+    func openSeries() async {
+        guard let ticket = await readSeries() else { return }
+        if editorMessages.isNewest(ticket) { showingSeries = true }
+    }
+    /// Loads the Series definition in the background; never presents the sheet.
+    func loadSeries() async { _ = await readSeries() }
+    /// Returns the load's ticket when it applied a definition.
+    private func readSeries() async -> SurfaceMessages<EditorMessageKind, String>.Ticket? {
         let credentialEpoch = discovery.credentialEpoch
-        guard outdatedServerBuild == nil else { return }
-        guard canWrite, let draft = editor else { return }
+        guard outdatedServerBuild == nil else { return nil }
+        guard canWrite, let draft = editor else { return nil }
         let client = self.client
         seriesGeneration += 1
         let request = seriesGeneration
@@ -1553,7 +1611,7 @@ final class TodoModel {
             var seen: Set<String> = []
             var entries: [HistoryEntry] = []
             while let id = queue.popLast() {
-                guard isCurrentCredential(credentialEpoch), seriesGeneration == request, profile == requestedProfile, editor?.id == draft.id else { return }
+                guard isCurrentCredential(credentialEpoch), seriesGeneration == request, profile == requestedProfile, editor?.id == draft.id else { return nil }
                 guard seen.insert(id).inserted else { continue }
                 let history = try await client.reads_period_history(path: .init(profile: requestedProfile, task: id)).ok.body.json
                 let decoded = try decode([HistoryEntry].self, history)
@@ -1562,16 +1620,18 @@ final class TodoModel {
                 queue += committed.flatMap { $0.event.relatedTasks }.filter { $0.seriesKey == current.seriesKey && !seen.contains($0.id) }.map(\.id)
                 queue += committed.flatMap { $0.event.redactedTaskIDs }.filter { !seen.contains($0) }
             }
-            guard !Task.isCancelled, seriesGeneration == request, profile == requestedProfile, editor?.id == draft.id else { return }
+            guard !Task.isCancelled, seriesGeneration == request, profile == requestedProfile, editor?.id == draft.id else { return nil }
             let definition = HistoryEntry.series(for: current, entries: entries)
             guard current.occurrence == nil || definition != nil else { throw DraftError.missingSeries }
             series = definition
-            showingSeries = presenting
+            return seriesTicket
         } catch {
             authorize(error, epoch: credentialEpoch, profile: requestedProfile)
-            guard isCurrentCredential(credentialEpoch) else { return }
-            guard !Task.isCancelled, seriesGeneration == request, profile == requestedProfile, editor?.opening == draft.opening else { return }
-            editorMessages.fail(describe(error, at: .editor), seriesTicket)
+            guard isCurrentCredential(credentialEpoch) else { return nil }
+            guard !Task.isCancelled, seriesGeneration == request, profile == requestedProfile, editor?.opening == draft.opening else { return nil }
+            let failureText = describe(error, at: .editor)
+            editorMessages.fail(failureText, seriesTicket)
+            return nil
         }
     }
 
@@ -1621,12 +1681,13 @@ final class TodoModel {
 
     /// `kind` and `writeMark` name the write whose success this read-back confirms: its
     /// earlier error of that kind and older connection messages end; nothing newer does.
-    /// `presenting` is the surface instance that made the write (nil: the main window). It is checked
-    /// after the read-back's await, not before: if that instance is no longer showing, a failed
-    /// read-back raises no message of its own and is left to the ordinary connection recovery.
-    /// `presents` is false for an action that was superseded: its read-back still runs, but it
-    /// raises no message of its own (S1-16).
-    func refreshAfterWrite(_ accepted: String, clearing kind: MessageKind? = nil, since writeMark: Int? = nil, presenting surface: MessageSurface? = nil, presents: Bool = true) async {
+    ///
+    /// `owner` says who may present the read-back's own outcome. It is asked at the moment of
+    /// publishing, after the read-back's await, never before (MAC-C1-S1-17): no "may present",
+    /// "is showing" or "is newest" value crosses the await. A superseded action, or one whose
+    /// surface instance is no longer showing, raises no message and clears no message of its kind;
+    /// a failed read-back is then left to the ordinary connection recovery.
+    func refreshAfterWrite(_ accepted: String, clearing kind: MessageKind? = nil, since writeMark: Int? = nil, owner: ReadBackOwner = .mainWindow(nil)) async {
         let credentialEpoch = discovery.credentialEpoch
         let mark = writeMark ?? messageMark
         catalogStale = true
@@ -1634,10 +1695,12 @@ final class TodoModel {
         guard isCurrentCredential(credentialEpoch) else { return }
         switch result {
         case .applied:
-            clearMessage(Set([MessageKind.connection] + (kind.map { [$0] } ?? [])), since: mark)
+            // A good read proves the connection; the write's own kind ends only for its owner.
+            clearMessage([MessageKind.connection], since: mark)
+            if let kind, owner.mayPresent(in: self) { clearMessage([kind], since: mark) }
         case .failed:
             if signedIn {
-                if presents, surface.map(isShowing) ?? true { publishMessage(accepted + ". The live view is reconnecting.", kind: .connection) }
+                if owner.mayPresent(in: self) { publishMessage(accepted + ". The live view is reconnecting.", kind: .connection) }
                 connect()
             }
         case .superseded:

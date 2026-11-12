@@ -162,39 +162,47 @@ extension TodoModel {
         dependencies.picker?.direction = direction
         await reloadDependencyPicker()
     }
-    /// Reloads the picker. Opening it and the person's Reload clear an earlier reload or link notice
-    /// on success (`clearing`); a link's read-back and a background refresh only refresh the data.
-    func reloadDependencyPicker(clearing: Bool = true) async {
-        guard let picker = dependencies.picker else { return }
-        guard connection == .live else { dependencies.picker?.loading = false; return }
-        if picker.purpose != .edit { await searchDependencyCandidates(); return }
+    /// Reloads the picker for the person (opening it, a direction change, the Reload button): on
+    /// success it clears an earlier reload or link notice, asked after the read (S1-17), only while
+    /// this reload is still the newest of its picker.
+    func reloadDependencyPicker() async {
+        guard let ticket = await readDependencyPicker() else { return }
+        if dependencies.picker?.messages.isNewest(ticket) == true { dependencies.picker?.messages.clear([.reload, .link], since: ticket.mark) }
+    }
+    /// Refreshes the picker's data for a link's read-back or a background refresh; clears nothing.
+    func refreshDependencyPicker() async { _ = await readDependencyPicker() }
+    /// Returns the reload's ticket when it applied fresh data.
+    private func readDependencyPicker() async -> SurfaceMessages<DependencyPicker.MessageKind, DependencyNotice>.Ticket? {
+        guard let picker = dependencies.picker else { return nil }
+        guard connection == .live else { dependencies.picker?.loading = false; return nil }
+        if picker.purpose != .edit { await searchDependencyCandidates(); return nil }
         dependencies.picker?.reloadRequest += 1
-        guard let request = dependencies.picker?.reloadRequest else { return }
+        guard let request = dependencies.picker?.reloadRequest else { return nil }
         let epoch = discovery.credentialEpoch
         let run = dependencies.generation
         let client = self.client
         let id = picker.id
         dependencies.picker?.loading = true
-        guard let ticket = dependencies.picker?.messages.begin(.reload) else { return }
+        guard let ticket = dependencies.picker?.messages.begin(.reload) else { return nil }
         do {
             let root = try await TaskSnapshot.decode(client.tasks_period_show(path: .init(profile: picker.profile, task: picker.root.id)).ok.body.json)
-            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == id, dependencies.picker?.reloadRequest == request else { return }
+            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == id, dependencies.picker?.reloadRequest == request else { return nil }
             let linkedIDs = picker.direction == .dependsOn ? root.depends_on ?? [] : root.blocks ?? []
             var linked: [TaskSnapshot] = []
             for taskID in linkedIDs { linked.append(try await TaskSnapshot.decode(client.tasks_period_show(path: .init(profile: picker.profile, task: taskID)).ok.body.json)) }
-            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == id, dependencies.picker?.reloadRequest == request else { return }
+            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == id, dependencies.picker?.reloadRequest == request else { return nil }
             dependencies.picker?.root = root
             dependencies.picker?.linked = linked
             dependencies.picker?.requiresReload = false
-            // Ends a reload or link notice from before it began; a newer one (a follow-up failure, say) stays.
-            if clearing, dependencies.picker?.messages.isNewest(ticket) == true { dependencies.picker?.messages.clear([.reload, .link], since: ticket.mark) }
             await searchDependencyCandidates()
+            return ticket
         } catch {
             authorize(error, epoch: epoch, profile: picker.profile)
-            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == id, dependencies.picker?.reloadRequest == request else { return }
+            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == id, dependencies.picker?.reloadRequest == request else { return nil }
             let failureNotice = dependencyNotice(error, context: .link)
             dependencies.picker?.messages.fail(failureNotice, ticket)
             dependencies.picker?.loading = false
+            return nil
         }
     }
     func searchDependencyCandidates() async {
@@ -265,7 +273,7 @@ extension TodoModel {
             // Presentation, only while this picker is still the one showing; a close at any point
             // (including during its reload) cannot skip the committed edge's catalog read-back.
             if dependencies.picker?.id == picker.id {
-                await reloadDependencyPicker(clearing: false)
+                await refreshDependencyPicker()
                 if currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == picker.id,
                    dependencies.picker?.messages.succeed(linkTicket) == true {
                     dependencies.picker?.feedback = report.outcome == "unchanged" ? (remove ? "Already removed" : "Already linked") : (remove ? "Dependency removed" : "Dependency added")
@@ -277,7 +285,7 @@ extension TodoModel {
             // Presentation in the main window too: only the newest link of this picker may clear
             // an earlier hand-off (a superseded one presents nothing anywhere).
             if linkTicket.isNewest { clearMessage([.dependencyLink], since: mark) }
-            if report.outcome != "unchanged" { await refreshAfterWrite("Dependencies updated", presenting: .dependencyPicker(picker.id), presents: linkTicket.isNewest) }
+            if report.outcome != "unchanged" { await refreshAfterWrite("Dependencies updated", owner: .surface(.dependencyPicker(picker.id), .init(linkTicket))) }
         } catch {
             authorize(error, epoch: epoch, profile: picker.profile)
             guard signedIn, profile == picker.profile, isCurrentCredential(epoch) else { return }

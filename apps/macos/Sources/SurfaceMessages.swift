@@ -107,3 +107,7 @@ struct SurfaceMessages<Kind: Hashable, Value> {
     /// The current message if it is of `kind`.
     func value(of kind: Kind) -> Value? { self.kind == kind ? value : nil }
 }
+
+/// Any surface's ticket, as the read-back owner asks it (S1-17).
+protocol SurfaceTicket { var isNewest: Bool { get } }
+extension SurfaceMessages.Ticket: SurfaceTicket {}

@@ -299,6 +299,45 @@ A superseded action also clears no earlier hand-off and raises no "Task added"
 capsule. Its read-back runs but raises no "… The live view is reconnecting."
 message (`refreshAfterWrite(presents:)`).
 
+**No presentation permission crosses an await** (MAC-C1-S1-17, ruled
+2026-11-12). A decision to present is never taken before an await and used after
+it. Every function that may present after awaiting asks the helper at the moment
+of publishing.
+
+- **Read-backs** take a `ReadBackOwner`, asked when the read-back publishes:
+  - `.mainWindow(ticket)`: a row action, or a surface action that closed its own
+    surface on success (quick-add create, Save, Move, Delete).
+  - `.surface(instance, ticket)`: only while that instance is showing.
+- **`PresentationTicket`** can only be made from a real ticket.
+- **Removed from the Mac target:**
+  - `refreshAfterWrite(presents:)` and `refreshAfterWrite(presenting:)`;
+  - the pre-await `showing ? nil : surface` choice in quick-add create, Save
+    and Delete;
+  - `showing` read after the read-back in quick-add create (announce, return
+    value) and Save (announce);
+  - `openSeries(presenting:)`, now `openSeries()` and `loadSeries()`;
+  - `reloadDependencyPicker(clearing:)`, now `reloadDependencyPicker()` and
+    `refreshDependencyPicker()`.
+- **Now checked live after the await:**
+  - The editor write's transfer report and "Task updated" check the write ticket
+    and the opening. A Copy closed during its read-back reports nothing.
+  - A transition's editor text reaches only an editor showing that Task.
+- **Kept, because they are data or the person's request, not permission:**
+  `dryRun`, `erased`, `retry`, `changed`, `firstOccurrence` and `openEditor`.
+  `openEditor` is applied only after the live newest check.
+- **Control.** `SourcePresentationRuleTests` fails if a removed parameter or
+  pattern returns.
+
+**Known limit: one banner slot** (MAC-C1-S1-18, ruled 2026-11-12). The main
+window shows one message. A failure that arrives later is a newer message and
+replaces an earlier unread one, for example an old picker instance's link
+failure after a newer instance's hand-off. That is as two failed Completes in a
+row would be, and suppressing it would hide a failure. It replaces only by
+publishing its own message, never by clearing. An older action's success never
+clears or replaces a newer hand-off. How to keep an earlier unread failure
+reachable (a count, a short stack, or a combined message) is for the Opus Mac
+UI seat in candidate 8.
+
 Same-kind actions that are gated cannot interleave: Import apply (`busy`),
 Batch edit and Attachment batch apply (`busy`), Dependency batch run
 (`pending`), delete (`busy` and `pending`), editor Save (`busy`), quick-add

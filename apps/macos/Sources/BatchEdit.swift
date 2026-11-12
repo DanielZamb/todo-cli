@@ -114,10 +114,10 @@ extension TodoModel {
       let report = try JSONDecoder().decode(BatchEditReport.self, from: JSONEncoder().encode(response))
       guard isCurrentCredential(credentialEpoch), profile == draft.profile else { return }
       // Once this sheet has closed, a committed apply still reaches the list and nothing is shown.
-      guard batchEdit?.id == draft.id else { if !dryRun { await refreshAfterWrite("Tasks updated", presenting: .batchEdit(draft.id)) }; return }
+      guard batchEdit?.id == draft.id else { if !dryRun { await refreshAfterWrite("Tasks updated", owner: .surface(.batchEdit(draft.id), .init(messageTicket))) }; return }
       // Only the newest apply of this sheet presents its report; an older one's commit still lands.
       if batchEdit?.messages.succeed(messageTicket) == true { batchEdit?.report = report }
-      if !dryRun { await refreshAfterWrite("Tasks updated", presenting: .batchEdit(draft.id)) }
+      if !dryRun { await refreshAfterWrite("Tasks updated", owner: .surface(.batchEdit(draft.id), .init(messageTicket))) }
     } catch {
       authorize(error, epoch: credentialEpoch, profile: draft.profile)
       guard isCurrentCredential(credentialEpoch), batchEdit?.id == draft.id else { return }

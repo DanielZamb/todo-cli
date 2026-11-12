@@ -92,7 +92,7 @@ extension TodoModel {
             guard isCurrentCredential(credentialEpoch), profile == draft.profile else { return }
           }
         }
-        await refreshAfterWrite("Attachments updated", presenting: .attachmentBatch(draft.id))
+        await refreshAfterWrite("Attachments updated", owner: .surface(.attachmentBatch(draft.id), .init(messageTicket)))
       }
     } catch {
       authorize(error, epoch: credentialEpoch, profile: draft.profile)

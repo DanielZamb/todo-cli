@@ -125,7 +125,7 @@ struct EditorView: View {
             }
             .task(id: model.canWrite ? model.editor?.base : nil) {
                 if model.editor?.base.occurrence != nil && !model.showingSeries && !model.seriesLoading {
-                    await model.openSeries(presenting: false)
+                    await model.loadSeries()
                 }
             }
             .sheet(isPresented: $model.showingSeries) { SeriesView(model: model, compact: compact) }

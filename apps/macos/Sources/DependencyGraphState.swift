@@ -142,7 +142,7 @@ extension TodoModel {
             // A background read refreshes the picker's data and clears no message (nothing is saved
             // and restored: whatever is showing stays, and anything newer stays too).
             let warnings = picker.warnings
-            await reloadDependencyPicker(clearing: false)
+            await refreshDependencyPicker()
             if dependencies.picker?.id == picker.id { dependencies.picker?.warnings = warnings }
         }
         guard isCurrentCredential(epoch), dependencies.generation == run else { return }

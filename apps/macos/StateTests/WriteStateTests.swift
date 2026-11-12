@@ -203,7 +203,7 @@ func liveGeneratedWritesAgainstScratchServer() async throws {
     #expect(seriesTask.id != base.id)
     #expect(seriesTask.title == "W06 Series")
     #expect(seriesTask.row_version == 1)
-    await model.openSeries(presenting: false)
+    await model.loadSeries()
     #expect(model.series?.recurrence.summary == "Every day")
     #expect(model.showingSeries == false)
     await model.openSeries()

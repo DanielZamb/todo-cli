@@ -79,7 +79,7 @@ try:
         (sources / Path(file).name).write_bytes(data)
         hashes[file] = hashlib.sha256(data).hexdigest()
     shutil.copyfile(fixtures / 'auth-epoch/SessionVault.swift', sources / 'SessionVault.swift')
-    for name in ['SignOutStreamTests.swift', 'SignOutNoticeTests.swift', 'SeatSignOutNoticeTests.swift', 'CredentialTransitionCancellationTests.swift', 'SeatRestoreCancellationBoundaryTests.swift', 'MessageKindTests.swift', 'SeatMessageInterleavingTests.swift', 'SeatMessageScopeObservationTests.swift', 'SeatRestoreCancellationCorrectedTests.swift', 'SeatSurfaceLifetimeTests.swift', 'SeatSurfaceClassTests.swift', 'SeatCandidate7Gate.swift', 'SeatCandidate7InlineInterleavingTests.swift', 'SeatCandidate7bBoundaryTests.swift']:
+    for name in ['SignOutStreamTests.swift', 'SignOutNoticeTests.swift', 'SeatSignOutNoticeTests.swift', 'CredentialTransitionCancellationTests.swift', 'SeatRestoreCancellationBoundaryTests.swift', 'MessageKindTests.swift', 'SeatMessageInterleavingTests.swift', 'SeatMessageScopeObservationTests.swift', 'SeatRestoreCancellationCorrectedTests.swift', 'SeatSurfaceLifetimeTests.swift', 'SeatSurfaceClassTests.swift', 'SeatCandidate7Gate.swift', 'SeatCandidate7InlineInterleavingTests.swift', 'SeatCandidate7bBoundaryTests.swift', 'SeatCandidate7cSupersessionTests.swift']:
         shutil.copyfile(fixtures / 'sign-out-stream' / name, tests / name)
     shutil.copyfile(root / 'apps/macos/Package.resolved', package / 'Package.resolved')
     api = str(root / 'apps/macos/API')
@@ -119,6 +119,9 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
         raise RuntimeError('CLI init doomed failed')
     if run([cache['cli'], 'add', 'Doomed Profile Task', '--profile', 'doomed', '--credential-profile', 'work', '--format', 'json'], 'seed-doomed.log', dict(env, TODO_SERVER_URL=url)):
         raise RuntimeError('CLI add to doomed failed')
+    # A destination Profile for the Move and Copy read-back controls (S1-17).
+    if run([cache['cli'], 'init', '--profile', 'transfer', '--credential-profile', 'work', '--format', 'json'], 'init-transfer.log', dict(env, TODO_SERVER_URL=url)):
+        raise RuntimeError('CLI init transfer failed')
 
     lock = threading.Lock()
     fault = {'mode': None, 'held': False, 'release': threading.Event()}
@@ -259,7 +262,7 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
     if only:
         exit_code = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', only], 'targeted-tests.log', test_env)
     else:
-        exit_code = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SignOutStreamTests', '--skip', 'SeatSignOutNoticeTests|SeatRestoreCancellationBoundaryTests|SeatMessageInterleavingTests|SeatMessageScopeObservationTests|SeatRestoreCancellationCorrectedTests|SeatSurfaceLifetimeTests|SeatSurfaceClassTests|SeatCandidate7InlineInterleavingTests|SeatCandidate7bBoundaryTests'], 'tests.log', test_env)
+        exit_code = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SignOutStreamTests', '--skip', 'SeatSignOutNoticeTests|SeatRestoreCancellationBoundaryTests|SeatMessageInterleavingTests|SeatMessageScopeObservationTests|SeatRestoreCancellationCorrectedTests|SeatSurfaceLifetimeTests|SeatSurfaceClassTests|SeatCandidate7InlineInterleavingTests|SeatCandidate7bBoundaryTests|SeatCandidate7cSupersessionTests|SeatGenerationLifetimeTests'], 'tests.log', test_env)
         # The seat's unchanged probe runs alone: its teardown invalidates its URLSession while
         # the model can still reconnect, and an exception there would hide the other suites.
         seat_exit = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatSignOutNoticeTests'], 'seat-tests.log', test_env)
@@ -274,7 +277,7 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
         (evidence / 'seat-restore.json').write_text(json.dumps(seat_restore, indent=2) + '\n')
         interleaving_exit = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatMessageInterleavingTests'], 'seat-interleaving-tests.log', test_env)
         seat_others = {}
-        for suite in ['SeatRestoreCancellationCorrectedTests', 'SeatMessageScopeObservationTests', 'SeatSurfaceLifetimeTests', 'SeatSurfaceClassTests', 'SeatCandidate7InlineInterleavingTests', 'SeatCandidate7bBoundaryTests']:
+        for suite in ['SeatRestoreCancellationCorrectedTests', 'SeatMessageScopeObservationTests', 'SeatSurfaceLifetimeTests', 'SeatSurfaceClassTests', 'SeatCandidate7InlineInterleavingTests', 'SeatCandidate7bBoundaryTests', 'SeatCandidate7cSupersessionTests', 'SeatGenerationLifetimeTests']:
             seat_others[suite] = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', suite], f'{suite}.log', test_env)
         # Coordinator ruling 3 (second seat), 2026-11-12: "The two `#require(model.message)` lines
         # (SeatSurfaceLifetimeTests.swift:85 and SeatMessageScopeObservationTests.swift:42) are expected
@@ -291,6 +294,24 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
             seat_ruling3[suite] = dict(exit=seat_others[suite], issues=found, expected_difference=line + ' (ruling 3, 2026-11-12: the follow-up failure lives in the surface that offered it)', accepted=sole or seat_others[suite] == 0)
             if sole: seat_others[suite] = 0
         (evidence / 'seat-ruling3.json').write_text(json.dumps(seat_ruling3, indent=2) + '\n')
+        # Coordinator ruling on MAC-C1-S1-18, 2026-11-12: "A failure that arrives later is a newer
+        # message, and a newer message replaces an older one in the single banner, exactly as two
+        # failed Completes in a row would; suppressing A instead would leave the person believing a
+        # Dependency was added when it was not. So the behaviour stands." The probe's line 77 for
+        # olderFails → true is the one expected difference, accepted only if it is the run's sole
+        # issue AND the probe's own receipt shows the old instance replaced the hand-off by
+        # publishing its own message (non-null, sequence + 1), never by clearing. olderFails → false
+        # (an older success) must pass: it never clears or replaces the newer hand-off.
+        log = (evidence / 'SeatCandidate7cSupersessionTests.log').read_text()
+        found = re.findall(r'recorded an issue with 1 argument (olderFails → (?:true|false)) at (SeatCandidate7cSupersessionTests\.swift:\d+)', log)
+        others = [line for line in re.findall(r'recorded an issue at (SeatCandidate7cSupersessionTests\.swift:\d+)', log)]
+        receipt = json.loads((evidence / 'reopened-instance-handoff-true.json').read_text()) if (evidence / 'reopened-instance-handoff-true.json').exists() else {}
+        published = receipt.get('after') not in (None, receipt.get('before')) and receipt.get('sequence_after') == (receipt.get('sequence_before') or 0) + 1
+        sole = seat_others['SeatCandidate7cSupersessionTests'] != 0 and found == [('olderFails → true', 'SeatCandidate7cSupersessionTests.swift:77')] and not others and published
+        seat_s118 = dict(exit=seat_others['SeatCandidate7cSupersessionTests'], issues=found + others, receipt=receipt, replaced_by_publishing=published,
+                         expected_difference='SeatCandidate7cSupersessionTests.swift:77 with olderFails → true (S1-18 ruling, 2026-11-12: a later failure is a newer message and replaces the older one in the single banner)', accepted=sole or seat_others['SeatCandidate7cSupersessionTests'] == 0)
+        if sole: seat_others['SeatCandidate7cSupersessionTests'] = 0
+        (evidence / 'seat-ruling-s118.json').write_text(json.dumps(seat_s118, indent=2) + '\n')
         exit_code = exit_code or seat_exit or restore_exit or interleaving_exit or int(any(seat_others.values()))
 
     with lock:

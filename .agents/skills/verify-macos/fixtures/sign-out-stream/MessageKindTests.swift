@@ -1252,5 +1252,123 @@ private actor ScriptGate: ClientTransport {
         }
         await finish(model, gate, vault)
     }
+
+    // MARK: MAC-C1-S1-17: who may present a read-back is asked when it publishes, never before
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil),
+          arguments: ["complete", "reopen", "save", "move", "delete", "quick-add",
+                      "copy-closed", "link-closed", "batch-edit-closed", "attachment-batch-closed", "dependency-batch-closed", "attachment-closed", "import-closed"])
+    func aReadBackPresentsOnlyForItsOwnerWhenItPublishes(_ kind: String) async throws {
+        // The write commits; its catalog read-back is held; the boundary happens (nothing, for a
+        // write the main window owns; its surface closes, otherwise); the read-back fails.
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        let credential = try #require(try vault.load())
+        var start: () async -> Void = {}
+        var boundary: () -> Void = {}
+        let mainWindowOwns = ["complete", "reopen", "save", "move", "delete", "quick-add"].contains(kind)
+        switch kind {
+        case "complete":
+            start = { await model.transition(task, action: "complete") }
+        case "reopen":
+            _ = try await todoClient(server: url, credential: credential).tasks_period_transition(path: .init(profile: "work", task: task.id), body: .json(.init(from_version: task.row_version, action: .complete))).ok
+            await model.refreshAfterWrite("Seeded")
+            let done = try #require(model.tasks.first { $0.id == task.id })
+            start = { await model.transition(done, action: "reopen") }
+        case "save":
+            model.beginEditing(task); model.editor?.title = task.title + " saved"
+            start = { _ = await model.save() }
+        case "move":
+            model.beginEditing(task)
+            start = { await model.write(.move("transfer")) }
+        case "copy-closed":
+            model.beginEditing(task)
+            start = { await model.write(.copy("transfer")) }
+            boundary = { model.editor = nil }
+        case "delete":
+            await model.openDependencyDelete(task)
+            try await wait("delete preview") { model.dependencies.deletion?.acceptedFromVersion != nil }
+            start = { await model.deleteTask(task) }
+        case "quick-add":
+            model.quickAdd = true; model.newTitle = "Read-back create " + UUID().uuidString
+            start = { _ = await model.create(openEditor: false) }
+        case "link-closed":
+            let candidate = try await secondTask(model, gate, vault)
+            model.dependencies.picker = .init(profile: "work", root: model.tasks.first { $0.id == task.id }!, direction: .blocks)
+            await model.reloadDependencyPicker()
+            start = { await model.toggleDependency(candidate) }
+            boundary = { model.closeDependencyPicker() }
+        case "batch-edit-closed":
+            model.batchEdit = .init(profile: "work"); await model.reloadBatchEditTargets()
+            model.batchEdit?.selected = [task.id]; model.batchEdit?.field = .priority; model.batchEdit?.value = task.priority == "P1" ? "P2" : "P1"
+            await model.applyBatchEdit(dryRun: true)
+            start = { await model.applyBatchEdit(dryRun: false) }
+            boundary = { model.batchEdit = nil }
+        case "attachment-batch-closed":
+            let target = try await secondTask(model, gate, vault)
+            let link = "https://example.test/readback-" + UUID().uuidString
+            model.beginEditing(task); await model.attachLink(link)
+            try await wait("source link") { hasLink(model.tasks.first { $0.id == task.id }, link) }
+            let reference = try #require(model.tasks.first { $0.id == task.id }?.attachments?.first { if case .link(let url) = $0.location { return url.absoluteString == link }; return false })
+            model.editor = nil
+            model.attachmentBatch = .init(profile: "work", reference: reference)
+            await model.reloadAttachmentTargets(); model.attachmentBatch?.selected = [target.id]
+            await model.applyAttachmentBatch(dryRun: true)
+            start = { await model.applyAttachmentBatch(dryRun: false) }
+            boundary = { model.attachmentBatch = nil }
+        case "dependency-batch-closed":
+            let target = try await secondTask(model, gate, vault)
+            model.dependencies.batch = .init(profile: "work", root: model.tasks.first { $0.id == task.id }!, direction: .dependsOn)
+            await model.reloadDependencyBatch(); model.dependencies.batch?.selected = [target.id]
+            await model.previewDependencyBatch(); try #require(model.dependencies.batch?.report?.dry_run == true)
+            start = { await model.applyDependencyBatch() }
+            boundary = { model.dependencies.batch = nil }
+        case "attachment-closed":
+            model.beginEditing(task)
+            start = { await model.attachLink("https://example.test/editor-readback-" + UUID().uuidString) }
+            boundary = { model.editor = nil }
+        default: // import-closed
+            model.showingImport = true
+            model.loadImport(data: Data(#"[{"external_id":"readback:\#(UUID().uuidString)","title":"Read-back import"}]"#.utf8), name: "readback.json")
+            await model.previewImport(); try #require(model.importReport?.dry_run == true)
+            start = { await model.applyImport() }
+            boundary = { model.showingImport = false }
+        }
+        await gate.next("reads.profiles", .holdThenFail(503, "READ-BACK failed"))
+        let write = Task { await start() }
+        try await wait("\(kind): read-back held") { await gate.isHeld("reads.profiles") }
+        boundary()
+        await gate.release("reads.profiles"); await write.value
+        let reconnecting = model.message?.contains("The live view is reconnecting.") == true
+        #expect(reconnecting == mainWindowOwns, "\(kind): \(mainWindowOwns ? "its owner presents" : "a closed surface presents nothing"): \(model.message ?? "nil")")
+        if kind == "copy-closed" { #expect(model.transferResult == nil, "copy-closed: no transfer report for a closed editor") }
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func anOldInstancesFailureReplacesTheHandOffOnlyByPublishingItsOwnMessage() async throws {
+        // S1-18 ruling: a later failure is a newer message. It replaces the earlier hand-off by
+        // publishing (the sequence grows and the text names its own Task), never by clearing.
+        let gate = ScriptGate(); let (model, vault, root) = try await live(gate)
+        let older = try await secondTask(model, gate, vault), newer = try await secondTask(model, gate, vault)
+        _ = try await todoClient(server: url, credential: try #require(try vault.load())).tasks_period_depend(path: .init(profile: "work", task: newer.id), body: .json(.init(blocker_id: root.id, from_version: newer.row_version))).ok
+        await model.refreshAfterWrite("Seeded")
+        let rootNow = model.tasks.first { $0.id == root.id }!, newerNow = model.tasks.first { $0.id == newer.id }!
+        model.dependencies.picker = .init(profile: "work", root: rootNow, direction: .blocks); await model.reloadDependencyPicker()
+        await gate.next("tasks.depend", .holdThenFail(503, "OLD instance link failed"))
+        let olderRun = Task { await model.toggleDependency(older) }
+        try await wait("older held") { await gate.isHeld("tasks.depend") }
+        model.closeDependencyPicker()
+        model.dependencies.picker = .init(profile: "work", root: rootNow, direction: .blocks); await model.reloadDependencyPicker()
+        await gate.next("tasks.undepend", .holdThenFail(503, "NEW instance link failed"))
+        let newerRun = Task { await model.toggleDependency(newerNow) }
+        try await wait("newer held") { await gate.isHeld("tasks.undepend") }
+        model.closeDependencyPicker(); await gate.release("tasks.undepend"); await newerRun.value
+        let handOff = try #require(model.message), sequence = model.messageSequence
+        #expect(handOff.contains(newer.title))
+        await gate.release("tasks.depend"); await olderRun.value
+        #expect(model.message != nil && model.message?.contains(older.title) == true, "the later failure names its own Task: \(model.message ?? "nil")")
+        #expect(model.messageSequence == sequence + 1, "it replaced the hand-off by publishing, not by clearing")
+        await finish(model, gate, vault)
+    }
 }
 
