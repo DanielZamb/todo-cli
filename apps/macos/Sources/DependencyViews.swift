@@ -242,6 +242,7 @@ extension TodoModel {
             guard isCurrentCredential(epoch), profile == selectedProfile else { return }
             guard surface.map(isShowing) ?? true else { return }
             clearMessage([.dependencyFollowUp], since: mark)
+            importFollowUpError = nil
             closeDependencyPicker()
             if !dependencies.initial.contains(where: { $0.id == task.id }) { dependencies.initial.append(task) }
             quickAdd = true
@@ -252,7 +253,7 @@ extension TodoModel {
             // Shown where the person is looking: inside the sheet that offered the follow-up.
             switch surface {
             case .dependencyPicker: dependencies.picker?.failure = DependencyNotice(message: describe(error))
-            case .importSheet: importError = describe(error, at: .importTasks)
+            case .importSheet: importFollowUpError = describe(error, at: .importTasks)
             default: publishMessage(describe(error), kind: .dependencyFollowUp, surface: surface)
             }
         }

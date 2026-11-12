@@ -51,8 +51,11 @@ final class TodoModel {
     var attachmentBatch: AttachmentBatchDraft?
     var showingImport = false { didSet {
         if showingImport && !oldValue { importInstance = UUID() }
-        if !showingImport && oldValue { endMessage(raisedBy: .importSheet(importInstance)) }
+        if !showingImport && oldValue { endMessage(raisedBy: .importSheet(importInstance)); importFollowUpError = nil }
     } }
+    /// A Dependency follow-up offered by the Import report that failed; shown in that report and
+    /// ended with it (ruling 3), by a Profile or credential change, or by the follow-up succeeding.
+    var importFollowUpError: String?
     /// Identity of the current Import sheet; renewed each time it opens.
     @ObservationIgnored private(set) var importInstance = UUID()
     var importDocument: ImportDocument?
@@ -245,7 +248,11 @@ final class TodoModel {
         historyGeneration += 1
         seriesGeneration += 1
         serverErrors = [:]
-        if credential != value { endMessage() }
+        if credential != value {
+            endMessage()
+            // Import belongs to the credential that opened it, as the picker does (reset above).
+            showingImport = false
+        }
         credential = value
         busy = false
         diagnosticsLoading = false
@@ -325,6 +332,7 @@ final class TodoModel {
         importDocument = nil
         importReport = nil
         importError = nil
+        importFollowUpError = nil
         importCloseMissing = false
     }
 

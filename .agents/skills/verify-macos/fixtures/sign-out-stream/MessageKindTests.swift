@@ -383,7 +383,7 @@ private actor ScriptGate: ClientTransport {
         let gate = ScriptGate(); let (model, vault, _) = try await live(gate)
         model.showingImport = true
         _ = await newerFollowUpError(model, gate)
-        #expect(model.importError?.contains("NEWER follow-up failed") == true, "in the Import report: \(model.importError ?? "nil")")
+        #expect(model.importFollowUpError?.contains("NEWER follow-up failed") == true, "in the Import report: \(model.importFollowUpError ?? "nil")")
         #expect(model.message == nil, "not under the sheet: \(model.message ?? "")")
         model.showingImport = false
         #expect(model.message == nil)
@@ -953,6 +953,49 @@ private actor ScriptGate: ClientTransport {
         model.quickAdd = true; model.newTitle = "Visible quick add " + UUID().uuidString
         #expect(await model.create(openEditor: false))
         #expect(model.deletionNotice == nil, "shown in All tasks: no capsule")
+        await finish(model, gate, vault)
+    }
+
+    // MARK: what ends a follow-up failure in its surface (counterparts of the seat's
+    // SeatSurfaceLifetimeTests.swift:85 and SeatMessageScopeObservationTests.swift:42, ruling 3)
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil),
+          arguments: ["picker", "import"], ["close", "profile-change", "credential-change", "unrelated-write", "ready", "same-follow-up-succeeds"])
+    func whatEndsAFollowUpFailureShownInItsSurface(_ surface: String, _ event: String) async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        let target = try await secondTask(model, gate, vault)
+        if surface == "picker" { pickerFor(model, task) } else { model.showingImport = true }
+        let picker = model.dependencies.picker?.id
+        func shown() -> String? { surface == "picker" ? model.dependencies.picker?.failure?.message : model.importFollowUpError }
+        await gate.next("tasks.show", .fail(404, "SURFACE follow-up failed"))
+        await model.createDependencyFollowUp(UUID().uuidString)
+        let failure = try #require(shown(), "\(surface): the failure shows in its surface")
+        #expect(failure.contains("SURFACE follow-up failed") && model.message == nil)
+        switch event {
+        case "close":
+            if surface == "picker" { model.closeDependencyPicker() } else { model.showingImport = false }
+            #expect(shown() == nil, "\(surface): closing the surface ends it")
+        case "profile-change":
+            model.changeProfile("personal")
+            #expect(shown() == nil && model.dependencies.picker == nil && !model.showingImport, "\(surface): a Profile change ends it with the surface")
+        case "credential-change":
+            model.replaceCredential(try await owner())
+            #expect(shown() == nil && model.dependencies.picker == nil && !model.showingImport, "\(surface): a credential change ends it with the surface")
+        case "unrelated-write":
+            await model.transition(task, action: "complete")
+            try await wait("write landed") { model.tasks.first { $0.id == task.id }?.status == "done" }
+            #expect(shown() == failure, "\(surface): a successful unrelated write leaves it: \(shown() ?? "nil")")
+            if surface == "picker" { #expect(model.dependencies.picker?.id == picker, "the picker stays open") }
+        case "ready":
+            let streams = await gate.streamCount
+            model.connect()
+            try await ready(model, gate, streams: streams + 1)
+            #expect(shown() == failure, "\(surface): reaching ready leaves it: \(shown() ?? "nil")")
+            if surface == "picker" { #expect(model.dependencies.picker?.id == picker, "the picker stays open") }
+        default:
+            await model.createDependencyFollowUp(target.id)
+            #expect(shown() == nil && model.quickAdd, "\(surface): the same follow-up succeeding replaces it with its Quick Add draft: \(shown() ?? "nil")")
+        }
         await finish(model, gate, vault)
     }
 }
