@@ -262,3 +262,24 @@ the exact-file selector at 0 and directory selector at 1 with identical owned
 FD evidence. The revised control requires both selectors to identify the held
 FD and then requires the directory result to be empty after close. It never
 treats nonempty output or unsupported-option stderr as a closed directory.
+
+The final committed diagnostic implementation is
+`ea8647bee54e5abd2f0efdf04b4c58e9969acffd`. Its fresh receipt is
+denial-committed-final/result.json with commands.json: outer exit 0,
+PASS_DIAGNOSTIC_ONLY, completeRecipe=false and qualification=false. Server
+inputs match that committed head. The C strict-root control exits 78 and its
+matching assertion exits 0; the literal-root mutation exits 0 and makes that
+same assertion fail at 1. Strict and ancestor-metadata server starts end in
+SIGABRT. Baseline and literal-root diagnostic starts reach health 200, then
+their owned shutdowns exit 130. Kernel reports in this repeat were rate-limited;
+the earlier own-PID report and deterministic C operation remain separate
+evidence. Exact-file held-FD lookup exits 0, directory lookup exits 1 with
+that FD present, and the closed directory lookup exits 1 with no output/error.
+Scratch was removed. The prior deliberately retained diagnostic root was also
+closed/rechecked/retired with supported arguments; its receipt is
+denial-committed-final/prior-retained-scratch-retirement.json.
+
+This later handoff changes documentation only and does not restamp the
+diagnostic binaries or qualify any Mac implementation. The coordinator has
+authorized visible V01 conditionally after the whole guard matrix is green and
+a fresh preflight. That condition is unmet. V02 is still held.

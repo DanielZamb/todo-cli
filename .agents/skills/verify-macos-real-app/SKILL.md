@@ -14,8 +14,9 @@ frozen-head controls and required reviews pass. V02 and visible launches are hel
 The coordinator lifted the earlier Swift-slot hold. A new seat hold may arrive;
 finish the current Swift job and start none until released. Qualification is
 now blocked on native server startup requiring root-directory data access.
-Do not add that out-of-scratch permission. Read the report and supervisor
-proposal before changing ownership. No full or visible helper run is qualified
+Do not add that out-of-scratch permission. Read the [report](../../../docs/decisions/ui-speed/mac-verification-app-report.md)
+and [supervisor proposal](../../../docs/decisions/ui-speed/mac-verification-supervisor-proposal.md)
+before changing ownership. No full or visible helper run is qualified
 for this correction.
 
 ## Launch
@@ -89,7 +90,8 @@ for actual qualification state and pending work. Do not substitute older receipt
 
 ## Visible readback and interruption (held)
 
-After explicit release and a green guard matrix, every visible launch needs
+The coordinator has authorized visible V01 once the whole guard matrix is
+green. That condition is currently unmet. Every visible launch then needs
 neither installed Todo app frontmost and both session and HID idle signals of
 at least 60 seconds. Monitoring permissions must already exist; no prompt is
 requested. Install local/global monitors and the background HID watch before
