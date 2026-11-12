@@ -6,8 +6,10 @@ description: Build and drive the separate Todo Verification Mac app on a compile
 # Verify the separate Mac app
 
 Created with create-verification-skill. Read [the feature map](features/README.md).
-Status: draft pending the fresh committed-head recipe, production state/offscreen
-proofs and linked-symbol comparison. Development readback alone does not qualify.
+Status: proven end to end on 2026-11-12 at frozen implementation head
+`ab989410cef89b5670fc2a6101698441753b5ec5`. The complete fresh-build recipe,
+production state/offscreen recipes and linked-symbol comparison passed.
+Receipts and exact exits are in the implementation report below.
 This recipe never launches the production Todo app. V01 covers startup and
 readback only. Input automation and latency measurement belong to V02 and
 require the coordinator's review release.
@@ -23,11 +25,12 @@ node .agents/skills/verify-macos-real-app/scripts/verify.mjs "$PWD/docs/evidence
 The helper uses the compiled CLI to initialize a synthetic Profile and two
 Tasks, then starts a compiled server with scratch HOME and database. Readiness
 requires its loopback health within 60 seconds. It builds only the separate
-TodoVerification scheme with Xcode signing and package resolution disabled. It then applies an ad hoc
-bundle seal with the test identifier, no Team ID and no developer authority.
+TodoVerification scheme with Xcode signing and package resolution disabled.
+It then applies an ad hoc bundle seal with the test identifier, no Team ID and
+no developer authority.
 The unsealed linker-signed artifact has no runtime bundle identifier on this Mac;
-the seal is required for bundle-ID-qualified accessibility. Every
-Swift command goes through scripts/swift-slot.sh. It never installs an app.
+the seal is required for bundle-ID-qualified accessibility. Every Swift build,
+test and script runs through scripts/swift-slot.sh. It never installs an app.
 
 The app refuses before a window unless its manifest, scratch paths, binary
 hashes, listener PID, server environment and health identity all agree. The
@@ -35,9 +38,9 @@ visible run also requires neither installed Todo app to be frontmost and the
 owner to have supplied no keyboard or pointer input for a minute. Owner input
 ends the run. Never defeat that guard or schedule repeated launch attempts.
 
-For a headless guard run, append `--guards-only`. This starts only the scratch
-server and Foundation guard probe. It creates no app window and does not grant
-permission for V02.
+For a headless guard run, append `--guards-only`. This runs the scratch server
+and headless startup, sandbox, memory, credential and local event-loop controls.
+It creates no app window and does not grant permission for V02.
 
 ## Doctor
 
@@ -52,15 +55,14 @@ run, never a passing empty screen.
 ## Drive
 
 The visible V01 helper launches the app's own executable, restores a scratch
-Session from memory and reads the accessibility tree only after resolving that owned PID by
-`local.todo.verification`. Require both
-literal titles `V01 seeded Task alpha` and `V01 seeded Task beta`. No setter or
+Session from memory and reads the accessibility tree only after resolving
+that owned PID by `local.todo.verification`. Require both literal titles `V01 seeded Task alpha` and `V01 seeded Task beta`. No setter or
 fixture-only UI supplies these rows. The Tasks come from compiled CLI writes,
 public HTTP, the generated client and production TodoModel/RootView.
 
 AXRead.swift performs read-only accessibility queries. It never requests a
 permission prompt. Do not use it to read the owner's apps. The helper's current
-status and proof gaps are recorded in the [implementation report](../../../../docs/decisions/ui-speed/mac-verification-app-report.md).
+status and proof gaps are recorded in the [implementation report](../../../docs/decisions/ui-speed/mac-verification-app-report.md).
 
 ## Evidence
 
