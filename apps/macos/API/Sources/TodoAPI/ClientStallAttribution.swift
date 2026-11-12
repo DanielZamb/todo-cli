@@ -195,18 +195,46 @@ public final class ClientStallSampler: @unchecked Sendable {
         var stacks: [[ClientStallSymbol]] = []
         for index in 0..<taken {
             let sample = buffer.advanced(by: index).pointee
-            var pcs = withUnsafeBytes(of: sample.pcs) { Array($0.bindMemory(to: UInt64.self).prefix(Int(sample.count))) }
-            // A leaf that has not pushed a frame record has its caller only in LR: the frame walk
-            // starts at the caller's caller. Insert LR after the pc unless the walk already has it.
-            if sample.lr != 0, !pcs.isEmpty, pcs.count < 2 || pcs[1] != sample.lr { pcs.insert(sample.lr, at: 1) }
+            let walked = withUnsafeBytes(of: sample.pcs) { Array($0.bindMemory(to: UInt64.self).prefix(Int(sample.count))) }
+            let pcs = ClientStallStack.assemble(pcs: walked, lr: sample.lr, functionStart: ClientStallSymbolizer.functionStart)
             stacks.append(pcs.enumerated().map { offset, pc in ClientStallSymbolizer.symbol(pc, isReturnAddress: offset > 0, ownImages: ownImages) })
         }
         return ClientStallAttributor.attribute(stacks, disabled: disabled)
     }
 }
 
+/// Where the link register goes in a sampled stack (coordinator ruling, 2026-11-12).
+///
+/// A leaf that has not pushed a frame record has its caller only in LR, so the frame-pointer walk
+/// begins at the caller's caller. But once a function has pushed its frame, LR points back into
+/// that same function (after its last call returned) or equals the saved return address; inserting
+/// it then adds a duplicate, or a wrong caller if LR was reused. The rule: with LR stripped of its
+/// pointer-authentication bits exactly as the saved return addresses are, insert it after the pc
+/// only when (a) it differs from the first saved return address and (b) it does not resolve into
+/// the same function as the pc. Otherwise skip it.
+///
+/// Not provable from a sample: a reused LR that happens to resolve into another function is
+/// inserted as a caller. The stall's label therefore still needs the samples to agree.
+public enum ClientStallStack {
+    public static func assemble(pcs: [UInt64], lr: UInt64, functionStart: (UInt64) -> UInt64?) -> [UInt64] {
+        guard lr != 0, let pc = pcs.first else { return pcs }
+        if pcs.count > 1, pcs[1] == lr { return pcs }                         // (a) already the saved return address
+        // A return address points just after the call: look up the call itself.
+        if let own = functionStart(pc), let caller = functionStart(lr &- 1), own == caller { return pcs }   // (b) inside the pc's own function
+        var stack = pcs
+        stack.insert(lr, at: 1)
+        return stack
+    }
+}
+
 /// dladdr and the Swift demangler, used only after the sampled thread has been resumed.
 enum ClientStallSymbolizer {
+    /// The start of the function containing `address`, or nil when it cannot be resolved.
+    static func functionStart(_ address: UInt64) -> UInt64? {
+        var info = Dl_info()
+        guard dladdr(UnsafeRawPointer(bitPattern: UInt(address)), &info) != 0, let start = info.dli_saddr else { return nil }
+        return UInt64(UInt(bitPattern: start))
+    }
     private typealias Demangle = @convention(c) (UnsafePointer<CChar>?, Int, UnsafeMutablePointer<CChar>?, UnsafeMutablePointer<Int>?, UInt32) -> UnsafeMutablePointer<CChar>?
     private static let demangler: Demangle? = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "swift_demangle").map { unsafeBitCast($0, to: Demangle.self) }
     static func symbol(_ pc: UInt64, isReturnAddress: Bool, ownImages: [String]) -> ClientStallSymbol {

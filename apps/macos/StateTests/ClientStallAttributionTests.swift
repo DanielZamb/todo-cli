@@ -50,6 +50,24 @@ import TodoAPI
         #expect(record.inLabel?.count ?? 0 <= ClientStallAttributor.symbolLimit && !record.frames.isEmpty)
     }
 
+    // The link-register rule, deterministic: three stack shapes with supplied registers and a
+    // supplied function table (functions start at 0x1000, 0x2000 and 0x3000; each spans 0x1000).
+    private func start(_ address: UInt64) -> UInt64? { address >= 0x1000 && address < 0x4000 ? address & ~0xFFF : nil }
+    @Test func aLeafWithNoFrameHasItsCallerFromTheLinkRegister() {
+        // pc in leaf 0x1000; its caller 0x2000 only in LR; the walk starts at the grandcaller 0x3000.
+        let stack = ClientStallStack.assemble(pcs: [0x1010, 0x3040], lr: 0x2020, functionStart: start)
+        #expect(stack == [0x1010, 0x2020, 0x3040])
+    }
+    @Test func aFunctionMidBodyAfterACallSkipsTheLinkRegister() {
+        // pc in 0x2000 after a call returned: LR points back into 0x2000 itself.
+        let stack = ClientStallStack.assemble(pcs: [0x2080, 0x3040], lr: 0x2060, functionStart: start)
+        #expect(stack == [0x2080, 0x3040])
+    }
+    @Test func aLinkRegisterEqualToTheSavedReturnAddressIsSkipped() {
+        let stack = ClientStallStack.assemble(pcs: [0x1010, 0x2020, 0x3040], lr: 0x2020, functionStart: start)
+        #expect(stack == [0x1010, 0x2020, 0x3040])
+    }
+
     @Test func aFailedSampleTurnsSamplingOffForTheRun() {
         let sampler = ClientStallSampler(thread: mach_port_t(MACH_PORT_NULL), ownImages: [], windowLimitNS: ClientStallSampler.windowLimitNS)
         let stall = UUID()

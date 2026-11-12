@@ -143,3 +143,46 @@ Publication to layout was 132 ms with three rows, so for selection the list's si
 - **Order.** These runs use the Swift slot. They start after the seat reports
   on b882483b and after the stall attribution Swift work has had its short
   runs.
+
+## Stall attribution: the link-register rule (coordinator ruling, 2026-11-12)
+
+A stall's `in` label comes from the frame-pointer walk of each sample. A leaf
+that has not pushed a frame record (for example `ProcessInfo.systemUptime`) has
+its caller only in the link register (LR), so the walk begins at the caller's
+caller. Commit 89f3aca3 inserted LR after the pc whenever the walk did not
+already start with it. That also inserted LR in two cases where it is wrong.
+
+**The rule.** LR is stripped of its pointer-authentication bits exactly as the
+saved return addresses are (`todo_strip` in `ClientStallSampling.c`). It goes
+after the pc only when both hold:
+
+- (a) it differs from the first saved return address;
+- (b) it does not resolve into the same function as the pc. The function start
+  comes from `dladdr`'s `dli_saddr`, looked up at `LR - 1`, because a return
+  address points just after its call.
+
+Otherwise it is skipped. The code is `ClientStallStack.assemble` in
+`apps/macos/API/Sources/TodoAPI/ClientStallAttribution.swift`.
+
+**Proof.** Three state tests in `ClientStallAttributionTests` supply the
+registers and a function table, so they do not depend on where a live sample
+lands:
+
+| Shape | Input | Result |
+| --- | --- | --- |
+| A leaf with no frame of its own: the caller is only in LR | pc in 0x1000's function, walk `[0x3040]`, LR 0x2020 | LR inserted: `[0x1010, 0x2020, 0x3040]` |
+| A function mid-body after a call returned: LR points into itself | pc 0x2080, LR 0x2060 | skipped |
+| LR equal to the first saved return address | walk `[0x2020, 0x3040]`, LR 0x2020 | skipped |
+
+Mutation controls, kept in `.scratch/c8-mutations`:
+
+- M3 removes (a) and (b), so LR is always inserted. The mid-body and equal-LR
+  tests fail.
+- M4 never inserts LR. The leaf test fails.
+
+**What stays unprovable.** Once a function has saved LR in its frame, the
+register is free. If it then holds a value that happens to resolve into a
+function other than the pc's (used as a scratch register, or left stale), it
+is inserted as a caller that is not on the stack. No sample can tell this apart from a true leaf. A label therefore
+still needs the samples to agree, as `agreeing` reports, before it names the
+stalling function.
