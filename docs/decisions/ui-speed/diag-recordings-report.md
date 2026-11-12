@@ -1418,7 +1418,7 @@ cleanup-pre-cost, cleanup-superseded and cleanup-final it deletes 81 files with
 copies retain hashes and sources/receipts; the other 74 are closed Bun compile
 temporaries. Zero open-file skips occur in the temporary cleanups. APFS shared
 extents and other units' activity mean this is not an attributed global df delta.
-The final guarded reading is 33.6 GB free. An earlier delivery reading was 30.0 GB;
+The final guarded reading is 33.3 GB free. An earlier delivery reading was 30.0 GB;
 no further build was started there, and the next df reading returned above 33 GB.
 All owned fixture processes have exited, and their helpers removed scratch data.
 Raw receipts remain local and ignored. No evidence or binary is tracked.
