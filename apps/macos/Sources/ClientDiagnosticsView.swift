@@ -48,12 +48,17 @@ struct ClientDiagnosticsView: View {
                     Grid(alignment: .trailing, horizontalSpacing: 12, verticalSpacing: 8) {
                         GridRow { Text("Interaction").gridColumnAlignment(.leading); Text("p50 (ms)"); Text("p90 (ms)"); Text("p99 (ms)"); Text("Max (ms)"); Text("Count"); Text("Incomplete") }.foregroundStyle(.secondary)
                         ForEach(rows) { row in
-                            GridRow { category(row); Text(milliseconds(row.p50MS)); Text(milliseconds(row.p90MS)); Text(milliseconds(row.p99MS)); Text(milliseconds(row.maxMS)); Text("\(row.count)"); Text("\(row.incompleteCount)") }
-                                .accessibilityElement(children: .ignore).accessibilityLabel(ClientDiagnosticDisplay.accessibility(row))
+                            // A GridRow is not one accessibility container: a modifier on it lands on every
+                            // cell, so the row was read seven times. The first cell carries the row's label.
+                            GridRow {
+                                category(row).accessibilityElement(children: .ignore).accessibilityLabel(ClientDiagnosticDisplay.accessibility(row))
+                                Group { Text(milliseconds(row.p50MS)); Text(milliseconds(row.p90MS)); Text(milliseconds(row.p99MS)); Text(milliseconds(row.maxMS)); Text("\(row.count)"); Text("\(row.incompleteCount)") }
+                                    .accessibilityHidden(true)
+                            }
                         }
                     }.monospacedDigit()
                 }
-                Text("Target: median 20 ms, p99 300 ms. Percentiles cover the last 512 verified completions per row. Timings end after layout. Screen presentation is not measured.").foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).diagnosticsBounds("client-target")
+                Text(ClientDiagnosticDisplay.timingNote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).diagnosticsBounds("client-target")
                 Text("Incomplete, superseded and unverified totals cover this recording session. Incomplete wait is the longest pending or ended wait.").foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 total("Refreshes", snapshot.refreshes)
                 total("Requests", snapshot.requests)
@@ -85,7 +90,7 @@ struct ClientDiagnosticsView: View {
                         if let category = event.action, let phases = event.actionPhases {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(ClientDiagnosticDisplay.action(category)).fontWeight(.medium)
-                                if let hold = phases.holdMS { pair("Hold before release (ms)", milliseconds(hold)) }
+                                if let hold = ClientDiagnosticDisplay.hold(event) { pair(hold.label, hold.value) }
                                 pair("Input queue (ms)", milliseconds(phases.inputQueueMS))
                                 pair("Handler, including waits (ms)", milliseconds(phases.handlerWallMS))
                                 pair("Requests, overlapping (ms)", milliseconds(phases.requestUnionMS))
@@ -114,7 +119,7 @@ struct ClientDiagnosticsView: View {
                     ForEach(snapshot.recent.reversed()) { event in
                         HStack {
                             VStack(alignment: .leading) {
-                                Text(ClientDiagnosticDisplay.event(event.name))
+                                Text(ClientDiagnosticDisplay.event(event.name) + (event.releaseSource == .nativeSelection ? ", from selection" : ""))
                                 if let trigger = event.trigger, let label = ClientDiagnosticDisplay.environmentTrigger(trigger) { Text(label).foregroundStyle(.secondary) }
                                 if let capability = event.nativeSelectionNotifications {
                                     if capability.changing == .unavailable { Text("Row highlight started: unavailable").foregroundStyle(.secondary) }

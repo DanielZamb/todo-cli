@@ -1109,6 +1109,27 @@ private final class DiagnosticTickCounter: @unchecked Sendable {
         guard depth < 40, let element = element as? any NSAccessibilityProtocol else { return [] }
         return [element.accessibilityLabel()].compactMap { $0 } + (element.accessibilityChildren() ?? []).flatMap { accessibilityLabels($0, depth: depth + 1) }
     }
+    /// A layout record for a pointer or keyboard selection, decoded as the journal would hold it.
+    private func interaction(_ kind: String, hold: Double?, source: String?) throws -> ClientDiagnosticEvent {
+        var phases: [String: Any] = ["inputQueueMS": 30, "handlerWallMS": 40, "requestUnionMS": 0, "publicationToLayoutMS": 190]
+        if let hold { phases["holdMS"] = hold }
+        var fields: [String: Any] = ["id": UUID().uuidString, "run": UUID().uuidString, "monotonicMS": 1000, "epochMS": 1, "name": "ui.layout.committed",
+                                     "inputKind": kind, "actionPhases": phases, "action": ["subtype": "task.selection.pointer", "inventory_id": "I07"]]
+        if let source { fields["selectionContext"] = ["releaseSource": source, "refreshInFlight": false, "journalFileBytes": 0, "journalBytesWritten": 0] }
+        return try JSONDecoder().decode(ClientDiagnosticEvent.self, from: JSONSerialization.data(withJSONObject: fields))
+    }
+    @Test func theHoldRowSaysWhereTheReleaseCameFromAndWhenItWasNotMeasured() throws {
+        // Ruling 4 on the Opus seat's finding 5.
+        let derived = try #require(ClientDiagnosticDisplay.hold(try interaction("pointer", hold: 53.9, source: "nativeSelection")))
+        #expect(derived.label == "Hold before release, from selection (ms)" && derived.value == "53.9")
+        let observed = try #require(ClientDiagnosticDisplay.hold(try interaction("pointer", hold: 120, source: "mouseUp")))
+        #expect(observed.label == "Hold before release (ms)" && observed.value == "120.0")
+        let missing = ClientDiagnosticDisplay.hold(try interaction("pointer", hold: nil, source: nil))
+        #expect(missing?.label == "Hold before release (ms)" && missing?.value == "Not measured", "a pointer action without a release reads as not measured, not as nothing")
+        #expect(ClientDiagnosticDisplay.hold(try interaction("keyboard", hold: nil, source: nil)) == nil, "a key press has no hold")
+        #expect(ClientDiagnosticDisplay.event(.inputReleased) == "Hold before release", "one name for one quantity")
+        #expect(ClientDiagnosticDisplay.timingNote.contains("Clicks are timed from their release"), "the note says where click timings start")
+    }
     @Test func localSummaryDoesNotInvalidateTheOtherDiagnosticsSections() {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("todo-s01-verify-panel-observation-" + UUID().uuidString)
         let recorder = ClientDiagnosticsRecorder(journalDirectory: directory)

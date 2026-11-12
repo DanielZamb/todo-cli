@@ -69,6 +69,16 @@ enum ClientDiagnosticDisplay {
         if milliseconds < 120_000 { return String(format: "%.1f s", milliseconds / 1000) }
         return String(format: "%.1f min", milliseconds / 60_000)
     }
+    /// The note under the This client table.
+    static let timingNote = "Target: median 20 ms, p99 300 ms. Clicks are timed from their release; the time the button was held is listed under Interaction phases. Percentiles cover the last 512 verified completions per row. Timings end after layout. Screen presentation is not measured."
+    /// The hold row of an interaction, or nil when none is shown. A pointer action whose release
+    /// was not recorded reads as not measured; a release taken from the list's selection says so.
+    static func hold(_ event: ClientDiagnosticEvent) -> (label: String, value: String)? {
+        let derived = event.selectionContext?.releaseSource == .nativeSelection
+        let label = derived ? "Hold before release, from selection (ms)" : "Hold before release (ms)"
+        if let hold = event.actionPhases?.holdMS { return (label, String(format: "%.1f", hold)) }
+        return event.inputKind == .pointer ? (label, "Not measured") : nil
+    }
     static func accessibility(_ row: ClientDiagnosticActionSummary) -> String {
         func metric(_ value: Double?) -> String { value.map { String(format: "%.1f milliseconds", $0) } ?? "not measured" }
         let status = row.incompleteCount > 0 ? "Incomplete. " : overBudget(row) ? "Over budget. " : ""
@@ -307,7 +317,7 @@ enum ClientDiagnosticDisplay {
         case .resultPublished: "Model published"
         case .layoutCommitted: "Layout committed"
         case .inputObserved: "Input observed"
-        case .inputReleased: "Released after"
+        case .inputReleased: "Hold before release"
         case .nativeSelectionChanging: "Row highlight started"
         case .nativeSelectionCommitted: "Row highlight settled"
         case .selectionCommitted: "Selection committed"
