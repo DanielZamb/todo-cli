@@ -134,6 +134,12 @@ batch, while one Task write still succeeds exactly once. After storage recovers,
 shutdown makes one bounded attempt to persist any outstanding mark. A failed
 attempt is counted and never becomes a retry loop.
 
+`bun .agents/skills/verify-ui-profiler/scripts/lease-liveness.ts` demonstrates
+the crash fixture's lifetime requirement with forced garbage collection. An
+idle child must retain its store until it is killed; an empty timer retains only
+the process. The two cases assert literal failed-open counts 0 and 1. The
+production lease code and crash-ownership assertions are unchanged.
+
 The earlier narrow witness's zero fractions after a refusal are superseded by
 null fractions: known starts can be counted, but the omitted facts make the
 all-start denominator unknown. The normal timer control now includes the older
