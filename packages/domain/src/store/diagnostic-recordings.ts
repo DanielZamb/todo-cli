@@ -57,6 +57,7 @@ export class DiagnosticRecordings {
   private loss = zero();
   private available = false;
   private lease: Database | undefined;
+  private expiry: ReturnType<typeof setTimeout> | undefined;
   private blockBytes = 4096;
   private tail: Promise<void> = Promise.resolve();
   private statsQueued = false;
@@ -180,6 +181,7 @@ export class DiagnosticRecordings {
   async close() {
     await this.flush();
     this.available = false;
+    clearTimeout(this.expiry);
     this.releaseLease();
   }
   private releaseLease() {
@@ -235,8 +237,31 @@ export class DiagnosticRecordings {
       this.loss.storage_failures++;
     });
   }
+  private armExpiry(minimumDelay = 1) {
+    clearTimeout(this.expiry);
+    const first = this.entries[0];
+    if (!this.available || !first) return;
+    const delay = Math.max(
+      minimumDelay,
+      first.received + recordingLimits.retentionMs - this.time() + 1,
+    );
+    this.expiry = setTimeout(
+      () => {
+        this.schedule(async () => {
+          try {
+            if (await this.prune()) await this.save();
+          } finally {
+            this.armExpiry();
+          }
+        });
+      },
+      Math.min(delay, 2147483647),
+    );
+    this.expiry.unref();
+  }
   private async save() {
     if (!this.available) return;
+    this.armExpiry();
     try {
       await this.atomic("status.json", JSON.stringify(this.loss));
     } catch {

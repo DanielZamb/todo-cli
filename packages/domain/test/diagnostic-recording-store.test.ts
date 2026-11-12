@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, it } from "@effect/vitest";
+import { vi } from "vitest";
 import { validateRecordingBatch } from "../src/diagnostic-recordings.ts";
 import {
   recordingsComparable,
@@ -482,6 +483,26 @@ it("releases writer ownership after a process crash", async () => {
   } finally {
     child.kill();
     await child.exited;
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+it("expires idle recordings without a subsequent request", async () => {
+  const root = await mkdtemp(join(tmpdir(), "todo-recording-idle-expiry-"));
+  vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+  vi.setSystemTime(1000);
+  const store = await DiagnosticRecordings.open(root);
+  try {
+    expect(store.ingest(batch()).accepted).toBe(true);
+    await store.flush();
+    await vi.advanceTimersByTimeAsync(7 * 86400000 + 1);
+    await store.flush();
+    expect(store.status().segments).toBe(0);
+    expect(store.status().loss.expired_events).toBe(1);
+    expect((await readdir(root)).filter((f) => /^\d/u.test(f))).toEqual([]);
+  } finally {
+    await store.close();
+    vi.useRealTimers();
     await rm(root, { recursive: true, force: true });
   }
 });

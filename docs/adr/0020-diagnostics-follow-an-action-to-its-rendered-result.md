@@ -112,6 +112,8 @@ total is at most 256 MiB. Electron main and renderer share one app quota.
 Oldest segments go first; expiration, capacity losses, corrupt/orphan segments,
 queue drops and storage failures are counted and returned with every read.
 The implementation additionally caps segment count and the pending queue.
+An unreferenced expiry timer removes idle records without a later request;
+filesystem failures are counted and retried with a one-minute minimum interval.
 An empty private SQLite lease file grants one writer per directory; it contains
 no recordings or Task data and releases its OS lock when a process dies.
 Three filesystem blocks are reserved for the lease and atomic status replacement.
