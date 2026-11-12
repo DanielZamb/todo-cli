@@ -48,7 +48,9 @@ parser.add_argument('--iteration-offset', type=int, default=0)
 parser.add_argument('--owner-fixture', action='store_true')
 parser.add_argument('--connection-probe', action='store_true')
 parser.add_argument('--inspector-layout', action='store_true')
+parser.add_argument('--inspector-selection', action='store_true')
 args = parser.parse_args()
+if args.inspector_selection and (not args.owner_fixture or args.climb or args.inspector_layout or args.connection_probe or args.slow_actions): parser.error('--inspector-selection requires --owner-fixture and its own workload mode')
 os.umask(0o077)
 if args.owner_fixture: args.personal_tasks=OWNER['personal']['total']
 if args.connection_probe and not args.prepare_only: parser.error('--connection-probe prepares the target; run connections.py for the direct-server drive')
@@ -91,10 +93,11 @@ if args.working_tree:
     refs['working-tree'] = run(['git', 'rev-parse', 'HEAD'], 'working-parent').strip()
     (evidence / 'working-tree.diff').write_bytes(subprocess.check_output(['git', 'diff', '--binary', 'HEAD', '--', 'apps/macos/Sources', 'apps/macos/API/Sources'], cwd=ROOT))
 (evidence / 'revisions.json').write_text(json.dumps(refs, indent=2))
-labels = {ref: str(index) + '-' + sha[:8] if args.climb else sha[:8] for index, (ref, sha) in enumerate(refs.items())}
+labels = {ref: str(index) + '-' + sha[:8] if args.climb or args.inspector_selection else sha[:8] for index, (ref, sha) in enumerate(refs.items())}
 packages = {}
 for ref, sha in refs.items():
     cache_name = ('climb-working-tree' if ref == 'working-tree' else 'climb-' + sha) if args.climb else ('working-tree' if ref == 'working-tree' else sha)
+    if args.inspector_selection: cache_name = 'inspector-selection-' + ('working-tree' if ref == 'working-tree' else sha)
     package = ROOT / '.scratch/mac-perf' / cache_name / 'apps/macos'
     label = labels[ref]
     package.mkdir(parents=True, exist_ok=True)
@@ -168,6 +171,8 @@ for ref, sha in refs.items():
         fixture = fixture.replace('rows[rows.count - 1]["switchToLiveMS"] = toLive', 'rows[rows.count - 1]["switchToLiveMS"] = toLive; rows[rows.count - 1]["switchToCurrentMS"] = toCurrent')
     if args.connection_probe:
         pass
+    elif args.inspector_selection:
+        fixture = SOURCE.with_name('InspectorSelection.swift').read_text()
     elif args.inspector_layout:
         fixture = fixture.split('@MainActor struct MacPerformanceMeasurement')[0] + SOURCE.with_name('InspectorMeasurement.swift').read_text()
     elif args.slow_actions:
@@ -243,9 +248,26 @@ for ref, sha in refs.items():
     model_source = model_source.replace('if let cursor = lastSequence.flatMap(Int64.init), operation.seq <= cursor { continue }', 'if let cursor = lastSequence.flatMap(Int64.init), operation.seq <= cursor { continue }\n                            PerfTrace.shared.consumed(operation.seq)')
     model_source = model_source.replace('if Task.isCancelled || generation != run { return }', 'if Task.isCancelled || generation != run { return }\n                PerfTrace.record(error)', 1)
     model_source = model_source.replace('try JSONDecoder().decode(type, from: JSONEncoder().encode(wire))', 'try PerfTrace.decode { try JSONDecoder().decode(type, from: JSONEncoder().encode(wire)) }')
-    model_file.write_text(original_model_source if args.connection_probe else model_source)
+    model_file.write_text(original_model_source if args.connection_probe or args.inspector_selection else model_source)
     snapshot_file = package / 'Sources/TaskSnapshot.swift'
-    if not args.connection_probe: snapshot_file.write_text(snapshot_file.read_text().replace('try JSONDecoder().decode(Self.self, from: JSONEncoder().encode(value))', 'try PerfTrace.decode { try JSONDecoder().decode(Self.self, from: JSONEncoder().encode(value)) }'))
+    if not args.connection_probe and not args.inspector_selection: snapshot_file.write_text(snapshot_file.read_text().replace('try JSONDecoder().decode(Self.self, from: JSONEncoder().encode(value))', 'try PerfTrace.decode { try JSONDecoder().decode(Self.self, from: JSONEncoder().encode(value)) }'))
+    if args.inspector_selection:
+        (package / 'Sources/PerfSelectionTrace.swift').write_text(SOURCE.with_name('InspectorSelectionTrace.swift').read_text())
+        monitor = package / 'Sources/ClientDiagnosticsMonitor.swift'
+        value = monitor.read_text(); marker = 'func selected(_ task: String) {'
+        assert value.count(marker) == 1
+        monitor.write_text(value.replace(marker, marker + '\n        PerfSelectionTrace.selected()'))
+        value = model_file.read_text(); marker = 'clientDiagnosticsUI.inspectorPublished(task.id)'
+        assert value.count(marker) == 1
+        model_file.write_text(value.replace(marker, 'PerfSelectionTrace.published()\n        ' + marker))
+        view = package / 'Sources/AppViews.swift'
+        value = view.read_text(); marker = '.onChange(of: selection) { old, id in'
+        assert value.count(marker) == 1
+        value = value.replace(marker, '.onReceive(NotificationCenter.default.publisher(for: Notification.Name("MacPerfSelectTask"))) { message in selection = message.object as? String }\n                    ' + marker)
+        for struct_marker, call in [('struct TaskListView: View {', 'PerfSelectionTrace.listBody()'), ('struct TaskRow: View {', 'PerfSelectionTrace.rowBody()')]:
+            start = value.index(struct_marker); body = value.index('    var body: some View {\n', start) + len('    var body: some View {\n')
+            value = value[:body] + '        let _ = ' + call + '\n' + value[body:]
+        view.write_text(value)
     (package / 'Sources/SessionVault.swift').write_text('''
 import Foundation
 struct SessionVault {
@@ -350,7 +372,13 @@ for iteration in range(args.iteration_offset, args.iteration_offset + args.runs)
             for profile in ['work', 'personal']:
                 run([binaries['cli'], 'login', '--password-stdin', '--profile', profile, '--format', 'json'], 'login-' + profile + name, env, input='scratch verification passphrase\n')
                 items = [dict(external_id=f'perf-{i}', title=f'Measurement Task {i:03}', description='Ordinary description for planning and follow-up. ' * 3, priority=['P1','P2','P3','P4'][i % 4], project_name=f'Project {i % 12:02}', tag_names=[f'Tag {i % 70:02}', f'Tag {(i + 13) % 70:02}'], energy=i % 5 + 1, estimate_min=25, **({'due_at': {'kind':'date','date':'2026-11-09'}} if i % 3 == 0 else {}), **({'depends_on': [f'perf-{i-1}']} if i in [1,3,5] else {})) for i in range(args.personal_tasks if profile == 'personal' else 180)]
-                if args.owner_fixture: items=owner_items(profile,dependencies=True)
+                if args.owner_fixture:
+                    items=owner_items(profile,dependencies=True)
+                    if args.inspector_selection:
+                        for index,item in enumerate(items):
+                            original=item['description']
+                            item['description']=original.replace('workload',f'Task {index:03}')
+                            assert len(item['description']) == len(original)
                 file = scratch / (profile + '.json')
                 file.write_text(json.dumps(items))
                 run([binaries['cli'], 'import', file, '--profile', profile, '--format', 'json'], 'import-' + profile + name, env)
@@ -529,7 +557,7 @@ for iteration in range(args.iteration_offset, args.iteration_offset + args.runs)
             (folder / 'cleanup.json').write_text(json.dumps(dict(processes=[dict(pid=p.pid, exit=p.returncode) for p in processes], scratchRemoved=not scratch.exists(), retainedScratch=str(scratch) if unsafe else None)))
             if 'log' in locals(): log.close()
 
-if args.inspector_layout:
+if args.inspector_layout or args.inspector_selection:
     print(json.dumps(dict(errors=0, sessions=sum(command['log'].startswith('session-') for command in commands))))
     raise SystemExit(0)
 if args.climb:
