@@ -122,6 +122,9 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
     # A destination Profile for the Move and Copy read-back controls (S1-17).
     if run([cache['cli'], 'init', '--profile', 'transfer', '--credential-profile', 'work', '--format', 'json'], 'init-transfer.log', dict(env, TODO_SERVER_URL=url)):
         raise RuntimeError('CLI init transfer failed')
+    # An empty Profile for the deleted-Profile read-back control (S1-19).
+    if run([cache['cli'], 'init', '--profile', 'deletable', '--credential-profile', 'work', '--format', 'json'], 'init-deletable.log', dict(env, TODO_SERVER_URL=url)):
+        raise RuntimeError('CLI init deletable failed')
 
     lock = threading.Lock()
     fault = {'mode': None, 'held': False, 'release': threading.Event()}

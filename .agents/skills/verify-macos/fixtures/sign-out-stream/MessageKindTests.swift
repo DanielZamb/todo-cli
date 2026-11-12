@@ -11,7 +11,9 @@ import TodoAPI
 // while an action that clears this kind is still finishing (the newer one survives),
 // and a recovery, where the same kind's success clears its earlier message.
 
-private enum Step: Sendable { case pass, hold, fail(Int, String), holdThenFail(Int, String), drop }
+/// `corrupt`: the request reaches the server (a write commits), then the client gets a 200 whose
+/// body it cannot read (S1-19).
+private enum Step: Sendable { case pass, hold, fail(Int, String), holdThenFail(Int, String), drop, corrupt }
 
 private actor ScriptGate: ClientTransport {
     let session: URLSession
@@ -43,6 +45,10 @@ private actor ScriptGate: ClientTransport {
         case .hold: await withCheckedContinuation { held[operationID] = $0 }
         case .fail(let status, let message): throw RequestFailure(status: status, message: message, code: status == 401 ? "unauthorized" : "unavailable")
         case .drop: throw URLError(.networkConnectionLost)
+        case .corrupt:
+            if stopped { throw CancellationError() }
+            let (response, _) = try await base.send(request, body: body, baseURL: baseURL, operationID: operationID)
+            return (response, HTTPBody("{\"unreadable\":true}"))
         case .holdThenFail(let status, let message):
             await withCheckedContinuation { held[operationID] = $0 }
             throw RequestFailure(status: status, message: message, code: "unavailable")
@@ -1395,6 +1401,97 @@ private actor ScriptGate: ClientTransport {
         await gate.release("tasks.depend"); await toggle.value
         let rootTitle = model.tasks.first { $0.id == root.id }?.title ?? root.title
         #expect(model.message?.hasPrefix("Couldn't make “\(candidate.title)” depend on “\(rootTitle)”.") == true, "Blocks: \(model.message ?? "nil")")
+        await finish(model, gate, vault)
+    }
+
+    // MARK: MAC-C1-S1-19: a committed write's read-back cannot be skipped by a later failure
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil),
+          arguments: ["create", "save", "complete", "delete", "move", "link", "batch-edit", "dependency-batch", "import", "attach-paths"])
+    func aCommittedWriteReadsTheCatalogBackWhenItsReplyOrSecondaryReadFails(_ kind: String) async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        let credential = try #require(try vault.load())
+        var run: () async -> Void = {}
+        var landed: () -> Bool = { false }
+        var operation = ""
+        switch kind {
+        case "create":
+            let title = "Committed create " + UUID().uuidString
+            model.quickAdd = true; model.newTitle = title
+            operation = "tasks.create"; run = { _ = await model.create(openEditor: false) }
+            landed = { model.tasks.contains { $0.title == title } }
+        case "save":
+            let title = task.title + " committed"
+            model.beginEditing(task); model.editor?.title = title
+            operation = "tasks.edit"; run = { _ = await model.save() }
+            landed = { model.tasks.contains { $0.id == task.id && $0.title == title } }
+        case "complete":
+            operation = "tasks.transition"; run = { await model.transition(task, action: "complete") }
+            landed = { model.tasks.first { $0.id == task.id }?.status == "done" || !model.tasks.contains { $0.id == task.id && $0.status == "open" } }
+        case "delete":
+            await model.openDependencyDelete(task)
+            try await wait("delete preview") { model.dependencies.deletion?.acceptedFromVersion != nil }
+            operation = "tasks.delete"; run = { await model.deleteTask(task) }
+            landed = { !model.tasks.contains { $0.id == task.id } }
+        case "move":
+            model.beginEditing(task)
+            operation = "tasks.move"; run = { await model.write(.move("transfer")) }
+            landed = { !model.tasks.contains { $0.id == task.id } }
+        case "link":
+            let candidate = try await secondTask(model, gate, vault)
+            model.dependencies.picker = .init(profile: "work", root: model.tasks.first { $0.id == task.id }!, direction: .blocks)
+            await model.reloadDependencyPicker()
+            operation = "tasks.depend"; run = { await model.toggleDependency(candidate) }
+            landed = { model.tasks.first { $0.id == candidate.id }?.depends_on?.contains(task.id) == true }
+        case "batch-edit":
+            let wanted = task.priority == "P1" ? "P2" : "P1"
+            model.batchEdit = .init(profile: "work"); await model.reloadBatchEditTargets()
+            model.batchEdit?.selected = [task.id]; model.batchEdit?.field = .priority; model.batchEdit?.value = wanted
+            await model.applyBatchEdit(dryRun: true)
+            operation = "tasks.batchEdit"; run = { await model.applyBatchEdit(dryRun: false) }
+            landed = { model.tasks.first { $0.id == task.id }?.priority == wanted }
+        case "dependency-batch":
+            let target = try await secondTask(model, gate, vault)
+            model.dependencies.batch = .init(profile: "work", root: model.tasks.first { $0.id == task.id }!, direction: .dependsOn)
+            await model.reloadDependencyBatch(); model.dependencies.batch?.selected = [target.id]
+            await model.previewDependencyBatch(); try #require(model.dependencies.batch?.report?.dry_run == true)
+            operation = "tasks.batchDepend"; run = { await model.applyDependencyBatch() }
+            landed = { model.tasks.first { $0.id == task.id }?.depends_on?.contains(target.id) == true }
+        case "import":
+            let title = "Committed import " + UUID().uuidString
+            model.showingImport = true
+            model.loadImport(data: Data(#"[{"external_id":"committed:\#(UUID().uuidString)","title":"\#(title)"}]"#.utf8), name: "committed.json")
+            await model.previewImport(); try #require(model.importReport?.dry_run == true)
+            operation = "tasks.importTasks"; run = { await model.applyImport() }
+            landed = { model.tasks.contains { $0.title == title } }
+        default: // attach-paths: the write commits; its secondary tasks.show fails
+            let file = FileManager.default.temporaryDirectory.appendingPathComponent("committed-\(UUID().uuidString).txt")
+            try Data("attachment".utf8).write(to: file); defer { try? FileManager.default.removeItem(at: file) }
+            model.beginEditing(task)
+            await gate.next("tasks.show", .fail(503, "SECONDARY read failed"))
+            operation = ""; run = { await model.attachPaths([file.path]) }
+            landed = { (model.tasks.first { $0.id == task.id }?.attachments ?? []).contains { if case .file(let path) = $0.location { return path.hasSuffix(file.lastPathComponent) }; return false } }
+        }
+        _ = credential
+        if !operation.isEmpty { await gate.next(operation, .corrupt) }
+        await run()
+        try await wait("\(kind): the committed change reaches the list") { landed() }
+        #expect(landed(), "\(kind): the read-back ran after the failure")
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func aDeletedProfilesFailedReadBackIsNotADeletionFailure() async throws {
+        let gate = ScriptGate(); let (model, vault, _) = try await live(gate)
+        model.changeProfile("deletable")
+        try await wait("deletable live") { model.profile == "deletable" && !model.loading && model.canWrite }
+        try await Task.sleep(for: .milliseconds(100))
+        model.beginProfileDeletion()
+        try #require(model.profileDeletion != nil)
+        await gate.next("reads.profiles", .fail(503, "PROFILES read failed"))
+        await model.deleteProfile()
+        #expect(model.profileDeletionError == nil, "the deletion stands; no deletion failure: \(model.profileDeletionError ?? "nil")")
+        #expect(model.message?.contains("was deleted. The live view is reconnecting.") == true, "\(model.message ?? "nil")")
         await finish(model, gate, vault)
     }
 }

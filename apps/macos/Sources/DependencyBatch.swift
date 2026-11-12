@@ -125,9 +125,11 @@ extension TodoModel {
         guard let ticket = dependencies.batch?.messages.begin(.run) else { return }
         defer { if dependencies.batch?.id == batch.id { dependencies.batch?.pending = false } }
         struct Payload: Encodable { let items: [DependencyBatchItem]; let dry_run: Bool }
+        var committed = false // the write's reply came back OK: its read-back cannot be skipped (S1-19)
         do {
             let payload = try decode(Operations.tasks_period_batchDepend.Input.Body.jsonPayload.self, Payload(items: batch.items, dry_run: dryRun))
             let response = try await client.tasks_period_batchDepend(path: .init(profile: batch.profile), body: .json(payload))
+            if !dryRun, case .ok = response { committed = true }
             if case .conflict(let conflict) = response { throw try dependencyConflict(conflict.body.json) }
             let wire = try response.ok.body.json
             let report = try decode(DependencyBatchReport.self, wire)
@@ -143,6 +145,11 @@ extension TodoModel {
             if !dryRun { await refreshAfterWrite("Dependencies updated", owner: .surface(.dependencyBatch(batch.id), .init(ticket))) }
         } catch {
             authorize(error, epoch: epoch, profile: batch.profile)
+            // A committed apply whose reply could not be used (or carried an unreadable row) still
+            // reads the catalog back (S1-19).
+            if !dryRun, committed || committedBeforeFailure(error), signedIn, profile == batch.profile, isCurrentCredential(epoch) {
+                await refreshAfterWrite("Dependencies updated", owner: .surface(.dependencyBatch(batch.id), .init(ticket)))
+            }
             guard signedIn, profile == batch.profile, isCurrentCredential(epoch), dependencies.batch?.id == batch.id else { return }
             let failureNotice = dependencyNotice(error, context: .link)
             dependencies.batch?.messages.fail(failureNotice, ticket)

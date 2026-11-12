@@ -9,6 +9,8 @@ extension TodoModel {
   enum AttachmentResult {
     case accepted(TaskSnapshot)
     case conflict(TaskSnapshot?)
+    /// The write committed, but a secondary read after it failed: its read-back still runs (S1-19).
+    case committed(Error)
   }
 
   private func changeAttachment(_ operation: (Client, TaskDraft) async throws -> AttachmentResult)
@@ -25,11 +27,25 @@ extension TodoModel {
       let result = try await operation(client, attachmentDraft)
       guard isCurrentCredential(credentialEpoch), profile == draft.base.profile_id else { return }
       // Once this editor has closed, an accepted Attachment change still reaches the list and nothing is shown.
+      if case .committed(let readError) = result {
+        // Its secondary read failed after the commit: authorization first, then the read-back,
+        // which also brings the open editor the committed Attachments (S1-19).
+        authorize(readError, epoch: credentialEpoch, profile: draft.base.profile_id)
+        guard isCurrentCredential(credentialEpoch), profile == draft.base.profile_id else { return }
+        await refreshAfterWrite("Attachment updated", owner: .surface(.editor(draft.opening), .init(attachmentTicket)))
+        guard isCurrentCredential(credentialEpoch), profile == draft.base.profile_id else { return }
+        if editor?.opening == draft.opening, let fresh = tasks.first(where: { $0.id == draft.id && $0.profile_id == draft.base.profile_id }) {
+          editor = editor?.acceptingAttachmentChange(fresh)
+        }
+        return
+      }
       guard editor?.opening == draft.opening else { if case .accepted = result { await refreshAfterWrite("Attachment updated", owner: .surface(.editor(draft.opening), .init(attachmentTicket))) }; return }
       switch result {
       case .accepted(let task):
         editor = editor?.acceptingAttachmentChange(task)
         await refreshAfterWrite("Attachment updated", owner: .surface(.editor(draft.opening), .init(attachmentTicket)))
+      case .committed:
+        break
       case .conflict(let latest):
         if let latest { editor = editor?.acceptingAttachmentChange(latest) }
         await refreshAfterWrite("Task changed", owner: .surface(.editor(draft.opening), .init(attachmentTicket)))
@@ -39,6 +55,11 @@ extension TodoModel {
     } catch {
       authorize(error, epoch: credentialEpoch, profile: draft.base.profile_id)
       guard isCurrentCredential(credentialEpoch) else { return }
+      // A committed change whose reply could not be read still reads the catalog back (S1-19).
+      if committedBeforeFailure(error), profile == draft.base.profile_id {
+        await refreshAfterWrite("Attachment updated", owner: .surface(.editor(draft.opening), .init(attachmentTicket)))
+        guard isCurrentCredential(credentialEpoch) else { return }
+      }
       // A closed editor shows nothing; its error would otherwise reach whatever editor opens next.
       guard profile == draft.base.profile_id, editor?.opening == draft.opening else { return }
       editorMessages.fail(describe(error, at: .editor), attachmentTicket)
@@ -68,8 +89,13 @@ extension TodoModel {
       if let row = report.items.first, row.outcome == "rejected", row.error?.code != "occ_conflict" {
         throw row.error ?? ServerFailure(message: "Attachments were rejected.")
       }
-      let latest = try TaskSnapshot.decode(try await client.tasks_period_show(path: .init(profile: draft.base.profile_id, task: draft.id)).ok.body.json)
-      if report.items.first?.error?.code == "occ_conflict" { return .conflict(latest) }
+      let conflicted = report.items.first?.error?.code == "occ_conflict"
+      // The secondary read: if it fails, a conflict committed nothing (the error goes to the
+      // ordinary failure path), but an accepted batch did, and its read-back must still run (S1-19).
+      let latest: TaskSnapshot
+      do { latest = try TaskSnapshot.decode(try await client.tasks_period_show(path: .init(profile: draft.base.profile_id, task: draft.id)).ok.body.json) }
+      catch { if conflicted { throw error }; return .committed(error) }
+      if conflicted { return .conflict(latest) }
       return .accepted(latest)
     }
   }

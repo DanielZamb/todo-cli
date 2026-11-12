@@ -107,10 +107,12 @@ extension TodoModel {
     busy = true
     guard let messageTicket = batchEdit?.messages.beginClean(.apply) else { return }
     defer { if discovery.credentialEpoch == credentialEpoch { busy = false } }
+    var committed = false // the write's reply came back OK: its read-back cannot be skipped (S1-19)
     do {
       let items: [[String: Any]] = draft.targets.filter { draft.selected.contains($0.id) }.map { ["task_id": $0.id, "from_version": $0.row_version] }
       let payload = try JSONDecoder().decode(Operations.tasks_period_batchEdit.Input.Body.jsonPayload.self, from: JSONSerialization.data(withJSONObject: ["items": items, "changes": draft.change, "dry_run": dryRun]))
       let response = try await client.tasks_period_batchEdit(path: .init(profile: draft.profile), body: .json(payload)).ok.body.json
+      if !dryRun { committed = true }
       let report = try JSONDecoder().decode(BatchEditReport.self, from: JSONEncoder().encode(response))
       guard isCurrentCredential(credentialEpoch), profile == draft.profile else { return }
       // Once this sheet has closed, a committed apply still reaches the list and nothing is shown.
@@ -120,6 +122,10 @@ extension TodoModel {
       if !dryRun { await refreshAfterWrite("Tasks updated", owner: .surface(.batchEdit(draft.id), .init(messageTicket))) }
     } catch {
       authorize(error, epoch: credentialEpoch, profile: draft.profile)
+      // A committed apply whose reply could not be used still reads the catalog back (S1-19).
+      if !dryRun, committed || committedBeforeFailure(error), isCurrentCredential(credentialEpoch), profile == draft.profile {
+        await refreshAfterWrite("Tasks updated", owner: .surface(.batchEdit(draft.id), .init(messageTicket)))
+      }
       guard isCurrentCredential(credentialEpoch), batchEdit?.id == draft.id else { return }
       let failureNotice = describe(error, at: .batchEdit)
       batchEdit?.messages.fail(failureNotice, messageTicket)

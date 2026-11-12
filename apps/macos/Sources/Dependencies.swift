@@ -256,14 +256,17 @@ extension TodoModel {
             if discovery.credentialEpoch == epoch { dependencies.pendingDependents.remove(dependent.id) }
             if dependencies.picker?.id == picker.id { dependencies.picker?.pending.remove(candidate.id) }
         }
+        var committed = false // the write's reply came back OK: its read-back cannot be skipped (S1-19)
         do {
             let report: DependencyEdgeReport
             if remove {
                 let response = try await client.tasks_period_undepend(path: .init(profile: picker.profile, task: dependent.id), body: .json(.init(blocker_id: blocker.id, from_version: dependent.row_version)))
+                if case .ok = response { committed = true }
                 if case .conflict(let conflict) = response { throw try dependencyConflict(conflict.body.json) }
                 report = try decode(DependencyEdgeReport.self, response.ok.body.json)
             } else {
                 let response = try await client.tasks_period_depend(path: .init(profile: picker.profile, task: dependent.id), body: .json(.init(blocker_id: blocker.id, from_version: dependent.row_version)))
+                if case .ok = response { committed = true }
                 if case .conflict(let conflict) = response { throw try dependencyConflict(conflict.body.json) }
                 report = try decode(DependencyEdgeReport.self, response.ok.body.json)
             }
@@ -289,6 +292,11 @@ extension TodoModel {
         } catch {
             authorize(error, epoch: epoch, profile: picker.profile)
             guard signedIn, profile == picker.profile, isCurrentCredential(epoch) else { return }
+            // A committed edge whose reply could not be used still reads the catalog back (S1-19).
+            if committed || committedBeforeFailure(error) {
+                await refreshAfterWrite("Dependencies updated", owner: .surface(.dependencyPicker(picker.id), .init(linkTicket)))
+                guard signedIn, profile == picker.profile, isCurrentCredential(epoch) else { return }
+            }
             var notice = dependencyNotice(error, context: dependent.status == "done" ? .linkDone : .link)
             notice.attemptTitle = candidate.title
             notice.attemptVerb = remove ? "remove" : "add"

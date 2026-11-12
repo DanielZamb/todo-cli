@@ -458,6 +458,7 @@ final class TodoModel {
     func applyImport() async { await runImport(dryRun: false) }
 
     private func runImport(dryRun: Bool) async {
+        var committed = false // the write's reply came back OK: its read-back cannot be skipped (S1-19)
         let credentialEpoch = discovery.credentialEpoch
         guard canWrite, let document = importDocument else { return }
         if !dryRun && importReport?.dry_run != true { return }
@@ -480,6 +481,7 @@ final class TodoModel {
                 if importCloseMissing { cancellations = document.cancellations(from: preview) }
             }
             let response = try await client.tasks_period_importTasks(path: .init(profile: requestedProfile), body: .json(.init(file_name: document.name, items: try JSONDecoder().decode(OpenAPIArrayContainer.self, from: JSONEncoder().encode(items)), dry_run: dryRun, close_missing: importCloseMissing, close_missing_candidates: cancellations)))
+            if !dryRun, case .ok = response { committed = true }
             let report = try decode(ImportSummary.self, response.ok.body.json)
             guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
             // A reopened Import has a new generation; the previous sheet's committed apply still reaches the list.
@@ -494,6 +496,11 @@ final class TodoModel {
         } catch {
             authorize(error, epoch: credentialEpoch, profile: requestedProfile)
             guard isCurrentCredential(credentialEpoch) else { return }
+            // A committed apply whose reply could not be used still reads the catalog back (S1-19).
+            if !dryRun, committed || committedBeforeFailure(error), profile == requestedProfile {
+                await refreshAfterWrite("Import applied", owner: surface.map { .surface($0, .init(ticket)) } ?? .mainWindow(.init(ticket)))
+                guard isCurrentCredential(credentialEpoch) else { return }
+            }
             guard profile == requestedProfile, importGeneration == requestedGeneration, surface.map(isShowing) ?? true else { return }
             importMessages.fail(describe(error, at: .importTasks), ticket)
         }
@@ -636,11 +643,23 @@ final class TodoModel {
         let deleteTicket = profileDeletionMessages.begin(.delete)
         defer { if discovery.credentialEpoch == credentialEpoch { busy = false } }
         do {
-            let response = try await client.reads_period_deleteProfile(path: .init(profile: deleted), body: .json(.init(with_tasks: prompt.deleteTasks, dry_run: false)))
-            _ = try response.ok.body.json
+            do {
+                let response = try await client.reads_period_deleteProfile(path: .init(profile: deleted), body: .json(.init(with_tasks: prompt.deleteTasks, dry_run: false)))
+                _ = try response.ok.body.json
+            } catch where committedBeforeFailure(error) {
+                // Deleted, but its reply could not be read: the deletion stands (S1-19).
+            }
             guard profile == deleted, generation == run, !Task.isCancelled else { return }
             profileDeletion = nil
-            try await leaveDeletedProfile(named: prompt.name)
+            // The Profile is deleted. Reading the Profiles back is this write's read-back: its
+            // failure is not a deletion failure; the connection recovery leaves the Profile when the
+            // reload arrives (S1-19).
+            do { try await leaveDeletedProfile(named: prompt.name) } catch {
+                handleAuthorization(error, credentialEpoch: credentialEpoch)
+                guard isCurrentCredential(credentialEpoch), signedIn, deleteTicket.isNewest else { return }
+                publishMessage("\u{201C}\(prompt.name)\u{201D} was deleted. The live view is reconnecting.", kind: .connection)
+                connect()
+            }
         } catch {
             guard isCurrentCredential(credentialEpoch) else { return }
             guard profile == deleted, generation == run, !Task.isCancelled else { return }
@@ -1084,6 +1103,7 @@ final class TodoModel {
     }
 
     func create(openEditor: Bool) async -> Bool {
+        var committed = false // the write's reply came back OK: its read-back cannot be skipped (S1-19)
         let credentialEpoch = discovery.credentialEpoch
         guard canWrite else { return false }
         let title = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1110,6 +1130,7 @@ final class TodoModel {
             guard isCurrentCredential(credentialEpoch), profile == creationProfile else { return false }
             let payload = try JSONDecoder().decode(Operations.tasks_period_create.Input.Body.jsonPayload.self, from: JSONSerialization.data(withJSONObject: value))
             let response = try await client.tasks_period_create(path: .init(profile: profile), body: .json(payload))
+            if case .ok = response { committed = true }
             let wire = try response.ok.body.json
             guard isCurrentCredential(credentialEpoch), profile == creationProfile else { return false }
             let task = try TaskSnapshot.decode(wire)
@@ -1148,6 +1169,11 @@ final class TodoModel {
         } catch {
             authorize(error, epoch: credentialEpoch, profile: creationProfile)
             guard isCurrentCredential(credentialEpoch), profile == creationProfile else { return false }
+            // A committed create whose reply could not be used still reads the catalog back (S1-19).
+            if committed || committedBeforeFailure(error) {
+                await refreshAfterWrite("Task added", owner: surface.map { .surface($0, .init(createTicket)) } ?? .mainWindow(.init(createTicket)))
+                guard isCurrentCredential(credentialEpoch), profile == creationProfile else { return false }
+            }
             if surface.map(isShowing) ?? true { quickAddMessages.fail(describe(error, at: .quickAdd), createTicket); return false }
             // The quick-add that started this was closed during the create (Escape is not gated by
             // busy): the newest create of that instance hands one named message to the main window,
@@ -1158,6 +1184,7 @@ final class TodoModel {
 
     @discardableResult
     func save() async -> TaskSnapshot? {
+        var committed = false // the write's reply came back OK: its read-back cannot be skipped (S1-19)
         let credentialEpoch = discovery.credentialEpoch
         guard canWrite, let draft = editor else { return nil }
         let requestedProfile = profile
@@ -1168,6 +1195,7 @@ final class TodoModel {
         do {
             let payload = try JSONDecoder().decode(Operations.tasks_period_edit.Input.Body.jsonPayload.self, from: draft.changesData())
             let response = try await client.tasks_period_edit(path: .init(profile: profile, task: draft.id), body: .json(payload))
+            if case .ok = response { committed = true }
             guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return nil }
             // Presentation belongs to the editor opening that started the Save, and to the newest Save.
             let showing = editor?.opening == draft.opening && editorMessages.isNewest(saveTicket)
@@ -1195,6 +1223,10 @@ final class TodoModel {
             return saved
         } catch {
             authorize(error, epoch: credentialEpoch, profile: requestedProfile)
+            // A committed Save whose reply could not be used still reads the catalog back (S1-19).
+            if committed || committedBeforeFailure(error), isCurrentCredential(credentialEpoch), profile == requestedProfile {
+                await refreshAfterWrite("Task saved", owner: .surface(.editor(draft.opening), .init(saveTicket)))
+            }
             guard isCurrentCredential(credentialEpoch), profile == requestedProfile, editor?.opening == draft.opening else { return nil }
             editorMessages.fail(describe(error, at: .editor), saveTicket); return nil }
     }
@@ -1351,6 +1383,7 @@ final class TodoModel {
     }
 
     func transition(_ task: TaskSnapshot, action: String) async {
+        var committed = false // the write's reply came back OK: its read-back cannot be skipped (S1-19)
         let credentialEpoch = discovery.credentialEpoch
         let mark = messageMark
         guard canWrite else { return }
@@ -1361,6 +1394,7 @@ final class TodoModel {
             let data = try JSONSerialization.data(withJSONObject: ["from_version": task.row_version, "action": action])
             let payload = try JSONDecoder().decode(Operations.tasks_period_transition.Input.Body.jsonPayload.self, from: data)
             let response = try await client.tasks_period_transition(path: .init(profile: profile, task: task.id), body: .json(payload))
+            if case .ok = response { committed = true }
             guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
             if case .conflict = response {
                 _ = await refresh(generation: generation)
@@ -1378,12 +1412,18 @@ final class TodoModel {
             announce("Task updated")
         } catch {
             guard isCurrentCredential(credentialEpoch) else { return }
+            // A committed transition whose reply could not be used still reads the catalog back (S1-19).
+            if committed || committedBeforeFailure(error), profile == requestedProfile {
+                await refreshAfterWrite("Task updated")
+                guard isCurrentCredential(credentialEpoch) else { return }
+            }
             publishMessage(describe(error, dependencyContext: action == "complete" ? .complete : .reopen), kind: .transition)
             if editor?.id == task.id { editorError = describe(error, at: .editor, dependencyContext: action == "complete" ? .complete : .reopen) }
             handleAuthorization(error, credentialEpoch: credentialEpoch) }
     }
 
     func deleteTask(_ task: TaskSnapshot) async {
+        var committed = false // the write's reply came back OK: its read-back cannot be skipped (S1-19)
         let credentialEpoch = discovery.credentialEpoch
         let mark = messageMark
         guard canWrite else { return }
@@ -1397,6 +1437,7 @@ final class TodoModel {
         defer { if discovery.credentialEpoch == credentialEpoch { busy = false } }
         do {
             let response = try await client.tasks_period_delete(path: .init(profile: profile, task: task.id), query: .init(from_version: String(fromVersion), with_dependencies: ._true, dependency_fingerprint: fingerprint))
+            if case .ok = response { committed = true }
             guard isCurrentCredential(credentialEpoch), profile == deletionProfile else { return }
             if case .conflict(let conflict) = response {
                 // A closed confirmation shows nothing; there is no committed delete to apply.
@@ -1437,6 +1478,11 @@ final class TodoModel {
         } catch {
             authorize(error, epoch: credentialEpoch, profile: deletionProfile)
             guard isCurrentCredential(credentialEpoch) else { return }
+            // A committed delete whose reply could not be used still reads the catalog back (S1-19).
+            if committed || committedBeforeFailure(error), profile == deletionProfile {
+                await refreshAfterWrite("Task deleted", clearing: .delete, since: mark, owner: .surface(.deleteDialog(preview.id), .init(deleteTicket)))
+                guard isCurrentCredential(credentialEpoch) else { return }
+            }
             guard profile == deletionProfile, dependencies.deletion?.id == preview.id else { return }
             if error is DependencyGraphReply.ProtocolError {
                 dependencies.deletion?.messages.fail(.init(message: "The server response could not be read. Reload Dependencies before confirming again."), deleteTicket)
@@ -1452,6 +1498,7 @@ final class TodoModel {
     }
 
     func write(_ intent: TaskWriteIntent) async {
+        var committed = false // the write's reply came back OK: its read-back cannot be skipped (S1-19)
         let credentialEpoch = discovery.credentialEpoch
         guard canWrite, let draft = editor else { return }
         let requestedProfile = profile
@@ -1470,6 +1517,7 @@ final class TodoModel {
             switch intent {
             case .move(let destination):
                 let response = try await client.tasks_period_move(path: .init(profile: profile, task: draft.id), body: .json(.init(from_version: draft.base.row_version, destination_profile: destination)))
+                if case .ok = response { committed = true }
                 guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
                 if case .conflict(let value) = response { if editor?.opening == draft.opening && editorMessages.isNewest(writeTicket) { try acceptConflict(value.body.json, intent: intent) }; return }
                 let wire = try response.ok.body.json
@@ -1477,22 +1525,26 @@ final class TodoModel {
                 removedDependencies = try (wire.removed_dependencies ?? []).map { try decode(DependencyEdge.self, $0) }
             case .copy(let destination):
                 let response = try await client.tasks_period_copy(path: .init(profile: profile, task: draft.id), body: .json(.init(from_version: draft.base.row_version, destination_profile: destination)))
+                if case .ok = response { committed = true }
                 guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
                 if case .conflict(let value) = response { if editor?.opening == draft.opening && editorMessages.isNewest(writeTicket) { try acceptConflict(value.body.json, intent: intent) }; return }
                 task = try TaskSnapshot.decode(response.ok.body.json)
             case .revert(let seq):
                 let response = try await client.tasks_period_revert(path: .init(profile: profile, task: draft.id), body: .json(.init(from_version: draft.base.row_version, seq: Int(seq))))
+                if case .ok = response { committed = true }
                 guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
                 if case .conflict(let value) = response { if editor?.opening == draft.opening && editorMessages.isNewest(writeTicket) { try acceptConflict(value.body.json, intent: intent) }; return }
                 task = try TaskSnapshot.decode(response.ok.body.json)
             case .skipOccurrence:
                 let response = try await client.tasks_period_skipOccurrence(path: .init(profile: profile, task: draft.id), body: .json(.init(from_version: draft.base.row_version)))
+                if case .ok = response { committed = true }
                 guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
                 if case .conflict(let value) = response { if editor?.opening == draft.opening && editorMessages.isNewest(writeTicket) { try acceptConflict(value.body.json, intent: intent) }; return }
                 task = try TaskSnapshot.decode(response.ok.body.json)
             case .editSeries(let recurrence):
                 let payload = try JSONDecoder().decode(Operations.tasks_period_editSeries.Input.Body.jsonPayload.self, from: draft.seriesData(recurrence))
                 let response = try await client.tasks_period_editSeries(path: .init(profile: profile, task: draft.id), body: .json(payload))
+                if case .ok = response { committed = true }
                 guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
                 if case .conflict(let value) = response { if editor?.opening == draft.opening && editorMessages.isNewest(writeTicket) { try acceptConflict(value.body.json, intent: intent) }; return }
                 task = try TaskSnapshot.decode(response.ok.body.json)
@@ -1567,6 +1619,10 @@ final class TodoModel {
             announce("Task updated")
         } catch {
             authorize(error, epoch: credentialEpoch, profile: requestedProfile)
+            // A committed write whose reply could not be used still reads the catalog back (S1-19).
+            if committed || committedBeforeFailure(error), isCurrentCredential(credentialEpoch), profile == requestedProfile {
+                await refreshAfterWrite("Task updated", owner: .surface(.editor(draft.opening), .init(writeTicket)))
+            }
             guard isCurrentCredential(credentialEpoch), profile == requestedProfile, editor?.opening == draft.opening else { return }
             let context: DependencyActionContext
             if case .revert = intent { context = .revert } else { context = .link }
@@ -1658,6 +1714,7 @@ final class TodoModel {
     }
 
     func saveSeries(_ recurrence: Recurrence) async {
+        var committed = false // the write's reply came back OK: its read-back cannot be skipped (S1-19)
         let credentialEpoch = discovery.credentialEpoch
         let requestedProfile = profile
         guard canWrite else { return }
@@ -1674,6 +1731,7 @@ final class TodoModel {
         do {
             let payload = try JSONDecoder().decode(Operations.tasks_period_createSeries.Input.Body.jsonPayload.self, from: draft.newSeriesData(recurrence, dependsOn: dependencies.firstOccurrenceInitial.map(\.id)))
             let response = try await client.tasks_period_createSeries(path: .init(profile: requestedProfile), body: .json(payload))
+            if case .ok = response { committed = true }
             guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
             if case .conflict = response { editorMessages.fail("Conflict: the Series was not created. Your draft is preserved.", seriesSaveTicket); return }
             let wire = try response.ok.body.json
@@ -1690,6 +1748,11 @@ final class TodoModel {
         } catch {
             authorize(error, epoch: credentialEpoch, profile: requestedProfile)
             guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
+            // A committed Series whose reply could not be used still reads the catalog back (S1-19).
+            if committed || committedBeforeFailure(error) {
+                await refreshAfterWrite("Series created", owner: .mainWindow(.init(seriesSaveTicket)))
+                guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
+            }
             editorMessages.fail(describe(error, at: .editor), seriesSaveTicket) }
     }
 
@@ -1728,6 +1791,14 @@ final class TodoModel {
         case .superseded:
             break
         }
+    }
+
+    /// Whether a write failed after the server committed it: its reply was a success the client
+    /// could not read (S1-19). Callers also note `committed` once a reply is the OK case, so a later
+    /// step (a secondary read, a check on the reply) cannot skip the read-back either.
+    func committedBeforeFailure(_ error: Error) -> Bool {
+        guard let failure = error as? ClientError, let status = failure.response?.status else { return false }
+        return status.kind == .successful
     }
 
     /// Whether the list as currently shown (view, search, Project, Tag and filters) includes `id`.
