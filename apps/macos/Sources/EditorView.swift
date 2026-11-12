@@ -86,6 +86,10 @@ struct EditorView: View {
                         }
                     }.frame(maxWidth: .infinity).padding(20)
                 }
+                // Compact (candidate 8 ruling 5): the body shows its scroll bars, so a field at the
+                // bottom edge reads as more content, not a cut.
+                .scrollIndicators(compact ? .visible : .automatic)
+                .compactBounds("editor-scroll", when: compact)
                 Divider()
                 HStack {
                     if model.busy {
@@ -115,7 +119,8 @@ struct EditorView: View {
                             )
                             .accessibilityIdentifier("save-task")
                     }
-                }.controlSize(.large).padding(16)
+                }.controlSize(compact ? .regular : .large).padding(.horizontal, 16).padding(.vertical, compact ? 10 : 16)
+                    .compactBounds("editor-footer", when: compact)
             }
         }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(.background)
@@ -149,7 +154,7 @@ struct EditorView: View {
                 Text("Description").foregroundStyle(.secondary)
                 TextEditor(text: textBinding(\.description, category: .editDescription))
                     .scrollContentBackground(.hidden).padding(6).background(.background, in: RoundedRectangle(cornerRadius: 6))
-                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(.separator)).frame(height: 100).font(.body).accessibilityLabel(
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(.separator)).frame(height: compact ? 60 : 100).font(.body).compactBounds("edit-description", when: compact).accessibilityLabel(
                         "Description"
                     ).accessibilityIdentifier("edit-description")
                 Text("Markdown").font(.caption).foregroundStyle(.tertiary).padding(.leading, 11)

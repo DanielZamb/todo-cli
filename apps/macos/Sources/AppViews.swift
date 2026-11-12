@@ -388,7 +388,11 @@ struct TaskListView: View {
                 }
             }.padding(.horizontal, 16).padding(.vertical, 8).compactBounds("header")
             Divider()
-            searchField.padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 4)
+            // The Find field belongs to the list; while the editor is shown it would take the
+            // editor's room (candidate 8 ruling 5). The search text is kept for Back to tasks.
+            if model.editor == nil || model.quickAdd {
+                searchField.padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 4)
+            }
             if model.editor != nil, let result = model.transferResult {
                 TaskTransferResultView(model: model, result: result)
                 Divider()
@@ -1006,7 +1010,7 @@ struct QuickAddView: View {
                 Image(systemName: "xmark").font(.caption2)
             }.frame(minHeight: 28).contentShape(Rectangle())
         }.lineLimit(1).buttonStyle(.bordered).tint(nil as Color?).controlSize(.small).help(title).accessibilityLabel("Clear \(title)")
-            .background(measure(field)).preference(key: QuickAddChipLabels.self, value: [field: title])
+            .background(measure(field)).compactBounds("chip-" + field).preference(key: QuickAddChipLabels.self, value: [field: title])
     }
 
     private func measure(_ field: String) -> some View {
@@ -1035,21 +1039,22 @@ struct MessageBanner: View {
     let control: TodoModel.MessageBannerControl
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
-            Group {
-                if model.lookupError(at: .message, text: message) != nil {
-                    ClientErrorNotice(model: model, text: message, position: .message)
-                } else {
-                    Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(TodoColors.color("destructive"))
-                        .accessibilityLabel(spoken)
-                }
-            }.accessibilityElement(children: .combine)
+            if model.lookupError(at: .message, text: message) != nil {
+                // Keeps its own elements, so "Find Task by id" stays reachable.
+                ClientErrorNotice(model: model, text: message, position: .message)
+            } else {
+                Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(TodoColors.color("destructive"))
+                    .accessibilityElement(children: .combine).accessibilityLabel(spoken)
+            }
             Spacer()
             switch control {
             case .reconnect:
                 Button("Reconnect") { model.connect() }.accessibilityIdentifier("message-reconnect")
             case .dismiss:
-                Button { model.dismissMessage(sequence) } label: { Image(systemName: "xmark") }
-                    .buttonStyle(.borderless).help("Dismiss").accessibilityLabel("Dismiss message").accessibilityIdentifier("message-dismiss")
+                Button { model.dismissMessage(sequence) } label: {
+                    Image(systemName: "xmark").frame(minWidth: 28, minHeight: 28).contentShape(Rectangle())
+                }
+                    .buttonStyle(.borderless).foregroundStyle(.secondary).help("Dismiss").accessibilityLabel("Dismiss message").accessibilityIdentifier("message-dismiss")
             }
         }.padding()
             .onAppear { announce() }
@@ -1057,7 +1062,8 @@ struct MessageBanner: View {
     }
     /// Connection messages describe a state ("… The live view is reconnecting."); the others are errors.
     private var spoken: String { control == .dismiss ? "Error. " + message : message }
-    private func announce() { AccessibilityNotification.Announcement(spoken).post() }
+    /// Once per message: the banner reappearing with the same message announces nothing.
+    private func announce() { if model.takeAnnouncement(sequence) { AccessibilityNotification.Announcement(spoken).post() } }
 }
 
 /// The view side of quick-add's instance rule. The menu-bar window has no model instance, so its
@@ -1075,6 +1081,8 @@ struct QuickAddMetadataRegion<Content: View>: View {
     let content: Content
     @State private var parsedHeight: CGFloat = 0
     @State private var dependencyHeight: CGFloat = 24
+    @State private var contentHeight: CGFloat = 0
+    @State private var chipRowHeight: CGFloat = 0
     init(maximumRows: Int, dependencies: InitialDependencySelection, @ViewBuilder content: () -> Content) {
         self.maximumRows = maximumRows
         self.dependencies = dependencies
@@ -1086,14 +1094,25 @@ struct QuickAddMetadataRegion<Content: View>: View {
                 dependencies.background(GeometryReader { geometry in Color.clear.preference(key: QuickAddDependencyHeight.self, value: geometry.size.height) })
                 content.background(GeometryReader { geometry in Color.clear.preference(key: QuickAddParsedMetadataHeight.self, value: geometry.size.height) })
             }.frame(maxWidth: .infinity, alignment: .leading)
-        }.frame(height: visibleHeight).compactBounds("quick-add-metadata")
+                .background(GeometryReader { geometry in Color.clear.preference(key: QuickAddRegionContentHeight.self, value: geometry.size.height) })
+        }.frame(height: visibleHeight).scrollIndicators(.visible).compactBounds("quick-add-metadata")
+            .onPreferenceChange(QuickAddRegionContentHeight.self) { contentHeight = $0 }
+            .onPreferenceChange(QuickAddChipFrames.self) { frames in
+                chipRowHeight = frames.filter { !$0.key.hasPrefix("control:") }.values.map(\.height).max() ?? 0
+            }
             .preference(key: QuickAddAddedMetadataHeight.self, value: Optional(visibleHeight - max(24, parsedHeight)))
             .onPreferenceChange(QuickAddParsedMetadataHeight.self) { parsedHeight = $0 }
             .onPreferenceChange(QuickAddDependencyHeight.self) { dependencyHeight = $0 }
     }
+    /// The Dependency block, then up to `maximumRows` whole rows of chips at their measured height
+    /// (about 34 pt, not the 20 pt the old cap assumed), so the region never ends partway into a
+    /// row; more content scrolls, with visible scroll bars. The two blocks are stacked, so the
+    /// height is their sum, not the larger of the two.
     private var visibleHeight: CGFloat {
-        let cap = 32 + CGFloat(maximumRows) * 20 + CGFloat(maximumRows - 1) * 8
-        return dependencyHeight > cap ? cap : max(24, parsedHeight, dependencyHeight)
+        let row = chipRowHeight > 0 ? chipRowHeight : 34
+        let cap = max(24, dependencyHeight) + 8 + CGFloat(maximumRows) * row + CGFloat(max(0, maximumRows - 1)) * 8
+        let content = max(contentHeight, 24)
+        return min(content, cap)
     }
 }
 
@@ -1123,6 +1142,10 @@ struct QuickAddDependencyHeight: PreferenceKey {
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 struct QuickAddContentHeight: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+struct QuickAddRegionContentHeight: PreferenceKey {
     static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }

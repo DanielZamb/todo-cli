@@ -122,8 +122,13 @@ struct Snapshots {
                     let frames = compactMeasurements.frames
                     compactLayouts[name + "-" + mode] = frames.mapValues { [Double($0.minX), Double($0.minY), Double($0.width), Double($0.height)] }
                     if name.hasPrefix("search-compact-") {
-                        let search = try #require(frames["search"])
-                        #expect(search.minX >= 0 && search.maxX <= width && search.minY >= 0 && search.maxY <= height)
+                        // Candidate 8 ruling 5: the Find field belongs to the list and is hidden while the editor is shown.
+                        if name.hasSuffix("detail") || name.hasSuffix("copied") || name.hasSuffix("copy-failed") {
+                            #expect(frames["search"] == nil, "\(name): no Find field over the Compact editor")
+                        } else {
+                            let search = try #require(frames["search"])
+                            #expect(search.minX >= 0 && search.maxX <= width && search.minY >= 0 && search.maxY <= height)
+                        }
                     }
                     if name.hasSuffix("initial-error") {
                         _ = try #require(frames["task-load-error"])
@@ -143,6 +148,33 @@ struct Snapshots {
                         let title = try #require(frames["task-title"])
                         let id = try #require(frames["task-id"])
                         #expect(id.minY >= title.maxY)
+                    }
+                }
+                if name == "compact-editor" {
+                    // Candidate 8 ruling 5: the footer sits below the scrolling body, so nothing in the
+                    // body is drawn under it; the body scrolls with visible scroll bars.
+                    let frames = compactMeasurements.frames
+                    let body = try #require(frames["editor-scroll"]), footer = try #require(frames["editor-footer"])
+                    #expect(footer.minY >= body.maxY - 0.5, "the footer starts at or below the body: \(footer) \(body)")
+                    #expect(footer.maxY <= height + 0.5 && body.minY >= 0, "both inside the window")
+                    #expect(frames["search"] == nil, "no Find field over the editor")
+                    let fields = frames.filter { ["task-title", "task-id", "edit-description"].contains($0.key) }
+                    let receipt: [String: Any] = ["window_height": height, "body": [body.minY, body.maxY], "footer": [footer.minY, footer.maxY],
+                        "fields": fields.mapValues { ["minY": $0.minY, "maxY": $0.maxY, "fully_visible": $0.maxY <= body.maxY + 0.5] }]
+                    try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("compact-editor-bounds-\(mode).json"))
+                }
+                if name.hasPrefix("compact-quick-add") {
+                    // Candidate 8 ruling 5: the chip region ends on a row boundary; no chip is cut.
+                    let frames = compactMeasurements.frames
+                    if let region = frames["quick-add-metadata"] {
+                        let chips = frames.filter { $0.key.hasPrefix("chip-") }
+                        for (key, chip) in chips {
+                            let inside = chip.minY >= region.minY - 0.5 && chip.maxY <= region.maxY + 0.5
+                            let below = chip.minY >= region.maxY - 0.5
+                            #expect(inside || below, "\(name) \(key) is cut by the region edge: chip \(chip) region \(region)")
+                        }
+                        let receipt: [String: Any] = ["region": [region.minY, region.maxY], "chips": chips.mapValues { [$0.minY, $0.maxY] }]
+                        try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("\(name)-chip-rows-\(mode).json"))
                     }
                 }
                 if name == "full-priority-ready" {
@@ -321,18 +353,19 @@ struct Snapshots {
                 try await render("c7-compact-banner-dismiss", TaskListView(model: conflict, compactMode: true, referenceDate: referenceDate).compactContent, width: 393, height: 426)
                 try await render("c7-banner-reconnect", WorkspaceSnapshot(model: banner("Task saved. The live view is reconnecting.", .connection)), width: 1100, height: 720)
                 try await render("c7-banner-quick-add-failed", WorkspaceSnapshot(model: banner("Couldn't add “Ship the release”. The server rejected this request (HTTP 503).", .quickAdd)), width: 1100, height: 720)
-                try await render("c7-banner-dependency-failed", WorkspaceSnapshot(model: banner("Couldn't add the Dependency on “Review the interaction design”. This Dependency would create a loop. Choose another Task.", .dependencyLink)), width: 1100, height: 720)
+                try await render("c7-banner-dependency-failed", WorkspaceSnapshot(model: banner("Couldn't make “Review the interaction design” depend on “Prepare the release notes”. This Dependency would create a loop.", .dependencyLink)), width: 1100, height: 720)
                 let signOutSettings = SettingsView(
                     model: banner("Couldn't sign out. The server rejected this request (HTTP 503).", .signOut), selectedTab: .general, notifications: NotificationSettingsState(authorization: "Allowed"),
                     serverStatus: ManagedServerStatus(label: "fixture.todo.server", path: "/fixture/LaunchAgents/todo.plist", installed: true, loaded: true,
                                                       configuration: ManagedServerConfiguration(executable: "/fixture/Todo/Server/todo-server", database: "/fixture/todo.db", port: 4310)))
                 try await render("c7-settings-sign-out-failed", signOutSettings, width: 640, height: 560)
                 let importing = fixture(); importing.signedIn = true; importing.showingImport = true
-                importing.importMessages.publish("The server rejected this request (HTTP 404).", kind: .followUp)
+                importing.importMessages.publish("Couldn't prepare the follow-up Task: The server rejected this request (HTTP 404). Try again.", kind: .followUp)
                 try await render("c7-import-follow-up-failed", ImportView(model: importing, compact: false), width: 760, height: 620)
                 let picker = fixture(); picker.signedIn = true
                 picker.dependencies.picker = .init(profile: "work", root: picker.tasks[0], direction: .dependsOn)
-                picker.dependencies.picker?.failure = DependencyNotice(message: "The server rejected this request (HTTP 404).")
+                picker.dependencies.picker?.failure = DependencyNotice(message: "This Task blocks done Tasks.", followUp: picker.tasks[1].id,
+                    followUpFailure: "Couldn't prepare the follow-up Task: The server rejected this request (HTTP 404). Try again.")
                 try await render("c7-picker-follow-up-failed", DependencyPickerView(model: picker), width: 560, height: 620)
                 let added = fixture(); added.signedIn = true; added.deletionNotice = "Task added"
                 try await render("c7-capsule-task-added", WorkspaceSnapshot(model: added), width: 1100, height: 720)
