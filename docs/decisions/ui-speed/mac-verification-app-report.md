@@ -1,6 +1,14 @@
 # Mac verification app V01 safety correction
 
-Status: blocked on disk preflight, qualification incomplete. After the latest
+Status: qualification resumed after the coordinator reported 37 GiB free.
+The visible recipe remains pending while the owner uses the Mac. Before each
+large step, the helper now records the available bytes and a step budget above
+the 30 GiB floor; the credential sweep checks that budget before each rebuild.
+The generated Xcode project is being refreshed before freezing the runtime head.
+Final results and actual command exits will be retained under a fresh local
+evidence directory. No seven-finding closure is claimed before those results.
+
+Previous stop: blocked on disk preflight, qualification incomplete. After the latest
 Swift-slot release, the small Bun configuration and parent-exit controls were
 completed without a Swift job. Available space then fell from about 30.4 GiB
 to 29.93 GiB, below the required 30 GiB floor. No retained own .scratch/DerivedData

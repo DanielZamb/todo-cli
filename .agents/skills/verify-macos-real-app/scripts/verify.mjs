@@ -34,6 +34,13 @@ const tools = fs.realpathSync(fs.mkdtempSync('/tmp/todo-mac-verify-tools-'));
 fs.mkdirSync(tools + '/home'); fs.mkdirSync(tools + '/tmp');
 const base = environment(tools + '/home', tools + '/tmp');
 const commands = [], stages = {}, fixtures = new Set(), activeChildren = new Set(), swiftPrograms = new Set();
+const diskSamples = [];
+function diskStage(stage, reserveGiB = 0.25) {
+ const stat = fs.statfsSync(root), freeBytes = stat.bavail * stat.bsize;
+ const sample = { stage, freeBytes, floorBytes: 30 * 1024 ** 3, reserveBytes: reserveGiB * 1024 ** 3 };
+ diskSamples.push(sample); fs.writeFileSync(evidence + '/disk-stages.json', JSON.stringify(diskSamples, null, 2));
+ assert(freeBytes - sample.reserveBytes >= sample.floorBytes, 'DISK STOP before ' + stage + ': insufficient room above 30 GiB for the step budget');
+}
 function job(argv) {
  const expanded = command(argv);
  if (expanded[0] === '/bin/sh' && expanded[1] === root + '/scripts/swift-slot.sh') {
@@ -110,6 +117,7 @@ try {
   assert(!dirty.trim() || process.argv.includes('--development'), 'Qualification requires a committed clean head');
   result.development = Boolean(dirty.trim()); stages.frozenSource = !result.development;
   const inputs = must(['git', 'ls-files', 'apps/cli', 'apps/server', 'packages', 'pnpm-lock.yaml'], 'binary-inputs').trim().split('\n');
+  diskStage('compiled-binaries', 1);
   const digest = createHash('sha256').update(sourceHead); for (const file of inputs) digest.update(file).update(fs.readFileSync(file));
   digest.update(fs.readFileSync('.agents/skills/verify-macos-real-app/scripts/server-entry.mjs'));
   const sourceHash = digest.digest('hex'), cache = path.join(root, '.scratch/bin', sourceHash); fs.mkdirSync(cache, { recursive: true });
@@ -126,6 +134,7 @@ try {
   fs.writeFileSync(evidence + '/generated-bindings.json', JSON.stringify({ sourceHead, sha256: hash(bindings), ...binaryProvenance.sha256 }, null, 2)); stages.compiledBinaries = true;
   must(['xcrun', 'clang', '-c', 'apps/macos/VerificationApp/ChildProof.c', '-o', childObject], 'child-proof');
   must(['xcrun', 'clang', '-c', '.agents/skills/verify-macos-real-app/scripts/SandboxPolicyCheck.c', '-o', policyObject], 'policy-proof');
+  diskStage('native-controls', 0.5);
   build([guardFile, bindings, 'apps/macos/VerificationApp/OwnerIdle.swift', 'apps/macos/VerificationApp/ScratchSandbox.swift', 'apps/macos/VerificationApp/VerificationDefaults.swift', '.agents/skills/verify-macos-real-app/scripts/NativeBoundaryProbe.swift'], native + '/boundary', 'build-boundary', [childObject, policyObject]);
   const protocol = fs.readFileSync('apps/macos/Sources/TodoModel.swift', 'utf8').match(/@MainActor protocol SessionStorage \{[\s\S]*?\n\}/)[0];
   fs.writeFileSync(tools + '/SessionStorage.swift', 'import Foundation\n' + protocol + '\n');
@@ -148,7 +157,9 @@ try {
   await qualifyBoundaryProfiles(evidence + '/root-boundary-profiles');
   await qualifyServerBoundary({ evidence: evidence + '/server-boundary-profiles', fixture, sourceHead, development: result.development });
   await qualifyPreflightHelper(evidence + '/preflight-helper');
+  diskStage('regressions', 0.5);
   await runRegressions({ root, tools, native, evidence, base, execute, must, asynchronous, fixture, port, pause, build, swift, slot: root + '/scripts/swift-slot.sh', childObject, policyObject, guardFile, bindings, stages, binaryProvenance, sourceHead });
+  diskStage('class-reds', 0.5);
   await runClassReds({ tools, native, evidence, base, execute, must, fixture, port, build, guardFile, bindings, policyObject, sourceHead });
   must(['node', '.agents/skills/verify-macos-real-app/scripts/node-reds.mjs', evidence + '/node-reds.json'], 'node-reds');
   if (process.argv.includes('--focus-regressions')) {
@@ -159,6 +170,7 @@ try {
   const parentDeath = await qualifyParentDeath({ evidence: evidence + '/parent-death', fixture, relay: tools + '/parent-relay', sourceHead });
   assert.equal(parentDeath.status, 'PASS_COMPONENT'); stages.parentDeathCleanup = true;
   const mutants = generateGuardMutants(root, tools);
+  diskStage('predicate-sweep', 1);
   build([mutants.generated, bindings], native + '/mutants', 'build-guard-mutants');
   const red = [];
   for (const value of [{ index: 'baseline' }, ...mutants.variants]) {
@@ -180,12 +192,14 @@ try {
   must(['node', '.agents/skills/verify-macos-real-app/scripts/generate-credential-traps.mjs', sdk, tools + '/CredentialSymbols.inc', tools], 'credential-census');
   assert.equal(fs.readFileSync(tools + '/CredentialSymbols.inc', 'utf8'), fs.readFileSync('apps/macos/VerificationApp/CredentialSymbols.inc', 'utf8'), 'Review and commit changed SDK bindings before qualification');
   fs.copyFileSync(tools + '/credential-export-census.json', evidence + '/credential-export-census.json');
+  diskStage('credential-removal-sweep', 0.25);
   const credentialResult = credentialSweep(evidence + '/credentials');
   assert.equal(credentialResult.status, 'PASS_COMPONENT');
   stages.credentialBoundary = true; stages.credentialRedControls = true;
   must(['node', '.agents/skills/verify-macos-real-app/scripts/receipt-stages.test.mjs'], 'receipt-stages');
   if (!process.argv.includes('--guards-only')) {
     must(['sh', 'scripts/disk-guard.sh'], 'disk-before-build'); assert(fs.statfsSync(root).bavail * fs.statfsSync(root).bsize >= 30 * 1024 ** 3);
+    diskStage('fresh-app', 2.5);
     const resolved = 'apps/macos/VerificationApp/TodoVerification.xcodeproj/project.xcworkspace/xcshareddata/swiftpm'; fs.mkdirSync(resolved, { recursive: true });
     fs.copyFileSync('apps/macos/Todo.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved', resolved + '/Package.resolved');
     assert(stages.frozenSource && stages.guardMatrix && stages.guardRedControls && stages.credentialBoundary && stages.credentialRedControls, 'No app build/visible authority before the entire matrix passes on a frozen head');
@@ -198,8 +212,10 @@ try {
     must(['node', '.agents/skills/verify-macos-real-app/scripts/audit.mjs', app, evidence], 'audit'); stages.artifactAudit = true;
     must(['node', '.agents/skills/verify-macos-real-app/scripts/production-source-preservation.mjs', evidence + '/production-source', path.join(root, 'docs/evidence/mac-verification-app/symbols-ab989410')], 'production-source-preservation'); stages.productionPreservation = true;
     must(['sh', 'scripts/disk-guard.sh'], 'disk-before-root-check');
+    diskStage('root-check', 0.5);
     must(['/usr/bin/lockf', '-k', '/tmp/todo-pnpm-check.lock', executable('pnpm'), 'check'], 'root-check'); stages.rootCheck = true;
     assert(!fs.existsSync(evidence + '/swift-hold'), 'Coordinator holds new Swift jobs; production reruns remain held');
+    diskStage('production-suites', 1.5);
     must(['node', '.agents/skills/verify-macos-real-app/scripts/production-proofs.mjs', evidence + '/production', evidence], 'production-suites'); stages.productionSuites = true;
     swiftPrograms.add(app + '/Contents/MacOS/TodoVerification');
     const f = await fixture(); try {
