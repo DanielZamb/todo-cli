@@ -260,7 +260,7 @@ own value, so a new instance starts a new sequence. Within it:
 | Field (surface instance) | Kinds | May set it | May clear it |
 | --- | --- | --- | --- |
 | `message` (main window; Settings shows it under Sign out while `messageKind == .signOut`) | `MessageKind` | The table above, by `publishMessage` and the newest of a follow-up's kind | Rule 2 and rule 4; Dismiss |
-| Dependency picker `failure` (`DependencyPicker.id`) | `reload`, `link`, `followUp` | A reload's failure, a link or unlink failure, or a follow-up failure, each only while newest of its kind | A link's start (an earlier `link` or `reload` notice); opening, a direction change or the person's Reload on success (`reload` and `link` from before its mark); a link's success (`link` from before its mark); a follow-up's success (`followUp` from before its mark); closing the picker. A link's read-back and the background refresh clear nothing. |
+| Dependency picker `failure` (`DependencyPicker.id`) | `reload`, `link`, `followUp` | A reload's failure, a link or unlink failure, or a follow-up failure, each only while newest of its kind. A follow-up failure is shown with the notice that offered it (that notice, its button and the failure, published as one `followUp` message; candidate 8 ruling 1). | A link's start (an earlier `link`, `reload` or `followUp` notice); opening, a direction change or the person's Reload on success (`reload`, `link` and `followUp` from before its mark: the Reload ruling below); a link's success (`link` from before its mark); a follow-up's success (`followUp` from before its mark); closing the picker. A link's read-back and the background refresh clear nothing. |
 | Import `importError` and `importFollowUpError` (`importInstance`) | `file`, `run`, `followUp` | Reading the file (`file`); a preview or apply failure (`run`); a follow-up failure (`followUp`), each only while newest of its kind | A preview or apply start (`file` and `run`); a run's success (`run` from before its mark); a follow-up's success (`followUp` from before its mark); closing or resetting Import |
 | Quick-add `quickAddError` and `parseError` (`quickAddInstance`) | `create`, `parse` | A create failure or a parse failure, each only while newest of its kind | A create start (`create`) or a parse start (`parse`); a success of the same kind from before its mark; opening quick-add |
 | Editor `editorError` (`TaskDraft.opening`) | `general`, `save`, `write`, `conflict`, `series`, `seriesSave`, `attachment` | Synchronous checks (`general`: validation, transition and delete conflict text, Attachment input checks); a Save, Move, Copy or transfer failure; a conflict definitions reload failure; a Series open or save failure; an Attachment write failure. Each asynchronous one only while newest of its kind. | Save, write and Series save start clean; a Series open starts by ending `series`; a success of the same kind from before its mark; a new editor opening; accepting a conflict |
@@ -272,6 +272,21 @@ own value, so a new instance starts a new sequence. Within it:
 | Dependency graph `failure` (`DependencyGraphState`, with `request`) | `read` | A graph read failure while newest | Its success (`read` from before its mark); closing the graph |
 | Settings `profileDeletionError` (the Delete Profile prompt) | `delete` | A Profile deletion refusal or failure while newest | A new prompt; "Delete Tasks too…"; a Profile activation |
 | Settings `snapshotError` | `list`, `write` | A Snapshot list failure, or a create, preview or restore failure, each only while newest of its kind | A list start (clean), including the list a create or restore runs after it succeeds; a preview's success (`write` from before its mark) |
+
+**What a Reload clears** (ruled 2026-11-12). A Reload the person asks for clears the
+notices its success makes untrue, not only its own kind, and only those that
+existed before the Reload began (its mark):
+
+- **Picker.** Opening, a direction change and the Reload button clear earlier
+  `reload`, `link` and `followUp` notices. A link notice that asked for a
+  reload, and a follow-up offered by it, are no longer true once the
+  Dependencies are fresh.
+- **Delete confirmation.** Its Reload clears earlier `reload` and `delete`
+  notices. An earlier refusal becomes the review text (`reviewFailure`).
+- **Dependency batch.** Its reload clears earlier `reload` and `run` notices.
+
+A refresh the person did not ask for clears nothing: the picker's background
+refresh and a link's read-back.
 
 **Supersession is final** (MAC-C1-S1-16, ruled 2026-11-12). A hand-off to the
 main window is a presentation like any other. Every completion checks, in
