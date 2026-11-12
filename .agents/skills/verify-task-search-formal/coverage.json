@@ -77,7 +77,7 @@
         "catalogSignalRevision and full-read debt",
         "lastCatalogReadAt and activation age"
       ],
-      "sha256": "1d6d18af0d0cdf4ba0e1ac6e02952675dceda4b7a29942ced22736b214a81338"
+      "sha256": "8daab56fd0d88ba8b1e84bb70daf5a6b928fff92215ac1270ff36d15b7b44f5e"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -293,5 +293,16 @@
       }
     ],
     "review": "Only message ownership in the stream ready path and restore/signIn cancellation handling changed. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged."
+  },
+  "messageRuleReview": {
+    "product": "5d347c7fb1e0a5af728b17271f89bdf5b74e9dfb",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "1d6d18af0d0cdf4ba0e1ac6e02952675dceda4b7a29942ced22736b214a81338",
+        "to": "8daab56fd0d88ba8b1e84bb70daf5a6b928fff92215ac1270ff36d15b7b44f5e"
+      }
+    ],
+    "review": "Only message kinds, sequence marks and surfaces changed: the stream ready path notes a mark per attempt and clears older connection messages; the Snapshot reload handler ends the message before its existing reset; refreshAfterWrite takes an optional kind and mark for its clear. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged."
   }
 }

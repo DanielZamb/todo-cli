@@ -5,7 +5,7 @@
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "a91cb00cf2f5b844a01ef1278246f695836ba6f4",
+  "productionSyncCommit": "5d347c7fb1e0a5af728b17271f89bdf5b74e9dfb",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -133,7 +133,7 @@
         "canShowDiscovery",
         "applyDiscoveryShow"
       ],
-      "sha256": "fca1231652bb3b7d471761e580e42c4c251e0f75bbc1bac96da4488e7b9291db",
+      "sha256": "ffb138ffd6ebe6490209f9dffa419b354d38f2668e9ba450305b19a99563dc82",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -157,7 +157,7 @@
         "signOut start, failure and commit",
         "followChanges reconnect retry from Offline and sign-out notice"
       ],
-      "sha256": "1d6d18af0d0cdf4ba0e1ac6e02952675dceda4b7a29942ced22736b214a81338",
+      "sha256": "8daab56fd0d88ba8b1e84bb70daf5a6b928fff92215ac1270ff36d15b7b44f5e",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -225,7 +225,7 @@
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "475726d3d81c382469375bd8ce51d687bdec4fa2",
+  "previousProductionSyncCommit": "a91cb00cf2f5b844a01ef1278246f695836ba6f4",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -332,6 +332,27 @@
     "review": "message gains an owner (general, connection, signOut); ready and successful writes clear only named owners; a credential or Profile change ends a sign-out notice; the saved signOutNotice restore is removed. restore and signIn use stillOwns(epoch) after each await: a superseded epoch returns without touching state, a cancelled same-epoch task throws to the existing cancellation cleanup. Discovery publication, Show acceptance, closeDiscovery at sign-out start and every epoch comparison are unchanged.",
     "controls": [
       "docs/evidence/discovery-formal/swift-tRAIuC/result.json (a91cb00c)",
+      "Electron sources unchanged since docs/evidence/discovery-formal/electron-pfQcH2"
+    ]
+  },
+  "messageRuleReview": {
+    "product": "5d347c7fb1e0a5af728b17271f89bdf5b74e9dfb",
+    "previous": "a91cb00cf2f5b844a01ef1278246f695836ba6f4",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/Discovery.swift",
+        "from": "fca1231652bb3b7d471761e580e42c4c251e0f75bbc1bac96da4488e7b9291db",
+        "to": "ffb138ffd6ebe6490209f9dffa419b354d38f2668e9ba450305b19a99563dc82"
+      },
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "1d6d18af0d0cdf4ba0e1ac6e02952675dceda4b7a29942ced22736b214a81338",
+        "to": "8daab56fd0d88ba8b1e84bb70daf5a6b928fff92215ac1270ff36d15b7b44f5e"
+      }
+    ],
+    "review": "Messages carry a kind, a growing sequence and an optional raising surface; successes clear only their kinds and only messages older than their start; credential, Profile and Snapshot reload end any message; closing the picker, Import or Delete dialog ends its message. In Discovery, applyDiscoveryShow notes a mark after closeDiscovery and on success clears only an older discoveryShow message; its failure publishes kind discoveryShow to the main window. No discovery publication, Show acceptance, canShowDiscovery, closeDiscovery or epoch check changed.",
+    "controls": [
+      "docs/evidence/discovery-formal/swift-7Rz1or/result.json (5d347c7f)",
       "Electron sources unchanged since docs/evidence/discovery-formal/electron-pfQcH2"
     ]
   }
