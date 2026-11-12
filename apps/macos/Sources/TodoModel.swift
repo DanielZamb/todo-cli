@@ -661,9 +661,10 @@ final class TodoModel {
                 connect()
             }
         } catch {
+            // A 401 for the current credential ends the Session even if this action is no longer wanted (S1-20).
+            handleAuthorization(error, credentialEpoch: credentialEpoch)
             guard isCurrentCredential(credentialEpoch) else { return }
             guard profile == deleted, generation == run, !Task.isCancelled else { return }
-            handleAuthorization(error, credentialEpoch: credentialEpoch)
             if let values = try? await client.reads_period_profiles().ok.body.json,
                let latest = try? decode([DiscoveryEntry].self, values) {
                 guard profile == deleted, generation == run, !Task.isCancelled else { return }
@@ -840,6 +841,9 @@ final class TodoModel {
             appliedCatalogCursor = lastSequence
             return .applied
         } catch {
+            // A 401 for the current credential ends the Session even if this refresh was cancelled or
+            // superseded by a newer one of the same scope (S1-20); publication below stays guarded.
+            handleAuthorization(error, credentialEpoch: credentialEpoch)
             guard isCurrentCredential(credentialEpoch) else { return .superseded }
             guard canPublishSearch(run: run, request: request, identity: identity) else { return .superseded }
             if let refusal = failure(error), refusal.code == "search_too_broad" {
@@ -856,7 +860,6 @@ final class TodoModel {
             }
             loading = false
             searchPhase = .error
-            handleAuthorization(error, credentialEpoch: credentialEpoch)
             return .failed
         }
     }
@@ -1245,9 +1248,11 @@ final class TodoModel {
             tags = try decode([DiscoveryEntry].self, tagValues).sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
             editorMessages.succeed(conflictTicket)
         } catch {
+            // A 401 for the current credential ends the Session even if this action is no longer wanted (S1-20).
+            handleAuthorization(error, credentialEpoch: credentialEpoch)
             guard isCurrentCredential(credentialEpoch) else { return }
             let failureText = describe(error, at: .editor)
-            editorMessages.fail(failureText, conflictTicket); handleAuthorization(error, credentialEpoch: credentialEpoch) }
+            editorMessages.fail(failureText, conflictTicket) }
     }
 
     var hasUnsavedEditor: Bool {
@@ -1411,6 +1416,8 @@ final class TodoModel {
             guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
             announce("Task updated")
         } catch {
+            // A 401 for the current credential ends the Session even if this action is no longer wanted (S1-20).
+            handleAuthorization(error, credentialEpoch: credentialEpoch)
             guard isCurrentCredential(credentialEpoch) else { return }
             // A committed transition whose reply could not be used still reads the catalog back (S1-19).
             if committed || committedBeforeFailure(error), profile == requestedProfile {
@@ -1418,8 +1425,7 @@ final class TodoModel {
                 guard isCurrentCredential(credentialEpoch) else { return }
             }
             publishMessage(describe(error, dependencyContext: action == "complete" ? .complete : .reopen), kind: .transition)
-            if editor?.id == task.id { editorError = describe(error, at: .editor, dependencyContext: action == "complete" ? .complete : .reopen) }
-            handleAuthorization(error, credentialEpoch: credentialEpoch) }
+            if editor?.id == task.id { editorError = describe(error, at: .editor, dependencyContext: action == "complete" ? .complete : .reopen) } }
     }
 
     func deleteTask(_ task: TaskSnapshot) async {
@@ -1896,6 +1902,8 @@ final class TodoModel {
             diagnosticsError = nil
             diagnosticsRetrySeconds = 1
         } catch {
+            // A 401 for the current credential ends the Session even if this poll is no longer wanted (S1-20).
+            handleAuthorization(error, credentialEpoch: credentialEpoch)
             guard !Task.isCancelled, run == generation, signedIn else { return }
             diagnosticsError = "Server unavailable; retrying when live."
             diagnosticsRetrySeconds = min(30, diagnosticsRetrySeconds * 2)
@@ -1909,6 +1917,7 @@ final class TodoModel {
         let request = historyGeneration
         let requestedProfile = profile
         let run = generation
+        let credentialEpoch = discovery.credentialEpoch
         let historyTicket = historyMessages.beginClean(.load)
         do {
             let value = try await client.reads_period_history(path: .init(profile: requestedProfile, task: task.id)).ok.body.json
@@ -1916,6 +1925,8 @@ final class TodoModel {
             history = try decode([HistoryEntry].self, value)
             historyMessages.succeed(historyTicket)
         } catch {
+            // A 401 for the current credential ends the Session even if this action is no longer wanted (S1-20).
+            handleAuthorization(error, credentialEpoch: credentialEpoch)
             guard historyGeneration == request, generation == run, profile == requestedProfile, editor?.id == task.id else { return }
             let failureText = describe(error, at: .history)
             historyMessages.fail(failureText, historyTicket)
@@ -1946,6 +1957,8 @@ final class TodoModel {
             snapshotsLoaded = true
             snapshotMessages.succeed(listTicket)
         } catch {
+            // A 401 for the current credential ends the Session even if this action is no longer wanted (S1-20).
+            handleAuthorization(error, credentialEpoch: credentialEpoch)
             guard isCurrentCredential(credentialEpoch) else { return }
             let failureText = describe(error, at: .snapshot)
             snapshotMessages.fail(failureText, listTicket) }
@@ -1962,6 +1975,8 @@ final class TodoModel {
             guard isCurrentCredential(credentialEpoch) else { return }
             await loadSnapshots()
         } catch {
+            // A 401 for the current credential ends the Session even if this action is no longer wanted (S1-20).
+            handleAuthorization(error, credentialEpoch: credentialEpoch)
             guard isCurrentCredential(credentialEpoch) else { return }
             let failureText = describe(error, at: .snapshot)
             snapshotMessages.fail(failureText, writeTicket) }
@@ -1980,6 +1995,8 @@ final class TodoModel {
             snapshotRestoreTarget = snapshot
             snapshotMessages.succeed(writeTicket)
         } catch {
+            // A 401 for the current credential ends the Session even if this action is no longer wanted (S1-20).
+            handleAuthorization(error, credentialEpoch: credentialEpoch)
             guard isCurrentCredential(credentialEpoch) else { return }
             let failureText = describe(error, at: .snapshot)
             snapshotMessages.fail(failureText, writeTicket) }
@@ -1997,6 +2014,8 @@ final class TodoModel {
             snapshotRestore = nil; snapshotRestoreTarget = nil
             await loadSnapshots()
         } catch {
+            // A 401 for the current credential ends the Session even if this action is no longer wanted (S1-20).
+            handleAuthorization(error, credentialEpoch: credentialEpoch)
             guard isCurrentCredential(credentialEpoch) else { return }
             let failureText = describe(error, at: .snapshot)
             snapshotMessages.fail(failureText, writeTicket) }

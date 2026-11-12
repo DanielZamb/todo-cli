@@ -1414,6 +1414,9 @@ private actor ScriptGate: ClientTransport {
         var run: () async -> Void = {}
         var landed: () -> Bool = { false }
         var operation = ""
+        // Lives for the whole test: a defer inside a case would delete it before the attach runs.
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("committed-\(UUID().uuidString).txt")
+        defer { try? FileManager.default.removeItem(at: file) }
         switch kind {
         case "create":
             let title = "Committed create " + UUID().uuidString
@@ -1465,8 +1468,7 @@ private actor ScriptGate: ClientTransport {
             operation = "tasks.importTasks"; run = { await model.applyImport() }
             landed = { model.tasks.contains { $0.title == title } }
         default: // attach-paths: the write commits; its secondary tasks.show fails
-            let file = FileManager.default.temporaryDirectory.appendingPathComponent("committed-\(UUID().uuidString).txt")
-            try Data("attachment".utf8).write(to: file); defer { try? FileManager.default.removeItem(at: file) }
+            try Data("attachment".utf8).write(to: file)
             model.beginEditing(task)
             await gate.next("tasks.show", .fail(503, "SECONDARY read failed"))
             operation = ""; run = { await model.attachPaths([file.path]) }
@@ -1484,6 +1486,7 @@ private actor ScriptGate: ClientTransport {
     func aDeletedProfilesFailedReadBackIsNotADeletionFailure() async throws {
         let gate = ScriptGate(); let (model, vault, _) = try await live(gate)
         model.changeProfile("deletable")
+        try await ready(model, gate, streams: 2)
         try await wait("deletable live") { model.profile == "deletable" && !model.loading && model.canWrite }
         try await Task.sleep(for: .milliseconds(100))
         model.beginProfileDeletion()
@@ -1494,5 +1497,35 @@ private actor ScriptGate: ClientTransport {
         #expect(model.message?.contains("was deleted. The live view is reconnecting.") == true, "\(model.message ?? "nil")")
         await finish(model, gate, vault)
     }
-}
 
+    // MARK: MAC-C1-S1-20: a 401 for the current credential ends the Session even if unwanted
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil),
+          arguments: ["transition-cancelled", "catalog-cancelled", "catalog-superseded", "retired-control"])
+    func aCurrentUnauthorizedReplyEndsTheSessionWhetherOrNotItsActionIsStillWanted(_ kind: String) async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        // A search refresh reads tasks.list; the transition is its own write.
+        let operation = kind == "transition-cancelled" || kind == "retired-control" ? "tasks.transition" : "tasks.list"
+        await gate.next(operation, .holdThenFail(401, "CURRENT credential refused"))
+        let action = Task {
+            if operation == "tasks.transition" { await model.transition(task, action: "complete") }
+            else { _ = await model.retrySearch() }
+        }
+        try await wait("\(kind): held") { await gate.isHeld(operation) }
+        switch kind {
+        case "transition-cancelled", "catalog-cancelled": action.cancel()
+        case "catalog-superseded": _ = await model.retrySearch()
+        default:
+            let replacement = try await owner()
+            try vault.save(replacement); model.replaceCredential(replacement); model.signedIn = true
+        }
+        await gate.release(operation); await action.value
+        if kind == "retired-control" {
+            #expect(model.signedIn, "a superseded credential's 401 never ends the new Session")
+        } else {
+            try await wait("\(kind): Session ended") { !model.signedIn }
+            #expect(!model.signedIn, "\(kind): the dead Session is noticed")
+        }
+        await finish(model, gate, vault)
+    }
+}

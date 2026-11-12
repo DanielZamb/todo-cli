@@ -115,12 +115,13 @@ extension TodoModel {
             dependencies.graph?.publish(report, ticket: readTicket)
             if !graph.search.isEmpty { await searchDependencyGraph() }
         } catch {
+            // A 401 for the current credential ends the Session even if this action is no longer wanted (S1-20).
+            handleAuthorization(error, credentialEpoch: epoch)
             guard signedIn && profile == graph.profile && isCurrentCredential(epoch), dependencies.graph?.request == request, dependencies.graph?.root == graph.root else { return }
             let notice = dependencyNotice(error, context: .link)
             dependencies.graph?.messages.fail(notice, readTicket)
             dependencies.graph?.loading = false
             if notice.failure?.code == "not_found" { dependencies.graph?.report = nil; dependencies.graph?.deleted = true }
-            handleAuthorization(error, credentialEpoch: epoch)
         }
     }
     func closeDependencyGraph() { dependencies.graph = nil; dependencies.graphRequest += 1; dependencies.graphSearchRequest += 1 }
@@ -164,9 +165,10 @@ extension TodoModel {
             dependencies.graph?.matches = Set(rows.map(\.id))
             dependencies.graph?.searchFailure = nil
         } catch {
+            // A 401 for the current credential ends the Session even if this action is no longer wanted (S1-20).
+            handleAuthorization(error, credentialEpoch: epoch)
             guard isCurrentCredential(epoch), profile == graph.profile, dependencies.graphSearchRequest == request, dependencies.graph?.root == graph.root, dependencies.graph?.search == graph.search else { return }
             dependencies.graph?.searchFailure = dependencyNotice(error, context: .search)
-            handleAuthorization(error, credentialEpoch: epoch)
         }
     }
 }
