@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import { receipt, requiredStages } from './receipt-stages.mjs';
+const all = Object.fromEntries(requiredStages.map(key => [key, true]));
+assert.equal(receipt(all, 'visible').completeRecipe, true);
+assert.equal(receipt(all, 'guards-only').completeRecipe, false);
+assert.equal(receipt(all, 'headless').completeRecipe, false);
+for (const key of requiredStages) assert.equal(receipt({ ...all, [key]: false }, 'visible').completeRecipe, false, key);
+assert.equal(receipt({ guardMatrix: true, guardRedControls: true, cleanup: true }, 'guards-only').completeRecipe, false);
+assert.equal(receipt({}, 'failed').completeRecipe, false);
+console.log('PASS: every required stage controls qualification');

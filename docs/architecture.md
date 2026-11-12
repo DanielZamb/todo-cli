@@ -57,11 +57,16 @@ The monorepo uses pnpm workspaces. Bun runs TypeScript and compiles the two bina
 
 The separate TodoVerification Xcode project is excluded from the production
 scheme, installer and packaging check. Its launch manifest validates scratch
-HOME, loopback listener ownership, compiled binary hashes and server identity
-before creating a window. It injects memory-only Session storage through the
+HOME, retained file descriptors, build-pinned binary hashes and the database
+inode/listening socket of a server child it starts itself. It forbids attaching
+to another server. Its sandbox is installed before child execution and health;
+HTTP uses ephemeral sessions without persistent credentials or redirects.
+All checks precede creating a window. It injects memory-only Session storage through the
 production model's optional SessionStorage parameter. It excludes production
 startup and managed-server lifecycle code, bundles no server, and uses a fatal
-Security credential trap. See [ADR-0021](adr/0021-separate-mac-verification-app.md)
+Security credential trap and denies unlisted credential/settings/cloud brokers.
+The corrected implementation remains under qualification, with visible runs
+and V02 held. See [ADR-0021](adr/0021-separate-mac-verification-app.md)
 and [verify-macos-real-app](../.agents/skills/verify-macos-real-app/SKILL.md).
 The contract for HTTP is one HttpApi definition
 ([ADR-0003](adr/0003-httpapi-openapi-as-the-single-contract.md)). Electron uses

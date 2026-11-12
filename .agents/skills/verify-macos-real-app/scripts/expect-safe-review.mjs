@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const [kind, receipt] = process.argv.slice(2);
+const observed = JSON.parse(fs.readFileSync(receipt));
+if (kind === 'network') assert.deepEqual(observed.unexpectedScratchListenerRequests, [], 'The guard contacted a URL outside the manifest');
+else if (kind === 'authority') assert.equal(observed.builtAppExit, 78, 'The guard trusted forged process-environment text');
+else if (kind === 'identity') assert.equal(observed.exit, 78, 'The guard accepted a multiply linked database');
+else if (kind === 'bindings') assert(observed.every(row => row.exit === 79), 'A credential-capable import is untrapped');
+else if (kind === 'input') assert.equal(observed.find(row => row.type === 'modifier').observed.exit, 80, 'A delivered modifier event did not stop');
+else if (kind === 'instances') assert.deepEqual(observed.secondInstance.map(row => row.exit).sort(), [0, 78], 'Two instances accepted the same run');
+else throw new Error('Specify a review safety class');

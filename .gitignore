@@ -59,3 +59,5 @@ xcuserdata/
 *.key
 *.pem
 /.cursor/
+
+/apps/macos/VerificationApp/BuildBindings.generated.swift

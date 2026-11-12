@@ -1,286 +1,181 @@
-# Mac verification app V01
+# Mac verification app V01 safety correction
 
-Status: V01 complete; ready for review. V02 remains held for coordinator review.
-Branch: `feat/mac-verification-app`.
-Frozen implementation head: `ab989410cef89b5670fc2a6101698441753b5ec5`.
-The initial checkout matched candidate 6,
-`8b9be429751165d4ecef11f3f23d1844384e54b4`, exactly.
+Status: blocked for qualification by the coordinator's Swift-slot hold; correction
+is draft, with all seven findings still awaiting final closure. Visible launches
+and V02 remain held. No new frozen-head or end-to-end safety pass is claimed.
+Branch: feat/mac-verification-app. Previous reviewed head:
+`eceedba4589717ff0615614ce283841bab378638`.
 
-All final runtime qualification receipts below belong to the frozen head.
-The later handoff commit changes only this report and the skill documentation.
-It does not restamp binaries with the handoff SHA. Earlier development receipts
-identify their own source head and are excluded from final qualification.
+The initial candidate-6 checkout matched
+`8b9be429751165d4ecef11f3f23d1844384e54b4`. The prior implementation/readback
+receipts belong to `ab989410cef89b5670fc2a6101698441753b5ec5`; the later
+review rejected its isolation. Neither those receipts nor dirty development
+runs qualify the correction. The final corrected runtime head has not yet been
+frozen. This report's blocked handoff commit is an intermediate draft.
 
-## App boundary and production diff
+## Seven findings and current evidence
 
-The separate TodoVerification project builds production RootView, TodoModel,
-generated API, resources, Diagnostics, Quick add and Settings. Its own name is
-Todo Verification and its bundle identifier is `local.todo.verification`.
-It excludes TodoApp, production SessionVault, ServerLifecycle and
-ServerSettingsView, has no bundled server or lifecycle implementation, and is
-absent from production target membership, installation and packaging paths.
-Its Server page says managed controls are unavailable.
+The full independent review and urgent probes were read. Each original reviewer
+probe was copied unchanged and rerun against the reviewed implementation before
+correction, using synthetic files/listeners only. The seven matching safety
+assertions each failed at exit 1. The original helper processes often exit 0
+when they successfully record an unsafe result; that is not a safety pass.
+MV-S1-7's first failure is an evaluation of the unchanged source assignment,
+matching the seat's inspected probe, not an invented full guards-only rerun.
 
-The only production source edit is the Session storage injection seam in
-TodoModel: a MainActor protocol, production SessionVault conformance, optional
-constructor injection and an immutable storage property. The default constructs
-the original SessionVault with the same service and account. SessionVault source,
-production Xcode project, installers and packaging checks are unchanged.
-MainActor isolation also preserves compatibility with the existing memory-vault
-auth-epoch fixture; its literal typecheck passes. No production behavior fix
-or test-source substitution is included in this branch.
+Local baseline evidence: docs/evidence/mac-verification-app/review-red-before.
+It includes assertions.json, p1, p2 and partial-receipt-red.json. No original
+Security function was called; no visible window was opened for these probes.
 
-Verification injects MemorySessionVault; an accidentally used verification
-fallback SessionVault fails immediately. Entry validation precedes SwiftUI App,
-AppStorage, model and window construction. The private canonical manifest binds
-scratch HOME/CFFIXED_USER_HOME, all scratch paths, CLI/server hashes, loopback
-listener ownership, server HOME/database and exact health build/contract.
-
-The verification-only sandbox denies writes outside scratch, owner-home reads
-except the app bundle, execution of other processes, securityd lookup and
-outbound connections except its scratch server port. Its negative controls use
-run-owned sentinel files and live scratch listeners. They never probe the
-owner's Todo data or managed server. The securityd control queries sandbox
-policy without contacting the service.
-
-The embedded interposer covers 240 credential-family exports plus
-SecCopyErrorMessageString. The app imports no Security function directly.
-TrapProbe proves direct and dlsym pointer identity before calling a fatal
-handler. A missing binding returns without invoking the original function.
-Every binding is tested both present and individually removed.
-
-## Identity and first successful visible launch
-
-The initial visible-launch gate correctly refused while the owner's Todo app
-was frontmost. The coordinator then authorized resumption after bringing Finder
-forward. Every later visible attempt had its own frontmost/idle preflight; the
-production app was left alone in the background.
-
-A linker-only unsigned build had valid Info.plist identity but returned nil for
-its owned PID's NSRunningApplication bundle identifier. The census checked
-only the recorded owned PID and the test bundle ID from both scratch and normal
-reader environments. Own-bundle LSRegisterURL, scratch cwd and removal of the
-parent's inherited CF bundle ID did not correct it. The local receipts are
-`identity-premise.md`, `identity-signature-before.log`, `resume-development-6`
-and `identity-clean-parent` under the evidence root.
-
-An explicit ad hoc seal of only TodoVerification.app restored runtime bundle-ID
-lookup and AX readback. The recipe therefore builds with CODE_SIGNING_ALLOWED=NO
-and then runs `codesign --force --sign - --identifier local.todo.verification
---timestamp=none <verification-app>`. Its receipt requires adhoc, no Team ID
-and no Authority. No developer signing identity is used. The before/after
-control is `identity-adhoc-control`; its screenshot was visually inspected and
-shows the production All tasks screen, Profile verify, two Tasks and the two
-literal seeded titles.
-
-The frozen-head launch passed preflight with Finder frontmost and combined
-session idle 38343.429 seconds (HID idle 38343.429 seconds). Its capture was
-visually inspected: All tasks, Profile verify, exactly two P3 Tasks titled
-V01 seeded Task alpha and V01 seeded Task beta, with no load-error banner.
-The local capture is frozen-ab989410/window.png; the independent read is
-frozen-ab989410/accessibility.json and the stop receipt is interruption.json.
-The recipe returned 0 with completeRecipe true, development false, cleaned
-true and 1077 recorded commands. Artifact hashes are in artifact-sha256.json. AX resolves the test bundle
-identifier, requires its owned PID, and reads only its own main window.
-Its window number comes from that AX window through _AXUIElementGetWindow;
-there is no global window enumeration or fallback to another application's
-windows. Captures remain ignored local evidence.
-
-## Input interruption proof
-
-The first CGEvent.postToPid diagnostic exited 0 but produced no receiver
-receipt and did not stop the app. It is retained as a failed delivery attempt,
-not a passing input proof. V01 supplies no general input driver.
-
-After successful AX readback and capture, a file in the accepted private
-scratch root requests one marked F20 event. The verification process posts it
-into its own NSApplication event queue. The ordinary local monitor observes
-the V01 marker and exits 80. This proves in-process event handling and the stop
-mechanism; it does not establish physical input or WindowServer delivery.
-
-An unmarked event in that window takes the same monitor path and exits 80 as
-owner input. Input elsewhere updates the session idle clock, checked every
-100 ms. Quiet/recent-input literal fixtures and an inverted clock-predicate
-control prove that decision. The offscreen local-event probe runs the same
-monitor; removing it makes the expected-exit-80 assertion fail with exit 1.
-No owner key content or pointer coordinate is logged.
-
-The first frozen attempt at d31510af60acbb765a168ef6674baf536463e0fa
-passed every headless/red control and built the app, then its decoy listener
-raised an unhandled ECONNRESET before AX readback. It exited 1 without a
-complete recipe result. Its app and server were absent at recovery; lsof
-confirmed scratch was closed before removal. Recovery and logs remain in
-frozen-d31510af. The helper now records expected decoy resets and fails on
-unexpected errors. That helper-only fix is included in the final frozen head;
-the fresh qualification repeats all controls.
-
-## Commands and actual exits
-
-Evidence root: `docs/evidence/mac-verification-app` (ignored, local only).
-Exact argv and real child exits are preserved in each commands.json, including
-expected nonzero guard/trap/red-test exits. All Swift builds, tests and scripts
-run inside scripts/swift-slot.sh. The native helper owns that lock for its
-whole recipe and verifies the lockf parent; production suites each own it for
-the whole original recipe. Xcode package resolution and updates are disabled;
-SPM resolution is disabled and tracked pins remain unchanged.
-
-| Command | Actual exit/result | Local receipt |
+| Finding | Correction in the draft | Executed after-fix evidence / outstanding qualification |
 | --- | --- | --- |
-| `sh scripts/disk-guard.sh`, then `/usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check` | 0, then 0 | root-check-frozen-ab989410.json and .log |
-| `node .agents/skills/verify-macos-real-app/scripts/verify.mjs "$PWD/docs/evidence/mac-verification-app/frozen-ab989410" --fresh-build` | 0; full recipe PASS, 1077 command receipts | frozen-ab989410/result.json and commands.json |
-| Fresh production Release compile through the Swift slot (exact command below) | 0; clean build, source unchanged | production-build-ab989410/result.json and build.log |
-| `node .agents/skills/verify-macos-real-app/scripts/production-proofs.mjs "$PWD/docs/evidence/mac-verification-app/production-ab989410" "$PWD/docs/evidence/mac-verification-app/frozen-ab989410"` | 0; both original recipes PASS; scratch removed | production-ab989410/commands.json and result.json |
-| `scripts/swift-slot.sh apps/macos/scripts/verify-write-state.py <production-evidence>/state` | 0; 238 tests/45 suites, 3 Diagnostics state tests, 2 contract tests | production-ab989410/state.log and state/commands.json |
-| `scripts/swift-slot.sh apps/macos/scripts/verify-design.py <production-evidence>/offscreen` | 0; 10 tests/10 suites; 872-image production manifest | production-ab989410/offscreen.log and offscreen/commands.json |
-| `node .agents/skills/verify-macos-real-app/scripts/compare-production.mjs <production-executable> <candidate6-executable> <symbol-evidence>` | 0; six imports unchanged; 26 storage symbols added, none removed | symbols-ab989410/comparison.json |
-| `node .agents/skills/verify-macos-real-app/scripts/audit.mjs <verification-app> <symbol-evidence> <production-executable>` | 0; verification exclusion and production storage present | symbols-ab989410/audit.json |
+| MV-S1-1: curl/config/file exfiltration | No curl. In-process ephemeral GET under the sandbox; no credentials/cookies/cache/proxy/redirects. Skill subprocesses use explicit paths and fresh environments. | Dirty diagnostic accepted healthy owned child with poisoned CURL/proxy/netrc/SSL settings and zero unrelated requests/bytes; redirect and 401 refused 78. Environment-inheritance red fails 1. Built app still needs fresh qualification. |
+| MV-S1-2: hard-linked database | Descriptor traversal/checks for manifest, HOME/tmp, code, DB/WAL/SHM, outputs and locks; one link/current UID/root device; descriptor hashing and kernel pins. | Six hard links and six symlinks refused 78; eight pinned replacements denied by kernel; unprotected replacement independently refused 78. Final matrix/red sweep, creation/rotation and abrupt cleanup still pending. |
+| MV-S1-3: ps substring spoof | No ps/attach path. Start pinned compiled child with exact seven-key environment; retain child; require kernel parent/start, actual database inode and listening socket before requests. | Healthy owned child and public seeded-Task readback exited 0. Four actual foreign compiled servers with wrong HOME/DB and markers in environment/argv0/cwd/executable path refused 78. Foreign listener and child replacement refused without HTTP to the impostor. Frozen/built-app rerun pending. |
+| MV-S1-4: missing credential APIs/brokers/stores | SDK/runtime census expands bindings to 1,099; unique trap handlers and imported-symbol audit. Deny unlisted Mach brokers. Memory standard defaults and isolated HTTP including streams use existing clientFactory injection. | Headless broker queries deny securityd.xpc and related services, while ephemeral health/HID/defaults work under the earlier policy. The 1,099 positive/removal batch, built imports and stricter-policy compatibility remain pending. |
+| MV-S1-5: modifier-only/busy-main input | Full exposed input masks; local/global monitor installation before window; independent background session-any-event and IOKit HID sampling every 50 ms. | Posted event types 10 and 12 stop at 80; literal input-mask and busy-main injected-HID controls pass. New removal controls are written, not run. Pre-window monitor refactor and global/visible behavior remain unqualified. |
+| MV-S1-6: duplicate instances | Descriptor-checked root flock plus consumed marker, machine visible lock plus protected directory entries. | Concurrent first/second root checks return 0/78; reuse 78. Machine first/second lock checks return 0/78 without opening windows. Latest directory protection change needs rerun. |
+| MV-S1-7: partial receipt says complete | Explicit actual stage vector. Complete requires visible scope and every required stage true. | Node tests and restored-old-logic red pass/fail at 0/1. Actual dirty headless diagnostic has completeRecipe=false. Frozen guards-only/built artifact receipts pending. |
 
-Fresh production compile command (build only):
+These are partial observations, not closed findings. The
+[guard design](mac-verification-guard-design.md) lists the counterfactual for
+each check, exact process classes/environments and matching controls. The skill
+has been returned to draft until its corrected recipe passes end to end.
 
-```sh
-scripts/swift-slot.sh xcodebuild -project apps/macos/Todo.xcodeproj -scheme Todo -configuration Release -destination platform=macOS -derivedDataPath .scratch/mac-production-symbols/DerivedData -clonedSourcePackagesDirPath .scratch/mac-verification/DerivedData/SourcePackages -disableAutomaticPackageResolution -skipPackageUpdates clean build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO ONLY_ACTIVE_ARCH=YES
+## Current commands and real exits
+
+All paths below are relative to this checkout. Local evidence is ignored by Git.
+Every Swift build/probe before the hold ran through scripts/swift-slot.sh.
+After the hold message no Swift job was running, and none was started.
+
+| Command | Exit/result | Evidence |
+| --- | --- | --- |
+| Unchanged six reviewer scripts through scripts/swift-slot.sh on reviewed source | Outer 0; each unsafe observation reproduced; seven matching safety assertions 1 | review-red-before/assertions.json and p1/p2 logs |
+| node .agents/skills/verify-macos-real-app/scripts/verify.mjs <safety-development-6> --development --focus-regressions | 0; PASS_DIAGNOSTIC, 66 observations, 90 command receipts, completeRecipe=false | safety-development-6/result.json, commands.json, guard-matrix.json |
+| node .agents/skills/verify-macos-real-app/scripts/verify.mjs <safety-development-7> --development --guards-only | 1; 66 observations recorded, then stricter read-denial sandbox caused compiled server to stop before mutant baseline readiness; 94 receipts; cleanup true | safety-development-7/result.json and mutant-baseline.log |
+| node .agents/skills/verify-macos-real-app/scripts/process-policy.test.mjs | 0; every named hostile parent variable dropped | slot-hold-cleanup/node-reds.json records repeated baseline |
+| node .agents/skills/verify-macos-real-app/scripts/receipt-stages.test.mjs | 0; partial scopes and each missing required stage incomplete | slot-hold-cleanup/node-reds.json records repeated baseline |
+| node .agents/skills/verify-macos-real-app/scripts/node-reds.mjs <receipt> | 0; both baseline tests 0, each matching mutation test 1 | slot-hold-cleanup/node-reds.json |
+| node --check on changed Node helpers; git diff --check | 0 when last run; repeat before handoff | local tool execution |
+
+Development receipts record eceedba4 as their parent head and development=true;
+their code was dirty and is not claimed byte-equal to that commit. In the seventh
+run the guard/mutant builds also straddled the stricter sandbox edit. This is
+explicitly disqualified diagnostic evidence. The added server log descriptor
+will expose the child startup reason on the next permitted run. No hidden
+retry, relaxed broker rule or visible launch followed that failure.
+
+## Remaining work after the holds
+
+1. After the Swift hold is released, resolve the stricter sandbox child-startup
+   failure using only owned scratch logs, keeping credential brokers denied.
+   Qualify SQLite side-file/Diagnostics creation and cleanup under directory pins.
+2. Compile/run the latest class controls (input/defaults/sandbox), guard predicate
+   sweep, full 1,099 binding positives and individual removals, and current app
+   source/project generation. The generator script is changed but the tracked
+   Xcode project has not yet been regenerated; it must not be treated as current.
+3. Restore production state/offscreen execution through an explicit linked safety
+   boundary with a fresh minimal environment. The old DYLD-injection wrapper is
+   disabled before starting any subprocess. Historical passes cannot replace reruns.
+4. Freeze one clean implementation head. Rebuild CLI/server, bindings, native
+   proofs and verification app from it with clean build; rerun all controls and
+   root check, then source/symbol comparisons. No working-tree SHA restamping.
+5. Only after a green guard matrix and explicit coordinator visible release,
+   requalify bundle-ID/owned-PID accessibility readback/capture and interruption.
+   The current build's visibleAllowed=false gate must stay held until then.
+   Keep completeRecipe=false until every actual visible stage passes.
+
+No V02 input driver or measurements were started. The coordinator's requested
+correctness, UI and hands-on review releases still apply.
+
+## Production preservation
+
+No new production Mac source change was made during this correction. The sole
+existing seam remains TodoModel's MainActor SessionStorage, SessionVault
+conformance, optional constructor injection and immutable existential property.
+SessionVault.swift is byte-identical to candidate 6, SHA-256
+`101ad59877b3446eb95db6766f91590b4e31985558a9fc9ba3f2b07d390f60c5`.
+The existing clientFactory parameter supplies verification-only HTTP policy;
+no additional production seam was introduced. The generated API and production
+transport implementation remain unchanged; its default-session factories are
+not selected by this entrypoint. Ordinary/stream behavior of the new safety
+adapter still requires compiled/runtime qualification.
+
+The independent seat confirmed prior production source/symbol preservation.
+Those artifacts were built, never launched. Their hashes are production
+`fbb3082170522b277bf8c2e736cd4462075401c4ab86f87d5a952788931db7b9`,
+candidate 6
+`39856a0c0ad85d22d309cdbca1e8a1faaf32540d81d74984d38e8cc7c2930a7c`.
+Both were preserved by hash before removing superseded DerivedData. The six
+Security imports remain SecCopyErrorMessageString, SecItemAdd,
+SecItemCopyMatching, SecItemDelete, SecItemUpdate and
+SecKeychainSetUserInteractionAllowed. No storage symbol was removed.
+
+The exact 26 added production symbols are below. They are in the production
+binary because the allowed stored existential needs metadata, value copying,
+protocol dispatch/conformance and the model field offset. They are not
+verification-code leakage. Original comparison: symbols-ab989410/comparison.json.
+
+```text
+_symbolic Todo.SessionStorage
+_symbolic _____ 4Todo12SessionVaultV
+_symbolic ______p 4Todo14SessionStorageP
+_symbolic ______pSg 4Todo14SessionStorageP
+assignWithCopy value witness for Todo.SessionVault
+assignWithTake value witness for Todo.SessionVault
+demangling cache variable for type metadata for Todo.SessionStorage?
+destroy value witness for Todo.SessionVault
+direct field offset for Todo.TodoModel.(vault in _277A8AEC59CD413B5F17A239A8575E79) : Todo.SessionStorage
+full type metadata for Todo.SessionVault
+getEnumTagSinglePayload value witness for Todo.SessionVault
+initializeBufferWithCopyOfBuffer value witness for Todo.SessionVault
+initializeWithCopy value witness for Todo.SessionVault
+mangled name ref for type metadata for Todo.SessionStorage?
+nominal type descriptor for Todo.SessionVault
+protocol conformance descriptor for Todo.SessionVault : Todo.SessionStorage in Todo
+protocol descriptor for Todo.SessionStorage
+protocol requirements base descriptor for Todo.SessionStorage
+protocol witness for Todo.SessionStorage.delete() throws -> () in conformance Todo.SessionVault : Todo.SessionStorage in Todo
+protocol witness table for Todo.SessionVault : Todo.SessionStorage in Todo
+reflection metadata field descriptor Todo.SessionStorage
+reflection metadata field descriptor Todo.SessionVault
+storeEnumTagSinglePayload value witness for Todo.SessionVault
+type metadata accessor for Todo.SessionVault
+type metadata for Todo.SessionVault
+value witness table for Todo.SessionVault
 ```
 
-The verification app is at
-`.scratch/mac-verification/DerivedData/Build/Products/Release/TodoVerification.app`.
-The production executable for the last two commands is
-`.scratch/mac-production-symbols/DerivedData/Build/Products/Release/Todo.app/Contents/MacOS/Todo`.
-The immutable candidate-6 executable is
-`.scratch/candidate6-symbols/DerivedData/Build/Products/Release/Todo.app/Contents/MacOS/Todo`.
-It was built from a git source archive at 8b9be429751165d4ecef11f3f23d1844384e54b4,
-never the performance worker's live checkout. That compile exited 0; the
-receipt is candidate6-symbol-build.log. The symbol evidence directory is
-`docs/evidence/mac-verification-app/symbols-ab989410`.
+The original state recipe reported 238 tests/45 suites, three Diagnostics tests
+and two contract tests; offscreen reported ten tests/872 renders, all at
+ab989410. This correction has not rerun them. Neither the installed app nor a
+production executable has been launched. Production project, API, resource,
+installer, packaging, lock and Swift-pin files remain unchanged.
 
-The root check uses the separately authorized clock-fix merge
-`391592593f9ea40aa1fac02b7c010ca0018f8953`, containing exactly reviewed commit
-`6b167266fc34c3304e30ed220bb652b4d17c05ab`. Its earlier pre-merge failure is
-retained in root-check-first.log. The frozen-head check passed 387 domain,
-69 CLI, 32 server and 168 Electron tests, plus one existing Electron skip.
-The closed Bun temporary left by the root check was removed after lsof showed
-no open descriptor; its retirement receipt is root-check-retired-ab989410.json.
+## Historical first launch and limits
 
-## Guard matrix and red controls
+The ab989410 visible receipt independently read V01 seeded Task alpha and
+V01 seeded Task beta from the verification app's own window after resolving
+local.todo.verification and its owned PID. The local frozen-ab989410 capture
+showed All tasks, Profile verify and two P3 Tasks. A marked event posted inside
+that app stopped it at 80. These are historical UI observations; the later
+safety escapes prevent using them as proof of isolation. No new visible launch
+has been attempted during the correction.
 
-The Foundation bad-manifest matrix has 15 cases: valid is 0, every bad case
-is 78 with its literal reason. Built-app --check-manifest runs valid at 0 and
-eight bad cases at 78 before creating a window: missing manifest, wrong HOME,
-missing HOME, non-loopback URL, server hash, CLI hash, unrelated listener and
-wrong contract. Frontmost/idle fixtures accept Finder at 120 seconds and
-reject unknown frontmost, either Todo app and active owner input at 78.
+The current input design covers the exposed NSEvent types locally/globally
+where macOS allows, plus independent background HID sampling. macOS can withhold
+secure input/gestures or consume events, and a suspended process cannot execute
+a monitor. Sampling and scheduling impose detection delay; there is no hard
+real-time or physical-delivery claim. Denying brokers may disable native file
+panels, URL opening, preferences or cloud/autofill features. These flows remain
+unproven, and no permission is requested by this draft.
 
-Each row below has an isolated source copy with the matching predicate
-inverted. The unchanged valid-launch assertion passes for baseline (0), then
-fails for that mutant (real test exit 1; guard probe 78). Guard source and
-replacement are retained in frozen-ab989410/guard-reds.json.
+## Disk and cleanup during the Swift hold
 
-| Control | Guard | Matching red test exit | Mutant probe exit |
-| --- | --- | --- | --- |
-| 0 | Manifest location under private tmp | 1 | 78 |
-| 1 | Manifest/root lstat and non-symlink | 1 | 78 |
-| 2 | Manifest/root owner and private mode | 1 | 78 |
-| 3 | Canonical manifest path | 1 | 78 |
-| 4 | Generated client contract | 1 | 78 |
-| 5 | Canonical run root | 1 | 78 |
-| 6 | All launch paths within scratch | 1 | 78 |
-| 7 | HOME, CFFIXED_USER_HOME and effective home | 1 | 78 |
-| 8 | Compiled CLI/server hashes | 1 | 78 |
-| 9 | Server PID greater than one | 1 | 78 |
-| 10 | PID executable equals compiled server | 1 | 78 |
-| 11 | Exclusive loopback listener PID and address | 1 | 78 |
-| 12 | Server HOME/database environment | 1 | 78 |
-| 13 | Exact health identity | 1 | 78 |
-| 14 | Session prefix and nonempty Profile | 1 | 78 |
-| 15 | Ownership/health subprocess success | 1 | 78 |
-| 16 | Manifest presence | 1 | 78 |
-| 17 | Explicit loopback URL | 1 | 78 |
-| 18 | Known frontmost application | 1 | 78 |
-| 19 | Neither Todo app frontmost | 1 | 78 |
-| 20 | At least one minute idle | 1 | 78 |
-| 21 | Session input clock decision | 1 | 78 |
-| 22 | Own-bundle registration success | 1 | 78 |
-
-All nine sandbox literal observations are true: scratch read/write, bundle
-read, scratch-server connect, denied owner-path read/write, denied global
-write, denied other-port connect, denied process execution and denied
-security-service lookup. Ten isolated sandbox controls remove each of its
-eight allow/deny rules or invert its install-result/owner-lookup guards.
-Every matching behavior assertion fails with real test exit 1 (underlying
-behavior probe 1 or refusal 78); the unmodified baseline exits 0.
-
-| Sandbox control | Removed rule or inverted guard | Red test exit | Probe exit |
-| --- | --- | --- | --- |
-| 0 | Global file-write denial | 1 | 1 |
-| 1 | Owner-home read/write denial | 1 | 1 |
-| 2 | App-bundle read allowance | 1 | 1 |
-| 3 | Scratch read/write allowance | 1 | 78 |
-| 4 | Outbound-network denial | 1 | 1 |
-| 5 | Scratch-server port allowance | 1 | 1 |
-| 6 | Process-execution denial | 1 | 1 |
-| 7 | securityd lookup denial | 1 | 1 |
-| 8 | Successful sandbox-install result | 1 | 78 |
-| 9 | Owner-home lookup availability | 1 | 78 |
-
-The 241 individual credential-binding removals each make the matching
-expected-exit-79 test fail with exit 1. The underlying probe exits 1 without
-calling an original Security function. With all bindings present, all 241
-handlers exit 79. The app's embedded trap also exits 79. The memory-save
-assignment removal fails its unchanged load/save/delete assertion, test exit 1.
-The local-monitor removal fails the required exit-80 assertion, test exit 1.
-Receipts: trap-reds.json, traps.json, sandbox-reds.json, sandbox.json,
-memory-red.json and local-input-red.json in frozen-ab989410.
-
-## Production preservation and limits
-
-The production Release build completed at the frozen head with sourceUnchanged
-true and no Xcode CodeSign action. It was never launched. Against the immutable
-candidate-6 build, the six credential-function imports are exactly unchanged:
-SecCopyErrorMessageString, SecItemAdd, SecItemCopyMatching, SecItemDelete,
-SecItemUpdate and SecKeychainSetUserInteractionAllowed. The storage-symbol
-subset adds 26 symbols and removes none. The comparison covers credential imports
-and storage-related symbols. SessionVault
-source SHA-256 remains
-101ad59877b3446eb95db6766f91590b4e31985558a9fc9ba3f2b07d390f60c5.
-The verification artifact has no direct Security function imports, embeds its
-trap and contains its memory adapter. Production retains SessionVault and has
-none of VerificationManifest, MemorySessionVault, ScratchSandbox or the test
-entrypoint. Receipts: symbols-ab989410/comparison.json, audit.json and
-commands.json.
-
-The original production state recipe passed without a Session adapter or
-test-source substitution: 238 Swift Testing tests in 45 suites, the separate
-3-test Diagnostics state pass, and two contract tests with no failures. It
-used the same frozen-head CLI/server/seed binaries, scratch homes and database,
-and a fatal credential interposer. Its original durable SQLite/HTTP assertions
-also passed. state/result.json reports nativeAppLaunched false,
-keychainAccessed false and scratchRemoved true.
-
-The full original offscreen recipe passed with 10 tests in 10 suites and an
-872-image production manifest. All 872 renders settled in exactly two captures;
-over-limit, late-change and stale-on-first-layout lists are empty. The images
-are scale 2, exported as sRGB independently of the host display. An extra
-attachment-preview fixture PNG is outside the production manifest. The compact priority
-and full planning-filter captures were visually inspected. The recipe's build,
-presentation checks, app-source typecheck, assets, graph resources and
-accessibility identifier check all exited 0. This remains an offscreen proof;
-its result explicitly records nativeGlassVerified false. See
-production-ab989410/offscreen/result.json and commands.json.
-
-The production helper returned 0 at the same frozen head and removed its scratch
-home. Native and production binary hashes, per-file source hashes and build
-metadata are retained in their provenance receipts. The scratch server health
-reported build ab989410. No source changed during either qualification.
-
-No production app executable was launched. The installed Todo app was never
-activated or quit, and its windows and data were never inspected.
-No original Keychain credential function, developer identity, real Todo store,
-managed-server operation or launchd action was used. The only frontmost-app
-metadata came from the required preflight. No child agent or thread was
-launched. The no-comments delegated pass and fresh Claude skill discovery
-remain coordinator checks under the explicit no-children order.
-
-The verify-macos-real-app skill is now proven end to end by the complete
-committed-head recipe and is no longer draft. Development --visible-only runs
-explicitly set completeRecipe false. There are no input-to-render measurements, latency
-claims or V02 interaction controls here. Correctness review, the Opus Mac UI
-seat and the coordinator-arranged hands-on launch still precede V02.
+After checking every removed directory with lsof -Di +D (exit 1, no open files),
+removed only this worker's superseded verification/production/candidate DerivedData
+and compiled-binary caches. Preserved all evidence plus hash-verified production
+and candidate-6 symbol inputs at .scratch/preserved-symbol-inputs. Free disk
+before was 40,383,459,328 bytes (37.610 GiB); after was 45,082,894,336 bytes
+(41.987 GiB), reclaiming 4,699,435,008 bytes (4.377 GiB). Receipt:
+slot-hold-cleanup/receipt.json. Shared disk usage can change independently.
+No other worker's cache, production app, server or launchd state was touched.

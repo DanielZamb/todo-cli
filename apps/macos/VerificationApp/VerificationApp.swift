@@ -11,15 +11,16 @@ enum VerificationEntry {
     @MainActor static func main() {
         credentialTrapReady()
         do {
-            try LaunchGuard.check(expectedContract: TodoContract.id)
+            try verificationRequire(CommandLine.arguments.contains("--check-manifest") || VerificationBuild.visibleAllowed, "Visible launches are held pending coordinator release.")
+            try LaunchGuard.check(expectedContract: TodoContract.id, visible: !CommandLine.arguments.contains("--check-manifest"), expectedServerSHA256: VerificationBuild.serverSHA256, expectedCLISHA256: VerificationBuild.cliSHA256)
             if CommandLine.arguments.contains("--check-manifest") {
                 print("manifest accepted; no window constructed")
                 exit(0)
             }
             try OwnerIdle.requireIdle()
-            let registration = LSRegisterURL(Bundle.main.bundleURL as CFURL, true)
-            try LaunchGuard.require(registration == noErr, "The verification bundle could not register its own application identity.")
             try ScratchSandbox.install(LaunchGuard.accepted!)
+            try VerificationDirectories.install()
+            try VerificationDefaults.install()
         } catch {
             FileHandle.standardError.write(Data((error.localizedDescription + "\n").utf8))
             exit(78)
@@ -36,15 +37,16 @@ struct TodoVerificationApp: App {
 
     init() {
         let manifest = LaunchGuard.accepted!
+        let factory = VerificationClientFactory(manifest: manifest)
         let configuration = ClientConfiguration(server: URL(string: manifest.serverURL)!, initialProfile: manifest.profile, vaultService: "local.todo.verification.memory")
-        _model = State(initialValue: TodoModel(configuration: configuration, clientDiagnostics: .init(journalDirectory: URL(fileURLWithPath: manifest.home).appendingPathComponent("journal")), sessionStorage: MemorySessionVault(manifest.session)))
+        _model = State(initialValue: TodoModel(configuration: configuration, clientFactory: { server, credential in factory.client(server: server, credential: credential) }, clientDiagnostics: factory.recorder, sessionStorage: MemorySessionVault(manifest.session)))
     }
 
     var body: some Scene {
         Window("Todo Verification", id: "tasks") {
             RootView(model: model, compactMode: $compactMode)
                 .task {
-                    activityMonitor = OwnerIdle.monitor(interruptionRequest: URL(fileURLWithPath: LaunchGuard.accepted!.root).appendingPathComponent("interruption-control"))
+                    activityMonitor = OwnerIdle.monitor(interruptionRequest: URL(fileURLWithPath: LaunchGuard.accepted!.root).appendingPathComponent("interruption-control"), requireGlobal: true)
                     NSApp.activate(ignoringOtherApps: true)
                     let identity: [String: Any] = ["bundleIdentifier": Bundle.main.bundleIdentifier ?? "missing", "bundlePath": Bundle.main.bundlePath, "runningBundleIdentifier": NSRunningApplication.current.bundleIdentifier ?? "missing", "activationPolicy": NSApp.activationPolicy().rawValue, "windows": NSApp.windows.map { ["title": $0.title, "visible": $0.isVisible, "number": $0.windowNumber] as [String: Any] }]
                     if let receipt = try? JSONSerialization.data(withJSONObject: identity, options: [.sortedKeys]) { FileHandle.standardError.write(Data("app identity ".utf8) + receipt + Data("\n".utf8)) }

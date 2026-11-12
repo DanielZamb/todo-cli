@@ -11,10 +11,15 @@ production.source_build_phase.files.each do |file|
 end
 group = project.main_group.new_group('VerificationApp', '.')
 Dir[File.join(__dir__, '*.swift')].sort.each do |path|
-  target.source_build_phase.add_file_reference(group.new_file(File.basename(path)))
+  target.source_build_phase.add_file_reference(group.new_file(File.basename(path))) unless File.basename(path) == 'BuildBindings.generated.swift'
 end
+target.source_build_phase.add_file_reference(group.new_file('BuildBindings.generated.swift'))
 trap.source_build_phase.add_file_reference(group.new_file('CredentialTrap.c'))
+trap.source_build_phase.add_file_reference(group.new_file('ChildProof.c'))
 trap.add_system_framework('Security')
+trap.add_system_framework('IOKit')
+trap.add_system_framework('CoreFoundation')
+trap.add_system_framework('Foundation')
 target.add_dependency(trap)
 target.frameworks_build_phase.add_file_reference(trap.product_reference)
 copy = target.new_copy_files_build_phase('Embed credential trap')
@@ -33,7 +38,7 @@ build = project.new(Xcodeproj::Project::Object::PBXBuildFile)
 build.product_ref = product
 target.frameworks_build_phase.files << build
 phase = target.new_shell_script_build_phase('Bundle canonical graph resources')
-phase.shell_script = 'node "$SRCROOT/../scripts/graph-resources.mjs" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/graph-browser"'
+phase.shell_script = '"$TODO_NODE_BINARY" "$SRCROOT/../../../.agents/skills/verify-macos-real-app/scripts/bundle-graph.mjs" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/graph-browser"'
 phase.always_out_of_date = '1'
 phase.output_paths = ['$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/graph-browser/graph.js']
 [target, trap].each do |item|

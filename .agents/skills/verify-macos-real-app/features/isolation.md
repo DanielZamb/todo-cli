@@ -1,5 +1,7 @@
 # Credential and lifecycle isolation
 
+Status: requalification pending. Visible runs and V02 are held; follow the current SKILL.md. Historical driving instructions below do not release either hold.
+
 ## Sub-features
 
 Memory-only Session storage, fatal credential traps, separate bundle identity,

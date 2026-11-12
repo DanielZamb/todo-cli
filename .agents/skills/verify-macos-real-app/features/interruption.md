@@ -1,5 +1,7 @@
 # Stop when input arrives
 
+Status: requalification pending. Visible runs and V02 are held; follow the current SKILL.md. Historical driving instructions below do not release either hold.
+
 ## Sub-features
 
 Frontmost-app and one-minute idle preflight, local input receipt, session input

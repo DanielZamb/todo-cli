@@ -1,5 +1,7 @@
 # Task readback
 
+Status: requalification pending. Visible runs and V02 are held; follow the current SKILL.md. Historical driving instructions below do not release either hold.
+
 ## Sub-features
 
 Restore the memory Session, load the synthetic Profile and display the two
