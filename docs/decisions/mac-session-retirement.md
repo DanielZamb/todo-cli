@@ -122,8 +122,13 @@ The rule, as ruled on 2026-11-11:
    `profile`) changes.
 5. Nothing saves or restores a message. An older message never comes back.
 6. Every kind has a success that clears it in ordinary use (table below).
-7. A message raised by a sheet or dialog belongs to it. It ends when that
-   surface closes, unless the surface hands it to the main window on purpose.
+7. A surface is an instance: each opening of a sheet, picker or dialog gets a
+   new identity. Work started from an instance may publish a message, close a
+   surface or open another one only while that same instance is showing. Once
+   it has closed, a committed result still reaches the data and the list (its
+   read-back runs), but it raises no message, closes nothing and opens nothing.
+   Its own message ends when it closes, unless it hands the message to the
+   main window on purpose.
 
 Rule 4 holds on every path that changes scope. Each of these ends any message:
 `replaceCredential` with a different credential, which covers sign-in,
@@ -132,15 +137,22 @@ sign-in as another Profile, restore, sign-out and Session expiry; any change of
 transfer, and leaving a Profile deleted elsewhere; and a Snapshot reload event,
 which ends the message before it resets the scope.
 
-| Surface | Messages it raises | Ends when |
+| Surface (instance identity) | Work it starts | Completion after its instance has closed or been replaced |
 | --- | --- | --- |
-| Dependency picker | `dependencyFollowUp` from Create follow-up | The picker closes (`closeDependencyPicker`, including after a successful follow-up) |
-| Import sheet | `dependencyFollowUp` from its report's Create follow-up | `showingImport` becomes false (Done, Cancel, reset) |
-| Delete confirmation sheet | `delete` conflict for a Task not open in the editor | `closeDependencyDelete`, or the successful delete that closes it |
-| Discovery Look up | `discoveryShow` | Handed to the main window on purpose. The dialog closes before the request, and the error describes the Show the person sees there. |
+| Dependency picker (`DependencyPicker.id`) | Candidate reads; link or unlink; Create follow-up | Reads publish nothing. A committed link or unlink runs its read-back so the list shows it, with no feedback, warning or reload. A follow-up shows no message, does not close a newer picker and does not open Quick Add. Its result is a read that prepares a Quick Add draft, so nothing remains to commit. |
+| Import sheet (`importInstance`, renewed on open) | Preview; apply; Create follow-up | A preview publishes nothing. A committed apply runs its read-back; the reopened sheet's generation rejects its report. A follow-up behaves as in the picker. |
+| Delete confirmation (`DependencyDelete.id`) | Preview reload; delete | A conflict shows nothing. A committed delete still closes the editor on that Task and runs its read-back, does not close a newer confirmation, and its message ends. |
+| Batch edit (`BatchEditDraft.id`) | Target reload; preview; apply | Reloads and previews publish nothing. A committed apply runs its read-back with no report. A failure shows nothing. |
+| Attachment batch (`AttachmentBatchDraft.id`) | Target reload; preview; apply | Same as Batch edit. A committed apply also updates the open editor's Attachments when that Task is open. |
+| Dependency batch (`DependencyBatchDraft.id`) | Target reload; preview; apply | Same as Batch edit. |
+| Editor Attachment actions (editor draft id) | Attach, detach, label, upload | An accepted change runs its read-back. A conflict or error shows nothing once that editor has closed. |
+| Discovery Look up (identity and generation; Show intent) | Lookup; Show | A lookup publishes nothing. Show hands its error to the main window on purpose, because the dialog closes before the request. A late Show for a superseded intent does nothing. |
+| Settings: Profile deletion, Snapshots | Delete Profile; Snapshot list, preview and restore | These write their own `profileDeletionError` and `snapshotError`, guarded by Profile, generation and credential. They raise no `message`. A committed restore reaches the list through the reload event. |
+| Diagnostics | Snapshot polls | Writes `diagnosticsError` only, guarded by generation. Raises no `message`. |
 
-`createDependencyFollowUp` records the open surface: the picker if one is open,
-otherwise the Import sheet if it is shown, otherwise the main window.
+`createDependencyFollowUp` captures the open instance, the picker before the
+Import sheet, and applies nothing unless that instance is still showing.
+Closing an instance ends only a message that instance raised.
 
 | Kind | Published by | Success that clears it | Reachable in ordinary use |
 | --- | --- | --- | --- |

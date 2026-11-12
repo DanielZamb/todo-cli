@@ -105,7 +105,9 @@ extension TodoModel {
       let payload = try JSONDecoder().decode(Operations.tasks_period_batchEdit.Input.Body.jsonPayload.self, from: JSONSerialization.data(withJSONObject: ["items": items, "changes": draft.change, "dry_run": dryRun]))
       let response = try await client.tasks_period_batchEdit(path: .init(profile: draft.profile), body: .json(payload)).ok.body.json
       let report = try JSONDecoder().decode(BatchEditReport.self, from: JSONEncoder().encode(response))
-      guard isCurrentCredential(credentialEpoch), batchEdit?.id == draft.id, profile == draft.profile else { return }
+      guard isCurrentCredential(credentialEpoch), profile == draft.profile else { return }
+      // Once this sheet has closed, a committed apply still reaches the list and nothing is shown.
+      guard batchEdit?.id == draft.id else { if !dryRun { await refreshAfterWrite("Tasks updated") }; return }
       batchEdit?.report = report
       if !dryRun { await refreshAfterWrite("Tasks updated") }
     } catch {

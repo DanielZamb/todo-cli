@@ -23,7 +23,9 @@ extension TodoModel {
       var attachmentDraft = draft
       attachmentDraft.base = attachmentTask ?? draft.base
       let result = try await operation(client, attachmentDraft)
-      guard isCurrentCredential(credentialEpoch), profile == draft.base.profile_id, editor?.id == draft.id else { return }
+      guard isCurrentCredential(credentialEpoch), profile == draft.base.profile_id else { return }
+      // Once this editor has closed, an accepted Attachment change still reaches the list and nothing is shown.
+      guard editor?.id == draft.id else { if case .accepted = result { await refreshAfterWrite("Attachment updated") }; return }
       switch result {
       case .accepted(let task):
         editor = editor?.acceptingAttachmentChange(task)

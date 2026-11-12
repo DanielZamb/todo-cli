@@ -49,7 +49,12 @@ final class TodoModel {
     var writeIntent: TaskWriteIntent?
     var batchEdit: BatchEditDraft?
     var attachmentBatch: AttachmentBatchDraft?
-    var showingImport = false { didSet { if !showingImport { endMessage(raisedBy: .importSheet) } } }
+    var showingImport = false { didSet {
+        if showingImport && !oldValue { importInstance = UUID() }
+        if !showingImport && oldValue { endMessage(raisedBy: .importSheet(importInstance)) }
+    } }
+    /// Identity of the current Import sheet; renewed each time it opens.
+    @ObservationIgnored private(set) var importInstance = UUID()
     var importDocument: ImportDocument?
     var importReport: ImportSummary?
     var importError: String?
@@ -137,9 +142,18 @@ final class TodoModel {
         /// What a successful restore or sign-in makes untrue.
         static let session: Set<MessageKind> = [.restore, .signIn, .sessionEnded, .connection]
     }
-    /// A sheet or dialog that raised the message. The message ends when that surface closes.
-    /// Discovery Show is not one: its dialog closes before the request, so its error belongs to the main window.
-    enum MessageSurface: Hashable { case dependencyPicker, importSheet, deleteDialog }
+    /// The sheet or dialog instance that raised the message. Each opening is a new instance;
+    /// the message ends when that instance closes. Discovery Show is not one: its dialog closes
+    /// before the request, so its error belongs to the main window.
+    enum MessageSurface: Hashable { case dependencyPicker(UUID), importSheet(UUID), deleteDialog(UUID) }
+    /// Whether the instance that started some work is still the one showing.
+    func isShowing(_ surface: MessageSurface) -> Bool {
+        switch surface {
+        case .dependencyPicker(let id): dependencies.picker?.id == id
+        case .importSheet(let id): showingImport && importInstance == id
+        case .deleteDialog(let id): dependencies.deletion?.id == id
+        }
+    }
     /// The newest message. Each one has a kind and a sequence number that only grows.
     var message: String? { didSet {
         if message == nil { messageKind = nil; messageSurface = nil } else { messageSequence += 1; messageKind = pendingMessageKind; messageSurface = pendingMessageSurface }
@@ -318,7 +332,9 @@ final class TodoModel {
             }
             let response = try await client.tasks_period_importTasks(path: .init(profile: requestedProfile), body: .json(.init(file_name: document.name, items: try JSONDecoder().decode(OpenAPIArrayContainer.self, from: JSONEncoder().encode(items)), dry_run: dryRun, close_missing: importCloseMissing, close_missing_candidates: cancellations)))
             let report = try decode(ImportSummary.self, response.ok.body.json)
-            guard profile == requestedProfile, importGeneration == requestedGeneration else { return }
+            guard isCurrentCredential(credentialEpoch), profile == requestedProfile else { return }
+            // A reopened Import has a new generation; the previous sheet's committed apply still reaches the list.
+            guard importGeneration == requestedGeneration else { if !dryRun { await refreshAfterWrite("Import applied") }; return }
             if report.items.contains(where: { $0.error?.hasMalformedDependencyError == true }) {
                 importReport = nil
                 throw DependencyGraphReply.ProtocolError.incompatible
@@ -1172,13 +1188,15 @@ final class TodoModel {
         defer { if discovery.credentialEpoch == credentialEpoch { busy = false } }
         do {
             let response = try await client.tasks_period_delete(path: .init(profile: profile, task: task.id), query: .init(from_version: String(fromVersion), with_dependencies: ._true, dependency_fingerprint: fingerprint))
-            guard isCurrentCredential(credentialEpoch), profile == deletionProfile, dependencies.deletion?.id == preview.id else { return }
+            guard isCurrentCredential(credentialEpoch), profile == deletionProfile else { return }
             if case .conflict(let conflict) = response {
+                // A closed confirmation shows nothing; there is no committed delete to apply.
+                guard dependencies.deletion?.id == preview.id else { return }
                 dependencies.deletion?.failure = dependencyNotice(try dependencyConflict(conflict.body.json), context: .delete)
                 await reloadDependencyDelete(changed: true)
                 guard isCurrentCredential(credentialEpoch), profile == deletionProfile, dependencies.deletion?.id == preview.id else { return }
                 if editor?.id == task.id { editorError = "The Task changed. Close and reopen it before deleting." }
-                else { publishMessage("The task changed before it could be deleted.", kind: .delete, surface: .deleteDialog) }
+                else { publishMessage("The task changed before it could be deleted.", kind: .delete, surface: .deleteDialog(preview.id)) }
                 return
             }
             let wire = try response.ok.body.json
@@ -1195,8 +1213,9 @@ final class TodoModel {
                 pendingNavigation = nil
                 deletionNotice = "Task deleted"
             }
-            dependencies.deletion = nil
-            endMessage(raisedBy: .deleteDialog)
+            // The committed delete reaches the editor and the list even if this confirmation has closed.
+            if dependencies.deletion?.id == preview.id { dependencies.deletion = nil }
+            endMessage(raisedBy: .deleteDialog(preview.id))
             await refreshAfterWrite("Task deleted", clearing: .delete, since: mark)
         } catch {
             guard isCurrentCredential(credentialEpoch) else { return }

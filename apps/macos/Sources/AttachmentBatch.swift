@@ -69,14 +69,14 @@ extension TodoModel {
       let payload = try JSONDecoder().decode(Operations.tasks_period_attachMany.Input.Body.jsonPayload.self, from: JSONSerialization.data(withJSONObject: ["items": items, "dry_run": dryRun]))
       let value = try await client.tasks_period_attachMany(path: .init(profile: draft.profile), body: .json(payload)).ok.body.json
       let report = try JSONDecoder().decode(AttachmentBatchReport.self, from: JSONEncoder().encode(value))
-      guard isCurrentCredential(credentialEpoch), attachmentBatch?.id == draft.id, profile == draft.profile else { return }
-      attachmentBatch?.report = report
+      guard isCurrentCredential(credentialEpoch), profile == draft.profile else { return }
+      // Once this sheet has closed, a committed apply still reaches the editor and the list, and nothing is shown.
+      if attachmentBatch?.id == draft.id { attachmentBatch?.report = report }
       if !dryRun {
         if let editor, draft.selected.contains(editor.id) {
           let wire = try await client.tasks_period_show(path: .init(profile: draft.profile, task: editor.id)).ok.body.json
-          guard isCurrentCredential(credentialEpoch), attachmentBatch?.id == draft.id, profile == draft.profile, self.editor?.id == editor.id else { return }
-          let latest = try TaskSnapshot.decode(wire)
-          self.editor = self.editor?.acceptingAttachmentChange(latest)
+          guard isCurrentCredential(credentialEpoch), profile == draft.profile else { return }
+          if self.editor?.id == editor.id { self.editor = self.editor?.acceptingAttachmentChange(try TaskSnapshot.decode(wire)) }
         }
         await refreshAfterWrite("Attachments updated")
       }

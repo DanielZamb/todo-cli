@@ -11,7 +11,7 @@ import TodoAPI
 // while an action that clears this kind is still finishing (the newer one survives),
 // and a recovery, where the same kind's success clears its earlier message.
 
-private enum Step: Sendable { case pass, hold, fail(Int, String) }
+private enum Step: Sendable { case pass, hold, fail(Int, String), holdThenFail(Int, String) }
 
 private actor ScriptGate: ClientTransport {
     let session: URLSession
@@ -20,6 +20,8 @@ private actor ScriptGate: ClientTransport {
     var held: [String: CheckedContinuation<Void, Never>] = [:]
     var streams: [AsyncThrowingStream<HTTPBody.ByteChunk, any Error>.Continuation] = []
     var failingStreams = 0
+    var counts: [String: Int] = [:]
+    func count(_ operation: String) -> Int { counts[operation, default: 0] }
     init() { let s = URLSession(configuration: .ephemeral); session = s; base = URLSessionTransport(configuration: .init(session: s)) }
     func next(_ operation: String, _ steps: Step...) { script[operation, default: []] += steps }
     func isHeld(_ operation: String) -> Bool { held[operation] != nil }
@@ -30,14 +32,19 @@ private actor ScriptGate: ClientTransport {
     func failNextStream() { failingStreams += 1 }
     var streamCount: Int { streams.count }
     var stopped = false
-    func stop() { stopped = true; for key in held.keys { release(key) }; streams.forEach { $0.finish() }; session.invalidateAndCancel() }
+    // The session is not invalidated: a request already past the stopped check could otherwise create a task on it.
+    func stop() { stopped = true; for key in held.keys { release(key) }; streams.forEach { $0.finish() } }
     func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
+        counts[operationID, default: 0] += 1
         var step = Step.pass
         if var queue = script[operationID], !queue.isEmpty { step = queue.removeFirst(); script[operationID] = queue }
         switch step {
         case .pass: break
         case .hold: await withCheckedContinuation { held[operationID] = $0 }
         case .fail(let status, let message): throw RequestFailure(status: status, message: message, code: status == 401 ? "unauthorized" : "unavailable")
+        case .holdThenFail(let status, let message):
+            await withCheckedContinuation { held[operationID] = $0 }
+            throw RequestFailure(status: status, message: message, code: "unavailable")
         }
         if operationID == "changes.stream" {
             if failingStreams > 0 { failingStreams -= 1; throw URLError(.networkConnectionLost) }
@@ -449,6 +456,141 @@ private actor ScriptGate: ClientTransport {
         await gate.endStream()
         try await wait("left deleted Profile") { model.profile != "doomed" }
         #expect(model.message == nil)
+        await finish(model, gate, vault)
+    }
+    // MARK: surface instances (rule 7, MAC-C1-S1-11)
+
+    private func pickerFor(_ model: TodoModel, _ task: TaskSnapshot) { model.dependencies.picker = .init(profile: "work", root: task, direction: .dependsOn) }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [false, true])
+    func pickerFollowUpAfterCloseDoesNothing(fails: Bool) async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        pickerFor(model, task)
+        await gate.next("tasks.show", fails ? .holdThenFail(503, "OLD closed-picker follow-up failed") : .hold)
+        let followUp = Task { await model.createDependencyFollowUp(task.id) }
+        try await wait("show held") { await gate.isHeld("tasks.show") }
+        model.closeDependencyPicker()
+        await gate.release("tasks.show"); await followUp.value
+        #expect(model.dependencies.picker == nil && !model.quickAdd && model.message == nil, "fails=\(fails)")
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func olderPickerSuccessLeavesTheNewerPickerAndItsError() async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        pickerFor(model, task)
+        await gate.next("tasks.show", .hold)
+        let older = Task { await model.createDependencyFollowUp(task.id) }
+        try await wait("show held") { await gate.isHeld("tasks.show") }
+        model.closeDependencyPicker()
+        pickerFor(model, task)
+        let newer = model.dependencies.picker?.id
+        await gate.next("tasks.show", .fail(404, "NEWER picker B follow-up failed"))
+        await model.createDependencyFollowUp(UUID().uuidString)
+        let error = try #require(model.message)
+        await gate.release("tasks.show"); await older.value
+        #expect(model.dependencies.picker?.id == newer && !model.quickAdd && model.message == error)
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func olderPickerFailureLeavesTheNewerPicker() async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        pickerFor(model, task)
+        await gate.next("tasks.show", .hold)
+        let older = Task { await model.createDependencyFollowUp(UUID().uuidString) }
+        try await wait("show held") { await gate.isHeld("tasks.show") }
+        model.closeDependencyPicker()
+        pickerFor(model, task)
+        let newer = model.dependencies.picker?.id
+        await gate.release("tasks.show"); await older.value
+        #expect(model.dependencies.picker?.id == newer && model.message == nil)
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [false, true])
+    func importFollowUpAfterCloseOrReopenDoesNothing(reopen: Bool) async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        model.showingImport = true
+        await gate.next("tasks.show", .hold)
+        let success = Task { await model.createDependencyFollowUp(task.id) }
+        try await wait("show held") { await gate.isHeld("tasks.show") }
+        model.showingImport = false
+        if reopen { model.resetImport(); model.showingImport = true }
+        await gate.release("tasks.show"); await success.value
+        #expect(!model.quickAdd && model.message == nil && model.showingImport == reopen, "success reopen=\(reopen)")
+        if !model.showingImport { model.resetImport(); model.showingImport = true }
+        await gate.next("tasks.show", .hold)
+        let failure = Task { await model.createDependencyFollowUp(UUID().uuidString) }
+        try await wait("show held again") { await gate.isHeld("tasks.show") }
+        model.showingImport = false
+        if reopen { model.resetImport(); model.showingImport = true }
+        await gate.release("tasks.show"); await failure.value
+        #expect(model.message == nil && model.showingImport == reopen, "failure reopen=\(reopen)")
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [false, true])
+    func deleteAfterCloseStillReachesTheListAndShowsNothing(reopen: Bool) async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        await model.openDependencyDelete(task)
+        try await wait("delete preview") { model.dependencies.deletion?.acceptedFromVersion != nil }
+        await gate.next("tasks.delete", .hold)
+        let delete = Task { await model.deleteTask(task) }
+        try await wait("delete held") { await gate.isHeld("tasks.delete") }
+        model.closeDependencyDelete()
+        var other: UUID?
+        if reopen, let second = model.tasks.first(where: { $0.id != task.id }) {
+            await model.openDependencyDelete(second); other = model.dependencies.deletion?.id
+        }
+        let reads = await gate.count("tasks.list")
+        await gate.release("tasks.delete"); await delete.value
+        #expect(await gate.count("tasks.list") > reads, "the committed delete's read-back ran")
+        #expect(!model.tasks.contains { $0.id == task.id })
+        #expect(model.message == nil)
+        #expect(model.dependencies.deletion?.id == other, "a newer confirmation stays open")
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func deleteConflictAfterCloseShowsNothing() async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        await model.openDependencyDelete(task)
+        try await wait("delete preview") { model.dependencies.deletion?.acceptedFromVersion != nil }
+        try await edit(task, credential: try #require(try vault.load()))
+        await gate.next("tasks.delete", .hold)
+        let delete = Task { await model.deleteTask(task) }
+        try await wait("delete held") { await gate.isHeld("tasks.delete") }
+        model.closeDependencyDelete()
+        await gate.release("tasks.delete"); await delete.value
+        #expect(model.message == nil && model.dependencies.deletion == nil)
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [0, 1, 2])
+    func batchEditAfterCloseStillReachesTheListAndShowsNothing(mode: Int) async throws {
+        // mode 0: late success after close; 1: late failure after close; 2: late success after reopen.
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        model.batchEdit = .init(profile: "work")
+        await model.reloadBatchEditTargets()
+        model.batchEdit?.selected = [task.id]; model.batchEdit?.field = .priority; model.batchEdit?.value = task.priority == "P1" ? "P2" : "P1"
+        let wanted = model.batchEdit!.value
+        await model.applyBatchEdit(dryRun: true)
+        try #require(model.batchEdit?.report?.dry_run == true)
+        await gate.next("tasks.batchEdit", mode == 1 ? .holdThenFail(503, "OLD closed-sheet batch failed") : .hold)
+        let apply = Task { await model.applyBatchEdit(dryRun: false) }
+        try await wait("batch held") { await gate.isHeld("tasks.batchEdit") }
+        model.batchEdit = nil
+        if mode == 2 { model.batchEdit = .init(profile: "work") }
+        let newer = model.batchEdit?.id
+        let reads = await gate.count("tasks.list")
+        await gate.release("tasks.batchEdit"); await apply.value
+        #expect(model.batchEdit?.id == newer && model.batchEdit?.report == nil && model.batchEdit?.error == nil, "mode \(mode)")
+        #expect(model.message == nil, "mode \(mode)")
+        if mode != 1 {
+            #expect(await gate.count("tasks.list") > reads, "mode \(mode): the committed apply's read-back ran")
+            #expect(model.tasks.first { $0.id == task.id }?.priority == wanted, "mode \(mode): the list shows it")
+        }
         await finish(model, gate, vault)
     }
 }

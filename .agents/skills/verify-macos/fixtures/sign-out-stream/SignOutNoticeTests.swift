@@ -24,7 +24,8 @@ private actor NoticeGate: ClientTransport {
     func endStream() { streams.last?.finish() }
     var streamCount: Int { streams.count }
     var stopped = false
-    func stop() { stopped = true; streams.forEach { $0.finish() }; session.invalidateAndCancel() }
+    // The session is not invalidated: a request already past the stopped check could otherwise create a task on it.
+    func stop() { stopped = true; streams.forEach { $0.finish() } }
     func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
         operations.append(operationID)
         if var queue = failures[operationID], !queue.isEmpty {

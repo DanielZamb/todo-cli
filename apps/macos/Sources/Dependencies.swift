@@ -141,8 +141,9 @@ extension TodoModel {
     func closeDependencyPicker() {
         dependencies.generation += 1
         dependencies.searchRequest += 1
+        let closing = dependencies.picker?.id
         dependencies.picker = nil
-        endMessage(raisedBy: .dependencyPicker)
+        if let closing { endMessage(raisedBy: .dependencyPicker(closing)) }
     }
     func setDependencyDirection(_ direction: DependencyDirection) async {
         guard dependencies.picker?.purpose == .edit || direction == .dependsOn else { return }
@@ -240,7 +241,12 @@ extension TodoModel {
                 if case .conflict(let conflict) = response { throw try dependencyConflict(conflict.body.json) }
                 report = try decode(DependencyEdgeReport.self, response.ok.body.json)
             }
-            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == picker.id else { return }
+            guard signedIn, profile == picker.profile, isCurrentCredential(epoch) else { return }
+            // Once this picker has closed, a committed edge still reaches the list and the picker shows nothing.
+            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == picker.id else {
+                if report.outcome != "unchanged" { await refreshAfterWrite("Dependencies updated") }
+                return
+            }
             await reloadDependencyPicker()
             guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == picker.id else { return }
             dependencies.picker?.feedback = report.outcome == "unchanged" ? (remove ? "Already removed" : "Already linked") : (remove ? "Dependency removed" : "Dependency added")

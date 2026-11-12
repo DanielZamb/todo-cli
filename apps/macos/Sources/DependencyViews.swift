@@ -231,20 +231,23 @@ struct DependencyDeleteView: View {
 extension TodoModel {
     func createDependencyFollowUp(_ id: String) async {
         guard signedIn else { return }
-        // The follow-up is offered by the Dependency picker and by the Import report; its error belongs to whichever is open.
-        let surface: MessageSurface? = dependencies.picker != nil ? .dependencyPicker : showingImport ? .importSheet : nil
+        // The follow-up is offered by a Dependency picker or an Import report. Its result belongs to
+        // that instance: once it has closed, the read raises no message, closes nothing and opens nothing.
+        let surface: MessageSurface? = dependencies.picker.map { .dependencyPicker($0.id) } ?? (showingImport ? .importSheet(importInstance) : nil)
         let epoch = discovery.credentialEpoch
         let selectedProfile = profile
         let mark = messageMark
         do {
             let task = try await TaskSnapshot.decode(client.tasks_period_show(path: .init(profile: selectedProfile, task: id)).ok.body.json)
             guard isCurrentCredential(epoch), profile == selectedProfile else { return }
+            guard surface.map(isShowing) ?? true else { return }
             clearMessage([.dependencyFollowUp], since: mark)
             closeDependencyPicker()
             if !dependencies.initial.contains(where: { $0.id == task.id }) { dependencies.initial.append(task) }
             quickAdd = true
         } catch {
             guard isCurrentCredential(epoch), profile == selectedProfile else { return }
+            guard surface.map(isShowing) ?? true else { return }
             publishMessage(describe(error), kind: .dependencyFollowUp, surface: surface)
             handleAuthorization(error, credentialEpoch: epoch)
         }
