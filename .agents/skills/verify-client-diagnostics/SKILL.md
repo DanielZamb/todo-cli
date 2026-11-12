@@ -82,3 +82,18 @@ credential-lifetime and restarted-server controls in that feature map. The
 first shared-session implementation is blocked by a request-creation crash;
 the resource result cannot qualify it. Require the corrected lifetime and
 publication controls, full gates and independent review before installation.
+
+`scripts/stall_sampler_stress.py <new-absolute-evidence-directory>` proves the stall
+sampler's suspended C window without Swift, the app or Keychain:
+
+- It builds `apps/macos/API/Sources/ClientStallSampling` with
+  `fixtures/stall-sampler/stress.c` as a universal Release binary.
+- It takes 100,000 samples of a thread churning malloc and two locks. Every
+  sample must succeed, the target must advance after every resume, and no window
+  may exceed 1 ms.
+- It checks that the x86_64 slice reports unsupported.
+- It runs a control that takes the target's lock inside the window. The control
+  must hang and be caught by the watchdog (exit 3).
+
+The Swift caller's limits (disable on failure or a window over 1 ms, main thread
+only, symbolication after resume) are proved separately.
