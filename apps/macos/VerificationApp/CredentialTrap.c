@@ -1,5 +1,16 @@
 #include <string.h>
 #include <unistd.h>
+#include <stdbool.h>
+
+extern bool SecTrustReportNetworkingAnalytics(const char *, void *);
+static bool deny_networking_analytics(const char *eventName, void *attributes) {
+    (void)eventName; (void)attributes;
+    return false;
+}
+__attribute__((used, section("__DATA,__interpose")))
+static const struct { const void *replacement; const void *original; } networking_analytics_denial = {
+    (const void *)deny_networking_analytics, (const void *)SecTrustReportNetworkingAnalytics
+};
 
 extern void verification_child_cleanup(void);
 static void credential_forbidden(const char *name) {
@@ -20,6 +31,7 @@ static void credential_forbidden(const char *name) {
 #undef TRAP
 
 const void *todo_verification_handler(const char *name) {
+    if (strcmp(name, "SecTrustReportNetworkingAnalytics") == 0) return (const void *)deny_networking_analytics;
 #define TRAP(api) if (strcmp(name, #api) == 0) return (const void *)forbidden_##api;
 #include "CredentialSymbols.inc"
 #undef TRAP

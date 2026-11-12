@@ -18,6 +18,7 @@ import { credentialSweep } from './credential-sweep.mjs';
 import { qualifyServerBoundary } from './server-boundary.mjs';
 import { qualifyPreflightHelper } from './preflight-helper-component.mjs';
 import { qualifyParentDeath } from './parent-death.mjs';
+import { qualifyNetworkingAnalytics } from './networking-analytics.mjs';
 
 process.umask(0o077);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
@@ -212,6 +213,7 @@ try {
   assert.equal(fs.readFileSync(tools + '/CredentialSymbols.inc', 'utf8'), fs.readFileSync('apps/macos/VerificationApp/CredentialSymbols.inc', 'utf8'), 'Review and commit changed SDK bindings before qualification');
   fs.copyFileSync(tools + '/credential-export-census.json', evidence + '/credential-export-census.json');
   diskStage('credential-removal-sweep', 0.25);
+  assert.equal(qualifyNetworkingAnalytics(evidence + '/networking-analytics').status, 'PASS_COMPONENT');
   const credentialResult = credentialSweep(evidence + '/credentials');
   assert.equal(credentialResult.status, 'PASS_COMPONENT');
   stages.credentialBoundary = true; stages.credentialRedControls = true;

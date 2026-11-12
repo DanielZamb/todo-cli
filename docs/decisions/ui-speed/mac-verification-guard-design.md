@@ -89,6 +89,7 @@ reusable input/control, not evidence of execution unless its receipt exists.
 | Generated client | Default shared session is reached through another factory | Existing nonnil clientFactory always supplies verification transport; source/import audit; built-client runtime coverage pending |
 | Streaming HTTP | SSE silently constructs an ordinary default session | Verification stream session uses the same ephemeral policy and preserves per-stream cancellation; runtime qualification pending |
 | Credential symbols | A handwritten list omits a linked entry point | SDK export/runtime census plus built-binary import enumeration; every present binding pointer-tested and individually removed |
+| Networking analytics | CFNetwork attempts Security telemetry, or a denial silently forwards it to a service | A local false-return binding ignores arguments and never calls the original; inspect the compiled body before the pointer/result probe; binding removal and result inversion fail |
 | Pointer test | Removing a trap calls the real credential API | Compare expected unique handler before invocation; missing binding exits 1 without calling original |
 | Framework credentials | A framework bypasses direct Sec imports via a broker | Deny all unlisted Mach lookup, Keychain paths; safe policy queries include securityd.xpc, autofill, Passkeys, CloudKit and ubiquity |
 | Defaults | Separate bundle ID still reads ambient global defaults | Process-only memory standard defaults, no persistent domains/suites; cfprefsd denied; memory-default removal control |

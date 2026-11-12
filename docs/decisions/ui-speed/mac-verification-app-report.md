@@ -1,5 +1,33 @@
 # Mac verification app V01 safety correction
 
+Latest correction before refreezing: 8806ba09 passed 102 native cases, 15 class
+reds, all 63 predicate inversions with no exclusions, all 1,638 fail-fast
+bindings and all 1,638 removals. The fresh app built and passed its artifact
+audit, but --check-manifest exited 79 on SecTrustReportNetworkingAnalytics.
+That attempt remains FAIL with completeRecipe=false. Production suites and
+the root check had not started. Receipts: frozen-8806ba09.
+
+[Apple's Security header](https://github.com/apple-oss-distributions/Security/blob/main/trust/headers/SecTrustPriv.h)
+declares this as a networking analytics entry. The correction does not execute
+it: one local denial ignores both arguments and returns false. All other
+credential candidates remain fail-fast traps, and all broker denials remain.
+The census accounts for 1,637 fail-fast bindings and one locally denied
+analytics entry. The built-artifact audit checks that entry's disassembly for
+calls or system calls before checking its binding and false result.
+
+The initial compiled analytics probe exited 79 and its expected-zero assertion
+failed at 1. The corrected component passed at 0; binding removal and a
+true-result mutation each failed at 1 without calling an original function.
+Its optimized denial consists of mov w0, #0 followed by ret. Scratch copies of
+the built verification app, labelled as development overlays, passed the
+manifest check at 0 with that library alone. No transport exception or sandbox
+allowance is added. Metadata-only variants with the original library still
+trapped at 79. Evidence: analytics-red-8806ba09,
+analytics-green-development-8806ba09 and ats-diagnostic-8806ba09-v2/-v3/-v4.
+The original failed attempt's closed build tree was retired after an empty
+supported lsof check; hashes for 2,945 files and 840,411,958 logical bytes are
+preserved. A new committed head must qualify this changed library.
+
 Current attempt: resumed after the coordinator reported 44.9 GiB free. The
 checkout sample was 43.9 GiB. The coordinator now requires completion of the
 headless scope, with visible work explicitly owed. The new receipt test failed

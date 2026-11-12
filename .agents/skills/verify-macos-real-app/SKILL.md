@@ -93,6 +93,12 @@ Matching positive assertions must fail at exit 1 for each scratch mutation.
 An absent receipt or missing stage is unproved, never implicitly passed.
 
 The source-and-runtime Security export census generates the trap bindings.
+The networking-only SecTrustReportNetworkingAnalytics entry has a local denial
+that ignores both arguments and returns false without calling the original.
+Audit its compiled body for calls/system calls before loading its probe, then
+check the binding and false result. Binding removal and result inversion must
+fail. Every other credential candidate remains a fail-fast trap. This hook
+grants no broker or network permission and does not change app transport policy.
 Audit the actual binary's imports against it, including Authorization and SOS
 families. TrapProbe checks the expected handler pointer before calling it;
 a missing trap returns 1 without executing the original API. Safe sandbox
