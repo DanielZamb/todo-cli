@@ -77,7 +77,7 @@
         "catalogSignalRevision and full-read debt",
         "lastCatalogReadAt and activation age"
       ],
-      "sha256": "95873235d559a9228ef87be57ad8e1a6c377f12a471d2ddc63fb3d9aefa13c13"
+      "sha256": "c580a4296637b3e1cdbe7168b6e47701883eb92fd2486b1c6648e646e1b84850"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -347,5 +347,17 @@
       }
     ],
     "review": "TodoModel and AppViews changed for the completion order, messages (Dismiss, named hand-offs, sign-out wording), Profile switch readiness, quick-add completion gate and capsule, and the shared isCurrentEpoch helper. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged."
+  },
+  "surfaceMessagesReview": {
+    "product": "63fd7f957368c82a22bc538b7feec73cbdc6fabc",
+    "controls": "check-swift passed on 63fd7f95: docs/evidence/discovery-formal/swift-UQNxFe",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "95873235d559a9228ef87be57ad8e1a6c377f12a471d2ddc63fb3d9aefa13c13",
+        "to": "c580a4296637b3e1cdbe7168b6e47701883eb92fd2486b1c6648e646e1b84850"
+      }
+    ],
+    "review": "MAC-C1-S1-15 moves every surface-local message onto SurfaceMessages (tickets per kind, newest of a kind presents, success clears its own kind from before its mark). TodoModel: main message storage is the same helper; Import, quick-add (create and parse), editor, History, Profile deletion and Snapshot messages take tickets. BatchEdit and AttachmentBatch: reload and apply take tickets; reports present only for the newest. AttachmentModel: input checks publish through editorError's setter. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged; searchError, taskLoadError and the picker and graph searchFailure stay outside the helper."
   }
 }

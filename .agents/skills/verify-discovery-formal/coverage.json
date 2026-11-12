@@ -5,7 +5,7 @@
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "e2d58e4f9a82219a8acac9920a668a53ddf2829f",
+  "productionSyncCommit": "63fd7f957368c82a22bc538b7feec73cbdc6fabc",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -157,7 +157,7 @@
         "signOut start, failure and commit",
         "followChanges reconnect retry from Offline and sign-out notice"
       ],
-      "sha256": "95873235d559a9228ef87be57ad8e1a6c377f12a471d2ddc63fb3d9aefa13c13",
+      "sha256": "c580a4296637b3e1cdbe7168b6e47701883eb92fd2486b1c6648e646e1b84850",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -193,7 +193,7 @@
       "functions": [
         "changeAttachment captured epoch and publication"
       ],
-      "sha256": "e51b0e6201f5f552c32108269dc4895bca6ad23cbda388e9b214ffa8558be149",
+      "sha256": "8cb348f0b03e6df8533aab9d8ddec3c9b5b763d92232dc7c881c6fbfb0c6124a",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -202,7 +202,7 @@
         "reloadBatchEditTargets",
         "applyBatchEdit"
       ],
-      "sha256": "b0002043c56ae8e68b122957ad7a66e4da0594613971915e27835cc03ad57f66",
+      "sha256": "d07191cf5cd731020e293c622e9fa2c361ce5ef8648d6d83ba6792bfb50e9e3c",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -211,7 +211,7 @@
         "reloadAttachmentTargets",
         "applyAttachmentBatch"
       ],
-      "sha256": "71769f13937b3ff9be1f6d8759294f021830df465f4255b98b399ed568c4d8b6",
+      "sha256": "71e0dc626b9b48a4a25e5bb786002e6cf8689d2087b488361b67e4262f7ff3b0",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     }
   ],
@@ -225,7 +225,7 @@
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "05a54e6884b1bf7b727fc3159f25dab75a9da032",
+  "previousProductionSyncCommit": "e2d58e4f9a82219a8acac9920a668a53ddf2829f",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -464,5 +464,32 @@
       }
     ],
     "review": "Candidate 7 changes no discovery publication, Show or Close guard. expireSession compares the credential epoch alone (not Task cancellation), through isCurrentEpoch, which isCurrentCredential also uses; the authorization-epoch mutant now replaces isCurrentEpoch so it removes the epoch comparison from both layers (caller ownership checks and expireSession) and still fails oldUnauthorizedCannotExpireReplacementSession with replacementSurvived. Other changes: owning-instance checks after awaits, committed read-backs, Save/Move/Copy openings, the message banner and Dismiss, named hand-offs, Import follow-up state, and This client wording."
+  },
+  "surfaceMessagesReview": {
+    "product": "63fd7f957368c82a22bc538b7feec73cbdc6fabc",
+    "controls": "check-swift passed on 63fd7f95: docs/evidence/discovery-formal/swift-UQNxFe",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "95873235d559a9228ef87be57ad8e1a6c377f12a471d2ddc63fb3d9aefa13c13",
+        "to": "c580a4296637b3e1cdbe7168b6e47701883eb92fd2486b1c6648e646e1b84850"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentModel.swift",
+        "from": "e51b0e6201f5f552c32108269dc4895bca6ad23cbda388e9b214ffa8558be149",
+        "to": "8cb348f0b03e6df8533aab9d8ddec3c9b5b763d92232dc7c881c6fbfb0c6124a"
+      },
+      {
+        "path": "apps/macos/Sources/BatchEdit.swift",
+        "from": "b0002043c56ae8e68b122957ad7a66e4da0594613971915e27835cc03ad57f66",
+        "to": "d07191cf5cd731020e293c622e9fa2c361ce5ef8648d6d83ba6792bfb50e9e3c"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentBatch.swift",
+        "from": "71769f13937b3ff9be1f6d8759294f021830df465f4255b98b399ed568c4d8b6",
+        "to": "71e0dc626b9b48a4a25e5bb786002e6cf8689d2087b488361b67e4262f7ff3b0"
+      }
+    ],
+    "review": "MAC-C1-S1-15 moves every surface-local message onto SurfaceMessages (tickets per kind, newest of a kind presents, success clears its own kind from before its mark). TodoModel: main message storage is the same helper; Import, quick-add (create and parse), editor, History, Profile deletion and Snapshot messages take tickets. BatchEdit and AttachmentBatch: reload and apply take tickets; reports present only for the newest. AttachmentModel: input checks publish through editorError's setter. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed; requestDiscovery, showDiscoveryMatch and discovery.error are untouched (discovery stays outside the helper, see docs/decisions/mac-session-retirement.md)."
   }
 }
