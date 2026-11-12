@@ -145,3 +145,26 @@ null fractions: known starts can be counted, but the omitted facts make the
 all-start denominator unknown. The normal timer control now includes the older
 admission marker's expiry as its next wake-up, instead of assuming only data
 segments can expire. No retry-delay or byte-bound assertion is weakened.
+
+## Mark and data durability
+
+Run the joint lifecycle controls after reading the C3/C4 lifecycle table in
+docs/decisions/ui-speed/diag-recordings-report.md:
+
+```sh
+pnpm --filter @todo/domain test recording-durability.test.ts
+bun build --compile .agents/skills/verify-ui-profiler/scripts/durability-server.ts --outfile .scratch/bin/durability-server
+bun .agents/skills/verify-ui-profiler/scripts/durability.ts "$PWD/docs/evidence/ui-speed/recording-durability-new"
+```
+
+The verification-only server requires its owned scratch HOME/database. It uses
+the production file boundary and contains no production fault flag. Sixteen
+producer/CLI-import cases use a genuine marked export and SIGKILL before the
+mark, after the mark, after data publication and after acknowledgement. Partial
+temporary recovery cases construct a partial private temporary before SIGKILL;
+they do not claim to interrupt a kernel write or prove power-loss durability.
+Every restart/export is absent or marked, and exact retry commits one action.
+Permanent mark-write failure and one data-write failure also preserve the
+literal Task read and recover on explicit retry. The unit cross product covers
+present, absent and partial data with present, absent, partial and corrupt marks,
+then export, eviction and expiry. Two races cover refusal/new data during unlink.

@@ -167,9 +167,13 @@ export class DiagnosticRecordings {
         store.read(name),
       );
       for (const entry of store.entries)
+        store.admissions.merge(entry.run, entry.received);
+      for (const entry of store.entries)
         store.recoveredRuns.add(entry.run.run_id);
       store.trimIdentity();
       store.available = true;
+      for (const id of store.admissions.ids())
+        if (store.admissions.dirty(id)) await store.persistAdmission(id);
       await store.prune();
       await store.save();
     } catch {
@@ -387,7 +391,7 @@ export class DiagnosticRecordings {
   }
   private async persistAdmission(id: string) {
     const run = this.admissions.base(id);
-    if (!run) return;
+    if (!run || !this.admissions.dirty(id)) return;
     const cap = this.options.appBytes ?? recordingLimits.appBytes;
     const data = this.entries
       .filter((entry) => entry.run.app === run.app)
@@ -441,8 +445,11 @@ export class DiagnosticRecordings {
         (this.queued + bytes <= recordingLimits.queueBytes &&
           this.pendingIds.size < recordingLimits.pendingBatches));
     if (!dryRun) {
-      if (accepted && this.admissions.merge(batch.run, this.time()))
-        this.queueAdmission(run.run_id);
+      if (accepted) {
+        this.admissions.merge(batch.run, this.time());
+        if (duplicate && this.admissions.dirty(run.run_id))
+          this.queueAdmission(run.run_id);
+      }
       if (duplicate) this.loss.duplicate_batches++;
       else if (!accepted) {
         this.loss.dropped_batches++;
@@ -461,7 +468,18 @@ export class DiagnosticRecordings {
         const received = this.time();
         this.schedule(async () => {
           try {
-            const text = JSON.stringify({ received, batch: { ...batch, run } });
+            await this.persistAdmission(run.run_id);
+            if (this.admissions.dirty(run.run_id))
+              throw new Error("Admission changed before data publication");
+            const text = JSON.stringify({
+              received,
+              batch: {
+                ...batch,
+                run: this.admissions.base(run.run_id)
+                  ? this.admissions.describe(run)
+                  : run,
+              },
+            });
             const length = this.charge(
               new TextEncoder().encode(text).byteLength,
             );
@@ -610,9 +628,7 @@ export class DiagnosticRecordings {
       else this.loss.capacity_events += victim.events;
     }
     if (changed) this.trimIdentity();
-    await this.admissions.expire(
-      this.directory,
-      this.time(),
+    await this.admissions.expire(this.directory, this.time(), () =>
       this.activeRuns(),
     );
     return changed;

@@ -153,14 +153,34 @@ export class RecordingAdmissions {
         .map((state) => state.updated_at),
     );
   }
-  async expire(directory: string, now: number, active: ReadonlySet<string>) {
+  async expire(
+    directory: string,
+    now: number,
+    active: () => ReadonlySet<string>,
+  ) {
+    let retained = active();
     for (const [id, state] of this.states)
       if (
-        !active.has(id) &&
+        !retained.has(id) &&
         state.updated_at < now - recordingLimits.retentionMs
       ) {
-        await unlink(join(directory, `${id}.admission.json`));
-        this.states.delete(id);
+        try {
+          await unlink(join(directory, `${id}.admission.json`));
+        } catch (error) {
+          if (
+            !(
+              error instanceof Error &&
+              "code" in error &&
+              error.code === "ENOENT"
+            )
+          )
+            throw error;
+        }
+        retained = active();
+        if (this.states.get(id) === state) {
+          if (retained.has(id)) state.dirty = true;
+          else this.states.delete(id);
+        }
       }
   }
 }

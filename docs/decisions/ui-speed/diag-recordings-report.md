@@ -831,3 +831,76 @@ is claimed. Client adoption, native compilation/UI proof, terminal PNG rendering
 fresh Claude discovery, quiet-machine confirmation, hardware power-loss proof
 and allocation accounting remain unproven as stated above.
 
+## C3 and C4 durability correction of 241306a2
+
+C2 remains resolved. C1's null fractions are correct; the seat's corrected
+13-case identity witness is now the preservation control. The new failures are
+the ordering and recovery of a qualifying mark and its data, and idempotent
+expiry of a mark that never reached disk. Both unchanged compiled seat witnesses
+exit 1 before this correction. The import witness commits a data segment, returns
+500 again on exact retry after repair, then exposes clean fractions after SIGKILL.
+The expiry witness records ENOENT on three list queries and the fresh-run show.
+Receipts are retained under docs/evidence/ui-speed/recordings-durability.
+
+### Joint file lifecycle specification
+
+Data and its qualifying mark now share one atomic segment publication: the
+stored batch keeps the versioned run.admission snapshot. A separate checkpoint
+is still required for a refusal that admits no data, subsequent refusal counts,
+and uncertainty that must outlive segment eviction. One queue job writes the
+checkpoint first, checks that it is current, then writes the self-describing
+segment. A failed checkpoint cannot publish data. A failed data write may leave
+an incomplete, empty run, but no newly admitted events. Such a mark is not a
+successful batch acknowledgement. Explicit retries of dirty metadata schedule
+bounded work even if the incoming metadata is unchanged or its events duplicate
+retained events. There is no autonomous retry loop.
+
+This avoids replacing a run's entire retained history on every upload. Only
+marked segments gain a copy of their small allowlisted admission object; clean
+segments keep their existing encoding. Missing checkpoints can be reconstructed
+from those segment snapshots before reads become available. A corrupt published
+checkpoint fails closed; an uncommitted temporary is discarded. Atomic rename
+and file sync establish process-crash publication points. These tests do not
+claim hardware power-loss durability. Pre-fix segments that already lost all
+evidence of a mark cannot reveal facts that are no longer present; no recovery
+of that historical damage is claimed.
+
+In the table, data means newly submitted events, checkpoint means the per-run
+admission file, and marked means incomplete with null all-start fractions.
+Readers serialize behind pending writer work. File-state construction tests
+cover all three data states crossed with all four checkpoint states, then run
+export, eviction and expiry on the healthy states. Compiled producer and CLI
+import controls exercise every named publication point with the same genuine
+export from a refused run.
+
+| Lifecycle step / failure | Data file | Checkpoint | Reader / export result | Explicit retry | Control |
+| --- | --- | --- | --- | --- | --- |
+| Clean run admission | Existing clean encoding | None required | Ordinary observed summaries | Stored duplicate, no new events | Existing producer recipe |
+| Before marked admission starts | Absent | Absent | Absent after crash | Write checkpoint then data | before_mark, both surfaces |
+| Checkpoint write fails | Absent | Dirty in memory, absent on disk | Live marked empty run; 500 requires retaining entire batch; absent after a crash before persistence | Retry dirty checkpoint, then data | fail_mark, C3 witness, literal import unit |
+| Crash with partial checkpoint temporary | Absent | Uncommitted partial temporary | Temporary removed on startup; run absent | Fresh ordered publication | mark_temp, both surfaces |
+| Checkpoint durable, before data | Absent | Durable marked descriptor | Marked empty run; zero-event export | Publish data once | after_mark, both surfaces |
+| Data write fails | Absent | Durable mark, including counted failed submission | Marked empty run; no accepted events | Publish data once | fail_data, both surfaces |
+| Crash with partial data temporary | Partial temporary | Durable | Temporary removed; marked empty run | Publish data once | data_temp, both surfaces |
+| Data rename complete, before acknowledgement | Committed with mark snapshot | Durable | Marked 8 ms action; null fractions | Idempotent stored duplicate | after_data, both surfaces |
+| Crash after acknowledgement | Committed with mark snapshot | Durable | Same marked action after restart | Idempotent stored duplicate | after_ack, both surfaces |
+| Duplicate retry with a dirty later refusal | Old committed data retained | Dirty newer mark | Marked, never a complete comparison | Requeue mark once without duplicating data | Dirty-duplicate unit |
+| Checkpoint absent or partial temporary, qualified data retained | Committed with mark snapshot | Reconstructed and persisted at startup | Marked data; export preserves snapshot; repair failure withholds reads | Retry persistence after repair | File-state cross product |
+| Data absent or partial temporary, checkpoint retained | Absent after temporary cleanup | Durable | Marked empty run, zero-event export | Original data can be retried | File-state cross product |
+| Both files absent or only uncommitted temporaries | Absent after cleanup | Absent after cleanup | Run absent; no fabricated clean summary | Fresh publication | File-state cross product |
+| Published checkpoint corrupt | Any of the three data states | Invalid | Metadata queries/export refused, never a perfect result | Repair private metadata, reopen | Three corrupt-final cases |
+| Evict last retained data | Removed | Retained, charged and exportable | Marked empty run | Re-admit original facts without clearing mark | Healthy file-state cases and existing completeness recipe |
+| Expire inactive durable checkpoint | No data/pending references | Removed | Run absent; charge released | New admission follows ordinary policy | File-state day-8 cases |
+| Expire inactive checkpoint that never existed | Absent | Already absent | Success, state and charge released; fresh run stays readable | No repeated ENOENT | C4 witness and literal expiry unit |
+| Other unlink error | Unchanged | Retained in state | Counted failure, no false successful cleanup | Automatic retry after at least 60000 ms | Existing literal backoff and real expiry recipes |
+| New refusal arrives during old unlink | Unchanged | New state retained dirty | New counts survive | Persist newer state | Refusal/unlink race unit |
+| New qualifying data arrives during old unlink | Pending | State retained dirty after fresh active-reference check | No clean publication | Data job first restores checkpoint | Active/unlink race unit |
+
+Expiry treats only ENOENT as successful removal. It checks both the state
+version and current retained/pending references after asynchronous unlink. A
+new refusal cannot be deleted with its predecessor, and a new data job cannot
+inherit a forgotten mark. Other errors retain their counters and minimum
+one-minute backoff. The byte, run, queue, event and age caps remain in force.
+
+Gates, contract proof, costs and the final head are recorded below after execution.
+
