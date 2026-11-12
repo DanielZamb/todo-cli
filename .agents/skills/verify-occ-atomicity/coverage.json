@@ -1,9 +1,9 @@
 {
-  "confirmedCommit": "7a90388d246e6c03f975d82c164c3e589cf15c7d",
+  "confirmedCommit": "219749f2ab4ed40fdf7f257c991385a2057bf215",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "091405e6bc9d6173c80e292f2f2f9ed1053b5b8e156dd3bbb37ef6e953f27765",
+      "sha256": "bfcc3d468f001ad316cc0be532b7663f526b2ca546618355baf032db7b3f0757",
       "functions": [
         "OperationStore.constructor",
         "OperationStore.transaction",
@@ -108,7 +108,7 @@
     }
   ],
   "reviewedCandidate": false,
-  "review": "SERVER-READS: every mapped body including constructor, transaction, historySync, validation, append, rejection, checkpoints and replay is byte-identical. Profile graph SELECT and committedHistory are outside the mapped functions. Existing mapped bodies only moved lines. No model, configuration, invariant, fixture, event or writer change.",
+  "review": "SERVER-READS authorization revision: constructor, transaction, historySync, record/rejection, validation, append, checkpoint and replay mapped bodies remain byte-identical to 98511eff. Imports and nominal read wrappers are outside the mapping. Body equality receipts precede renewal. No model, configuration, invariant or writer change.",
   "integrationReview": {
     "base": "8ef210ff08532419123653757313c5ef97201e98",
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",

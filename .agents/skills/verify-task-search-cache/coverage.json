@@ -1,6 +1,6 @@
 {
-  "productCommit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
-  "scope": "Reviewed integrated exact-text memo and erasure mapping; current generated controls and restoration precede renewal. Complete model/admission/compiled lifecycle command follows; no performance retiming.",
+  "productCommit": "219749f2ab4ed40fdf7f257c991385a2057bf215",
+  "scope": "Reviewed immutable 219749f2 authorization read boundaries; full cache command follows mapping renewal; no performance claim from these properties.",
   "seed": "0x5ea2c001",
   "files": [
     {
@@ -17,22 +17,22 @@
     },
     {
       "path": "commands.ts",
-      "sha256": "69f21856b32d60483a9e22fa83144e950e4dbe47524a3680bb0744225f365617"
+      "sha256": "2d0858f602286357e546104bbf1ee026d6ce3b2458f0c7685b321b68d1ea6ef5"
     },
     {
       "path": "store/store.ts",
-      "sha256": "9cbc8b8a2920b91f8cfc0e2137ade7d4ba11a28f7ad6c16fd29b4450d54cbc71"
+      "sha256": "bfcc3d468f001ad316cc0be532b7663f526b2ca546618355baf032db7b3f0757"
     },
     {
       "path": "store/snapshots.ts",
-      "sha256": "14774139fc4c323eedd7d2b31f28182b0b447a4b776bad1e58b354b434b1adb8"
+      "sha256": "6c05980e3b6ad904a2a24d8f96f8e489589fd6f61aae47ddf092cbf224478e0d"
     },
     {
       "path": "store/search-cache-events.ts",
       "sha256": "4f0276e1953a56db0a31844c51faec02835eea134b04a06ed2ba6e9231d6d600"
     }
   ],
-  "review": "Only commands.ts changes among covered cache files, adding confirm_from_version after a successful Delete simulation. Read capture/prepare, epochs, keys, finalizers, hygiene and Tag projection remain unchanged. Seven fresh real-source cache controls failed intended assertions, restored byte-exactly and passed clean/strict checks before the old commands.ts hash stopped the initial run. No timings or memory measurements are renewed.",
+  "review": "Read continuations bind Profile and parsed fields before hooks. Both list/readTasks memo tokens remain before authentication, with the same prepare callback position and exact source text. Matcher, work meter, runner, cache/accounting/admission, erasure and observer bodies are unchanged. Seven real cache controls failed their intended literal assertions and restored/typechecked before this mapping renewal; observer controls likewise restored and strictly checked. No model change.",
   "reviewedCandidate": true,
   "hygieneFiles": [
     {
@@ -41,7 +41,7 @@
     },
     {
       "path": "apps/server/src/server.ts",
-      "sha256": "45a392a51249de8330df1a2a95ef11f2ae223c2dc7718c98c65308ded34e7120"
+      "sha256": "05b5573d8f4234080b37fe5dd2aaea41cb53be76aeeeb9920e7d9c4651d62059"
     },
     {
       "path": "packages/domain/src/store/search-cache-events.ts",
@@ -49,15 +49,15 @@
     },
     {
       "path": "packages/domain/src/store/snapshots.ts",
-      "sha256": "14774139fc4c323eedd7d2b31f28182b0b447a4b776bad1e58b354b434b1adb8"
+      "sha256": "6c05980e3b6ad904a2a24d8f96f8e489589fd6f61aae47ddf092cbf224478e0d"
     },
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "9cbc8b8a2920b91f8cfc0e2137ade7d4ba11a28f7ad6c16fd29b4450d54cbc71"
+      "sha256": "bfcc3d468f001ad316cc0be532b7663f526b2ca546618355baf032db7b3f0757"
     },
     {
       "path": "apps/cli/src/main.ts",
-      "sha256": "f7e46eefdeb3b10a8679681662e3c4d7141bba7b015182e0a4805b92196ad72a"
+      "sha256": "80b566dcc15c7dab00008363da720ede4b01078534b03115510d688ce28fb64b"
     }
   ],
   "integrationReview": {
@@ -82,7 +82,7 @@
       "result": "Three intended observer controls1, restored0, strictTypecheck0; real compiled CLI defect1/runtime_error and typed refusal2 proved before renewal"
     }
   },
-  "previousProductCommit": "97eb40021812cba9fdae76471328b890db239349",
+  "previousProductCommit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
   "clientIntegrationReview": {
     "product": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
     "main": "2c488fc72fe264741d5d8db8f90b441bf426af32",
@@ -99,5 +99,20 @@
     "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
     "changes": "Delete preview adds accepted request Version; batch item code/schema becomes occ_conflict only. Store, graph algorithms, events, transaction and matcher bodies unchanged. New clients retain request-time getters, source identities and catalog debt. PR12 exact56pt/px Import layout composes with the same structured Dependency projector.",
     "limits": "Finite models and manual function mapping; native signing, storage, Keychain, Session persistence, real OS dispatch and VoiceOver remain held."
+  },
+  "authorizationReadReview": {
+    "product": "219749f2ab4ed40fdf7f257c991385a2057bf215",
+    "changes": [
+      "commands.ts",
+      "store/store.ts",
+      "store/snapshots.ts"
+    ],
+    "controls": "docs/evidence/perf-cache/generated-sYh21P/behavior-result.json",
+    "hygiene": [
+      "hygiene-Oi1xF3"
+    ],
+    "scope": "Only caller binding and nominal wrappers affect covered files. Epoch-before-auth, both preparation hooks, invalidation, accounting, source-text keys and finite models are retained.",
+    "fullResult": "docs/evidence/perf-cache/verify-Xh1k3D/result.json",
+    "result": "Complete properties, hygiene, admission model/code, compiled lifecycle, erasure and CLI defect command exited 0 on immutable product 219749f2."
   }
 }
