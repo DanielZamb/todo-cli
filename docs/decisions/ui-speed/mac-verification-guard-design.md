@@ -96,6 +96,7 @@ reusable input/control, not evidence of execution unless its receipt exists.
 | Direct file reads | Correct manifest coexists with arbitrary path reads by a shared screen | Deny general file reads except scratch, own bundle and system resources; synthetic outside-file control |
 | Outbound sockets | Health is safe but later generated calls reach another port | Same sandbox inherited for lifetime, origin check and unrelated live listener; network-rule red control |
 | Subprocesses | A checked path is resolved through inherited PATH/config | Absolute immediate executable paths and environments built from scratch; policy test and inheritance red |
+| Compiled Bun configuration | The binary reintroduces environment/configuration from its working directory despite a fresh inherited environment | bun-config-control's scratch .env/bunfig cases; explicit no-autoload/no-config compiler policy is written but must follow the default-loading red before being wired |
 | Local owner input | Modifier/key-up/drag type is absent from the mask | Literal full exposed NSEvent type list; delivered type 10/12 controls and modifier-mask removal |
 | Global owner input | Local monitor cannot see another application's events | Global monitor installed before a window; unavailable permission/registration refuses; independent HID watch |
 | Busy UI thread | Main-thread timers cannot run to notice owner activity | 50 ms background Dispatch timer samples combined-session-any-event and IOKit HID idle; busy-main injected-HID control/red |

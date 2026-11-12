@@ -119,6 +119,16 @@ must first reproduce its missing behavior with parent-death-driver --before,
 then pass after implementation. The visible gate explicitly requires that
 proof, so this source draft cannot produce a complete visible receipt yet.
 
+The no-build audit during the hold found another MV-S1-1 case to qualify.
+Local Bun help reports that standalone .env and bunfig.toml autoloading default
+to true, matching [Bun's documented standalone configuration behavior](https://bun.sh/docs/compiler/executables).
+The inherited environment alone therefore does not establish the claimed
+configuration boundary. bun-config-control.mjs now defines synthetic runtime
+and compiler configuration probes. Its default-loading red is written but
+unrun, as is the explicit no-autoload/no-config policy. That policy has not
+yet been wired into compiler invocations. No credential, network or owner-data
+probe is needed for these controls; they use scratch markers only.
+
 ## Seven findings and current evidence
 
 The full independent review and urgent probes were read. Each original reviewer
