@@ -141,7 +141,11 @@ final class TodoModel {
         case general, connection, restore, signIn, sessionEnded, signOut, transition, delete, dependencyFollowUp, discoveryShow
         /// What a successful restore or sign-in makes untrue.
         static let session: Set<MessageKind> = [.restore, .signIn, .sessionEnded, .connection]
+        /// The banner's one control for a message of this kind. A reconnect clears only connection
+        /// messages, so every other kind offers Dismiss instead.
+        var bannerControl: MessageBannerControl { self == .connection ? .reconnect : .dismiss }
     }
+    enum MessageBannerControl: Equatable { case reconnect, dismiss }
     /// The sheet or dialog instance that raised the message. Each opening is a new instance;
     /// the message ends when that instance closes. Discovery Show is not one: its dialog closes
     /// before the request, so its error belongs to the main window.
@@ -186,6 +190,9 @@ final class TodoModel {
         guard message != nil, let kind = messageKind, kinds.contains(kind), messageSequence <= mark else { return }
         message = nil
     }
+    /// The person dismissed the message numbered `sequence` (the one the banner showed). Like the
+    /// other ends, it ends that message and nothing newer.
+    func dismissMessage(_ sequence: Int) { if message != nil, messageSequence == sequence { message = nil } }
     /// A credential or Profile change ends any message.
     func endMessage() { if message != nil { message = nil } }
     /// A closed sheet or dialog ends the message it raised.

@@ -1188,3 +1188,22 @@ func deleteNeverAcceptsPreviewOrForeignRepliesAsConfirmedSuccess(reply: String) 
     gate.renew()                     // and opened again
     #expect(!gate.owns(first) && !gate.owns(second) && gate.owns(gate.opening), "only the current opening acts")
 }
+
+@Test @MainActor func onlyConnectionMessagesOfferReconnectAndEveryOtherKindCanBeDismissed() {
+    typealias Kind = TodoModel.MessageKind
+    #expect(Kind.connection.bannerControl == .reconnect, "a reconnect clears connection messages")
+    for kind: Kind in [.general, .restore, .signIn, .sessionEnded, .signOut, .transition, .delete, .dependencyFollowUp, .discoveryShow] {
+        #expect(kind.bannerControl == .dismiss, "\(kind): a reconnect does not clear it, so the banner offers Dismiss")
+    }
+}
+
+@Test @MainActor func dismissingEndsTheShowingMessageAndNeverANewerOne() {
+    let model = TodoModel(configuration: .init(server: URL(string: "http://127.0.0.1:1")!, initialProfile: "work", vaultService: "unused-dismiss"), catalogNotifications: NotificationCenter(), wakeNotifications: NotificationCenter())
+    model.publishMessage("The Task changed. Close and reopen it before trying that action again.", kind: .transition)
+    let shown = model.messageSequence
+    model.publishMessage("Couldn't sign out. The server rejected this request (HTTP 503).", kind: .signOut)
+    model.dismissMessage(shown)
+    #expect(model.message == "Couldn't sign out. The server rejected this request (HTTP 503).", "a dismiss aimed at an older message leaves the newer one")
+    model.dismissMessage(model.messageSequence)
+    #expect(model.message == nil && model.messageKind == nil, "dismissing the showing message ends it")
+}

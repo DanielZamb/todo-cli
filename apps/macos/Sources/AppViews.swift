@@ -588,15 +588,7 @@ struct TaskListView: View {
                 }.padding(12)
             }
             if let message = model.message {
-                if model.lookupError(at: .message, text: message) != nil {
-                    ClientErrorNotice(model: model, text: message, position: .message).padding()
-                } else {
-                    HStack {
-                        Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(TodoColors.color("destructive"))
-                        Spacer()
-                        Button("Retry") { model.connect() }
-                    }.padding()
-                }
+                MessageBanner(model: model, message: message, sequence: model.messageSequence, control: (model.messageKind ?? .general).bannerControl)
             }
             if model.loading && model.appliedSearchSnapshot == nil {
                 ProgressView("Loading tasks…").frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1031,6 +1023,41 @@ struct QuickAddView: View {
             }
         }
     }
+}
+
+/// The main window's message banner. Connection messages keep one button, Reconnect; every other
+/// kind has a trailing Dismiss button, because a reconnect would not clear it. The message reads as
+/// one accessibility element and is announced when it appears. No time limit for errors.
+struct MessageBanner: View {
+    let model: TodoModel
+    let message: String
+    let sequence: Int
+    let control: TodoModel.MessageBannerControl
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Group {
+                if model.lookupError(at: .message, text: message) != nil {
+                    ClientErrorNotice(model: model, text: message, position: .message)
+                } else {
+                    Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(TodoColors.color("destructive"))
+                        .accessibilityLabel(spoken)
+                }
+            }.accessibilityElement(children: .combine)
+            Spacer()
+            switch control {
+            case .reconnect:
+                Button("Reconnect") { model.connect() }.accessibilityIdentifier("message-reconnect")
+            case .dismiss:
+                Button { model.dismissMessage(sequence) } label: { Image(systemName: "xmark") }
+                    .buttonStyle(.borderless).help("Dismiss").accessibilityLabel("Dismiss message").accessibilityIdentifier("message-dismiss")
+            }
+        }.padding()
+            .onAppear { announce() }
+            .onChange(of: sequence) { _, _ in announce() }
+    }
+    /// Connection messages describe a state ("… The live view is reconnecting."); the others are errors.
+    private var spoken: String { control == .dismiss ? "Error. " + message : message }
+    private func announce() { AccessibilityNotification.Announcement(spoken).post() }
 }
 
 /// The view side of quick-add's instance rule. The menu-bar window has no model instance, so its

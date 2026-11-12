@@ -119,7 +119,11 @@ The rule, as ruled on 2026-11-11:
 3. Of those, it clears only the kinds its success makes untrue (table below).
 4. A message also ends when a newer message replaces it, or when the credential
    (`replaceCredential` with a different value) or the Profile (any change of
-   `profile`) changes.
+   `profile`) changes, or when the person dismisses it. Dismiss
+   (`dismissMessage(_:)`, ruled 2026-11-12) ends the message the banner showed
+   at that moment and nothing newer. The banner offers Reconnect for
+   connection messages only, because a reconnect clears only those; every
+   other kind offers Dismiss.
 5. Nothing saves or restores a message. An older message never comes back.
 6. Every kind has a success that clears it in ordinary use (table below).
 7. A surface is an instance: each opening of a sheet, picker or dialog gets a
@@ -211,6 +215,9 @@ no longer depends on the stream being live.
 | `dependencyFollowUp` | Dependency follow-up Task read failure | A later successful follow-up | Yes: the same picker action |
 | `discoveryShow` | Discovery Show failure | A later successful Show | Yes: Show from Look up Task |
 | `general` | Direct assignments only. No production writer remains. | Only rule 4 | Not used by production code |
+
+Every kind except `connection` can also be ended by the person with the
+banner's Dismiss button; `connection` keeps Reconnect.
 
 No refresh kind exists. Catalog and search failures publish to `searchError`
 and `taskLoadError`, which their own next read replaces, never to `message`.
