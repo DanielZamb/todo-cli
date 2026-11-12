@@ -144,6 +144,39 @@ Publication to layout was 132 ms with three rows, so for selection the list's si
   on b882483b and after the stall attribution Swift work has had its short
   runs.
 
+## Result: the cost of stall attribution on selection (approved run b, 2026-11-12)
+
+The candidate 8 head e484efc6 against the same head with the stall
+attribution, observed events and both link-register commits reverted
+(`measure/c8-observation-off`, 0ed0c30d, measurement only). Command:
+`run.py <evidence> --selection-press --selection-variant offscreen --ref e484efc6
+--ref measure/c8-observation-off --runs 5 --owner-fixture --owner-preflight`.
+There were five pairs, and the order alternated within each pair. The owner
+preflight admitted every cell; load was recorded per cell; each session had 21
+clicks, the first one cold. The evidence is in
+`docs/evidence/mac-perf/c8/selection-ab-e484efc6/` (local, with the harness
+source it ran).
+
+| Pair | Load at start, on / off | Press to layout, on / off (median ms) | Difference |
+| --- | --- | --- | --- |
+| 0 | 6.0 / 5.0 (off peaked at 13.6) | 98.7 / 184.9 | load spike in the off cell |
+| 1 | 5.5 / 5.9 | 90.6 / 87.8 | +2.8 |
+| 2 | 4.6 / 4.4 | 92.8 / 89.5 | +3.2 |
+| 3 | 3.9 / 4.1 | 92.3 / 99.2 | −6.9 |
+| 4 | 4.3 / 4.4 | 91.7 / 92.5 | −0.8 |
+
+- **Press to layout.** Median of the pair differences: −0.8 ms. Pooled warm
+  clicks without pair 0: 92.2 ms on, 91.5 ms off (+0.7 ms, n = 80 each). Both
+  are under the 2 ms limit. A single pair moves by ±3 to 7 ms, so this run
+  resolves the cost to within a few milliseconds, not to a fraction of one.
+- **Body counts.** List bodies were 2 per click in every session. Row bodies
+  had a median of 26–30 per click in both arms; pair 0's on cell had 36, under
+  the load spike.
+- **Delivery.** Every click settled in both arms (21 of 21 in each of the ten
+  sessions).
+- **Idle.** No session recorded a stall, so the sampler took no sample. Idle
+  with no sampling is proven by the state tests.
+
 ## Stall attribution: the link-register rule (coordinator ruling, 2026-11-12)
 
 A stall's `in` label comes from the frame-pointer walk of each sample. A leaf

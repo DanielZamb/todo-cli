@@ -58,8 +58,10 @@ and long content scrolling inside its body.
 Ruling 4 (accessibility: combine only the Label; announce once per sequence)
 has no visual state; its state tests cover it.
 
-Wording note for the seat (D2): when the parts share a reason, the merged
-message repeats the single-Task sentence ("This Dependency would create a loop.
-Choose another Task.") after a count of two. The coordinator's example used a
-plural form ("Each would create a cycle."). Plural sentences per code would need
-new wording; that is the seat's call.
+Wording note for the seat (D2, as ruled on 2026-11-12): a merged message never
+carries a singular reason. When every part was refused with the same code and
+that code has a plural sentence, the merged message closes with it, for example
+"Each would create a loop. Choose other Tasks." Any other mix closes with "Try
+each again to see why." in the picker or "Open each Task's Dependencies to see
+why." in the banner. The sentences are in `MergedFailureWording.pluralReasons`;
+the final words are the seat's.
