@@ -264,7 +264,7 @@ for ref, sha in refs.items():
         value = view.read_text(); marker = '.onChange(of: selection) { old, id in'
         assert value.count(marker) == 1
         value = value.replace(marker, '.onReceive(NotificationCenter.default.publisher(for: Notification.Name("MacPerfSelectTask"))) { message in selection = message.object as? String }\n                    ' + marker)
-        for struct_marker, call in [('struct TaskListView: View {', 'PerfSelectionTrace.listBody()'), ('struct TaskRow: View {', 'PerfSelectionTrace.rowBody()')]:
+        for struct_marker, call in [('struct TaskListView: View', 'PerfSelectionTrace.listBody()'), ('struct TaskRow: View', 'PerfSelectionTrace.rowBody()')]:
             start = value.index(struct_marker); body = value.index('    var body: some View {\n', start) + len('    var body: some View {\n')
             value = value[:body] + '        let _ = ' + call + '\n' + value[body:]
         view.write_text(value)
