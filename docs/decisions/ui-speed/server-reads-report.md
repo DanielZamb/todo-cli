@@ -1,5 +1,116 @@
 # Server projection reads
 
+## S1-C3 lifetime audit, implementation held
+
+Audited product: `a7e0ed0e64de3403d51511aa50fc4135a58d6c85`. S1-C3 remains open. No production source, authority semantics, transaction mode, API contract, proof mapping or test assertion was changed. This delivery records the required finding before implementing a lifetime guard. S1-C1 and S1-C2 remain the previous closed work; the sections below are their historical delivery record.
+
+The coordinator required: "If any ordinary request path would now fail closed, that is a finding to report to me before you change its behaviour." The compiled control proves that condition. Twelve successful ordinary call variants create their authority inside a SQLite transaction, then inspect it with no transaction active. Adding only the required lifetime check would make these requests fail with the existing generic storage error. This affects valid list/search, Show, graph, views, shared CLI reads, managed images, import preview, owner Snapshot list/Show and Quick-add. Implementing that behavioral change before reporting would violate the requested hold point.
+
+### Failing-first reproduction
+
+The seat's retained-authority.ts was copied byte-for-byte unchanged, cmp exit 0, into this worktree's private scratch directory. Its relative imports resolve this product. Its fixture manifest already refers to this worktree's scratch-only mini fixture. Compile exits 0; run exits 1 at the literal forbidden-Task assertion. After the real Token revocation, the owner creates aa-after-revocation. Retained graphRead returns it, changesRead and Task History return its TaskCreated at seq 12, and a fresh public list correctly fails as revoked. All selectors are Work/read-only. This independently reproduces the retained-authority leak and is not a claim of a remote HTTP exploit.
+
+The unchanged probe also calls changesRead immediately after authorizeRead to obtain its initial cursor. That is already outside the creating transaction. Under the new ruling it should refuse there, before reaching revocation, so later lifetime controls must arrange any legitimate initial query in a live checked scope. The future unchanged probe's expected refusal is not a successful run today.
+
+### Compiled observation of ordinary requests
+
+The observer compiles the real domain code with two observational hooks. The authority constructor and inspector record only case name, kind, phase and SQLite Database.inTransaction. The existing search scheduler checkpoint records when its real setImmediate callback runs. No guard, credential lookup, SQL, returned row, transaction or search algorithm is replaced. Tests use literal Work Task ids ab-0, ab-2 and ab-4, literal Show id, absent image, Snapshot id and directory/lookup Profile/Task ids. The long-description search commits one scratch Task and returns only audit-yield, with 56 actual scheduler checkpoints. Final observer build/run both exit 0. All 18 calls succeed on the current product.
+
+| Successful ordinary call | Authority created inside transaction | Inspections outside transaction | Inspections inside transaction | Search checkpoints |
+| --- | --- | ---: | ---: | ---: |
+| list | yes | 2 | 1 | 0 |
+| search | yes | 2 | 1 | 3 |
+| show | yes | 2 | 1 | 0 |
+| graph | yes | 2 | 1 | 0 |
+| view | yes | 1 | 1 | 0 |
+| cli-readTasks | yes | 2 | 1 | 0 |
+| image | yes | 3 | 1 | 0 |
+| import-preview | yes | 2 | 1 | 0 |
+| snapshot-list | yes | 1 | 0 | 0 |
+| snapshot-show | yes | 1 | 0 | 0 |
+| quick-add | yes | 1 | 1 | 0 |
+| history | yes | 0 | 1 | 0 |
+| projects | yes | 0 | 1 | 0 |
+| tags | yes | 0 | 1 | 0 |
+| profiles | yes | 0 | 1 | 0 |
+| directory | yes | 0 | 2 | 0 |
+| lookup | yes | 0 | 2 | 0 |
+| search-yield | yes | 2 | 1 | 56 |
+
+An outside inspection is sufficient to show the new lifetime rule would refuse: the authority's creating transaction has ended and there is no current transaction in which it could have been rechecked. It is not an assertion that a new guard has already been implemented or tested. Nested Discovery checks remain inside the physical deferred snapshot. Search processing yields after row materialization with no live authorization transaction; it does not currently perform a later port recheck.
+
+### Caller lifetime audit
+
+Locations in the table are relative to packages/domain/src unless prefixed apps/. The complete 186-site read-port caller inventory in the S1-C2 section remains applicable because product sources are identical. This table adds the creating/consuming transaction and recheck audit for every authority-bearing caller family, including longer command continuations.
+
+| Caller family | Production locations | Current lifetime | Recheck today | Finding under the ruling |
+| --- | --- | --- | --- | --- |
+| Task list and text search | commands.ts:358-386 | readMetadata commits, then checkRead and graphRead run outside it. Text matching runs after graph materialization and can yield. | None. The observer records three checkpoints for the small query and 56 for the long-description query. | Would refuse before graph query; pure filtering could stay outside after rows/filters are materialized inside the checked transaction. |
+| Shared CLI Task reads | commands.ts:155-210; apps/cli/src/main.ts:708 and subsequent readTasks callers | readState commits, then checkRead/graphRead run. Export, review, list and shared mutation preparation use this helper. | No retained-authority recheck. Each new helper call authorizes afresh, but its returned authority already escapes that transaction. | Would refuse ordinary CLI reads and write preparation that uses them. |
+| Show and Missing-Task recovery | commands.ts:393-430; task-lookup-error.ts:50-63; server.ts:673-689 | readOne leaves readMetadata, then inspects authority and queries graph. Recovery inspects the same authority later. | None. | Would refuse successful Show as well as affected error recovery. |
+| Dependency graph | graph-queries.ts:137-150; server.ts:620-635 | authorizeRead returns after its transaction, then checkRead and graphRead run. | None. | Would refuse ordinary graph reads. |
+| Planning views | client-reads.ts:92-107 | readCatalog obtains all rows inside auth transaction, but returns an authority inspected afterward to select fields. | None; later view computation uses already materialized rows. | checkRead would refuse before view construction, even though the catalog SQL itself ran in the checked transaction. |
+| Managed Attachment image bytes | attachment-commands.ts:466-491; server.ts:519-540 | readOne already crosses the boundary; imageRead inspects again and reads managed bytes afterward. Server recovery also inspects after the call. | None. | Would refuse. Keep image selection and the required file read inside an authorized read scope, rather than silently allowing a retained capability. |
+| Snapshot list and Show | store/snapshots.ts:273-283; server.ts:1014-1034; apps/cli/src/main.ts:2259-2264 | ownerRead commits before listRead/showRead. Each raw Snapshot method opens another transaction after its authority check. Snapshot Show reads its manifest/files. | None. | Would refuse ordinary HTTP and CLI Snapshot reads. This is a real crossing, not just a yielding-search issue. |
+| Quick-add parse | server.ts:886-906 | subscribe returns after its check transaction; checkRead then extracts the bound parser fields outside it. | None. | Would refuse a valid ordinary Quick-add parse before its pure parser runs. |
+| Import preview and apply | import-tasks.ts:45-56, 148, 222, 337 | Initial readState commits before checkRead/graphRead. Apply can reuse the original read for graphRead after intervening accepted writes. | No recheck of the retained graph authority. Later auth.read(request) calls authorize afresh, but do not renew that retained value. | Would refuse preview and early apply. The post-write graph reread additionally needs an explicit later-transaction recheck. Dry-run import still requires a write-scoped credential on the base. |
+| Transfer metadata, Revert and invalid-Version recovery | commands.ts:1208-1217, 1467-1487, 1761-1774 | Each captures readState and consumes its authority after that transaction; transfer also passes targetRead to the existing metadata helper after a second readState. | None. | Would refuse these ordinary command preparations/recovery paths. Copy bound plain selectors while in scope, then run a later authorized query only in a valid new scope. |
+| Discovery directory and prefix lookup | discovery.ts:40-94; auth.ts:885-935 | readSnapshot holds one physical deferred SQLite transaction through Effect.runSyncExitWith. Nested auth boundaries use transaction: run => run(). Authorities are created and consumed inside it. | Directory/lookup finish with auth.profiles; per-Profile catalog/metadata checks run inside the same outer snapshot. | No observed expired use. Do not advance a lifetime serial for nested pass-through checks or SAVEPOINTs as though they committed the physical outer transaction. |
+| Projects, Tags, Profile summaries and ordinary Task History | auth.ts:1082-1129; client-reads.ts:79-84, 151-152 | Projection or taskHistory callback runs before the creating auth transaction returns. Results leave as data, not authority for another query. | No extra check needed for that same transaction. | These ports already run in their creating transaction. Raw taskHistory supplied an escaped authority remains unsafe, as the seat probe demonstrates. |
+| SSE subscription and polling | apps/server/src/sse.ts:26-106, 122-147 | Subscription authority escapes immediately. The 250 ms poll queries generation and changes before running recheckRead. recheckRead calls authenticate in a separate transaction which also ends before returning. | Per-poll recheck exists, but follows changesRead and is skipped for a batch containing ProfileDeleted. It does not provide a live transaction scope to the query. | A strict guard would reject initial checkRead or the first poll. Stamp-only recheck is insufficient if its own transaction ends before the query. Poll recheck and query need one live scope. |
+| SSE restore transition | apps/server/src/sse.ts:63-79; apps/server/test/sse.test.ts:288-334 | On generation change, the base emits reload and retains the same authority for later polls. | No renewal in the generation-change branch. The next ordinary poll rechecks credentials after reading. | A generation-bound authority cannot simply be restamped across restore. A fresh authorized scope/value is needed after reload if credentials and Profile remain valid. |
+
+### Binding terminal-frame constraint
+
+[ADR-0010](../../adr/0010-profile-deletion.md) states: "An already connected owner Session receives the ProfileDeleted SSE operation before the stream closes." Profile deletion writes TaskDeleted and ProfileDeleted, the tombstone, and scoped Token revocations atomically. The current poll reads that committed batch, intentionally skips its credential recheck if ProfileDeleted is present, emits the batch, and rejects the next ordinary poll. This terminal frame is already required by the ADR and the requested base frame parity. The earlier compiled Profile recipe's profile-deleted.sse receipt demonstrates that existing owner-Session frame; it is historical evidence, not a new lifetime-fix run.
+
+A new query which requires the Profile still to be active and authorized cannot read that committed ProfileDeleted row after the same commit tombstones the Profile. Moving the current recheck before changesRead would remove the required owner-Session terminal operation. Keeping the current post-read exception would leave the query-port lifetime rule unenforced. I have not invented a terminal-query exception, borrowed owner authority, weakened the Profile check or changed the required frame. This requires a coordinator ruling for the terminal notification mechanism before implementation. No ADR was changed or superseded.
+
+[ADR-0012](../../adr/0012-owner-snapshots.md) also requires restore reload followed by delivery from its restore boundary. The current stream retains one authority across restore. A fixed stream must acquire a new authority for the new generation after reload when the credential and Profile remain valid, rather than renewing an old-generation value. The unchanged baseline SSE suite passes all four tests, including ordered delivery, revocation failure/closure and both-Profile restore reload/delivery. This is baseline evidence only, not post-fix frame parity.
+
+### Smallest proposed implementation, not applied
+
+Keep the private brand, origin, kind, immutable selectors and frozen class/payload. Add a private active transaction lease and restore-generation binding. Reject a query authority after its lease ends, even before an unrelated transaction begins. Incrementing a serial only when another transaction starts would leave a gap after commit. A later recheck must validate and query inside the same still-active physical transaction; returning from an independent authenticate transaction is not enough.
+
+Use a synchronous checked-read callback to obtain metadata, graph rows and owned filter/selection values within the existing credential-check transaction. Ordinary requests should perform one credential lookup. Run yielding search, pure view/Quick-add processing, encoding and rendering on those materialized values afterward. Owner Snapshot and managed image reads need the same live checked scope around their storage access. Import's later post-write graph queries need explicit rechecked scopes. Discovery must retain its one deferred snapshot with nested pass-through checks. Preserve immediate/deferred modes and the writer/replay model; changing a transaction's extent is an implementation change to review and verify, not something this audit silently made.
+
+For SSE, a scoped poll must combine recheck and query and preserve its cursor. Restore requires fresh authority. The terminal ProfileDeleted rule above needs resolution first. Until then, neither a public-path regression nor an exception to the query-port lifetime rule is authorized by this report.
+
+### Commands, real exits and remaining work
+
+Evidence is private and ignored under `docs/evidence/ui-speed/server-reads/authority-lifetime`. All databases, credentials, Snapshot files and the extra search Task are scratch-only. The first observer run failed with write_scope because it used the read-only Token for import preview; the base requires write scope even for dry-run. The second run used the owner Session for that call and passed. The third adds real search checkpoint observations and the yielding search and passes. This fixture correction changes no product authorization behavior.
+
+| Exact invocation | Real exit |
+| --- | ---: |
+| `bun build --compile .scratch/review-correction2/retained-authority.ts --outfile .scratch/bin/retained-authority-before` | 0 |
+| `.scratch/bin/retained-authority-before` | 1, forbidden post-revocation Task returned |
+| `cmp .scratch/review-correction2/retained-authority.ts <seat-unchanged-source>` | 0 |
+| `bun .scratch/review-correction2/build-transaction-audit.ts`, first / second / third builds | 0 / 0 / 0 |
+| `.scratch/bin/read-transaction-audit` | 1, import preview refused write_scope |
+| `.scratch/bin/read-transaction-audit-2` | 0 |
+| `.scratch/bin/read-transaction-audit-3` | 0 |
+| `pnpm --filter @todo/server test sse.test.ts` | 0, four baseline tests |
+
+| Receipt | Real exit |
+| --- | ---: |
+| `delivery-disk` | 0 |
+| `probe-before` | 1 |
+| `probe-build-before` | 0 |
+| `probe-source-compare` | 0 |
+| `sse-baseline` | 0 |
+| `transaction-audit-2` | 0 |
+| `transaction-audit-3` | 0 |
+| `transaction-audit-build-2` | 0 |
+| `transaction-audit-build-3` | 0 |
+| `transaction-audit-build` | 0 |
+| `transaction-audit` | 1 |
+
+The lifetime implementation, all-port revocation/expiry/deletion/restore/Purge/unrelated-request matrix, positive scoped-recheck control, post-fix SSE frame parity, root order-27 check, AtomicCAS, Task search cache, 57-fixture parity, both mutation modes, interleaving, zero-decode sweep and paired cost comparison remain pending. The earlier C2 passes below do not qualify S1-C3. No full gate was rerun to imply closure while the required implementation is held. The contract remains 78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289.
+
+Observer scratch directories were removed after each run. Cleanup removed 4 closed owned Bun runtime copies, 354643456 bytes, after lsof checks. Two superseded observer binaries were retired by hash only after lsof showed no open file; the failing retained-authority binary and final observer remain for review. Free space was 34.3 GB. No child agents, real Todo database, native app, Swift, Keychain, signing, push, merge or PR was used. The implementation is stopped at the requested ordinary-path finding and binding terminal-frame constraint.
+
+## Previous delivery record
+
 ## Runtime authority repair, S1-C2
 
 Product: `ade8f941f3d15c61cffdb58d45114b4ababbcc5e`. Previous delivery: `1c5413cb94210b1ae00b6b70b90b6091ddfabf98`. Contract remains `78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289`. This section supersedes the earlier nominal-authority description; earlier measurements and attempts remain historical below.
