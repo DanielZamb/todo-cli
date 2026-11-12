@@ -32,7 +32,7 @@ export async function qualifyServerBoundary({ evidence, fixture, sourceHead, dev
         child.stdout.on('data', value => stdout += value);
         child.stderr.on('data', value => stderr += value);
         stopped = new Promise((resolve, reject) => { child.on('error', reject); child.on('close', (status, signal) => resolve({ status, signal })); });
-        for (let i = 0; i < 1000 && child.exitCode === null && child.signalCode === null && !stdout.includes('Listening on '); i++) await new Promise(resolve => setTimeout(resolve, 10));
+        for (let i = 0; i < 6000 && child.exitCode === null && child.signalCode === null && !stdout.includes('Listening on '); i++) await new Promise(resolve => setTimeout(resolve, 10));
         const rows = stdout.split('\n').filter(line => line.startsWith('boundary-proof ')).map(line => JSON.parse(line.slice(15)));
         const finished = stdout.split('\n').find(line => line.startsWith('boundary-complete '));
         const complete = finished && JSON.parse(finished.slice(18));

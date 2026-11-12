@@ -19,7 +19,7 @@ export async function qualifyParentDeath({ evidence, fixture, relay, sourceHead,
   const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
   let result = { sourceHead, status: 'FAIL', completeRecipe: false, SwiftStarted: false, before };
   try {
-    for (let n = 0; n < 1000 && !stdout.includes('Listening on '); n++) {
+    for (let n = 0; n < 6000 && !stdout.includes('Listening on '); n++) {
       assert.equal(parent.exitCode, null, stdout + stderr); assert.equal(parent.signalCode, null, stdout + stderr); await pause(10);
     }
     assert(stdout.includes('Listening on '), stdout + stderr);

@@ -16,6 +16,14 @@ That row is excluded, and the attempt is incomplete. The helper now uses the
 same 20-minute queue allowance as the qualification runner. No app was built
 or launched in that attempt. Receipts: frozen-40c37232.
 
+The faba5b2c attempt was then stopped at a worker-requested checkpoint after
+finding a six-second owned-server readiness loop, shorter than standing order
+18's sixty-second minimum. Its literal-root controls and compiled bootstrap
+receipts are retained, but it is not a completed qualification. The runtime and
+compiled-server control loops now permit at least sixty seconds. The stop
+marker was worker-requested; the runner's generic coordinator-hold error text
+does not describe a new coordinator instruction. Receipts: frozen-faba5b2c.
+
 Previous stop: blocked on disk preflight, qualification incomplete. After the latest
 Swift-slot release, the small Bun configuration and parent-exit controls were
 completed without a Swift job. Available space then fell from about 30.4 GiB

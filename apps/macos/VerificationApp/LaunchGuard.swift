@@ -339,7 +339,7 @@ func verificationChildCleanup()
             FileHandle.standardError.write(Data("owned-process ".utf8) + (try JSONSerialization.data(withJSONObject: ["executable": server.path, "arguments": [], "environment": process.environment!], options: .sortedKeys)) + Data("\n".utf8))
             try storage.verify(); try process.run(); child = process; childRegister(process.processIdentifier)
             var ready = false
-            for _ in 0..<600 {
+            for _ in 0..<6000 {
                 try require(process.isRunning, "The owned scratch server stopped before readiness.")
                 if childInspect(process.processIdentifier, UInt64(UInt32(bitPattern: database!.initial.st_dev)), database!.initial.st_ino, UInt16(port)) == 1 { ready = true; break }
                 Thread.sleep(forTimeInterval: 0.01)

@@ -156,7 +156,7 @@ export async function runRegressions(c) {
       foreignChild = await asynchronous([executable], 'foreign-process-' + place, env, false, placement);
       // A public health response proves this is a running compiled server, not inert marker text.
       let ready = false;
-      for (let n = 0; n < 500 && !ready; n++) {
+      for (let n = 0; n < 6000 && !ready; n++) {
         assert.equal(foreignChild.child.exitCode, null, foreignChild.output());
         ready = await new Promise(resolve => { const req = http.get(f.manifest.serverURL + '/health', res => { res.resume(); resolve(res.statusCode === 200); }); req.on('error', () => resolve(false)); });
         if (!ready) await pause(10);

@@ -53,6 +53,25 @@ function job(argv) {
  return ['/bin/sh', root + '/scripts/swift-slot.sh', ...expanded];
 }
 const hash = file => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+function retireBuildTree(directory, label) {
+ assert([root + '/.scratch/mac-verification/DerivedData', root + '/apps/macos/DerivedData/V01Proof'].includes(directory));
+ if (!fs.existsSync(directory)) return;
+ const closed = execute(['/usr/sbin/lsof', '-Fpcn', '+D', directory], label + '-open-files');
+ assert(closed.status === 1 && !closed.stdout.trim() && !closed.stderr.trim(), 'Cannot retire an unproven closed build tree: ' + directory);
+ const files = {};
+ function visit(folder) {
+  for (const entry of fs.readdirSync(folder, { withFileTypes: true })) {
+   const file = path.join(folder, entry.name);
+   if (entry.isDirectory()) visit(file);
+   else if (entry.isFile()) files[path.relative(directory, file)] = hash(file);
+   else if (entry.isSymbolicLink()) files[path.relative(directory, file)] = { symlink: fs.readlinkSync(file) };
+  }
+ }
+ visit(directory); const before = fs.statfsSync(root);
+ fs.writeFileSync(evidence + '/' + label + '-hashes.json', JSON.stringify({ sourceHead, directory, files }, null, 2));
+ fs.rmSync(directory, { recursive: true }); const after = fs.statfsSync(root);
+ fs.writeFileSync(evidence + '/' + label + '.json', JSON.stringify({ sourceHead, directory, closureExit: closed.status, freeBytesBefore: before.bavail * before.bsize, freeBytesAfter: after.bavail * after.bsize }, null, 2));
+}
 let sourceHead, template, result = { status: 'FAIL', visibleLaunchHeld: true, visibleReadback: false, appLaunchAttempted: false };
 function record(argv, name, env, value, secret = false) {
   name = name.replace(/[^A-Za-z0-9_.-]/g, '_');
@@ -207,9 +226,16 @@ try {
     fs.writeFileSync(bindings, fs.readFileSync(bindings, 'utf8').replace('visibleAllowed = false', 'visibleAllowed = true'));
     fs.writeFileSync(evidence + '/app-bindings.json', JSON.stringify({ sourceHead, nativeBindingSHA256, appBindingSHA256: hash(bindings), guardMatrixGreen: true }, null, 2));
     must(['xcodebuild', '-project', 'apps/macos/VerificationApp/TodoVerification.xcodeproj', '-scheme', 'TodoVerification', '-configuration', 'Release', '-destination', 'platform=macOS', '-derivedDataPath', '.scratch/mac-verification/DerivedData', '-disableAutomaticPackageResolution', '-skipPackageUpdates', ...(process.argv.includes('--fresh-build') ? ['clean', 'build'] : ['build']), 'CODE_SIGNING_ALLOWED=NO', 'CODE_SIGNING_REQUIRED=NO', 'ONLY_ACTIVE_ARCH=YES', 'TODO_NODE_BINARY=' + executable('node')], 'build-app'); stages.builtApp = true;
-    const app = path.join(root, '.scratch/mac-verification/DerivedData/Build/Products/Release/TodoVerification.app');
+    const product = path.join(root, '.scratch/mac-verification/DerivedData/Build/Products/Release/TodoVerification.app');
+    const retained = path.join(root, '.scratch/mac-verification/qualified-' + sourceHead); fs.mkdirSync(retained, { recursive: true });
+    const app = retained + '/TodoVerification.app'; assert(!fs.existsSync(app)); fs.renameSync(product, app);
     must(['codesign', '--force', '--sign', '-', '--identifier', 'local.todo.verification', '--timestamp=none', app], 'adhoc-identity');
     must(['node', '.agents/skills/verify-macos-real-app/scripts/audit.mjs', app, evidence], 'audit'); stages.artifactAudit = true;
+    swiftPrograms.add(app + '/Contents/MacOS/TodoVerification');
+    const f = await fixture(); try {
+      must([app + '/Contents/MacOS/TodoVerification', '--check-manifest'], 'built-app-guard', f.env);
+    } finally { f.dispose(); }
+    retireBuildTree(root + '/.scratch/mac-verification/DerivedData', 'retire-app-build');
     must(['node', '.agents/skills/verify-macos-real-app/scripts/production-source-preservation.mjs', evidence + '/production-source', path.join(root, 'docs/evidence/mac-verification-app/symbols-ab989410')], 'production-source-preservation'); stages.productionPreservation = true;
     must(['sh', 'scripts/disk-guard.sh'], 'disk-before-root-check');
     diskStage('root-check', 0.5);
@@ -217,10 +243,7 @@ try {
     assert(!fs.existsSync(evidence + '/swift-hold'), 'Coordinator holds new Swift jobs; production reruns remain held');
     diskStage('production-suites', 1.5);
     must(['node', '.agents/skills/verify-macos-real-app/scripts/production-proofs.mjs', evidence + '/production', evidence], 'production-suites'); stages.productionSuites = true;
-    swiftPrograms.add(app + '/Contents/MacOS/TodoVerification');
-    const f = await fixture(); try {
-      must([app + '/Contents/MacOS/TodoVerification', '--check-manifest'], 'built-app-guard', f.env);
-    } finally { f.dispose(); }
+    retireBuildTree(root + '/apps/macos/DerivedData/V01Proof', 'retire-production-build');
     if (!process.argv.includes('--headless')) {
       const readerBindings = tools + '/ReaderBindings.swift';
       fs.writeFileSync(readerBindings, 'enum VerificationReaderBuild { static let appBundlePath = ' + JSON.stringify(app) + ' }\n');
