@@ -488,7 +488,9 @@ final class TodoModel {
         } catch {
             guard discovery.credentialEpoch == credentialEpoch else { return }
             if !Task.isCancelled {
-                publishMessage(describe(error), kind: .signOut)
+                // Say what failed and leave out draft wording: a sign-out has no draft to preserve.
+                let reason = describe(error).replacingOccurrences(of: " Your draft is preserved.", with: "")
+                publishMessage("Couldn't sign out. " + reason, kind: .signOut)
                 handleAuthorization(error, credentialEpoch: credentialEpoch)
             }
             if signedIn { connect() }

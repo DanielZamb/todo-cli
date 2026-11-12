@@ -11,7 +11,7 @@ import TodoAPI
 // while an action that clears this kind is still finishing (the newer one survives),
 // and a recovery, where the same kind's success clears its earlier message.
 
-private enum Step: Sendable { case pass, hold, fail(Int, String), holdThenFail(Int, String) }
+private enum Step: Sendable { case pass, hold, fail(Int, String), holdThenFail(Int, String), drop }
 
 private actor ScriptGate: ClientTransport {
     let session: URLSession
@@ -42,6 +42,7 @@ private actor ScriptGate: ClientTransport {
         case .pass: break
         case .hold: await withCheckedContinuation { held[operationID] = $0 }
         case .fail(let status, let message): throw RequestFailure(status: status, message: message, code: status == 401 ? "unauthorized" : "unavailable")
+        case .drop: throw URLError(.networkConnectionLost)
         case .holdThenFail(let status, let message):
             await withCheckedContinuation { held[operationID] = $0 }
             throw RequestFailure(status: status, message: message, code: "unavailable")
@@ -364,24 +365,41 @@ private actor ScriptGate: ClientTransport {
     // MARK: surfaces (rule 7) and scope changes (rule 4)
 
     @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
-    func closingThePickerEndsItsFollowUpError() async throws {
+    func aPickerFollowUpFailureShowsInThePicker() async throws {
+        // Ruling 3: the failure shows where the person is looking, inside the picker, not in the
+        // main window's banner under the sheet; closing the picker ends it with the picker.
         let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
         model.dependencies.picker = .init(profile: "work", root: task, direction: .dependsOn)
         _ = await newerFollowUpError(model, gate)
-        try #require(model.message?.contains("NEWER follow-up failed") == true)
+        #expect(model.dependencies.picker?.failure?.message.contains("NEWER follow-up failed") == true, "in the picker: \(model.dependencies.picker?.failure?.message ?? "nil")")
+        #expect(model.message == nil, "not under the sheet: \(model.message ?? "")")
         model.closeDependencyPicker()
         #expect(model.message == nil)
         await finish(model, gate, vault)
     }
 
     @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
-    func closingImportEndsItsFollowUpError() async throws {
+    func anImportFollowUpFailureShowsInTheImportReport() async throws {
         let gate = ScriptGate(); let (model, vault, _) = try await live(gate)
         model.showingImport = true
         _ = await newerFollowUpError(model, gate)
-        try #require(model.message?.contains("NEWER follow-up failed") == true)
+        #expect(model.importError?.contains("NEWER follow-up failed") == true, "in the Import report: \(model.importError ?? "nil")")
+        #expect(model.message == nil, "not under the sheet: \(model.message ?? "")")
         model.showingImport = false
         #expect(model.message == nil)
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [false, true])
+    func aFailedSignOutSaysThatTheSignOutFailed(unreachable: Bool) async throws {
+        // Ruling 3: the text says what failed, and a sign-out has no draft to preserve.
+        let gate = ScriptGate(); let (model, vault, _) = try await live(gate)
+        let streams = await gate.streamCount
+        await gate.next("credentials.signOut", unreachable ? .drop : .fail(503, "The server rejected this request (HTTP 503)."))
+        await model.signOut()
+        #expect(model.message?.hasPrefix("Couldn't sign out. ") == true, "\(model.message ?? "nil")")
+        #expect(model.message?.contains("draft") == false, "\(model.message ?? "nil")")
+        try await ready(model, gate, streams: streams + 1)
         await finish(model, gate, vault)
     }
 

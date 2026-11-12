@@ -249,7 +249,12 @@ extension TodoModel {
             authorize(error, epoch: epoch, profile: selectedProfile)
             guard isCurrentCredential(epoch), profile == selectedProfile else { return }
             guard surface.map(isShowing) ?? true else { return }
-            publishMessage(describe(error), kind: .dependencyFollowUp, surface: surface)
+            // Shown where the person is looking: inside the sheet that offered the follow-up.
+            switch surface {
+            case .dependencyPicker: dependencies.picker?.failure = DependencyNotice(message: describe(error))
+            case .importSheet: importError = describe(error, at: .importTasks)
+            default: publishMessage(describe(error), kind: .dependencyFollowUp, surface: surface)
+            }
         }
     }
 }
