@@ -1,9 +1,9 @@
 {
-  "confirmedCommit": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
+  "confirmedCommit": "ae9c5be3d2869bcec2553a75cc110f67350e2ad0",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "f7f7aac127d3e308335fc43aec4d8490b1e795e6b175d54f0e3b5a33752c6e4e",
+      "sha256": "489f3471e589e2fcd0347946b2efdd7569b66687d243b3de2294bcbb1c30a12f",
       "functions": [
         "OperationStore.constructor",
         "OperationStore.transaction",
@@ -107,8 +107,8 @@
       ]
     }
   ],
-  "reviewedCandidate": true,
-  "review": "Merged-source review: all covered store bodies match both parents except the combined constructor, whose identical three-way statement trace preserves Init. Actual-source behavioral sensitivity precedes renewal. No model or bound changes. See docs/decisions/ui-speed/server-integration.md.",
+  "reviewedCandidate": false,
+  "review": "Candidate for the seat: merge ae9c5be3 of feat/diag-core and integ/server. Every listed store and projection function is byte-identical to one parent's certified body while the other parent left it at base: the constructor (Init) is integ/server's 4d709efa body; transaction, record, appendSync, historySync and readTasks are diagnosticsReview's 3ef9e674 bodies; the rest equal base. Only the whole-file store.ts hash moves. The pre-renewal check passed every behavioral and model stage and stopped only on that hash (fv01-check-q7Eq1X); both real-code breaks then failed and the restored source passed (sensitivity-iQpwza); the renewed check passed (fv01-check-y8YbXS). No model, invariant, fixture or bound changed.",
   "integrationReview": {
     "product": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
     "parents": [
@@ -127,5 +127,14 @@
     "scope": "Caller-only synchronous scalar timing. applyEvent text is unchanged; DB validation, append, projection, commit and rejection ordering and transaction membership are unchanged. Recorder failures are contained at timing boundaries.",
     "evidence": "docs/decisions/ui-speed/diag-core-report.md",
     "control": "diagnostic-context.test.ts independently throws from start and end and requires both literal Task creations to commit. The complete pre-renewal AtomicCAS command passed behavior, model and controls before stopping on exactly these two conservative file hashes."
+  },
+  "mergeReview": {
+    "product": "ae9c5be3d2869bcec2553a75cc110f67350e2ad0",
+    "parents": [
+      "6d6537420c4f7107f0b16574599ab3993c89e56e",
+      "2a840b5554227c2cd5f476e793f196536c18b6ad"
+    ],
+    "previousStoreSha256": "f7f7aac127d3e308335fc43aec4d8490b1e795e6b175d54f0e3b5a33752c6e4e",
+    "evidence": "docs/decisions/ui-speed/diag-recordings-report.md"
   }
 }

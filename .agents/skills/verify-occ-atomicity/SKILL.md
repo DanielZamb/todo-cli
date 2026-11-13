@@ -328,3 +328,14 @@ The new private journal is not called by a Task mutation or transaction.
 Recorder calls retain the shared non-throwing guard; the 47 compiled fault
 controls pass. Models, invariants, bounds and crash insertion points are unchanged.
 The recording report names the full check and real-code sensitivity receipts.
+
+## Diagnostics and server-integration merge candidate, 2026-11-13
+
+Merge ae9c5be3 joins feat/diag-core 6d653742 and integ/server 2a840b55. No
+covered function has new content: each is byte-identical to one parent's
+certified body and the other parent left it at base. The constructor (Init)
+is integ/server's; transaction, record, appendSync, historySync and readTasks
+are the reviewed Diagnostics bodies. Only the whole-file store.ts hash moves.
+The pre-renewal check stopped only on that hash, both real-code breaks failed,
+the restored source passed and the renewed check passed. The renewal is a
+candidate (`reviewedCandidate: false`) until the seat re-checks it.
