@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   appendFileSync,
@@ -292,8 +292,17 @@ try {
     backend: inputs.backend,
     dependencyPins,
     nativeApp: false,
-    keychain: false,
+    // Not a claim yet: the build has not run. The result records the guard's answer.
+    keychain: "read from the guard after the build (see result)",
   });
+  // Candidate 10, item 8: the Keychain answer comes from the guard (state_package.py guard, `nm -u`
+  // over the built products), never a constant; null when the guard wrote no receipt.
+  const keychainFromGuard = (): boolean | null => {
+    const receipt = join(evidence, "keychain-guard.json");
+    spawnSync("python3", [join(root, "apps/macos/scripts/state_package.py"), "guard", build, receipt], { stdio: "inherit" });
+    if (!existsSync(receipt)) return null;
+    return JSON.parse(readFileSync(receipt, "utf8")).keychainLinked ?? null;
+  };
   const proofHashes = () =>
     originals.map(({ path, hash }) => ({
       path,
@@ -495,7 +504,7 @@ try {
       consecutiveSuites: 20,
       runs,
       nativeApp: false,
-      keychain: false,
+      keychain: keychainFromGuard(),
     });
     console.log(
       JSON.stringify({ passed: true, commit, evidence, consecutiveSuites: 20 }),
@@ -565,7 +574,7 @@ try {
     outcomes,
     memorySessionVault: true,
     nativeApp: false,
-    keychain: false,
+    keychain: keychainFromGuard(),
     liveSourceUnchanged: true,
   });
   console.log(JSON.stringify({ passed: true, commit, evidence }));
