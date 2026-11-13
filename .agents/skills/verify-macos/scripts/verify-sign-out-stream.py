@@ -300,19 +300,34 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
         # Coordinator ruling on MAC-C1-S1-18, 2026-11-12: "A failure that arrives later is a newer
         # message, and a newer message replaces an older one in the single banner, exactly as two
         # failed Completes in a row would; suppressing A instead would leave the person believing a
-        # Dependency was added when it was not. So the behaviour stands." The probe's line 77 for
-        # olderFails → true is the one expected difference, accepted only if it is the run's sole
-        # issue AND the probe's own receipt shows the old instance replaced the hand-off by
-        # publishing its own message (non-null, sequence + 1), never by clearing. olderFails → false
-        # (an older success) must pass: it never clears or replaces the newer hand-off.
+        # Dependency was added when it was not. So the behaviour stands." Under D2 (accepted for
+        # candidate 8, 2026-11-12) the later same-kind failure merges into the banner instead of
+        # replacing it. The probe's line 77 for olderFails → true is accepted only from its receipt:
+        # the old instance published its own failure (the banner after names the older dependent and
+        # the sequence moved by one), never by clearing. olderFails → false (an older success) must pass.
+        #
+        # Coordinator ruling on candidate 7c line 52 under D1, 2026-11-12: "A ticked, B ticked on
+        # another row; A's write commits and its catalog read-back fails with 503 while B is refused.
+        # A's own 'Dependencies updated. The live view is reconnecting.' presents in the main window,
+        # and B's notice in the picker is unchanged. That is the corrected rule doing its job ... The
+        # runner accepts line 52 only with the receipt you describe (A's own message, B's notice
+        # unchanged, the same picker open) and only if your same-row case presents nothing."
         log = (evidence / 'SeatCandidate7cSupersessionTests.log').read_text()
         found = re.findall(r'recorded an issue with 1 argument (olderFails → (?:true|false)) at (SeatCandidate7cSupersessionTests\.swift:\d+)', log)
         others = [line for line in re.findall(r'recorded an issue at (SeatCandidate7cSupersessionTests\.swift:\d+)', log)]
         receipt = json.loads((evidence / 'reopened-instance-handoff-true.json').read_text()) if (evidence / 'reopened-instance-handoff-true.json').exists() else {}
-        published = receipt.get('after') not in (None, receipt.get('before')) and receipt.get('sequence_after') == (receipt.get('sequence_before') or 0) + 1
-        sole = seat_others['SeatCandidate7cSupersessionTests'] != 0 and found == [('olderFails → true', 'SeatCandidate7cSupersessionTests.swift:77')] and not others and published
-        seat_s118 = dict(exit=seat_others['SeatCandidate7cSupersessionTests'], issues=found + others, receipt=receipt, replaced_by_publishing=published,
-                         expected_difference='SeatCandidate7cSupersessionTests.swift:77 with olderFails → true (S1-18 ruling, 2026-11-12: a later failure is a newer message and replaces the older one in the single banner)', accepted=sole or seat_others['SeatCandidate7cSupersessionTests'] == 0)
+        published = receipt.get('after') not in (None, receipt.get('before')) and 'Older dependent' in (receipt.get('after') or '') and receipt.get('sequence_after') == (receipt.get('sequence_before') or 0) + 1
+        readback = json.loads((evidence / 'superseded-during-link-readback.json').read_text()) if (evidence / 'superseded-during-link-readback.json').exists() else {}
+        own_readback = readback.get('message') == 'Dependencies updated. The live view is reconnecting.' and readback.get('newer_notice') is not None and readback.get('notice_after') == readback.get('newer_notice') and readback.get('same_picker_open') is True
+        main_log = (evidence / 'tests.log').read_text() if (evidence / 'tests.log').exists() else ''
+        same_row = re.search(r'✔ Test aLinkReadBackFailureFollowsItsRowsSupersession\(_:\) with 2 test cases passed', main_log) is not None and 'aLinkReadBackFailureFollowsItsRowsSupersession(_:) recorded an issue' not in main_log
+        sole = (seat_others['SeatCandidate7cSupersessionTests'] != 0 and found == [('olderFails → true', 'SeatCandidate7cSupersessionTests.swift:77')] and published
+                and others in ([], ['SeatCandidate7cSupersessionTests.swift:52']) and (not others or (own_readback and same_row)))
+        seat_s118 = dict(exit=seat_others['SeatCandidate7cSupersessionTests'], issues=found + others, receipt=receipt, older_published_its_own_failure=published,
+                         readback_receipt=readback, line52_own_readback=own_readback, line52_same_row_presents_nothing=same_row,
+                         expected_difference=['SeatCandidate7cSupersessionTests.swift:77 with olderFails → true (S1-18 ruling, 2026-11-12, merged into the banner under D2: the older failure is published, never cleared)',
+                                              'SeatCandidate7cSupersessionTests.swift:52 (D1, ruled 2026-11-12: the older row is live and reports its own failed read-back; the newer row\'s notice is unchanged)'],
+                         accepted=sole or seat_others['SeatCandidate7cSupersessionTests'] == 0)
         if sole: seat_others['SeatCandidate7cSupersessionTests'] = 0
         (evidence / 'seat-ruling-s118.json').write_text(json.dumps(seat_s118, indent=2) + '\n')
         # Coordinator ruling D1, 2026-11-12: "supersession is per target, not per kind. An action is
