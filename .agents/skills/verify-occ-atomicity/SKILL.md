@@ -291,6 +291,7 @@ Run before and after a constructor wiring change and compare the seed hash and
 trace arrays exactly. It does not claim native SQLite internal tracing.
 The seed contains a committed Version-1 Task and no Purge, matching Init.
 
-[Purge restore mapping candidate](PURGE-RESTORE-MAPPING.md) records the approved
-constructor argument, statement trace, function comparison and final renewal.
-It remains pending the correctness seat's re-check.
+[Purge restore source mapping](PURGE-RESTORE-MAPPING.md) records the accepted
+constructor renewal and its statement trace. A later preview cleanup guard
+changes only an uncovered method; all 45 covered declarations remain byte-identical.
+Its new whole-file renewal remains a candidate until the seat re-checks it.
