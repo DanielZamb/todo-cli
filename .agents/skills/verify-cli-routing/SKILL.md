@@ -138,9 +138,27 @@ The typed refusal is exit 1, server_command_not_run, with no History warning.
 
 Before reporting a slice, run
 `node .agents/skills/verify-cli-routing/scripts/pin-audit.mjs <commit> <out.json>`
-(or `--worktree`). It enumerates every file under every `.agents/skills/verify-*`
-directory, with no list of known pin files. It compares each JSON row that pins
-a product path to the commit's bytes, and lists text lines that hold a product
-path and a hash. Exit 1 means a pinned mapping is stale: renew it by its own
-skill's procedure, never by hand. A fixed list of pin files missed eight DAG
-public rows from slice 1 to the c9 merge.
+(or `--worktree`). It reads every file under every `.agents/skills` directory
+and accounts for every run of exactly 64 hex digits, in any case. Each one is:
+
+- compared: a pin hashed against the commit's bytes;
+- historical, by a named rule: change records, review-record contracts, tools
+  pinned by URL, Git-ignored docs/evidence receipts, names, function hashes
+  covered by a matching whole-file pin, or a ledger entry;
+- unknown.
+
+Any drift or unknown exits 1 with file and line. Paths may be repo-relative,
+./ or ../ relative, absolute inside the checkout, or relative to
+packages/domain/src. The map form and any hash key are read. A top-level
+`contract` is compared with CONTRACT_ID, and `modelSha256` with the skill's
+.tla model.
+
+Values no rule reads go in scripts/pin-ledger.json, one entry per file and
+value with a reason, and a `path` when it is a pin to compare. Add one only
+after reading the value in context. `node .agents/skills/verify-cli-routing/scripts/pin-audit-selftest.mjs`
+proves that the shapes the seat used to defeat the first version now come out
+as drift or unknown.
+
+Exit 1 means a pinned mapping is stale: renew it by its own skill's procedure,
+never by hand. A fixed list of pin files missed eight DAG public rows, and the
+public pin's contract, from slice 1 to the c9 merge.

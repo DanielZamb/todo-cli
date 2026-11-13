@@ -1,0 +1,366 @@
+{
+  "about": "Values under .agents/skills that no rule in pin-audit.mjs classifies. Each entry names one value in one file. An entry with a path is compared as a pin; one without is historical for its reason. Add an entry only after reading the value in context.",
+  "entries": [
+    {
+      "file": ".agents/skills/verify-dag-formal/SKILL.md",
+      "value": "78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289",
+      "reason": "contract id of integrated product 7d947f91 quoted in prose; the live contract pin is the top-level contract in verify-dag-formal/public-pin.json"
+    },
+    {
+      "file": ".agents/skills/verify-dag-formal/SKILL.md",
+      "value": "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88",
+      "reason": "TLA+ tools 1.7.4 jar hash quoted in prose; the live pin is tool.json"
+    },
+    {
+      "file": ".agents/skills/verify-dag-formal/features/README.md",
+      "value": "78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289",
+      "reason": "contract id of integrated product 7d947f91 quoted in prose; the live contract pin is the top-level contract in verify-dag-formal/public-pin.json"
+    },
+    {
+      "file": ".agents/skills/verify-dag-formal/features/public.md",
+      "value": "78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289",
+      "reason": "contract id of integrated product 7d947f91 quoted in prose; the live contract pin is the top-level contract in verify-dag-formal/public-pin.json"
+    },
+    {
+      "file": ".agents/skills/verify-dag-formal/graph-response-properties.ts",
+      "value": "9954c8d86f6e9abac1ac3fb46be0ea16a7043297e2815dff32533a4c5de93c8f",
+      "reason": "fixture hash the graph response properties check at run time",
+      "path": "packages/domain/test/fixtures/dag/chain-1000.json"
+    },
+    {
+      "file": ".agents/skills/verify-dag-formal/mapping.md",
+      "value": "78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289",
+      "reason": "contract id of integrated product 7d947f91 quoted in prose; the live contract pin is the top-level contract in verify-dag-formal/public-pin.json"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "b9ec2d8ebf6eed046577134dccdc4a4004a10d76a5409a44af4e2f8b62f19ced",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "ac059420e71fee7976ab0ecf4c1db73b1d6b644ed524f9819467014a1711d347",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "474608c247b3e91ada6ec62c84cdf43957e6dafa6688524af34bccfa837884a3",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "cb17ccfa4489e644b4ab85b58f7350f19b6cce9a3e688be485b420dcc61163fa",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "223cf9ed82c5b280e2d91558a1d8b8789df54e5d39e831ed5ec82ce0215db565",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "98b1229b6a90611e602d5fea246b26ce2460f15db3f6a2fd205ad17ef9d88186",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "4070031488bbe95357b282d6bc62ba07cbc03b92c33e3ac22c1b3fdffa9d4d67",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "988dbb670465eb539e29bfa80160772a114645dd718b92fd16d48a2e3230fda0",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "5314af586ef7abd8a1ff1ce9fcbe63b2d4b05b94351884cc4f0bd2b7f6e5f435",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "467184b538022ed5b6d2d1fc6fdc94a9894790561b7422513210eaa2ec25857b",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "32c0282dd4406c168e74486bea143b3041525a68d3db4dd48e1a25e2634cc9a3",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "4f129a271d0c7125942276b30d712f3cde1e59f61882bc3e1969fc35bc87d3f1",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "015cb9ae61f082d1ef61021b6077252e8f364a5c485e9c227dd8804e9eeb31b9",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "f3b876ee686d677d57fc13d0aef5005891b16721da73dfff9dce8f6c5e22ddc7",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "9960fed3da6d0245ac22a0ae373b7a55a78c79ef4c19f5dac278bec6525ce563",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "c3a20fde91c42cd13285a69f62d00e2da73db7192666b2642cba1e54c1449c54",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "e1b26afd2a84ed863814afd3c41894f0fed538992fb3665203784478e62ead7e",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "5edcd6f6aa5a48ff7256df0021a8c8b46d2c23972362b1cc9e3131798ef6bf80",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "7fda25f6cd6804fe3b447484d127876cad7fc47f8cbdd959e2e995195575eb70",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "81d8bf873743fb13848c39cb2f338d1b17448fc7558d20be216cefe798adacb0",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "8d5a26ea59bd000381a3c27c1a4ebaed743f042739c5f87dcc7fc662d26f0944",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "0f022192fa99f3a1f34a81c51c9c19310d5174d9cfbae5659a514e2fea899c4f",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "c2f1af14dd01dbf6f939c796aa169e6c374f89708e696b77734e7d1d545fd18e",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "34681749db3462d4da15662549df52195c16a669aef61a5ffad2ff17cc26caae",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "1edb229648469e83b4238876c682e24377c1a3123f450e43dc9fc600fe26ff28",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "0650bb1da4d79d640c534136259eec778eba3dbab36c7d5b38c1c31a41097642",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "50b43b1bc26ed92720e902ccbf62438045e95892f081aa05a44b6f08dba9b3e9",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "f7eb2d6ec0297dbd3c317c9ddf02853c4de8182462e1bfff67eba79ab4691d10",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "b853636d986608b6c1f76796e5c67c454b8281f37c8dc728c1e6aeae7dc1f068",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "b144ca7d05552b1c0e2f9688afee4872f65b7433773921457fe344c7642dd90d",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "6a4f7697de1517166e71b9a0f124d9197b0ca219b105dc5ed1b01ef2fc5f56f0",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "dd29af93acc8f5c6c82d6b66e3d15f78563a3ec53c053730234744d15778e9f7",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "8318f58180a2b8605194209e602c3a38ecf734c891502708dd17c06be18f9352",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "0c9b61805d221c60f17bdabd489afa69fd39d805f4a23457cf570fbada2449ca",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "aabb61fcf1eb35aa0471d63fae8154c28b5f505d91ae112c31c05a07b4b630df",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "0e1d39edfa5c32f9781984da0c5265d81346cf64dcc8fc4380ef6f4693e20ddf",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "c266c3d598d0c8f50bbf83290bf8f9e13ef53f981e6ae93db9f27bf26f6b6639",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "233aa8e82e39f0e14750943daa47c8c390451ddedda614bc8e705db977d67e54",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "5f7bb74da8018432628c52f3576f36e3eb58dd2263ffd246c3a8a7ba2a1da880",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "3fba9b0e427d6d2ffeae4f21ccf7368a31d11e45548673150c32d7165705ce91",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "f5a26377c8c7af55a24b264d065a6b3f08ffe58d7e188d8ed59449085b41323d",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "7423f9fcd29b45ead0c857a93186759d7fe8e1b88ec7303458989c81b3260f6a",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "a73dddd179e48be392588cd4476015cb75a4721aa22785da9c7e051f856ff73f",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "6bd546ba6518296b08d2317bc6b5c7c994adeb86211639e18fb5075d663ef590",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "e76674ad89a63dabb3e603beae0fc2333264c29e47a659d9be9070ece95fa973",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "7f8462c827387e08e48456e1819152d4e36c00a7509b130a1d4923f5d12972dd",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "725152db259e21fd1adb62721005584a7d8aed56de780f6f95605bba819124b9",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "92bb31f71e19f1dbda6c43ecbbb186eb36fdd2b5218857f5dec337d75a24e8c5",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
+      "value": "fd4fb12c0e6318d34e581b3ba0b4342b964aa92bb436dae555a76ff2cdbdeb10",
+      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/REPORT.md",
+      "value": "76ae9ac6c338dd206deea6bb71194b11916b5f3e794949b6db665f4f33246e24",
+      "reason": "binary or source hash of a past discovery run, recorded in report prose"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/REPORT.md",
+      "value": "b9ec2d8ebf6eed046577134dccdc4a4004a10d76a5409a44af4e2f8b62f19ced",
+      "reason": "binary or source hash of a past discovery run, recorded in report prose"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/REPORT.md",
+      "value": "ac059420e71fee7976ab0ecf4c1db73b1d6b644ed524f9819467014a1711d347",
+      "reason": "binary or source hash of a past discovery run, recorded in report prose"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/REPORT.md",
+      "value": "474608c247b3e91ada6ec62c84cdf43957e6dafa6688524af34bccfa837884a3",
+      "reason": "binary or source hash of a past discovery run, recorded in report prose"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/REPORT.md",
+      "value": "cb17ccfa4489e644b4ab85b58f7350f19b6cce9a3e688be485b420dcc61163fa",
+      "reason": "binary or source hash of a past discovery run, recorded in report prose"
+    },
+    {
+      "file": ".agents/skills/verify-discovery-formal/SOURCE-MAPPING.md",
+      "value": "78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289",
+      "reason": "contract id of integrated product 7d947f91 quoted in prose; the live contract pin is the top-level contract in verify-dag-formal/public-pin.json"
+    },
+    {
+      "file": ".agents/skills/verify-occ-atomicity/PURGE-RESTORE-MAPPING.md",
+      "value": "fd68adcacf2ab99704d59ef4abae846ce20a1caa47ac795d886138ca7e4c9157",
+      "reason": "hash of the scratch Task seed a past run used, recorded in prose"
+    },
+    {
+      "file": ".agents/skills/verify-occ-atomicity/PURGE-RESTORE-MAPPING.md",
+      "value": "8dbb9b9ba322c1cb29d41732072792f4c929cea185770f1597d25a393e5787e1",
+      "reason": "store.ts whole-file hash renewed at the fv01 run, quoted in prose; the live pin is verify-occ-atomicity/coverage.json"
+    },
+    {
+      "file": ".agents/skills/verify-task-search-cache/admission/MAPPING.md",
+      "value": "78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289",
+      "reason": "contract id of integrated product 7d947f91 quoted in prose; the live contract pin is the top-level contract in verify-dag-formal/public-pin.json"
+    },
+    {
+      "file": ".agents/skills/verify-task-search-formal/CLIENT-MAPPING.md",
+      "value": "78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289",
+      "reason": "contract id of integrated product 7d947f91 quoted in prose; the live contract pin is the top-level contract in verify-dag-formal/public-pin.json"
+    },
+    {
+      "file": ".agents/skills/verify-task-search-formal/CLIENT-MAPPING.md",
+      "value": "b9ec2d8ebf6eed046577134dccdc4a4004a10d76a5409a44af4e2f8b62f19ced",
+      "reason": "binary or source hash of a past discovery run, recorded in report prose"
+    },
+    {
+      "file": ".agents/skills/verify-task-search-formal/MATCHER-REPORT.md",
+      "value": "196d91957dc059666cca0414aa0d73204349a0075f054732479358f6061230c5",
+      "reason": "hash of an immutable past matcher candidate, recorded in a report table"
+    },
+    {
+      "file": ".agents/skills/verify-task-search-formal/MATCHER-REPORT.md",
+      "value": "4f44913d63f3de2d65ecbee037b8810388945f0514d76079e7b24cc6141fe08e",
+      "reason": "hash of an immutable past matcher candidate, recorded in a report table"
+    },
+    {
+      "file": ".agents/skills/verify-task-search-formal/MATCHER-REPORT.md",
+      "value": "96df592e0ce243c63397924c154e437973b8bc8f30e40948a75045498a7739cf",
+      "reason": "hash of an immutable past matcher candidate, recorded in a report table"
+    },
+    {
+      "file": ".agents/skills/verify-task-search-formal/MATCHER-REPORT.md",
+      "value": "ff8d8fefbf123574205085d6714c36149eb946d717a0c585c27f0f4ef58c4183",
+      "reason": "hash of an immutable past matcher candidate, recorded in a report table"
+    },
+    {
+      "file": ".agents/skills/verify-task-search-formal/REPORT.md",
+      "value": "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88",
+      "reason": "TLA+ tools 1.7.4 jar hash quoted in prose; the live pin is tool.json"
+    }
+  ]
+}

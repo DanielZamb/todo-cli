@@ -33,6 +33,10 @@ const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 // Review 3's adapter limits (R3-1, R3-2, R3-3) need the store's private
 // connection, SQL transaction control or a writer built on the raw store. None
 // of those may appear in the server's source.
+// Known limit (CLI routing seat, review 3, R7): this guard is a text scan. It
+// catches ordinary spellings, not deliberate evasion: an alias such as
+// `const D = Database; new D(path)` passes it, and it does not count END,
+// SQLite's synonym for COMMIT. Both limits predate the routing guard exception.
 it("keeps the store's private connection and raw transactions out of apps/server", () => {
   const server = sources("apps/server/src");
   const reaches = server.flatMap((path) =>

@@ -112,18 +112,23 @@ pin file named otherwise. It also could not resolve the cache's relative paths:
 it reported its seven `files` rows as MISSING, so drift there would have gone
 unseen.
 
-The audit left in the skill, `.agents/skills/verify-cli-routing/scripts/pin-audit.mjs`,
-uses no list. It enumerates every file under every `.agents/skills/verify-*`
-directory at a commit, with `--worktree` for uncommitted work. It parses every
-JSON file and compares every object that pairs a product path (apps/, packages/,
-scripts/) with a 64-hex hash against the commit's bytes. Relative paths resolve
-at the root, then under packages/domain/src, and an unresolved row fails. A text
-file line holding a product path and a 64-hex value is listed for review. Run at
-8d7a453c it exits 1 with exactly the eight DAG public rows and the cache's
-server.ts row. At be9f0638 it exits 0: 131 rows in 6 pin files, out of 412+
-files scanned. Its 45 listed text lines are all per-function hashes in
-verify-occ-atomicity/PURGE-RESTORE-MAPPING.md, inside store.ts and projection.ts,
-whose whole-file pins match.
+The first version of the audit (42f34353) still compared only `{path|file, sha256}`
+rows with product paths. The seat showed it passed silently over other shapes
+(review 3, R5). The audit now accounts for every 64-hex string under every
+`.agents/skills` directory, in any case, as compared, historical by a named rule,
+or unknown. Unknown or drift exits 1 with file and line, and a ledger lists by
+value what no rule reads. Counts:
+
+| Commit | Occurrences | Compared match | Compared drift | Historical | Unknown | Exit |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 8d7a453c (413 files) | 282 | 126 | 10 | 146 | 0 | 1 |
+| head, this commit (426 files) | 377 | 136 | 0 | 241 (72 of them the ledger's own values) | 0 | 0 |
+
+At 8d7a453c the ten drifts are the eight DAG public rows, the cache's server.ts
+row, and verify-dag-formal/public-pin.json's top-level contract (78a2be44 against
+the commit's 259e9afb), which the earlier audits could not see. The renewal in
+355fa5d9 covered it. pin-audit-selftest.mjs builds the seat's shapes with wrong
+hashes and requires each to come out as drift or unknown.
 
 ## Isolation
 
