@@ -56,6 +56,8 @@ export const recordingOpenRefusals = {
     "Another process kept writing recordings.db while it was being checked, so no consistent reading was possible; the server retries in one minute.",
   open_failed:
     "The recordings directory could not be opened; the server retries in one minute.",
+  check_unavailable:
+    "The store could not finish its own check of recordings.db, so nothing was decided about the files; the server retries in one minute.",
 } as const;
 export type RecordingOpenRefusalReason = keyof typeof recordingOpenRefusals;
 export const recordingStoreFiles = [
@@ -68,11 +70,13 @@ export function recordingRefusalGuidance(
   directory: string,
   reason: RecordingOpenRefusalReason,
   present: readonly string[],
+  detail?: string,
 ) {
   const retrying =
     reason === "initialization_busy" ||
     reason === "store_busy" ||
-    reason === "open_failed";
+    reason === "open_failed" ||
+    reason === "check_unavailable";
   const files = retrying
     ? []
     : (reason === "not_private" && present.length === 0
@@ -82,7 +86,9 @@ export function recordingRefusalGuidance(
   return {
     state: retrying ? ("retrying" as const) : ("refused" as const),
     reason,
-    explanation: recordingOpenRefusals[reason],
+    explanation: detail
+      ? `${recordingOpenRefusals[reason]} What failed: ${detail}.`
+      : recordingOpenRefusals[reason],
     files,
     recovery: retrying
       ? "Recording retries automatically every minute; Task service is unaffected."
@@ -110,7 +116,10 @@ export class RecordingOpenRefusal extends Error {
           ? "Recording integrity"
           : reason === "open_failed"
             ? "Recording directory unavailable"
-            : "Foreign database refused",
+            : reason === "check_unavailable"
+              ? "Recording check unavailable"
+              : "Foreign database refused",
+    readonly detail?: string,
   ) {
     super(message);
   }
@@ -118,11 +127,49 @@ export class RecordingOpenRefusal extends Error {
 const refuse = (reason: RecordingOpenRefusalReason): never => {
   throw new RecordingOpenRefusal(reason);
 };
+const errorCode = (error: unknown) => {
+  const code =
+    error !== null && typeof error === "object" && "code" in error
+      ? String(error.code)
+      : error instanceof Error
+        ? error.name
+        : "unknown";
+  return /^[A-Za-z0-9_]{1,40}$/.test(code) ? code : "unknown";
+};
+const missing = (error: unknown) => errorCode(error) === "ENOENT";
+const fileNature = new Set([
+  "ELOOP",
+  "EISDIR",
+  "ENOTDIR",
+  "ENXIO",
+  "EACCES",
+  "EPERM",
+  "EFTYPE",
+]);
+const aboutTheFile = (error: unknown) => fileNature.has(errorCode(error));
+const unavailable = (stage: string, error: unknown): never => {
+  throw new RecordingOpenRefusal(
+    "check_unavailable",
+    undefined,
+    `${stage}: ${errorCode(error)}`,
+  );
+};
+const sqliteContent = (error: unknown) => {
+  const code = errorCode(error);
+  return code === "SQLITE_NOTADB" || code.startsWith("SQLITE_CORRUPT");
+};
+const ourCatalogVerdict = (error: unknown) =>
+  error instanceof Error && error.message === "Foreign database refused";
 function ownedHeader(fd: number, cap: number) {
   const stat = fstatSync(fd);
   if (stat.size > cap) refuse("oversized");
   const header = Buffer.alloc(100);
-  const size = readSync(fd, header, 0, 100, 0);
+  let size = 0;
+  try {
+    size = readSync(fd, header, 0, 100, 0);
+  } catch (error) {
+    unavailable("header read", error);
+  }
   return (
     size === 100 &&
     header.subarray(0, 16).equals(Buffer.from("SQLite format 3\0")) &&
@@ -134,14 +181,8 @@ const sizeOf = (path: string) => {
   try {
     return lstatSync(path).size;
   } catch (error) {
-    if (
-      error !== null &&
-      typeof error === "object" &&
-      "code" in error &&
-      error.code === "ENOENT"
-    )
-      return undefined;
-    throw error;
+    if (missing(error)) return undefined;
+    return unavailable("file size", error);
   }
 };
 const sameFile = (fd: number, path: string) => {
@@ -149,8 +190,9 @@ const sameFile = (fd: number, path: string) => {
   try {
     const named = lstatSync(path);
     return current.ino === named.ino && current.dev === named.dev;
-  } catch {
-    return false;
+  } catch (error) {
+    if (missing(error)) return false;
+    return unavailable("path check", error);
   }
 };
 function clearEmptySidecars(path: string, sides: readonly string[]) {
@@ -160,14 +202,9 @@ function clearEmptySidecars(path: string, sides: readonly string[]) {
     try {
       fd = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW);
     } catch (error) {
-      if (
-        error !== null &&
-        typeof error === "object" &&
-        "code" in error &&
-        error.code === "ENOENT"
-      )
-        continue;
-      return refuse("foreign_sidecar");
+      if (missing(error)) continue;
+      if (aboutTheFile(error)) return refuse("foreign_sidecar");
+      return unavailable("sidecar open", error);
     }
     try {
       const stat = fstatSync(fd);
@@ -178,7 +215,11 @@ function clearEmptySidecars(path: string, sides: readonly string[]) {
       )
         refuse("foreign_sidecar");
       if (!sameFile(fd, file)) refuse("replaced");
-      unlinkSync(file);
+      try {
+        unlinkSync(file);
+      } catch (error) {
+        unavailable("sidecar removal", error);
+      }
     } finally {
       closeSync(fd);
     }
@@ -189,36 +230,35 @@ function inspect(fd: number, path: string, image: () => number) {
   try {
     wal = openSync(path + "-wal", constants.O_RDONLY | constants.O_NOFOLLOW);
   } catch (error) {
-    if (
-      !(
-        error !== null &&
-        typeof error === "object" &&
-        "code" in error &&
-        error.code === "ENOENT"
-      )
-    )
-      refuse("not_private");
+    if (!missing(error)) {
+      if (aboutTheFile(error)) refuse("not_private");
+      unavailable("WAL open", error);
+    }
   }
   try {
     if (wal !== undefined) {
       const stat = fstatSync(wal);
       if (!stat.isFile() || stat.nlink !== 1) refuse("not_private");
     }
+    const read = (descriptor: number) => (target: Buffer, position: number) => {
+      try {
+        return readSync(descriptor, target, 0, target.length, position);
+      } catch (error) {
+        return unavailable("store read", error);
+      }
+    };
     const verdict = inspectRecordingCatalog(
-      {
-        size: fstatSync(fd).size,
-        read: (target, position) =>
-          readSync(fd, target, 0, target.length, position),
-      },
+      { size: fstatSync(fd).size, read: read(fd) },
       wal === undefined
         ? undefined
-        : {
-            size: fstatSync(wal).size,
-            read: (target, position) =>
-              readSync(wal, target, 0, target.length, position),
-          },
+        : { size: fstatSync(wal).size, read: read(wal) },
       (offset, page) => {
-        writeSync(image(), page, 0, page.length, offset);
+        const target = image();
+        try {
+          writeSync(target, page, 0, page.length, offset);
+        } catch (error) {
+          unavailable("temporary image write", error);
+        }
       },
     );
     if (verdict.kind !== "owned") return refuse(verdict.kind);
@@ -230,12 +270,21 @@ function inspect(fd: number, path: string, image: () => number) {
 function preflight(path: string) {
   const uri = pathToFileURL(path);
   uri.searchParams.set("immutable", "1");
-  const existing = new Database(uri.href, { readonly: true, strict: true });
+  let existing: Database;
+  try {
+    existing = new Database(uri.href, { readonly: true, strict: true });
+  } catch (error) {
+    if (sqliteContent(error)) return refuse("foreign_catalog");
+    return unavailable("catalog check open", error);
+  }
   try {
     try {
       recognizeRecordingFormat(existing);
-    } catch {
-      refuse("foreign_catalog");
+    } catch (error) {
+      if (busy(error)) throw error;
+      if (ourCatalogVerdict(error) || sqliteContent(error))
+        refuse("foreign_catalog");
+      unavailable("catalog check", error);
     }
     checkIntegrity(existing);
   } finally {
@@ -274,28 +323,44 @@ function consistentInspection(fd: number, path: string) {
     let imageFd: number | undefined;
     const image = () => {
       if (imageFd === undefined) {
-        scratch = mkdtempSync(join(tmpdir(), "todo-recording-check-"));
-        imageFd = openSync(
-          join(scratch, "image.db"),
-          constants.O_RDWR | constants.O_CREAT | constants.O_EXCL,
-          0o600,
-        );
+        try {
+          scratch = mkdtempSync(join(tmpdir(), "todo-recording-check-"));
+          imageFd = openSync(
+            join(scratch, "image.db"),
+            constants.O_RDWR |
+              constants.O_CREAT |
+              constants.O_EXCL |
+              constants.O_NOFOLLOW,
+            0o600,
+          );
+        } catch (error) {
+          return unavailable("temporary image create", error);
+        }
       }
       return imageFd;
     };
+    const release = () => {
+      const open = imageFd;
+      imageFd = undefined;
+      if (open !== undefined)
+        try {
+          closeSync(open);
+        } catch {}
+    };
     try {
       const inspected = inspect(fd, path, image);
-      if (imageFd !== undefined) closeSync(imageFd);
-      imageFd = undefined;
+      release();
       preflight(inspected.imaged && scratch ? join(scratch, "image.db") : path);
     } catch (error) {
-      if (!(error instanceof RecordingOpenRefusal)) throw error;
+      if (!(error instanceof RecordingOpenRefusal))
+        return unavailable("inspection", error);
       refusal = error;
     } finally {
-      if (imageFd !== undefined) closeSync(imageFd);
+      release();
       if (scratch) rmSync(scratch, { recursive: true, force: true });
     }
     if (!refusal) return;
+    if (refusal.reason === "check_unavailable") throw refusal;
     const stable = before === fileStamp(fd, path);
     if (stable && confirmed === refusal.reason) throw refusal;
     confirmed = stable ? refusal.reason : undefined;
@@ -312,6 +377,7 @@ function checkIntegrity(db: Database) {
         ?.quick_check === "ok" && !db.query("PRAGMA foreign_key_check").get();
   } catch (error) {
     if (busy(error)) throw error;
+    if (!sqliteContent(error)) unavailable("integrity check", error);
   }
   if (!ok) refuse("integrity");
 }
@@ -327,8 +393,12 @@ export function openRecordingDatabase(
   if (totalBytes < recordingMinimumBytes) throw new Error("Recording capacity");
   try {
     mkdirSync(directory, { recursive: true, mode: 0o700 });
-  } catch {
-    refuse("open_failed");
+  } catch (error) {
+    throw new RecordingOpenRefusal(
+      "open_failed",
+      undefined,
+      `directory create: ${errorCode(error)}`,
+    );
   }
   const dir = lstatSync(directory);
   if (!dir.isDirectory() || dir.isSymbolicLink())
@@ -344,8 +414,9 @@ export function openRecordingDatabase(
       let stat: ReturnType<typeof lstatSync>;
       try {
         stat = lstatSync(path + side);
-      } catch {
-        continue;
+      } catch (error) {
+        if (missing(error)) continue;
+        return unavailable("sidecar check", error);
       }
       if (
         !stat.isFile() ||
@@ -368,19 +439,16 @@ export function openRecordingDatabase(
     );
     created = true;
   } catch (error) {
-    if (
-      !(
-        error &&
-        typeof error === "object" &&
-        "code" in error &&
-        error.code === "EEXIST"
-      )
-    )
-      return refuse("not_private");
+    if (errorCode(error) !== "EEXIST") {
+      if (aboutTheFile(error)) return refuse("not_private");
+      return unavailable("main create", error);
+    }
     try {
       fd = openSync(path, constants.O_RDWR | constants.O_NOFOLLOW);
-    } catch {
-      return refuse("not_private");
+    } catch (error) {
+      if (missing(error)) return refuse("replaced");
+      if (aboutTheFile(error)) return refuse("not_private");
+      return unavailable("main open", error);
     }
   }
   let db: Database | undefined;
@@ -416,20 +484,25 @@ export function openRecordingDatabase(
             refuse("foreign_sidecar");
           const uri = pathToFileURL(path);
           uri.searchParams.set("vfs", "unix-none");
-          const initial = new Database(uri.href, { strict: true });
           try {
-            initial.exec(
-              "PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL;",
-            );
-            initial.transaction(() => {
-              initial.exec(recordingDDL);
+            const initial = new Database(uri.href, { strict: true });
+            try {
               initial.exec(
-                `PRAGMA application_id=${recordingApplicationId};PRAGMA user_version=${recordingSchemaVersion};`,
+                "PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL;",
               );
-            })();
-            boundary?.("initialized");
-          } finally {
-            initial.close();
+              initial.transaction(() => {
+                initial.exec(recordingDDL);
+                initial.exec(
+                  `PRAGMA application_id=${recordingApplicationId};PRAGMA user_version=${recordingSchemaVersion};`,
+                );
+              })();
+              boundary?.("initialized");
+            } finally {
+              initial.close();
+            }
+          } catch (error) {
+            if (busy(error)) throw error;
+            unavailable("initialization", error);
           }
         } else if (!ownedHeader(fd, totalBytes)) refuse("foreign_header");
       } else if (!ownedHeader(fd, totalBytes))
@@ -462,8 +535,9 @@ export function openRecordingDatabase(
           readwrite: true,
           create: false,
         });
-      } catch {
-        return refuse("replaced");
+      } catch (error) {
+        if (!sameFile(fd, path)) return refuse("replaced");
+        return unavailable("connection open", error);
       }
       try {
         if (!sameFile(fd, path)) refuse("replaced");
@@ -472,7 +546,9 @@ export function openRecordingDatabase(
           recognizeRecordingFormat(db);
         } catch (error) {
           if (busy(error)) throw error;
-          refuse("foreign_catalog");
+          if (ourCatalogVerdict(error) || sqliteContent(error))
+            refuse("foreign_catalog");
+          unavailable("live catalog check", error);
         }
       } catch (error) {
         db.close();
@@ -489,8 +565,10 @@ export function openRecordingDatabase(
     }
   } catch (error) {
     if (db) db.close();
-    if (created && fstatSync(fd).size === 0 && sameFile(fd, path))
-      unlinkSync(path);
+    try {
+      if (created && fstatSync(fd).size === 0 && sameFile(fd, path))
+        unlinkSync(path);
+    } catch {}
     closeSync(fd);
     if (error instanceof RecordingOpenRefusal) throw error;
     if (busy(error))
@@ -498,11 +576,11 @@ export function openRecordingDatabase(
         "initialization_busy",
         "database is locked",
       );
-    throw new RecordingOpenRefusal("foreign_catalog");
+    return unavailable("open", error);
   }
   if (!db) {
     closeSync(fd);
-    throw new RecordingOpenRefusal("foreign_catalog");
+    return unavailable("open", new Error("no connection"));
   }
   const opened = db;
   let held = true;
@@ -548,7 +626,12 @@ export function openRecordingDatabase(
       }
       opened.close();
       handle.close();
-      throw error;
+      if (busy(error))
+        throw new RecordingOpenRefusal(
+          "initialization_busy",
+          "database is locked",
+        );
+      return unavailable("store setup", error);
     }
   }
 }

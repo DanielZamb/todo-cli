@@ -70,6 +70,7 @@ if (
   if (!port) throw new Error("Missing recording port");
   let engine: RecordingDatabase | undefined;
   let refusal: RecordingOpenRefusalReason | undefined;
+  let refusalDetail: string | undefined;
   let currentId: number | undefined,
     stepStarted = performance.now();
   const progress = () => {
@@ -86,6 +87,8 @@ if (
     } catch (error) {
       refusal =
         error instanceof RecordingOpenRefusal ? error.reason : "open_failed";
+      refusalDetail =
+        error instanceof RecordingOpenRefusal ? error.detail : undefined;
       if (!(error instanceof Error && /locked|busy/iu.test(error.message)))
         break;
       await new Promise((r) => setTimeout(r, 10));
@@ -199,7 +202,11 @@ if (
     status: engine?.status() ?? blank(),
     ...(engine || !refusal
       ? {}
-      : { refusal, refusal_files: presentRecordingFiles(boot.directory) }),
+      : {
+          refusal,
+          refusal_files: presentRecordingFiles(boot.directory),
+          ...(refusalDetail ? { refusal_detail: refusalDetail } : {}),
+        }),
   });
   await new Promise(() => {});
 }
@@ -219,6 +226,9 @@ const Response = Schema.Struct({
   ),
   refusal_files: Schema.optionalKey(
     Schema.Array(Schema.Literals(recordingStoreFiles)),
+  ),
+  refusal_detail: Schema.optionalKey(
+    Schema.String.check(Schema.isPattern(/^[a-z ]{1,40}: [A-Za-z0-9_]{1,40}$/)),
   ),
 });
 const decodeWorkerMessage = Schema.decodeUnknownOption(
@@ -260,7 +270,11 @@ export class DiagnosticRecordings {
   private condition: "available" | "unavailable" | "held_reader" =
     "unavailable";
   private refusal:
-    | { reason: RecordingOpenRefusalReason; files: readonly string[] }
+    | {
+        reason: RecordingOpenRefusalReason;
+        files: readonly string[];
+        detail?: string;
+      }
     | undefined;
   private pending = new Map<
     number,
@@ -348,6 +362,7 @@ export class DiagnosticRecordings {
             this.refusal = {
               reason: r.refusal ?? "open_failed",
               files: r.refusal_files ?? [],
+              ...(r.refusal_detail ? { detail: r.refusal_detail } : {}),
             };
             this.unavailable();
             return;
@@ -519,6 +534,7 @@ export class DiagnosticRecordings {
               this.directory,
               this.refusal.reason,
               this.refusal.files,
+              this.refusal.detail,
             ),
           }),
     };

@@ -48,6 +48,7 @@ export type RecordingCatalogVerdict =
     }
   | { readonly kind: "foreign_header" | "foreign_catalog" };
 type Read = (target: Buffer, position: number) => number;
+class CatalogShapeError extends Error {}
 const walChecksum = (
   s: [number, number],
   data: Buffer,
@@ -66,12 +67,12 @@ const varint = (page: Buffer, at: number): [number, number] => {
   let value = 0;
   for (let i = 0; i < 8; i++) {
     const byte = page[at + i];
-    if (byte === undefined) throw new Error("catalog");
+    if (byte === undefined) throw new CatalogShapeError();
     value = value * 128 + (byte & 0x7f);
     if (byte < 0x80) return [value, at + i + 1];
   }
   const last = page[at + 8];
-  if (last === undefined) throw new Error("catalog");
+  if (last === undefined) throw new CatalogShapeError();
   return [value * 256 + last, at + 9];
 };
 export function inspectRecordingCatalog(
@@ -138,14 +139,14 @@ export function inspectRecordingCatalog(
   const visited = new Set<number>();
   const page = (pgno: number) => {
     if (pgno < 1 || pgno > pageLimit || visited.size > 4096)
-      throw new Error("catalog");
+      throw new CatalogShapeError();
     const buffer = Buffer.alloc(pageSize);
     const at = committed.get(pgno);
     const read =
       at === undefined
         ? main.read(buffer, (pgno - 1) * pageSize)
         : wal?.read(buffer, at);
-    if (read !== pageSize) throw new Error("catalog");
+    if (read !== pageSize) throw new CatalogShapeError();
     return buffer;
   };
   try {
@@ -170,7 +171,7 @@ export function inspectRecordingCatalog(
       let collected = local;
       let next = local < size ? buffer.readUInt32BE(start + local) : 0;
       while (collected < size) {
-        if (visited.has(next)) throw new Error("catalog");
+        if (visited.has(next)) throw new CatalogShapeError();
         visited.add(next);
         const overflow = page(next);
         const take = Math.min(usable - 4, size - collected);
@@ -192,7 +193,7 @@ export function inspectRecordingCatalog(
       const values: Array<string | null> = [];
       let at = headerSize;
       for (const type of types) {
-        if (type === 10 || type === 11) throw new Error("catalog");
+        if (type === 10 || type === 11) throw new CatalogShapeError();
         const size = type >= 12 ? (type - 12) >> 1 : (fixed[type] ?? 0);
         values.push(
           type >= 13 && type % 2 === 1
@@ -203,11 +204,11 @@ export function inspectRecordingCatalog(
         );
         at += size;
       }
-      if (at > data.length) throw new Error("catalog");
+      if (at > data.length) throw new CatalogShapeError();
       return values;
     };
     const walk = (pgno: number) => {
-      if (visited.has(pgno)) throw new Error("catalog");
+      if (visited.has(pgno)) throw new CatalogShapeError();
       visited.add(pgno);
       const buffer = pgno === 1 ? first : page(pgno);
       const base = pgno === 1 ? 100 : 0;
@@ -230,10 +231,10 @@ export function inspectRecordingCatalog(
             typeof tbl_name !== "string" ||
             sql === undefined
           )
-            throw new Error("catalog");
+            throw new CatalogShapeError();
           rows.push({ type, name, tbl_name, sql });
         }
-      } else throw new Error("catalog");
+      } else throw new CatalogShapeError();
     };
     walk(1);
     const order = (a: SchemaRow, b: SchemaRow) =>
@@ -241,14 +242,21 @@ export function inspectRecordingCatalog(
       Buffer.compare(Buffer.from(a.name), Buffer.from(b.name));
     if (JSON.stringify(rows.sort(order)) !== expected.catalog)
       return { kind: "foreign_catalog" };
-    if (!writePage || committedFrames === 0)
-      return { kind: "owned", committedFrames };
+  } catch (error) {
+    if (error instanceof CatalogShapeError || error instanceof RangeError)
+      return { kind: "foreign_catalog" };
+    throw error;
+  }
+  if (!writePage || committedFrames === 0)
+    return { kind: "owned", committedFrames };
+  {
     const target = Buffer.alloc(pageSize);
     for (let pgno = 1; pgno <= pageLimit; pgno++) {
       target.fill(0);
       const at = committed.get(pgno);
       if (at !== undefined) {
-        if (wal?.read(target, at) !== pageSize) throw new Error("catalog");
+        if (wal?.read(target, at) !== pageSize)
+          throw new Error("Recording store changed during its check");
       } else if ((pgno - 1) * pageSize < main.size)
         main.read(target, (pgno - 1) * pageSize);
       if (pgno === 1) {
@@ -258,7 +266,5 @@ export function inspectRecordingCatalog(
       writePage((pgno - 1) * pageSize, target);
     }
     return { kind: "owned", committedFrames, imaged: true };
-  } catch {
-    return { kind: "foreign_catalog" };
   }
 }

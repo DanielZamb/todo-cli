@@ -270,3 +270,23 @@ SQLite's default page cache. The temporary file is at most the main file's
 size, which is capped by the recordings ceiling (`totalBytes`, 256 MiB by
 default); a larger main file is refused as `oversized` before any copy.
 Review 5's `image-cost.ts` measures it under `/usr/bin/time -l`.
+
+## The store's own failures are never a verdict about the files
+
+A refusal with removal advice is reported only for something established
+about the files: a header, catalog, sidecar, link, size, integrity or replaced
+path. When the store's own machinery fails, the open answers
+`check_unavailable`: state retrying, no files, no removal advice. Machinery
+failures include the temporary check copy (create or write), reading the store
+files, SQLite errors other than `SQLITE_NOTADB` and `SQLITE_CORRUPT*`, and any
+unexpected throw. The `detail` ("<stage>: <error code>") says what failed and
+contains no path.
+
+`.agents/skills/verify-ui-profiler/scripts/sqlite-check-temp.sh <checkout> <evidence>`
+creates an owned 8 MiB HFS+ volume, then opens a store with committed WAL
+frames while TMPDIR is normal, missing, read-only and on the full volume. It
+also opens a foreign catalog with TMPDIR missing. The volume is detached and
+removed afterwards. Expected: normal opens; missing, read-only and full answer
+`check_unavailable` (create ENOENT, create EACCES, write ENOSPC); the foreign
+catalog is still refused; the temporary directory's listing is unchanged in
+every case.

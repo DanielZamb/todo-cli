@@ -550,3 +550,113 @@ it("R5-3 answers an open it could not read consistently as busy, with nothing to
       "Recording retries automatically every minute; Task service is unaffected.",
   });
 });
+
+const withTmpdir = <A>(value: string, run: () => A) => {
+  const previous = process.env.TMPDIR;
+  process.env.TMPDIR = value;
+  try {
+    return run();
+  } finally {
+    if (previous === undefined) delete process.env.TMPDIR;
+    else process.env.TMPDIR = previous;
+  }
+};
+const recoveringStore = (root: string) => {
+  const dir = owned(root);
+  committedWal(
+    root,
+    dir,
+    "UPDATE counters SET value=value+1 WHERE name='dropped_batches'",
+  );
+  expect(statSync(join(dir, "recordings.db-wal")).size).toBeGreaterThan(0);
+  return dir;
+};
+const refusalWithDetail = (dir: string) => {
+  try {
+    new RecordingDatabase(dir).close();
+  } catch (error) {
+    if (error instanceof RecordingOpenRefusal)
+      return { reason: error.reason, detail: error.detail };
+    throw error;
+  }
+  return { reason: "opened", detail: undefined };
+};
+
+for (const [label, prepare, detail] of [
+  ["missing", (_: string) => undefined, "temporary image create: ENOENT"],
+  [
+    "read-only",
+    (t: string) => {
+      mkdirSync(t);
+      chmodSync(t, 0o500);
+    },
+    "temporary image create: EACCES",
+  ],
+] as const)
+  it(`R6-1 answers retrying, not foreign, when the temporary directory is ${label}, and leaves nothing behind`, () => {
+    const root = scratch();
+    const temp = join(root, "temp");
+    try {
+      const dir = recoveringStore(root);
+      prepare(temp);
+      const before = snapshot(dir);
+      const outside = readdirSync(root).sort();
+      expect(withTmpdir(`${temp}/`, () => refusalWithDetail(dir))).toEqual({
+        reason: "check_unavailable",
+        detail,
+      });
+      expect(snapshot(dir)).toEqual(before);
+      expect(readdirSync(root).sort()).toEqual(outside);
+      if (label === "read-only") expect(readdirSync(temp)).toEqual([]);
+      expect(
+        recordingRefusalGuidance(
+          dir,
+          "check_unavailable",
+          ["recordings.db"],
+          detail,
+        ),
+      ).toEqual({
+        state: "retrying",
+        reason: "check_unavailable",
+        explanation: `The store could not finish its own check of recordings.db, so nothing was decided about the files; the server retries in one minute. What failed: ${detail}.`,
+        files: [],
+        recovery:
+          "Recording retries automatically every minute; Task service is unaffected.",
+      });
+    } finally {
+      try {
+        chmodSync(temp, 0o700);
+      } catch {}
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+it("R6-1 still refuses a foreign catalog committed in the WAL while the temporary directory is missing", () => {
+  const root = scratch();
+  try {
+    const dir = owned(root);
+    committedWal(root, dir, "DROP TRIGGER sequence_conflict");
+    const before = snapshot(dir);
+    expect(
+      withTmpdir(join(root, "missing") + "/", () => refusalWithDetail(dir)),
+    ).toEqual({ reason: "foreign_catalog", detail: undefined });
+    expect(snapshot(dir)).toEqual(before);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+it("R6-1 opens a recovering store with a usable temporary directory and leaves it empty", () => {
+  const root = scratch();
+  const temp = join(root, "temp");
+  try {
+    const dir = recoveringStore(root);
+    mkdirSync(temp);
+    expect(withTmpdir(`${temp}/`, () => refusalWithDetail(dir)).reason).toBe(
+      "opened",
+    );
+    expect(readdirSync(temp)).toEqual([]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
