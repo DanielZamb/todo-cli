@@ -243,8 +243,10 @@ extension TodoModel {
         enum Owner { case picker(UUID, SurfaceMessages<DependencyPicker.MessageKind, DependencyNotice>.Ticket), report(SurfaceMessages<ImportMessageKind, String>.Ticket), main(SurfaceMessages<MessageKind, String>.Ticket) }
         let owner: Owner
         switch surface {
-        // The follow-up for this rejected row: a newer one for the same row supersedes it (D1).
-        case .dependencyPicker(let picker): owner = .picker(picker, dependencies.picker!.messages.begin(.followUp, target: id))
+        // A follow-up commits nothing; its result is a navigation (Quick Add). So any newer
+        // follow-up in this picker supersedes it, whatever its row (coordinator ruling,
+        // 2026-11-12). Its failure still belongs to its row, so a link on that row ends it.
+        case .dependencyPicker(let picker): owner = .picker(picker, dependencies.picker!.messages.begin(.followUp))
         case .importSheet: owner = .report(importMessages.begin(.followUp))
         default: owner = .main(beginMessage(.dependencyFollowUp))
         }
@@ -277,7 +279,7 @@ extension TodoModel {
                 guard dependencies.picker?.id == picker else { break }
                 var notice = DependencyNotice(message: failed)
                 if var offered = dependencies.picker?.operationFailure, offered.followUp != nil { offered.followUpFailure = failed; notice = offered }
-                dependencies.picker?.messages.fail(notice, ticket)
+                dependencies.picker?.messages.fail(notice, ticket, row: id)
             case .report(let ticket):
                 let failureText = "Couldn't prepare the follow-up Task: " + describe(error, at: .importTasks) + " Try again."
                 importMessages.fail(failureText, ticket)

@@ -69,6 +69,19 @@ import Testing
         let olderPublished = messages.fail("older", older)
         #expect(!olderPublished && messages.isNewest(newer) && messages.value == nil)
     }
+    // A navigation (coordinator ruling, 2026-11-12): superseded across rows, its message ends with its row.
+    @Test func aNavigationIsSupersededAcrossRowsButItsMessageEndsWithItsRow() {
+        var messages = SurfaceMessages<Kind, String>()
+        let older = messages.begin(.a), newer = messages.begin(.a)
+        let olderPublished = messages.fail("row A", older, row: "row A")
+        #expect(!olderPublished && messages.value == nil, "the older navigation, for another row, presents nothing")
+        let newerPublished = messages.fail("row B", newer, row: "row B")
+        #expect(newerPublished && messages.value == "row B")
+        messages.clear([.a], onlyTarget: "row A")
+        #expect(messages.value == "row B", "an action on another row leaves it")
+        messages.clear([.a], onlyTarget: "row B")
+        #expect(messages.value == nil, "an action on its row ends it")
+    }
     // D2: same-kind failures on different targets merge; another kind replaces.
     private func merged() -> SurfaceMessages<Kind, String> {
         .init(merge: { kind, parts in kind == .a ? "\(parts.count): " + MergedFailureWording.names(parts.map(\.subject)) : nil })

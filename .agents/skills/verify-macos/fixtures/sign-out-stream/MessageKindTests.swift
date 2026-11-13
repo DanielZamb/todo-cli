@@ -12,8 +12,9 @@ import TodoAPI
 // and a recovery, where the same kind's success clears its earlier message.
 
 /// `corrupt`: the request reaches the server (a write commits), then the client gets a 200 whose
-/// body it cannot read (S1-19).
-private enum Step: Sendable { case pass, hold, fail(Int, String), holdThenFail(Int, String), drop, corrupt }
+/// body it cannot read (S1-19). `holdAs`: held under "operation#label", so two requests of one
+/// operation can be pending at once and released in either order.
+private enum Step: Sendable { case pass, hold, holdAs(String), fail(Int, String), holdThenFail(Int, String), drop, corrupt }
 
 private actor ScriptGate: ClientTransport {
     let session: URLSession
@@ -43,6 +44,7 @@ private actor ScriptGate: ClientTransport {
         switch step {
         case .pass: break
         case .hold: await withCheckedContinuation { held[operationID] = $0 }
+        case .holdAs(let label): await withCheckedContinuation { held[operationID + "#" + label] = $0 }
         case .fail(let status, let message): throw RequestFailure(status: status, message: message, code: status == 401 ? "unauthorized" : "unavailable")
         case .drop: throw URLError(.networkConnectionLost)
         case .corrupt:
@@ -1576,21 +1578,67 @@ private actor ScriptGate: ClientTransport {
         await finish(model, gate, vault)
     }
 
+    // Follow-ups are navigations (coordinator ruling, 2026-11-12): "Create follow-up" commits
+    // nothing and opens Quick Add, so in one picker only the newest follow-up is live, whatever its
+    // row. Links commit writes and stay per row (D1).
     @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
-    func anOlderFollowUpForAnotherRowStillOpensItsQuickAdd() async throws {
-        // D1: follow-ups for two rejected rows are both live. The older one's success opens its
-        // Quick Add, which closes the picker and the newer row's failure with it.
+    func anOlderFollowUpForAnotherRowPresentsNothingAndTheNewerFailureKeepsItsNotice() async throws {
         let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
         pickerFor(model, task)
+        let picker = try #require(model.dependencies.picker?.id)
+        model.dependencies.picker?.failure = DependencyNotice(message: "ORIGINAL This Task blocks done Tasks.", followUp: task.id)
         await gate.next("tasks.show", .hold)
         let older = Task { await model.createDependencyFollowUp(task.id) }
-        try await wait("older held") { await gate.isHeld("tasks.show") }
-        await gate.next("tasks.show", .fail(404, "OTHER ROW follow-up failed"))
+        try await wait("A held") { await gate.isHeld("tasks.show") }
+        await gate.next("tasks.show", .fail(404, "ROW B follow-up failed"))
         await model.createDependencyFollowUp(UUID().uuidString)
-        #expect(model.dependencies.picker?.failure?.message.contains("OTHER ROW follow-up failed") == true, "the other row's failure shows first")
         await gate.release("tasks.show"); await older.value
-        #expect(model.quickAdd && model.dependencies.picker == nil && model.dependencies.initial.contains { $0.id == task.id }, "the older row's follow-up presents")
-        #expect(model.message == nil, "nothing moves to the banner")
+        #expect(model.dependencies.picker?.id == picker && !model.quickAdd, "the picker stays open and A opens no Quick Add")
+        #expect(model.dependencies.picker?.failure?.message == "ORIGINAL This Task blocks done Tasks.", "the notice stays")
+        #expect(model.dependencies.picker?.failure?.followUp == task.id, "its button stays")
+        #expect(model.dependencies.picker?.failure?.followUpFailure == "Couldn't prepare the follow-up Task: ROW B follow-up failed Try again.", "B's failure stays with it")
+        #expect(model.dependencies.initial.isEmpty && model.message == nil, "A adds nothing and says nothing")
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: ["older-completes-first", "older-completes-last"])
+    func ofTwoSucceedingFollowUpsInOnePickerOnlyTheNewerOpensQuickAdd(_ order: String) async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        let other = try await secondTask(model, gate, vault)
+        pickerFor(model, task)
+        await gate.next("tasks.show", .holdAs("A"), .holdAs("B"))
+        let older = Task { await model.createDependencyFollowUp(task.id) }
+        try await wait("A held") { await gate.isHeld("tasks.show#A") }
+        let newer = Task { await model.createDependencyFollowUp(other.id) }
+        try await wait("B held") { await gate.isHeld("tasks.show#B") }
+        if order == "older-completes-first" {
+            await gate.release("tasks.show#A"); await older.value
+            #expect(!model.quickAdd && model.dependencies.picker != nil, "A, superseded, opens nothing")
+            await gate.release("tasks.show#B"); await newer.value
+        } else {
+            await gate.release("tasks.show#B"); await newer.value
+            await gate.release("tasks.show#A"); await older.value
+        }
+        #expect(model.quickAdd && model.dependencies.picker == nil, "B opens Quick Add")
+        #expect(model.dependencies.initial.map(\.id) == [other.id], "only B's Task: \(model.dependencies.initial.map(\.title))")
+        #expect(model.message == nil)
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func aLinkOnARowStillEndsThatRowsFollowUpNotice() async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        let other = try await secondTask(model, gate, vault)
+        pickerFor(model, task); await model.reloadDependencyPicker()
+        model.dependencies.picker?.failure = DependencyNotice(message: "ORIGINAL This Task blocks done Tasks.", followUp: task.id)
+        await gate.next("tasks.show", .fail(404, "ROW follow-up failed"))
+        await model.createDependencyFollowUp(task.id)
+        try #require(model.dependencies.picker?.failure?.followUpFailure == "Couldn't prepare the follow-up Task: ROW follow-up failed Try again.")
+        await gate.next("tasks.depend", .hold)
+        let link = Task { await model.toggleDependency(other) }
+        try await wait("link held") { await gate.isHeld("tasks.depend") }
+        #expect(model.dependencies.picker?.failure == nil, "a link on this row ends its follow-up notice when it starts: \(model.dependencies.picker?.failure?.message ?? "nil")")
+        await gate.release("tasks.depend"); await link.value
         await finish(model, gate, vault)
     }
 

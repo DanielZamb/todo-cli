@@ -260,7 +260,7 @@ own value, so a new instance starts a new sequence. Within it:
 | Field (surface instance) | Kinds | May set it | May clear it |
 | --- | --- | --- | --- |
 | `message` (main window; Settings shows it under Sign out while `messageKind == .signOut`) | `MessageKind` | The table above, by `publishMessage` and the newest of a follow-up's kind | Rule 2 and rule 4; Dismiss |
-| Dependency picker `failure` (`DependencyPicker.id`) | `reload`, `link`, `followUp` | A reload's failure, a link or unlink failure, or a follow-up failure, each only while newest of its kind. A follow-up failure is shown with the notice that offered it (that notice, its button and the failure, published as one `followUp` message; candidate 8 ruling 1). | A link's start (an earlier `link`, `reload` or `followUp` notice); opening, a direction change or the person's Reload on success (`reload`, `link` and `followUp` from before its mark: the Reload ruling below); a link's success (`link` from before its mark); a follow-up's success (`followUp` from before its mark); closing the picker. A link's read-back and the background refresh clear nothing. |
+| Dependency picker `failure` (`DependencyPicker.id`) | `reload`, `link`, `followUp` | A reload's failure, a link or unlink failure (newest on its row), or a follow-up failure (newest in the picker, whatever its row: a navigation), each only while newest. A follow-up failure is shown with the notice that offered it (that notice, its button and the failure, published as one `followUp` message; candidate 8 ruling 1). | A link's start (an earlier `link`, `reload` or `followUp` notice); opening, a direction change or the person's Reload on success (`reload`, `link` and `followUp` from before its mark: the Reload ruling below); a link's success (`link` from before its mark); a follow-up's success (`followUp` from before its mark); closing the picker. A link's read-back and the background refresh clear nothing. |
 | Import `importError` and `importFollowUpError` (`importInstance`) | `file`, `run`, `followUp` | Reading the file (`file`); a preview or apply failure (`run`); a follow-up failure (`followUp`), each only while newest of its kind | A preview or apply start (`file` and `run`); a run's success (`run` from before its mark); a follow-up's success (`followUp` from before its mark); closing or resetting Import |
 | Quick-add `quickAddError` and `parseError` (`quickAddInstance`) | `create`, `parse` | A create failure or a parse failure, each only while newest of its kind | A create start (`create`) or a parse start (`parse`); a success of the same kind from before its mark; opening quick-add |
 | Editor `editorError` (`TaskDraft.opening`) | `general`, `save`, `write`, `conflict`, `series`, `seriesSave`, `attachment` | Synchronous checks (`general`: validation, transition and delete conflict text, Attachment input checks); a Save, Move, Copy or transfer failure; a conflict definitions reload failure; a Series open or save failure; an Attachment write failure. Each asynchronous one only while newest of its kind. | Save, write and Series save start clean; a Series open starts by ending `series`; a success of the same kind from before its mark; a new editor opening; accepting a conflict |
@@ -362,8 +362,18 @@ candidate 8). An action is superseded only by a newer action of the same kind on
 the same target in the same instance. Examples of a target:
 
 - the dependent Task of a link or unlink;
-- the rejected row of a follow-up;
 - the Task of a Save.
+
+**Writes and navigations** (coordinator ruling, 2026-11-12). An action that
+commits, or may have committed, a write is superseded only by a newer action of
+the same kind on the same target. An action whose result is a navigation (it
+opens or replaces a sheet) is superseded by any newer navigation of the same kind
+in the same surface instance, whatever its target. "Create follow-up" commits
+nothing and opens Quick Add, so in one picker only the newest follow-up is live:
+an older follow-up that later succeeds opens nothing, and one that later fails
+presents nothing. Its failure still belongs to its row (`fail(_:_:row:)`), so a
+link on that row ends it as before. The Import report's follow-ups were already
+superseded this way.
 
 Two actions on different targets are both live, and each reports its own
 outcome: in the surface while it is open, and as a hand-off after it closes, as

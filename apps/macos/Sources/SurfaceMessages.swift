@@ -54,8 +54,9 @@ struct SurfaceMessages<Kind: Hashable, Value> {
 
     struct Ticket: Equatable {
         let kind: Kind
-        /// What the action acts on (D1): the dependent Task of a link, the rejected row of a
-        /// follow-up. Only a newer action of the same kind on the same target supersedes it.
+        /// What the action acts on (D1): the dependent Task of a link. Only a newer action of the
+        /// same kind on the same target supersedes it. A navigation (it opens or replaces a sheet)
+        /// has none: any newer navigation of its kind in the instance supersedes it.
         let target: AnyHashable?
         let generation: Int
         let mark: Int
@@ -120,9 +121,12 @@ struct SurfaceMessages<Kind: Hashable, Value> {
     }
 
     /// A failure: publishes only while the action is still the newest of its kind (on its target).
-    @discardableResult mutating func fail(_ value: Value, _ ticket: Ticket, subject: String? = nil, reasonCode: String? = nil, reasonText: String? = nil) -> Bool {
+    /// `row` names the row the message belongs to when that differs from the ticket's target: a
+    /// navigation is superseded across rows, but its message still ends with a later action on its
+    /// row.
+    @discardableResult mutating func fail(_ value: Value, _ ticket: Ticket, row: AnyHashable? = nil, subject: String? = nil, reasonCode: String? = nil, reasonText: String? = nil) -> Bool {
         guard isNewest(ticket) else { return false }
-        publish(value, kind: ticket.kind, target: ticket.target, subject: subject, reasonCode: reasonCode, reasonText: reasonText)
+        publish(value, kind: ticket.kind, target: row ?? ticket.target, subject: subject, reasonCode: reasonCode, reasonText: reasonText)
         return true
     }
 
