@@ -27,9 +27,16 @@ The draft decision is [ADR-0023](../../adr/0023-cli-writes-through-the-running-s
   No pinned constructor or transaction changes implement this check.
 - The SQLite singleton guard lives in the private .todo-routing directory beside
   the canonical database, named by device, inode and birth time. It outlives store
-  close and is independent of HOME/TMPDIR. Server startup refuses multiply linked
-  database files because different hard-link directories have no common beside-file
-  registry. The CLI still writes directly to hard-linked databases. At publication,
+  close and is independent of HOME/TMPDIR. A multiply linked database (link count
+  other than 1) never stops the server: it starts and serves exactly as on the
+  base, takes no guard, publishes no record, gives no proof, authorizes no command
+  or nudge and logs the reason once, as when descriptor evidence is missing. Backup
+  tools can link a live file without the owner knowing, and different hard-link
+  directories share no beside-file guard. If the link count leaves 1 while the
+  server runs, that incarnation withdraws for good, as for a lost guard; removing
+  the link does not restore its record. Two servers on one multiply linked file are
+  possible, as on the base, but neither ever proves, so no CLI write can be sent to
+  the wrong one. The CLI writes directly to hard-linked databases. At publication,
   proof and authorization, losing the guard inode or database binding permanently
   withdraws that incarnation and removes only its own record. It never recreates
   a missing guard while serving. No production guard is created under /tmp.

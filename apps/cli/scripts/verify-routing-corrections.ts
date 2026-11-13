@@ -906,6 +906,116 @@ try {
       };
     },
   );
+  await check("Multiply linked database serves without routing", async () => {
+    const local = (log: string) => log.split('"http.url": "/local/').length - 1;
+    const withdrawals = (log: string, cause: string) =>
+      log
+        .split("\n")
+        .filter(
+          (line) =>
+            line.includes('"event":"local_routing_disabled"') &&
+            line.includes(cause),
+        ).length;
+    const token = JSON.parse(
+      fs.readFileSync(join(home, ".todo-cli/session_default.json"), "utf8"),
+    ).token;
+    const file = endpointPath(fs.realpathSync(db));
+    const port = (log: string) =>
+      Number(
+        log.split("Listening on http://127.0.0.1:")[1]?.match(/^[0-9]+/)?.[0],
+      );
+    const proofStatus = async (p: number) =>
+      (
+        await fetch(`http://127.0.0.1:${p}/local/database-proof`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nonce: "c".repeat(64) }),
+        })
+      ).status;
+    // Linked before start-up: serves as on the base, never routes.
+    const link = join(home, "second-link.db");
+    fs.linkSync(db, link);
+    assert.equal(fs.statSync(db).nlink, 2);
+    const linked = start(server, db);
+    await until(() => port(linked.log()) > 0, linked.child);
+    const linkedPort = port(linked.log());
+    assert.equal(fs.existsSync(file), false);
+    assert.equal(
+      withdrawals(linked.log(), "more than one hard link"),
+      1,
+      linked.log(),
+    );
+    const listed = await fetch(
+      `http://127.0.0.1:${linkedPort}/profiles/default/tasks`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    assert.equal(listed.status, 200);
+    const created = await fetch(
+      `http://127.0.0.1:${linkedPort}/profiles/default/tasks`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title: "Created over HTTP on a linked file" }),
+      },
+    );
+    assert.equal(created.status, 200, await created.clone().text());
+    assert.equal(await proofStatus(linkedPort), 400);
+    const localBefore = local(linked.log());
+    const tasksBefore = count(db);
+    await command(["add", "Direct on a linked file"]);
+    assert.equal(count(db), tasksBefore + 1);
+    assert.equal(local(linked.log()), localBefore);
+    assert.equal(fs.existsSync(file), false);
+    assert.equal(withdrawals(linked.log(), "hard link"), 1);
+    await stop(linked.child);
+    fs.unlinkSync(link);
+    // Linked after start-up: withdraws for good, logged once.
+    const later = await ready(server, db);
+    assert.equal(await proofStatus(later.record.port), 200);
+    fs.linkSync(db, link);
+    assert.equal(await proofStatus(later.record.port), 400);
+    assert.equal(fs.existsSync(later.file), false);
+    assert.equal(
+      withdrawals(later.log(), "gained another hard link"),
+      1,
+      later.log(),
+    );
+    fs.unlinkSync(link);
+    assert.equal(fs.statSync(db).nlink, 1);
+    assert.equal(await proofStatus(later.record.port), 400);
+    assert.equal(fs.existsSync(later.file), false);
+    const localLater = local(later.log());
+    await command(["add", "Direct after link removed"]);
+    assert.equal(local(later.log()), localLater);
+    assert.equal(fs.existsSync(later.file), false);
+    assert.equal(withdrawals(later.log(), "hard link"), 1);
+    await stop(later.child);
+    return {
+      linked_at_start: {
+        server_started: true,
+        list_status: 200,
+        create_status: 200,
+        record: false,
+        proof_status: 400,
+        cli_write_direct: 1,
+        server_local_requests_from_cli: 0,
+        withdrawal_logs: 1,
+      },
+      linked_after_start: {
+        proof_before_link: 200,
+        proof_after_link: 400,
+        record_after_link: false,
+        withdrawal_logs: 1,
+        proof_after_unlink: 400,
+        record_after_unlink: false,
+        cli_write_direct: 1,
+        server_local_requests_from_cli: 0,
+      },
+    };
+  });
   assert(
     events
       .filter((e) => e.path === "/local/nudge")

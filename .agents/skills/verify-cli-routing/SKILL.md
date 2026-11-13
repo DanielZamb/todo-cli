@@ -121,5 +121,7 @@ first production routing requires MAC-proved 2 and the reviewed durable-denial f
 The endpoint independently fstats newly opened descriptors across synchronous
 store acquisition on macOS and Linux. Missing platform evidence disables all
 local routing with one log; differing evidence aborts startup. The persistent
-guard outlives store close. Multiply linked server startup is refused to prevent
-independent beside-file registries. CLI writes still fall back directly.
+guard outlives store close. A multiply linked database starts and serves as on
+the base with no guard, record, proof or authorization and one withdrawal log; a
+link added after start-up withdraws that incarnation for good, and removing it
+does not bring the record back. CLI writes go direct with zero server requests.

@@ -81,36 +81,42 @@ export function databaseEndpoint(path: string) {
           join(dirname(resolve(path)), "attachments"),
       ),
     };
-    // Hard links in different directories have no common beside-file registry.
-    // Refuse startup rather than create independent guards for one inode.
-    if (fstatSync(descriptor).nlink !== 1)
-      throw new Error("Cannot start a server on a multiply linked database");
-    const registry = join(dirname(canonical), ".todo-routing");
-    mkdirSync(registry, { mode: 0o700, recursive: true });
-    if (!privateEntry(registry, true))
-      throw new Error("Unsafe server lock directory");
-    const guardPath = join(
-      registry,
-      `${binding.identity.device}-${binding.identity.inode}-${binding.identity.birth}.sqlite`,
-    );
-    lockDescriptor = openSync(guardPath, "a", 0o600);
-    const lockedIdentity = identity(lockDescriptor);
-    if (!privateEntry(guardPath, false))
-      throw new Error("Unsafe server lock file");
-    const beforeGuard = descriptors();
-    guard = new Database(guardPath);
-    guard.exec("PRAGMA busy_timeout=0; BEGIN EXCLUSIVE");
-    const afterGuard = descriptors();
-    if (
-      beforeGuard &&
-      afterGuard &&
-      ![...afterGuard].some(
-        ([fd, id]) => !beforeGuard.has(fd) && sameIdentity(id, lockedIdentity),
-      )
-    )
-      throw new Error(
-        "Server guard connection file differs from its kept descriptor",
+    // Hard links in different directories have no common beside-file guard.
+    // A multiply linked file is served as on the base, without a guard, and
+    // this incarnation takes no part in routing.
+    const singlyLinked = () => fstatSync(descriptor).nlink === 1;
+    const linked = !singlyLinked();
+    let guardPath: string | undefined;
+    let lockedIdentity: ReturnType<typeof identity> | undefined;
+    if (!linked) {
+      const registry = join(dirname(canonical), ".todo-routing");
+      mkdirSync(registry, { mode: 0o700, recursive: true });
+      if (!privateEntry(registry, true))
+        throw new Error("Unsafe server lock directory");
+      guardPath = join(
+        registry,
+        `${binding.identity.device}-${binding.identity.inode}-${binding.identity.birth}.sqlite`,
       );
+      lockDescriptor = openSync(guardPath, "a", 0o600);
+      const held = identity(lockDescriptor);
+      lockedIdentity = held;
+      if (!privateEntry(guardPath, false))
+        throw new Error("Unsafe server lock file");
+      const beforeGuard = descriptors();
+      guard = new Database(guardPath);
+      guard.exec("PRAGMA busy_timeout=0; BEGIN EXCLUSIVE");
+      const afterGuard = descriptors();
+      if (
+        beforeGuard &&
+        afterGuard &&
+        ![...afterGuard].some(
+          ([fd, id]) => !beforeGuard.has(fd) && sameIdentity(id, held),
+        )
+      )
+        throw new Error(
+          "Server guard connection file differs from its kept descriptor",
+        );
+    }
     const incarnation = randomBytes(32).toString("hex");
     const secret = randomBytes(32).toString("hex");
     let record: EndpointRecord | undefined;
@@ -138,8 +144,27 @@ export function databaseEndpoint(path: string) {
         JSON.stringify({ event: "local_routing_disabled", cause }) + "\n",
       );
     };
+    if (linked)
+      withdraw(
+        "Server database has more than one hard link; local routing is off for this incarnation",
+      );
     const current = () => {
       if (withdrawn) return false;
+      try {
+        if (!singlyLinked()) {
+          withdraw(
+            "Server database gained another hard link; local routing is off for this incarnation",
+          );
+          return false;
+        }
+      } catch {
+        withdraw("Server database descriptor is unavailable");
+        return false;
+      }
+      if (!guardPath || !lockedIdentity) {
+        withdraw("Server guard is unavailable");
+        return false;
+      }
       try {
         const stat = statSync(guardPath, { bigint: true });
         if (
@@ -167,6 +192,8 @@ export function databaseEndpoint(path: string) {
     return {
       beforeStore: descriptors,
       verifyStore(before: ReturnType<typeof descriptors>) {
+        // A linked incarnation already withdrew and serves as on the base.
+        if (withdrawn) return;
         const after = descriptors();
         if (!before || !after) {
           withdraw(
