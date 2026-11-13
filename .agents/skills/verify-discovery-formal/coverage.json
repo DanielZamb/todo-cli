@@ -5,7 +5,7 @@
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "1f281291641fcef42301443f09d5f0f2651153ed",
+  "productionSyncCommit": "5a359ca66a9014be74f81f3f1baee25db1ca76f9",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -133,7 +133,7 @@
         "canShowDiscovery",
         "applyDiscoveryShow"
       ],
-      "sha256": "c359acd66790aeeab8b8d12518336ac2ca9318e5604e765bae57d2a6e9c0eae9",
+      "sha256": "631e996fd45661d09c1dc45dbecc8bfe2076cf9e652f2dcb11f546050062851a",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -157,7 +157,7 @@
         "signOut start, failure and commit",
         "followChanges reconnect retry from Offline and sign-out notice"
       ],
-      "sha256": "4650f9dd4992523a4aeb6d9d5c5478e5ff1dab46ef3f2264388ae2c5f4d8177b",
+      "sha256": "21974e42db272bea7902d56b9bf8935fa78a7675bafa2137460912a978300b4d",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -167,7 +167,7 @@
         "TaskListView sheet/alert binding",
         "DraftNavigationActions target capture and explicit Cancel"
       ],
-      "sha256": "cfc26acfa67d9e220dce8795024242dfa89306ff827bd2717cb3db0bcd8f758d",
+      "sha256": "1592456047df2944823f11df2867224eb45aa9a04ba0c33599bb305ab9df85d1",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -193,7 +193,7 @@
       "functions": [
         "changeAttachment captured epoch and publication"
       ],
-      "sha256": "a58d146e2cdc7a1f95be8c3c8f971c15def77627e7f738b507c543940131579e",
+      "sha256": "ca9e3b5ae612bdaaa1983761e620c0b573134240d2dd83658a2a37711d8b4f1b",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -202,7 +202,7 @@
         "reloadBatchEditTargets",
         "applyBatchEdit"
       ],
-      "sha256": "2325eb5c4f4b7074e1c0042ce1604ebf74319750b5eb2a7bcf21f2d76c6aba1c",
+      "sha256": "f1ed5d55dd6f66bdeb8a6ef4c850e073db5ee8354d4b7994922e198078bf1a0b",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -211,7 +211,7 @@
         "reloadAttachmentTargets",
         "applyAttachmentBatch"
       ],
-      "sha256": "7cd4d4bf9594e4c18dc652f95540ff7d59389156da6e91c4b44de7a78c92bb45",
+      "sha256": "ee879680f803f56ca92b25d986bcee99aeb697732f0eb4aa22d0dfb14447c1a4",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     }
   ],
@@ -225,7 +225,7 @@
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "8290ff1e034a524a64eb780f93009e05aef68978",
+  "previousProductionSyncCommit": "1f281291641fcef42301443f09d5f0f2651153ed",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -564,20 +564,40 @@
     "review": "Candidate 8: write paths keep a committed write's read-back when a later step fails (S1-19) and handle a current 401 first in every failure path (S1-20), reading discovery.credentialEpoch as before and comparing it with isCurrentCredential; supersession is per target and same-kind link failures merge (D1, D2); the Find field is hidden, not cleared, while the Compact editor is shown (ruling 5); confirmations expire by sequence; rows count timeline ticks for stall observation. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed; requestDiscovery, showDiscoveryMatch and discovery.error are untouched (discovery stays outside the helper, see docs/decisions/mac-session-retirement.md)."
   },
   "renewalReview": {
-    "product": "1f281291641fcef42301443f09d5f0f2651153ed",
-    "controls": "check-swift passed on 1f281291: docs/evidence/discovery-formal/swift-hcIIdS",
+    "product": "5a359ca66a9014be74f81f3f1baee25db1ca76f9",
+    "controls": "check-swift passed on 5a359ca6: docs/evidence/discovery-formal/swift-gRn8hO",
     "changed": [
       {
+        "path": "apps/macos/Sources/Discovery.swift",
+        "from": "c359acd66790aeeab8b8d12518336ac2ca9318e5604e765bae57d2a6e9c0eae9",
+        "to": "631e996fd45661d09c1dc45dbecc8bfe2076cf9e652f2dcb11f546050062851a"
+      },
+      {
         "path": "apps/macos/Sources/TodoModel.swift",
-        "from": "92f171587de6cff9c30f946cc15828e7c2be4fd65dcc714afb771fcc7731bf52",
-        "to": "4650f9dd4992523a4aeb6d9d5c5478e5ff1dab46ef3f2264388ae2c5f4d8177b"
+        "from": "4650f9dd4992523a4aeb6d9d5c5478e5ff1dab46ef3f2264388ae2c5f4d8177b",
+        "to": "21974e42db272bea7902d56b9bf8935fa78a7675bafa2137460912a978300b4d"
       },
       {
         "path": "apps/macos/Sources/AppViews.swift",
-        "from": "54d8624e14d90efef5c93e74fc50bbf918d48a2d6316fc83bcb394f6c5db4eee",
-        "to": "cfc26acfa67d9e220dce8795024242dfa89306ff827bd2717cb3db0bcd8f758d"
+        "from": "cfc26acfa67d9e220dce8795024242dfa89306ff827bd2717cb3db0bcd8f758d",
+        "to": "1592456047df2944823f11df2867224eb45aa9a04ba0c33599bb305ab9df85d1"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentModel.swift",
+        "from": "a58d146e2cdc7a1f95be8c3c8f971c15def77627e7f738b507c543940131579e",
+        "to": "ca9e3b5ae612bdaaa1983761e620c0b573134240d2dd83658a2a37711d8b4f1b"
+      },
+      {
+        "path": "apps/macos/Sources/BatchEdit.swift",
+        "from": "2325eb5c4f4b7074e1c0042ce1604ebf74319750b5eb2a7bcf21f2d76c6aba1c",
+        "to": "f1ed5d55dd6f66bdeb8a6ef4c850e073db5ee8354d4b7994922e198078bf1a0b"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentBatch.swift",
+        "from": "7cd4d4bf9594e4c18dc652f95540ff7d59389156da6e91c4b44de7a78c92bb45",
+        "to": "ee879680f803f56ca92b25d986bcee99aeb697732f0eb4aa22d0dfb14447c1a4"
       }
     ],
-    "review": "The Profile return fix (86549d65, coordinator ruling on the candidate 9 restore finding) changes TodoModel.swift and AppViews.swift. In TodoModel: replaceCredential gains a first line that drops the forced-leave record (no change to the credential epoch or its order); followChanges' reload branch reads whether the person acted before its resets and, after discoverProfiles, may return to a restored Profile through activateProfile, exactly as the existing profile-change branch beside it does; discoverProfiles says why when the shown Profile is gone; leaveDeletedProfile records the leave; the editor and quickAdd didSets, newTitle, setSearchText and changeProfile note a person's action. In AppViews: the notice capsule shows the offer's Switch button, and the list's selection notes a person's action. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
+    "review": "Candidate 10 (d6df6719, item 8 at 5a359ca6) changes six mapped Swift files. Discovery.swift: DiscoveryState.dialog gains a didSet that, from hidden to shown only, calls the model's presented() closure (a person-action count, MAC-C1-S1-32); openDiscovery, closeDiscovery, requestDiscovery and every publication guard are unchanged. TodoModel.swift: notePersonActed() now advances PersonInput's content-free count; every write function's first line notes a person's action (a counter, before and independent of its guards); sheet and dialog state notes a presentation from hidden to shown; the notice timer moved from the view into the model (noticeHeld, restartNoticeTimer, holdNotice with a cancellation check) with 6 s and 10 s notices; ForcedProfileLeave records the person-input count, and a second deletion carries the first leave only when forcedLeaveToCarry, asked before the switch, finds no action; discoverProfiles and leaveDeletedProfile ask it before switching; the Profile notices use curly quotes. AppViews.swift: the notice capsule reports hover and focus to the model instead of running its own timer; Quick Add's chip region tells the Dependency line when it cuts chips. AttachmentModel.swift, BatchEdit.swift and AttachmentBatch.swift: each write function's first line notes a person's action. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
   }
 }
