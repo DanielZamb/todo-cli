@@ -1610,6 +1610,34 @@ private actor ScriptGate: ClientTransport {
         await finish(model, gate, vault)
     }
 
+    /// The seat's candidate 7c probe (line 52) under D1: a link's committed write whose catalog
+    /// read-back fails. Superseded on its own row, the read-back presents nothing; on another row it
+    /// is live and reports its own read-back, while the newer row's refusal stays in the picker.
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: ["same-row", "other-row"])
+    func aLinkReadBackFailureFollowsItsRowsSupersession(_ row: String) async throws {
+        let gate = ScriptGate(); let (model, vault, root) = try await live(gate)
+        let (a, b) = try await blocksPicker(model, gate, vault, root: root)
+        await gate.next("reads.profiles", .holdThenFail(503, "A catalog read-back"))
+        let older = Task { await model.toggleDependency(a) }
+        try await wait("A's read-back held") { await gate.isHeld("reads.profiles") }
+        var newer: String?
+        if row == "same-row" {
+            _ = model.dependencies.picker?.messages.begin(.link, target: a.id)
+        } else {
+            await gate.next("tasks.depend", .fail(503, "ROW B refused"))
+            await model.toggleDependency(b)
+            newer = try #require(model.dependencies.picker?.failure?.message, "B's refusal shows")
+        }
+        await gate.release("reads.profiles"); await older.value
+        if row == "same-row" {
+            #expect(model.message == nil, "superseded on its row: \(model.message ?? "nil")")
+        } else {
+            #expect(model.message?.hasSuffix(". The live view is reconnecting.") == true, "A's own read-back: \(model.message ?? "nil")")
+            #expect(model.dependencies.picker?.failure?.message == newer, "B's refusal stays in the picker")
+        }
+        await finish(model, gate, vault)
+    }
+
     @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
     func twoRefusedLinksOnDifferentRowsMergeIntoOneNotice() async throws {
         let gate = ScriptGate(); let (model, vault, root) = try await live(gate)
