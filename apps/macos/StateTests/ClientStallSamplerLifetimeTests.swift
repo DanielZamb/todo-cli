@@ -88,6 +88,23 @@ import TodoAPI
         #expect(records == ClientStallSampler.perHour, "records within the hour, across a stop and a start: \(records)")
     }
 
+    /// MAC-C1-S1-22: after a sampling failure, every later stall would return a disabled record;
+    /// the hourly budget comes first. Red on 6d00929c: 1,000 records in 200 seconds.
+    @Test func aFailedSamplerStillRecordsAtMostTheHourlyCap() {
+        let sampler = ClientStallSampler(thread: mach_port_t(MACH_PORT_NULL), ownImages: [], windowLimitNS: ClientStallSampler.windowLimitNS)
+        var records = 0
+        for index in 0..<1000 {
+            let id = UUID(), now = 1000 + Double(index) * 200
+            _ = sampler.tick(stall: id, pendingMS: 150, nowMS: now)
+            if sampler.finish(stall: id, nowMS: now) != nil { records += 1 }
+        }
+        #expect(sampler.disabled?.contains("failed") == true)
+        #expect(records == ClientStallSampler.perHour, "1,000 stalls in 200 s after a failure: \(records) records")
+        let nextHour = UUID()
+        _ = sampler.tick(stall: nextHour, pendingMS: 150, nowMS: 1000 + 3_600_000)
+        #expect(sampler.finish(stall: nextHour, nowMS: 1000 + 3_600_000)?.disabled != nil, "the next hour records again")
+    }
+
 }
 
 private struct LifetimeTimeout: Error { let what: String }

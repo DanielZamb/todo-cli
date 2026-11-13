@@ -196,10 +196,13 @@ public final class ClientStallSampler: @unchecked Sendable {
     public func finish(stall id: UUID, nowMS: Double) -> ClientStallAttribution? {
         defer { if stall == id { stall = nil; taken = 0 } }
         let count = taken
-        guard stall == id, count > 0, count <= Self.capacity else { return disabled.map { .init(samples: 0, inLabel: nil, agreeing: 0, frames: [], disabled: $0) } }
+        let sampled = stall == id && count > 0 && count <= Self.capacity
+        guard sampled || disabled != nil else { return nil }
+        // MAC-C1-S1-22: the hourly budget comes before every outcome, a disabled one included.
         if nowMS - hourStartMS >= 3_600_000 { hourStartMS = nowMS; attributedThisHour = 0 }
         guard attributedThisHour < Self.perHour else { return nil }
         attributedThisHour += 1
+        guard sampled else { return disabled.map { .init(samples: 0, inLabel: nil, agreeing: 0, frames: [], disabled: $0) } }
         var stacks: [[ClientStallSymbol]] = []
         for index in 0..<count {
             let sample = buffer.advanced(by: index).pointee
