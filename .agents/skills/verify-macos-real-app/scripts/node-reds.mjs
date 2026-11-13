@@ -26,6 +26,10 @@ try {
     ['production-qualification.mjs', 'production-qualification.test.mjs', 'assert.equal(receipt.keychainLinked, false, ', 'assert.equal(false, false, ', 'A linked Keychain call fails qualification'],
     ['production-seam.mjs', 'production-seam.test.mjs', "assert.deepEqual(current, reviewed, 'The seam must match the reviewed seam line for line');", '', 'An extra product line beyond the seam must fail'],
     ['production-seam.mjs', 'production-seam.test.mjs', "assert.deepEqual([...changedFiles].sort(), [SEAM_FILE], 'Product code may differ from the installed base only by the Session storage seam');", '', 'Another changed product file must fail'],
+    ['production-symbol-compare.mjs', 'production-symbol-compare.test.mjs', "assert.deepEqual(candidate.imports, base.imports, 'Production credential imports changed against candidate 8');", '', 'A new credential import must fail'],
+    ['production-symbol-compare.mjs', 'production-symbol-compare.test.mjs', "for (const name of VERIFICATION_NAMES) assert(!candidate.symbols.some(line => line.includes(name)), 'Verification code reached the production binary: ' + name);", '', 'Verification code in production must fail'],
+    ['production-symbol-compare.mjs', 'production-symbol-compare.test.mjs', "assert.deepEqual(removed, [], 'Storage symbols were removed from the production binary');", '', 'A removed storage symbol must fail'],
+    ['production-symbol-compare.mjs', 'production-symbol-compare.test.mjs', "assert.deepEqual([...added].sort(), [...reviewed.symbolsAdded].sort(), 'The seam adds different symbols against candidate 8 than the reviewed ones');", '', 'An unreviewed added symbol must fail'],
     ['production-qualification.mjs', 'production-qualification.test.mjs', "assert(nesting && nesting.exit !== 0 && typeof nesting.output === 'string' && nesting.output.includes(NESTED_SANDBOX_REFUSAL), 'Deny-only not retained needs its recorded nested-sandbox refusal');", '', 'A dropped guard needs its cause'],
   ]) {
     if (module === 'process-policy.mjs') fs.copyFileSync(path.resolve('.agents/skills/verify-macos-real-app/scripts/bun-policy.mjs'), directory + '/bun-policy.mjs');

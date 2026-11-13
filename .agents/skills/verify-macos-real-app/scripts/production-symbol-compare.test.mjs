@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import { compareSymbols } from './production-symbol-compare.mjs';
+const imports = ['_SecItemAdd', '_SecItemDelete'];
+const base = { imports, symbols: ['type metadata for Todo.SessionVault'] };
+const seam = ['protocol descriptor for Todo.SessionStorage'];
+const reviewed = { credentialImports: imports, symbolsAdded: seam };
+const candidate = { imports, symbols: [...base.symbols, ...seam] };
+assert.deepEqual(compareSymbols({ base, candidate, reviewed }), { symbolsAdded: seam, symbolsRemoved: [] });
+assert.throws(() => compareSymbols({ base, candidate: { ...candidate, imports: [...imports, '_SecKeychainFindGenericPassword'] }, reviewed }), /imports changed/, 'A new credential import must fail');
+assert.throws(() => compareSymbols({ base: { ...base, imports: ['_SecItemAdd'] }, candidate: { ...candidate, imports: ['_SecItemAdd'] }, reviewed }), /six reviewed imports/, 'Imports must equal the reviewed ones');
+assert.throws(() => compareSymbols({ base, candidate: { ...candidate, symbols: [...candidate.symbols, 'type metadata for Todo.MemorySessionVault'] }, reviewed }), /Verification code reached/, 'Verification code in production must fail');
+assert.throws(() => compareSymbols({ base, candidate: { ...candidate, symbols: seam }, reviewed }), /removed/, 'A removed storage symbol must fail');
+assert.throws(() => compareSymbols({ base, candidate: { ...candidate, symbols: [...candidate.symbols, 'value witness table for Todo.SessionStorageBox'] }, reviewed }), /different symbols/, 'An unreviewed added symbol must fail');
+assert.throws(() => compareSymbols({ base: { imports: [], symbols: [] }, candidate: { imports: [], symbols: [] }, reviewed: { credentialImports: [], symbolsAdded: [] } }), /Empty/);
+console.log('PASS: production credential imports, verification names, removals and the reviewed seam symbols');

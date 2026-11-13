@@ -1,4 +1,4 @@
-export const requiredStages = ['frozenSource', 'compiledBinaries', 'guardMatrix', 'guardRedControls', 'credentialBoundary', 'credentialRedControls', 'inputBoundary', 'instanceLocks', 'parentDeathCleanup', 'builtApp', 'artifactAudit', 'productionPreservation', 'rootCheck', 'productionSuites', 'ownerPreflight', 'visibleLaunch', 'accessibilityReadback', 'visibleInputStop', 'cleanup'];
+export const requiredStages = ['frozenSource', 'compiledBinaries', 'guardMatrix', 'guardRedControls', 'credentialBoundary', 'credentialRedControls', 'inputBoundary', 'instanceLocks', 'parentDeathCleanup', 'builtApp', 'artifactAudit', 'productionPreservation', 'productionSymbols', 'rootCheck', 'productionSuites', 'keychainGuardRed', 'ownerPreflight', 'visibleLaunch', 'accessibilityReadback', 'visibleInputStop', 'cleanup'];
 export const visibleStages = ['ownerPreflight', 'visibleLaunch', 'accessibilityReadback', 'visibleInputStop'];
 export function receipt(stages, scope, successful = false) {
   const result = Object.fromEntries(requiredStages.map(stage => [stage, stages[stage] === true]));

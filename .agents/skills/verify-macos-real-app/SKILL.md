@@ -12,8 +12,11 @@ the fresh app build, ad hoc identity, the audit and the unguarded production
 comparison (298 tests each side, same outcomes). It stopped at the deny-only
 arm, which SwiftPM's nested manifest sandbox cannot run under (ruling B: arm
 dropped, refusal recorded). The branch now merges installed candidate 8
-(20d592d3), the production base and its Keychain link guard. A new frozen full
-run is owed.
+(20d592d3), the production base and its Keychain link guard. The full run also
+re-derives the production symbol comparison against candidate 8 (two unsigned
+Release builds) and reruns the guard's red control on this head. Owed at
+integration onto the Mac line: the discovery-formal and task-search-formal
+TodoModel.swift pins (see the report). A new frozen full run is owed.
 No full or visible recipe is qualified for this correction.
 
 The earlier ab989410 visible recipe read both

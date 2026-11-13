@@ -89,7 +89,7 @@ function record(argv, name, env, value, secret = false) {
 }
 function execute(argv, name, env = base, input, secret = false) {
   argv = job(argv);
-  const value = run(argv, { cwd: root, env, input, encoding: 'utf8', maxBuffer: 128 * 1024 * 1024, timeout: commandTimeout(argv, name === 'production-suites' ? 7200000 : 1200000) });
+  const value = run(argv, { cwd: root, env, input, encoding: 'utf8', maxBuffer: 128 * 1024 * 1024, timeout: commandTimeout(argv, ['production-suites', 'production-symbols', 'keychain-guard-red'].includes(name) ? 7200000 : 1200000) });
   return record(argv, name, env, value, secret);
 }
 function must(argv, name, env = base, input, secret = false) {
@@ -245,6 +245,10 @@ try {
     const f = await fixture(); try {
       must([app + '/Contents/MacOS/TodoVerification', '--check-manifest'], 'built-app-guard', f.env);
     } finally { f.dispose(); }
+    // Two unsigned Release production builds (base 20d592d3, this head) reuse the verification
+    // build's resolved packages, so they run before that tree is retired.
+    diskStage('production-symbols', 6);
+    must(['node', '.agents/skills/verify-macos-real-app/scripts/production-symbols.mjs', evidence + '/production-symbols', evidence, root + '/.scratch/mac-verification/DerivedData/SourcePackages', evidence + '/swift-hold'], 'production-symbols'); stages.productionSymbols = true;
     retireBuildTree(root + '/.scratch/mac-verification/DerivedData', 'retire-app-build');
     must(['node', '.agents/skills/verify-macos-real-app/scripts/production-source-preservation.mjs', evidence + '/production-source', path.join(root, 'docs/evidence/mac-verification-app/symbols-ab989410')], 'production-source-preservation'); stages.productionPreservation = true;
     assert(!fs.existsSync(evidence + '/swift-hold'), 'Coordinator holds new Swift jobs; production reruns remain held');
@@ -252,6 +256,8 @@ try {
     must(['node', '.agents/skills/verify-macos-real-app/scripts/production-proofs.mjs', evidence + '/production', evidence], 'production-suites'); stages.productionSuites = true;
     retireBuildTree(root + '/apps/macos/DerivedData/V01Proof', 'retire-production-build');
     retireBuildTree(root + '/.scratch/production-base-20d592d3/apps/macos/DerivedData/V01Proof', 'retire-production-base-build');
+    diskStage('keychain-guard-red', 2);
+    must(['node', '.agents/skills/verify-macos-real-app/scripts/keychain-guard-control.mjs', evidence + '/keychain-guard-red', evidence + '/swift-hold'], 'keychain-guard-red'); stages.keychainGuardRed = true;
     must(['sh', 'scripts/disk-guard.sh'], 'disk-before-root-check');
     diskStage('root-check', 0.5);
     must(['/usr/bin/lockf', '-k', '/tmp/todo-pnpm-check.lock', executable('pnpm'), 'check'], 'root-check'); stages.rootCheck = true;

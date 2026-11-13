@@ -95,9 +95,9 @@ Two changes follow from the merge:
   file is TodoModel.swift and that its added and removed lines equal the
   reviewed seam (production-seam.mjs). Its test fails an extra line and an
   extra file. A development run against the merged tree passes with 13 seam
-  lines. The 26-symbol comparison stays the reviewed candidate 6 binary
-  comparison; it is not rebuilt against candidate 8
-  (`symbolComparisonAgainstProductBase: false`).
+  lines. That script makes no binary claim
+  (`symbolComparisonAgainstProductBase: false`). The binary comparison against
+  candidate 8 is the production-symbols stage below.
 
 The production comparison now runs base 20d592d3 against this head. Both
 recipe versions are candidate 8's: they build a mirrored package with the
@@ -106,9 +106,7 @@ link guard finds any Keychain call in a built test product. The adapter knows
 the guard's tools by absolute path (/usr/bin/rsync, nm, otool). Every recipe's
 keychain-guard.json is attached to its arm. Qualification fails if a receipt
 is missing, checked no product, or says `keychainLinked: true`. The guard's own
-red control (exit 3 with the production vault, 0 with the in-memory vault) is
-candidate 8's receipt, docs/evidence/mac-perf/c8/keychain-guard on that line.
-It is not rerun here.
+red control is rerun on this head in the full run (keychain-guard-red, below).
 
 Coverage pins audited on the merged tree (every live SHA-256 pin in
 `.agents/skills/verify-*/coverage.json`):
@@ -121,10 +119,84 @@ Coverage pins audited on the merged tree (every live SHA-256 pin in
 | discovery-formal | 20 of 21 | apps/macos/Sources/TodoModel.swift |
 | task-search-formal | 15 of 16 | apps/macos/Sources/TodoModel.swift |
 
-Both TodoModel.swift pins equal candidate 8's file (92f17158…). They differ
-here only by the seam, inside mapped functions that call the vault (signOut,
-restore, expireSession). Renewing them is the mapping owners' review, which
-requires their Swift checks. They are not renewed on this branch.
+### Owed at this unit's integration onto the Mac candidate line
+
+The two TodoModel.swift pins, in verify-discovery-formal and
+verify-task-search-formal, belong to this unit, as the coordinator ruled. Both
+equal candidate 8's file (92f171587de6…). They are not renewed here, because
+renewal needs the mappings' Swift check, which runs on the Mac line. Whoever
+runs that check should look at the following.
+
+The seam changes three hunks of TodoModel.swift against 20d592d3 and nothing
+else in the product:
+
+- the `SessionStorage` protocol and `extension SessionVault: SessionStorage {}`
+  at the top of the file;
+- `private var vault: SessionVault { SessionVault(service:
+  configuration.vaultService, account: configuration.server.absoluteString) }`
+  becomes `private let vault: any SessionStorage`;
+- `init(configuration:…)` gains `sessionStorage: (any SessionStorage)? = nil`
+  and sets `self.vault = sessionStorage ?? SessionVault(service:
+  configuration.vaultService, account: configuration.server.absoluteString)`.
+
+**verify-discovery-formal.** Its mapped functions that reach the vault, with
+unchanged bodies:
+
+- `restore()`: `try vault.load()`
+- `signIn(_:)`: `try vault.save(session.credential)`
+- `signOut()`: `try vault.delete()`
+- `expireSession(credentialEpoch:)`: `try? vault.delete()`
+
+The mapped behaviour is unchanged. Each call goes through the seam and nothing
+else moves. The production app passes no `sessionStorage`, so `vault` is the
+same SessionVault value candidate 8 builds on every access. It is built once,
+from the same `let configuration`, which cannot change after init. The calls
+reach the same SessionVault methods through the protocol witness.
+SessionVault.swift is byte-identical to candidate 8. No statement in any
+mapped function body moved, and no ordering, epoch check or await point
+changed.
+
+**verify-task-search-formal.** None of its mapped functions touches the vault
+or the init lines. The file-level pin differs only through the three hunks
+above.
+
+The production symbol comparison against candidate 8 (production-symbols in
+the full run) checks the same claim in the built binary. The seam must add
+exactly the 26 reviewed storage symbols and remove none.
+
+### Added to the full run at the coordinator's ruling (2026-11-13)
+
+- **production-symbols** (production-symbols.mjs). Two unsigned Release builds
+  of the production Todo app, base 20d592d3 and this head, run before the
+  verification app's build tree is retired, because they reuse its resolved
+  packages.
+  - The builds use CODE_SIGNING_ALLOWED=NO, the shared Swift slot, a scratch
+    HOME and the scratch production server as TODO_SERVER_BINARY. They are
+    built, never launched.
+  - The server bundle phase runs `pnpm licenses list`. The scratch HOME's
+    .npmrc names the package store this worktree was installed from, read from
+    node_modules/.modules.yaml. Nothing else of the real HOME is used.
+  - production-symbol-compare.mjs requires that the head has the same
+    credential imports as the base and as the six reviewed, no verification
+    symbol, no removed storage symbol, and exactly the reviewed added symbols.
+    Its four removal mutants fail at 1.
+  - A `--check-phases` development run ran both shell phases (graph resources
+    and server bundle) at base and head outside Xcode, and passed.
+  - The symbol build trees are retired after the comparison, with their
+    hashes kept.
+- **keychain-guard-red** (keychain-guard-control.mjs). Candidate 8's guard red
+  control, rerun on this head.
+  - `state_package.py prepare --production-vault` mirrors the package with the
+    production SessionVault. The control checks that the mirror's file is
+    byte-identical to the product's, builds its tests through the shared slot,
+    and requires `state_package.py guard` to exit 3. The receipt must name
+    exactly `_SecItemAdd`, `_SecItemCopyMatching`, `_SecItemDelete`,
+    `_SecItemUpdate` and `_SecKeychainSetUserInteractionAllowed`.
+  - The green half is every production recipe's own receipt with the in-memory
+    vault, which qualification already requires. No test runs in the control.
+
+Both are required stages (productionSymbols, keychainGuardRed). Node controls
+are 23 of 23.
 
 ## Ruling B: deny-only guard not retained (Claude Opus 5.5, 2026-11-13)
 
