@@ -191,11 +191,13 @@ load 3.6 to 5.0). Medians, unbounded against bounded:
 - 5,000 title-only Tasks after the first refusal: repeat 5.3 against 6.2 ms.
 - Every repeat in every arm except base opened no recording transaction.
 The gate costs about 15 to 20 percent on rows under the bound, from
-evaluating octet_length() once per gated column. The quiet, null and
-whole-window fixtures of this run were seeded with 5,000 extra title-only Tasks
-before the first refusal by a driver bug (fixed in 208dccc8); their
-repeat figures are valid (one step, as before: about 0.018 ms) and their first
-refusals are those of that import, not of a quiet Profile.
+evaluating octet_length() once per gated column. The quiet, null and whole-window fixtures of that run were seeded with 5,000
+extra title-only Tasks by a driver bug (fixed in 208dccc8) and were measured
+again (five rounds, load 2.2 to 6.1). First refusal, base / unbounded /
+bounded: quiet 3.1 / 3.7 / 5.1 ms; null Profile 4.0 / 4.3 / 4.0 ms; 200,000
+rows inside the window 4.4 / 214 / 278 ms, of which 110 and 141 ms under the
+lock. Repeats cost 0.011 to 0.019 ms in every arm, and no repeat opened a
+recording transaction outside the base.
 
 ### Considered and not taken: a remembered position
 
