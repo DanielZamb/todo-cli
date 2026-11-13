@@ -159,7 +159,11 @@ function clearEmptySidecars(path: string, sides: readonly string[]) {
     }
     try {
       const stat = fstatSync(fd);
-      if (!stat.isFile() || stat.nlink !== 1 || stat.size !== 0)
+      if (
+        !stat.isFile() ||
+        stat.nlink !== 1 ||
+        (side !== "-shm" && stat.size !== 0)
+      )
         refuse("foreign_sidecar");
       if (!sameFile(fd, file)) refuse("replaced");
       unlinkSync(file);
@@ -262,7 +266,7 @@ export function openRecordingDatabase(
     const journal = sizeOf(path + "-journal");
     if (mainSize === 0 && journal !== undefined && journal > 0)
       refuse("interrupted_initialization");
-    if (sides.some((s) => (sizeOf(path + s) ?? 0) > 0))
+    if (sides.some((s) => s !== "-shm" && (sizeOf(path + s) ?? 0) > 0))
       refuse("foreign_sidecar");
   }
   let fd: number;

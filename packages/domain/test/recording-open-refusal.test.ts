@@ -229,13 +229,6 @@ for (const [label, main, side, bytes, reason] of [
     "foreign_sidecar",
   ],
   [
-    "an empty main beside a non-empty shm",
-    "",
-    "-shm",
-    32768,
-    "foreign_sidecar",
-  ],
-  [
     "a missing main beside a non-empty journal",
     undefined,
     "-journal",
@@ -450,6 +443,47 @@ it("SQL11 carries a worker refusal and its present files to the owner's health",
       await s.close();
     }
     expect(snapshot(dir)).toEqual(before);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+it("R5-1 initializes after only recordings.db is deleted from a really closed store", () => {
+  const root = scratch();
+  try {
+    const dir = owned(root);
+    const db = new RecordingDatabase(dir);
+    db.close();
+    const shm = statSync(join(dir, "recordings.db-shm")).size;
+    expect(shm).toBeGreaterThan(0);
+    expect(statSync(join(dir, "recordings.db-wal")).size).toBe(0);
+    unlinkSync(join(dir, "recordings.db"));
+    const reopened = new RecordingDatabase(dir);
+    expect(reopened.db.query("PRAGMA application_id").get()).toEqual({
+      application_id: 0x544f4452,
+    });
+    expect(reopened.status().segments).toBe(0);
+    reopened.close();
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+it("R5-1 initializes an empty main beside a non-empty -shm and an empty -wal, whatever the -shm holds", () => {
+  const root = scratch();
+  try {
+    const dir = join(root, "store");
+    mkdirSync(dir, { mode: 0o700 });
+    writeFileSync(join(dir, "recordings.db"), "", { mode: 0o600 });
+    writeFileSync(join(dir, "recordings.db-wal"), "", { mode: 0o600 });
+    writeFileSync(join(dir, "recordings.db-shm"), Buffer.alloc(32768, 7), {
+      mode: 0o600,
+    });
+    const db = new RecordingDatabase(dir);
+    expect(db.db.query("PRAGMA application_id").get()).toEqual({
+      application_id: 0x544f4452,
+    });
+    db.close();
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
