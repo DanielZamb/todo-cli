@@ -165,6 +165,12 @@ import TodoAPI
                             #expect(viewport.insetBy(dx: -0.5, dy: -0.5).contains(row), "\(file) at least two complete candidates remain visible")
                         }
                     }
+                    if name == "series-initial" {
+                        // The seat's Series fixes (candidate 8 review): a preset shows no raw rule, and the
+                        // primary action is the prominent default button.
+                        #expect(capture.frames["series-raw-rule"] == nil, "\(file): a preset names its rule in the Repeat row only")
+                        _ = try #require(capture.frames["series-primary"], "\(file): Create Series is drawn")
+                    }
                     if name == "initial-many-invalid" {
                         let sheet = try #require(capture.frames["quick-add-sheet"])
                         #expect(sheet.minY >= 0 && sheet.maxY <= height && sheet.minX >= 0 && sheet.maxX <= width)
