@@ -124,14 +124,16 @@ candidate 8 merge.
 
 | Credential (restore matrix case) | Deletion and restore in one pass (gated; usual on the timer) | Pass between them (ungated; usual with the wake) |
 | --- | --- | --- |
-| Owner Session, Profile restored (`restore-active-owner`) | ready; reload `{"generation":"…0011","seq":18}`; then the next TaskCreated | ready; the deletion batch (first frame an operation: TaskDeleted …, ProfileDeleted); failure; close |
+| Owner Session, Profile restored (`restore-active-owner`) | ready; reload `{"generation":"…0011","seq":18}`; then the next TaskCreated | ready; TaskDeleted; ProfileDeleted; failure `not_found` "Profile not found; choose a Profile from GET /profiles"; close |
 | Scoped Token removed by the restore (`restore-absent-scoped`) | ready; failure `Unauthorized invalid_credential` | ready; failure `Unauthorized revoked` |
 
-The scoped row is literal from both runs. The owner row's ungated first frame
-is observed as an operation (the run's assertion expects reload or failure);
-its full frame list will be captured by one ungated single-scenario run. The
-lease-window test above gives the Session's full sequence for the same
-interleaving: TaskCreated, TaskDeleted, ProfileDeleted, failure, close.
+Both rows are literal frames from the runs (the ungated ones from a capture
+copy of the driver that drains the stream instead of asserting at the first
+non-reload frame; `docs/evidence/ui-speed/integ-wake/capture-ungated`). In the
+ungated owner case the failure follows the ProfileDeleted frame within 0.1 ms:
+the restore's own signal ends the next wait at once, so the closing failure no
+longer waits for the fallback either. The client then reconnects and sees the
+restored Profile.
 
 ## Review 3's three small items
 
@@ -249,4 +251,80 @@ deletion-and-restore interleaving above.
 | One-stream Purge, restore, deletion | 0 gated / 1 ungated | 7/7 equal the seat's capture |
 | Observer matrix | 1 / 0 | unchanged literal / R3-I1 literal, 46/46 |
 
-PENDING-PROOFS
+| Task search cache, full command on a45ddeaa | 0 | all nine stages 0: properties (seven source controls), hygiene (three observer controls, restored, typecheck, renewed hashes), admission model, admission code, disk, binaries, compiled lifecycle, erasure, CLI defect; `docs/evidence/perf-cache/verify-3LSEWw`; uncached oracle rebuilt for a45ddeaa |
+| DAG formal, full default on a45ddeaa (attempts 1 to 4) | 1 | setup only, no product finding: (1) the pinned TLA jar was absent and its download is denied by the sandbox; (2) the nested compiler guard's `ps` is setuid and a sandboxed process may not exec it; (3) production conformance copies the jar from `docs/evidence/dag-formal/tools`; (4) the public stage needs the preserved e7170510 baseline CLI. Fixed by copying the hash-pinned jar (936a2620…) into both tool paths, a profile that execs only `/bin/ps` outside the sandbox (protected directory, ports 4310/14310 and the internet stay denied; controls recorded), and copying the preserved baseline CLI whose SHA-256 and product commit match its provenance |
+| DAG formal, full default on a45ddeaa (attempt 5) | 0 | 38 model stages (13 intended violations at exit 12, the rest clean), production conformance with 36 controls, public conformance with 53 controls on product a45ddeaa, each with its intended failure and exact restoration; all 53 anchors matched once before renewal; `docs/evidence/dag-formal/check-CJjEnL` |
+| verify-server-api | 0 | |
+| verify-auth | 1, then 0 | the first run's driver refused its scratch path because my TMPDIR lacked a trailing slash; rerun with one passes |
+| verify-profiles | 0 | |
+| verify-snapshots | 0 | default injected repair case (no Snapshot code changed in this merge) |
+| verify-scheduler, `TODO_VERIFY_SCHEDULER_NO_LAUNCHD=1` | 0 | restart mid-wait, competing processes, 3 unique reminders, date-only ignored, cleanup; `realLaunchctl: false`, so install/status/uninstall stay unproven |
+| Server suite | 0 | 12 files, 120 tests |
+| Root check (standing order 27), TMPDIR outside the repository | 0 | disk guard 60.7 GB; install scripts, OpenAPI check, typecheck, lint, then domain 462, Electron 168 (1 existing skip), server 120, CLI 73 |
+
+The contract id is still 78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289:
+no file under `packages/api` or `apps/macos/API` differs from 2a840b55.
+
+## Renewals and what they certify
+
+Both are candidates for the seat. Rows were recomputed from product a45ddeaa's
+bytes by a script that refuses any row that is not one of the expected stale
+ones (commit 9709abbe).
+
+- **verify-task-search-cache** (two hygiene rows: `server.ts`
+  4abead0e… → aef0cf33…, `task-search-cache-hygiene.ts` be77122a… → acd46be9…;
+  `productCommit` a45ddeaa). It certifies the store-owned folded-word memo, its
+  admission model and controls, and the server's cache hygiene observer as wired
+  in this product. Hygiene still receives the undecorated store and is forked
+  before the scheduler; its parameter narrows to `CacheHygieneReads` with a
+  byte-identical body.
+- **verify-dag-formal**, public map (`server.ts` 4abead0e… → aef0cf33…;
+  `confirmedCommit`, both pins' `commit` a45ddeaa). It certifies finite DAG safety
+  and production and public conformance on this product. `rejectUnknownQuery`
+  and the `importTasks`, `depend`, `undepend` and `batchDepend` handlers are
+  textually unchanged; they now reach their commands through the decorated
+  store, which signals open streams at the outermost exit. The other 15 DAG
+  `coverage.json` pins and 55 public pins are byte-identical.
+- The other mappings (discovery-formal, occ-atomicity, task-search-formal) pin no
+  changed file and are not renewed. No function listed in verify-occ-atomicity's
+  `coverage.json` changed.
+
+## Latency and idle, timer against wake
+
+Meters: verify-sse's `meter-server.mjs` compiled at this head (wake) and with the
+three `apps/server/src` files that differ from integ/server served from 2a840b55
+(timer: the strict loop with its 250 ms sleep and no decorator). `measure.mjs`:
+five alternating pairs, 40 edits per arm per pair, 178-Task fixture, shared clock
+`clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW)`, 10 cores. Run 13:43 to 13:46 UTC,
+one-minute load 4.33 to 6.11 throughout (three other units active).
+
+| Commit to received operation, ms | Timer (2a840b55) | Wake (merged) |
+| --- | ---: | ---: |
+| Median | 114.139 | 1.059 |
+| p90 | 217.963 | 3.588 |
+| p99 | 245.490 | 9.217 |
+| Maximum | 247.429 | 13.514 |
+| Event before parsed reply | 1/200 | 76/200 |
+| Negative intervals | 0 | 0 |
+
+Pair medians: timer 122.42, 123.83, 115.26, 106.69, 108.64; wake 1.09, 0.97,
+0.89, 1.08, 1.24.
+
+| Idle streams | Timer passes/s | Wake passes/s | Timer CPU ms/s, median [range] | Wake CPU ms/s, median [range] |
+| ---: | --- | --- | --- | --- |
+| 1 | 3.99 [3.98–3.99] | 3.99 [3.99–3.99] | 26.8 [20.3–38.0] | 24.2 [20.6–26.3] |
+| 2 | 7.99 [7.98–7.99] | 7.99 [7.99–7.99] | 24.3 [15.8–27.4] | 19.3 [18.0–34.4] |
+| 5 | 19.96 [19.89–19.96] | 19.96 [19.88–19.96] | 23.1 [20.7–24.6] | 26.5 [20.7–30.8] |
+
+There are no extra idle passes; CPU ranges overlap, so no idle CPU difference is
+established. 300-edit serial burst with one stream: timer 9 to 11 passes and
+History reads, 2,302 to 2,730 ms server CPU; wake 300 passes and History reads,
+2,374 to 3,530 ms CPU. Task read p50 1.3–1.6 ms (timer) against 1.1–1.9 ms (wake),
+p99 4.5–5.5 against 4.9–14.7 ms. Serial edits produce one pass each with the
+wake, as reviews 2 and 3 found on the base.
+
+## Limits
+
+No Swift was built or run; the Mac side belongs to candidate 8. Native apps,
+Keychain, signing and launchd were not used. Bounded models, observed timing and
+fixture parity prove no unbounded property.
