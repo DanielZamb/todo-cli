@@ -5,7 +5,7 @@
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "8290ff1e034a524a64eb780f93009e05aef68978",
+  "productionSyncCommit": "1f281291641fcef42301443f09d5f0f2651153ed",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -157,7 +157,7 @@
         "signOut start, failure and commit",
         "followChanges reconnect retry from Offline and sign-out notice"
       ],
-      "sha256": "92f171587de6cff9c30f946cc15828e7c2be4fd65dcc714afb771fcc7731bf52",
+      "sha256": "4650f9dd4992523a4aeb6d9d5c5478e5ff1dab46ef3f2264388ae2c5f4d8177b",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -167,7 +167,7 @@
         "TaskListView sheet/alert binding",
         "DraftNavigationActions target capture and explicit Cancel"
       ],
-      "sha256": "54d8624e14d90efef5c93e74fc50bbf918d48a2d6316fc83bcb394f6c5db4eee",
+      "sha256": "cfc26acfa67d9e220dce8795024242dfa89306ff827bd2717cb3db0bcd8f758d",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -225,7 +225,7 @@
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "f6393ab5e216342ab8c711a028ba7ae2144a0c57",
+  "previousProductionSyncCommit": "8290ff1e034a524a64eb780f93009e05aef68978",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -564,15 +564,20 @@
     "review": "Candidate 8: write paths keep a committed write's read-back when a later step fails (S1-19) and handle a current 401 first in every failure path (S1-20), reading discovery.credentialEpoch as before and comparing it with isCurrentCredential; supersession is per target and same-kind link failures merge (D1, D2); the Find field is hidden, not cleared, while the Compact editor is shown (ruling 5); confirmations expire by sequence; rows count timeline ticks for stall observation. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed; requestDiscovery, showDiscoveryMatch and discovery.error are untouched (discovery stays outside the helper, see docs/decisions/mac-session-retirement.md)."
   },
   "renewalReview": {
-    "product": "8290ff1e034a524a64eb780f93009e05aef68978",
-    "controls": "check-swift passed on 8290ff1e: docs/evidence/discovery-formal/swift-3YvPSi",
+    "product": "1f281291641fcef42301443f09d5f0f2651153ed",
+    "controls": "check-swift passed on 1f281291: docs/evidence/discovery-formal/swift-hcIIdS",
     "changed": [
       {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "92f171587de6cff9c30f946cc15828e7c2be4fd65dcc714afb771fcc7731bf52",
+        "to": "4650f9dd4992523a4aeb6d9d5c5478e5ff1dab46ef3f2264388ae2c5f4d8177b"
+      },
+      {
         "path": "apps/macos/Sources/AppViews.swift",
-        "from": "a5e8297d19bf43b665f9135ecf601b0b86d0aa24847927aff07db9f6a5ad190c",
-        "to": "54d8624e14d90efef5c93e74fc50bbf918d48a2d6316fc83bcb394f6c5db4eee"
+        "from": "54d8624e14d90efef5c93e74fc50bbf918d48a2d6316fc83bcb394f6c5db4eee",
+        "to": "cfc26acfa67d9e220dce8795024242dfa89306ff827bd2717cb3db0bcd8f758d"
       }
     ],
-    "review": "Candidate 9 changes AppViews.swift in three places only: CompactWindowHeight.restored opens Compact at min(640 pt, the screen) when no height is stored (UI review 2, item 1); MessageBanner shows a Dependency failure as its DependencyNoticeContent without the exit-code line (item 3); and Compact Quick Add's metadata region and content anchor (parsed chips first, the region sized from the room it is given, no offset in Compact; item 2). No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
+    "review": "The Profile return fix (86549d65, coordinator ruling on the candidate 9 restore finding) changes TodoModel.swift and AppViews.swift. In TodoModel: replaceCredential gains a first line that drops the forced-leave record (no change to the credential epoch or its order); followChanges' reload branch reads whether the person acted before its resets and, after discoverProfiles, may return to a restored Profile through activateProfile, exactly as the existing profile-change branch beside it does; discoverProfiles says why when the shown Profile is gone; leaveDeletedProfile records the leave; the editor and quickAdd didSets, newTitle, setSearchText and changeProfile note a person's action. In AppViews: the notice capsule shows the offer's Switch button, and the list's selection notes a person's action. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
   }
 }
