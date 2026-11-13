@@ -219,6 +219,15 @@ database, and start the server again. The Task database is never involved.
 The two apps' Diagnostics panels do not show this entry yet; that belongs to
 the app-side unit.
 
-The seat's review-4 witnesses (`wal-refusal2.ts`, `swap-task.ts`) are archived
-in the run store and run unchanged from `.scratch/recordings-sqlite4-s1/claude/`
-against an immutable capture of 6d653742 (red) and the current head (green).
+`bun .agents/skills/verify-ui-profiler/scripts/sqlite-refusal-classes.ts <checkout>`
+prints one row per enumerable refusal class and the two recovery shapes, using
+only the RecordingDatabase API, so the same file runs against an older capture
+(`git archive <commit>` with the worktree's node_modules linked) for a red
+receipt. Every refusal row must show `files_unchanged: true`.
+`bun .agents/skills/verify-ui-profiler/scripts/sqlite-swap-witness.ts <checkout> .scratch/bin/todo`
+makes a real Task database with the compiled CLI, captures one committed WAL
+transaction while its writer is open, renames both over `recordings.db` right
+after the immutable preflight, and must report `files_unchanged_since_swap:
+true`. The seat's review-4 witnesses (`wal-refusal2.ts`, `swap-task.ts`) stay
+archived in the run store and run unchanged from
+`.scratch/recordings-sqlite4-s1/claude/`.

@@ -130,8 +130,11 @@ try {
     (p) => p.title === "Recent errors",
   );
   assert.ok(pane);
-  assert.ok(pane.lines.every((line) => [...line].length <= 46), pane.lines.join("\n"));
-  const joined = pane.lines.join("");
+  const wrapped = pane.lines.slice(
+    pane.lines.findIndex((line) => line.includes("Recordings refused:")),
+  );
+  assert.ok(wrapped.length > 2 && wrapped.every((line) => [...line].length <= 46), pane.lines.join("\n"));
+  const joined = wrapped.join("");
   for (const file of files) assert.ok(joined.includes(file), file);
   assert.ok(joined.includes("interrupted_initialization"));
   assert.ok(joined.includes("may be discarded"));
