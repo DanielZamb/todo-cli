@@ -274,7 +274,7 @@ extension TodoModel {
             // Shown where the person is looking: inside the sheet that offered the follow-up.
             // Say what failed and that it can be tried again; the picker keeps the notice that
             // offered the follow-up, with its button, and shows the failure with it (ruling 1).
-            let failed = "Couldn't prepare the follow-up Task: " + describe(error) + " Try again."
+            let failed = "Couldn't prepare the follow-up Task. " + describe(error) + " Try again."
             switch owner {
             case .picker(let picker, let ticket):
                 guard dependencies.picker?.id == picker else { break }
@@ -282,7 +282,7 @@ extension TodoModel {
                 if var offered = dependencies.picker?.operationFailure, offered.followUp != nil { offered.followUpFailure = failed; notice = offered }
                 dependencies.picker?.messages.fail(notice, ticket, row: id)
             case .report(let ticket):
-                let failureText = "Couldn't prepare the follow-up Task: " + describe(error, at: .importTasks) + " Try again."
+                let failureText = "Couldn't prepare the follow-up Task. " + describe(error, at: .importTasks) + " Try again."
                 importMessages.fail(failureText, ticket)
             case .main(let ticket): if isNewestMessage(ticket) { publishMessage(describe(error), kind: .dependencyFollowUp, surface: surface) }
             }

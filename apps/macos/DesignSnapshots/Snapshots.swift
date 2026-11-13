@@ -366,7 +366,7 @@ struct Snapshots {
                 let picker = fixture(); picker.signedIn = true
                 picker.dependencies.picker = .init(profile: "work", root: picker.tasks[0], direction: .dependsOn)
                 picker.dependencies.picker?.failure = DependencyNotice(message: "This Task blocks done Tasks.", followUp: picker.tasks[1].id,
-                    followUpFailure: "Couldn't prepare the follow-up Task: The server rejected this request (HTTP 404). Try again.")
+                    followUpFailure: "Couldn't prepare the follow-up Task. The server rejected this request (HTTP 404). Try again.")
                 try await render("c8-picker-follow-up-failed", DependencyPickerView(model: picker, compact: true), width: 393, height: 426)
                 try await render("c8-banner-hand-off-depends", WorkspaceSnapshot(model: banner("Couldn't make “Review the interaction design” depend on “Prepare the release notes”. This Dependency would create a loop. Choose another Task.", .dependencyLink)), width: 1100, height: 720)
                 try await render("c8-banner-hand-off-blocks", WorkspaceSnapshot(model: banner("Couldn't stop “Prepare the release notes” depending on “Review the interaction design”. The Task changed. Reload its Dependencies before trying again.", .dependencyLink)), width: 1100, height: 720)
@@ -419,12 +419,12 @@ struct Snapshots {
                                                       configuration: ManagedServerConfiguration(executable: "/fixture/Todo/Server/todo-server", database: "/fixture/todo.db", port: 4310)))
                 try await render("c7-settings-sign-out-failed", signOutSettings, width: 640, height: 560)
                 let importing = fixture(); importing.signedIn = true; importing.showingImport = true
-                importing.importMessages.publish("Couldn't prepare the follow-up Task: The server rejected this request (HTTP 404). Try again.", kind: .followUp)
+                importing.importMessages.publish("Couldn't prepare the follow-up Task. The server rejected this request (HTTP 404). Try again.", kind: .followUp)
                 try await render("c7-import-follow-up-failed", ImportView(model: importing, compact: false), width: 760, height: 620)
                 let picker = fixture(); picker.signedIn = true
                 picker.dependencies.picker = .init(profile: "work", root: picker.tasks[0], direction: .dependsOn)
                 picker.dependencies.picker?.failure = DependencyNotice(message: "This Task blocks done Tasks.", followUp: picker.tasks[1].id,
-                    followUpFailure: "Couldn't prepare the follow-up Task: The server rejected this request (HTTP 404). Try again.")
+                    followUpFailure: "Couldn't prepare the follow-up Task. The server rejected this request (HTTP 404). Try again.")
                 try await render("c7-picker-follow-up-failed", DependencyPickerView(model: picker), width: 560, height: 620)
                 let added = fixture(); added.signedIn = true; added.deletionNotice = "Task added"
                 try await render("c7-capsule-task-added", WorkspaceSnapshot(model: added), width: 1100, height: 720)

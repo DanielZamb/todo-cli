@@ -385,7 +385,7 @@ private actor ScriptGate: ClientTransport {
         let notice = String(describing: model.dependencies.picker?.failure)
         #expect(model.dependencies.picker?.failure?.message == "ORIGINAL This Task blocks done Tasks." && model.dependencies.picker?.failure?.followUp == task.id, "the original notice and its follow-up stay: \(notice)")
         // Read the field itself: a debug description escapes the apostrophe in "Couldn't".
-        #expect(model.dependencies.picker?.failure?.followUpFailure == "Couldn't prepare the follow-up Task: NEWER follow-up failed Try again.", "the failure is shown with it: \(notice)")
+        #expect(model.dependencies.picker?.failure?.followUpFailure == "Couldn't prepare the follow-up Task. NEWER follow-up failed Try again.", "the failure is shown with it: \(notice)")
         #expect(model.message == nil, "not under the sheet: \(model.message ?? "")")
         model.closeDependencyPicker()
         #expect(model.message == nil)
@@ -1597,7 +1597,7 @@ private actor ScriptGate: ClientTransport {
         #expect(model.dependencies.picker?.id == picker && !model.quickAdd, "the picker stays open and A opens no Quick Add")
         #expect(model.dependencies.picker?.failure?.message == "ORIGINAL This Task blocks done Tasks.", "the notice stays")
         #expect(model.dependencies.picker?.failure?.followUp == task.id, "its button stays")
-        #expect(model.dependencies.picker?.failure?.followUpFailure == "Couldn't prepare the follow-up Task: ROW B follow-up failed Try again.", "B's failure stays with it")
+        #expect(model.dependencies.picker?.failure?.followUpFailure == "Couldn't prepare the follow-up Task. ROW B follow-up failed Try again.", "B's failure stays with it")
         #expect(model.dependencies.initial.isEmpty && model.message == nil, "A adds nothing and says nothing")
         await finish(model, gate, vault)
     }
@@ -1634,7 +1634,7 @@ private actor ScriptGate: ClientTransport {
         model.dependencies.picker?.failure = DependencyNotice(message: "ORIGINAL This Task blocks done Tasks.", followUp: task.id)
         await gate.next("tasks.show", .fail(404, "ROW follow-up failed"))
         await model.createDependencyFollowUp(task.id)
-        try #require(model.dependencies.picker?.failure?.followUpFailure == "Couldn't prepare the follow-up Task: ROW follow-up failed Try again.")
+        try #require(model.dependencies.picker?.failure?.followUpFailure == "Couldn't prepare the follow-up Task. ROW follow-up failed Try again.")
         await gate.next("tasks.depend", .hold)
         let link = Task { await model.toggleDependency(other) }
         try await wait("link held") { await gate.isHeld("tasks.depend") }
