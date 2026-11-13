@@ -1,9 +1,8 @@
 # Private Diagnostics recordings
 
-The current delivery corrects SQL7 and SQL8 from the second SQLite review. See
-"Resume verification after disk hold" below for the completed gate. Earlier
-sections record the
-previous implementations and their receipts.
+The current delivery corrects SQL8 and SQL9 from the third SQLite review. See
+"SQL8 and SQL9 after the third SQLite review" below for its design, failing-first
+controls and final gate receipts. Earlier sections describe superseded versions.
 
 The SQLite implementation replaces the unshipped file journal with a separate
 SQLite database in a worker thread. The SQLite replacement section at the end
@@ -2389,3 +2388,332 @@ guard reports 126.0 GB free. No global free-space delta is attributed to these
 file charges. Archived SQL7/SQL8 input hashes match their originals, recorded
 in resume/witnesses-unchanged.json. The current compiled CLI/server/seed stay
 for reproducibility; no binary or generated evidence is tracked.
+
+## SQL8 and SQL9 after the third SQLite review
+
+This correction addresses the review of
+`1e371d0e30698d05526406b1aa5b4373fc69e63a`. All raw results below are retained in
+`docs/evidence/ui-speed/recordings-sql-ownership`. The earlier SQL8 acceptance
+claims describe the earlier static controls, which did not cover a peer taking
+ownership between the empty-file check and initialization. That gap is closed
+by exclusion and a second decision under it. This store remains uninstalled;
+there is no format migration.
+
+### SQL8 ownership before initialization
+
+An empty recordings file is inspected again while the store holds native,
+non-blocking exclusion on that file. A peer that commits before exclusion wins:
+its non-empty file is foreign and is refused. A peer trying to commit while
+exclusion is held receives SQLite busy. The initializer publishes the schema,
+application id and version in one FULL-synchronous rollback-journal transaction
+before releasing exclusion. Exactly one of two simultaneous legitimate
+initializers publishes the schema; both subsequently open the owned store.
+The exclusion attempt is bounded to 100 ms, with 2 ms retry steps. Normal owned
+connection setup retries busy at most 49 times, with a 1 ms SQLite busy timeout
+and 2 ms between attempts. These waits run only in the recordings worker.
+
+On macOS the guard uses native `flock`. The compiled controls prove its
+interoperation with a separate process using the ordinary SQLite VFS. A normal
+SQLite connection in the guarded initializer would conflict with its own native
+lock, so only that initial connection uses SQLite's `unix-none` VFS while the
+native guard is held. It closes before the descriptor releases exclusion.
+All subsequent recording operations use the normal VFS and SQLite locks.
+`none-lock-experiment.log` retains the native peer experiment. The Linux branch
+uses an open-file-description lock over SQLite's lock-byte range; that branch
+has not been executed on this Mac. There is no extra lock file, lease or index.
+The external guard is necessary because `unix-none` itself performs no locking,
+as described by [SQLite's VFS documentation](https://www.sqlite.org/vfs.html).
+
+The main file alone now declares the format. A plain 100-byte read must find
+SQLite's header, application id `0x544f4452` at offset 68 and version 1 at offset
+60. Unknown headers never reach a SQLite open. Initialization publishes those
+bytes and the schema in rollback mode, so their recognition never depends on
+WAL contents. A claimed store first receives an immutable read of its durable
+main catalog, then validation of the live catalog through a normal connection.
+Both must match the exact expected tables, columns, indexes, triggers and
+version before any mode change or WAL setup. This follows the coordinator's
+header suggestion and uses no validation copy. SQLite documents immutable
+reads' lack of locking in its [URI documentation](https://www.sqlite.org/uri.html).
+
+A main file or auxiliary larger than the configured physical cap is refused
+before SQLite opens it. An impossible metadata cap is refused before file
+creation. The caps remain 32 MiB per app, 256 MiB total and seven days. The quota
+unit fixture previously used an 8192-byte total, smaller than the catalog itself;
+its input is now 131072 bytes. Its overflow/refusal assertions are unchanged.
+A separate literal 8192-byte control proves refusal without creating a file or
+changing the directory mode.
+
+The seat's original empty-file and Task-database race witnesses remain
+byte-identical, with their failing results on 1e371d0e. They pause immediately
+before the journal pragma and require the peer to commit at that point. The
+corrected initializer already holds exclusion across that pragma, so the peer
+cannot commit then. Requiring those schedules to finish unchanged would require
+removing the protection. The coordinator confirmed this oracle change. Their
+property is carried by both replacement schedules below, plus simultaneous
+legitimate initialization.
+
+| Archived witness | Red on 1e371d0e | Replacement property and receipt |
+| --- | --- | --- |
+| `empty-race.ts`, newly created zero file | exit 1 | `initialization-final`: peer commits at the barrier before exclusion; store refuses and the complete directory snapshot is unchanged; held-exclusion peer gets busy |
+| `empty-race.ts`, existing zero file | exit 1 | Same two schedules with an existing zero file |
+| `empty-task-race.ts`, real compiled CLI Task database | exit 1 | `initialization-final`: compiled CLI commits a real Task database before exclusion; every file hash, mode and the directory listing stay unchanged; held-exclusion peer cannot publish foreign data |
+| Foreign WAL auxiliary mutation | `red-foreign-files`, exit 1 | `green-foreign-files-final`, exit 0, with WAL/shm present, absent, partly absent and rollback journal |
+
+`initialization-final` also starts both legitimate initializers at the barrier,
+asserts exactly one `initialized` publication and retrieves all three admitted
+events. `init-server-final` holds that exclusion while the real compiled Task
+server starts and serves a literal Task list and a new Task with row version 1.
+Only recording initialization waits. After release, recording ingestion succeeds.
+This proves the exclusion is off the Task readiness and request paths.
+
+The all-files snapshots compare the directory listing, the directory's mode and
+every file's SHA-256 and mode before and after refusal. The unchanged seat static
+matrix and the existing six refusal controls pass, including overlapping table
+names, wrong columns, wrong identifier/version, extra index/trigger, Task database
+and copy. Real owned stores reopen. `recording-header.test.ts` also covers all
+four oversized suffixes. No foreign main, WAL, shm or rollback journal is
+opened with SQLite when its main header does not identify this store.
+
+### SQL9 individually expiring service samples
+
+Each service sample now retains its own monotonic timestamp. Observing a reply
+first removes expired samples and appends only the new observation; it never
+refreshes an older timestamp. At age 60000 ms a sample is gone. Each method has
+at most eight samples; the seven RPC methods hold at most 56 in aggregate.
+One method's observations never affect another. With no live samples, admission
+uses the existing cold floors and 1.5 margin. The 5000 ms call deadline,
+10000 ms inactivity limit and 60000 ms worker restart backoff are unchanged.
+SQL7's distinction between a caller deadline and worker inactivity is unchanged.
+
+Both archived witnesses are red on 1e371d0e and green on this implementation:
+`stale-rate.ts` and `stale-upload.ts` each perform a slow successful call, wait
+an actual 61 seconds and then complete two fast calls. The new production-class
+unit controls use an injected monotonic clock and literal 3500 ms/60000 ms values.
+They check an old outlier expires despite an intervening fresh reply, the cold
+estimate is 37.5 ms for Show, method isolation and the 56-sample bound.
+
+### Receipts and unchanged interfaces
+
+The red source probes are archived without edits in
+`.scratch/recordings-sqlite3-s1`, with their hashes in the evidence. Reusable
+positive controls are in the verify-ui-profiler skill. Preparation failures
+remain recorded: the first initialization pair exposed a normal-open busy race,
+a first domain run exposed the impossible 8 KiB fixture, and local syntax/type
+preparation commands failed before correction. Later receipts are separately
+named; no red result is overwritten as a pass.
+
+Old and new HTTP contract ids are both
+`55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8`.
+The contract check confirms no HTTP schema, TypeScript pin, golden or generated
+Swift update is needed. Task `store.ts` and `projection.ts` are unchanged;
+no formal anchor is renewed. No Swift, native app, Keychain, signing, install,
+real owner data or push is used.
+
+### Known cost from the seat
+
+The seat's direct rate pairs accepted 445 of 450 batches on the reviewed head
+and 414 on the base at three producers and an assumed ten batches per second.
+At one batch per second nothing was refused. Head-minus-base Task-write
+changes cross zero at every tested rate; these are not evidence of a speed-up.
+The seat's frozen 32-producer flood measured a paired 16.184 ms Task-write
+increase, with a range of 8.591 to 20.507 ms. Its separate head-only 425/450
+series is not the direct paired series. Under that flood, about 12 ms per write
+was main-thread validation, with JSON at 1.9 ms and worker-call work at 2.3 ms.
+No early refusal optimization is made here: it would need to preserve refusal
+accounting. Actual app cadence with two and three producers remains owed at
+integration.
+
+### Root-check controls
+
+Disk guard ran before each exact locked command, with the additional 30 GiB
+soft-floor check. The first two runs exited 1 in the unchanged Electron test
+`test/guarded-run.test.ts > preserves literal argv and exit through direct fake delegates`.
+Both retained the original 5000 ms guard. Run `root` began at one-minute load
+4.568 and ended at 12.760; `root2` began at 6.641 and ended at 9.804.
+The isolated five-test Electron control exited 0, at loads 7.558 to 7.433.
+No Electron source, test, timeout or assertion changed.
+
+Run `root3` is the exact command
+`/usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check`, without worker caps or
+timeout overrides. It exited 0 at loads 5.486 to 6.771, passing 465 domain,
+38 server, 80 CLI and 168 Electron tests, with one existing skip. Domain and
+server tests include the existing recorder guards, type-level and label controls.
+The CLI suite took 125.37 seconds; its serial fixture execution completed normally.
+The failed earlier runs remain distinct receipts.
+
+### Frozen ingestion cost on the busy host
+
+The 32-producer flood adds 11.698 ms to Task-write p50, with paired differences
+from 9.455 to 15.342 ms. Full-store eviction adds 1.392 ms, from 0.779 to 1.727 ms.
+The smaller read changes and expiry-write change are inconclusive. The 16- and
+128-event write pairs are positive, but their median changes, 0.959 and 1.749 ms,
+are inside the pair-to-pair spread. Under the coordinator's measurement rule,
+the size of those effects remains inconclusive. This is not a no-overhead claim.
+
+The unchanged `sqlite-cost.ts` busy-host variant completes 100 cells, ten
+alternating pairs for each of five challenges, and exits 0. Each cell checks
+20 Task reads and 20 writes against literal status, content, list length and
+Version expectations. All 4000 Task requests pass. One-minute load is recorded
+at both boundaries of every cell. The same corrected binary runs on both sides;
+these are ingestion-off/ingestion-on comparisons, not two source versions and
+not a measurement of turning off the server's metadata recorder. No imposed CPU
+pressure, compile or other verification job from this unit overlaps the timed
+cells. Other units continue their work on the shared host.
+
+The 16-event, 128-event and eviction challenges each accept all 200 uploads.
+The flood accepts 2435 of 6400 and explicitly refuses 3965. Those refusals are
+not counted as accepted work. Expiry has 200 runs queries rather than uploads;
+its 0/0 batch entry means no upload was offered. The full-store challenges
+actually seed more than 30 MiB before the timed region. Worker-independent seed
+transactions reach 36.225 ms on this host, above the 2 ms threshold, confirming
+that synchronous recordings SQLite remains in the worker. Task requests do
+not synchronously wait for SQLite or for initialization exclusion. Admission
+still examines at most eight samples per method on the main thread; ingestion
+still pays the existing validation/encoding cost there.
+
+The flood's server CPU is 5555 [4240, 6670] ms with ingestion versus
+120 [90, 200] ms without it; driver CPU is 463.888 [392.752, 550.929] ms. The
+server uses much more CPU than the driver. These are whole-process figures,
+including its worker, and do not independently attribute that CPU to validation
+or SQLite. The earlier seat profile is the evidence for the validation cost
+reported above. There is no new speed-up claim and no inference about physical
+client presentation. Quiet-machine confirmation under the unchanged ceiling is
+owed at integration, as are the apps' actual batch cadence with two and three
+producers and the terminal PNG render by a unit holding the Swift slot.
+
+Values below are milliseconds unless labelled otherwise. Cells show medians
+and full ranges across ten runs per side. Paired differences are enabled minus
+baseline, in pair order. The raw cells and compiled source manifest remain in
+the evidence; `source-final.json` identifies corrected source hash
+`6d096f75f30bd0ace559d55f29934864cc5e200000e5115b641f0428641b223e`.
+
+| Challenge | Read p50 without / with | Write p50 without / with | Accepted / dropped batches |
+| --- | --- | --- | --- |
+| 16 events | 1.739 [1.319, 3.412] / 2.079 [1.557, 3.266] | 1.876 [1.377, 3.329] / 2.905 [2.439, 5.402] | 200 / 0 |
+| 128 events | 1.602 [1.354, 3.114] / 1.691 [1.525, 2.267] | 1.661 [1.418, 3.055] / 3.470 [3.289, 4.772] | 200 / 0 |
+| 32 producers | 0.995 [0.677, 1.740] / 1.141 [0.818, 1.740] | 0.990 [0.701, 2.108] / 12.793 [10.161, 17.256] | 2435 / 3965 |
+| Expiry | 0.886 [0.745, 1.355] / 0.915 [0.717, 1.626] | 0.918 [0.695, 1.519] / 1.339 [1.117, 1.994] | 0 / 0 |
+| Eviction | 0.867 [0.777, 1.643] / 1.025 [0.878, 1.395] | 0.883 [0.819, 1.867] / 2.355 [2.172, 2.839] | 200 / 0 |
+
+| Challenge | Read paired differences, pairs 1 through 10, ms | Write paired differences, ms |
+| --- | --- | --- |
+| 16 events | -0.145, 0.195, 0.655, -0.262, 0.329, 0.046, 0.456, 0.613, 0.105, -0.062 | 1.845, 2.187, 1.612, 0.668, 0.934, 0.962, 0.899, 1.189, 0.956, 0.725 |
+| 128 events | 0.428, -0.077, 0.076, 0.026, 0.104, 0.599, 0.005, 0.420, -0.158, -1.108 | 2.278, 1.763, 1.720, 1.988, 1.718, 3.152, 1.735, 1.828, 1.672, 0.280 |
+| 32 producers | 0.120, 0.180, 0.341, 0.115, 0.090, 0.483, 0.115, -0.393, -0.134, 0.101 | 15.342, 10.635, 14.713, 11.262, 10.652, 14.355, 9.455, 13.986, 11.882, 11.513 |
+| Expiry | 0.392, 0.060, 0.072, 0.167, -0.029, 0.019, 0.030, -0.496, -0.098, -0.003 | 0.876, 0.463, 0.500, 0.653, 0.440, 0.420, 0.467, -0.261, 0.322, 0.377 |
+| Eviction | 0.128, 0.140, 0.205, 0.101, -0.248, 0.157, 0.306, -0.385, 0.118, -0.125 | 1.515, 1.280, 1.727, 1.364, 0.972, 1.595, 1.529, 0.779, 1.419, 1.172 |
+
+| Challenge | Server CPU without / with, ms | Driver CPU with, ms | Boundary one-minute load range |
+| --- | --- | --- | --- |
+| 16 events | 180.000 [160.000, 290.000] / 350.000 [320.000, 470.000] | 26.261 [18.992, 69.867] | 11.577 to 19.719 |
+| 128 events | 170.000 [170.000, 270.000] / 600.000 [580.000, 660.000] | 34.298 [26.984, 73.665] | 9.986 to 13.270 |
+| 32 producers | 120.000 [90.000, 200.000] / 5555.000 [4240.000, 6670.000] | 463.888 [392.752, 550.929] | 6.336 to 10.788 |
+| Expiry | 110.000 [90.000, 160.000] / 220.000 [180.000, 340.000] | 9.466 [5.814, 14.257] | 6.094 to 7.680 |
+| Eviction | 110.000 [100.000, 180.000] / 570.000 [520.000, 700.000] | 23.879 [22.549, 39.436] | 5.781 to 6.667 |
+
+The enabled-cell final loss snapshots sum as follows. These counters include
+retention/eviction of earlier accepted facts, so they are not upload-failure
+counts alone.
+
+| Challenge | Dropped batches | Dropped events | Expired events | Capacity-evicted events | Failure counter |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 16 events | 0 | 0 | 0 | 0 | 0 |
+| 128 events | 0 | 0 | 0 | 0 | 0 |
+| 32 producers | 5990 | 766720 | 0 | 259200 | 3965 |
+| Expiry | 211 | 27008 | 27008 | 0 | 0 |
+| Eviction | 190 | 24320 | 0 | 24320 | 0 |
+
+The flood's 3965 refused uploads correspond to the exposed failure-counter
+increase. That existing aggregate includes parent RPC admission/deadline
+refusals as well as engine failures; it is not a count of disk errors. The
+frozen recipe retains status and acceptance for each upload, not a per-reason
+breakdown, so this run does not independently classify every refusal. Its
+259200 capacity-evicted events are 2025 earlier accepted 128-event batches;
+adding those to the 3965 refused batches accounts for the 5990 total. Every
+scenario reports zero corrupt segments, duplicate batches and uncertain
+restarts. No failure response is used as successful work in the timing claim.
+
+### Final command receipts
+
+The table normalizes this checkout prefix to `$PWD`. Exact expanded arguments,
+start/end times, exit codes and load boundaries are in each `.command.json`;
+raw output is in its same-named log. The build receipts for the compiled
+helpers and clock server are retained beside them. Preparation failures remain
+separately labelled. The standalone final domain suite and focused format/rate
+suites each exit 0, as does the final root above.
+
+| Receipt | Actual command | Exit |
+| --- | --- | --- |
+| red-empty-race | `bun .scratch/recordings-sqlite3-s1/empty-race.ts` | 1 |
+| red-empty-task | `bun .scratch/recordings-sqlite3-s1/empty-task-race.ts` | 1 |
+| red-foreign-files | `bun .scratch/ownership-base/.agents/skills/verify-ui-profiler/scripts/sqlite-foreign-files.ts $PWD/docs/evidence/ui-speed/recordings-sql-ownership/red-foreign-files` | 1 |
+| red-stale-rate | `.scratch/recordings-sqlite3-s1/bin/stale-rate` | 1 |
+| red-stale-upload | `.scratch/recordings-sqlite3-s1/bin/stale-upload` | 1 |
+| initialization-final | `.scratch/bin/sqlite-initialization $PWD/docs/evidence/ui-speed/recordings-sql-ownership/initialization-final` | 0 |
+| init-server-final | `bun .agents/skills/verify-ui-profiler/scripts/sqlite-initialization-server.ts $PWD/docs/evidence/ui-speed/recordings-sql-ownership/init-server-final` | 0 |
+| green-foreign-files-final | `bun .agents/skills/verify-ui-profiler/scripts/sqlite-foreign-files.ts $PWD/docs/evidence/ui-speed/recordings-sql-ownership/green-foreign-files-final` | 0 |
+| green-format-files-final | `bun .scratch/recordings-sqlite3-s1/format-matrix-all-files-v1.ts` | 0 |
+| green-stale-rate-final | `.scratch/recordings-sqlite3-s1/bin/stale-rate-final` | 0 |
+| green-stale-upload-final | `.scratch/recordings-sqlite3-s1/bin/stale-upload-final` | 0 |
+| helper-types-final | `bun --bun node_modules/typescript/bin/tsc -p .agents/skills/verify-ui-profiler/tsconfig.json` | 0 |
+| producer | `env TODO_PROFILER_STRESS=1 bun .agents/skills/verify-ui-profiler/scripts/verify.ts $PWD/docs/evidence/ui-speed/recordings-sql-ownership/producer` | 0 |
+| completeness | `bun .agents/skills/verify-ui-profiler/scripts/completeness.ts $PWD/docs/evidence/ui-speed/recordings-sql-ownership/completeness` | 0 |
+| identities | `bun .agents/skills/verify-ui-profiler/scripts/corrections.ts $PWD/docs/evidence/ui-speed/recordings-sql-ownership/identities` | 0 |
+| admission-fault | `bun .agents/skills/verify-ui-profiler/scripts/admission-fault.ts $PWD/docs/evidence/ui-speed/recordings-sql-ownership/admission-fault` | 0 |
+| wire | `bun .agents/skills/verify-ui-profiler/scripts/sqlite-wire.ts $PWD/docs/evidence/ui-speed/recordings-sql-ownership/wire` | 0 |
+| identity | `bun .agents/skills/verify-ui-profiler/scripts/sqlite-identity.ts $PWD/docs/evidence/ui-speed/recordings-sql-ownership/identity` | 0 |
+| continuous | `.scratch/bin/sqlite-continuous $PWD/docs/evidence/ui-speed/recordings-sql-ownership/continuous` | 0 |
+| crash | `.scratch/bin/sqlite-crash $PWD/docs/evidence/ui-speed/recordings-sql-ownership/crash` | 0 |
+| writers | `bun .agents/skills/verify-ui-profiler/scripts/sqlite-writers.ts $PWD/docs/evidence/ui-speed/recordings-sql-ownership/writers` | 0 |
+| startup | `bun .agents/skills/verify-ui-profiler/scripts/sqlite-startup.ts $PWD/docs/evidence/ui-speed/recordings-sql-ownership/startup` | 0 |
+| expiry | `bun .agents/skills/verify-ui-profiler/scripts/sqlite-expiry.ts $PWD/docs/evidence/ui-speed/recordings-sql-ownership/expiry` | 0 |
+| full | `.agents/skills/verify-ui-profiler/scripts/sqlite-full.sh $PWD/docs/evidence/ui-speed/recordings-sql-ownership/full` | 0 |
+| factory | `bun .agents/skills/verify-ui-profiler/scripts/sqlite-factory.ts $PWD/docs/evidence/ui-speed/recordings-sql-ownership/factory` | 0 |
+| reader | `bun .agents/skills/verify-ui-profiler/scripts/sqlite-reader.ts $PWD/docs/evidence/ui-speed/recordings-sql-ownership/reader` | 0 |
+| reader-http | `bun .agents/skills/verify-ui-profiler/scripts/sqlite-reader-http.ts $PWD/docs/evidence/ui-speed/recordings-sql-ownership/reader-http` | 0 |
+| revoked | `bun .agents/skills/verify-ui-profiler/scripts/sqlite-auth.ts $PWD/docs/evidence/ui-speed/recordings-sql-ownership/revoked` | 0 |
+| revoked-read | `bun .agents/skills/verify-ui-profiler/scripts/sqlite-auth.ts $PWD/docs/evidence/ui-speed/recordings-sql-ownership/revoked-read read` | 0 |
+| native | `bun .agents/skills/verify-ui-profiler/scripts/sqlite-worker-missing.ts $PWD/docs/evidence/ui-speed/recordings-sql-ownership/native` | 0 |
+| progress | `.scratch/bin/sqlite-progress $PWD/docs/evidence/ui-speed/recordings-sql-ownership/progress` | 0 |
+| bytes | `.scratch/bin/sqlite-byte-bound $PWD/docs/evidence/ui-speed/recordings-sql-ownership/bytes` | 0 |
+| watchdog | `.scratch/bin/sqlite-watchdog $PWD/docs/evidence/ui-speed/recordings-sql-ownership/watchdog` | 0 |
+| auth | `.agents/skills/verify-auth/scripts/verify.sh $PWD/docs/evidence/ui-speed/recordings-sql-ownership/auth` | 0 |
+| recorder-faults | `.scratch/bin/verify-diagnostic-faults $PWD/docs/evidence/ui-speed/recordings-sql-ownership/recorder-faults` | 0 |
+| diagnostics | `env TODO_DIAGNOSTICS_NO_SWIFT=1 .agents/skills/verify-diagnostics/scripts/verify.sh $PWD/docs/evidence/ui-speed/recordings-sql-ownership/diagnostics` | 0 |
+| api | `.agents/skills/verify-server-api/scripts/verify.sh $PWD/docs/evidence/ui-speed/recordings-sql-ownership/api` | 0 |
+| contract | `bun packages/api/scripts/openapi.ts --check` | 0 |
+| root | `/usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check` | 1 |
+| root2 | `/usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check` | 1 |
+| electron-control | `pnpm --filter @todo/electron test guarded-run.test.ts` | 0 |
+| root3 | `/usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check` | 0 |
+| cost | `env TODO_RECORDING_COST_REQUESTS=20 /usr/bin/lockf -k /tmp/todo-ui-profiler-benchmark.lock bun .agents/skills/verify-ui-profiler/scripts/sqlite-cost.ts $PWD/docs/evidence/ui-speed/recordings-sql-ownership/cost` | 0 |
+| cost-report | `bun .agents/skills/verify-ui-profiler/scripts/sqlite-report.ts $PWD/docs/evidence/ui-speed/recordings-sql-ownership/cost` | 0 |
+| domain-final2 | `pnpm --filter @todo/domain test` | 0 |
+| format-units | `pnpm --filter @todo/domain test recording-format.test.ts recordings-sql-review.test.ts` | 0 |
+| rate-unit2 | `pnpm --filter @todo/domain test recording-rate.test.ts` | 0 |
+
+The full-volume control obtains real ENOSPC, refuses the recording with HTTP 500,
+then proves two Task creations and one scheduler ReminderFired. Reader recovery
+and the separate HTTP reader explanation/capacity counters pass. The final
+native missing-module control restores its owned module, recovers on backoff
+and reports available with one counted failure. The slow-read control keeps a
+progressing worker available for 15.429 seconds despite its caller deadline;
+a stopped read retires at 10.004 seconds. No product timeout was changed.
+
+### Final cleanup and remaining work
+
+All controls finish before retirement. `lsof` confirms 25 owned proof binaries
+and Bun temporaries are closed; they are hashed and removed, with no open-file
+skips. `retired.json` retains paths and SHA-256 values. The removed files total
+2240088134 logical bytes and 2240143360 allocated bytes, about 2.09 GiB. These
+are file charges, not an attributed APFS free-space delta while other units are
+building. The matching compiled CLI, server and seed remain with their hashes.
+Raw red/green receipts and reusable sources remain. The final disk guard reports
+78.5 GB free, above the 30 GiB soft floor; the checkout measures 4057460 KiB,
+about 3.87 GiB. No mounted full-volume scratch remains.
+
+The candidate is committed on top of 1e371d0e, without amend or push, for the
+seat's re-check. Quiet-machine confirmation, real app batching cadence,
+Linux execution of the exclusion branch and the terminal PNG remain explicitly
+unclaimed here. The Mac unit owns its integration work. The HTTP contract stays
+55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8.

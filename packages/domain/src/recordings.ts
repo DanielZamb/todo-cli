@@ -16,18 +16,13 @@ import {
   recordingLimits,
 } from "./diagnostic-recordings.ts";
 import { emptyRecordingAdmission } from "./recording-admission.ts";
+import {
+  recordingMethods as methods,
+  RecordingServiceRates,
+} from "./recording-rate.ts";
 import { RecordingRefusal, recordingRefusals } from "./recording-refusal.ts";
 import { RecordingDatabase } from "./recordings-sqlite.ts";
 
-const methods = [
-  "ingest",
-  "runs",
-  "show",
-  "export",
-  "compare",
-  "flush",
-  "close",
-] as const;
 const Request = Schema.Struct({
   id: Schema.Int,
   method: Schema.Literals(methods),
@@ -234,10 +229,7 @@ export class DiagnosticRecordings {
   private active:
     | { request: typeof Request.Type; cost: number; started: number }
     | undefined;
-  private rates = new Map<
-    (typeof methods)[number],
-    { at: number; samples: number[] }
-  >();
+  private rates = new RecordingServiceRates();
   private maxStepMs = 0;
   private failures = 0;
   private droppedBatches = 0;
@@ -356,14 +348,10 @@ export class DiagnosticRecordings {
               )
             : undefined;
           const active = this.active;
-          const previous = this.rates.get(active.request.method)?.samples ?? [];
-          this.rates.set(active.request.method, {
-            at: performance.now(),
-            samples: [
-              ...previous.slice(-7),
-              performance.now() - active.started,
-            ],
-          });
+          this.rates.observe(
+            active.request.method,
+            performance.now() - active.started,
+          );
           this.settle(id, r.value, error);
           this.queued -= active.cost;
           this.active = undefined;
@@ -420,7 +408,6 @@ export class DiagnosticRecordings {
       }, recordingWorkerPolicy.inactivityMs);
   }
   private estimate(method: (typeof methods)[number]) {
-    const recent = this.rates.get(method);
     const initial =
       method === "show"
         ? 25
@@ -429,15 +416,7 @@ export class DiagnosticRecordings {
           : method === "export"
             ? 10
             : 1;
-    return (
-      1.5 *
-      Math.max(
-        initial,
-        ...(recent && performance.now() - recent.at < 60000
-          ? recent.samples
-          : []),
-      )
-    );
+    return this.rates.estimate(method, initial);
   }
   private dispatch() {
     if (this.active || this.connection.kind !== "ready") return;

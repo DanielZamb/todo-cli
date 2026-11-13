@@ -416,7 +416,16 @@ concurrent external change makes the read refuse for retry. A pinned external
 reader can delay physical expiry within the disk cap; logical retention still
 hides old facts. Capacity refusals are counted, maintenance backs off and
 recovers automatically. The main file retains its high-water size; no vacuuming
-is scheduled. Existing nonempty files must match the recording application identifier, schema
-version and complete catalog read-only before modes or bytes change. An
-exclusively created or empty file can be initialized. No old-format migration
-is shipped.
+is scheduled.
+
+Recording initialization holds native exclusion on its own file across the
+second header/size check and one rollback-journal schema/identifier transaction.
+The durable main header publishes ownership before WAL is enabled. Foreign
+headers are never opened with SQLite, avoiding changes to their auxiliaries.
+An immutable main-catalog check precedes normal validation of a claimed store.
+Application id 0x544f4452, version 1 and the exact catalog must match before mode
+changes or writes. No old-format migration, validation copy or persistent
+lockfile is needed. Exclusion and bounded retry
+remain in the recording worker; a compiled control serves Task reads/writes
+while that exclusion is held. Rate history stamps each of at most eight samples
+per method and expires each on its own 60-second lifetime.

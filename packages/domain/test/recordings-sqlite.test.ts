@@ -242,7 +242,7 @@ it("refuses new runs at the fixed 5120-run constraint and rolls back a total quo
     await rm(p, { recursive: true, force: true });
   }
   const q = await mkdtemp(join(tmpdir(), "todo-sql-total-cap-")),
-    small = new RecordingDatabase(q, { totalBytes: 8192 });
+    small = new RecordingDatabase(q, { totalBytes: 131072 });
   try {
     expect(small.ingest(a, 1).accepted).toBe(false);
     expect(small.db.query("SELECT count(*) n FROM events").get()).toEqual({

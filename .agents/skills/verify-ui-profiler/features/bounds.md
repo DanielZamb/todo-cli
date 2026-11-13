@@ -27,7 +27,16 @@ Owned reads commit bounded row snapshots before materialization, and compare
 holds no snapshot across steps. A changed external version refuses the read.
 The main file retains its high-water allocation; no vacuuming is configured.
 
-Existing nonempty files need application id 0x544f4452, version 1 and the exact
-owned catalog before mode changes or writes. Foreign overlapping table names,
-wrong columns, identifiers, versions, indexes and triggers refuse unchanged.
-Only new exclusively created or empty files initialize; no migration is needed.
+Initialization rechecks an empty file under native exclusion and publishes the
+schema, application id 0x544f4452 and version 1 together in rollback mode. An
+unknown main header is refused without opening SQLite. The exact catalog of a
+claimed store is checked before mode changes or writes. Foreign overlapping
+tables, wrong columns, identifiers, versions, indexes and triggers refuse with
+every file, mode and directory listing unchanged. The initialization/all-files
+controls in the parent skill prove both peer schedules and one publication by
+two legitimate initializers. No migration or validation copy is needed.
+
+Admission history keeps eight individually timestamped samples per method,
+at most 56 overall. Each expires after 60000 ms; new replies never restamp old
+observations. The production rate tests and archived 61-second witnesses check
+expiry, method isolation and admission after a stale outlier is gone.

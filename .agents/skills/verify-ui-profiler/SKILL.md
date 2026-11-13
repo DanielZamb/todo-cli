@@ -161,3 +161,23 @@ For high-load controls, from the checkout root use
 <evidence> <command> <args...>`. It checks frontmost app and one
 minute of owner inactivity, uses at most six CPU processes for at most 85 seconds,
 and records loads throughout. There is no pressure in the frozen cost recipe.
+
+## Exclusive initialization and sample expiry
+
+Compile `scripts/sqlite-initialization.ts` to `.scratch/bin/sqlite-initialization`
+and run it from the checkout root with a new evidence directory. It covers new
+and existing zero-file peers, the compiled CLI committing a Task database before
+exclusion, a blocked peer while exclusion is held, and simultaneous legitimate
+initializers with exactly one publication. Its barrier markers stay outside
+the database directory. `scripts/sqlite-initialization-server.ts` additionally
+restarts the compiled server while initialization is held, serves literal Task
+reads and creation, releases exclusion and admits a recording.
+
+Run `scripts/sqlite-foreign-files.ts` for all-file hash/mode/listing preservation
+with foreign WAL/shm present, absent or partially absent and a rollback journal.
+Run `pnpm --filter @todo/domain test recording-rate.test.ts recording-header.test.ts`
+for individually expired production rate histories, per-method isolation, the
+56-sample aggregate bound and oversized-file refusal. The archived stale-rate
+and stale-upload witnesses each use a real 61-second wait and remain unchanged.
+The old journal-pragma race schedule is impossible under exclusion; preserve its
+reds and map it to the before-exclusion and held-exclusion controls.

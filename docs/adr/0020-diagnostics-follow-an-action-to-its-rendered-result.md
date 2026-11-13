@@ -272,8 +272,10 @@ posting: at most 1024 calls and 1 MiB, including an envelope allowance. Readines
 and every RPC have a 5000 ms deadline. A caller deadline refuses only that call.
 Only one call is dispatched at a time, and expired queued work is never sent.
 Admission also bounds predicted work to five seconds, using 1.5 times the largest
-of the last eight service times per method, with a 60-second observation window
-and documented cold estimates. An expired in-flight call retains its byte charge
+of the last eight service times per method, with each sample individually
+stamped at completion and expired after 60 seconds. Expired observations are
+never copied or restamped by a later reply. The documented cold estimates apply
+when no live samples remain. An expired in-flight call retains its byte charge
 until the reply or retirement. Replies and each bounded long-read step reset a
 10000 ms inactivity watchdog. A stalled in-flight operation, including worker
 initialization, is retired only after that inactivity period; queued deadlines
@@ -284,12 +286,24 @@ no content, route parameters, ids or filesystem paths. The Task server catches
 even a synchronous recording factory failure, serves Tasks immediately and shows
 the condition in the existing owner Diagnostics error list.
 
-Existing nonempty recording databases must identify application 0x544f4452 and
-schema version 1, and match the exact table, column, index and trigger catalog,
-read-only, before mode changes, WAL setup or DDL. Only an exclusively created or
-empty file can be initialized. This unit has not shipped; there is no migration
-for earlier unrecognized recording files. Refused files and directory modes
-remain unchanged.
+Recording ownership is published durably in the main SQLite header: application
+0x544f4452 and user_version 1. Initial schema and identifiers commit together in
+rollback-journal mode under native exclusion on the recordings file only. A
+second look at the held descriptor must still find empty contents or an already
+published recording header. A peer-created foreign file is refused before any
+mode change, journal switch or DDL. Two legitimate initializers publish once.
+The exclusion is nonblocking with bounded retries and runs only in the recording
+worker, never on Task readiness or Task requests. No lease/lockfile is added.
+
+Unknown headers and files larger than the configured cap are rejected by plain
+reads without opening them with SQLite. The exact main catalog is checked using
+an immutable read, which cannot maintain auxiliaries. A header-claimed store is
+then opened normally and its actual catalog checked before setup, followed by
+integrity and foreign-key checks. Initialization made the main catalog and header durable, so
+immutable reading is not used as a replacement for current WAL data. This avoids
+validation copies and leaves the storage limits unchanged. Refused foreign files,
+including WAL, shared memory and rollback journals, keep their bytes, modes and
+listing. The unit has not shipped; no old-format migration is provided.
 
 ## Still proposed
 

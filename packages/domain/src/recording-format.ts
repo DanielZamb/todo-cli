@@ -15,18 +15,27 @@ const expected = (() => {
   const db = new Database(":memory:");
   try {
     db.exec(recordingDDL);
-    return JSON.stringify(db.query<SchemaRow, []>(schemaQuery).all());
+    return {
+      catalog: JSON.stringify(db.query<SchemaRow, []>(schemaQuery).all()),
+      minimumBytes:
+        (db.query<{ page_count: number }, []>("PRAGMA page_count").get()
+          ?.page_count ?? 0) *
+        (db.query<{ page_size: number }, []>("PRAGMA page_size").get()
+          ?.page_size ?? 4096),
+    };
   } finally {
     db.close();
   }
 })();
+export const recordingMinimumBytes = expected.minimumBytes;
 export function recognizeRecordingFormat(db: Database) {
   if (
     db.query<{ application_id: number }, []>("PRAGMA application_id").get()
       ?.application_id !== recordingApplicationId ||
     db.query<{ user_version: number }, []>("PRAGMA user_version").get()
       ?.user_version !== recordingSchemaVersion ||
-    JSON.stringify(db.query<SchemaRow, []>(schemaQuery).all()) !== expected
+    JSON.stringify(db.query<SchemaRow, []>(schemaQuery).all()) !==
+      expected.catalog
   )
     throw new Error("Foreign database refused");
 }

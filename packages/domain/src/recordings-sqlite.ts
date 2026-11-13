@@ -80,6 +80,9 @@ export type RecordingDatabaseOptions = {
   appBytes?: number;
   totalBytes?: number;
   boundary?: (point: string) => void;
+  openBoundary?: (
+    point: import("./recording-database.ts").RecordingOpenPoint,
+  ) => void;
   progress?: () => void;
 };
 export class RecordingDatabase {
@@ -113,6 +116,7 @@ export class RecordingDatabase {
     this.db = openRecordingDatabase(
       directory,
       options.totalBytes ?? recordingLimits.totalBytes,
+      options.openBoundary,
     );
     this.recoveredThrough =
       this.db
