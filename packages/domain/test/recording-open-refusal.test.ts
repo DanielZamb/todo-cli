@@ -532,3 +532,21 @@ it("R5-1 initializes an empty main beside a non-empty -shm and an empty -wal, wh
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+it("R5-3 answers an open it could not read consistently as busy, with nothing to remove", () => {
+  expect(
+    recordingRefusalGuidance("/scratch/diagnostic-recordings", "store_busy", [
+      "recordings.db",
+      "recordings.db-wal",
+      "recordings.db-shm",
+    ]),
+  ).toEqual({
+    state: "retrying",
+    reason: "store_busy",
+    explanation:
+      "Another process kept writing recordings.db while it was being checked, so no consistent reading was possible; the server retries in one minute.",
+    files: [],
+    recovery:
+      "Recording retries automatically every minute; Task service is unaffected.",
+  });
+});

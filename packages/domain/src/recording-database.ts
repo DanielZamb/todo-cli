@@ -48,6 +48,8 @@ export const recordingOpenRefusals = {
   integrity: "recordings.db failed SQLite's integrity check.",
   initialization_busy:
     "Another process held recordings.db while it was being created; the server retries in one minute.",
+  store_busy:
+    "Another process kept writing recordings.db while it was being checked, so no consistent reading was possible; the server retries in one minute.",
   open_failed:
     "The recordings directory could not be opened; the server retries in one minute.",
 } as const;
@@ -63,12 +65,16 @@ export function recordingRefusalGuidance(
   reason: RecordingOpenRefusalReason,
   present: readonly string[],
 ) {
-  const retrying = reason === "initialization_busy" || reason === "open_failed";
-  const files = (
-    reason === "not_private" && present.length === 0
-      ? [directory]
-      : present.map((name) => join(directory, name))
-  ).slice(0, recordingStoreFiles.length);
+  const retrying =
+    reason === "initialization_busy" ||
+    reason === "store_busy" ||
+    reason === "open_failed";
+  const files = retrying
+    ? []
+    : (reason === "not_private" && present.length === 0
+        ? [directory]
+        : present.map((name) => join(directory, name))
+      ).slice(0, recordingStoreFiles.length);
   return {
     state: retrying ? ("retrying" as const) : ("refused" as const),
     reason,
@@ -94,11 +100,13 @@ export class RecordingOpenRefusal extends Error {
     readonly reason: RecordingOpenRefusalReason,
     message = reason === "initialization_busy"
       ? "Recording initialization busy"
-      : reason === "integrity"
-        ? "Recording integrity"
-        : reason === "open_failed"
-          ? "Recording directory unavailable"
-          : "Foreign database refused",
+      : reason === "store_busy"
+        ? "Recording store busy"
+        : reason === "integrity"
+          ? "Recording integrity"
+          : reason === "open_failed"
+            ? "Recording directory unavailable"
+            : "Foreign database refused",
   ) {
     super(message);
   }
@@ -228,6 +236,50 @@ function preflight(path: string, image: Buffer | undefined) {
     checkIntegrity(existing);
   } finally {
     existing.close();
+  }
+}
+const fileStamp = (fd: number, path: string) => {
+  const main = fstatSync(fd, { bigint: true });
+  let wal = "absent";
+  try {
+    const stat = lstatSync(`${path}-wal`, { bigint: true });
+    const header = Buffer.alloc(32);
+    const walFd = openSync(
+      `${path}-wal`,
+      constants.O_RDONLY | constants.O_NOFOLLOW,
+    );
+    try {
+      readSync(walFd, header, 0, 32, 0);
+    } finally {
+      closeSync(walFd);
+    }
+    wal = `${stat.ino}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}:${header.toString("hex")}`;
+  } catch {}
+  return `${main.ino}:${main.size}:${main.mtimeNs}:${main.ctimeNs}|${wal}`;
+};
+export const recordingInspectionPolicy = {
+  boundMs: 500,
+} as const;
+function consistentInspection(fd: number, path: string) {
+  const deadline = performance.now() + recordingInspectionPolicy.boundMs;
+  let confirmed: RecordingOpenRefusalReason | undefined;
+  for (;;) {
+    const before = fileStamp(fd, path);
+    let refusal: RecordingOpenRefusal | undefined;
+    try {
+      const inspected = inspect(fd, path);
+      preflight(path, inspected.image);
+    } catch (error) {
+      if (!(error instanceof RecordingOpenRefusal)) throw error;
+      refusal = error;
+    }
+    if (!refusal) return;
+    const stable = before === fileStamp(fd, path);
+    if (stable && confirmed === refusal.reason) throw refusal;
+    confirmed = stable ? refusal.reason : undefined;
+    if (performance.now() > deadline)
+      throw new RecordingOpenRefusal("store_busy");
+    wait();
   }
 }
 function checkIntegrity(db: Database) {
@@ -369,8 +421,7 @@ export function openRecordingDatabase(
     }
     const journal = sizeOf(path + "-journal");
     if (journal !== undefined && journal > 0) refuse("hot_journal");
-    const inspected = inspect(fd, path);
-    preflight(path, inspected.image);
+    consistentInspection(fd, path);
     for (let attempt = 0; ; attempt++) {
       if (!sameFile(fd, path)) refuse("replaced");
       if (!tryRecordingExclusion(fd, true)) {

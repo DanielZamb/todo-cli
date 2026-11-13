@@ -237,3 +237,21 @@ records in that writer's `-shm`.
 The seat's review-4 witnesses (`wal-refusal2.ts`, `swap-task.ts`) stay
 archived in the run store and run unchanged from
 `.scratch/recordings-sqlite4-s1/claude/`.
+
+## Concurrent writers never make a good store look foreign
+
+A refusal is reported only when two consecutive inspections, each with
+identical before and after stamps of both files (main and WAL inode, size,
+nanosecond modification and change times, WAL header), return the same reason.
+Any inspection that accepts the store proceeds to the live catalog check on
+the real connection. If no consistent refusal is reached within
+`recordingInspectionPolicy.boundMs` (500 ms), the open answers `store_busy`
+(state retrying, no files, no removal advice). The worker retries busy opens
+up to 50 times, 10 ms apart, then backs off for a minute.
+
+The seat's review-5 probe `concurrent-open.ts` (one process ingesting and
+checkpointing a good store, a second process opening it for 60 s) must show
+zero refusals. `bun .agents/skills/verify-ui-profiler/scripts/sqlite-refusal-under-load.ts
+<checkout> 60000 <commits-per-second>` holds the same load on a foreign store
+and on a damaged store: every open must be refused with its reason or answered
+`store_busy`, and none may open.
