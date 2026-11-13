@@ -50,7 +50,16 @@ it("keeps the store's private connection and raw transactions out of apps/server
       ...read(path).matchAll(/\b(BEGIN|COMMIT|ROLLBACK|SAVEPOINT|RELEASE)\b/gi),
     ].map((match) => [path, match[0]]),
   );
-  expect(control).toEqual([]);
+  // The one allowed transaction statement takes the CLI routing singleton
+  // guard's lock on its own private SQLite file beside the database
+  // (database-endpoint.ts). It is never the store's connection: the only
+  // connection that file constructs opens guardPath.
+  expect(control).toEqual([["apps/server/src/database-endpoint.ts", "BEGIN"]]);
+  const endpointSource = read("apps/server/src/database-endpoint.ts");
+  expect(
+    [...endpointSource.matchAll(/new Database\(([^)]*)\)/g)].map((m) => m[1]),
+  ).toEqual(["guardPath"]);
+  expect(endpointSource).toContain('guard.exec("BEGIN EXCLUSIVE");');
   const opened = server.flatMap((path) =>
     [...read(path).matchAll(/\bopenStore\(|new OperationStore\(/g)].map(
       (match) => [path, match[0]],
