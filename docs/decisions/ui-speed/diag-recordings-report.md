@@ -3363,3 +3363,83 @@ the stability rule:
 No file pinned by any mapping changed in this round. The pin audit at the
 head shows the same one mismatch: verify-discovery-formal's `task-client.ts`,
 deferred for the Swift step.
+
+## Review 7 finding R7-1 (2026-11-13)
+
+Claude Opus 5.5. Commit 795a9303. Evidence: `docs/evidence/ui-speed/recordings-r7/`.
+
+**Defect.** The R6-1 table counted EACCES and EPERM as facts about a file, on
+the premise that the store's own private files never produce them. A policy
+outside the file (a sandbox, endpoint security, a privacy control) can deny
+data access to a good private file. The store then answered `not_private`
+with removal advice.
+
+**Fix.** An open, create or sidecar error in the file-nature set (EACCES,
+EPERM, ELOOP, EISDIR, ENOTDIR, ENXIO, EFTYPE) is now a fact only when `lstat`
+confirms a non-private state:
+- for a file: not a regular file, a link count other than one, another owner,
+  or the owner's read and write bits missing;
+- for the recordings directory: not a directory, another owner, or the
+  owner's read, write and search bits missing. This answers the new
+  `directory_not_private`, with explanation and advice about the directory,
+  never "remove these files".
+
+Anything else answers `check_unavailable` with its stage.
+
+| Proof (`sqlite-access-denial.ts`, each case in its own `sandbox-exec` profile) | 6d7fcaa7 | 795a9303 |
+| --- | --- | --- |
+| Good store, data of `recordings.db` denied (metadata allowed) | `not_private`, 3 files, "remove" | `check_unavailable`, `main open: EPERM`, no files, no advice |
+| Good store, data of `recordings.db-wal` denied | `not_private`, 3 files, "remove" | `check_unavailable`, `wal open: EPERM` |
+| Good empty directory, file creation denied | `not_private`, the directory, "remove" | `check_unavailable`, `main create: EPERM` |
+| `recordings.db` without the owner read bit | `not_private` | `not_private` (confirmed by `lstat`) |
+| A directory in place of `recordings.db` | `not_private` | `not_private` |
+| A symbolic link in place of `recordings.db` | `not_private` | `not_private` |
+| Recordings directory without owner write | `not_private`, worded as files | `directory_not_private`, worded as the directory |
+| Directory listing before and after | unchanged | unchanged |
+
+The domain test file, run in a 6d7fcaa7 capture, fails only the
+directory-wording case. On head, 34 of 34 pass, including the owner-bit and
+directory facts.
+
+### Second pass over the table: facts resting on a premise
+
+| Site | Premise | Now |
+| --- | --- | --- |
+| Every file-nature errno (EACCES, EPERM, ELOOP, EISDIR, ENOTDIR, ENXIO, EFTYPE) at main create, main reopen, sidecar open and WAL open | The errno alone proves the file is not private | Confirmed by `lstat` (type, links, owner, owner bits) or answered `check_unavailable` |
+| An unwritable directory at main create | Worded as a fact about files | A directory fact, `directory_not_private`, confirmed from the directory |
+| Temporary copy `writeSync` | The copy equals the store (return value ignored) | A short write answers `check_unavailable` (`temporary image write: short`), so a partly written copy can never be refused as `integrity` or `foreign_catalog` |
+| Initialization wait loop | A non-empty file whose header is not ours, read while another process holds the exclusion, is foreign | The loop only waits. The header is judged after this open holds the exclusion; if it never can, the answer is `initialization_busy` (retrying) |
+
+Facts that rest on a check and stay as they are:
+- `sizeOf` / `sameFile` ENOENT (the path observed absent);
+- the sidecar pre-check and the sidecar clear (`lstat` / `fstat`);
+- main `fstat` (type, links);
+- the WAL `fstat`;
+- size above the ceiling (`oversized`);
+- a non-empty journal (`hot_journal`, `interrupted_initialization`);
+- the header and catalog read (`foreign_header`, `foreign_catalog`; confirmed
+  by two stable agreeing inspections);
+- SQLite's NOTADB/CORRUPT on the store (on the preflight, inside the
+  stability rule; on the live connection, under SQLite's own locks);
+- `quick_check` not ok (`integrity`, inside the stability rule);
+- `replaced` (the inode at the path is observed to differ).
+
+### Gates on 795a9303 (gates7, sandboxed except the access-denial control, which applies its own profile per case; every step gated on at least 40 GiB free)
+
+| Gate | Exit | Result |
+| --- | ---: | --- |
+| domain recordings tests | 0 | 84 |
+| initialization (compiled), initialization-server, foreign-files, visibility, swap, race, refusal-classes | 0 each | the initialization control covers the changed wait loop: two legitimate initializers, exactly one publication |
+| seat `classes.ts` | 1 | 20 of 21; the one row is the expectation the seat withdrew in review 6 |
+| seat `guidance-real`, `live-writer`, `temp-failure` | 0 each | |
+| seat `concurrent-open`, 60 s | 0 | 2,620 opened, 1 `store_busy` (retrying, no files, no advice); earlier rounds had 0 busy answers on the good store |
+| under load at 85 commits/s, 60 s | 0 | foreign 14,054 `foreign_catalog` + 1 `store_busy`; damaged 3,223 `integrity` + 5 `store_busy`; none opened |
+| under an unpaced writer, 30 s | 0 | foreign 869 + 13 busy; damaged 27 `integrity` + 41 busy; none opened |
+| `sqlite-check-temp.sh` (owned volume) | 0 | missing, read-only and full answer `check_unavailable`; the foreign catalog is still refused |
+| `sqlite-access-denial.ts` | 0 | as in the table above |
+| image cost, 173 MiB and 253 MiB | 0, 0 | 62 MiB peak at 253 MiB with frames |
+| verify-ui-profiler `verify.ts`, recorder faults, verify-occ-atomicity `check.ts` | 0 each | |
+| disk guard, then root `lockf pnpm check` | 0, 0 | domain 574, server 38, Electron 168 + 1 skipped, CLI 87 |
+
+No pinned file changed; the pin audit at the head shows the same one
+deferred mismatch (verify-discovery-formal's `task-client.ts`).
