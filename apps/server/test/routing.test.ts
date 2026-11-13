@@ -10,8 +10,8 @@ import {
 } from "@todo/domain/database-route";
 import { openStore, TaskCommands } from "@todo/domain/store";
 import { Effect, Fiber, Layer } from "effect";
-import { OutsideCommit } from "../src/outside-commit.ts";
 import { serverLayer } from "../src/server.ts";
+import { StreamWake } from "../src/stream-wake.ts";
 
 it.live(
   "a proved data-free nudge wakes every stream with timer fallback disabled",
@@ -35,7 +35,7 @@ it.live(
           serverLayer({
             path,
             port: 0,
-            outsideCommit: new OutsideCommit(Effect.never),
+            wake: new StreamWake(Effect.never),
           }),
         );
         const binding = databaseBinding(path);

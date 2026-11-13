@@ -15,6 +15,7 @@ export const designRecipes = [
   { id: "graph-browser", script: "verify-graph-browser.ts" },
   { id: "host-writes", host: true },
   { id: "host-task-search", host: true, mode: "TODO_VERIFY_TASK_SEARCH" },
+  { id: "host-stream-wake", host: true, mode: "TODO_VERIFY_STREAM_WAKE" },
   { id: "host-priority", host: true, mode: "TODO_VERIFY_PRIORITY_GROUPS" },
   {
     id: "host-version-guardrails",
@@ -39,6 +40,7 @@ export const verifyShellModes = [
   "TODO_VERIFY_NATIVE_UI",
   "TODO_VERIFY_SNAPSHOTS",
   "TODO_VERIFY_TASK_SEARCH",
+  "TODO_VERIFY_STREAM_WAKE",
   "TODO_VERIFY_PRIORITY_GROUPS",
   "TODO_VERIFY_VERSION_GUARDRAILS",
   "TODO_ELECTRON_VERIFY_METADATA_ONLY",

@@ -325,3 +325,13 @@ For compile-only Xcode verification, `apps/electron/scripts/xcode-compiler-guard
 creates local compiler shims and copies the installed Swift feature metadata
 unchanged beside them. See `apps/electron/scripts/verify-design-all.md` for its
 command. Mac Python helpers still run plainly through the Swift slot.
+
+## Stream and write reply order
+
+Set `TODO_ELECTRON_VERIFY_HOST=1 TODO_VERIFY_STREAM_WAKE=1` on the helper to run
+`scripts/verify-stream-wake.ts` against a compiled scratch server. The proxy holds
+actual write replies, SSE chunks and Task reads to prove reply-first, stream-first
+and an event during the write refresh. The production renderer must retain the
+saved title at Version 2, with no busy state left behind. This unsigned host proof
+does not establish signed storage, native notifications or production main-process
+cursor persistence. The full unsigned write drive remains a separate recipe.

@@ -171,7 +171,7 @@ it("serverLayer keeps the start-up evidence window to the store acquisition alon
     .replace(/\s+/g, " ")
     .trim();
   expect(window).toBe(
-    "const store = yield* Effect.acquireRelease( openStore({ path: options.path }), (store) => Effect.orDie(store.close()), );",
+    "const rawStore = yield* Effect.acquireRelease( openStore({ path: options.path }), (store) => Effect.orDie(store.close()), );",
   );
 });
 it.live(

@@ -74,9 +74,10 @@ import {
 import { databaseEndpoint } from "./database-endpoint.ts";
 import { translate } from "./errors.ts";
 import { localRoutes } from "./local-routes.ts";
-import { OutsideCommit } from "./outside-commit.ts";
 import { scheduler } from "./scheduler.ts";
 import { changesLayer } from "./sse.ts";
+import { StreamWake } from "./stream-wake.ts";
+import { streamWakeStore } from "./stream-wake-store.ts";
 import { taskSearchCacheHygiene } from "./task-search-cache-hygiene.ts";
 
 const taskResult = (
@@ -290,7 +291,7 @@ export const serverLayer = (options: {
   readonly path: string;
   readonly port: number;
   readonly allowedHosts?: ReadonlySet<string>;
-  readonly outsideCommit?: OutsideCommit;
+  readonly wake?: StreamWake;
 }) =>
   Layer.unwrap(
     Effect.gen(function* () {
@@ -302,21 +303,23 @@ export const serverLayer = (options: {
         }),
         (endpoint) => Effect.sync(() => endpoint?.close()),
       );
-      const outside = options.outsideCommit ?? new OutsideCommit();
       // Start-up evidence window. verifyStore accepts the store only if a new
       // descriptor on the kept database file appeared while it opened. Nothing
       // else in this process may open the database path between beforeStore()
       // and verifyStore(): an extra open of the kept file would supply that
       // evidence even if the store had opened a different file (the swap-back
       // case). Keep this window to the store acquisition alone; a test in
-      // apps/server/test/database-endpoint.test.ts pins it.
+      // apps/server/test/database-endpoint.test.ts pins it. The wake decorator
+      // is built after the window; it opens nothing.
       const beforeStore = endpoint?.beforeStore();
-      const store = yield* Effect.acquireRelease(
+      const rawStore = yield* Effect.acquireRelease(
         openStore({ path: options.path }),
         (store) => Effect.orDie(store.close()),
       );
       yield* Effect.sync(() => endpoint?.verifyStore(beforeStore));
-      const cacheHygiene = yield* taskSearchCacheHygiene(store);
+      const wake = options.wake ?? new StreamWake();
+      const store = streamWakeStore(rawStore, wake);
+      const cacheHygiene = yield* taskSearchCacheHygiene(rawStore);
       yield* cacheHygiene.run.pipe(Effect.forkScoped);
       yield* scheduler(store).pipe(Effect.forkScoped);
       const commands = new TaskCommands(store);
@@ -1067,10 +1070,8 @@ export const serverLayer = (options: {
           SystemLive,
           DiagnosticsLive,
           SnapshotsLive,
-          localRoutes(store, endpoint, outside),
-          changesLayer(store, outside.waiter).pipe(
-            Layer.provide(AuthorizationLive),
-          ),
+          localRoutes(store, endpoint, wake),
+          changesLayer(rawStore, wake).pipe(Layer.provide(AuthorizationLive)),
         ]),
         Layer.provide(
           HttpApiMiddleware.layerSchemaErrorTransform(

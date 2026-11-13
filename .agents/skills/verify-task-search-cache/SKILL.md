@@ -193,3 +193,23 @@ The full immutable 219749f2 command exited 0; its receipt is
 `docs/evidence/perf-cache/verify-Xh1k3D/result.json`. This includes the finite
 admission model and real-code controls, compiled lifecycle, erasure and CLI
 defect/refusal drives. It makes no new native or unbounded-safety claim.
+
+## Stream wake integration renewal
+
+Immutable merged product a45ddeaa6d00b1fc62560f70be48c2e0e1202495 renews only the
+two hygiene rows. server.ts adds the wake: cache hygiene still receives the
+undecorated store and is still forked before the scheduler. The hygiene
+observer's parameter narrows to CacheHygieneReads; its body is byte-identical.
+Before renewal, check-hygiene.mjs on a74f66c0 (same product bytes) passed clean,
+failed all three observer controls with their witnesses, restored, typechecked
+and stopped only at the stale hash. The uncached oracle is rebuilt for this
+product. The complete command's exit is in
+docs/decisions/ui-speed/stream-wake-integration.md.
+
+## c9 server integration renewal
+
+Immutable merged product 0bd8476df7d7147ea355b418346b57d33f403aee. No covered or
+hygiene file changed from a45ddeaa: the durable refusal touches only auth.ts and
+the new rejection-history.ts, neither mapped here. The uncached oracle is rebuilt
+for this product, and the complete command's exit is in
+docs/decisions/ui-speed/c9-server-integration.md.

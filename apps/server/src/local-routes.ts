@@ -8,12 +8,12 @@ import type { OperationStore } from "@todo/domain/store";
 import { Effect, Schema } from "effect";
 import { HttpApiBuilder } from "effect/http-api";
 import type { databaseEndpoint } from "./database-endpoint.ts";
-import type { OutsideCommit } from "./outside-commit.ts";
+import type { StreamWake } from "./stream-wake.ts";
 
 export const localRoutes = (
   store: OperationStore,
   endpoint: ReturnType<typeof databaseEndpoint>,
-  outside: OutsideCommit,
+  wake: StreamWake,
 ) =>
   HttpApiBuilder.group(TodoApi, "local", (handlers) =>
     handlers.handleAll({
@@ -36,7 +36,7 @@ export const localRoutes = (
             )
           )
             return yield* new BadRequest({ message: "Local proof required" });
-          outside.notify();
+          wake.signal();
           return null;
         }),
       runCommand: ({ payload, headers }) =>

@@ -185,38 +185,40 @@ try:
     stop(third)
     replay = subprocess.run([fixture, str(scratch), 'replay'], check=True, capture_output=True, text=True)
     save('replay.json', json.loads(replay.stdout))
-    assert lifecycle('status')['loaded'] is False
-    marker.touch()
-    launchd_attempted = True
-    installed = lifecycle('install')
-    assert installed['installed'] and installed['loaded']
-    shutil.copyfile(installed['path'], evidence / 'agent.plist')
-    stdout = home / 'Library' / 'Logs' / label / 'stdout.log'
-    def agent_ready():
-        matches = re.findall(r'Listening on http://127\.0\.0\.1:(\d+)', stdout.read_text() if stdout.exists() else '')
-        if not matches:
-            return None
-        try:
-            return request(f'http://127.0.0.1:{matches[-1]}', 'GET', '/health').get('service') == 'todo-server'
-        except OSError:
-            return None
-    wait_for(agent_ready)
-    assert lifecycle('install')['loaded']
-    wait_for(agent_ready)
-    assert lifecycle('status')['installed']
-    removed = lifecycle('uninstall')
-    assert not removed['installed'] and not removed['loaded']
-    assert lifecycle('uninstall')['loaded'] is False
-    marker.unlink()
-    launchd_attempted = False
-    shutil.copyfile(stdout, evidence / 'launchd-stdout.log')
-    stderr = stdout.with_name('stderr.log')
-    if stderr.exists():
-        shutil.copyfile(stderr, evidence / 'launchd-stderr.log')
+    no_launchd = os.environ.get('TODO_VERIFY_SCHEDULER_NO_LAUNCHD') == '1'
+    if not no_launchd:
+        assert lifecycle('status')['loaded'] is False
+        marker.touch()
+        launchd_attempted = True
+        installed = lifecycle('install')
+        assert installed['installed'] and installed['loaded']
+        shutil.copyfile(installed['path'], evidence / 'agent.plist')
+        stdout = home / 'Library' / 'Logs' / label / 'stdout.log'
+        def agent_ready():
+            matches = re.findall(r'Listening on http://127\.0\.0\.1:(\d+)', stdout.read_text() if stdout.exists() else '')
+            if not matches:
+                return None
+            try:
+                return request(f'http://127.0.0.1:{matches[-1]}', 'GET', '/health').get('service') == 'todo-server'
+            except OSError:
+                return None
+        wait_for(agent_ready)
+        assert lifecycle('install')['loaded']
+        wait_for(agent_ready)
+        assert lifecycle('status')['installed']
+        removed = lifecycle('uninstall')
+        assert not removed['installed'] and not removed['loaded']
+        assert lifecycle('uninstall')['loaded'] is False
+        marker.unlink()
+        launchd_attempted = False
+        shutil.copyfile(stdout, evidence / 'launchd-stdout.log')
+        stderr = stdout.with_name('stderr.log')
+        if stderr.exists():
+            shutil.copyfile(stderr, evidence / 'launchd-stderr.log')
     assert len(reminders()) == 3
     with sqlite3.connect(scratch / 'scratch.db') as db:
         (evidence / 'database.sql').write_text('\n'.join(db.iterdump()))
-    save('result.json', {'passed': True, 'compiledServer': True, 'restartMidWait': True, 'competingProcesses': True, 'uniqueReminders': 3, 'dateOnlyIgnored': True, 'cleanup': True, 'realLaunchctl': True, 'authenticatedSse': True, 'sharedContractDecoded': True, 'openapiExpanded': True, 'label': label, 'scratchHome': str(home), 'realDatabaseTouched': False})
+    save('result.json', {'passed': True, 'compiledServer': True, 'restartMidWait': True, 'competingProcesses': True, 'uniqueReminders': 3, 'dateOnlyIgnored': True, 'cleanup': True, 'realLaunchctl': not no_launchd, 'authenticatedSse': True, 'sharedContractDecoded': True, 'openapiExpanded': True, 'label': label, 'scratchHome': str(home), 'realDatabaseTouched': False})
 finally:
     for process in streams + servers:
         if process.poll() is None:

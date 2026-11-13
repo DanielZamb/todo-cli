@@ -74,7 +74,13 @@ A Conflict or validation failure rolls back that transaction, then records a
 rejected attempt in its own short transaction. Rejected rows stay in History.
 Replay never applies them. A rejected input over 32,768 characters of JSON is
 stored only as its size, and a repeated auth denial is stored once per
-minute (ADR-0007 amendment).
+minute, decided from History: first in a read, and on absence again inside
+the write transaction that appends (ADR-0007 amendment). The
+look-back walks that Profile by descending sequence to the start of the preceding
+minute. A sufficiently late commit with an older recording clock can hide a
+matching refusal and permit another row. Missing, future and non-recording stamps
+never end the walk. The [timestamp audit](decisions/ui-speed/durable-denial.md)
+records the provenance and the explicit ordering limit.
 
 ![Write path: authenticate, validate, append to op_log, apply, commit; rejected attempts roll back and are recorded](diagrams/write.png)
 
@@ -289,12 +295,14 @@ id. Each later `operation` event is a committed `OpLogEntry`, with `seq` as the
 SSE id. Only that Profile's committed operations appear, so gaps in ids are
 normal: rejected attempts and other Profiles are skipped.
 
-The route rereads `op_log` every 250 ms and checks the credential on each pass.
-After every writing CLI command that opened the store, once the store closes, a data-free best-effort local nudge can
-wake each stream's next normal pass immediately, including after refusal or dry run. The CLI discovers only a private
-record beside its selected canonical database, compares physical file identity and
-contract, and verifies a nonce HMAC before using the same connection. Discovery and
-nudge have separate 50 ms budgets. Failure leaves the direct command's result alone.
+The route waits at most 250 ms before rereading `op_log` and checking the
+credential on each pass. After every writing CLI command that opened the store,
+once the store closes, a data-free best-effort local nudge signals the server's
+one StreamWake, so each stream's next normal pass runs at once, including after
+refusal or dry run. The CLI discovers only a private record beside its selected
+canonical database, compares physical file identity and contract, and verifies a
+nonce HMAC before using the same connection. Discovery and nudge have separate
+50 ms budgets. Failure leaves the direct command's result alone.
 Each poll checks and materializes in one transaction and retains plain
 subscription selectors between polls. A never-created identifier is classified
 again on every poll, so a later CLI creation starts normal ordered delivery.
@@ -318,6 +326,36 @@ Session or Token, and an expired Session or Token receive only ready followed by
 their unchanged Unauthorized revoked or expired failure
 and close. The base also sent the terminal operation batch to these credentials.
 The exact raw frames and sequence ids are recorded in the server-reads report.
+A server-owned `StreamWake` also wakes every open stream
+after an in-process write. `stream-wake-store.ts` decorates the server's store,
+Authentication, Snapshots and ScheduledWork at their public boundaries. Exhaustive
+policies require a read/write choice when a public member is added. Empty scheduler
+work does not signal; SSE and cache hygiene use the raw store. The domain transaction
+and projection code are unchanged. A stream remembers the wake revision from before
+its pass, so commits during a pass force the next wait to return immediately.
+Bursts collapse into one pending pass per stream, and cancellation removes waiters.
+All decorated member exits, including reads and synchronous calls, check the
+connection's native SQLite transaction state. Writes mark a pending notification;
+the first exit outside a transaction delivers it. Nested writes cannot signal
+before the outer transaction ends, and detached children signal their own commits.
+The adapter obtains the existing connection once without changing domain code.
+Observer defects cannot change a write's result or cause; the timer remains its fallback.
+The wake decides only when a pass starts. The revision is read right after the
+wait and before the pass's checked lease, and is carried through the reload,
+ordinary and terminal results. Every pass still opens a fresh checked lease, and
+no lease or authority is held across the wait. The generation check, History
+cursor, authorization, terminal permission and emitted events are those above.
+The raw store reaches only those two readers, typed as `StreamReads` and
+`CacheHygieneReads` so neither can build a writer, and a server test forbids the
+private connection, SQL transaction control and any other raw-store use in the
+server. Every transaction callback is synchronous, which the decorator and the
+loop rely on. One commit goes unsignalled: `signIn` verifies the passphrase on a
+promise outside its fiber, so an interrupted sign-in (for example, a client that
+disconnects) exits and signals first, and its decision then commits one
+Profile-less auth row (`AuthChanged` for a new Session, or
+`AuthAttemptRejected`) with no signal. No stream delivers it: streams deliver only
+committed rows of their own Profile, and the next pass moves past it. The domain
+is unchanged for it.
 That is how a `todo edit` from the CLI process reaches an open desktop app.
 There is no file watcher. Reconnect with
 `Last-Event-ID: <seq>` to resume after that id, and save cursors per Profile.

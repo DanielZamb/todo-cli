@@ -26,5 +26,6 @@ test -s "$evidence/06-symlink.json"
 test -s "$evidence/06-symlink.sql"
 test -s "$evidence/actions.json"
 test -s "$evidence/result.json"
+"$repo/.agents/skills/verify-auth/scripts/verify-durable.sh" "$evidence/durable-denial"
 set +x
 echo "PASS; evidence survived cleanup: $evidence" >&3

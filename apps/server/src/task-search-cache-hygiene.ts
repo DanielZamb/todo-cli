@@ -1,7 +1,7 @@
-import type { OperationStore } from "@todo/domain/store";
 import { Effect, Schedule } from "effect";
+import type { CacheHygieneReads } from "./raw-store-reads.ts";
 
-export const taskSearchCacheHygiene = (store: OperationStore) =>
+export const taskSearchCacheHygiene = (store: CacheHygieneReads) =>
   Effect.gen(function* () {
     let cursor = yield* store.searchCacheEvents();
     const poll = Effect.gen(function* () {
