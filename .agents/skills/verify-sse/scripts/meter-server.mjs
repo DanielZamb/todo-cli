@@ -17,6 +17,16 @@ Database.prototype.query = function (sql, ...args) {
       },
     });
   }
+  // The strict loop reads one Profile's committed History inside each pass's
+  // checked lease; only the stream calls this query, once per active pass.
+  if (sql === "SELECT * FROM op_log WHERE profile=? AND outcome='committed' AND seq>? ORDER BY seq")
+    return new Proxy(statement, {
+      get(target, key) {
+        if (key === "all") return (...args) => { passes++; historyReads++; return target.all(...args); };
+        const value = Reflect.get(target, key);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
   if (sql !== "SELECT * FROM op_log WHERE seq>? ORDER BY seq") return statement;
   return new Proxy(statement, {
     get(target, key) {
