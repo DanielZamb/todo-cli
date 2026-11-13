@@ -118,23 +118,28 @@ import Testing
     }
     /// The seat's final closing sentences (candidate 8 review, 2026-11-12), for every code a link
     /// can be refused with: the seat's sentence, or the "see why" fallback for codes two links rarely
-    /// share. The seat's wording supersedes the earlier "no singular subject" heuristic.
+    /// share. The coordinator's D2 rule, stated exactly: no merged reason is the single-Task sentence
+    /// of its code (the sentence the picker shows for one refusal). A rule ("A Task can have at most
+    /// 13…") or a fact about the credential is not one Task's outcome, so it may read singular.
     @Test(arguments: [
-        ("dependency_cycle", "Each would create a loop. Choose other Tasks."),
-        ("too_many_dependencies", "A Task can have at most 13 direct Dependencies. Choose fewer."),
-        ("blocked", "Done Tasks can only depend on done or cancelled Tasks."),
-        ("dependency_profile_mismatch", "A Task and its Dependencies must be in the same Profile."),
-        ("occ_conflict", "These Tasks changed. Reload and try again."),
-        ("not_found", "These Tasks were deleted or moved."),
-        ("forbidden", "This credential can't change Dependencies."),
-        ("connection", "The server couldn't be reached. Try again."),
-        ("unavailable", "The server couldn't be reached. Try again."),
-        ("blocks_done_task", "fallback"), ("validation", "fallback"), ("invalid_args", "fallback"), ("unauthorized", "fallback"),
+        ("dependency_cycle", "Each would create a loop. Choose other Tasks.", "This Dependency would create a loop."),
+        ("too_many_dependencies", "A Task can have at most 13 direct Dependencies. Choose fewer.", "A Task can have at most 13 direct Dependencies.\n" + DependencyNotice.countAdvice(14)),
+        ("blocked", "Done Tasks can only depend on done or cancelled Tasks.", "A done Task can only depend on done or cancelled Tasks."),
+        ("blocks_done_task", "fallback", "This Task blocks done Tasks and can't be reopened."),
+        ("dependency_profile_mismatch", "A Task and its Dependencies must be in the same Profile.", "A Task and its Dependency must be in the same Profile."),
+        ("occ_conflict", "These Tasks changed. Reload and try again.", "This Task changed. Reload its Dependencies before trying again."),
+        ("not_found", "These Tasks were deleted or moved.", "Task not found."),
+        ("validation", "fallback", "Check this Dependency and try again."),
+        ("invalid_args", "fallback", "Check this Dependency and try again."),
+        ("forbidden", "This credential can't change Dependencies.", "This credential can't update Dependencies."),
+        ("unauthorized", "fallback", "Your Session ended. Sign in again."),
+        ("connection", "The server couldn't be reached. Try again.", "Couldn't update Dependencies. Try again."),
+        ("unavailable", "The server couldn't be reached. Try again.", "Couldn't update Dependencies. Try again."),
     ])
-    func aMergedReasonIsTheSeatsSentenceForItsCode(_ code: String, _ expected: String) {
-        #expect(MergedFailureWording.reason(codes: [code, code], differing: "fallback") == expected, "\(code)")
-        let single = ["This Dependency would create a loop.", "This Task changed. Reload its Dependencies before trying again.", "Task not found.", "Your Session ended. Sign in again."]
-        #expect(!single.contains { expected.contains($0) }, "\(code): not the single-Task sentence")
+    func aMergedReasonIsTheSeatsSentenceAndNeverItsCodesSingleTaskSentence(_ code: String, _ expected: String, _ single: String) {
+        let reason = MergedFailureWording.reason(codes: [code, code], differing: "fallback")
+        #expect(reason == expected, "\(code): \(reason)")
+        #expect(reason != single && !reason.contains(single), "\(code): the merged reason is not the single-Task sentence \(single)")
     }
 
     /// The banner's merged hand-offs (seat, 2026-11-12): one verb and one shared Task read as the
