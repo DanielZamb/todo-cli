@@ -107,16 +107,31 @@ clock before the start of the preceding minute. Missing, invalid, future and
 non-recording stamps never stop the walk. Wrong passphrases always append for
 the lockout.
 
-This look-back has a deliberate limit. A row committed more than a minute after
-its writer read the clock can hide an earlier matching refusal; the next repeat
-then appends one more row. The walk reads every row of that Profile between the
-newest row and the match or the stop, about one microsecond each: a repeat
-whose match is the newest row costs one step, but rows committed after the
-first refusal (an import of 5,000 Tasks in the same minute, for example) are
-read again by every repeat until the minute ends. That read holds no write
-lock, but on the server it runs on the one thread that serves every request:
-after 5,000 Tasks imported after the first refusal, each repeat costs about
-5.7 ms there, measured on 2026-11-13.
+This look-back has a deliberate limit. A row of at most 4,096 bytes stamped
+before the start of the preceding minute and committed after a refusal can hide
+it: one from a writer that commits more than a minute after reading its clock,
+or from a writer whose clock is behind (or steps back). The next repeat then
+appends one more row. The walk reads a row's event only if it is at most 4,096
+bytes; a larger row (a Task with a long description) is skipped unread, its
+size taken from the record header, so it neither matches nor hides. A refusal
+is always far smaller.
+
+The walk visits every row of that Profile between the newest row and the match
+or the stop. A repeat whose match is the newest row costs one step, but rows
+committed after the first refusal (an import in the same minute, for example)
+are passed again by every repeat until the minute ends. That holds no write
+lock, but on the server it runs on the one thread that serves every request.
+Before the size bound, the cost followed the bytes of those rows: the review
+seat measured each repeat at 7.9 ms after 5,000 imported Tasks with
+200-character descriptions, and at 57 to 67 ms after one import of 1,000 Tasks
+with 100,000-character descriptions, whose first refusal took 139 to 151 ms,
+about 70 ms of it under the write lock. With the bound (measured 2026-11-13,
+same method): after that 1,000-Task import, a repeat costs 0.34 ms (p99 0.44)
+and a first refusal 4.4 ms, 2.7 ms of it under the lock. Rows under the bound
+still cost what they cost: after 5,000 Tasks with 200-character descriptions,
+6.6 ms per repeat and an 18.1 ms first refusal, 10.2 ms of it under the lock.
+The cost now follows the number of rows of at most 4,096 bytes in the window,
+not their total size.
 A whole History inside the window must be searched on absence, twice: once in
 the read and once under the lock. Migration stamps, copied redaction stamps and supplied rejected-Task
 stamps never end the walk. See the

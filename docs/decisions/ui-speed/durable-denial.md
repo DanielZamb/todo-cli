@@ -8,24 +8,32 @@ clarification remains subject to owner acceptance.
 ## Decision and limit
 
 For an attempt at t, let m = floor(t / 60000) and horizon = (m - 1) * 60000.
-Inside the rejection's existing immediate transaction, walk that Profile's rows
-by descending seq, in one pass. A matching rejected auth event in minute m
-suppresses the append, whether its stamp is before or after t: two processes
-can read their clocks in one order and commit in the other, and the
-later-clock refusal committed first is still this minute's refusal. The first
-usable recording-clock stamp before the horizon ends the walk. A stamp after
-t, an invalid or absent stamp, or a row without a known recording-clock
-provenance cannot end it. End of History means append.
+Walk that Profile's rows by descending seq, in one pass: first in a read, and
+on absence again inside the rejection's immediate transaction. A row whose
+stored event is over 4,096 bytes is skipped unread (its length comes from the
+record header). A matching rejected auth event in minute m suppresses the
+append, whether its stamp is before or after t: two processes can read their
+clocks in one order and commit in the other, and the later-clock refusal
+committed first is still this minute's refusal. The first usable
+recording-clock stamp before the horizon ends the walk. A stamp after t, an
+invalid or absent stamp, a row without a known recording-clock provenance or a
+row over the size bound cannot end it. End of History means append.
 Wrong passphrases always append because the lockout counts each one.
 
 The decision uses History alone and is the same in separate CLI and server
 processes. It deliberately is not exact membership under arbitrary timestamp
-order. An older-than-horizon recording-clock row committed after a refusal
-can hide it and permit another row. The preceding minute is included so a
-writer crossing the current minute boundary does not hide that refusal.
-The tests pin both results: 5,000 rows at 00:19:59.999 committed after a
-00:20:00.001 refusal still yield one row; a later committed row stamped
-00:18:59.999 permits a second row.
+order. A row of at most 4,096 bytes stamped before the start of the preceding
+minute and committed after a refusal can hide it and permit another row. Two
+writers produce one: a writer that commits more than a minute after reading
+its clock, or a writer whose clock is behind another's (or steps back). The
+review seat measured two stores whose clocks were 30, 90 and 150 s apart,
+alternating ten refusals each: 1, 2 and 2 rows. The count stays bounded
+because each process's own newest row matches first. A larger row never hides
+a refusal: it is never read. The preceding minute is included so a writer
+crossing the current minute boundary does not hide that refusal. The tests pin
+these results: 5,000 rows at 00:19:59.999 committed after a 00:20:00.001
+refusal still yield one row; a later committed small row stamped 00:18:59.999
+permits a second row; a 100,000-byte row in the same place does not.
 
 ## Timestamp writer audit
 
@@ -143,6 +151,51 @@ and leaves one row for 20 fresh stores where the base leaves 21.
 On the server's single thread a repeat still costs its walk: after 5,000
 Tasks imported after the first refusal, 5.7 ms per repeat (p99 7.2), for every
 repeat until the minute ends, while no other request on that server runs.
+
+### Size bound (review seat F1)
+
+The review seat found that the walk's cost followed the bytes it parsed: each
+row's whole event went through json_extract. After one import of 1,000 Tasks
+with 100,000-character descriptions (within the HttpApi limits) a repeat cost
+57 to 67 ms on the server's thread and a first refusal 139 to 151 ms, about
+70 ms under the write lock; after 5,000 Tasks with 200-character descriptions,
+7.9 ms and 19.3 ms.
+
+The walk now reads octet_length(event) and nothing else of a row whose stored
+event is over 4,096 bytes. In the SQLite the compiled CLI, server and drivers
+load (/usr/lib/libsqlite3.dylib, 3.51.0, source f0ca7bba…, the same library
+UUID in all three under dyld's trace), octet_length() of a TEXT value is
+answered from the record header: with every overflow page of 20 large rows
+zeroed, octet_length() and the production walk still answer while length(event)
+and any column stored after event fail as malformed. outcome and reason are
+stored after event, so they are read only inside the same gate. The query plan
+is unchanged: SEARCH op_log USING INDEX op_log_profile_seq (profile=?).
+
+A refusal is a fixed shape of bounded literals and an instant, at most about
+160 bytes, so the bound never skips one. Skipping a large row as evidence lets
+the walk go further, never end early. A Profile whose History is mostly large
+rows is walked further on absence, at about half a microsecond per skipped row.
+
+Measured with the same method (one cloned fixture per scenario, three arms in
+rotating order: base 2a840b55, the unbounded read-first walk 65ee6900, the
+bounded walk 8061ae00; five rounds, three for the 100,000-character cases;
+load 3.6 to 5.0). Medians, unbounded against bounded:
+- 1,000 Tasks with 100,000-character descriptions after the first refusal:
+  repeat 46.5 ms (p99 65.9) against 0.34 ms (p99 0.44); burst of 1,000 47 s
+  against 0.35 s (base 0.02 s).
+- The same import before the first refusal: first refusal 96.4 ms, 50.2 under
+  the lock, against 4.4 ms, 2.7 under the lock (base 3.8).
+- 5,000 Tasks with 200-character descriptions after the first refusal: repeat
+  5.6 ms against 6.6 ms; before it, first refusal 17.0 against 18.1 ms, 9.9
+  against 10.2 under the lock. These rows are under the bound and still read.
+- 5,000 title-only Tasks after the first refusal: repeat 5.3 against 6.2 ms.
+- Every repeat in every arm except base opened no recording transaction.
+The gate costs about 15 to 20 percent on rows under the bound, from
+evaluating octet_length() once per gated column. The quiet, null and
+whole-window fixtures of this run were seeded with 5,000 extra title-only Tasks
+before the first refusal by a driver bug (fixed in 208dccc8); their
+repeat figures are valid (one step, as before: about 0.018 ms) and their first
+refusals are those of that import, not of a quiet Profile.
 
 ### Considered and not taken: a remembered position
 
