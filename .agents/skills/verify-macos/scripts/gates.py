@@ -14,6 +14,9 @@ stops on the first non-zero exit. Evidence: docs/evidence/mac-perf/c4/controls-f
 result.json, commands.json and one log per gate. Keychain: every runner builds through
 apps/macos/scripts/state_package.py, and result.json copies keychain_linked from the guard receipts.
 SSE is carried, not run: see `carried` below; update it whenever the server changes.
+The dag-public step (dag-public-gate.py) checks both DAG pins' premise before the public check: a
+head that changes a file in a pin's scopes needs that pin renewed at that head (its check passing
+first), as the last, verification-only commit of its delivery.
 Nothing is signed, launched or pushed.
 """
 import hashlib, json, os, subprocess, sys, time
@@ -143,7 +146,9 @@ try:
     # requires production-pin.json to name the same product; that pin certifies the server line's
     # product and is not moved by the Mac line.
     (root / 'docs/evidence/dag-formal').mkdir(parents=True, exist_ok=True)
-    run('dag-public', ['bun', '.agents/skills/verify-dag-formal/public-check.mjs'])
+    # MAC-C1-S1-35: the step first asserts that nothing in either DAG pin's scopes differs from its
+    # commit (the check alone reads only the pinned blobs), then runs the public check.
+    run('dag-public', ['python3', '.agents/skills/verify-macos/scripts/dag-public-gate.py', evidence / 'dag-public-pins.json'])
     run('root', ['scripts/swift-slot.sh', '/usr/bin/lockf', '-k', '/tmp/todo-pnpm-check.lock', 'pnpm', 'check'])
     run('doc-links', ['node', 'scripts/check-doc-links.mjs', 'HEAD'])
     keychain = keychain_summary()
