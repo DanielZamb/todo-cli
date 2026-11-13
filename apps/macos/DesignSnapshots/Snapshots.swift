@@ -40,8 +40,8 @@ struct Snapshots {
     func renderScreens() async throws {
         if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DISCOVERY_ONLY"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DAG_CHECKPOINT1"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DAG_CHECKPOINT2"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DAG_ONLY"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SC1_ONLY"] == "1" { return }
         NSApplication.shared.setActivationPolicy(.prohibited)
-        /// Candidate 9's images, both appearances (verify-design.py's C9_IMAGES).
-        let c9Images = 24
+        /// Candidates 9 and 10's images, both appearances (verify-design.py's C9_IMAGES).
+        let c9Images = 26
         let directory = URL(fileURLWithPath: try #require(ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DIR"]))
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         #expect(NSColor(named: "primary", bundle: TodoColors.bundle) != nil)
@@ -435,16 +435,23 @@ struct Snapshots {
                     adding.dependencies.initial = (0..<13).map { DependencySnapshots.task("initial-\($0)", title: "Launch review \($0)") }
                     try await render("c9-compact-screen-quick-add-many-\(Int(height))", TaskListView(model: adding, compactMode: true, referenceDate: referenceDate).compactContent, width: 393, height: height)
                 }
+                // UI check, c10, item 1: at 426 pt the chips are cut, so the line counts them; one Task.
+                let addingOne = fixture(); addingOne.signedIn = true; addingOne.quickAdd = true; addingOne.compactWindowHeight = 426
+                addingOne.newTitle = #"Ship tomorrow p1 #focus #planning @Client"#
+                addingOne.parsedInput = addingOne.newTitle
+                addingOne.parsedTask = .init(title: "Ship", due_at: .init(kind: "date", date: "2026-10-29"), priority: "P1", tags: ["focus", "planning"], project: "Client")
+                addingOne.dependencies.initial = [DependencySnapshots.task("initial-0", title: "Launch review 0")]
+                try await render("c10-compact-screen-quick-add-one-426", TaskListView(model: addingOne, compactMode: true, referenceDate: referenceDate).compactContent, width: 393, height: 426)
                 // Candidate 9 restore ruling: each notice a Profile switch can show, full and Compact.
                 for (name, setup) in [
-                    ("deleted", { (m: TodoModel) in m.deletionNotice = "\"Launch\" was deleted. Switched to Work." }),
+                    ("deleted", { (m: TodoModel) in m.publishNotice("\u{201C}Launch\u{201D} was deleted. Switched to Work.", seconds: 6) }),
                     ("returned", { (m: TodoModel) in m.deletionNotice = TodoModel.restoredProfileNotice("Launch", returned: true) }),
                     ("offer", { (m: TodoModel) in
                         m.profiles = m.profiles + [DiscoveryEntry(id: "launch", name: "Launch", open_task_count: 3, inbox_task_count: 0)]
                         m.restoredProfileOffer = ForcedProfileLeave(profile: "launch", name: "Launch", view: ProfileViewState(m), switchedTo: m.profile,
-                                                                    baseline: ProfileViewState(m), credentialEpoch: m.discovery.credentialEpoch, notice: "\"Launch\" was deleted. Switched to Work.")
+                                                                    baseline: ProfileViewState(m), credentialEpoch: m.discovery.credentialEpoch, notice: "\u{201C}Launch\u{201D} was deleted. Switched to Work.")
                         m.deletionNotice = TodoModel.restoredProfileNotice("Launch", returned: false) }),
-                    ("missing", { (m: TodoModel) in m.deletionNotice = "\"Launch\" is not in this database any more. Switched to Work." }),
+                    ("missing", { (m: TodoModel) in m.deletionNotice = "\u{201C}Launch\u{201D} isn't in the restored Snapshot. Switched to Work." }),
                 ] as [(String, (TodoModel) -> Void)] {
                     let noticed = fixture(); noticed.signedIn = true; setup(noticed)
                     try await render("c9-notice-profile-\(name)", WorkspaceSnapshot(model: noticed), width: 1100, height: 720)
@@ -877,9 +884,9 @@ struct Snapshots {
             notice.tags = []
             notice.planning = nil
             notice.viewCounts = ["all": 0, "today": 0, "overdue": 0, "scheduled": 0, "inbox": 0]
-            notice.deletionNotice = "\"Work\" was deleted. Switched to Personal."
+            notice.deletionNotice = "\u{201C}Work\u{201D} was deleted. Switched to Personal."
             try await render("profile-deleted-notice", WorkspaceSnapshot(model: notice), width: 1100, height: 720)
-            notice.deletionNotice = "\"Work\" was deleted. Switched to Personal."
+            notice.deletionNotice = "\u{201C}Work\u{201D} was deleted. Switched to Personal."
             try await render("compact-profile-deleted-notice", TaskListView(model: notice, compactMode: true).compactContent, width: 393, height: 426)
             model.signedIn = false
             model.profile = "work"

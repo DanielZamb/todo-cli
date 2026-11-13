@@ -5,10 +5,16 @@ struct InitialDependencySelection: View {
     let enabled: Bool
     let add: () -> Void
     @Environment(\.quickAddHeaderIsRow) private var headerIsRow
+    @Environment(\.quickAddDependenciesCut) private var cut
+    /// "Depends on", or "Depends on 13 Tasks" when some chips are out of view (UI check, c10).
+    static func heading(count: Int, cut: Bool) -> String {
+        guard cut, count > 0 else { return "Depends on" }
+        return "Depends on \(count) " + (count == 1 ? "Task" : "Tasks")
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Depends on")
+                Text(Self.heading(count: tasks.count, cut: cut)).accessibilityLabel(Self.heading(count: tasks.count, cut: cut)).compactBounds("dependency-heading")
                 Button("Add…", action: add).disabled(!enabled).accessibilityIdentifier("dependency-add")
             }.font(.caption).controlSize(.small).frame(minHeight: 24)
                 // In Compact Quick Add the line is a row of its own, so a cut after the parsed chips

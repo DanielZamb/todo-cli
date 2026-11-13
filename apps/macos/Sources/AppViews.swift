@@ -216,6 +216,7 @@ extension View {
     }
 }
 
+
 private struct TaskListClip: Shape {
     let top: CGFloat
     let bottom: CGFloat
@@ -269,6 +270,9 @@ struct TaskListView: View {
     }
     @State private var selection: String?
     @State private var showingTaskFilters = false
+    /// The notice holds while the pointer is over it or its button has keyboard focus (UI check, c10).
+    @State private var noticeHovered = false
+    @FocusState private var noticeButtonFocused: Bool
     @Environment(\.defaultMinListRowHeight) private var minimumRowHeight
     private var destination: Binding<SidebarDestination?> {
         Binding(
@@ -764,21 +768,17 @@ struct TaskListView: View {
                     // the candidate 9 restore finding).
                     if let offer = model.restoredProfileOffer, notice == TodoModel.restoredProfileNotice(model.profiles.first { $0.id == offer.profile }?.name ?? offer.name, returned: false) {
                         Button("Switch to \(model.profiles.first { $0.id == offer.profile }?.name ?? offer.name)") { model.goToRestoredProfile() }
-                            .buttonStyle(.borderless).disabled(model.editor != nil || model.busy).accessibilityIdentifier("restored-profile-switch").compactBounds("restored-profile-switch")
+                            .buttonStyle(.borderless).disabled(model.editor != nil || model.busy).focused($noticeButtonFocused)
+                            .accessibilityIdentifier("restored-profile-switch").compactBounds("restored-profile-switch")
                     }
                 }.padding(.horizontal, 16).padding(.vertical, 10)
-                    .background(.regularMaterial, in: Capsule()).padding(16).accessibilityIdentifier("task-notice").compactBounds("task-notice")
+                    .background(.regularMaterial, in: Capsule()).onHover { noticeHovered = $0 }.onDisappear { noticeHovered = false }
+                    .padding(16).accessibilityIdentifier("task-notice").compactBounds("task-notice")
             }
         }
-        // Each confirmation gets its own three seconds: the timer is keyed by the notice's sequence,
-        // and a cancelled timer (a newer notice replaced it) ends nothing.
-        .task(id: model.noticeMessages.sequence) {
-            guard model.deletionNotice != nil else { return }
-            let mark = model.noticeMessages.mark
-            // An offer to go to a restored Profile stays longer than a confirmation: it asks for an action.
-            do { try await Task.sleep(for: .seconds(model.restoredProfileOffer != nil ? 10 : 3)) } catch { return }
-            model.expireNotice(since: mark)
-        }
+        // The notice's timer (TodoModel.noticeHeld) waits while the pointer is over the capsule or its
+        // button has keyboard focus, and starts its full time again when both have left (UI check, c10).
+        .onChange(of: noticeHovered || noticeButtonFocused) { _, held in model.noticeHeld = held }
     }
     private func compactState(_ message: String, action: String, perform: @escaping () -> Void) -> some View {
         VStack(spacing: 12) {
@@ -1195,7 +1195,11 @@ struct QuickAddMetadataRegion<Content: View>: View {
             // it, so nothing feeds back) and shows the whole rows that fit in it; the actions stay
             // at the bottom, like the other Compact sheets (Mac UI review 2, item 2).
             GeometryReader { geometry in
-                scroll.frame(height: fitted(geometry.size.height)).frame(maxWidth: .infinity, alignment: .topLeading)
+                // When the cut leaves any row out of view (the Dependency chips come last), the
+                // "Depends on" line says how many there are (UI check, c10).
+                let height = fitted(geometry.size.height)
+                scroll.environment(\.quickAddDependenciesCut, max(contentHeight, 24) > height + 0.5)
+                    .frame(height: height).frame(maxWidth: .infinity, alignment: .topLeading)
             }.frame(minHeight: rows.first.map { $0.bottom } ?? 24, maxHeight: .infinity)
         } else {
             scroll.frame(height: visibleHeight)
@@ -1277,11 +1281,17 @@ struct QuickAddContentAnchor<Content: View>: View {
     }
 }
 private struct QuickAddHeaderIsRowKey: EnvironmentKey { static let defaultValue = false }
+private struct QuickAddDependenciesCutKey: EnvironmentKey { static let defaultValue = false }
 extension EnvironmentValues {
     /// Compact Quick Add counts the "Depends on" line as a row of its chip region.
     var quickAddHeaderIsRow: Bool {
         get { self[QuickAddHeaderIsRowKey.self] }
         set { self[QuickAddHeaderIsRowKey.self] = newValue }
+    }
+    /// Compact Quick Add's chip region cut off rows, so some Dependency chips are out of view.
+    var quickAddDependenciesCut: Bool {
+        get { self[QuickAddDependenciesCutKey.self] }
+        set { self[QuickAddDependenciesCutKey.self] = newValue }
     }
 }
 struct QuickAddAddedMetadataHeight: PreferenceKey {

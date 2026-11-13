@@ -255,7 +255,7 @@ struct ImportView: View {
                     .accessibilityLabel(row.accessibilityText(title: title))
                     .accessibilityHint("Actions available. Find Task by id.").focusable()
                     .contextMenu { Button("Find Task by id") { Task { await model.findTaskAfterLookupError(error) } } }
-                    .accessibilityAction(named: Text("Find Task by id")) { Task { await model.findTaskAfterLookupError(error) } }
+                    .accessibilityAction(named: Text("Find Task by id")) { model.notePersonActed(); Task { await model.findTaskAfterLookupError(error) } }
             } else {
                 content.help(row.rejectionDetail).accessibilityElement(children: .ignore)
                     .accessibilityLabel(row.accessibilityText(title: title))

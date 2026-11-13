@@ -49,7 +49,9 @@ struct ClientDiagnosticInputReceipt {
     var summary = ClientDiagnosticSummary()
     @ObservationIgnored private var generation = 0
     @ObservationIgnored private var mode = ClientDiagnosticMode.unknown
-    @ObservationIgnored private var eventMonitor: Any?
+    /// The app's one input observer (MAC-C1-S1-32). While this monitor runs, it hands this monitor
+    /// the same events its own NSEvent monitor received before c10.
+    @ObservationIgnored weak var personInput: PersonInput?
     @ObservationIgnored private var observer: CFRunLoopObserver?
     @ObservationIgnored private var timer: (any DispatchSourceTimer)?
     @ObservationIgnored private var activityObservers: [NSObjectProtocol] = []
@@ -121,17 +123,15 @@ struct ClientDiagnosticInputReceipt {
         for token in activityObservers { notifications.removeObserver(token) }
         for token in tableObservers { notifications.removeObserver(token) }
         for token in observedObservers { notifications.removeObserver(token) }
-        if let eventMonitor { NSEvent.removeMonitor(eventMonitor) }
         if let observer { CFRunLoopRemoveObserver(CFRunLoopGetMain(), observer, .commonModes) }
     }
     func start() {
         guard recorder.isOwnerSession, observer == nil else { return }
         generation += 1
-        // Passive: the monitor returns every event unchanged; scroll events are only counted.
-        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp, .leftMouseDragged, .keyDown, .scrollWheel]) { [weak self] event in
-            if event.type == .scrollWheel { ClientObservedActivity.shared.scrollEvents.add(1, ordering: .relaxed); return event }
-            MainActor.assumeIsolated { self?.input(event) }
-            return event
+        // Passive: the person-input observer returns every event unchanged; scroll events are only counted.
+        personInput?.diagnostics = { [weak self] event in
+            if event.type == .scrollWheel { ClientObservedActivity.shared.scrollEvents.add(1, ordering: .relaxed); return }
+            self?.input(event)
         }
         observer = CFRunLoopObserverCreateWithHandler(nil, CFRunLoopActivity.beforeWaiting.rawValue, true, Int.max) { [weak self] _, _ in
             MainActor.assumeIsolated { self?.commitOpportunity() }
@@ -228,7 +228,7 @@ struct ClientDiagnosticInputReceipt {
         for token in activityObservers { notifications.removeObserver(token) }; activityObservers.removeAll()
         for token in tableObservers { notifications.removeObserver(token) }; tableObservers.removeAll()
         for token in observedObservers { notifications.removeObserver(token) }; observedObservers.removeAll()
-        if let eventMonitor { NSEvent.removeMonitor(eventMonitor) }; eventMonitor = nil
+        personInput?.diagnostics = nil
         if let observer { CFRunLoopRemoveObserver(CFRunLoopGetMain(), observer, .commonModes) }; observer = nil
         pending.removeAll(); selection = nil; nativeSelection = nil; pointer = nil; lastInput = nil; lastInputScope = nil; summary = .init(); mode = .unknown
         regions = regions.filter { $0.value.view != nil }

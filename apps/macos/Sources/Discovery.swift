@@ -45,7 +45,9 @@ struct DiscoveryShowIntent: Equatable {
 
 @MainActor @Observable
 final class DiscoveryState {
-    var dialog: DiscoveryDialog?
+    var dialog: DiscoveryDialog? { didSet { if dialog != nil && oldValue == nil { presented() } } }
+    /// A sheet presented counts as the person acting (MAC-C1-S1-32); set by the model.
+    @ObservationIgnored var presented: @MainActor () -> Void = {}
     var phase = DiscoveryPhase.closed
     var prefix = ""
     var error: String?

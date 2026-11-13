@@ -119,6 +119,7 @@ extension TodoModel {
         await runDependencyBatch(dryRun: false)
     }
     private func runDependencyBatch(dryRun: Bool) async {
+        notePersonActed() // a write the person started (MAC-C1-S1-32)
         guard let batch = dependencies.batch, canWrite, !batch.items.isEmpty, !batch.pending else { return }
         let epoch = discovery.credentialEpoch
         dependencies.batch?.pending = true

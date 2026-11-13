@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 import TodoAPI
@@ -86,7 +87,7 @@ import TodoAPI
         try write("wake-\(gapMS)ms", receipt)
         #expect(model.signedIn && model.profile == restored && model.tasks.contains { $0.title == title }, "\(receipt)")
         #expect(receipt["catalog_matches_server"] as? Bool == true, "\(receipt)")
-        if left { #expect(model.deletionNotice == "\"\(restored)\" was restored. Switched back to it.", "\(receipt)") }
+        if left { #expect(model.deletionNotice == "\u{201C}\(restored)\u{201D} was restored. Switched back to it.", "\(receipt)") }
     }
 
     /// The person acted after the forced switch: the client stays, and the notice offers the
@@ -110,7 +111,7 @@ import TodoAPI
         let receipt = try await state(model, api)
         try write("acted", receipt)
         #expect(model.profile == away, "the person stays where they are: \(receipt)")
-        #expect(model.deletionNotice == "\"\(restored)\" was restored.", "\(receipt)")
+        #expect(model.deletionNotice == "\u{201C}\(restored)\u{201D} was restored.", "\(receipt)")
         model.goToRestoredProfile()
         try await until("the offer taken") { model.profile == restored && model.tasks.contains { $0.title == title } }
         #expect(model.restoredProfileOffer == nil && model.signedIn)
@@ -161,7 +162,7 @@ import TodoAPI
         try await settled(model)
         var receipt = try await state(model, api); receipt["first_switch"] = first
         try write("second-deletion", receipt)
-        #expect(model.deletionNotice == "\"\(restored)\" was restored. Switched back to it.", "\(receipt)")
+        #expect(model.deletionNotice == "\u{201C}\(restored)\u{201D} was restored. Switched back to it.", "\(receipt)")
     }
 
     /// The restored Profile comes back with the Snapshot's Tasks, not the ones it had when deleted.
@@ -205,10 +206,98 @@ import TodoAPI
         try await settled(model)
         let receipt = try await state(model, api)
         try write("removed-by-restore", receipt)
-        // Either path tells the person: the reload's rediscovery ("is not in this database any more")
+        // Either path tells the person: the reload's rediscovery ("isn't in the restored Snapshot")
         // or a reconnect's not_found ("was deleted").
         let notice = model.deletionNotice ?? ""
-        #expect(model.signedIn && notice.hasPrefix("\"\(late)\" ") && notice.contains("Switched to "), "\(receipt)")
+        #expect(model.signedIn && notice.hasPrefix("\u{201C}\(late)\u{201D} ") && notice.contains("Switched to "), "\(receipt)")
+    }
+
+    /// MAC-C1-S1-32: each kind of person action while away counts, through the one entry point
+    /// (PersonInput): the client stays, the notice says the Profile was restored and offers it.
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil),
+          arguments: ["write", "Dependency picker", "Batch edit", "Import", "Find by id", "Series", "History", "Snapshot dialog", "row drop", "click"])
+    func eachActionKindWhileAwayStaysAndOffers(_ action: String) async throws {
+        let credential = try await owner(), api = todoClient(server: url, credential: credential)
+        let title = "Wake restore \(action) " + UUID().uuidString
+        _ = try await api.tasks_period_create(path: .init(profile: restored), body: .json(.init(title: title)))
+        let id = try await snapshot(api, "c10 acted: \(action)")
+        let model = try await live(credential, on: restored, showing: title)
+        defer { model.signedIn = false; model.connect() }
+        try await delete(api, restored)
+        do { try await until("the client left the deleted Profile") { model.profile != restored } } catch {
+            // Leave the database as the suite had it, so one failure does not fail the next tests.
+            var receipt = try await state(model, api); receipt["action"] = action; receipt["stuck_on_deleted"] = true
+            receipt["forced_leave"] = model.forcedLeave?.profile ?? NSNull(); receipt["loading"] = model.loading; receipt["connection_detail"] = String(describing: model.connection)
+            try write("acted-stuck-\(action.replacingOccurrences(of: " ", with: "-").lowercased())", receipt)
+            try await restore(api, id); throw error
+        }
+        let away = model.profile
+        try await settled(model)
+        // Two Tasks on the Profile the client moved to, written by another client (a stream
+        // refresh, which does not count), for the actions that need one.
+        let first = "Away first " + UUID().uuidString, second = "Away second " + UUID().uuidString
+        _ = try await api.tasks_period_create(path: .init(profile: away), body: .json(.init(title: first)))
+        _ = try await api.tasks_period_create(path: .init(profile: away), body: .json(.init(title: second)))
+        try await until("the away Tasks shown") { model.tasks.contains { $0.title == first } && model.tasks.contains { $0.title == second } }
+        try await settled(model)
+        let leave = try #require(model.forcedLeave)
+        #expect(!model.personActedSinceLeave(leave), "nothing counted before the action: another client's writes and refreshes do not")
+        let a = try #require(model.tasks.first { $0.title == first }), b = try #require(model.tasks.first { $0.title == second })
+        switch action {
+        case "write": await model.transition(a, action: "complete")
+        case "Dependency picker": await model.openDependencyPicker(a)
+        case "Batch edit": await model.beginBatchEdit()
+        case "Import": model.resetImport(); model.showingImport = true
+        case "Find by id": await model.openDiscovery(.lookup)
+        case "Series": model.showingSeries = true
+        case "History": model.showingHistory = true
+        case "Snapshot dialog": await model.loadSnapshots(); if let shown = model.ownerSnapshots.first { await model.previewSnapshotRestore(shown) }
+        case "row drop": await model.commitDependencyDrop(DependencyDragSource(profile: away, task: a.id), target: b)
+        case "click": model.personInput.observe(NSEvent.mouseEvent(with: .leftMouseDown, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!)
+        default: Issue.record("unknown action \(action)")
+        }
+        // Close what the action opened, as the person would; closing is not an action of its own.
+        model.closeDependencyPicker(); model.batchEdit = nil; model.showingImport = false; model.closeDiscovery()
+        model.showingSeries = false; model.showingHistory = false; model.snapshotRestore = nil; model.snapshotRestoreTarget = nil
+        try await settled(model)
+        try await restore(api, id)
+        try await until("the offer") { model.restoredProfileOffer != nil }
+        try await settled(model)
+        var receipt = try await state(model, api); receipt["action"] = action; receipt["away"] = away
+        try write("acted-\(action.replacingOccurrences(of: " ", with: "-").lowercased())", receipt)
+        #expect(model.profile == away, "\(action): the person stays: \(receipt)")
+        #expect(model.deletionNotice == "\u{201C}\(restored)\u{201D} was restored.", "\(action): \(receipt)")
+        #expect(model.restoredProfileOffer?.profile == restored, "\(action): \(receipt)")
+    }
+
+    /// MAC-C1-S1-32: the input that caused the leave does not count. The person deletes the shown
+    /// Profile from the app's own Settings; a restore from elsewhere with no input in between
+    /// returns them, and with one click in between leaves them where they are, with the offer.
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [false, true])
+    func aDeletionFromSettingsThenARestoreFromElsewhere(_ clicked: Bool) async throws {
+        let credential = try await owner(), api = todoClient(server: url, credential: credential)
+        let title = "Wake restore settings " + UUID().uuidString
+        _ = try await api.tasks_period_create(path: .init(profile: restored), body: .json(.init(title: title)))
+        let id = try await snapshot(api, "c10 settings deletion, clicked \(clicked)")
+        let model = try await live(credential, on: restored, showing: title)
+        defer { model.signedIn = false; model.connect() }
+        // The click on Delete Profile, the prompt, the confirm: all before the leave.
+        model.personInput.observe(NSEvent.mouseEvent(with: .leftMouseDown, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!)
+        model.profileDeletion = ProfileDeletionPrompt(name: restored, count: model.tasks.count, deleteTasks: true)
+        await model.deleteProfile()
+        try await until("the client left the deleted Profile") { model.profile != restored }
+        let away = model.profile
+        try await settled(model)
+        #expect(model.deletionNotice == "\u{201C}\(restored)\u{201D} was deleted. Switched to \(model.profileName).")
+        if clicked { model.personInput.observe(NSEvent.mouseEvent(with: .leftMouseDown, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!) }
+        try await restore(api, id)
+        if clicked { try await until("the offer") { model.restoredProfileOffer != nil } }
+        else { try await until("back on the restored Profile") { model.profile == restored && model.tasks.contains { $0.title == title } } }
+        try await settled(model)
+        var receipt = try await state(model, api); receipt["clicked"] = clicked; receipt["away"] = away
+        try write("settings-deletion-\(clicked ? "clicked" : "untouched")", receipt)
+        #expect(model.profile == (clicked ? away : restored), "\(receipt)")
+        #expect(model.deletionNotice == (clicked ? "\u{201C}\(restored)\u{201D} was restored." : "\u{201C}\(restored)\u{201D} was restored. Switched back to it."), "\(receipt)")
     }
 
     /// A return never crosses a sign-out or a credential change (S1-20, S1-24).
@@ -235,6 +324,6 @@ import TodoAPI
         var receipt = try await state(model, api); receipt["boundary"] = boundary
         try write("boundary-\(boundary)", receipt)
         #expect(model.profile == away && model.restoredProfileOffer == nil && model.forcedLeave == nil, "\(receipt)")
-        #expect(model.deletionNotice != "\"\(restored)\" was restored. Switched back to it.", "\(receipt)")
+        #expect(model.deletionNotice != "\u{201C}\(restored)\u{201D} was restored. Switched back to it.", "\(receipt)")
     }
 }

@@ -38,7 +38,7 @@ final class TodoModel {
     var profile: String { didSet { if profile != oldValue { endMessage() } } }
     var tasks: [TaskSnapshot] = []
     var profiles: [DiscoveryEntry] = []
-    var profileDeletion: ProfileDeletionPrompt?
+    var profileDeletion: ProfileDeletionPrompt? { didSet { notePresented(profileDeletion != nil, oldValue != nil) } }
     enum ProfileDeletionMessageKind: Hashable { case delete }
     /// The Delete Profile prompt's caption under the one message rule (SurfaceMessages); a new
     /// prompt is a new instance. Deletion is gated by busy.
@@ -54,10 +54,11 @@ final class TodoModel {
     var viewCounts: [String: Int] = [:]
     var profileName: String { profiles.first { $0.id == profile }?.name ?? "Profile" }
     var writeIntent: TaskWriteIntent?
-    var batchEdit: BatchEditDraft?
-    var attachmentBatch: AttachmentBatchDraft?
+    var batchEdit: BatchEditDraft? { didSet { notePresented(batchEdit != nil, oldValue != nil) } }
+    var attachmentBatch: AttachmentBatchDraft? { didSet { notePresented(attachmentBatch != nil, oldValue != nil) } }
     var showingImport = false { didSet {
         if showingImport && !oldValue { importInstance = UUID() }
+        notePresented(showingImport, oldValue)
         if !showingImport && oldValue { endMessage(raisedBy: .importSheet(importInstance)); importMessages = .init() }
     } }
     enum ImportMessageKind: Hashable { case file, run, followUp }
@@ -79,9 +80,9 @@ final class TodoModel {
     }
     var importCloseMissing = false
 
-    var transferRequest: TaskTransferRequest?
+    var transferRequest: TaskTransferRequest? { didSet { notePresented(transferRequest != nil, oldValue != nil) } }
     var transferResult: TaskTransferResult?
-    var showingSeries = false
+    var showingSeries = false { didSet { notePresented(showingSeries, oldValue) } }
     var series: SeriesDefinition?
     /// The Compact window's content height (O34): 426 pt at its minimum, taller when the person
     /// drags it. Compact sheets size to it, so they grow with the window and never exceed it.
@@ -141,7 +142,7 @@ final class TodoModel {
         get { historyMessages.value }
         set { if let newValue { historyMessages.publish(newValue, kind: .load) } else { historyMessages.end() } }
     }
-    var showingHistory = false
+    var showingHistory = false { didSet { notePresented(showingHistory, oldValue) } }
     private var importGeneration = 0
     private var parseGeneration = 0
     private var historyGeneration = 0
@@ -150,7 +151,13 @@ final class TodoModel {
     let discovery = DiscoveryState()
     let dependencies = DependencyState()
     @ObservationIgnored let clientDiagnostics: ClientDiagnosticsRecorder
-    @ObservationIgnored lazy var clientDiagnosticsUI = ClientDiagnosticsMonitor(recorder: clientDiagnostics)
+    /// The one entry point that counts a person's actions (MAC-C1-S1-32), always on.
+    @ObservationIgnored let personInput = PersonInput()
+    @ObservationIgnored lazy var clientDiagnosticsUI: ClientDiagnosticsMonitor = {
+        let monitor = ClientDiagnosticsMonitor(recorder: clientDiagnostics)
+        monitor.personInput = personInput
+        return monitor
+    }()
     var signedIn = false { didSet {
         if signedIn {
             clientDiagnostics.authorizeOwnerSession(credential.hasPrefix("ses_"))
@@ -316,22 +323,65 @@ final class TodoModel {
         case openTransfer(TaskTransferResult)
         case showDiscovery(DiscoveryShowIntent)
     }
-    var pendingNavigation: EditorNavigation?
+    var pendingNavigation: EditorNavigation? { didSet { notePresented(pendingNavigation != nil, oldValue != nil) } }
     enum NoticeKind: Hashable { case notice }
     /// The main window's quiet confirmation ("Task added", "Task deleted", a Profile switch after
     /// deletion) under the one message rule: each notice has a sequence, and its timer ends only
     /// the notice that existed when it started, never a newer one that replaced it.
     var noticeMessages = SurfaceMessages<NoticeKind, String>()
+    /// How long the current notice shows, in seconds (see publishNotice).
+    private(set) var noticeSeconds: Double = 3
+    /// The notice timer's clock; tests inject their own.
+    @ObservationIgnored var noticeSleep: (Double) async throws -> Void = { try await Task.sleep(for: .seconds($0)) }
     /// The Profile the client left because it was deleted, while nothing has ended that leave (see
     /// ProfileReturn.swift), and the restored Profile the current notice offers to go to.
     var forcedLeave: ForcedProfileLeave?
     var restoredProfileOffer: ForcedProfileLeave?
     var deletionNotice: String? {
         get { noticeMessages.value }
-        set { if let newValue { noticeMessages.publish(newValue, kind: .notice) } else { noticeMessages.end() } }
+        set {
+            // An ordinary confirmation lasts 3 s; a Profile notice sets its own time after this.
+            noticeSeconds = 3
+            // MAC-C1-S1-34: an offer lives exactly as long as its notice; any other notice ends it.
+            if let offer = restoredProfileOffer, newValue != Self.restoredProfileNotice(profiles.first { $0.id == offer.profile }?.name ?? offer.name, returned: false) { restoredProfileOffer = nil }
+            if let newValue { noticeMessages.publish(newValue, kind: .notice) } else { noticeMessages.end() }
+            restartNoticeTimer()
+        }
     }
-    /// Ends the confirmation only if it is still the one shown at `mark` (its timer's start).
-    func expireNotice(since mark: Int) { noticeMessages.clear([.notice], since: mark) }
+    /// The pointer is over the notice or its button has keyboard focus: its timer waits, and starts
+    /// its full time again when both have left (UI check, c10). Set by the view.
+    var noticeHeld = false { didSet { if noticeHeld != oldValue { restartNoticeTimer() } } }
+    @ObservationIgnored private var noticeTimer: Task<Void, Never>?
+    /// Each notice gets its own time; a cancelled timer (a newer notice, or the pointer or focus
+    /// arriving) ends nothing.
+    private func restartNoticeTimer() {
+        noticeTimer?.cancel()
+        noticeTimer = nil
+        guard noticeMessages.value != nil, !noticeHeld else { return }
+        let mark = noticeMessages.mark
+        noticeTimer = Task { [weak self] in await self?.holdNotice(mark: mark) }
+    }
+    /// Publishes a notice that lasts `seconds` (paused while the pointer is over it or its button has
+    /// focus): 6 s for a forced Profile switch, 10 s for a restored Profile's offer (UI check, c10).
+    func publishNotice(_ text: String, seconds: Double) {
+        deletionNotice = text
+        noticeSeconds = seconds
+        restartNoticeTimer()
+    }
+    /// Ends the confirmation only if it is still the one shown at `mark` (its timer's start). An offer
+    /// whose notice ends this way is cleared with it (MAC-C1-S1-34).
+    func expireNotice(since mark: Int) {
+        noticeMessages.clear([.notice], since: mark)
+        if noticeMessages.value == nil { restoredProfileOffer = nil }
+    }
+    /// The notice's own timer: waits `noticeSeconds` (on the injectable clock), then ends the notice
+    /// that was showing at `mark`. Restarted whenever the pointer or focus leaves.
+    func holdNotice(mark: Int) async {
+        guard !Task.isCancelled else { return }
+        do { try await noticeSleep(noticeSeconds) } catch { return }
+        guard !Task.isCancelled else { return }
+        expireNotice(since: mark)
+    }
     var focusEditorTitle = false
     /// The open editor. A different opening starts a new message surface.
     var editor: TaskDraft? { didSet { if editor?.opening != oldValue?.opening { editorMessages = .init(); attachmentInputMessages = .init(); if editor != nil { notePersonActed() } } } }
@@ -362,7 +412,7 @@ final class TodoModel {
         get { snapshotMessages.value }
         set { if let newValue { snapshotMessages.publish(newValue, kind: .write) } else { snapshotMessages.end() } }
     }
-    var snapshotRestore: SnapshotRestorePreview?
+    var snapshotRestore: SnapshotRestorePreview? { didSet { notePresented(snapshotRestore != nil, oldValue != nil) } }
     var snapshotRestoreTarget: OwnerSnapshot?
     var restoreGeneration = "initial"
     var restoreReloadCount = 0
@@ -428,6 +478,8 @@ final class TodoModel {
         catalogObservers = CatalogNotificationObservers(system: catalogNotifications, workspace: self.wakeNotifications) { [weak self] trigger in
             Task { @MainActor [weak self] in self?.catalogEnvironmentChanged(trigger) }
         }
+        discovery.presented = { [weak self] in self?.notePersonActed() }
+        dependencies.presented = { [weak self] in self?.notePersonActed() }
     }
 
     private func catalogEnvironmentChanged(_ trigger: ClientDiagnosticTrigger) {
@@ -480,6 +532,7 @@ final class TodoModel {
     func applyImport() async { await runImport(dryRun: false) }
 
     private func runImport(dryRun: Bool) async {
+        notePersonActed() // a write the person started (MAC-C1-S1-32)
         var committed = false // the write's reply came back OK: its read-back cannot be skipped (S1-19)
         let credentialEpoch = discovery.credentialEpoch
         guard canWrite, let document = importDocument else { return }
@@ -577,6 +630,7 @@ final class TodoModel {
     }
 
     func signIn(_ passphrase: String) async -> Bool {
+        notePersonActed() // a write the person started (MAC-C1-S1-32)
         var credentialEpoch = discovery.credentialEpoch
         let mark = messageMark
         guard !busy else { return false }
@@ -608,6 +662,7 @@ final class TodoModel {
     }
 
     func signOut() async {
+        notePersonActed() // a write the person started (MAC-C1-S1-32)
         guard !busy else { return }
         // Sign-out keeps the credential epoch until the server has revoked the
         // credential. Closing Discovery and the stream retires their own work;
@@ -656,6 +711,7 @@ final class TodoModel {
     }
 
     func deleteProfile() async {
+        notePersonActed() // a write the person started (MAC-C1-S1-32)
         let credentialEpoch = discovery.credentialEpoch
         guard let prompt = profileDeletion, canWrite, editor == nil else { return }
         let client = self.client
@@ -710,13 +766,14 @@ final class TodoModel {
         profiles = latest
         guard !latest.contains(where: { $0.id == deleted }), let next = latest.first else { return }
         let left = ProfileViewState(self)
+        let carried = forcedLeaveToCarry(leaving: deleted)
         editor = nil
         conflict = nil
         history = []
         activateProfile(next.id)
-        let notice = "\"\(deletedName)\" was deleted. Switched to \(next.name)."
-        recordForcedLeave(profile: deleted, name: deletedName, view: left, switchedTo: next.id, notice: notice)
-        deletionNotice = notice
+        let notice = "\u{201C}\(deletedName)\u{201D} was deleted. Switched to \(next.name)."
+        recordForcedLeave(profile: deleted, name: deletedName, view: left, switchedTo: next.id, notice: notice, carrying: carried)
+        publishNotice(notice, seconds: 6)
     }
 
     /// Whether choosing `value` starts a Profile switch.
@@ -1060,7 +1117,7 @@ final class TodoModel {
                             editorError = nil; historyError = nil; snapshotRestore = nil; snapshotRestoreTarget = nil
                             refreshGeneration += 1; historyGeneration += 1; seriesGeneration += 1
                             let previousProfile = profile
-                            try await discoverProfiles()
+                            try await discoverProfiles(afterRestore: true)
                             if let (leave, acted) = leaveBeforeReload, resolveForcedLeave(leave, acted: acted) {
                                 UserDefaults.standard.set(String(reload.seq), forKey: cursorKey)
                                 return
@@ -1140,6 +1197,7 @@ final class TodoModel {
     }
 
     func create(openEditor: Bool) async -> Bool {
+        notePersonActed() // a write the person started (MAC-C1-S1-32)
         var committed = false // the write's reply came back OK: its read-back cannot be skipped (S1-19)
         let credentialEpoch = discovery.credentialEpoch
         guard canWrite else { return false }
@@ -1221,6 +1279,7 @@ final class TodoModel {
 
     @discardableResult
     func save() async -> TaskSnapshot? {
+        notePersonActed() // a write the person started (MAC-C1-S1-32)
         var committed = false // the write's reply came back OK: its read-back cannot be skipped (S1-19)
         let credentialEpoch = discovery.credentialEpoch
         guard canWrite, let draft = editor else { return nil }
@@ -1422,6 +1481,7 @@ final class TodoModel {
     }
 
     func transition(_ task: TaskSnapshot, action: String) async {
+        notePersonActed() // a write the person started (MAC-C1-S1-32)
         var committed = false // the write's reply came back OK: its read-back cannot be skipped (S1-19)
         let credentialEpoch = discovery.credentialEpoch
         let mark = messageMark
@@ -1463,6 +1523,7 @@ final class TodoModel {
     }
 
     func deleteTask(_ task: TaskSnapshot) async {
+        notePersonActed() // a write the person started (MAC-C1-S1-32)
         var committed = false // the write's reply came back OK: its read-back cannot be skipped (S1-19)
         let credentialEpoch = discovery.credentialEpoch
         let mark = messageMark
@@ -1538,6 +1599,7 @@ final class TodoModel {
     }
 
     func write(_ intent: TaskWriteIntent) async {
+        notePersonActed() // a write the person started (MAC-C1-S1-32)
         var committed = false // the write's reply came back OK: its read-back cannot be skipped (S1-19)
         let credentialEpoch = discovery.credentialEpoch
         guard canWrite, let draft = editor else { return }
@@ -1754,6 +1816,7 @@ final class TodoModel {
     }
 
     func saveSeries(_ recurrence: Recurrence) async {
+        notePersonActed() // a write the person started (MAC-C1-S1-32)
         var committed = false // the write's reply came back OK: its read-back cannot be skipped (S1-19)
         let credentialEpoch = discovery.credentialEpoch
         let requestedProfile = profile
@@ -1796,13 +1859,15 @@ final class TodoModel {
             editorMessages.fail(describe(error, at: .editor), seriesSaveTicket) }
     }
 
-    private func discoverProfiles() async throws {
+    /// `afterRestore`: a Snapshot restore's reload, so a shown Profile that is gone was not in that Snapshot.
+    private func discoverProfiles(afterRestore: Bool = false) async throws {
         let credentialEpoch = discovery.credentialEpoch
         let value = try await client.reads_period_profiles().ok.body.json
         guard isCurrentCredential(credentialEpoch) else { return }
         let shownName = profiles.first { $0.id == profile }?.name ?? profile
         let wasListed = profiles.contains { $0.id == profile }
         let view = ProfileViewState(self)
+        let carried = forcedLeaveToCarry(leaving: profile)
         profiles = try decode([DiscoveryEntry].self, value)
         if !profiles.contains(where: { $0.id == profile }), let first = profiles.first {
             let missing = profile
@@ -1811,9 +1876,11 @@ final class TodoModel {
             // that was shown and is gone after a rediscovery (a restore of an older Snapshot) is said,
             // and remembered like a deletion in case it comes back.
             if signedIn, wasListed {
-                let notice = "\"\(shownName)\" is not in this database any more. Switched to \(first.name)."
-                recordForcedLeave(profile: missing, name: shownName, view: view, switchedTo: first.id, notice: notice)
-                deletionNotice = notice
+                let notice = afterRestore
+                    ? "\u{201C}\(shownName)\u{201D} isn't in the restored Snapshot. Switched to \(first.name)."
+                    : "\u{201C}\(shownName)\u{201D} was deleted. Switched to \(first.name)."
+                recordForcedLeave(profile: missing, name: shownName, view: view, switchedTo: first.id, notice: notice, carrying: carried)
+                publishNotice(notice, seconds: 6)
             }
         }
     }
@@ -2013,6 +2080,7 @@ final class TodoModel {
     }
 
     func createSnapshot() async {
+        notePersonActed() // a write the person started (MAC-C1-S1-32)
         let credentialEpoch = discovery.credentialEpoch
         guard canWrite else { return }
         busy = true
@@ -2031,6 +2099,7 @@ final class TodoModel {
     }
 
     func previewSnapshotRestore(_ snapshot: OwnerSnapshot) async {
+        notePersonActed() // a write the person started (MAC-C1-S1-32)
         let credentialEpoch = discovery.credentialEpoch
         guard canWrite else { return }
         busy = true
@@ -2051,6 +2120,7 @@ final class TodoModel {
     }
 
     func confirmSnapshotRestore() async {
+        notePersonActed() // a write the person started (MAC-C1-S1-32)
         let credentialEpoch = discovery.credentialEpoch
         guard canWrite, let target = snapshotRestoreTarget, snapshotRestore != nil else { return }
         busy = true
@@ -2183,34 +2253,50 @@ struct ForcedProfileLeave: Equatable {
     var baseline: ProfileViewState
     let credentialEpoch: Int
     let notice: String
-    var acted = false
+    /// The person-input count when the leave was recorded (PersonInput, MAC-C1-S1-32).
+    var inputMark = 0
 }
 
 extension TodoModel {
     /// "\"Work\" was restored. Switched back to it." and the offer "\"Work\" was restored."
     static func restoredProfileNotice(_ name: String, returned: Bool) -> String {
-        returned ? "\"\(name)\" was restored. Switched back to it." : "\"\(name)\" was restored."
+        returned ? "\u{201C}\(name)\u{201D} was restored. Switched back to it." : "\u{201C}\(name)\u{201D} was restored."
     }
 
-    /// The person did something (selected, typed, opened an editor or Quick Add, changed Profile)
-    /// after a forced switch, so a later restore must not move them.
-    func notePersonActed() { if forcedLeave != nil { forcedLeave?.acted = true } }
+    /// The one entry point for every source of a person's action (MAC-C1-S1-32): the input
+    /// observer counts mouse-downs and key-downs itself; everything else (a write the person
+    /// started, a sheet or dialog presented, selection, search typing, an editor or Quick Add
+    /// opening, a Profile change, a menu command, a drop, a paste, an accessibility action) calls
+    /// this. Programmatic resets, refreshes, stream events, timers and the notice ending by itself
+    /// never call it.
+    func notePersonActed() { personInput.mark() }
+    /// A sheet or dialog going from hidden to shown. Closing one is not an action of its own.
+    func notePresented(_ shown: Bool, _ wasShown: Bool) { if shown && !wasShown { notePersonActed() } }
 
+    /// "Acted" is the union of the person-input mark and the state the person changes, compared
+    /// against what was captured when the leave was recorded; the input that caused the leave was
+    /// counted before it and so does not count.
     func personActedSinceLeave(_ leave: ForcedProfileLeave) -> Bool {
-        leave.acted || profile != leave.switchedTo || ProfileViewState(self) != leave.baseline || editor != nil || quickAdd || !newTitle.isEmpty
+        personInput.count != leave.inputMark || profile != leave.switchedTo || ProfileViewState(self) != leave.baseline || editor != nil || quickAdd || !newTitle.isEmpty
+    }
+
+    /// Asked before the client switches away from `deleted`, while the shown state is still the one
+    /// the person left: an earlier leave to carry forward when the Profile the client moved them
+    /// to is now gone too and they have done nothing since (personActedSinceLeave(earlier)).
+    func forcedLeaveToCarry(leaving deleted: String) -> ForcedProfileLeave? {
+        guard let earlier = forcedLeave, earlier.credentialEpoch == discovery.credentialEpoch, earlier.switchedTo == deleted,
+              !personActedSinceLeave(earlier) else { return nil }
+        return earlier
     }
 
     /// Called after the client switched away from a deleted Profile. A second forced switch while
-    /// the person has still done nothing keeps the first Profile and view as the place to return to.
-    func recordForcedLeave(profile deleted: String, name: String, view: ProfileViewState, switchedTo: String, notice: String) {
+    /// the person has still done nothing (`carrying`, from forcedLeaveToCarry before the switch)
+    /// keeps the first Profile and view as the place to return to.
+    func recordForcedLeave(profile deleted: String, name: String, view: ProfileViewState, switchedTo: String, notice: String, carrying earlier: ForcedProfileLeave?) {
         let epoch = discovery.credentialEpoch
-        if let earlier = forcedLeave, earlier.credentialEpoch == epoch, !earlier.acted, earlier.switchedTo == deleted {
-            forcedLeave = ForcedProfileLeave(profile: earlier.profile, name: earlier.name, view: earlier.view, switchedTo: switchedTo,
-                                             baseline: ProfileViewState(self), credentialEpoch: epoch, notice: notice)
-        } else {
-            forcedLeave = ForcedProfileLeave(profile: deleted, name: name, view: view, switchedTo: switchedTo,
-                                             baseline: ProfileViewState(self), credentialEpoch: epoch, notice: notice)
-        }
+        let first = earlier.flatMap { $0.credentialEpoch == epoch ? $0 : nil }
+        forcedLeave = ForcedProfileLeave(profile: first?.profile ?? deleted, name: first?.name ?? name, view: first?.view ?? view, switchedTo: switchedTo,
+                                         baseline: ProfileViewState(self), credentialEpoch: epoch, notice: notice, inputMark: personInput.count)
         restoredProfileOffer = nil
     }
 
@@ -2220,17 +2306,19 @@ extension TodoModel {
         guard signedIn, isCurrentEpoch(leave.credentialEpoch) else { forcedLeave = nil; return false }
         guard let back = profiles.first(where: { $0.id == leave.profile }) else {
             // The deletion still holds: stay where the client switched to, and keep saying why.
-            if profile == leave.switchedTo { deletionNotice = leave.notice }
+            if profile == leave.switchedTo { publishNotice(leave.notice, seconds: 6) }
             return false
         }
         forcedLeave = nil
         if acted {
             restoredProfileOffer = leave
-            deletionNotice = Self.restoredProfileNotice(back.name, returned: false)
+            publishNotice(Self.restoredProfileNotice(back.name, returned: false), seconds: 10)
+            // The offer is spoken too, with its action, so VoiceOver users hear it (UI check, c10).
+            announce(Self.restoredProfileNotice(back.name, returned: false) + " Switch to \(back.name) is available in the notice.")
             return false
         }
         returnToProfile(leave)
-        deletionNotice = Self.restoredProfileNotice(back.name, returned: true)
+        publishNotice(Self.restoredProfileNotice(back.name, returned: true), seconds: 6)
         return true
     }
 

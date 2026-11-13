@@ -71,8 +71,8 @@ struct AttachmentsSection: View {
     .accessibilityElement(children: .contain).accessibilityLabel("Attachments").accessibilityIdentifier("attachments-section")
     .onAppear { refreshClipboard() }
     .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in refreshClipboard() }
-    .onDrop(of: [.fileURL, .png, .jpeg, .gif, .webP], isTargeted: $dropTarget, perform: receive)
-    .onPasteCommand(of: [.png, .jpeg, .gif, .webP]) { providers in _ = receive(providers) }
+    .onDrop(of: [.fileURL, .png, .jpeg, .gif, .webP], isTargeted: $dropTarget) { providers in model.notePersonActed(); return receive(providers) }
+    .onPasteCommand(of: [.png, .jpeg, .gif, .webP]) { providers in model.notePersonActed(); _ = receive(providers) }
     .sheet(item: $model.attachmentBatch) { _ in AttachmentBatchView(model: model) }
     .sheet(item: $editing) { attachment in
       AttachmentLabelEditor(attachment: attachment, label: $label, disabled: disabled, cancel: { editing = nil }, save: { Task {

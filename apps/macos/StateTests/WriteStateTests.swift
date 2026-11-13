@@ -924,7 +924,7 @@ func liveExternalIdMoveRejectionPreservesBothProfiles() async throws {
     #expect(model.tasks.isEmpty)
     #expect(model.profiles.map(\.id) == ["personal"])
     #expect(model.profileDeletion == nil)
-    #expect(model.deletionNotice == "\"Work\" was deleted. Switched to Personal.")
+    #expect(model.deletionNotice == "\u{201C}Work\u{201D} was deleted. Switched to Personal.")
     #expect(model.message == nil)
 }
 
@@ -997,7 +997,7 @@ func profileDeletionAgainstCompiledScratchServerAndReload() async throws {
     _ = try await client.reads_period_deleteProfile(path: .init(profile: "f10-external"), body: .json(.init(with_tasks: false, dry_run: false))).ok.body.json
     try await wait { watching.profile != "f10-external" && watching.connection == .live }
     #expect(watching.profileDeletion == nil)
-    #expect(watching.deletionNotice == "\"f10-external\" was deleted. Switched to Personal.")
+    #expect(watching.deletionNotice == "\u{201C}f10-external\u{201D} was deleted. Switched to Personal.")
     #expect(watching.signedIn)
     #expect(!watching.profiles.contains { $0.id == "f10-external" })
     watching.signedIn = false

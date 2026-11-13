@@ -144,6 +144,7 @@ extension TodoModel {
       ], label: label)
   }
   func attachPaths(_ paths: [String], label: String? = nil, origin: AttachmentInputOrigin? = nil) async {
+    notePersonActed() // a write the person started (MAC-C1-S1-32)
     guard !paths.isEmpty else { return }
     await changeAttachment(origin: origin) { client, draft in
       let attachments = paths.map { path -> [String: String] in
@@ -180,6 +181,7 @@ extension TodoModel {
     await attachLocation(["kind": "link", "url": text], label: label)
   }
   private func attachLocation(origin: AttachmentInputOrigin? = nil, _ location: [String: String], label: String?) async {
+    notePersonActed() // a write the person started (MAC-C1-S1-32)
     await changeAttachment(origin: origin) { client, draft in
       var value: [String: Any] = ["from_version": draft.base.row_version, "location": location]
       if let label, !label.isEmpty { value["label"] = label }
@@ -198,6 +200,7 @@ extension TodoModel {
     }
   }
   func uploadImage(_ data: Data, mimeType: String, name: String? = nil, label: String? = nil, origin: AttachmentInputOrigin? = nil) async {
+    notePersonActed() // a write the person started (MAC-C1-S1-32)
     if let origin, !isCurrentAttachmentInput(origin) { return }
     guard data.count <= 20 * 1024 * 1024 else {
       editorError = "Images must be 20 MiB or smaller."
@@ -224,6 +227,7 @@ extension TodoModel {
     }
   }
   func detachAttachment(_ attachment: AttachmentSnapshot) async {
+    notePersonActed() // a write the person started (MAC-C1-S1-32)
     await changeAttachment { client, draft in
       let response = try await client.tasks_period_detach(
         path: .init(profile: draft.base.profile_id, task: draft.id),
@@ -238,6 +242,7 @@ extension TodoModel {
     }
   }
   func labelAttachment(_ attachment: AttachmentSnapshot, label: String?) async {
+    notePersonActed() // a write the person started (MAC-C1-S1-32)
     await changeAttachment { client, draft in
       let value: [String: Any] = ["from_version": draft.base.row_version, "attachment_id": attachment.id, "label": label.map { $0 as Any } ?? NSNull()]
       let payload = try JSONDecoder().decode(Operations.tasks_period_labelAttachment.Input.Body.jsonPayload.self, from: JSONSerialization.data(withJSONObject: value))

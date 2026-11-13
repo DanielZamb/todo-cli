@@ -58,6 +58,7 @@ extension TodoModel {
     if isCurrentCredential(credentialEpoch), attachmentBatch?.id == draft.id { attachmentBatch?.loading = false }
   }
   func applyAttachmentBatch(dryRun: Bool) async {
+    notePersonActed() // a write the person started (MAC-C1-S1-32)
     let credentialEpoch = discovery.credentialEpoch
     guard canWrite, let draft = attachmentBatch, !draft.loading, !draft.selected.isEmpty else { return }
     let client = self.client

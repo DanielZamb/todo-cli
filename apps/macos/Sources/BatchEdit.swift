@@ -102,6 +102,7 @@ extension TodoModel {
     if isCurrentCredential(credentialEpoch), batchEdit?.id == draft.id { batchEdit?.loading = false }
   }
   func applyBatchEdit(dryRun: Bool) async {
+    notePersonActed() // a write the person started (MAC-C1-S1-32)
     let credentialEpoch = discovery.credentialEpoch
     guard canWrite, !busy, let draft = batchEdit, !draft.loading, draft.valid, !draft.selected.isEmpty else { return }
     busy = true

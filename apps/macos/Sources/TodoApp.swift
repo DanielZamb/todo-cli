@@ -16,7 +16,7 @@ struct TodoApp: App {
     var body: some Scene {
         Window("Todo", id: "tasks") {
             RootView(model: model, compactMode: $compactMode)
-                .task { await model.restore() }
+                .task { model.personInput.install(); await model.restore() }
         }
         .defaultSize(width: 1100, height: 760)
         // The window's limits come from the content: Compact is 393 pt wide (its maximum width
@@ -24,13 +24,13 @@ struct TodoApp: App {
         .windowResizability(.contentSize)
         .commands {
             CommandGroup(after: .newItem) {
-                Button("New task") { model.quickAdd = true }
+                Button("New task") { model.notePersonActed(); model.quickAdd = true }
                     .keyboardShortcut("n").disabled(!model.canWrite)
-                Button("Quick add in menu bar", action: openMenuBarQuickAdd)
+                Button("Quick add in menu bar") { model.notePersonActed(); openMenuBarQuickAdd() }
                     .keyboardShortcut("n", modifiers: [.command, .option]).disabled(!model.signedIn)
             }
             CommandGroup(after: .sidebar) {
-                Toggle("Compact mode", isOn: $compactMode)
+                Toggle("Compact mode", isOn: Binding(get: { compactMode }, set: { model.notePersonActed(); compactMode = $0 }))
                     .keyboardShortcut("m", modifiers: [.command, .shift])
             }
         }

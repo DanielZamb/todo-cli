@@ -110,10 +110,12 @@ struct DependencyDelete: Identifiable {
     var dropStatus: DependencyDropStatus?
     var graphSearchRequest = 0
     var graphRequest = 0
-    var graph: DependencyGraphState?
-    var batch: DependencyBatchDraft?
-    var picker: DependencyPicker?
-    var deletion: DependencyDelete?
+    var graph: DependencyGraphState? { didSet { if graph != nil && oldValue == nil { presented() } } }
+    var batch: DependencyBatchDraft? { didSet { if batch != nil && oldValue == nil { presented() } } }
+    var picker: DependencyPicker? { didSet { if picker != nil && oldValue == nil { presented() } } }
+    var deletion: DependencyDelete? { didSet { if deletion != nil && oldValue == nil { presented() } } }
+    /// A sheet or dialog presented counts as the person acting (MAC-C1-S1-32); set by the model.
+    @ObservationIgnored var presented: @MainActor () -> Void = {}
     var generation = 0
     var searchRequest = 0
     var pendingDependents: Set<String> = []
@@ -236,6 +238,7 @@ extension TodoModel {
         }
     }
     func toggleDependency(_ candidate: TaskSnapshot) async {
+        notePersonActed() // a write the person started (MAC-C1-S1-32)
         guard canWrite, let picker = dependencies.picker, !picker.requiresReload, !picker.loading, candidate.profile_id == picker.profile else { return }
         if picker.purpose != .edit {
             var selected = picker.linked

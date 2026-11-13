@@ -94,6 +94,7 @@ struct DependencyDragModifier: ViewModifier {
                     model.dependencies.dropStatus = model.dependencyDropStatus(source: source, target: task)
                 } else if model.dependencies.dropTarget == task.id { model.dependencies.dropTarget = nil }
             })) { providers in
+                model.notePersonActed() // a drop is the person's action (MAC-C1-S1-32)
                 guard model.canWrite, let provider = providers.first, let expected = model.dependencies.dragSource else { return false }
                 // The origin is captured at the drop, before the provider's data arrives (S1-30).
                 let origin = model.dependencyDropOrigin(source: expected, target: task)
