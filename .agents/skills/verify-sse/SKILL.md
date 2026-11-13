@@ -154,11 +154,14 @@ READ_CONTROL_DETERMINISTIC_IDS=1 and the CLIs use build-read-cli.ts. Run:
 bun apps/server/scripts/read-scope-stream-control.ts <base-server> <current-server> <base-cli> <current-cli> <scratch-fixture.json> <evidence-directory>
 ```
 
-The 36 scenarios include the original fourteen, an explicit unscoped read-write
-Token deletion, and 21 restored-Profile/credential combinations. Every valid
-credential retains every base frame. Only credentials revoked or expired at the
-pass may omit the terminal batch or reload. A scoped Token removed by restore
-must first be proven revoked by deletion. Literal final credential states and
+The 37 scenarios include the original fourteen, an explicit unscoped read-write
+Token deletion, 21 restored-Profile/credential combinations and direct removal of
+a live scoped Token by restore without prior deletion. Every credential passing
+its validity/read-scope check retains every base frame. Missing credential rows
+and other failed credential checks end authority; an unobserved check is a
+different state and fails the control. Ended authority does not imply that a
+frame is omitted: standalone revoke/expire cases retain full wire equality.
+Literal final credential states and
 reload/refusal frames supplement whole-frame comparison. The verification-only
 build modes READ_TERMINAL_MUTANT=session-only and READ_STREAM_MUTANT=drop-reload
 must each fail the relevant literal comparison. READ_STREAM_SCENARIOS selects

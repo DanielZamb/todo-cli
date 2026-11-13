@@ -45,6 +45,10 @@ type FinalCredential = {
   expired: boolean;
   readAccess: boolean;
 };
+type PassCheck =
+  | { kind: "not-observed" }
+  | { kind: "missing" }
+  | { kind: "live" | "ended"; credential: FinalCredential };
 const deletionStates = new Map<string, FinalCredential>([
   [
     "delete-owner",
@@ -202,8 +206,23 @@ const scenarios = [
   "delete-expired-token",
   "delete-expired-session",
   ...restoreCases.keys(),
+  "restore-direct-removed",
 ];
-async function run(binary: string, cli: string, scenario: string) {
+restoreCases.set("restore-direct-removed", {
+  state: "absent",
+  subject: "scoped",
+});
+async function run(
+  binary: string,
+  cli: string,
+  scenario: string,
+): Promise<{
+  frames: string[];
+  finalCredential: FinalCredential | null;
+  revokedBeforeRestore: boolean;
+  passCheck: PassCheck;
+  beforeRestore: FinalCredential | null;
+}> {
   const restoration = restoreCases.get(scenario);
   const directory = mkdtempSync(join(tmpdir(), "todo-stream-scope-"));
   const path = join(directory, "scratch.db"),
@@ -240,6 +259,8 @@ async function run(binary: string, cli: string, scenario: string) {
     received: Frame[] = [];
   let finalCredential: FinalCredential | null = null;
   let revokedBeforeRestore = false;
+  let passCheck: PassCheck = { kind: "not-observed" };
+  let beforeRestore: FinalCredential | null = null;
   try {
     const deadline = performance.now() + 30000;
     while (!/Listening on http:\/\/127.0.0.1:\d+/.test(log)) {
@@ -371,6 +392,24 @@ async function run(binary: string, cli: string, scenario: string) {
         : restoration?.state === "absent"
           ? "never-restored"
           : "work";
+    const observeCredential = () => {
+      finalCredential = credentialState(credential);
+      passCheck =
+        finalCredential === null
+          ? { kind: "missing" }
+          : {
+              kind:
+                !finalCredential.revoked &&
+                !finalCredential.expired &&
+                finalCredential.readAccess &&
+                (finalCredential.profile === null ||
+                  finalCredential.profile === profile)
+                  ? "live"
+                  : "ended",
+              credential: finalCredential,
+            };
+      return finalCredential;
+    };
     const initProfile = () => {
       const initialized = spawnSync(
         resolve(cli),
@@ -440,13 +479,27 @@ async function run(binary: string, cli: string, scenario: string) {
     assert.equal((await next(reader)).raw, "event: ready\ndata: null\n\n");
     if (restoration) {
       writeFileSync(gate, "closed");
-      await request(
-        "DELETE",
-        `/profiles/${profile}`,
-        { with_tasks: true, dry_run: false },
-        fixture.controller,
-      );
+      if (scenario !== "restore-direct-removed")
+        await request(
+          "DELETE",
+          `/profiles/${profile}`,
+          { with_tasks: true, dry_run: false },
+          fixture.controller,
+        );
       revokedBeforeRestore = credentialState(credential)?.revoked ?? false;
+      beforeRestore = credentialState(credential);
+      if (scenario === "restore-direct-removed")
+        assert.deepEqual(
+          beforeRestore,
+          {
+            kind: "token",
+            profile: "never-restored",
+            revoked: false,
+            expired: false,
+            readAccess: true,
+          },
+          "direct restore: credential is live before restore",
+        );
       if (restoration.state === "tombstoned") {
         saved = Schema.decodeUnknownSync(Schema.Struct({ id: Schema.String }))(
           await request("POST", "/snapshots", {
@@ -478,7 +531,7 @@ async function run(binary: string, cli: string, scenario: string) {
         writeFileSync(clock, String(initialTime + 1000));
       if (restoration.subject === "expired-session")
         writeFileSync(clock, String(initialTime + 7 * 86400000));
-      finalCredential = credentialState(credential);
+      finalCredential = observeCredential();
       assert.deepEqual(
         finalCredential,
         restoration.state === "absent" && restoration.subject === "scoped"
@@ -488,7 +541,8 @@ async function run(binary: string, cli: string, scenario: string) {
       );
       assert.equal(
         revokedBeforeRestore,
-        restoration.subject === "scoped",
+        restoration.subject === "scoped" &&
+          scenario !== "restore-direct-removed",
         `${scenario}: deletion revocation before restore`,
       );
       const invalid =
@@ -606,6 +660,7 @@ async function run(binary: string, cli: string, scenario: string) {
         dry_run: false,
       });
       cliWrite("work", uuids[2] ?? "", "After restore");
+      observeCredential();
       writeFileSync(gate, "open");
       assert.equal((await next(reader)).event, "reload");
       assert.equal((await next(reader)).event, "operation");
@@ -678,6 +733,7 @@ async function run(binary: string, cli: string, scenario: string) {
           db.close();
         }
       }
+      observeCredential();
       writeFileSync(gate, "open");
       while (true) {
         const row = await reader.next();
@@ -686,10 +742,13 @@ async function run(binary: string, cli: string, scenario: string) {
       }
       assert.equal(received.at(-1)?.event, "effect/http-api/stream/failure");
     }
+    if (passCheck.kind === "not-observed") observeCredential();
     return {
       frames: received.map((frame) => frame.raw),
       finalCredential,
       revokedBeforeRestore,
+      passCheck,
+      beforeRestore,
     };
   } finally {
     for (const controller of controllers) controller.abort();
@@ -721,17 +780,38 @@ for (const scenario of selected) {
     baseline.finalCredential,
     scenario,
   );
+  assert.deepEqual(
+    candidate.passCheck,
+    baseline.passCheck,
+    `${scenario}: credential check at pass`,
+  );
+  assert.notEqual(
+    candidate.passCheck.kind,
+    "not-observed",
+    `${scenario}: pass must be observed`,
+  );
   const state = candidate.finalCredential;
   const restoration = restoreCases.get(scenario);
+  const endedAuthority =
+    candidate.passCheck.kind === "missing" ||
+    candidate.passCheck.kind === "ended";
+  const exceptionEligible =
+    process.env.READ_STREAM_ENDED_MUTANT === "old-revocation-proxy"
+      ? state !== null
+        ? state.revoked || state.expired
+        : restoration !== undefined && candidate.revokedBeforeRestore
+      : endedAuthority;
   const approved =
-    state !== null
-      ? state.revoked || state.expired
-      : restoration !== undefined && candidate.revokedBeforeRestore;
+    exceptionEligible &&
+    (restoration !== undefined || scenario.startsWith("delete-"));
   const result = {
     scenario,
     finalCredential: state,
     revokedBeforeRestore: candidate.revokedBeforeRestore,
     approvedTerminalDifference: approved,
+    endedAuthority,
+    passCheck: candidate.passCheck,
+    beforeRestore: candidate.beforeRestore,
     before: old,
     after: current,
   };
@@ -743,7 +823,7 @@ for (const scenario of selected) {
     assert.equal(old.length, 3, `${scenario}: literal base frame count`);
     assert.equal(
       old[1],
-      `event: reload\ndata: {"generation":"00000000-0000-4000-8000-000000000011","seq":${restoration.state === "tombstoned" ? 20 : 18}}\n\n`,
+      `event: reload\ndata: {"generation":"00000000-0000-4000-8000-${scenario === "restore-direct-removed" ? "000000000009" : "000000000011"}","seq":${restoration.state === "tombstoned" ? 20 : 18}}\n\n`,
       `${scenario}: literal reload frame`,
     );
     if (approved) {
@@ -789,6 +869,8 @@ for (const scenario of selected) {
     scenario,
     finalCredential: state,
     approvedTerminalDifference: approved,
+    endedAuthority,
+    passCheck: candidate.passCheck,
     beforeFrames: old.length,
     afterFrames: current.length,
   });
