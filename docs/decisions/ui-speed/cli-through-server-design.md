@@ -41,9 +41,12 @@ The draft decision is [ADR-0023](../../adr/0023-cli-writes-through-the-running-s
   withdraws that incarnation and removes only its own record. It never recreates
   a missing guard while serving. No production guard is created under /tmp.
 - A validated typed not_run reply on the proved connection means the command did
-  not execute or write, exit 2, server_command_not_run. It never triggers fallback
-  or retry. Every other post-send failure remains write_outcome_unknown, exit 1,
-  with the History warning and no automatic retry.
+  not execute or write: server_command_not_run, exit 1 (runtime meaning, because the
+  command itself was valid and running it again is correct), with a message saying
+  the server did not run it, nothing was written, and to run it again. It never
+  triggers automatic fallback or retry. Every other post-send failure remains
+  write_outcome_unknown, also exit 1; the two differ by code and by the History
+  warning, which only the unknown outcome carries.
 - The MAC-covered protocol is the capability. Protocol 1 is discovery, proof and
   nudge only for production CLI use. The test companion may exercise the prepared
   operation. The first production build routing a command must carry protocol 2

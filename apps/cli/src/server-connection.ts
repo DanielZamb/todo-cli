@@ -193,7 +193,7 @@ export class ProvenServer {
     try {
       const reply = Schema.decodeUnknownSync(BackendReply)(value);
       if (reply.outcome === "not_run")
-        throw new CommandError(2, "server_command_not_run", reply.message);
+        throw new CommandError(1, "server_command_not_run", reply.message);
       return reply;
     } catch (error) {
       if (

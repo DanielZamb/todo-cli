@@ -125,3 +125,4 @@ guard outlives store close. A multiply linked database starts and serves as on
 the base with no guard, record, proof or authorization and one withdrawal log; a
 link added after start-up withdraws that incarnation for good, and removing it
 does not bring the record back. CLI writes go direct with zero server requests.
+The typed refusal is exit 1, server_command_not_run, with no History warning.

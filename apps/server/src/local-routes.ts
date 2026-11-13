@@ -1,6 +1,7 @@
 import { BadRequest, TodoApi } from "@todo/api";
 import {
   CommandNotRun,
+  commandNotRunMessage,
   executeBackendCommand,
 } from "@todo/domain/backend-command";
 import type { OperationStore } from "@todo/domain/store";
@@ -50,9 +51,8 @@ export const localRoutes = (
             return Schema.decodeUnknownSync(CommandNotRun)({
               outcome: "not_run",
               code: "local_proof_required",
-              exit_code: 2,
-              message:
-                "The local database proof is no longer valid. The command was not run and nothing was written.",
+              exit_code: 1,
+              message: commandNotRunMessage,
             });
           const authorization = headers.authorization ?? "";
           const credential = authorization.startsWith("Bearer ")

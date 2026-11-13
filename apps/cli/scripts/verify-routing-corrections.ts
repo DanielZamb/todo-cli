@@ -732,10 +732,16 @@ try {
       environment,
     );
     proven.close();
-    assert.equal(refused.code, 2, refused.stdout + refused.stderr);
+    assert.equal(refused.code, 1, refused.stdout + refused.stderr);
     const failure = json(refused);
     assert.equal(failure.code, "server_command_not_run");
-    assert.equal(failure.exit_code, 2);
+    assert.equal(failure.exit_code, 1);
+    assert.equal(failure.exit_meaning, "runtime failure");
+    assert.equal(
+      failure.message,
+      "The server did not run this command because its local database proof was no longer valid. Nothing was written. Run the command again.",
+    );
+    assert(!failure.message.includes("History"));
     assert.equal(refused.stderr, "");
     assert.equal(
       events.filter((e) => e.path === "/local/commands").length - n,

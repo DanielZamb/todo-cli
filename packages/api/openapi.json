@@ -51082,12 +51082,12 @@
                         "message": {
                           "type": "string",
                           "enum": [
-                            "The local database proof is no longer valid. The command was not run and nothing was written."
+                            "The server did not run this command because its local database proof was no longer valid. Nothing was written. Run the command again."
                           ]
                         },
                         "exit_code": {
                           "type": "number",
-                          "enum": [2]
+                          "enum": [1]
                         }
                       },
                       "required": ["outcome", "code", "message", "exit_code"],

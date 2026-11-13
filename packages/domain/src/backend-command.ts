@@ -36,13 +36,16 @@ export const AddBackendResult = Schema.Struct({
   view: TaskViewSchema,
   dependency_warnings: Schema.optionalKey(Schema.Array(DependencyWarning)),
 });
+// A definite pre-execution refusal: the command was valid, nothing was written
+// and running it again is correct. Runtime meaning, exit 1, told apart from
+// write_outcome_unknown by its code and by the absence of the History warning.
+export const commandNotRunMessage =
+  "The server did not run this command because its local database proof was no longer valid. Nothing was written. Run the command again.";
 export const CommandNotRun = Schema.Struct({
   outcome: Schema.Literal("not_run"),
   code: Schema.Literal("local_proof_required"),
-  message: Schema.Literal(
-    "The local database proof is no longer valid. The command was not run and nothing was written.",
-  ),
-  exit_code: Schema.Literal(2),
+  message: Schema.Literal(commandNotRunMessage),
+  exit_code: Schema.Literal(1),
 });
 export const BackendReply = Schema.Union([
   CommandNotRun,
