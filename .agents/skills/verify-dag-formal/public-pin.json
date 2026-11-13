@@ -1,5 +1,5 @@
 {
-  "commit": "0bd8476df7d7147ea355b418346b57d33f403aee",
+  "commit": "63f9b6c8f112ad1cadc493c2186a134cf5e2c12a",
   "scope": "Integrated clients, two-part public contract amendment and PR12 main. Finite graph bounds and native holds unchanged.",
   "scopes": [
     "packages/domain",
@@ -45,7 +45,7 @@
     "apps/electron/package.json"
   ],
   "pendingCorrections": [],
-  "contract": "78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289",
+  "contract": "55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8",
   "awaitMergedIntegration": false,
   "integrationQualification": {
     "product": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
@@ -82,5 +82,12 @@
     "contract": "55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8",
     "review": "docs/decisions/ui-speed/diag-recordings-report.md",
     "scope": "feat/diag-core with integ/server merged. Covered graph, validation, write, replay and core algorithm bodies are byte-identical except caller-only Diagnostics spans: transaction (writer_lock_wait before BEGIN), appendSync (projection span around unchanged applyEvent), graph (graph span around integ/server's read) and Authentication.credentialCheck (authentication span). Public contract changes add the Diagnostics detail query and the profiler group only. No model, invariant or bound change. Candidate for the seat."
+  },
+  "c9MergeQualification": {
+    "product": "63f9b6c8f112ad1cadc493c2186a134cf5e2c12a",
+    "previous": "34edaba72fd5f1e8a6c41a0bd6340e424da8ee3c",
+    "contract": "55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8",
+    "review": "docs/decisions/ui-speed/diag-recordings-report.md",
+    "scope": "feat/diag-core 6cbbb953 merged with integ/c9-server 675aab82 (merge 7e16bb71). Since the previous candidate 34edaba7, the only changes in pinned files are integ/c9-server's: Authentication.perform, record, rejectionMinute, rejectionsThisMinute and verifyPassphrase (the durable refusal) in auth.ts, and serverLayer (the stream-wake wiring) in server.ts. The mapped Authentication.startSeries, append, requireCredential and mutate, and every graph, validation, write, replay, matcher, runner, admission, observer and erasure body, are unchanged. No model, invariant or bound change. Candidate for the seat."
   }
 }

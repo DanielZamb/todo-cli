@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "0bd8476df7d7147ea355b418346b57d33f403aee",
+  "confirmedCommit": "63f9b6c8f112ad1cadc493c2186a134cf5e2c12a",
   "source": "Three changed whole files at the accepted SERVER-READS renewal; this integration changes store wiring outside the listed DAG bodies, which remain byte-identical. See the per-function table and exact constructor diff.",
   "scope": "Merged immutable graph/storage source, reviewed covered functions and full fresh model/production/public controls.",
   "modelBaselineCommit": "a91dcf8917e242bce6c0f3521a1b2727114d0ef7",
@@ -86,7 +86,7 @@
     },
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "f7f7aac127d3e308335fc43aec4d8490b1e795e6b175d54f0e3b5a33752c6e4e",
+      "sha256": "489f3471e589e2fcd0347946b2efdd7569b66687d243b3de2294bcbb1c30a12f",
       "functions": [
         "OperationStore.transaction",
         "OperationStore.validate",
@@ -103,7 +103,7 @@
     },
     {
       "path": "packages/domain/src/store/projection.ts",
-      "sha256": "dd0d3823bd6b9ecd8868ee0eaacdb8e3438aca1bf944f897cd2092eb137364b9",
+      "sha256": "1484d7189856c294451f077a2c3fed45ac55084ad9a40b444e7534ecdf2bc4df",
       "functions": [
         "createProjection",
         "changes",
@@ -155,7 +155,7 @@
     },
     {
       "path": "packages/domain/src/auth/auth.ts",
-      "sha256": "0b743e8e5b245cf792118b20ff721e6f7fe38d59b12d34d2dc4676e4070c5982",
+      "sha256": "d01346091850736bf1cb205dde3d30f4a7408ad9e4a82b8f6382e10def5834ca",
       "functions": [
         "Authentication.startSeries",
         "Authentication.append"
@@ -252,5 +252,12 @@
     "contract": "55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8",
     "review": "docs/decisions/ui-speed/diag-recordings-report.md",
     "scope": "feat/diag-core with integ/server merged. Covered graph, validation, write, replay and core algorithm bodies are byte-identical except caller-only Diagnostics spans: transaction (writer_lock_wait before BEGIN), appendSync (projection span around unchanged applyEvent), graph (graph span around integ/server's read) and Authentication.credentialCheck (authentication span). Public contract changes add the Diagnostics detail query and the profiler group only. No model, invariant or bound change. Candidate for the seat."
+  },
+  "c9MergeQualification": {
+    "product": "63f9b6c8f112ad1cadc493c2186a134cf5e2c12a",
+    "previous": "34edaba72fd5f1e8a6c41a0bd6340e424da8ee3c",
+    "contract": "55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8",
+    "review": "docs/decisions/ui-speed/diag-recordings-report.md",
+    "scope": "feat/diag-core 6cbbb953 merged with integ/c9-server 675aab82 (merge 7e16bb71). Since the previous candidate 34edaba7, the only changes in pinned files are integ/c9-server's: Authentication.perform, record, rejectionMinute, rejectionsThisMinute and verifyPassphrase (the durable refusal) in auth.ts, and serverLayer (the stream-wake wiring) in server.ts. The mapped Authentication.startSeries, append, requireCredential and mutate, and every graph, validation, write, replay, matcher, runner, admission, observer and erasure body, are unchanged. No model, invariant or bound change. Candidate for the seat."
   }
 }
