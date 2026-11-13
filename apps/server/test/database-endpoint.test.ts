@@ -173,6 +173,12 @@ it("serverLayer keeps the start-up evidence window to the store acquisition alon
   expect(window).toBe(
     "const rawStore = yield* Effect.acquireRelease( openStore({ path: options.path }), (store) => Effect.orDie(store.close()), );",
   );
+  // The recordings service starts its worker when constructed. It is built
+  // once, after verifyStore, so this server's worker opens nothing in the
+  // window.
+  const recordings = "new RecordingService(";
+  expect(source.split(recordings)).toHaveLength(2);
+  expect(source.indexOf(recordings)).toBeGreaterThan(source.indexOf(end));
 });
 it.live(
   "store acquisition leaves exactly one new descriptor on the kept database file",

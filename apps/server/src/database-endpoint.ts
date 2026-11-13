@@ -41,6 +41,29 @@ const sameIdentity = (
   b: ReturnType<typeof identity>,
 ) => a.device === b.device && a.inode === b.inode && a.birth === b.birth;
 
+// Evidence that a file was opened inside a window: some descriptor, other than
+// the kept descriptor, names the file after the window, and its number was
+// either closed before the window or named a different file then. An open's
+// identity (device, inode, birth) is fixed for its life, so a number whose
+// identity changed was opened inside the window: another thread (the
+// recordings worker, a second server in this process) may close a number
+// before the window's open reuses it. A number that already named the file
+// before the window is never counted, so the swap-back case still refuses.
+const openedInWindow = (
+  before: ReadonlyMap<number, ReturnType<typeof identity>>,
+  after: ReadonlyMap<number, ReturnType<typeof identity>>,
+  file: ReturnType<typeof identity>,
+  kept: number,
+) =>
+  [...after].some(([fd, id]) => {
+    const was = before.get(fd);
+    return (
+      fd !== kept &&
+      sameIdentity(id, file) &&
+      (was === undefined || !sameIdentity(was, id))
+    );
+  });
+
 // A second server on one Todo database finds the guard already held.
 export class DatabaseHeldError extends Error {
   constructor() {
@@ -132,9 +155,7 @@ export function databaseEndpoint(path: string) {
       if (
         beforeGuard &&
         afterGuard &&
-        ![...afterGuard].some(
-          ([fd, id]) => !beforeGuard.has(fd) && sameIdentity(id, held),
-        )
+        !openedInWindow(beforeGuard, afterGuard, held, lockDescriptor)
       )
         throw new Error(
           "Server guard connection file differs from its kept descriptor",
@@ -224,14 +245,7 @@ export function databaseEndpoint(path: string) {
           );
           return;
         }
-        if (
-          ![...after].some(
-            ([fd, id]) =>
-              fd !== descriptor &&
-              !before.has(fd) &&
-              sameIdentity(id, binding.identity),
-          )
-        )
+        if (!openedInWindow(before, after, binding.identity, descriptor))
           throw new Error(
             "Server startup refused: SQLite store file differs from the kept database descriptor",
           );

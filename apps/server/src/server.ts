@@ -458,7 +458,13 @@ export const serverLayer = (options: {
       // evidence even if the store had opened a different file (the swap-back
       // case). Keep this window to the store acquisition alone; a test in
       // apps/server/test/database-endpoint.test.ts pins it. The wake decorator
-      // is built after the window; it opens nothing.
+      // is built after the window; it opens nothing. The recordings service
+      // starts its worker after verifyStore, so this server's own worker
+      // opens nothing in the window. A number another thread closes and the
+      // store's open reuses still counts (openedInWindow in
+      // database-endpoint.ts), but a number that named the database before
+      // the window is never counted, and an extra open of the database path
+      // inside the window remains false evidence.
       const beforeStore = endpoint?.beforeStore();
       const rawStore = yield* Effect.acquireRelease(
         openStore({ path: options.path }),
