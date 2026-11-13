@@ -3202,3 +3202,67 @@ Pin audit at the head: 76 pins and one mismatch. That mismatch is
 verify-discovery-formal's `task-client.ts`, unrenewed for the Swift reason
 above. Everything else certifies P or, for AtomicCAS, the same `store.ts`
 bytes.
+
+## Review 5 findings R5-1 to R5-5 (2026-11-13)
+
+Claude Opus 5.5. Each finding has its own commit, red first. Evidence:
+`docs/evidence/ui-speed/recordings-r5/`. The seat's review-5 probes run
+unchanged from `.scratch/recordings-sqlite5-s1/claude/`.
+
+| Finding | Commit | Red (c0103d09) | Green |
+| --- | --- | --- | --- |
+| R5-1: deleting only `recordings.db` from a really closed store is refused | e205fc88 | The test closes a real store (0-byte `-wal`, 32,768-byte `-shm`) and deletes the main file: refused as `foreign_sidecar` (`r51-r52-red.log`) | It initializes. Beside an absent or empty main and an absent or empty `-wal`, a `-shm` of any size is removed under the exclusion. A non-empty `-wal` or journal still refuses, untouched |
+| R5-2: a sidecar refusal leaves a new empty `recordings.db`, and its explanation says "non-empty" | f591b52d | A zero-length hard-linked `-shm` beside a missing main left a created `recordings.db`; the explanation test failed | Sidecars are checked (regular file, one link, no WAL or journal data) before anything is created, and an empty main this open created is removed if a later check refuses. The listing is unchanged. The explanation covers "holds data the store cannot prove is its own or is not a private regular file". A symlinked `-wal` control was already refused before creation |
+| R5-3: a concurrent writer makes a good store look foreign or corrupt | 96bce3bb | The seat's 60 s probe: 4 of 2,201 opens refused as `integrity` (`r53-red-concurrent.json`) | A refusal needs two consecutive inspections with unchanged file stamps that agree on the reason; otherwise the open answers `store_busy` within 500 ms, with no files and no removal advice. 60 s probe: 0 refusals in 4,320 and 3,017 opens. Under the same load (85 commits/s), a foreign store was refused `foreign_catalog` on all 10,912 opens and a damaged store `integrity` on all 5,718. Under an unpaced writer every open was refused with its reason or answered `store_busy`, never opened |
+| R5-4: a recovery open builds the whole image in memory | 210bbfce | The seat's image-cost probe, 173 MiB store with committed frames: 409 MiB peak RSS, 99 ms | The committed pages are streamed one page at a time into a 0600 file in a fresh `mkdtemp` directory, checked read-only and immutable, then removed. 173 MiB: 63 MiB peak, 361 ms |
+| R5-5: exception (c) worded as "exactly byte 104" | d626ca2d | The report and skill named one byte | The rule: SQLite sets one 32-bit read mark (`aReadMark[1..4]`, offsets 104–119; observed slot 1, offsets 104–107) to the current frame count, so 1 to 4 bytes change. `sqlite-refusal-race.ts` now asserts it |
+
+R5-3's probe writer stopped at exactly 5,120 batches in the first green run
+and reported 32,397 errors after that. 5,120 is the store's run capacity
+(`run_capacity`), because each probe batch creates a new run. The writer
+reached it because it now runs uncontended. A rerun with error messages
+captured shows 3,017 opens and 4,839 batches with 0 errors and 0 refusals.
+
+R5-4's bound: peak memory is the process baseline, one page buffer and the
+check connection's default SQLite page cache. It does not grow with the
+store. The temporary copy needs at most the main file's size on disk. The
+main file is capped by the recordings ceiling (`totalBytes`, 256 MiB by
+default); a larger one is refused as `oversized` before any copy. The
+ceiling measurement is in the gates table below.
+
+None of these commits changes a file that any mapping pins. The pin audit at
+the head shows the same one mismatch (verify-discovery-formal's
+`task-client.ts`, deferred for the Swift step). The AtomicCAS, verify-dag-formal
+and verify-task-search-cache candidates still name 34edaba7 objects that are
+byte-identical at the head, so none needs renewing again.
+
+### Gates on the final code (gates4, sandboxed, each step gated on at least 40 GiB free)
+
+| Gate | Exit | Result |
+| --- | ---: | --- |
+| domain recordings tests (9 files) | 0 | 77 tests |
+| sqlite-initialization, initialization-server, foreign-files, refusal-visibility | 0 each | |
+| sqlite-swap-witness | 0 | files unchanged since the swap |
+| sqlite-refusal-race | 0 | live writer: `foreign_catalog`, read-mark slot 1 only (byte 104 this run); path removed: `replaced`, no file created |
+| sqlite-refusal-classes (worker) | 0 | |
+| seat `classes.ts` (21 cases) | 1 at first, on a missing evidence folder (kept as `seat-classes-missing-dir.log`); then 1 | 20 of 21 as expected. Both R5-2 rows now pass. The one other row, "WAL: damaged data page in committed frames", opens on c0103d09 and on the head alike (the seat's own receipt records `opened: true`). It damages main's last page, page 20, which is not in the WAL; SQLite's own `quick_check` and `integrity_check` on a copy of that exact shape both return `ok`, so the store is sound and opening is correct. The probe's "refuse" label is wrong for this shape |
+| seat `guidance-real.ts` | 0 | |
+| seat `live-writer.ts` | 0 | includes the 511 → 512 carry: bytes 104–105 |
+| seat `concurrent-open.ts`, 60 s | 0 | 1,956 opens, all opened, 0 refusals, writer 4,907 batches with 0 errors |
+| under load at 85 commits/s, 60 s | 0 | foreign store `foreign_catalog` 11,854 of 11,854; damaged store `integrity` 4,115 of 4,115 |
+| under an unpaced writer, 30 s | 0 | foreign store: 773 `foreign_catalog`, 5 `store_busy`; damaged store: 32 `integrity`, 41 `store_busy`; none opened |
+| seat `image-cost.ts`, 173 MiB | 0 | 60 MiB peak without frames, 64 MiB with frames |
+| `image-cost` at the ceiling (253 MiB store) | 0 | 60 MiB without frames, 64 MiB with frames (554 ms) |
+| verify-ui-profiler `verify.ts` | 0 | |
+| recorder fault controls | 0 | |
+| verify-occ-atomicity `check.ts` | 0 | |
+| disk guard, then root `lockf pnpm check` | 0, 0 | domain 567, server 38, Electron 168 + 1 skipped, CLI 87 |
+
+R5-4's stated figure: a recovery open's peak RSS stays under 70 MiB up to the
+256 MiB ceiling (measured 64 MiB at 253 MiB), against 409 MiB at 173 MiB
+before. It needs at most the main file's size on disk, transiently.
+
+I broke the coordinator's floor once: the first R5-4 green measurement started
+with free space at 39.0 GiB, because its free-space reading and its start were
+in one command. It finished and left no temporary files. Every later run was
+gated on a separate reading.
