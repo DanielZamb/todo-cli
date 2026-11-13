@@ -194,6 +194,7 @@ export class OperationStore {
         path,
         (run) => this.transaction(run),
         () => this.searchWords.clearAll(),
+        this.attachmentRoot,
       );
       this.transaction(() => {
         const version =
@@ -327,6 +328,7 @@ export class OperationStore {
     });
 
   private cleanupAttachmentsSync() {
+    if (this.isPreview) return;
     for (const row of this.db
       .query<{ profile_id: string; task_id: string }, []>(
         "SELECT profile_id,task_id FROM attachment_cleanup",

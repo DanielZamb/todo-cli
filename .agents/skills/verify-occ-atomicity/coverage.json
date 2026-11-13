@@ -1,9 +1,9 @@
 {
-  "confirmedCommit": "b4b289066cca9f8c5e527c177abc4a3d759a7558",
+  "confirmedCommit": "97eb40021812cba9fdae76471328b890db239349",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "78331436469154a79babaf1f47036c43c64b697164fada36cca266b82cc4e186",
+      "sha256": "9cbc8b8a2920b91f8cfc0e2137ade7d4ba11a28f7ad6c16fd29b4450d54cbc71",
       "functions": [
         "OperationStore.constructor",
         "OperationStore.transaction",
@@ -108,20 +108,13 @@
     }
   ],
   "reviewedCandidate": false,
-  "review": "Runtime validation added to unmapped graphRead/changesRead wrappers; graph trusted projection method renamed. Constructor, transaction, historySync, record/rejection/validation/append and Snapshot/rebuild regions are byte-identical to 1c5413cb. Initial gate passed behavior and refused only the stale store hash. No model changes.",
+  "review": "Current merged-source AtomicCAS one-command passed at fv01-check-H5HU7k. Every covered body is byte-identical to the previously reviewed PERF source; Authentication discovery snapshot and CLI recovery changes do not alter Validate/Record/Apply/WriteVersion/Commit, rejection or replay. No model change or hash-only renewal of changed bodies.",
   "integrationReview": {
-    "base": "8ef210ff08532419123653757313c5ef97201e98",
-    "main": "cabf4866835a49f23dc0fe44694740f122855e33",
-    "changed": [
-      "packages/domain/src/store/store.ts",
-      "packages/domain/src/store/projection.ts",
-      "packages/domain/src/attachments.ts",
-      "packages/domain/src/dependency-rules.ts",
-      "packages/domain/src/dependencies.ts"
+    "status": "PROVISIONAL common-base map, deliberately unrenewed for pre-renewal gates",
+    "parents": [
+      "150a8c33d63b73d61fca2849c1455c52d2298366",
+      "8292b067d43dca17c0919673785464b0831645b2"
     ],
-    "controls": "docs/evidence/fv01/sensitivity-KdAFKt/result.json",
-    "scope": "Reviewed cache lifecycle hooks, Tag set projection, exit/report fields and stored witness compatibility. Both intended actual-source enumeration failures1, exact restoration before hash renewal. Full clean command follows.",
-    "renewedSensitivity": "docs/evidence/fv01/sensitivity-WnZxRk/result.json",
-    "result": "Both intended enumeration failures1, exact source restoration, restored complete command0 after reviewed hash renewal"
+    "base": "6b167266fc34c3304e30ed220bb652b4d17c05ab"
   }
 }

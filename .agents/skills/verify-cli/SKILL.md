@@ -203,3 +203,24 @@ and cross-Profile id-prefix lookup matrix, credential no-leak properties, WAL
 snapshot tests and auth-failure rollback proof. Run its single command after
 changing these reads or their CLI/HTTP contracts. Existing Profile-scoped SSE
 and Task search behavior retain their current recipes.
+
+## Accepted flags and early refusals
+
+Read [the compiled flag inventory](features/flag-contract.md). The normal recipe
+also runs mutation-flags.test.ts against its selected compiled binary. It proves
+64 unsupported mutation flag pairs refuse without changing any table or database
+bytes, and 32 md/JSON refusals happen before opening a store. Its help discovery
+walks every command and checks the schema registry, then compares normalized
+help and response-schema hashes with the reviewed fixture. flag-inventory.json,
+flag-consumers.json, mutation-flags.json and mutation-flags-early.json retain the
+actual outputs and each accepted flag's consumer or explicit exception.
+
+Task editing flags belong only to add/edit. Delete/Purge flags belong only to
+rm. Changes to those registrations must preserve rm's dry run, Dependency
+preview/fingerprint and Purge through verify-dag's public and closure recipes.
+The inventory retains init/login username as explicit compatibility exceptions
+with their exact help text. Detach rejects label, which remains available on
+attach and label-attachment. The same compiled test preserves all table bytes
+and the external file, covers early md/JSON refusals, and checks label values.
+The flag contract also records the intentional --force compatibility change
+for edit/done/cancel/reopen, including before and after behavior.

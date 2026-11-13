@@ -298,3 +298,17 @@ Authorization product `219749f2ab4ed40fdf7f257c991385a2057bf215` adds nominal
 read wrappers outside every mapped function. The same mapped bodies remain
 byte-identical to 98511eff; the range/hash receipt is in the SERVER-READS
 `boundary-revision/atomicity-body-review.json`. No model or writer body changed.
+## Constructor statement trace
+
+`constructor-trace.mjs <checkout> <owned-todo-constructor-directory> <output.json>`
+creates one scratch Init seed, then resets that same database from the seed on
+each invocation. It records executed public SQLite exec/prepared statements,
+bindings and immediate transaction entry/commit boundaries during construction.
+Run before and after a constructor wiring change and compare the seed hash and
+trace arrays exactly. It does not claim native SQLite internal tracing.
+The seed contains a committed Version-1 Task and no Purge, matching Init.
+
+[Purge restore source mapping](PURGE-RESTORE-MAPPING.md) records the accepted
+constructor renewal and its statement trace. A later preview cleanup guard
+changes only an uncovered method; all 45 covered declarations remain byte-identical.
+Its new whole-file renewal remains a candidate until the seat re-checks it.
