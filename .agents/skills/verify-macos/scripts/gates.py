@@ -47,7 +47,7 @@ def wait_for_disk(name):
         time.sleep(30)
 def quarantine_leftovers(name):
     # A gate's own Bun compile (the CLI tests' `bun build --compile`) can leave a `.*.bun-build`
-    # file in the tree; it is moved to the ignored quarantine before the next clean-tree check
+    # file in the tree; it is moved to a quarantine outside the checkout before the next clean-tree check
     # instead of stopping the run (MAC-C1-S1-28). Anything else uncommitted still stops it.
     moved = subprocess.run(['sh', '.agents/skills/verify-macos/scripts/quarantine-bun-build.sh'], capture_output=True, text=True)
     (evidence / f'quarantine-before-{name}.log').write_text(moved.stdout + moved.stderr)
