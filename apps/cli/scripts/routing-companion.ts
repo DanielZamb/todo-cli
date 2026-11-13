@@ -4,7 +4,7 @@ import {
   executeBackendCommand,
 } from "@todo/domain/backend-command";
 import { nowInstant } from "@todo/domain/commands";
-import { renderTask } from "@todo/domain/presentation";
+import { renderError, renderTask } from "@todo/domain/presentation";
 import { openStore } from "@todo/domain/store";
 import { Effect, Schema } from "effect";
 import { withAttachmentStatus } from "../src/attachments.ts";
@@ -72,7 +72,24 @@ if (mode === "server") {
       ),
     );
   } else {
-    process.stdout.write(`${JSON.stringify(reply.error, null, 2)}\n`);
+    if (format !== "md" && format !== "json" && format !== "table")
+      throw new Error("Invalid format");
+    const failure = reply.error;
+    const latest =
+      failure.details && "latest" in failure.details
+        ? failure.details.latest
+        : undefined;
+    (format === "json" ? process.stdout : process.stderr).write(
+      renderError(
+        failure.exit_code,
+        failure.code,
+        failure.message,
+        format,
+        failure.generated_at,
+        latest,
+        latest ? undefined : failure.details,
+      ),
+    );
     process.exitCode = reply.error.exit_code;
   }
 }

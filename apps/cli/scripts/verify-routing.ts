@@ -554,8 +554,13 @@ try {
         assert.equal(JSON.parse(output.stdout).code, "invalid_args");
         assert.equal(JSON.parse(output.stdout).exit_code, 2);
       }
+      if (name === "refusal" && format !== "json") {
+        assert.equal(output.stdout, "");
+        assert.match(output.stderr, /error 2 - validation or usage/);
+      }
       for (const mutation of [
         { ...output, stdout: `${output.stdout}\n` },
+        { ...output, stderr: `${output.stderr}\n` },
         { ...output, rows: `${output.rows}missing-rejection` },
         { ...output, exit: 4 },
       ])
@@ -565,7 +570,7 @@ try {
         format,
         exit: output.exit,
         bytes: Buffer.byteLength(output.stdout),
-        controls: 3,
+        controls: 4,
       });
     }
   }
