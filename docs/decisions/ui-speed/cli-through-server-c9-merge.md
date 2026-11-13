@@ -127,7 +127,14 @@ value what no rule reads. Counts:
 At 8d7a453c the ten drifts are the eight DAG public rows, the cache's server.ts
 row, and verify-dag-formal/public-pin.json's top-level contract (78a2be44 against
 the commit's 259e9afb), which the earlier audits could not see. The renewal in
-355fa5d9 covered it. pin-audit-selftest.mjs builds the seat's shapes with wrong
+355fa5d9 covered it. Later reports from other branches: a change record under a key that is not an
+exact name (`mergeReview.previousStoreSha256`) was paired with a sibling path and
+reported as drift. Change records are now read from the words in a key; a key
+naming a new value (`afterRenewalSha256`) beside a path is still compared. And
+`--ledger <file>` lets a branch without this ledger be audited with it: at
+integ/c9-server 675aab82, 76 unknown without it, 0 with it.
+
+pin-audit-selftest.mjs builds the seat's shapes with wrong
 hashes and requires each to come out as drift or unknown.
 
 ## Isolation

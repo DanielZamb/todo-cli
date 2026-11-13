@@ -153,6 +153,16 @@ packages/domain/src. The map form and any hash key are read. A top-level
 `contract` is compared with CONTRACT_ID, and `modelSha256` with the skill's
 .tla model.
 
+Change records are read from what a key says. A key with the word previous,
+before, from or old holds an old value; one with after or to is compared when a
+path sits beside it.
+
+To audit another branch whose checkout has no ledger yet, run this script by its
+path from that checkout's root and pass this checkout's ledger:
+`node <this-checkout>/.agents/skills/verify-cli-routing/scripts/pin-audit.mjs <commit> <out.json> --ledger <this-checkout>/.agents/skills/verify-cli-routing/scripts/pin-ledger.json`.
+Without it, values the ledger names come out unknown (76 at integ/c9-server
+675aab82; 0 with it).
+
 Values no rule reads go in scripts/pin-ledger.json, one entry per file and
 value with a reason, and a `path` when it is a pin to compare. Add one only
 after reading the value in context. `node .agents/skills/verify-cli-routing/scripts/pin-audit-selftest.mjs`

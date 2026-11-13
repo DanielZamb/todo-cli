@@ -258,31 +258,6 @@
       "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
     },
     {
-      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
-      "value": "e76674ad89a63dabb3e603beae0fc2333264c29e47a659d9be9070ece95fa973",
-      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
-    },
-    {
-      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
-      "value": "7f8462c827387e08e48456e1819152d4e36c00a7509b130a1d4923f5d12972dd",
-      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
-    },
-    {
-      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
-      "value": "725152db259e21fd1adb62721005584a7d8aed56de780f6f95605bba819124b9",
-      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
-    },
-    {
-      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
-      "value": "92bb31f71e19f1dbda6c43ecbbb186eb36fdd2b5218857f5dec337d75a24e8c5",
-      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
-    },
-    {
-      "file": ".agents/skills/verify-discovery-formal/HISTORICAL-INPUTS.json",
-      "value": "fd4fb12c0e6318d34e581b3ba0b4342b964aa92bb436dae555a76ff2cdbdeb10",
-      "reason": "discovery-formal historical input record: hash of a binary, receipt or review in another worktree or the run store, as recorded then; not in this repository"
-    },
-    {
       "file": ".agents/skills/verify-discovery-formal/REPORT.md",
       "value": "76ae9ac6c338dd206deea6bb71194b11916b5f3e794949b6db665f4f33246e24",
       "reason": "binary or source hash of a past discovery run, recorded in report prose"

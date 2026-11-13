@@ -37,6 +37,13 @@ try {
     docs: { path: "docs/notes.md", sha256: wrong },
     upper: { path: "apps/x.ts", sha256: wrong.toUpperCase() },
     domainRelative: { path: "y.ts", sha256: wrong },
+    // A change record whose key is not an exact name (verify-occ-atomicity's
+    // mergeReview.previousStoreSha256 beside an evidence path), and a pin whose
+    // key mentions after but sits beside a path, so must still be compared.
+    previousKey: { mergeReview: { previousStoreSha256: wrong, evidence: "apps/x.ts" } },
+    fromOld: { from_sha256: wrong, old_hash: wrong, path: "apps/x.ts" },
+    afterPin: { path: "apps/x.ts", afterRenewalSha256: wrong },
+    toNoPath: { toSha256: wrong },
   };
   for (const [name, pin] of Object.entries(shapes))
     put(`${s}/${name}.json`, `${JSON.stringify(pin, null, 2)}\n`);
@@ -67,13 +74,24 @@ try {
     [`${s}/pins.yaml`]: ["unknown"],
     [".agents/skills/not-verify/coverage.json"]: ["drift"],
     [`${s}/controls.json`]: ["match", "match", "historical"],
+    [`${s}/previousKey.json`]: ["historical"],
+    [`${s}/fromOld.json`]: ["historical", "historical"],
+    [`${s}/afterPin.json`]: ["drift"],
+    [`${s}/toNoPath.json`]: ["historical"],
   };
   const observed = Object.fromEntries(Object.keys(expectations).map((file) => [file, by(file)]));
   assert.deepEqual(observed, expectations);
   assert.equal(run.status, 1);
   assert.equal(result.unknown, 2);
-  assert.equal(result.compared.drift, 10);
-  console.log(JSON.stringify({ pass: true, exit: run.status, observed }, null, 2));
+  assert.equal(result.compared.drift, 11);
+  // --ledger: a ledger read from elsewhere classifies a value in this tree.
+  const yamlValue = wrong.replace(/1$/, "2");
+  const outside = join(root, "..", `${root.split("/").pop()}-ledger.json`);
+  writeFileSync(outside, JSON.stringify({ entries: [{ file: `${s}/pins.yaml`, value: yamlValue, reason: "self-test" }] }));
+  const withLedger = spawnSync(process.execPath, [audit, "--worktree", "--ledger", outside], { cwd: root, encoding: "utf8" });
+  rmSync(outside, { force: true });
+  assert.equal(JSON.parse(withLedger.stdout).unknown, 1);
+  console.log(JSON.stringify({ pass: true, exit: run.status, observed, unknownWithExternalLedger: 1 }, null, 2));
 } finally {
   rmSync(root, { recursive: true, force: true });
 }

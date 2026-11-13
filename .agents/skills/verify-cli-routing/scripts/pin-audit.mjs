@@ -1,6 +1,8 @@
 // Pin audit: account for every 64-hex string in every file under .agents/skills.
 // Usage, from the checkout root:
-//   node .agents/skills/verify-cli-routing/scripts/pin-audit.mjs [commit|--worktree] [out.json]
+//   node .agents/skills/verify-cli-routing/scripts/pin-audit.mjs [commit|--worktree] [out.json] [--ledger file]
+// From another checkout, run this script by its path with cwd at that
+// checkout's root and --ledger pointing at this pin-ledger.json.
 // With a commit (default HEAD), skill files and the files they pin both come
 // from that commit; --worktree reads both from the working tree.
 //
@@ -20,8 +22,12 @@
 //   inside the checkout, or relative to packages/domain/src. A path that
 //   resolves nowhere is unknown. Paths under docs/evidence/ are local receipts,
 //   Git-ignored by design (AGENTS.md), so they are historical, not comparable.
-// - JSON: values under a key named changes, previous, before or after are
-//   change records (historical). A top-level "contract" is compared with the
+// - JSON: change records are read from what a key says. A container (object or
+//   array) under changes, or under a key with the word previous, before, from,
+//   old, after or to, is historical. A hash under a key with the word previous,
+//   before, from or old is historical. A hash under a key with the word after or
+//   to is a pin when a path sits beside it (it names the current value), and
+//   historical otherwise. A top-level "contract" is compared with the
 //   commit's CONTRACT_ID; a nested "contract" belongs to a review record
 //   (historical). A sha256 beside a "url" pins a downloaded tool (historical:
 //   the artifact is not in the repository; the skill checks it on download).
@@ -40,17 +46,33 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
-import { basename, dirname, isAbsolute, join, normalize, relative } from "node:path";
+import { basename, dirname, isAbsolute, join, normalize, relative, resolve } from "node:path";
 
 const root = process.cwd();
 const realRoot = realpathSync(root);
-const [commitArg = "HEAD", out] = process.argv.slice(2);
+// --ledger <file> reads the ledger from another place, so a branch without
+// this ledger can be audited from its own checkout with this one's ledger.
+const argv = process.argv.slice(2);
+const ledgerAt = argv.indexOf("--ledger");
+const ledgerArg = ledgerAt >= 0 ? argv[ledgerAt + 1] : undefined;
+if (ledgerAt >= 0 && !ledgerArg) throw new Error("--ledger needs a file");
+const positional = argv.filter((_, index) => ledgerAt < 0 || (index !== ledgerAt && index !== ledgerAt + 1));
+const [commitArg = "HEAD", out] = positional;
 const worktree = commitArg === "--worktree";
 const commit = worktree
   ? "worktree"
   : execFileSync("git", ["rev-parse", commitArg], { encoding: "utf8" }).trim();
 const ledgerPath = ".agents/skills/verify-cli-routing/scripts/pin-ledger.json";
 const hexRun = /[0-9a-fA-F]+/g;
+// Words of a key: previousStoreSha256 -> previous, store, sha256.
+const keyWords = (key) =>
+  key
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+const oldWords = new Set(["previous", "before", "from", "old"]);
+const newWords = new Set(["after", "to"]);
 const isHex64 = (value) => typeof value === "string" && /^[0-9a-fA-F]{64}$/.test(value);
 const productPath = /\b((?:apps|packages|scripts)\/[\w@.+/-]+)/;
 
@@ -89,15 +111,17 @@ const contractId = read("packages/api/src/contract.ts")
   .match(/"([a-f0-9]{64})"/)?.[1];
 // The script and its ledger are the tool, read from the working tree; the
 // skill files and the files they pin are the subject, read from the commit.
-const ledger = existsSync(join(root, ledgerPath))
-  ? JSON.parse(readFileSync(join(root, ledgerPath), "utf8"))
-  : { entries: [] };
+const ledgerFile = ledgerArg ? resolve(ledgerArg) : join(root, ledgerPath);
+if (ledgerArg && !existsSync(ledgerFile)) throw new Error(`No ledger at ${ledgerFile}`);
+const ledger = existsSync(ledgerFile) ? JSON.parse(readFileSync(ledgerFile, "utf8")) : { entries: [] };
 const ledgerKey = (file, value) => `${file}\u0000${value.toLowerCase()}`;
 const ledgered = new Map(ledger.entries.map((entry) => [ledgerKey(entry.file, entry.value), entry]));
 // A ledger entry with a path is a pin in a shape no rule reads; compare it.
+const usedLedger = new Set();
 const fromLedger = (file, value) => {
   const entry = ledgered.get(ledgerKey(file, value));
   if (!entry) return undefined;
+  usedLedger.add(ledgerKey(file, value));
   if (!entry.path) return { class: "historical", rule: `ledger: ${entry.reason}` };
   const bytes = read(entry.path);
   if (!bytes) return { class: "unknown", rule: `ledger path ${entry.path} resolves nowhere` };
@@ -172,7 +196,12 @@ for (const file of files) {
       const siblings = Object.entries(node).filter(([, child]) => looksLikePath(child));
       for (const [key, child] of Object.entries(node)) {
         const here = `${keyPath}.${key}`;
-        const old = history || (["changes", "previous", "before", "after"].includes(key) ? key : false);
+        const words = keyWords(key);
+        const old =
+          history ||
+          (child && typeof child === "object" && (key === "changes" || words.some((w) => oldWords.has(w) || newWords.has(w)))
+            ? key
+            : false);
         if (file === ledgerPath) {
           if (isHex64(child)) push(child, { class: "historical", rule: "ledger entry value", where: here });
           visit(child, here, depth + 1, old);
@@ -183,6 +212,17 @@ for (const file of files) {
         } else if (isHex64(child)) {
           if (old) {
             push(child, { class: "historical", rule: `change record (under key ${old})`, where: here });
+            continue;
+          }
+          // A key that names an old value (previousStoreSha256, from_sha256)
+          // is a change record. A key that names a new value (afterRenewalSha256)
+          // is a pin when a path sits beside it, and a change record otherwise.
+          if (words.some((w) => oldWords.has(w))) {
+            push(child, { class: "historical", rule: `change record (key ${key} names an old value)`, where: here });
+            continue;
+          }
+          if (words.some((w) => newWords.has(w)) && !siblings.some(([, raw]) => resolvePath(raw, file))) {
+            push(child, { class: "historical", rule: `change record (key ${key} names a new value, no path beside it)`, where: here });
             continue;
           }
           if (key === "contract") {
@@ -289,6 +329,11 @@ const summary = {
   compared: { match: count((r) => r.status === "match"), drift: count((r) => r.status === "drift") },
   historical: byRule,
   unknown: count((r) => r.class === "unknown"),
+  // Entries that classified nothing here: another rule now reads the value,
+  // or the value is gone. Reported, not failed; prune them when reviewed.
+  ledgerUnused: ledger.entries
+    .filter((entry) => !usedLedger.has(ledgerKey(entry.file, entry.value)))
+    .map((entry) => `${entry.file} ${entry.value.slice(0, 12)}`),
   problems: problems.map((r) => `${r.class === "unknown" ? "unknown" : "drift"} ${r.file}:${r.line} ${r.path ?? ""} ${r.rule}`),
 };
 if (out) writeFileSync(out, `${JSON.stringify({ ...summary, records }, null, 2)}\n`);
