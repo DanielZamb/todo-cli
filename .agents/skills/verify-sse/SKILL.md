@@ -245,9 +245,13 @@ after the outer transaction rolls back. Its optional second argument is a store
 source file for an explicit red control; default verification uses current source.
 Its third argument selects `mutate`, `readSnapshot`, `sync-snapshot` or `matrix`.
 The helper runs all four. The matrix generates all six one/two-boundary paths
-over `auth.mutate` and `auth.readSnapshot`, with commit and rollback, and all 56
-callable member fixtures: 672 compositions. The fixture catalog is exhaustive at
-typecheck. Properties and connection close are excluded; closing the connection
+over `auth.mutate` and `auth.readSnapshot`, plus, for each strict read lease
+(`withRead`, `withMetadata`, `withState`, `recheckRead`, `withOwnerRead`,
+`withStreamRead`), the lease alone, the lease around `mutate` and `mutate` around
+the lease: 24 paths, each with commit and rollback, over all 77 callable member
+fixtures, 3,696 compositions. The six original paths alone are 924 of them. The
+fixture catalog is exhaustive at typecheck. `terminalChangesRead` uses a refusal
+fixture: a terminal authority exists only for a deleted Profile's last batch. Properties and connection close are excluded; closing the connection
 does not compose with continuing its transaction. Password changes use synchronous
 validation failures because their successful hashing is asynchronous and cannot
 run inside these synchronous callbacks. Destructive operations use refusal or

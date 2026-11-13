@@ -35,6 +35,14 @@ const request = (fixture: Fixture) => ({
   credential: fixture.credential,
   profile: fixture.profile.id,
 });
+const empty = Schema.Struct({});
+const within = (
+  s: OperationStore,
+  f: Fixture,
+  run: (
+    read: Parameters<Parameters<OperationStore["auth"]["withRead"]>[3]>[0],
+  ) => Effect.Effect<unknown, AuthError | StoreError>,
+) => s.auth.withRead(request(f), empty, {}, run);
 
 const members = {
   store: {
@@ -75,6 +83,11 @@ const members = {
     rebuild: (s) => s.rebuild(),
     revert: (s, f) =>
       s.revert({ actor, profile: f.profile.id, seq, occurred_at: time }),
+    graphRead: (s, f) => within(s, f, (read) => s.graphRead(read)),
+    terminalChangesRead: (s) =>
+      Effect.suspend(() => s.terminalChangesRead(null as never)),
+    committedHistory: (s, f) => s.committedHistory(f.profile.id, 0),
+    changesRead: (s, f) => within(s, f, (read) => s.changesRead(read, 0)),
   } satisfies Members<OperationStore>,
   auth: {
     setupOwner: (s) => s.auth.setupOwner(""),
@@ -126,6 +139,32 @@ const members = {
         next_occurrence_id: occurrence,
       }),
     revert: (s, f) => s.auth.revert({ ...request(f), seq }),
+    catalog: (s, f) => s.auth.catalog(request(f)),
+    metadata: (s, f) => s.auth.metadata(request(f)),
+    authorizeRead: (s, f) => s.auth.authorizeRead(request(f), empty, {}),
+    withRead: "boundary",
+    withMetadata: "boundary",
+    withState: "boundary",
+    readMetadata: (s, f) => s.auth.readMetadata(request(f), empty, {}),
+    readState: (s, f) => s.auth.readState(request(f), empty, {}),
+    readCatalog: (s, f) => s.auth.readCatalog(request(f), empty, {}),
+    subscribe: (s, f) => s.auth.subscribe(request(f), empty, {}),
+    checkRead: (s, f) => within(s, f, (read) => s.auth.checkRead(read, "read")),
+    recheckRead: "boundary",
+    ownerRead: (s, f) =>
+      s.auth.ownerRead({ credential: f.credential }, empty, {}),
+    withOwnerRead: "boundary",
+    withStreamRead: "boundary",
+    taskHistory: (s, f) =>
+      s.auth.taskHistory({ ...request(f), task_id: f.task.id }),
+    projects: (s, f) => s.auth.projects(request(f)),
+    tags: (s, f) => s.auth.tags(request(f)),
+    profileSummaries: (s, f) =>
+      s.auth.profileSummaries({ credential: f.credential }),
+    profilesRead: (s, f) =>
+      s.auth.profilesRead({ credential: f.credential }, empty, {}),
+    resolveProfileRead: (s, f) =>
+      s.auth.resolveProfileRead({ ...request(f), action: "read" }, empty, {}),
   } satisfies Members<OperationStore["auth"]>,
   scheduled: {
     pendingReminders: (s) => s.scheduled.pendingReminders(),
@@ -148,6 +187,17 @@ const members = {
     restore: (s) => s.snapshots.restore("absent", { dryRun: true }),
     prune: (s) => s.snapshots.prune(),
     runDaily: (s) => s.snapshots.runDaily(),
+    listRead: (s, f) =>
+      s.auth.withOwnerRead({ credential: f.credential }, empty, {}, (read) =>
+        s.snapshots.listRead(read),
+      ),
+    showRead: (s, f) =>
+      s.auth.withOwnerRead(
+        { credential: f.credential },
+        Schema.Struct({ snapshot: Schema.String }),
+        { snapshot: "absent" },
+        (read) => s.snapshots.showRead(read),
+      ),
   } satisfies Members<OperationStore["snapshots"]>,
 };
 
@@ -159,11 +209,29 @@ export const compositionLeaves = Object.entries(members).flatMap(
   ([group, values]) => leaves(group, values),
 );
 export const compositionScopes = ["mutate", "readSnapshot"] as const;
-export const compositionPaths = compositionScopes.flatMap((outer) => [
-  [outer],
-  ...compositionScopes.map((inner) => [outer, inner]),
-]);
-export type CompositionScope = (typeof compositionScopes)[number];
+export const leaseScopes = [
+  "withRead",
+  "withMetadata",
+  "withState",
+  "recheckRead",
+  "withOwnerRead",
+  "withStreamRead",
+] as const;
+export type CompositionScope =
+  | (typeof compositionScopes)[number]
+  | (typeof leaseScopes)[number];
+export const compositionPaths: ReadonlyArray<ReadonlyArray<CompositionScope>> =
+  [
+    ...compositionScopes.flatMap((outer) => [
+      [outer],
+      ...compositionScopes.map((inner) => [outer, inner]),
+    ]),
+    ...leaseScopes.flatMap((lease) => [
+      [lease],
+      [lease, "mutate" as const],
+      ["mutate" as const, lease],
+    ]),
+  ];
 export const compose = (
   store: OperationStore,
   fixture: Fixture,
@@ -177,7 +245,35 @@ export const compose = (
     compose(store, fixture, rest, operation, ended).pipe(
       Effect.onExit(() => sync(ended)),
     );
-  return scope === "mutate"
-    ? store.auth.mutate(request(fixture), nested)
-    : store.auth.readSnapshot(nested);
+  switch (scope) {
+    case "mutate":
+      return store.auth.mutate(request(fixture), nested);
+    case "readSnapshot":
+      return store.auth.readSnapshot(nested);
+    case "withRead":
+      return store.auth.withRead(request(fixture), empty, {}, nested);
+    case "withMetadata":
+      return store.auth.withMetadata(request(fixture), empty, {}, nested);
+    case "withState":
+      return store.auth.withState(request(fixture), empty, {}, nested);
+    case "recheckRead":
+      return store.auth
+        .authorizeRead(request(fixture), empty, {})
+        .pipe(Effect.flatMap((read) => store.auth.recheckRead(read, nested)));
+    case "withOwnerRead":
+      return store.auth.withOwnerRead(
+        { credential: fixture.credential },
+        empty,
+        {},
+        nested,
+      );
+    case "withStreamRead":
+      return store.auth.withStreamRead(
+        request(fixture),
+        empty,
+        {},
+        { after: 0, generation: "initial" },
+        nested,
+      );
+  }
 };
