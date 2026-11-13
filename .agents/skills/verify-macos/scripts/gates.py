@@ -138,9 +138,12 @@ try:
             assert not audit['keychainLinked'], ('discovery Swift products link the Keychain', audit['keychainSymbols'])
     run('task-search-formal', ['bun', '.agents/skills/verify-task-search-formal/check.ts'])
     # The DAG mapping fences the Dependency client's Swift files (public-coverage.json): a Swift change
-    # must never leave them stale again (coordinator, candidate 9). Model, production and public checks.
+    # must never leave them stale again (coordinator, candidate 9). This runs the public check, which
+    # asserts every fence against the product at public-pin.json's commit. The full check.mjs also
+    # requires production-pin.json to name the same product; that pin certifies the server line's
+    # product and is not moved by the Mac line.
     (root / 'docs/evidence/dag-formal').mkdir(parents=True, exist_ok=True)
-    run('dag-formal', ['bun', '.agents/skills/verify-dag-formal/check.mjs'])
+    run('dag-public', ['bun', '.agents/skills/verify-dag-formal/public-check.mjs'])
     run('root', ['scripts/swift-slot.sh', '/usr/bin/lockf', '-k', '/tmp/todo-pnpm-check.lock', 'pnpm', 'check'])
     run('doc-links', ['node', 'scripts/check-doc-links.mjs', 'HEAD'])
     keychain = keychain_summary()
