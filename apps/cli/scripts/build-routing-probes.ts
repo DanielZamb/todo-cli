@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 
 const [destinationArg, revision] = process.argv.slice(2);
 if (!destinationArg)
@@ -47,6 +47,21 @@ for (const mode of revision ? ["barrier"] : ["barrier", "reset"]) {
       {
         name: "routing-startup-evidence",
         setup(builder) {
+          // A baseline build reads every file from the archive. A relative
+          // import of a file the working tree no longer has (such as the
+          // baseline's outside-commit.ts) resolves to its root path, which
+          // onLoad below then serves from the archive.
+          if (archive) {
+            const source = archive;
+            builder.onResolve({ filter: /^\.\.?\// }, ({ path, importer }) => {
+              if (!importer.startsWith(root + "/")) return undefined;
+              const candidate = resolve(dirname(importer), path);
+              if (existsSync(candidate)) return undefined;
+              return existsSync(join(source, relative(root, candidate)))
+                ? { path: candidate }
+                : undefined;
+            });
+          }
           builder.onLoad(
             { filter: /\/(?:apps|packages)\/.*\.ts$/ },
             ({ path }) => {
