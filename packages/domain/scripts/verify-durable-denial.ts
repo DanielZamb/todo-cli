@@ -6,8 +6,10 @@ import { isAbsolute, join } from "node:path";
 import { Clock, Effect, Schema } from "effect";
 import { AuthError } from "../src/auth/model.ts";
 import { TaskCommands } from "../src/commands.ts";
-import { ProfileId, Version } from "../src/ids.ts";
+import { Event } from "../src/events.ts";
+import { ProfileId, TaskId, Version } from "../src/ids.ts";
 import { type OperationStore, openStore } from "../src/store/store.ts";
+import { CreateTask, resolveTaskCreation } from "../src/task-commands.ts";
 import { Instant } from "../src/time.ts";
 
 const [mode, directory, evidence] = process.argv.slice(2);
@@ -404,13 +406,58 @@ const program = Effect.acquireUseRelease(
                 holds.push(performance.now() - acquired);
             }
           });
+          // quiet: 200,000 rows before the horizon. null: the same for the
+          // null Profile. whole-window: 200,000 rows inside the window.
+          // *-before: 5,000 prior-minute rows committed before the first
+          // refusal; *-after: committed after it, so every repeat walks them.
+          // prior-*: small AuthChanged rows; import-*: real TaskCreated rows.
           const scenario = process.argv[5];
           assert.ok(
             scenario &&
-              ["quiet", "prior-minute", "whole-window", "null"].includes(
-                scenario,
-              ),
+              [
+                "quiet",
+                "null",
+                "whole-window",
+                "prior-before",
+                "prior-after",
+                "import-before",
+                "import-after",
+              ].includes(scenario),
           );
+          const bulk = (target: ProfileId | null) => {
+            const at = "2026-11-13T00:19:59.999Z";
+            if (scenario.startsWith("prior"))
+              return noise(db, at, 5000, target);
+            const insert = db.query(
+              "INSERT INTO op_log(actor,profile,entity_version,event,from_version,to_version,outcome,reason) VALUES ('import',?,1,?,NULL,1,'committed',NULL)",
+            );
+            const occurred_at = Schema.decodeUnknownSync(Instant)(at);
+            db.transaction(() => {
+              for (let i = 0; i < 5000; i++) {
+                const task = resolveTaskCreation(
+                  Schema.decodeUnknownSync(CreateTask)({
+                    title: `Imported Task ${i}`,
+                  }),
+                  profile,
+                  Schema.decodeUnknownSync(TaskId)(`import-${i}`),
+                  occurred_at,
+                );
+                const event = Schema.decodeUnknownSync(Event)({
+                  kind: "TaskCreated",
+                  entity_version: 1,
+                  occurred_at,
+                  task,
+                  series: null,
+                  project: null,
+                  tags: [],
+                });
+                insert.run(
+                  target,
+                  JSON.stringify(Schema.encodeSync(Event)(event)),
+                );
+              }
+            }).immediate();
+          };
           {
             const target = scenario === "null" ? null : profile;
             const before = count(db, target);
@@ -422,6 +469,7 @@ const program = Effect.acquireUseRelease(
               200000,
               target,
             );
+            if (scenario.endsWith("-before")) bulk(target);
             const attempt = () =>
               target === null
                 ? Effect.map(
@@ -439,8 +487,7 @@ const program = Effect.acquireUseRelease(
             yield* attempt();
             const firstMs = performance.now() - start;
             const firstHolds = [...holds];
-            if (scenario === "prior-minute")
-              noise(db, "2026-11-13T00:19:59.999Z", 5000, target);
+            if (scenario.endsWith("-after")) bulk(target);
             holds.length = 0;
             const burst = performance.now();
             for (let i = 0; i < 1000; i++) yield* attempt();

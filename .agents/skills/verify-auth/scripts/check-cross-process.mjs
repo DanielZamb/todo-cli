@@ -26,7 +26,10 @@ async function start(home){
 }
 async function stop(s){const ended=new Promise(r=>s.child.once('exit',(code,signal)=>r({code,signal})));s.child.kill('SIGTERM');return await ended;}
 const actions=[];const cases=[];
+// Each case must stay inside one wall-clock minute; start late cases in the next one.
+const freshMinute=async()=>{const left=60000-Date.now()%60000;if(left<15000)await new Promise(r=>setTimeout(r,left+250));};
 for(const name of ['cli-cli','server-server','cli-server','server-cli','server-restart','barrier-cli-cli-server']){
+ await freshMinute();
  const home=join(work,name);mkdirSync(home,{recursive:true});cpSync(seed,home,{recursive:true});
  let servers=[];let live;
  const startOne=async()=>{live=await start(home);servers.push(live);return live;};
