@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+  "confirmedCommit": "1a018e9633bfa3fa841b7721a48f7ac6a9abe3c8",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -73,7 +73,7 @@
         "requireCredential",
         "mutate"
       ],
-      "sha256": "7d1d589a41276e96e0ded770d823359c3546e6f55cfe79f74eb429591db6eb38"
+      "sha256": "1c2fc611163e594cd331c199b63783918fe05c42eae2bba83d12a29dbefd5049"
     },
     {
       "path": "packages/domain/src/import-dependencies.ts",
@@ -547,5 +547,12 @@
     "atomicProduct": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
     "review": "docs/decisions/ui-speed/server-integration.md",
     "scope": "Merged immutable product; all covered-body reviews and actual-source controls precede renewal. Full fresh gates follow. No model, invariant or bound changes."
+  },
+  "durableDenialCandidate": {
+    "product": "1a018e9633bfa3fa841b7721a48f7ac6a9abe3c8",
+    "previous": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+    "status": "candidate pending correctness-seat acceptance",
+    "review": "docs/decisions/ui-speed/durable-denial-formal.md",
+    "scope": "Only auth.ts whole file changes. Authentication.append/startSeries bodies and every other mapped file are identical. Auth recording is outside the finite DAG model. Fresh full default follows; no old result is relabelled."
   }
 }
