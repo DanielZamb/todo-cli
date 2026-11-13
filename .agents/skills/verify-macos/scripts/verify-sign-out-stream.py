@@ -79,7 +79,7 @@ try:
         (sources / Path(file).name).write_bytes(data)
         hashes[file] = hashlib.sha256(data).hexdigest()
     shutil.copyfile(fixtures / 'auth-epoch/SessionVault.swift', sources / 'SessionVault.swift')
-    for name in ['SignOutStreamTests.swift', 'SignOutNoticeTests.swift', 'SeatSignOutNoticeTests.swift', 'CredentialTransitionCancellationTests.swift', 'SeatRestoreCancellationBoundaryTests.swift', 'MessageKindTests.swift', 'SeatMessageInterleavingTests.swift', 'SeatMessageScopeObservationTests.swift', 'SeatRestoreCancellationCorrectedTests.swift', 'SeatSurfaceLifetimeTests.swift', 'SeatSurfaceClassTests.swift', 'SeatCandidate7Gate.swift', 'SeatCandidate7InlineInterleavingTests.swift', 'SeatCandidate7bBoundaryTests.swift', 'SeatCandidate7cSupersessionTests.swift']:
+    for name in ['SignOutStreamTests.swift', 'SignOutNoticeTests.swift', 'SeatSignOutNoticeTests.swift', 'CredentialTransitionCancellationTests.swift', 'SeatRestoreCancellationBoundaryTests.swift', 'MessageKindTests.swift', 'SeatMessageInterleavingTests.swift', 'SeatMessageScopeObservationTests.swift', 'SeatRestoreCancellationCorrectedTests.swift', 'SeatSurfaceLifetimeTests.swift', 'SeatSurfaceClassTests.swift', 'SeatCandidate7Gate.swift', 'SeatCandidate7InlineInterleavingTests.swift', 'SeatCandidate7bBoundaryTests.swift', 'SeatCandidate7cSupersessionTests.swift', 'SeatCommittedWriteTests.swift']:
         shutil.copyfile(fixtures / 'sign-out-stream' / name, tests / name)
     shutil.copyfile(root / 'apps/macos/Package.resolved', package / 'Package.resolved')
     api = str(root / 'apps/macos/API')
@@ -122,12 +122,18 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
     # A destination Profile for the Move and Copy read-back controls (S1-17).
     if run([cache['cli'], 'init', '--profile', 'transfer', '--credential-profile', 'work', '--format', 'json'], 'init-transfer.log', dict(env, TODO_SERVER_URL=url)):
         raise RuntimeError('CLI init transfer failed')
+    # The seat's held-write probe (SeatCommittedWriteTests) writes in a `personal` Profile.
+    if run([cache['cli'], 'init', '--profile', 'personal', '--credential-profile', 'work', '--format', 'json'], 'init-personal.log', dict(env, TODO_SERVER_URL=url)):
+        raise RuntimeError('CLI init personal failed')
     # An empty Profile for the deleted-Profile read-back control (S1-19).
     if run([cache['cli'], 'init', '--profile', 'deletable', '--credential-profile', 'work', '--format', 'json'], 'init-deletable.log', dict(env, TODO_SERVER_URL=url)):
         raise RuntimeError('CLI init deletable failed')
 
     lock = threading.Lock()
     fault = {'mode': None, 'held': False, 'release': threading.Event()}
+    # The seat's held-write control (SEAT_PROXY, POST /__control/<op>): an armed write, matched by
+    # path and credential, is forwarded so the server commits it; its reply is held until release.
+    held_write = {'path': None, 'credential': None, 'matched': 0, 'held': 0, 'release': threading.Event()}
     requests = []
     streams = []
 
@@ -140,7 +146,24 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
         protocol_version = 'HTTP/1.1'
         disable_nagle_algorithm = True
         def log_message(self, *args): pass
-        def do_POST(self): self.forward()
+        def do_POST(self):
+            if self.path.startswith('/__control/'): return self.held_write_control()
+            self.forward()
+        def held_write_control(self):
+            length = int(self.headers.get('Content-Length') or 0)
+            payload = json.loads(self.rfile.read(length) or b'{}') if length else {}
+            op = self.path[len('/__control/'):]
+            with lock:
+                if op == 'arm':
+                    held_write.update(path=payload['path'], credential=payload['credential'], matched=0, held=0, release=threading.Event())
+                elif op == 'release':
+                    held_write['release'].set()
+                elif op == 'reset':
+                    held_write['release'].set()
+                    held_write.update(path=None, credential=None, matched=0, held=0, release=threading.Event())
+                elif op != 'status':
+                    return self.reply({'error': 'unknown'}, 404)
+                return self.reply({'committedHeld': held_write['held'], 'matchedWrites': held_write['matched']})
         def do_PATCH(self): self.forward()
         def do_PUT(self): self.forward()
         def do_DELETE(self): self.forward()
@@ -201,8 +224,23 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
                     return self.reply({'error': {'code': 'unavailable', 'message': 'Scratch sign-out fault'}}, 503)
                 self.close_connection = True
                 return
+            armed = False
+            with lock:
+                if held_write['path'] and self.command in ('POST', 'PATCH', 'PUT', 'DELETE') and self.path.split('?')[0] == held_write['path'] \
+                        and headers.get('Authorization', headers.get('authorization')) == 'Bearer ' + held_write['credential']:
+                    held_write['matched'] += 1; armed = held_write['matched'] == 1
+                    release = held_write['release']
             connection, response = upstream_request(self.command, self.path, body, headers)
             record['status'] = response.status
+            if armed:
+                data = response.read(); connection.close()
+                with lock: held_write['held'] = 1
+                release.wait(120)
+                self.send_response(response.status)
+                for key in ('Content-Type', 'Cache-Control'):
+                    if response.getheader(key): self.send_header(key, response.getheader(key))
+                self.send_header('Content-Length', str(len(data))); self.end_headers(); self.wfile.write(data)
+                return
             if mode == 'revoke-drop':
                 response.read(); connection.close()
                 with lock: fault['held'] = True
@@ -257,7 +295,7 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
     threading.Thread(target=proxy.serve_forever, daemon=True).start()
     proxy_url = f'http://127.0.0.1:{proxy.server_port}'
     (evidence / 'endpoints.json').write_text(json.dumps({'server': url, 'proxy': proxy_url, 'database': str(scratch / 'scratch.db')}) + '\n')
-    test_env = dict(env, TODO_SIGN_OUT_STREAM='1', TODO_SIGN_OUT_PROXY=proxy_url, TODO_SIGN_OUT_SERVER=url, TODO_SIGN_OUT_EVIDENCE=str(evidence), SEAT_SERVER=url, SEAT_EVIDENCE=str(evidence))
+    test_env = dict(env, TODO_SIGN_OUT_STREAM='1', TODO_SIGN_OUT_PROXY=proxy_url, TODO_SIGN_OUT_SERVER=url, TODO_SIGN_OUT_EVIDENCE=str(evidence), SEAT_SERVER=url, SEAT_EVIDENCE=str(evidence), SEAT_PROXY=proxy_url)
     # SIGN_OUT_STREAM_ONLY=<swift test filter> runs only those suites against the same server and
     # proxy: a short, targeted run while the shared Swift slot is scarce. Its status is TARGETED-*,
     # never PASS; the full proof is the run without it.
@@ -265,7 +303,7 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
     if only:
         exit_code = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', only], 'targeted-tests.log', test_env)
     else:
-        exit_code = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SignOutStreamTests', '--skip', 'SeatSignOutNoticeTests|SeatRestoreCancellationBoundaryTests|SeatMessageInterleavingTests|SeatMessageScopeObservationTests|SeatRestoreCancellationCorrectedTests|SeatSurfaceLifetimeTests|SeatSurfaceClassTests|SeatCandidate7InlineInterleavingTests|SeatCandidate7bBoundaryTests|SeatCandidate7cSupersessionTests|SeatGenerationLifetimeTests'], 'tests.log', test_env)
+        exit_code = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SignOutStreamTests', '--skip', 'SeatSignOutNoticeTests|SeatRestoreCancellationBoundaryTests|SeatMessageInterleavingTests|SeatMessageScopeObservationTests|SeatRestoreCancellationCorrectedTests|SeatSurfaceLifetimeTests|SeatSurfaceClassTests|SeatCandidate7InlineInterleavingTests|SeatCandidate7bBoundaryTests|SeatCandidate7cSupersessionTests|SeatGenerationLifetimeTests|SeatCommittedWriteTests'], 'tests.log', test_env)
         # The seat's unchanged probe runs alone: its teardown invalidates its URLSession while
         # the model can still reconnect, and an exception there would hide the other suites.
         seat_exit = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatSignOutNoticeTests'], 'seat-tests.log', test_env)
@@ -280,7 +318,7 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
         (evidence / 'seat-restore.json').write_text(json.dumps(seat_restore, indent=2) + '\n')
         interleaving_exit = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatMessageInterleavingTests'], 'seat-interleaving-tests.log', test_env)
         seat_others = {}
-        for suite in ['SeatRestoreCancellationCorrectedTests', 'SeatMessageScopeObservationTests', 'SeatSurfaceLifetimeTests', 'SeatSurfaceClassTests', 'SeatCandidate7InlineInterleavingTests', 'SeatCandidate7bBoundaryTests', 'SeatCandidate7cSupersessionTests', 'SeatGenerationLifetimeTests']:
+        for suite in ['SeatRestoreCancellationCorrectedTests', 'SeatMessageScopeObservationTests', 'SeatSurfaceLifetimeTests', 'SeatSurfaceClassTests', 'SeatCandidate7InlineInterleavingTests', 'SeatCandidate7bBoundaryTests', 'SeatCandidate7cSupersessionTests', 'SeatGenerationLifetimeTests', 'SeatCommittedWriteTests']:
             seat_others[suite] = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', suite], f'{suite}.log', test_env)
         # Coordinator ruling 3 (second seat), 2026-11-12: "The two `#require(model.message)` lines
         # (SeatSurfaceLifetimeTests.swift:85 and SeatMessageScopeObservationTests.swift:42) are expected
