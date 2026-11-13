@@ -5,9 +5,9 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { command, environment, executable, run } from './process-policy.mjs';
-import { compareProductionOutcomes } from './production-outcomes.mjs';
 import { protectedDenials } from './production-denials.mjs';
 import { productionScratchRoot, recipeEvidence } from './production-paths.mjs';
+import { NESTED_SANDBOX_REFUSAL, qualifyPreservation } from './production-qualification.mjs';
 process.umask(0o077);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
 const scripts = path.join(root, '.agents/skills/verify-macos-real-app/scripts');
@@ -109,6 +109,34 @@ try {
   assert.equal(actual.status, expected); guardControls.push({ label, exit: actual.status });
  }
  fs.writeFileSync(evidence + '/guard-controls.json', JSON.stringify(guardControls, null, 2));
+ // Coordinator ruling B (2026-11-13): SwiftPM applies its own manifest sandbox and macOS refuses
+ // sandbox_apply inside a sandbox, so the deny-only profile cannot wrap the recipes and is not retained.
+ const nested = execute(['/usr/bin/sandbox-exec', '-f', denyProfile, '/usr/bin/sandbox-exec', '-p', '(version 1)(allow default)', '/usr/bin/true'], 'deny-only-nesting');
+ const nesting = { exit: nested.status, output: nested.stdout + nested.stderr, log: 'deny-only-nesting.log' };
+ assert(nesting.exit !== 0 && nesting.output.includes(NESTED_SANDBOX_REFUSAL), 'Nested sandbox_apply was not refused; the deny-only premise changed, stop for a ruling');
+ fs.writeFileSync(evidence + '/deny-only-nesting.json', JSON.stringify({ ...nesting, denyOnlyRetained: false }, null, 2));
+ // What the kernel query can see: the same probe opens a scratch stand-in for ~/.todo-cli without a
+ // sandbox (as the production test hosts now run) and under a profile denying the stand-in.
+ const stamp = time => new Date(time).toISOString().slice(0, 19).replace('T', ' ') + '+0000';
+ const sleep = ms => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+ const standIn = syntheticOwner + '/.todo-cli', kernelProbe = proof + '/kernel-probe', standInProfile = proof + '/stand-in-deny.sb';
+ checked(['xcrun', 'clang', scripts + '/ProductionAuditProbe.c', '-o', kernelProbe], 'build-kernel-probe');
+ fs.writeFileSync(standInProfile, '(version 1)(allow default)(deny file-read* file-write* (subpath ' + JSON.stringify(standIn) + '))');
+ const kernelStarted = Date.now();
+ const touched = execute([kernelProbe, syntheticFile], 'kernel-control-unsandboxed');
+ const refused = execute(['/usr/bin/sandbox-exec', '-f', standInProfile, kernelProbe, syntheticFile], 'kernel-control-sandboxed');
+ assert.equal(touched.status, 0, 'The unsandboxed probe must open the stand-in'); assert.equal(refused.status, 1, 'The sandboxed probe must be refused');
+ const kernelControls = [];
+ for (let attempt = 0; attempt < 15; attempt++) {
+  sleep(1000);
+  const predicate = 'eventMessage BEGINSWITH "Sandbox:" AND (eventMessage CONTAINS ' + JSON.stringify('(' + touched.pid + ')') + ' OR eventMessage CONTAINS ' + JSON.stringify('(' + refused.pid + ')') + ')';
+  const rows = JSON.parse(checked(['/usr/bin/log', 'show', '--start', stamp(kernelStarted - 1000), '--end', stamp(Date.now() + 1000), '--style', 'json', '--info', '--debug', '--predicate', predicate], 'kernel-control-query'));
+  kernelControls.splice(0, kernelControls.length, { label: 'unsandboxed-touch', pid: touched.pid, probeExit: touched.status, observedProtectedDenials: protectedDenials(rows, [touched.pid], [standIn], services) }, { label: 'sandboxed-touch', pid: refused.pid, probeExit: refused.status, observedProtectedDenials: protectedDenials(rows, [refused.pid], [standIn], services) });
+  if (kernelControls[1].observedProtectedDenials.length) break;
+ }
+ fs.writeFileSync(evidence + '/kernel-query-controls.json', JSON.stringify({ standIn, controls: kernelControls }, null, 2));
+ assert(kernelControls[1].observedProtectedDenials.length > 0, 'The kernel query must observe a denial issued by a sandbox');
+ assert.equal(kernelControls[0].observedProtectedDenials.length, 0, 'An unsandboxed touch is expected to leave no denial; if it does, revisit the report');
  if (process.argv.includes('--probe-controls')) result.status = 'DIAGNOSTIC_ONLY';
  else {
  const python = ['/opt/homebrew/bin/python3', '/usr/bin/python3'].find(file => fs.existsSync(file)); assert(python);
@@ -135,8 +163,6 @@ try {
  for (const [name, repository, sourceHead, binaryDirectory, guarded] of [
   ['base-unguarded', baseline, baselineHead, baseBinaries, false],
   ['candidate-unguarded', root, head, candidateBinaries, false],
-  ['base-deny-only', baseline, baselineHead, baseBinaries, true],
-  ['candidate-deny-only', root, head, candidateBinaries, true],
  ]) {
   disk(name); if (process.argv.includes('--probe-base') && arms.length) break;
   const arm = evidence + '/' + name; fs.mkdirSync(arm); fs.mkdirSync(arm + '/audit');
@@ -167,7 +193,6 @@ try {
    assert(rows[0].started && rows.at(-1).finished); return { file, ...rows.at(-1) };
   });
   const ended = Date.now(), pids = entry.descriptorAudit.map(row => row.pid);
-  const stamp = time => new Date(time).toISOString().slice(0, 19).replace('T', ' ') + '+0000';
   const own = pids.map(pid => 'eventMessage CONTAINS ' + JSON.stringify('(' + pid + ')')).join(' OR ');
   const protectedTerms = [...protectedPaths, ...services].map(value => 'eventMessage CONTAINS ' + JSON.stringify(value)).join(' OR ');
   const predicate = 'eventMessage BEGINSWITH "Sandbox:" AND (' + own + ') AND (' + protectedTerms + ')';
@@ -178,12 +203,8 @@ try {
  }
  if (process.argv.includes('--probe-base')) { result.status = 'DIAGNOSTIC_ONLY'; result.arms = arms; }
  else {
-  const plain = compareProductionOutcomes(arms[0], arms[1]), guarded = compareProductionOutcomes(arms[2], arms[3]);
-  const guardOnBase = compareProductionOutcomes(arms[0], arms[2]);
-  result = { ...result, arms, comparison: { plain, guarded, guardOnBase }, denyOnlyRetained: guardOnBase.sameOutcomes };
-  assert(guardOnBase.sameOutcomes, 'Deny-only policy changed base outcomes; stop without widening or fallback');
-  assert(plain.sameOutcomes, 'Base/candidate production outcomes differ');
-  if (result.denyOnlyRetained) assert(guarded.sameOutcomes, 'Guarded base/candidate production outcomes differ');
+  const qualification = qualifyPreservation(arms, nesting);
+  result = { ...result, arms, comparison: { plain: qualification.plain, guarded: qualification.guarded, guardOnBase: qualification.guardOnBase }, denyOnlyRetained: qualification.denyOnlyRetained, denyOnlyCause: qualification.denyOnlyCause, kernelQueryObservesUnsandboxedTouch: false };
   assert.equal(checked(['git', 'rev-parse', 'HEAD'], 'head-after').trim(), head);
   result.status = 'PASS_PRESERVATION';
  }

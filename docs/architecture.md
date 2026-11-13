@@ -69,9 +69,9 @@ Its fixed frontmost query runs in a separate, hash-pinned metadata child with
 its own restrictive profile. The child returns bounded JSON and exits without
 passing a broker handle; the app/server retain their stricter broker policy.
 Production state/offscreen preservation runs outside that strict profile,
-alternating the base and candidate and comparing every test outcome. A narrow
-deny-only guard for real Todo/Keychain access is kept only if it preserves the
-base outcomes. Test processes use descriptor auditing and a whole-run own-PID
+running the base and candidate and comparing every test outcome. The narrow
+deny-only guard is not retained because SwiftPM's own manifest sandbox cannot
+nest inside it. Test processes use descriptor auditing and a whole-run own-PID
 kernel query requiring zero observed protected-path/Keychain-service denials;
 they make no credential API-entry attestation. A guard-induced outcome change
 or protected denial stops the run. The app/server trap boundary is unchanged.

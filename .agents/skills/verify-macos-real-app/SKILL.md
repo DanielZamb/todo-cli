@@ -6,12 +6,12 @@ description: Qualify the separate Todo Verification Mac app's scratch guards and
 # Verify the separate Mac app
 
 Created with create-verification-skill. Read [the feature map](features/README.md).
-Status: draft safety correction. Frozen f2965900 passed the full guard/class/
-predicate/trap/removal checks and the fresh verification-app audit and manifest
-check. Its production comparison stopped at a baseline evidence-location bug
-and two Attachment-path fixture failures. The driver now uses canonical worktree
-scratch, recipe-local evidence and complete recipe-exit comparison. Literal
-controls and ten Node removals pass; a new frozen full run remains owed.
+Status: draft safety correction. Frozen 3b53bbcf (run r3) passed guards,
+red controls, 1,637 credential traps and removals, input, locks, parent death,
+the fresh app build, ad hoc identity, the audit and the unguarded production
+comparison (298 tests each side, same outcomes). It stopped at the deny-only
+arm, which SwiftPM's nested manifest sandbox cannot run under. Ruling B drops
+that arm and records the refusal instead. A new frozen full run is owed.
 No full or visible recipe is qualified for this correction.
 
 The earlier ab989410 visible recipe read both
@@ -175,18 +175,21 @@ before/after. Keep at least the 30 GiB soft floor.
 
 The strict profile governs the verification app and its server child. Production
 state/offscreen suites run outside it, using the original scratch-HOME recipes
-through swift-slot.sh. production-proofs alternates base 8b9be429 and the frozen
-candidate, first without a suite sandbox and then with a deny-only profile for
-the real Todo/Keychain directories and Keychain Mach services. Every test must
+through swift-slot.sh. production-proofs runs base 8b9be429, then the frozen
+candidate, without a suite sandbox. The deny-only profile is not retained
+(ruling B, 2026-11-13): SwiftPM applies its own manifest sandbox and macOS
+refuses sandbox_apply inside a sandbox, which every run re-records in
+deny-only-nesting.json. Every test must
 have the same identity and outcome. Whole-recipe exits are compared too.
 A recipe failure without a corresponding recorded test failure is unqualified;
 matching partial Swift results cannot hide a failed artifact validator.
 Production scratch is private under the canonical worktree .scratch directory.
 Recipe output is physical under that recipe's checkout so relative artifact
 validation works; the primary evidence folder links to it. Record load and shared failures; a failure
-only on the candidate is a finding. Keep the deny-only profile only if it
-changes no base outcome; otherwise stop and report the test and denial evidence.
-Do not widen it or fall back silently. No broker or app/server permission is added.
+only on the candidate is a finding. production-qualification.mjs records
+denyOnlyRetained=false only with that refusal, true only with guarded arms that
+ran, and fails on a missing descriptor audit or kernel query. If nesting ever
+succeeds, stop for a ruling. No broker or app/server permission is added.
 
 The production library audits descriptors only, without Security imports or
 replacing defaults, temporary storage or production sources. It samples at a
@@ -194,7 +197,10 @@ nominal 10 ms interval; scheduling can delay it and short-lived opens can be
 missed. Require a completed audit plus a filtered kernel query for the test
 hosts' own PIDs over the whole run. Zero protected-path or Keychain-service
 denials must be observed. A denial is a suite finding to report with the test;
-it is not an allowance to add. The deny-only policy supplies continuous denial.
+it is not an allowance to add. The kernel-query control shows the limit: an
+unsandboxed touch of a scratch stand-in logs nothing, a sandbox-denied touch
+logs a denial. Without the guard the query cannot catch a touch by the
+unsandboxed hosts, and nothing observes their Keychain calls; see the report.
 Production hosts have no API-entry attestation. The withdrawn
 originalCredentialCalls field remains withdrawn. DYLD startup settings remain
 excluded. The verification app/server keeps its traps, import audit and strict

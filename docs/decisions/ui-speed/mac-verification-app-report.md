@@ -59,6 +59,92 @@ helper's own swift-hold below 40 GiB; it was never triggered.
 
 The skill stays draft. The visible recipe and V02 remain held.
 
+## Ruling B: deny-only guard not retained (Claude Opus 5.5, 2026-11-13)
+
+The coordinator ruled that the deny-only guard is not retained. Its earlier
+ruling already said this: a deny-only guard is kept only if it changes no
+outcome, and a guard under which the package cannot build changes the outcome.
+Passing `--disable-sandbox` to SwiftPM was rejected. production-proofs now
+records the cause live on every run: `sandbox-exec -f deny-only.sb sandbox-exec
+-p '(version 1)(allow default)' /usr/bin/true` must exit nonzero with
+`sandbox_apply: Operation not permitted` (exit 71 observed). The run writes
+deny-only-nesting.json with `denyOnlyRetained: false`. If nesting ever
+succeeds, the run stops for a ruling. Only the two unguarded arms run.
+qualifyPreservation in production-qualification.mjs then requires four things:
+
+- both unguarded arms
+- a finished, clean descriptor audit for each test host
+- a kernel query whose PIDs equal the audited hosts and that observed zero
+  protected denials
+- the same outcomes at base and head
+
+It returns `denyOnlyRetained: true` only when both guarded arms ran both
+recipes, and `false` only with the recorded refusal. Its Node test and five
+removal mutants are in node-reds.mjs. Each mutant fails its matching assertion
+at 1, and 15 of 15 controls pass. The mutants cover:
+
+- retained hardcoded to true
+- the guarded-arm-ran check removed
+- the kernel-query check removed
+- the descriptor-audit check removed
+- the recorded-cause check removed
+
+A development run of the production controls
+(ruling-b-controls-development) exited 0 and removed its scratch.
+
+### What protects the owner's real data during the production suite
+
+The production suite has no outer sandbox, so the owner's data is protected by
+the suite's own isolation:
+
+- **Environment.** Each recipe gets HOME, CFFIXED_USER_HOME and TMPDIR in a
+  private 0700 scratch folder under the worktree's .scratch. Only an explicit
+  environment is passed; DYLD_, CURL_, proxy, NODE_OPTIONS and BUN_OPTIONS
+  variables are refused at every child boundary. TODO_DB is a scratch
+  database. The adapter refuses a server binary or database outside scratch.
+- **Scratch server.** It runs from a hashed scratch binary under its own
+  top-level `sandbox-exec` profile. The profile denies every file outside the
+  scratch root and system libraries, all outbound networking, Mach lookups and
+  further execution.
+- **SwiftPM.** It runs with `--disable-keychain`, `--disable-netrc` and package
+  resolution disabled.
+- **Keychain.** The only tests that save to a Keychain (NativeBehaviorTests)
+  are excluded from the package's test targets, so these recipes never run
+  them. The package tests build TodoModel with synthetic vault service names
+  ("never-keychain-…", "unused-…"). The tests that drive sign-in, sign-out and
+  restore use transports that fail before the model reaches its vault. This
+  holds by test design and is not checked at runtime. A scratch HOME does not
+  redirect the Keychain, so a test that did reach SessionVault would call
+  securityd. It would address its synthetic service name, not the owner's item.
+
+**Descriptor audit.** A library linked into each Swift test host with
+`-needed_library` (not DYLD) samples the host's own open descriptors at a
+nominal 10 ms, from startup to exit. It ends the host with exit 78 if any
+descriptor's path is under the real ~/.todo-cli or ~/Library/Keychains, their
+Data-volume aliases, or the system Keychain folders. The controls show a held
+scratch stand-in caught at 78, and the detector-removed mutant missing it at
+0. The audit sees only descriptors held when a sample is taken. It misses opens
+shorter than the interval and path operations that hold no descriptor (stat,
+access, rename). It also misses Keychain calls, which travel to securityd over
+XPC without opening a protected file in the host.
+
+**Kernel query.** It reads kernel `Sandbox: … deny` lines for the hosts' own
+PIDs. Without an outer sandbox the hosts are unsandboxed, so touching a
+protected path is allowed and logged nowhere. The new control shows this with
+a scratch stand-in for ~/.todo-cli:
+
+- The same probe, unsandboxed, opens the stand-in at exit 0 and the query finds
+  zero lines.
+- Under a profile denying the stand-in, it is refused at exit 1 and the query
+  finds `Sandbox: kernel-probe(pid) deny(1) file-read-data …/.todo-cli/sentinel`.
+
+In the unguarded arms, then, the kernel query cannot fail on a protected-path
+touch. It remains a required record, as ruled, but it is not counted as a
+protection.
+
+At runtime, the sampled descriptor audit is the only observer for files.
+Nothing observes Keychain calls from the production test hosts.
+
 Frozen f296590021a3530fe51f38b7923388c7aecafc59 passed the 102-case guard
 matrix, all 15 class controls, all 63 predicate controls including 18, all
 1,637 credential traps and all 1,637 removals, the networking-only denial controls,

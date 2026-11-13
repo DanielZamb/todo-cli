@@ -18,8 +18,14 @@ try {
     ['production-paths.mjs', 'production-paths.test.mjs', "path.join(repository, 'docs'", "path.join(arm, 'docs'", 'Recipe evidence must resolve inside its source repository'],
     ['production-paths.mjs', 'production-paths.test.mjs', "fs.mkdtempSync(path.join(scratch, 'v01-production-'))", "fs.mkdtempSync('/tmp/todo-mac-production-')", 'Scratch root must stay inside the workspace'],
     ['production-denials.mjs', 'production-denials.test.mjs', 'return result;', 'return [];'],
+    ['production-qualification.mjs', 'production-qualification.test.mjs', 'denyOnlyRetained: false, denyOnlyCause: {', 'denyOnlyRetained: true, denyOnlyCause: {', 'Without guarded arms that ran, the record must say false'],
+    ['production-qualification.mjs', 'production-qualification.test.mjs', ' && ran(guardedBase) && ran(guardedCandidate)', '', 'true needs a guarded arm that ran'],
+    ['production-qualification.mjs', 'production-qualification.test.mjs', "assert(arm.kernel && Array.isArray(arm.kernel.pids) && arm.kernel.pids.length > 0 && Array.isArray(arm.kernel.observedProtectedDenials), 'Missing kernel query: ' + arm.name);", '', 'A missing kernel query fails qualification'],
+    ['production-qualification.mjs', 'production-qualification.test.mjs', 'arm.descriptorAudit.length > 0', 'true', 'A missing descriptor audit fails qualification'],
+    ['production-qualification.mjs', 'production-qualification.test.mjs', "assert(nesting && nesting.exit !== 0 && typeof nesting.output === 'string' && nesting.output.includes(NESTED_SANDBOX_REFUSAL), 'Deny-only not retained needs its recorded nested-sandbox refusal');", '', 'A dropped guard needs its cause'],
   ]) {
     if (module === 'process-policy.mjs') fs.copyFileSync(path.resolve('.agents/skills/verify-macos-real-app/scripts/bun-policy.mjs'), directory + '/bun-policy.mjs');
+    if (module === 'production-qualification.mjs') fs.copyFileSync(path.resolve('.agents/skills/verify-macos-real-app/scripts/production-outcomes.mjs'), directory + '/production-outcomes.mjs');
     const sourcePath = path.resolve('.agents/skills/verify-macos-real-app/scripts', module);
     const source = fs.readFileSync(sourcePath, 'utf8'); assert(source.includes(before));
     const mutant = directory + '/' + module; fs.writeFileSync(mutant, source.replace(before, after));
