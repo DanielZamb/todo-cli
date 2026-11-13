@@ -33,6 +33,8 @@ HOME="$scratch" "$scratch/restore-proof" "$scratch" "$evidence" schema
 HOME="$scratch" "$scratch/restore-proof" "$scratch" "$evidence" attachments
 (cd "$scratch" && bun build --compile "$repo/packages/domain/scripts/snapshot-cleanup-proof.ts" --outfile "$scratch/cleanup-proof")
 HOME="$scratch" "$scratch/cleanup-proof" --drive "$scratch/cleanup-cases" "$evidence"
+(cd "$scratch" && bun build --compile "$repo/packages/domain/scripts/snapshot-raw-history-proof.ts" --outfile "$scratch/raw-history-proof")
+HOME="$scratch" "$scratch/raw-history-proof" "$scratch/raw-history-cases" "$evidence"
 rm -rf -- "$scratch"
 test -s "$evidence/result.json"
 set +x

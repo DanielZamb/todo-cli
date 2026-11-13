@@ -132,3 +132,32 @@ sizes and counts, requiring one stable checksum after the first redaction.
 The CLI drive also supplies checksum-matching `not a SQLite file` bytes.
 Restore must report `invalid_snapshot`, exit 2 and leave live Tasks unchanged.
 This differs from checksum mismatch, which remains a separate refusal.
+
+## Raw History and immediate cleanup
+
+The raw-History drive injects older unknown keys that decoding drops, plus SQL
+entity_version 2, into an already redacted row. Six cases cover live startup,
+stored-copy redaction and restore staging, with and without private keys.
+They require the actual stored text to lose those keys and the SQL column to
+become 1. Raw checkpoint payloads receive an unknown-key control too. The drive
+then requires canonical copies to remain byte-stable over repeated redaction.
+`raw-history.json` retains the observations.
+
+The eight cleanup cases now require the Purged PNG and job to be gone when
+restore returns, before reopening or another Purge. `cleanup-guards.json` adds
+literal option-root and environment-root controls, preserving a PNG under the
+default root. It also covers failed erasure with a successful restore and
+retained job, dry run, refused/rolled-back restore, guarded queue deletion,
+durable-Purge membership rechecking and applied in-memory preview isolation.
+The preview fixture forks before the crash so existing constructor cleanup
+cannot erase the test image. It supplies scratch Snapshot publication for that
+in-memory fixture and neutralizes only its unrelated Purge cleanup, then tests
+the real restore pass with the real Attachment root.
+
+The post-commit pass runs only on an applied persistent restore after the
+transaction has committed. Every job is checked against the durable Purge
+union again, erased with eraseTaskAttachments, and deleted through the supplied
+guarded transaction. Failed erasure retains the job and the successful restore
+report, with no added response field. Pending jobs have no dedicated owner
+CLI, HTTP or desktop view today. Their rows remain in attachment_cleanup for
+SQLite inspection and the existing startup/Purge retry paths.

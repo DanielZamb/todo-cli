@@ -254,7 +254,12 @@ export function redactTaskHistory(
       },
     });
     const content = JSON.stringify(redacted);
-    if (content !== JSON.stringify(entry.event)) {
+    const stored = db
+      .query<{ event: string; entity_version: number }, [number]>(
+        "SELECT event,entity_version FROM op_log WHERE seq=?",
+      )
+      .get(entry.seq);
+    if (content !== stored?.event || stored.entity_version !== 1) {
       allowHistoryUpdates();
       db.query("UPDATE op_log SET event=?,entity_version=1 WHERE seq=?").run(
         content,

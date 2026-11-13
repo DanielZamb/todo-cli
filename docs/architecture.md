@@ -87,8 +87,8 @@ Task references discovered through SQLite foreign keys before deleting the Task.
 It also repairs orphan references when the Task is already absent. Snapshot
 copies retain pending Attachment erasure jobs. Restore combines saved and live
 jobs, retaining only ids in the durable Purge union, so a restored Deleted Task
-keeps its bytes. The existing cleanup pass erases copied bytes after commit or
-on the next store open. Unchanged copy redaction skips compaction, keeping
+keeps its bytes. The restore pass erases eligible copied bytes after commit, before returning.
+Failures retain jobs for retry without changing restore success. Unchanged copy redaction skips compaction, keeping
 its checksum stable. Content-free History and
 Version tombstones remain. The [reference inventory](../.agents/skills/verify-snapshots/features/task-references.md)
 records declared and JSON references and their verification.

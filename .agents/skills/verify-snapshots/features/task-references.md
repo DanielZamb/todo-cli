@@ -46,11 +46,11 @@ second connections, untouched Profiles and durable-journal replay.
 The cleanup matrix uses the correctness seat's two-connection crash boundary.
 The Purge writer exits 73 after commit, before image erasure. An already-open
 connection takes the newer Snapshot. Eight cases cover warm/fresh restore,
-older/newer Snapshot and pending/drained cleanup. After the existing cleanup
-pass, the Purged PNG is absent. A Deleted Task restored alive keeps its PNG,
+older/newer Snapshot and pending/drained cleanup. When the applied persistent restore returns, the Purged PNG and job are gone. A Deleted Task restored alive keeps its PNG,
 even with a synthetic non-Purge job in the live queue before restore.
 
-Unchanged redaction skips equal History/checkpoint writes and does not drop
+Unchanged redaction compares actual stored History text and SQL entity_version
+with the output, and compares raw checkpoint payloads. It skips equal writes and does not drop
 immutable triggers. Copies with no changes or migration skip compaction and
 manifest replacement, so reapplying a Purge union keeps actual bytes and
 checksums stable. Repair still scans references when the Task row is absent.

@@ -3,7 +3,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { it } from "@effect/vitest";
 import {
+  cleanupGuards,
   proveSnapshotCleanup,
+  proveSnapshotCleanupGuard,
   proveSnapshotRedactionStability,
 } from "../scripts/snapshot-cleanup-proof.ts";
 
@@ -35,3 +37,24 @@ it("reapplying a Purge union leaves saved Snapshot bytes and checksums stable", 
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+for (const source of ["options", "env"] as const) {
+  it(`finishes restore erasure in the ${source} custom root and preserves the default root`, async () => {
+    const directory = mkdtempSync(join(tmpdir(), "todo-custom-root-"));
+    try {
+      await proveSnapshotCleanup(directory, "warm-pre-pending", source);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  }, 60000);
+}
+for (const mode of cleanupGuards) {
+  it(`post-restore cleanup respects ${mode}`, async () => {
+    const directory = mkdtempSync(join(tmpdir(), "todo-cleanup-guard-"));
+    try {
+      await proveSnapshotCleanupGuard(directory, mode);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  }, 60000);
+}

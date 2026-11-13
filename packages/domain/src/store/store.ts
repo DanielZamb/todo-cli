@@ -187,6 +187,7 @@ export class OperationStore {
         path,
         (run) => this.transaction(run),
         () => this.searchWords.clearAll(),
+        this.attachmentRoot,
       );
       this.transaction(() => {
         const version =

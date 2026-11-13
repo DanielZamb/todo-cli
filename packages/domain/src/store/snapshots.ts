@@ -18,6 +18,7 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { Effect, Schema } from "effect";
+import { eraseTaskAttachments } from "../attachment-store.ts";
 import { DatabaseRestored, OpLogEntry } from "../events.ts";
 import { TaskId } from "../ids.ts";
 import {
@@ -122,6 +123,7 @@ export class Snapshots {
     path: string,
     private readonly transaction: <A>(run: () => A) => A,
     private readonly afterRestore: () => void,
+    private readonly attachmentRoot: string,
   ) {
     this.directory = join(dirname(path), "snapshots");
     this.persistent = path !== ":memory:";
@@ -355,7 +357,7 @@ export class Snapshots {
       let attached = false;
       let target: Database | undefined;
       try {
-        return this.transaction((): SnapshotRestoreReport => {
+        const report = this.transaction((): SnapshotRestoreReport => {
           if (!options.dryRun) this.prepare();
           const manifest = this.manifest(id);
           if (hash(manifest.path) !== manifest.sha256)
@@ -583,6 +585,9 @@ export class Snapshots {
             generation,
           };
         });
+        if (this.persistent && !report.dry_run && !this.db.inTransaction)
+          this.finishPurgeCleanup();
+        return report;
       } finally {
         target?.close();
         if (attached) this.db.exec("DETACH DATABASE restore_source");
@@ -591,6 +596,30 @@ export class Snapshots {
         this.temporary.delete(stage);
       }
     });
+
+  private finishPurgeCleanup() {
+    for (const row of this.db
+      .query<{ profile_id: string; task_id: string }, []>(
+        "SELECT profile_id,task_id FROM attachment_cleanup",
+      )
+      .all()) {
+      try {
+        this.transaction(() => {
+          if (!this.purgedIdsSync().some((id) => id === row.task_id)) return;
+          eraseTaskAttachments(
+            this.attachmentRoot,
+            row.profile_id,
+            row.task_id,
+          );
+          this.db
+            .query(
+              "DELETE FROM attachment_cleanup WHERE profile_id=? AND task_id=?",
+            )
+            .run(row.profile_id, row.task_id);
+        });
+      } catch {}
+    }
+  }
 
   readonly prune = (options: { readonly dryRun?: boolean } = {}) =>
     attempt(() =>
