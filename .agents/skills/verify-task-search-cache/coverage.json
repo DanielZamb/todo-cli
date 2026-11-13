@@ -1,5 +1,5 @@
 {
-  "productCommit": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+  "productCommit": "a45ddeaa6d00b1fc62560f70be48c2e0e1202495",
   "scope": "Reviewed immutable merged strict reads and Snapshot/Purge source 5f46e7b3; no performance claim from cache properties.",
   "seed": "0x5ea2c001",
   "files": [
@@ -37,11 +37,11 @@
   "hygieneFiles": [
     {
       "path": "apps/server/src/task-search-cache-hygiene.ts",
-      "sha256": "be77122a27f471e8d9804f6215bdd5c8622bfcdf952130cdb7e58ebd8b61883b"
+      "sha256": "acd46be9ba6a33c92b839b718b1586742550282b085e8a181d9c3b4bbda37c3a"
     },
     {
       "path": "apps/server/src/server.ts",
-      "sha256": "4abead0eafaf18835759651f2d7d7ed0d568506e02192e5aec3713500500844e"
+      "sha256": "aef0cf33a4faa4572d26f0b23cf915bc833c06e734060396e9198a5115ce3ff8"
     },
     {
       "path": "packages/domain/src/store/search-cache-events.ts",
@@ -82,7 +82,7 @@
       "result": "Three intended observer controls1, restored0, strictTypecheck0; real compiled CLI defect1/runtime_error and typed refusal2 proved before renewal"
     }
   },
-  "previousProductCommit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
+  "previousProductCommit": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
   "clientIntegrationReview": {
     "product": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
     "main": "2c488fc72fe264741d5d8db8f90b441bf426af32",
@@ -120,5 +120,12 @@
     "atomicProduct": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
     "review": "docs/decisions/ui-speed/server-integration.md",
     "scope": "Merged immutable product; all covered-body reviews and actual-source controls precede renewal. Full fresh gates follow. No model, invariant or bound changes."
+  },
+  "streamWakeIntegration": {
+    "product": "a45ddeaa6d00b1fc62560f70be48c2e0e1202495",
+    "previousProduct": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+    "review": "docs/decisions/ui-speed/stream-wake-integration.md",
+    "scope": "Merged immutable product of integ/server 2a840b55 and perf/stream-wake 21a4a52e. Covered-body review and actual-source controls precede renewal; the full command follows on this product. No model, invariant or bound changes.",
+    "certifies": "The store-owned folded-word memo, its admission model and controls, and the server's cache hygiene observer, as wired in this product: hygiene still receives the undecorated store and is forked before the scheduler; its parameter type narrows to CacheHygieneReads with a byte-identical body."
   }
 }

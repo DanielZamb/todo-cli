@@ -3,6 +3,17 @@ name: verify-dag-formal
 description: Check finite Task dependency safety and immutable production conformance. Use after graph, transaction, replay or public Dependency changes. Read the active immutable product from production-pin.json and public-pin.json; final client/runtime mapping remains pending.
 ---
 
+## Stream wake integration renewal
+
+Immutable merged product a45ddeaa6d00b1fc62560f70be48c2e0e1202495 adds the
+reviewed stream wake (21a4a52e) to 5f46e7b3's server. The only covered file that
+changes is apps/server/src/server.ts, by the wake wiring: rejectUnknownQuery and
+the importTasks, depend, undepend and batchDepend handlers are textually
+unchanged and now reach their commands through the decorated store. All 53
+public control anchors match exactly once on the product before renewal.
+docs/decisions/ui-speed/stream-wake-integration.md records the review and the
+full command's actual exit. No model, invariant or bound changed.
+
 ## Server and Snapshot integration renewal
 
 Immutable merged product 5f46e7b3c36afaffe8f2328df6453b8546be27a5 combines the independently reviewed strict read scopes and Snapshot/Purge/CLI corrections. docs/decisions/ui-speed/server-integration.md records the per-function review, exact diffs, three-way constructor trace, current command exits and exclusions. No model, invariant or bound changed. The full fresh qualification remains separate from historical results below. The owed native Swift stage remains explicit.
