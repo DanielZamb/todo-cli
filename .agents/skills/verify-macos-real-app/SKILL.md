@@ -6,7 +6,13 @@ description: Qualify the separate Todo Verification Mac app's scratch guards and
 # Verify the separate Mac app
 
 Created with create-verification-skill. Read [the feature map](features/README.md).
-Status: draft safety correction. The earlier ab989410 visible recipe read both
+Status: draft safety correction. The latest frozen de9ee853 run stopped at the
+shared 30 GiB disk floor, exited 1 and completed cleanup. Its root-boundary and
+metadata components passed; the full matrix, fresh app, production comparison
+and final root check remain owed. No visible preflight or app build occurred.
+Compiled caches and the base Swift build were hashed and retired after the stop.
+
+The earlier ab989410 visible recipe read both
 seeded Tasks, but the independent review disproved its isolation. It does not
 qualify this revision. All seven review findings remain open until the new
 frozen-head controls and required reviews pass. V02 and visible launches are held.

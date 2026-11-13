@@ -1,5 +1,71 @@
 # Mac verification app V01 safety correction
 
+Disk stop on frozen qualification head de9ee85309176faed0e310c563f6df686305bbb1. The helper's
+--fresh-build --headless command exited 1 after shared free disk crossed the
+30 GiB floor at 29.9236 GiB. An operator-disk-stop receipt and swift-hold marker
+prevented another Swift job. The current stale-metadata control finished at
+78, fixture/tool closure checks passed, and cleanup completed. The raw error
+uses the helper's generic coordinator-hold wording; the marker came from the
+coordinator's standing disk floor, not a new review-seat hold. completeRecipe
+and completeVisibleRecipe are false. No app was built or launched at this head.
+All seven findings remain open for final qualification and review.
+
+Receipts: docs/evidence/mac-verification-app/frozen-de9ee853/. result.json,
+commands.json and binary-provenance.json name the frozen head. receipt-index.json
+links the component receipts by hash to that invocation; original receipts were
+not restamped. No visible preflight was attempted. The fixed metadata component
+runs headlessly and grants no idle or visible-run authority.
+
+| Frozen command/control | Actual result |
+| --- | --- |
+| Clean source check; scratch CLI and both server builds; native probe builds | 0 |
+| In-memory Session control and compiled bootstrap | 0 |
+| App-role literal-root baseline | 0; matching test 0 |
+| App-role literal removed / widened subpath / widened file-read* | 78 each; matching tests 1 each |
+| Server-child literal baseline | Accepted; matching test 0; intentional owned-server termination 130 |
+| Server-child literal removed | SIGABRT; matching test 1 |
+| Server-child widened subpath / widened file-read* | 78 each; matching tests 1 each |
+| Owned metadata helper baseline / three removals | 0 / 78 each; matching tests 0 / 1 each |
+| Owned-server guard; seeded Tasks through its public API; metadata-child validation | 0 each |
+| Stale metadata-child validation | 78 |
+| Full helper --fresh-build --headless | 1; disk stop; cleanup true; completeRecipe false |
+
+| Review finding | Qualification at this frozen head |
+| --- | --- |
+| MV-S1-1 ambient configuration / network reach | Strict app/server root-boundary controls pass; full hostile-environment and class-red controls pending |
+| MV-S1-2 file identity / hard links | Native code compiled; full file matrix and class/predicate reds pending |
+| MV-S1-3 server ownership | Owned-server and seeded API readback pass; foreign-server/replacement and class-red sweep pending |
+| MV-S1-4 credential boundary | Native boundary library compiled; complete trap/removal sweep, fresh app and corrected import audit pending |
+| MV-S1-5 all owner input | Input probes compiled; full delivered-event and red controls pending |
+| MV-S1-6 instance exclusion | Probe compiled; explicit-release instance controls and reds pending |
+| MV-S1-7 completion receipt | Node development controls pass with matching mutants failing; frozen full recipe remains incomplete |
+
+The full guard/class/predicate/trap sweeps, including predicate 18 with no
+exclusion, remain owed at this frozen head. Then the fresh app/audit, alternating
+8b9be429/candidate production comparison and final standing-order-27 root check
+remain owed. The latter did not run because the prerequisites were incomplete.
+The production comparison continues to use deny-only protection, zero observed
+protected denial attempts and the nominal 10 ms descriptor audit, as recorded
+in ADR-0021. No production API-entry claim or startup-loading setting was added.
+The four visible stages and V02 remain held.
+
+After the stopped job settled, supported lsof +D checks returned 1 with empty
+stdout and stderr for each retired root. Hashes were preserved before removing
+all own compiled caches and the retained base Swift build. This retired
+1,714,531,870 logical bytes. Immediate free-space samples were 30.1368 and
+31.7899 GiB; other units' activity explains the later pre-cleanup sample being
+above the original floor-crossing sample. post-stop-retirement.json records
+the exact bytes, closure commands and hashes. No own Swift job remains running.
+The base source clone remains, but its build tree and both arms' compiled
+binaries have been retired. A resumed qualification will need those artifacts
+built again; no new verification app build has occurred on this head.
+
+The implementation commit below this report freezes the queue-safe interactive
+controls. The focused dirty-driver controls used native probes compiled from
+00a16176 and retain that attribution. The earlier no-comments instruction's
+child review was not launched because this worker's explicit no-children rule
+wins; the local changed-code scan found no added comments or suppressions.
+
 The frozen 00a16176125e872d36a10590a58ffc0466fdaa86 attempt failed before
 completing the guard matrix. Its interactive server-replacement readiness timer
 included the shared Swift-slot queue. Cleanup then removed the synthetic
