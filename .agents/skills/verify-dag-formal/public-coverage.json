@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
+  "confirmedCommit": "eca430bf1f3b5b9aeeb69a82c0086e3dab364249",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -65,7 +65,7 @@
         "cliResult",
         "mutateTask"
       ],
-      "sha256": "69f21856b32d60483a9e22fa83144e950e4dbe47524a3680bb0744225f365617"
+      "sha256": "574f8654daff45e54db0b4c5f1fb642a60d2c7814826d3a0c2cfbcec247197b3"
     },
     {
       "path": "packages/domain/src/auth/auth.ts",
@@ -73,7 +73,7 @@
         "requireCredential",
         "mutate"
       ],
-      "sha256": "887890d05908da4ea007a716b9ebc311ab0c58f9253506e17fcb38c7ea4a85ca"
+      "sha256": "7d1d589a41276e96e0ded770d823359c3546e6f55cfe79f74eb429591db6eb38"
     },
     {
       "path": "packages/domain/src/import-dependencies.ts",
@@ -87,7 +87,7 @@
       "functions": [
         "executeImport"
       ],
-      "sha256": "e8fe1880544b588a9eaec413e3bd7d39579f8f2bb1de344d741aa91a39f17020"
+      "sha256": "a5da60d74d8d7b3ce9a11f936a60769c05f23525a45ff90b300d35547ecb65b2"
     },
     {
       "path": "packages/domain/src/import.ts",
@@ -116,7 +116,7 @@
         "takeSnapshot",
         "graph"
       ],
-      "sha256": "9cbc8b8a2920b91f8cfc0e2137ade7d4ba11a28f7ad6c16fd29b4450d54cbc71"
+      "sha256": "78331436469154a79babaf1f47036c43c64b697164fada36cca266b82cc4e186"
     },
     {
       "path": "packages/domain/src/store/purge.ts",
@@ -188,7 +188,7 @@
         "rejectUnknownQuery",
         "TasksApi handlers: depend, undepend, batchDepend, importTasks"
       ],
-      "sha256": "45a392a51249de8330df1a2a95ef11f2ae223c2dc7718c98c65308ded34e7120"
+      "sha256": "4abead0eafaf18835759651f2d7d7ed0d568506e02192e5aec3713500500844e"
     },
     {
       "path": "apps/cli/src/main.ts",
@@ -199,7 +199,7 @@
         "false filter guard",
         "malformed Version boundary finding"
       ],
-      "sha256": "f7e46eefdeb3b10a8679681662e3c4d7141bba7b015182e0a4805b92196ad72a"
+      "sha256": "d02c596f930c970e15ea67aad6c43c0ca041bb2dc598fff9e9873c99a9814378"
     },
     {
       "path": "apps/cli/src/schema.ts",
@@ -229,7 +229,7 @@
         "queryGraph",
         "readGraph"
       ],
-      "sha256": "402257e1773144a0570582ade9dca80efd25f265bac9f2de212b5ca626760213"
+      "sha256": "ff099b0484a16de21eb20ad9a27cb0366c7816061d65b7bca7d158303962babb"
     },
     {
       "path": "packages/domain/src/graph-mermaid.ts",
