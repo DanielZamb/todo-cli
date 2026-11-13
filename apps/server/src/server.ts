@@ -88,6 +88,8 @@ import { recordingGuard, recordingRoutes } from "./diagnostic-recordings.ts";
 import { translate } from "./errors.ts";
 import { scheduler } from "./scheduler.ts";
 import { changesLayer } from "./sse.ts";
+import { StreamWake } from "./stream-wake.ts";
+import { streamWakeStore } from "./stream-wake-store.ts";
 import { taskSearchCacheHygiene } from "./task-search-cache-hygiene.ts";
 
 const encodedRead =
@@ -437,7 +439,7 @@ export const serverLayer = (options: {
 }) =>
   Layer.unwrap(
     Effect.gen(function* () {
-      const store = yield* Effect.acquireRelease(
+      const rawStore = yield* Effect.acquireRelease(
         openStore({ path: options.path }),
         (store) => Effect.orDie(store.close()),
       );
@@ -452,7 +454,9 @@ export const serverLayer = (options: {
         ),
         (value) => Effect.promise(() => value.close()),
       );
-      const cacheHygiene = yield* taskSearchCacheHygiene(store);
+      const wake = new StreamWake();
+      const store = streamWakeStore(rawStore, wake);
+      const cacheHygiene = yield* taskSearchCacheHygiene(rawStore);
       yield* cacheHygiene.run.pipe(Effect.forkScoped);
       yield* scheduler(store).pipe(Effect.forkScoped);
       const commands = new TaskCommands(store);
@@ -1252,7 +1256,7 @@ export const serverLayer = (options: {
             Layer.provide(AuthorizationLive),
           ),
           SnapshotsLive,
-          changesLayer(store).pipe(Layer.provide(AuthorizationLive)),
+          changesLayer(rawStore, wake).pipe(Layer.provide(AuthorizationLive)),
         ]),
         Layer.provide(
           HttpApiMiddleware.layerSchemaErrorTransform(

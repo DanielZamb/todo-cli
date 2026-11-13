@@ -29,7 +29,8 @@ cd "$root"
 } > "$evidence/commands.log" 2>&1
 rm -rf "$scratch"
 [ ! -e "$scratch" ]
-for file in actions.json database.sql restart-and-competition.json credential-cleanup.json changed-due.json authenticated-sse.json shared-contract.json openapi.json resumed.sse replay.json agent.plist result.json; do
+for file in actions.json database.sql restart-and-competition.json credential-cleanup.json changed-due.json authenticated-sse.json shared-contract.json openapi.json resumed.sse replay.json result.json; do
   test -s "$evidence/$file"
 done
+if [ "${TODO_VERIFY_SCHEDULER_NO_LAUNCHD:-0}" != 1 ]; then test -s "$evidence/agent.plist"; fi
 echo 'PASS; evidence survived cleanup'

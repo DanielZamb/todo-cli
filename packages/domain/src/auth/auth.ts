@@ -32,6 +32,8 @@ import {
   TokenOptions,
 } from "./model.ts";
 
+import { repeatedAuthRejection } from "./rejection-history.ts";
+
 type AuthorityKind = "read" | "profiles" | "owner" | "terminal";
 type AuthorityValue<Kind extends AuthorityKind, P, Fields> = Readonly<{
   kind: Kind;
@@ -514,12 +516,6 @@ export class Authentication<Read> {
     });
   }
 
-  // ADR-0007 amendment: a repeated rejection (same actor, Profile, action and
-  // detail) is recorded once per minute, so a local process retrying forever
-  // adds at most one History row per kind per minute instead of one per try.
-  private rejectionMinute = -1;
-  private readonly rejectionsThisMinute = new Set<string>();
-
   private record(input: {
     action: AuthAction;
     time: number;
@@ -528,28 +524,18 @@ export class Authentication<Read> {
     credential_id?: string;
     error?: AuthError;
   }) {
-    const kind = input.error
-      ? JSON.stringify([
-          input.actor,
-          input.profile ?? null,
-          input.action,
-          input.error.detail,
-        ])
-      : undefined;
-    if (kind !== undefined) {
-      const minute = Math.floor(input.time / 60_000);
-      if (minute !== this.rejectionMinute) {
-        this.rejectionMinute = minute;
-        this.rejectionsThisMinute.clear();
-      }
-      // Wrong passphrases are never merged: the lockout counts each one,
-      // and it already caps them at 10 an hour.
-      if (
-        input.error?.detail !== "invalid_passphrase" &&
-        this.rejectionsThisMinute.has(kind)
-      )
-        return;
-    }
+    if (
+      input.error &&
+      input.error.detail !== "invalid_passphrase" &&
+      repeatedAuthRejection(this.db, {
+        actor: input.actor,
+        profile: input.profile ?? null,
+        action: input.action,
+        detail: input.error.detail,
+        time: input.time,
+      })
+    )
+      return;
     const event = input.error
       ? {
           kind: "AuthAttemptRejected",
@@ -577,7 +563,6 @@ export class Authentication<Read> {
         input.error ? "rejected" : "committed",
         input.error ? "auth" : null,
       );
-    if (kind !== undefined) this.rejectionsThisMinute.add(kind);
   }
 
   private perform<A>(
@@ -613,15 +598,31 @@ export class Authentication<Read> {
                       .get(profile)
                   ? profile
                   : null;
-            this.transaction(() =>
-              this.record({
-                action,
-                time,
+            // ADR-0007: a repeat is decided first in a read. One SELECT is one
+            // read snapshot and holds nothing open afterwards; a match there
+            // appends nothing and takes no write lock. Absence takes the lock,
+            // and record() decides again inside it with the same walk.
+            // Wrong passphrases never merge, so they never take this exit.
+            const repeat =
+              error.detail !== "invalid_passphrase" &&
+              !this.db.inTransaction &&
+              repeatedAuthRejection(this.db, {
                 actor: error.actor,
                 profile: target,
-                error,
-              }),
-            );
+                action,
+                detail: error.detail,
+                time,
+              });
+            if (!repeat)
+              this.transaction(() =>
+                this.record({
+                  action,
+                  time,
+                  actor: error.actor,
+                  profile: target,
+                  error,
+                }),
+              );
             throw error;
           }
         },

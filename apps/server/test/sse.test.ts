@@ -1,12 +1,13 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, it } from "@effect/vitest";
 import { ChangeEvent } from "@todo/api";
 import { Profile, ProfileId, Task } from "@todo/domain";
 import { openStore, TaskCommands } from "@todo/domain/store";
-import { Context, Effect, Layer, Schema } from "effect";
+import { Context, Effect, Fiber, Layer, Schema } from "effect";
 import { HttpServer } from "effect/http";
+import { TestClock } from "effect/testing";
 import { serverLayer } from "../src/server.ts";
 
 const fixture = Effect.gen(function* () {
@@ -72,7 +73,7 @@ const fixture = Effect.gen(function* () {
       }),
       ({ controller }) => Effect.sync(() => controller.abort()),
     );
-  return { store, request, connect, session };
+  return { store, request, connect, session, path, directory };
 });
 
 async function* frames(response: Response) {
@@ -346,6 +347,103 @@ it.live(
         [null, "signIn"],
         [null, "signIn"],
       ]);
+    }),
+  15000,
+);
+
+it.effect(
+  "delivers a server commit without advancing the clock",
+  () =>
+    Effect.gen(function* () {
+      yield* TestClock.setTime(Date.now());
+      const { request, connect } = yield* fixture;
+      const reader = frames((yield* connect()).response);
+      expect(yield* next(reader)).toEqual({ event: "ready", data: null });
+      const received = yield* next(reader).pipe(Effect.forkScoped);
+      const created = yield* task(
+        yield* request("POST", "/profiles/work/tasks", { title: "Immediate" }),
+      );
+      const event = operation(yield* Fiber.join(received));
+      expect(event.data.event.kind).toBe("TaskCreated");
+      expect(event.data.to_version).toBe(1);
+      if (event.data.event.kind === "TaskCreated")
+        expect(event.data.event.task.id).toBe(created.id);
+    }),
+  10000,
+);
+
+it.effect(
+  "finds an external writer only after the 250 ms fallback",
+  () =>
+    Effect.gen(function* () {
+      yield* TestClock.setTime(Date.now());
+      const { store, connect, session } = yield* fixture;
+      const reader = frames((yield* connect()).response);
+      expect(yield* next(reader)).toEqual({ event: "ready", data: null });
+      const received = yield* next(reader).pipe(Effect.forkScoped);
+      yield* new TaskCommands(store).create(
+        {
+          credential: session.credential,
+          profile: Schema.decodeUnknownSync(ProfileId)("work"),
+        },
+        { title: "External fallback" },
+      );
+      yield* TestClock.adjust("249 millis");
+      expect(received.pollUnsafe()).toBeUndefined();
+      yield* TestClock.adjust("1 millis");
+      const event = operation(yield* Fiber.join(received));
+      expect(event.data.event.kind).toBe("TaskCreated");
+    }),
+  10000,
+);
+
+it.effect(
+  "delivers a compiled CLI process commit after advancing the fallback clock",
+  () =>
+    Effect.gen(function* () {
+      const binary = process.env.TODO_CLI_BINARY;
+      if (!binary) return;
+      yield* TestClock.setTime(Date.now());
+      const { connect, session, path, directory } = yield* fixture;
+      mkdirSync(join(directory, ".todo-cli"));
+      writeFileSync(
+        join(directory, ".todo-cli", "session_work.json"),
+        JSON.stringify({ token: session.credential }),
+        { mode: 0o600 },
+      );
+      const reader = frames((yield* connect()).response);
+      expect(yield* next(reader)).toEqual({ event: "ready", data: null });
+      const received = yield* next(reader).pipe(Effect.forkScoped);
+      const child = Bun.spawn(
+        [
+          binary,
+          "--profile",
+          "work",
+          "--format",
+          "json",
+          "add",
+          "Compiled fallback",
+        ],
+        {
+          env: { ...process.env, HOME: directory, TODO_DB: path },
+          stdout: "pipe",
+          stderr: "pipe",
+        },
+      );
+      const output = yield* Effect.promise(async () => ({
+        exit: await child.exited,
+        stdout: await new Response(child.stdout).text(),
+        stderr: await new Response(child.stderr).text(),
+      }));
+      expect(output.exit).toBe(0);
+      expect(received.pollUnsafe()).toBeUndefined();
+      yield* TestClock.adjust("249 millis");
+      expect(received.pollUnsafe()).toBeUndefined();
+      yield* TestClock.adjust("1 millis");
+      const event = operation(yield* Fiber.join(received));
+      expect(event.data.event.kind).toBe("TaskCreated");
+      if (event.data.event.kind === "TaskCreated")
+        expect(event.data.event.task.title).toBe("Compiled fallback");
     }),
   15000,
 );

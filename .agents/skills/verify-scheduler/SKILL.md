@@ -129,3 +129,11 @@ The generation metadata query filters canonical NULL Profile/snapshot-restore
 headers using the existing Profile/seq index before JSON extraction. No historical
 Task payloads are decoded per tick. No launchd or installed server is needed for
 this cache proof; use only recorded scratch processes.
+
+## Scratch process proof without launchd
+
+When launchd is forbidden, set `TODO_VERIFY_SCHEDULER_NO_LAUNCHD=1` on the same
+helper. Restart, competing processes, reminder receipts, credential cleanup, SSE,
+OpenAPI and replay assertions still run. Only install/status/uninstall are skipped,
+`realLaunchctl` is false, and no agent.plist is expected. This mode makes no
+launchd claim and never invokes lifecycle commands.

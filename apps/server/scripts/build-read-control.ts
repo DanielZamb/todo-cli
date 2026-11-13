@@ -41,6 +41,23 @@ const result = await Bun.build({
               assert.equal([...contents.matchAll(marker)].length, 1);
               contents = contents.replace(marker, "");
             }
+            const wakeWait = "yield* wake.wait(state.wakeVersion);";
+            if (
+              variant === "after" &&
+              path === "apps/server/src/sse.ts" &&
+              contents.includes(wakeWait) &&
+              process.env.READ_STREAM_WAKE_UNGATED !== "1"
+            ) {
+              // READ_CONTROL_POLL_GATE holds Clock.sleep, which held every
+              // pass of the timer loop. The wake's signal path does not sleep,
+              // so hold it at the same point: after the wait, before the pass
+              // captures its wake version and takes its lease.
+              assert.equal(contents.split(wakeWait).length, 2);
+              contents = contents.replace(
+                wakeWait,
+                `${wakeWait}\n                yield* Effect.sleep("0 millis");`,
+              );
+            }
             if (
               variant === "after" &&
               process.env.READ_TERMINAL_MUTANT === "session-only" &&

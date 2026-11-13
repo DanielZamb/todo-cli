@@ -18,9 +18,20 @@ import { type OperationStore, StoreError } from "@todo/domain/store";
 import { Effect, Schema, Stream } from "effect";
 import { HttpApiBuilder, HttpApiSchema } from "effect/http-api";
 import { translate } from "./errors.ts";
+import type { StreamReads } from "./raw-store-reads.ts";
+import type { StreamWake } from "./stream-wake.ts";
 
 type Connection = { active: boolean };
 type Cursor = { cursor: number; generation: string };
+// Every pass returns all four fields explicitly, never by spreading the
+// previous state: a missing wakeVersion would otherwise keep the version from
+// when the stream opened, and every later wait would return at once.
+type PassState = {
+  readonly cursor: number;
+  readonly generation: string;
+  readonly wakeVersion: number;
+  readonly terminal: boolean;
+};
 class TerminalPermission {
   #used = false;
   readonly #connection: Connection;
@@ -58,7 +69,7 @@ class TerminalPermission {
 Object.freeze(TerminalPermission.prototype);
 Object.freeze(TerminalPermission);
 
-export const changesLayer = (store: OperationStore) =>
+export const changesLayer = (store: StreamReads, wake: StreamWake) =>
   HttpApiBuilder.group(TodoApi, "changes", (handlers) =>
     handlers.handleAll({
       stream: ({ params, headers }) =>
@@ -163,11 +174,14 @@ export const changesLayer = (store: OperationStore) =>
             {
               cursor: reset ? initial.restore_seq : subscription.fields.after,
               generation: initial.generation,
-            },
-            (state) =>
+              wakeVersion: wake.version,
+              terminal: false,
+            } satisfies PassState,
+            (state: PassState) =>
               Effect.gen(function* () {
-                yield* Effect.sleep("250 millis");
-                if ("terminal" in state) {
+                yield* wake.wait(state.wakeVersion);
+                const wakeVersion = wake.version;
+                if (state.terminal) {
                   yield* translate(
                     store.auth.authenticate({
                       credential: subscription.credential,
@@ -218,7 +232,9 @@ export const changesLayer = (store: OperationStore) =>
                             {
                               cursor: current.restore_seq,
                               generation: current.generation,
-                            },
+                              wakeVersion,
+                              terminal: false,
+                            } satisfies PassState,
                           ] as const;
                         }
                         const batch =
@@ -261,12 +277,11 @@ export const changesLayer = (store: OperationStore) =>
                         return [
                           events,
                           {
-                            ...state,
                             cursor: batch.cursor,
-                            ...(result.kind === "terminal"
-                              ? { terminal: true }
-                              : {}),
-                          },
+                            generation: state.generation,
+                            wakeVersion,
+                            terminal: result.kind === "terminal",
+                          } satisfies PassState,
                         ] as const;
                       }),
                   ),

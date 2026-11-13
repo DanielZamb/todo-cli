@@ -3,6 +3,28 @@ name: verify-dag-formal
 description: Check finite Task dependency safety and immutable production conformance. Use after graph, transaction, replay or public Dependency changes. Read the active immutable product from production-pin.json and public-pin.json; final client/runtime mapping remains pending.
 ---
 
+## c9 server integration renewal
+
+Immutable merged product 0bd8476df7d7147ea355b418346b57d33f403aee combines the
+stream wake integration (a45ddeaa's mapping) and the durable refusal (13ff84d6's
+candidate). Every pinned row in both coverages equals the product's bytes:
+server.ts from the wake, auth.ts from the refusal. All 53 public control anchors
+match exactly once on the product before renewal. This renewal carries the full
+default run that 13ff84d6 was accepted without; its exit is in
+docs/decisions/ui-speed/c9-server-integration.md. No model, invariant or bound
+changed.
+
+## Stream wake integration renewal
+
+Immutable merged product a45ddeaa6d00b1fc62560f70be48c2e0e1202495 adds the
+reviewed stream wake (21a4a52e) to 5f46e7b3's server. The only covered file that
+changes is apps/server/src/server.ts, by the wake wiring: rejectUnknownQuery and
+the importTasks, depend, undepend and batchDepend handlers are textually
+unchanged and now reach their commands through the decorated store. All 53
+public control anchors match exactly once on the product before renewal.
+docs/decisions/ui-speed/stream-wake-integration.md records the review and the
+full command's actual exit. No model, invariant or bound changed.
+
 ## Diagnostics merge candidate, 2026-11-13
 
 Candidate product 34edaba72fd5f1e8a6c41a0bd6340e424da8ee3c (feat/diag-core with integ/server merged), contract
@@ -243,3 +265,14 @@ files and unproven ownership; record safe removals with paths/hashes/bytes and
 separate capacity observations. Never signal unowned/shared helpers. The
 completed run has no active compiler, and the exact-pattern find receipt is
 under f1-closure-5PIxSP/order30-find-before.txt.
+
+## Durable refusal candidate renewal
+
+The candidate product is 13ff84d64f4bb0fb8e206dcc700f11b2956e38ed (then 8061ae0098a1d4627e3b41f3f0cfaf4270616bf9, then fb55ff7c83b968703634feb75f85c0e027142fa3, then 635a93d1c2a0d99c13857244c36b4a1656d73e92,
+first proposed as
+1a018e9633bfa3fa841b7721a48f7ac6a9abe3c8; every mapped file is byte-identical between them).
+See docs/decisions/ui-speed/durable-denial-formal.md. Only the auth.ts whole-file
+hash changes. All four covered Authentication methods and all other mapped
+files are byte-identical. Auth recording remains outside the finite DAG model.
+No invariant, bound or control changes. Independent seat acceptance is pending;
+the next full default command supplies fresh candidate-specific evidence.
