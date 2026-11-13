@@ -1,6 +1,6 @@
 # Durable refusal candidate mapping renewal
 
-Product capture: 8061ae0098a1d4627e3b41f3f0cfaf4270616bf9.
+Product capture: 13ff84d64f4bb0fb8e206dcc700f11b2956e38ed.
 Previous DAG product: 5f46e7b3c36afaffe8f2328df6453b8546be27a5.
 First proposed capture: 1a018e9633bfa3fa841b7721a48f7ac6a9abe3c8. It advanced to
 635a93d1c2a0d99c13857244c36b4a1656d73e92 to include the
@@ -17,6 +17,10 @@ It advanced again to 8061ae0098a1d4627e3b41f3f0cfaf4270616bf9 for the review sea
 and F2: only auth/rejection-history.ts changes (the size-bounded walk and the
 total recording-clock mapping). That file is not mapped; every mapped file,
 auth.ts included, is byte-identical to fb55ff7c83b968703634feb75f85c0e027142fa3.
+It advanced again to 13ff84d64f4bb0fb8e206dcc700f11b2956e38ed for the review seat's F6: the
+walk reads every 257th large row it meets as evidence. Only
+auth/rejection-history.ts changes; every mapped file is byte-identical to
+8061ae0098a1d4627e3b41f3f0cfaf4270616bf9.
 This renewal is a candidate pending independent correctness-seat acceptance.
 No model, invariant, bound, expected result or control changes.
 

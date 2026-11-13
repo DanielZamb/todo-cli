@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "8061ae0098a1d4627e3b41f3f0cfaf4270616bf9",
+  "confirmedCommit": "13ff84d64f4bb0fb8e206dcc700f11b2956e38ed",
   "source": "Three changed whole files at the accepted SERVER-READS renewal; this integration changes store wiring outside the listed DAG bodies, which remain byte-identical. See the per-function table and exact constructor diff.",
   "scope": "Merged immutable graph/storage source, reviewed covered functions and full fresh model/production/public controls.",
   "modelBaselineCommit": "a91dcf8917e242bce6c0f3521a1b2727114d0ef7",
@@ -224,10 +224,10 @@
     "scope": "Merged immutable product; all covered-body reviews and actual-source controls precede renewal. Full fresh gates follow. No model, invariant or bound changes."
   },
   "durableDenialCandidate": {
-    "product": "8061ae0098a1d4627e3b41f3f0cfaf4270616bf9",
+    "product": "13ff84d64f4bb0fb8e206dcc700f11b2956e38ed",
     "previous": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
     "status": "candidate pending correctness-seat acceptance",
     "review": "docs/decisions/ui-speed/durable-denial-formal.md",
-    "scope": "Only auth.ts whole file changes. Authentication.append/startSeries bodies and every other mapped file are identical. Auth recording is outside the finite DAG model. Advanced from the first candidate 1a018e9633bfa3fa841b7721a48f7ac6a9abe3c8 to include the unmapped rejection-history.ts later-stamp fix; every mapped file is byte-identical between the two. Advanced again to fb55ff7c83b968703634feb75f85c0e027142fa3 for the read-first refusal decision in Authentication.perform (ruling 2026-11-13): auth.ts whole-file hash only; startSeries, append, requireCredential and mutate bodies unchanged. Advanced again to 8061ae0098a1d4627e3b41f3f0cfaf4270616bf9 for the size-bounded walk in the unmapped auth/rejection-history.ts (seat review F1, F2); no mapped file changes. Fresh full default follows; no old result is relabelled."
+    "scope": "Only auth.ts whole file changes. Authentication.append/startSeries bodies and every other mapped file are identical. Auth recording is outside the finite DAG model. Advanced from the first candidate 1a018e9633bfa3fa841b7721a48f7ac6a9abe3c8 to include the unmapped rejection-history.ts later-stamp fix; every mapped file is byte-identical between the two. Advanced again to fb55ff7c83b968703634feb75f85c0e027142fa3 for the read-first refusal decision in Authentication.perform (ruling 2026-11-13): auth.ts whole-file hash only; startSeries, append, requireCredential and mutate bodies unchanged. Advanced again to 8061ae0098a1d4627e3b41f3f0cfaf4270616bf9 for the size-bounded walk in the unmapped auth/rejection-history.ts (seat review F1, F2); no mapped file changes. Advanced again to 13ff84d64f4bb0fb8e206dcc700f11b2956e38ed for the sampled large-row bound in that same unmapped file (seat review F6). Fresh full default follows; no old result is relabelled."
   }
 }
