@@ -36,7 +36,7 @@ export const recordingOpenRefusals = {
   foreign_catalog:
     "recordings.db carries the recordings identifier, but its committed tables differ from this version's.",
   foreign_sidecar:
-    "recordings.db is missing or empty, but a non-empty -wal, -shm or -journal file is beside it.",
+    "recordings.db is missing or empty, and a -wal, -shm or -journal file beside it either holds data the store cannot prove is its own or is not a private regular file.",
   interrupted_initialization:
     "recordings.db is empty beside a non-empty -journal: initialization stopped before its first commit, and the store cannot prove the journal is its own.",
   hot_journal:
@@ -266,9 +266,22 @@ export function openRecordingDatabase(
     const journal = sizeOf(path + "-journal");
     if (mainSize === 0 && journal !== undefined && journal > 0)
       refuse("interrupted_initialization");
-    if (sides.some((s) => s !== "-shm" && (sizeOf(path + s) ?? 0) > 0))
-      refuse("foreign_sidecar");
+    for (const side of sides) {
+      let stat: ReturnType<typeof lstatSync>;
+      try {
+        stat = lstatSync(path + side);
+      } catch {
+        continue;
+      }
+      if (
+        !stat.isFile() ||
+        stat.nlink !== 1 ||
+        (side !== "-shm" && stat.size > 0)
+      )
+        refuse("foreign_sidecar");
+    }
   }
+  let created = false;
   let fd: number;
   try {
     fd = openSync(
@@ -279,6 +292,7 @@ export function openRecordingDatabase(
         constants.O_NOFOLLOW,
       0o600,
     );
+    created = true;
   } catch (error) {
     if (
       !(
@@ -402,6 +416,8 @@ export function openRecordingDatabase(
     }
   } catch (error) {
     if (db) db.close();
+    if (created && fstatSync(fd).size === 0 && sameFile(fd, path))
+      unlinkSync(path);
     closeSync(fd);
     if (error instanceof RecordingOpenRefusal) throw error;
     if (busy(error))

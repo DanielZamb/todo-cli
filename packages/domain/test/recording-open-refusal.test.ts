@@ -469,6 +469,50 @@ it("R5-1 initializes after only recordings.db is deleted from a really closed st
   }
 });
 
+for (const [label, build] of [
+  [
+    "a zero-length -shm hard-linked to another file",
+    (dir: string) => {
+      writeFileSync(join(dir, "keep.txt"), "", { mode: 0o600 });
+      linkSync(join(dir, "keep.txt"), join(dir, "recordings.db-shm"));
+    },
+  ],
+  [
+    "a zero-length -wal that is a symbolic link",
+    (dir: string) => {
+      writeFileSync(join(dir, "elsewhere"), "", { mode: 0o600 });
+      symlinkSync(join(dir, "elsewhere"), join(dir, "recordings.db-wal"));
+    },
+  ],
+] as const)
+  it(`R5-2 refuses ${label} beside a missing main without creating any file`, () => {
+    const root = scratch();
+    try {
+      const dir = join(root, "store");
+      mkdirSync(dir, { mode: 0o700 });
+      build(dir);
+      const before = snapshot(dir);
+      const names = readdirSync(dir).sort();
+      expect(refusal(dir).reason).toBe("foreign_sidecar");
+      expect(readdirSync(dir).sort()).toEqual(names);
+      expect(snapshot(dir)).toEqual(before);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+it("R5-2 explains a sidecar refusal without claiming the sidecar holds data", () => {
+  expect(
+    recordingRefusalGuidance(
+      "/scratch/diagnostic-recordings",
+      "foreign_sidecar",
+      ["recordings.db-shm"],
+    ).explanation,
+  ).toBe(
+    "recordings.db is missing or empty, and a -wal, -shm or -journal file beside it either holds data the store cannot prove is its own or is not a private regular file.",
+  );
+});
+
 it("R5-1 initializes an empty main beside a non-empty -shm and an empty -wal, whatever the -shm holds", () => {
   const root = scratch();
   try {
