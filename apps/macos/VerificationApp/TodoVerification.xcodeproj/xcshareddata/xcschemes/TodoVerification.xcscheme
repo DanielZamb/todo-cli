@@ -14,7 +14,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "2DB91EC9C80036939897C95FBE64E58F"
+               BlueprintIdentifier = "828C4FABA8B5FC55C6395184A853F44D"
                BuildableName = "TodoVerification.app"
                BlueprintName = "TodoVerification"
                ReferencedContainer = "container:TodoVerification.xcodeproj">
@@ -30,7 +30,7 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "2DB91EC9C80036939897C95FBE64E58F"
+            BlueprintIdentifier = "828C4FABA8B5FC55C6395184A853F44D"
             BuildableName = "TodoVerification.app"
             BlueprintName = "TodoVerification"
             ReferencedContainer = "container:TodoVerification.xcodeproj">
@@ -53,7 +53,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "2DB91EC9C80036939897C95FBE64E58F"
+            BlueprintIdentifier = "828C4FABA8B5FC55C6395184A853F44D"
             BuildableName = "TodoVerification.app"
             BlueprintName = "TodoVerification"
             ReferencedContainer = "container:TodoVerification.xcodeproj">
@@ -70,7 +70,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "2DB91EC9C80036939897C95FBE64E58F"
+            BlueprintIdentifier = "828C4FABA8B5FC55C6395184A853F44D"
             BuildableName = "TodoVerification.app"
             BlueprintName = "TodoVerification"
             ReferencedContainer = "container:TodoVerification.xcodeproj">
