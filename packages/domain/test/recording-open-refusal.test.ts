@@ -690,3 +690,45 @@ it("R6-1 carries a machinery failure to the owner's health as retrying, with wha
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+it("R7-1 refuses a main file without owner read permission as not private, after confirming it", () => {
+  const root = scratch();
+  try {
+    const dir = owned(root);
+    const before = snapshot(dir);
+    chmodSync(join(dir, "recordings.db"), 0o200);
+    expect(refusalWithDetail(dir)).toEqual({
+      reason: "not_private",
+      detail: undefined,
+    });
+    chmodSync(join(dir, "recordings.db"), 0o600);
+    expect(snapshot(dir)).toEqual(before);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+it("R7-1 words an unwritable recordings directory as a fact about the directory", () => {
+  const root = scratch();
+  const dir = join(root, "store");
+  try {
+    mkdirSync(dir, { mode: 0o700 });
+    chmodSync(dir, 0o500);
+    expect(refusalWithDetail(dir)).toEqual({
+      reason: "directory_not_private",
+      detail: undefined,
+    });
+    expect(readdirSync(dir)).toEqual([]);
+    expect(recordingRefusalGuidance(dir, "directory_not_private", [])).toEqual({
+      state: "refused",
+      reason: "directory_not_private",
+      explanation:
+        "The recordings directory is not this user's private directory: it is not a directory, or its owner or owner read, write and search permission is not the server's, so the store cannot create or open its files.",
+      files: [dir],
+      recovery: `Recordings are diagnostic data and may be discarded; Task service is unaffected. Stop the server, give ${dir} back to this user as a directory with owner read, write and search permission, or remove it, then start it again.`,
+    });
+  } finally {
+    chmodSync(dir, 0o700);
+    rmSync(root, { recursive: true, force: true });
+  }
+});

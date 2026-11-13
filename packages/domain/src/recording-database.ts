@@ -47,7 +47,9 @@ export const recordingOpenRefusals = {
     "A non-empty recordings.db-journal is beside the store; the store never writes one after initialization.",
   oversized: "A recordings file is larger than the recordings disk ceiling.",
   not_private:
-    "The recordings directory or recordings.db is not a private regular file (a link, a directory or a shared file).",
+    "recordings.db or its -wal is not a private regular file of this user: it is a link or a directory, it has another link, or its owner or owner read and write permission is not the server's.",
+  directory_not_private:
+    "The recordings directory is not this user's private directory: it is not a directory, or its owner or owner read, write and search permission is not the server's, so the store cannot create or open its files.",
   replaced: "recordings.db was replaced while the store was opening it.",
   integrity: "recordings.db failed SQLite's integrity check.",
   initialization_busy:
@@ -79,10 +81,11 @@ export function recordingRefusalGuidance(
     reason === "check_unavailable";
   const files = retrying
     ? []
-    : (reason === "not_private" && present.length === 0
-        ? [directory]
-        : present.map((name) => join(directory, name))
-      ).slice(0, recordingStoreFiles.length);
+    : reason === "directory_not_private"
+      ? [directory]
+      : present
+          .map((name) => join(directory, name))
+          .slice(0, recordingStoreFiles.length);
   return {
     state: retrying ? ("retrying" as const) : ("refused" as const),
     reason,
@@ -92,7 +95,9 @@ export function recordingRefusalGuidance(
     files,
     recovery: retrying
       ? "Recording retries automatically every minute; Task service is unaffected."
-      : `Recordings are diagnostic data and may be discarded; Task service is unaffected. Stop the server, remove ${files.join(", ")}, then start it again to create an empty store.`,
+      : reason === "directory_not_private"
+        ? `Recordings are diagnostic data and may be discarded; Task service is unaffected. Stop the server, give ${directory} back to this user as a directory with owner read, write and search permission, or remove it, then start it again.`
+        : `Recordings are diagnostic data and may be discarded; Task service is unaffected. Stop the server, remove ${files.join(", ")}, then start it again to create an empty store.`,
   };
 }
 export function presentRecordingFiles(directory: string) {
@@ -146,7 +151,33 @@ const fileNature = new Set([
   "EPERM",
   "EFTYPE",
 ]);
-const aboutTheFile = (error: unknown) => fileNature.has(errorCode(error));
+const notPrivateFile = (path: string) => {
+  try {
+    const stat = lstatSync(path);
+    return (
+      !stat.isFile() ||
+      stat.nlink !== 1 ||
+      stat.uid !== process.getuid?.() ||
+      (stat.mode & 0o600) !== 0o600
+    );
+  } catch {
+    return false;
+  }
+};
+const notPrivateDirectory = (path: string) => {
+  try {
+    const stat = lstatSync(path);
+    return (
+      !stat.isDirectory() ||
+      stat.uid !== process.getuid?.() ||
+      (stat.mode & 0o700) !== 0o700
+    );
+  } catch {
+    return false;
+  }
+};
+const aboutTheFile = (error: unknown, path: string) =>
+  fileNature.has(errorCode(error)) && notPrivateFile(path);
 const unavailable = (stage: string, error: unknown): never => {
   throw new RecordingOpenRefusal(
     "check_unavailable",
@@ -203,7 +234,7 @@ function clearEmptySidecars(path: string, sides: readonly string[]) {
       fd = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW);
     } catch (error) {
       if (missing(error)) continue;
-      if (aboutTheFile(error)) return refuse("foreign_sidecar");
+      if (aboutTheFile(error, file)) return refuse("foreign_sidecar");
       return unavailable("sidecar open", error);
     }
     try {
@@ -231,7 +262,7 @@ function inspect(fd: number, path: string, image: () => number) {
     wal = openSync(path + "-wal", constants.O_RDONLY | constants.O_NOFOLLOW);
   } catch (error) {
     if (!missing(error)) {
-      if (aboutTheFile(error)) refuse("not_private");
+      if (aboutTheFile(error, `${path}-wal`)) refuse("not_private");
       unavailable("wal open", error);
     }
   }
@@ -254,11 +285,14 @@ function inspect(fd: number, path: string, image: () => number) {
         : { size: fstatSync(wal).size, read: read(wal) },
       (offset, page) => {
         const target = image();
+        let written = 0;
         try {
-          writeSync(target, page, 0, page.length, offset);
+          written = writeSync(target, page, 0, page.length, offset);
         } catch (error) {
           unavailable("temporary image write", error);
         }
+        if (written !== page.length)
+          unavailable("temporary image write", { code: "short" });
       },
     );
     if (verdict.kind !== "owned") return refuse(verdict.kind);
@@ -407,7 +441,10 @@ export function openRecordingDatabase(
   }
   const dir = lstatSync(directory);
   if (!dir.isDirectory() || dir.isSymbolicLink())
-    throw new RecordingOpenRefusal("not_private", "Private directory required");
+    throw new RecordingOpenRefusal(
+      "directory_not_private",
+      "Private directory required",
+    );
   const path = join(directory, "recordings.db"),
     sides = ["-wal", "-shm", "-journal"];
   const mainSize = sizeOf(path);
@@ -445,14 +482,16 @@ export function openRecordingDatabase(
     created = true;
   } catch (error) {
     if (errorCode(error) !== "EEXIST") {
-      if (aboutTheFile(error)) return refuse("not_private");
+      if (aboutTheFile(error, path)) return refuse("not_private");
+      if (fileNature.has(errorCode(error)) && notPrivateDirectory(directory))
+        return refuse("directory_not_private");
       return unavailable("main create", error);
     }
     try {
       fd = openSync(path, constants.O_RDWR | constants.O_NOFOLLOW);
     } catch (error) {
       if (missing(error)) return refuse("replaced");
-      if (aboutTheFile(error)) return refuse("not_private");
+      if (aboutTheFile(error, path)) return refuse("not_private");
       return unavailable("main open", error);
     }
   }
@@ -473,8 +512,6 @@ export function openRecordingDatabase(
           tryRecordingExclusion(fd, true)
         )
           break;
-        if (fstatSync(fd).size > 0 && !ownedHeader(fd, totalBytes))
-          refuse("foreign_header");
         wait();
       } while (performance.now() < until);
       if (excluded) {

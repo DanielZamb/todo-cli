@@ -290,3 +290,23 @@ removed afterwards. Expected: normal opens; missing, read-only and full answer
 `check_unavailable` (create ENOENT, create EACCES, write ENOSPC); the foreign
 catalog is still refused; the temporary directory's listing is unchanged in
 every case.
+
+## Access denials are checked, not assumed
+
+An open, create or sidecar error such as EACCES, EPERM, ELOOP, EISDIR,
+ENOTDIR, ENXIO or EFTYPE leads to a refusal only when `lstat` confirms a
+non-private state. For a file that means: not a regular file, a link count
+other than one, another owner, or the owner's read and write bits missing. An
+unwritable recordings directory is refused as `directory_not_private`, from
+its type, owner and owner rwx bits, with advice about the directory. A denial
+that leaves the file looking private (for example a policy denying data
+access) answers `check_unavailable` with its stage. A short write of the
+temporary check copy also answers `check_unavailable`; the copy is never
+assumed complete.
+
+`bun .agents/skills/verify-ui-profiler/scripts/sqlite-access-denial.ts <checkout> <evidence>`
+covers three denials of a good store, each run under its own `sandbox-exec`
+data or create denial: main data, WAL data, and file creation. All three must
+answer retrying with no files and no advice. Four controls must keep their
+true refusals: no owner read bit, a directory in place of `recordings.db`, a
+symbolic link in its place, and an unwritable directory.
