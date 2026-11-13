@@ -1,5 +1,5 @@
 {
-  "productCommit": "63f9b6c8f112ad1cadc493c2186a134cf5e2c12a",
+  "productCommit": "29927cb04cc49bb706be602127557f43602ed5b2",
   "scope": "Reviewed immutable merged strict reads and Snapshot/Purge source 5f46e7b3; no performance claim from cache properties.",
   "seed": "0x5ea2c001",
   "files": [
@@ -41,7 +41,7 @@
     },
     {
       "path": "apps/server/src/server.ts",
-      "sha256": "60a6355773444f68d6b2089adc64810c2e8b941a7c25eb043744d40be33376f8"
+      "sha256": "1a0686e755625f2c3debf5a8d42e3770c9a64d7ffd7095d3a0aaffcda12b8725"
     },
     {
       "path": "packages/domain/src/store/search-cache-events.ts",
@@ -57,7 +57,7 @@
     },
     {
       "path": "apps/cli/src/main.ts",
-      "sha256": "c2a6dcfab444fe28931e7963fe07db2f038f9ca408df4bb14ea952cdc5929608"
+      "sha256": "39aaac18eb91769d170a38d7e5aded8c564ce9fd84d893fe68d4dceac9b05572"
     }
   ],
   "integrationReview": {
@@ -82,7 +82,7 @@
       "result": "Three intended observer controls1, restored0, strictTypecheck0; real compiled CLI defect1/runtime_error and typed refusal2 proved before renewal"
     }
   },
-  "previousProductCommit": "0bd8476df7d7147ea355b418346b57d33f403aee",
+  "previousProductCommit": "63f9b6c8f112ad1cadc493c2186a134cf5e2c12a",
   "clientIntegrationReview": {
     "product": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
     "main": "2c488fc72fe264741d5d8db8f90b441bf426af32",
@@ -205,5 +205,27 @@
     "previous": {
       "productCommit": "0bd8476df7d7147ea355b418346b57d33f403aee"
     }
+  },
+  "contractIntegration": {
+    "product": "29927cb04cc49bb706be602127557f43602ed5b2",
+    "previous": [
+      "63f9b6c8f112ad1cadc493c2186a134cf5e2c12a",
+      "0733af4afcaac34774333ab019b29f05c7ebea9e"
+    ],
+    "review": "docs/decisions/ui-speed/recordings-cli-routing-contract.md",
+    "status": "candidate for the seats",
+    "scope": "integ/contract: feat/diag-core 2538e94b merged with feat/cli-through-server 062e242f (d9c70249), the descriptor-window rule (13837b70) and the cross-side probes (29927cb0). Only the hygiene rows server.ts and main.ts change. server.ts serverLayer keeps hygiene on the raw store, forked before the scheduler, and adds the endpoint, verifyStore, the recordings service and one StreamWake around it; main.ts withStore adds routing's write mode, discovery, server-mode refusal and nudge around this branch's Diagnostics root. No matcher, runner, admission, epoch, preparation, observer or erasure body changes; the seven protected files are byte-identical to 63f9b6c8. No model change.",
+    "changes": [
+      {
+        "path": "apps/server/src/server.ts",
+        "before": "60a6355773444f68d6b2089adc64810c2e8b941a7c25eb043744d40be33376f8",
+        "after": "1a0686e755625f2c3debf5a8d42e3770c9a64d7ffd7095d3a0aaffcda12b8725"
+      },
+      {
+        "path": "apps/cli/src/main.ts",
+        "before": "c2a6dcfab444fe28931e7963fe07db2f038f9ca408df4bb14ea952cdc5929608",
+        "after": "39aaac18eb91769d170a38d7e5aded8c564ce9fd84d893fe68d4dceac9b05572"
+      }
+    ]
   }
 }

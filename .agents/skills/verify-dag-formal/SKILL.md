@@ -3,6 +3,19 @@ name: verify-dag-formal
 description: Check finite Task dependency safety and immutable production conformance. Use after graph, transaction, replay or public Dependency changes. Read the active immutable product from production-pin.json and public-pin.json; final client/runtime mapping remains pending.
 ---
 
+## Recordings and CLI routing integration renewal
+
+Candidate: product 29927cb04cc49bb706be602127557f43602ed5b2 on integ/contract,
+feat/diag-core 2538e94b merged with feat/cli-through-server 062e242f (d9c70249)
+plus the descriptor-window rule (13837b70). Seven public rows change (main.ts,
+help.ts, packages/api/src/index.ts, openapi.json, server.ts and the two contract
+identity files), and the public contract moves to the merged product's generated
+dae320b0. Every mapped public item is byte-identical to the accepted candidate
+63f9b6c8; openapi.json adds only the three /local paths. Production rows are
+unchanged. The full default's actual exit is in
+docs/decisions/ui-speed/recordings-cli-routing-contract.md. No model, invariant
+or bound changed. Candidate for the seats.
+
 ## CLI routing integration renewal
 
 Candidate: immutable product 0733af4afcaac34774333ab019b29f05c7ebea9e is `feat/cli-through-server` after it

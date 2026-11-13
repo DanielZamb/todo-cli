@@ -1,5 +1,5 @@
 {
-  "commit": "63f9b6c8f112ad1cadc493c2186a134cf5e2c12a",
+  "commit": "29927cb04cc49bb706be602127557f43602ed5b2",
   "seed": 260911,
   "randomDags": 256,
   "maxRandomNodes": 40,
@@ -59,5 +59,17 @@
     "previous": {
       "commit": "0bd8476df7d7147ea355b418346b57d33f403aee"
     }
+  },
+  "contractIntegration": {
+    "product": "29927cb04cc49bb706be602127557f43602ed5b2",
+    "previous": [
+      "63f9b6c8f112ad1cadc493c2186a134cf5e2c12a",
+      "0733af4afcaac34774333ab019b29f05c7ebea9e"
+    ],
+    "contract": "dae320b089cf4847ab92cc172bd8d808e0e21701dbe19bf77bb5babea0d99a23",
+    "review": "docs/decisions/ui-speed/recordings-cli-routing-contract.md",
+    "status": "candidate for the seats",
+    "scope": "integ/contract: feat/diag-core 2538e94b (recordings, contract 55c6d138) merged with feat/cli-through-server 062e242f (CLI routing slice 1, contract 259e9afb) as d9c70249, then the identity-aware descriptor-window rule in database-endpoint.ts (13837b70) and the cross-side probes (29927cb0). Every mapped public item (Tasks, DependRequest, BatchEdgeRequest, TaskFilters, rejectUnknownQuery, the depend, undepend, batchDepend and importTasks handlers, dependencyCommand, batchDepend, the deletion confirmation, the rm Version wording and the graph response schema) is byte-identical to 63f9b6c8; openapi.json adds only the three /local paths and keeps every earlier path. The contract moves to the merged product's generated dae320b0. Production coverage rows are unchanged. No model, invariant or bound change. Candidate for the seats.",
+    "changes": []
   }
 }

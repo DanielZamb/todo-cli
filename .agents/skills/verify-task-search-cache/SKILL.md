@@ -36,6 +36,18 @@ checker requires the baseline manifest and identical protected matcher, runner
 and Tag projection hashes. It never falls back to a cached binary as its oracle.
 Follow the run's disk guard, batch floor and runtime-copy cleanup orders.
 
+## Recordings and CLI routing integration renewal
+
+Candidate: product 29927cb04cc49bb706be602127557f43602ed5b2 on integ/contract.
+Only the hygiene rows apps/server/src/server.ts and apps/cli/src/main.ts change;
+the seven protected domain files and the hygiene observer are byte-identical to
+63f9b6c8. Hygiene still receives the raw store and is forked before the
+scheduler. Before renewal check.mjs passed (no protected file changed) and
+check-hygiene.mjs ran its clean, three observer controls, restored and typecheck
+stages, then stopped only at the server.ts hash. Exits of the uncached oracle and
+the full verify.mjs are in docs/decisions/ui-speed/recordings-cli-routing-contract.md.
+Candidate until the seats accept it.
+
 ## Behavior and controls
 
 The generated drive reuses the matcher atoms and seed 0x5ea2c001. It compares

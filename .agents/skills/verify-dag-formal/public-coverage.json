@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "63f9b6c8f112ad1cadc493c2186a134cf5e2c12a",
+  "confirmedCommit": "29927cb04cc49bb706be602127557f43602ed5b2",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -180,7 +180,7 @@
         "BatchEdgeRequest",
         "TaskFilters"
       ],
-      "sha256": "b3e39b8ad1af0110f117d029b1c410e4e8a55c5083f040880cae203faa2bb383"
+      "sha256": "a11bd7620cd2e10036e8f1bfbee0fa8bf745dc443bbff9bc1ac345a0538196b6"
     },
     {
       "path": "apps/server/src/server.ts",
@@ -188,7 +188,7 @@
         "rejectUnknownQuery",
         "TasksApi handlers: depend, undepend, batchDepend, importTasks"
       ],
-      "sha256": "60a6355773444f68d6b2089adc64810c2e8b941a7c25eb043744d40be33376f8"
+      "sha256": "1a0686e755625f2c3debf5a8d42e3770c9a64d7ffd7095d3a0aaffcda12b8725"
     },
     {
       "path": "apps/cli/src/main.ts",
@@ -199,7 +199,7 @@
         "false filter guard",
         "malformed Version boundary finding"
       ],
-      "sha256": "c2a6dcfab444fe28931e7963fe07db2f038f9ca408df4bb14ea952cdc5929608"
+      "sha256": "39aaac18eb91769d170a38d7e5aded8c564ce9fd84d893fe68d4dceac9b05572"
     },
     {
       "path": "apps/cli/src/schema.ts",
@@ -265,7 +265,7 @@
       "functions": [
         "graph response schema"
       ],
-      "sha256": "4221d130130826377354bba128ca4b7e813d5e47744612c5822c3b08ccd0a88d"
+      "sha256": "7832877039181df82aa7f3e19e001afffef2c1a45d9ab45ef011ade229ef9171"
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/openapi.json",
@@ -304,14 +304,14 @@
     },
     {
       "path": "packages/api/src/contract.ts",
-      "sha256": "fb3f0d4175e3ba007e99d10f4aca5a94325aeff16e8ad965b2cd889912532f1c",
+      "sha256": "9b99ebcb7ad1e04934469d64098c5f75b5663c5e332111c5ce8a9cdd1f4b5f2d",
       "functions": [
         "contract identity"
       ]
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift",
-      "sha256": "f89920d6407378c1f300e2a8197e823caddd601cc2e27aab2a270a47bae0155f",
+      "sha256": "e53a824306de8dff01669835c8654c55bb04e1ed99fc8ed4ad0866b234530230",
       "functions": [
         "contract identity"
       ]
@@ -433,7 +433,7 @@
       "functions": [
         "rm confirmation Version wording"
       ],
-      "sha256": "12f5dfacde85738fb94cb019ac700dd3402cf3432e2b53f2326574fac0cc0a5e"
+      "sha256": "56a8659c172018d7756ee1c0bbf15beb5e05d9c5379946d3a08593a120d8534b"
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Components+Schemas.swift",
@@ -637,5 +637,53 @@
     "previous": {
       "confirmedCommit": "0bd8476df7d7147ea355b418346b57d33f403aee"
     }
+  },
+  "contractIntegration": {
+    "product": "29927cb04cc49bb706be602127557f43602ed5b2",
+    "previous": [
+      "63f9b6c8f112ad1cadc493c2186a134cf5e2c12a",
+      "0733af4afcaac34774333ab019b29f05c7ebea9e"
+    ],
+    "contract": "dae320b089cf4847ab92cc172bd8d808e0e21701dbe19bf77bb5babea0d99a23",
+    "review": "docs/decisions/ui-speed/recordings-cli-routing-contract.md",
+    "status": "candidate for the seats",
+    "scope": "integ/contract: feat/diag-core 2538e94b (recordings, contract 55c6d138) merged with feat/cli-through-server 062e242f (CLI routing slice 1, contract 259e9afb) as d9c70249, then the identity-aware descriptor-window rule in database-endpoint.ts (13837b70) and the cross-side probes (29927cb0). Every mapped public item (Tasks, DependRequest, BatchEdgeRequest, TaskFilters, rejectUnknownQuery, the depend, undepend, batchDepend and importTasks handlers, dependencyCommand, batchDepend, the deletion confirmation, the rm Version wording and the graph response schema) is byte-identical to 63f9b6c8; openapi.json adds only the three /local paths and keeps every earlier path. The contract moves to the merged product's generated dae320b0. Production coverage rows are unchanged. No model, invariant or bound change. Candidate for the seats.",
+    "changes": [
+      {
+        "path": "packages/api/src/index.ts",
+        "before": "b3e39b8ad1af0110f117d029b1c410e4e8a55c5083f040880cae203faa2bb383",
+        "after": "a11bd7620cd2e10036e8f1bfbee0fa8bf745dc443bbff9bc1ac345a0538196b6"
+      },
+      {
+        "path": "apps/server/src/server.ts",
+        "before": "60a6355773444f68d6b2089adc64810c2e8b941a7c25eb043744d40be33376f8",
+        "after": "1a0686e755625f2c3debf5a8d42e3770c9a64d7ffd7095d3a0aaffcda12b8725"
+      },
+      {
+        "path": "apps/cli/src/main.ts",
+        "before": "c2a6dcfab444fe28931e7963fe07db2f038f9ca408df4bb14ea952cdc5929608",
+        "after": "39aaac18eb91769d170a38d7e5aded8c564ce9fd84d893fe68d4dceac9b05572"
+      },
+      {
+        "path": "packages/api/openapi.json",
+        "before": "4221d130130826377354bba128ca4b7e813d5e47744612c5822c3b08ccd0a88d",
+        "after": "7832877039181df82aa7f3e19e001afffef2c1a45d9ab45ef011ade229ef9171"
+      },
+      {
+        "path": "packages/api/src/contract.ts",
+        "before": "fb3f0d4175e3ba007e99d10f4aca5a94325aeff16e8ad965b2cd889912532f1c",
+        "after": "9b99ebcb7ad1e04934469d64098c5f75b5663c5e332111c5ce8a9cdd1f4b5f2d"
+      },
+      {
+        "path": "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift",
+        "before": "f89920d6407378c1f300e2a8197e823caddd601cc2e27aab2a270a47bae0155f",
+        "after": "e53a824306de8dff01669835c8654c55bb04e1ed99fc8ed4ad0866b234530230"
+      },
+      {
+        "path": "apps/cli/src/help.ts",
+        "before": "12f5dfacde85738fb94cb019ac700dd3402cf3432e2b53f2326574fac0cc0a5e",
+        "after": "56a8659c172018d7756ee1c0bbf15beb5e05d9c5379946d3a08593a120d8534b"
+      }
+    ]
   }
 }
