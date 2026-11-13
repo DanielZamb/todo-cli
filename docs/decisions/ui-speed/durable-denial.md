@@ -78,26 +78,91 @@ entire History inside the window is necessarily visited on absence. There is
 no constant row cap or absolute worst-case bound independent of History, and
 no time threshold is treated as a throughput guarantee.
 
-Measured on 2026-11-13 with the compiled driver's bench mode, five pairs in
-alternating order, base 2a840b55 against this branch, load 5 to 11 on ten
-cores. Medians: the first refusal costs about the same as the base when its
-Profile is quiet (3.9 ms against 4.4) or for the null Profile; 6.3 ms against
-2.0 after 5,000 small prior-minute rows; 11.2 ms against 2.1 after 5,000 real
-TaskCreated rows; 145 ms against 4.0 when all 200,000 rows lie inside the
-window. A burst of 1,000 repeats whose match is the newest row costs what the
-base costs (34 ms against 35). When 5,000 rows are committed after the first
-refusal, every repeat reads them again: the burst takes 3.7 s (small rows) and
-7.7 s (TaskCreated rows) against 0.03 s, and each rejection transaction holds
-the write lock 2.4 ms and 5.1 ms at the median, 14 and 16 ms at p99, 68 and
-182 ms at most. An owner can reach that case: a client retrying a refused
-credential during the minute after an import. Pushing the walk into SQLite does
-not help, because reading each row's event JSON is most of the cost. The
-first worker's index options remain the way to remove it.
+### Under the lock (the first form, measured)
 
-The old Set hit already ran within a dedicated BEGIN IMMEDIATE transaction.
-The new lookup adds no transaction. A read-only positive fast path would need
-its own Snapshot-restore linearization proof and an in-writer recheck on
-absence. It is outside this unit.
+Measured on 2026-11-13 with the compiled driver's bench mode, five pairs in
+alternating order, base 2a840b55 against the look-back decided only inside the
+recording transaction, load 5 to 11 on ten cores. Each refusal opens two write
+transactions: the failed credential check's own (median 0.008 to 0.036 ms in
+every case, as on the base) and the recording one. Medians: the first refusal
+costs about the same as the base when its Profile is quiet (3.9 ms against 4.4)
+or for the null Profile; 6.3 ms against 2.0 after 5,000 small prior-minute rows;
+11.2 ms against 2.1 after 5,000 real TaskCreated rows; 145 ms against 4.0 when
+all 200,000 rows lie inside the window. A burst of 1,000 repeats whose match is
+the newest row costs what the base costs (34 ms against 35). When 5,000 rows are
+committed after the first refusal, every repeat reads them again under the
+lock: the burst takes 3.7 s (small rows) and 7.7 s (TaskCreated rows) against
+0.03 s, and each recording transaction holds the write lock 3.4 ms and 7.2 ms
+at the median, 20 and 19 ms at p99, 68 and 182 ms at most. A client retrying a
+refused credential in the two minutes after an import could keep the lock busy
+for most of that time. Pushing the walk into SQLite does not help, because
+reading each row's event JSON is most of the cost.
+
+### Read first (ruling 2026-11-13)
+
+Authentication.perform now decides a repeat first in a read: the same
+repeatedAuthRejection walk, outside any transaction, as one SELECT and so one
+WAL read snapshot that is released when the walk returns. A match appends
+nothing and opens no recording transaction. Absence takes BEGIN IMMEDIATE, and
+record() decides again inside it with the same function; nothing is carried
+from the read to the locked decision. A caller already inside a transaction
+keeps the locked path. Wrong passphrases never reach this path: they are
+recorded inside the sign-in queue's own transaction, and the read is also
+skipped for that detail. The failed credential check keeps its own transaction,
+exactly as on the base, so a repeat still takes the write lock once, for
+microseconds, but never for its walk.
+
+A Snapshot restore that lands between a matching read and the refusal's return
+leaves one outcome. The refusal linearizes at its read snapshot, where the
+match existed, so it is merged; the restore then replaces History, which holds
+no refusal in that minute if the Snapshot predates the first one. That is the
+same History as a merged repeat committing just before the restore under the
+locked form. The next identical refusal finds nothing and is recorded. Purge
+never removes auth rows, and Profile deletion keeps the Profile id and its
+History, so neither changes a read decision. Two processes whose reads both
+miss serialize on BEGIN IMMEDIATE; the second re-walks inside the lock, finds
+the first one's row and appends nothing: one row.
+
+Measured the same way (five rounds, three arms in rotating order on one cloned
+fixture per scenario, load 5.3 to 6.4; table in the unit's local evidence).
+Across quiet, null, whole-window, import-before, import-after and prior-after,
+0 of 5,000 repeats per arm opened a recording transaction, so the recording
+hold is 0; the locked form opened one for every repeat (median 5.70 ms, max
+9.90 after a 5,000-Task import committed after the first refusal). A repeat's
+only write transaction is the failed check's own, median 0.007 to 0.017 ms in
+every arm. Repeat wall time does not change: 5.67 ms against 5.75 after that
+import (base 0.019), 2.71 against 2.75 after 5,000 small rows; a burst of 1,000
+takes 5.7 s and 2.7 s, against 0.02 s on the base. The first refusal walks twice
+on absence: after a 5,000-Task import committed before it, 18.3 ms against 10.1
+locked and 3.0 base, of which 10.0 ms under the lock; with 200,000 rows inside
+the window, 274 ms against 132 and 3.0, 131 ms under the lock. The CLI-shaped
+case (a new store per refusal) is dominated by opening the store (240 to 370 ms
+in every arm); its refusal then costs 6.2 ms after the import without the lock,
+and leaves one row for 20 fresh stores where the base leaves 21.
+
+On the server's single thread a repeat still costs its walk: after 5,000
+Tasks imported after the first refusal, 5.7 ms per repeat (p99 7.2), for every
+repeat until the minute ends, while no other request on that server runs.
+
+### Considered and not taken: a remembered position
+
+A process could remember, per actor, Profile, action, detail and minute, the
+matching refusal's seq. Checking only that row is wrong: in the stated limit
+case the walk stops at an older-than-horizon row committed after the match and
+appends, while a process holding the position would merge, so a server and a
+fresh CLI would leave different History. The exact form also remembers the
+Profile's newest row at the last walk, with both rows' exact event bytes. A
+repeat, in one read transaction, looks both up by seq, requires byte identity,
+and walks only rows newer than that boundary: a match or reaching the boundary
+means found, a terminator means append, any mismatch falls back to the full
+walk. Rows below the boundary are append-only History. Purge only redacts Task
+events to a kind that never ends the walk, and a changed boundary row forces
+the full walk. A restore appends DatabaseRestored with a fresh random
+generation, so a restored boundary row is never byte-identical. Derived cost:
+two primary-key lookups plus the rows committed since the last walk, tens of
+microseconds in a burst; a new process pays the full walk. It saves CPU on the
+server's thread only for a tight retry loop after a bulk import, and needs that
+exactness argument accepted line by line. Filed as a follow-up.
 
 ## Verification
 
