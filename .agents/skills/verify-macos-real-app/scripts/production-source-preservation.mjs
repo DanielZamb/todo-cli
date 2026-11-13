@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { command, environment, run } from './process-policy.mjs';
+import { SEAM_FILE, checkSeam } from './production-seam.mjs';
 
 process.umask(0o077);
 const evidence = process.argv[2], baseline = process.argv[3];
@@ -23,12 +24,17 @@ try {
   assert.equal(prior.symbolsAdded.length, 26); assert.deepEqual(prior.symbolsRemoved, []);
   result.sourceHead = checked(['git', 'rev-parse', 'HEAD'], 'head').trim();
   const paths = ['apps/macos/Sources', 'apps/macos/API', 'apps/macos/Resources', 'apps/macos/Todo.xcodeproj', 'apps/macos/Package.swift', 'apps/macos/Tests', 'apps/macos/StateTests', 'apps/macos/DesignSnapshots'];
-  checked(['git', 'diff', '--exit-code', 'ab989410cef89b5670fc2a6101698441753b5ec5', '--', ...paths], 'production-source-diff');
+  // Product code equals the installed candidate 8 except the reviewed Session storage seam, line for line.
+  const productBase = '20d592d3ba50b38cf17c697d0645304e75334cc1';
+  const changedFiles = checked(['git', 'diff', '--name-only', productBase, '--', ...paths], 'production-source-diff-files').trim().split('\n').filter(Boolean);
+  const reviewedDiff = checked(['git', 'diff', '8b9be429751165d4ecef11f3f23d1844384e54b4', 'ab989410cef89b5670fc2a6101698441753b5ec5', '--', SEAM_FILE], 'reviewed-seam-diff');
+  const currentDiff = checked(['git', 'diff', productBase, '--', SEAM_FILE], 'production-source-diff');
+  const seam = checkSeam({ changedFiles, reviewedDiff, currentDiff });
   const files = checked(['git', 'ls-files', '--', ...paths], 'production-source-files').trim().split('\n').filter(Boolean);
   const sources = Object.fromEntries(files.map(file => [file, hash(file)]));
   assert.equal(sources['apps/macos/Sources/SessionVault.swift'], prior.sessionVaultSourceSHA256);
   fs.writeFileSync(evidence + '/reviewed-comparison.json', JSON.stringify(prior, null, 2));
-  result = { ...result, status: 'PASS_SOURCE_CONTINUITY', sourceHead: result.sourceHead, reviewedSymbolSourceHead: 'ab989410cef89b5670fc2a6101698441753b5ec5', reviewedComparisonSHA256: hash(path.join(baseline, 'comparison.json')), baselineBinarySHA256: prior.baselineBinarySHA256, reviewedProductionBinarySHA256: prior.productionBinarySHA256, symbolsAdded: prior.symbolsAdded, symbolsRemoved: prior.symbolsRemoved, credentialImports: prior.credentialImports, sources };
+  result = { ...result, status: 'PASS_SOURCE_CONTINUITY', sourceHead: result.sourceHead, productBase, seam, symbolComparisonAgainstProductBase: false, reviewedSymbolSourceHead: 'ab989410cef89b5670fc2a6101698441753b5ec5', reviewedComparisonSHA256: hash(path.join(baseline, 'comparison.json')), baselineBinarySHA256: prior.baselineBinarySHA256, reviewedProductionBinarySHA256: prior.productionBinarySHA256, symbolsAdded: prior.symbolsAdded, symbolsRemoved: prior.symbolsRemoved, credentialImports: prior.credentialImports, sources };
 } catch (error) { result.error = error.stack; process.exitCode = 1; }
 finally {
   fs.writeFileSync(evidence + '/commands.json', JSON.stringify(commands, null, 2)); fs.writeFileSync(evidence + '/result.json', JSON.stringify(result, null, 2)); fs.rmSync(scratch, { recursive: true });

@@ -71,10 +71,11 @@ passing a broker handle; the app/server retain their stricter broker policy.
 Production state/offscreen preservation runs outside that strict profile,
 running the base and candidate and comparing every test outcome. The narrow
 deny-only guard is not retained because SwiftPM's own manifest sandbox cannot
-nest inside it. Test processes use descriptor auditing and a whole-run own-PID
-kernel query requiring zero observed protected-path/Keychain-service denials;
-they make no credential API-entry attestation. A guard-induced outcome change
-or protected denial stops the run. The app/server trap boundary is unchanged.
+nest inside it. The base is installed candidate 8 (20d592d3); its recipes build
+a mirrored package with an in-memory Session vault and stop if any test product
+links a Keychain call. Test processes use sampled descriptor auditing; they
+make no credential API-entry attestation. A linked Keychain call or a protected
+descriptor stops the run. The app/server trap boundary is unchanged.
 The corrected implementation remains under qualification, with visible runs
 and V02 held. See [ADR-0021](adr/0021-separate-mac-verification-app.md)
 and [verify-macos-real-app](../.agents/skills/verify-macos-real-app/SKILL.md).

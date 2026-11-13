@@ -93,7 +93,8 @@ corrected recipe passes end to end and the coordinator releases the reviews.
 
 The strict profile governs the verification app and its server child. Production
 state and offscreen suites run outside that profile and compare the unchanged
-test list and each outcome against base 8b9be429, alternating base and candidate.
+test list and each outcome against the installed base, alternating base and candidate
+(8b9be429 originally; installed candidate 8, 20d592d3, since 2026-11-13).
 Use the existing scratch-HOME, unsigned recipes through the shared Swift slot.
 A deny-only profile protecting the real Todo and Keychain directories and
 Keychain Mach services is retained only if it changes no base test outcome
@@ -109,10 +110,11 @@ or its server no additional access.
 
 Credential entry points in the verification app/server boundary retain their
 trap and import-audit attestation. Production test hosts have no API-entry
-attestation: their protection is the suite's own isolation, a filtered query
-for their own PIDs over the whole run with zero observed protected-path or
-Keychain-service denial attempts, and descriptor auditing at a nominal 10 ms
-interval. Any such denial is a suite finding, not an allowance to add. Scheduling
+attestation: their protection is the suite's own isolation, candidate 8's
+in-memory Session vault with a link guard that refuses any test product linking
+a Keychain call, and descriptor auditing at a nominal 10 ms interval. The
+own-PID kernel query is required only under a guard sandbox, because it sees
+only sandbox-issued denials. Any such denial is a suite finding, not an allowance to add. Scheduling
 can delay sampling and a transient descriptor can be missed. The earlier
 originalCredentialCalls field stays withdrawn for production suites. DYLD
 startup settings remain excluded; no broker is introduced.

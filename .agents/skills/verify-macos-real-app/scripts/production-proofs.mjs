@@ -11,7 +11,7 @@ import { NESTED_SANDBOX_REFUSAL, qualifyPreservation } from './production-qualif
 process.umask(0o077);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
 const scripts = path.join(root, '.agents/skills/verify-macos-real-app/scripts');
-const baselineHead = '8b9be429751165d4ecef11f3f23d1844384e54b4';
+const baselineHead = '20d592d3ba50b38cf17c697d0645304e75334cc1'; // installed candidate 8
 const [evidence, nativeEvidence] = process.argv.slice(2);
 assert(path.isAbsolute(evidence) && !fs.existsSync(evidence)); fs.mkdirSync(evidence, { recursive: true, mode: 0o700 });
 const proof = productionScratchRoot(root);
@@ -140,7 +140,7 @@ try {
  if (process.argv.includes('--probe-controls')) result.status = 'DIAGNOSTIC_ONLY';
  else {
  const python = ['/opt/homebrew/bin/python3', '/usr/bin/python3'].find(file => fs.existsSync(file)); assert(python);
- const tools = { sh: '/bin/sh', ps: '/bin/ps', xcrun: '/usr/bin/xcrun', swift: '/usr/bin/swift', node: executable('node'), bun: executable('bun'), python3: fs.realpathSync(python) };
+ const tools = { sh: '/bin/sh', ps: '/bin/ps', xcrun: '/usr/bin/xcrun', swift: '/usr/bin/swift', node: executable('node'), bun: executable('bun'), python3: fs.realpathSync(python), rsync: '/usr/bin/rsync', nm: '/usr/bin/nm', otool: '/usr/bin/otool' };
  function binaries(repository, sourceHead, reuse) {
   const cache = root + '/.scratch/production-binaries/' + sourceHead; fs.mkdirSync(cache, { recursive: true });
   for (const [source, name] of [['apps/cli/src/main.ts', 'todo'], ['apps/server/src/main.ts', 'todo-server'], ['apps/server/scripts/seed-verification.ts', 'seed'], ['.agents/skills/verify-task-search/seed-recovery.ts', 'search-recovery']]) {
@@ -184,7 +184,9 @@ try {
     for (const test of row.outcomes) entry.outcomes.push({ id: stage + '/' + tests + '/' + test.id, outcome: test.outcome });
     tests++;
    }
-   assert(tests > 0); entry.recipes.push({ stage, exit: actual.status, evidence: output, hostLoadAfter: os.loadavg() });
+   const guardReceipt = output + '/keychain-guard.json';
+   const keychainGuard = fs.existsSync(guardReceipt) ? JSON.parse(fs.readFileSync(guardReceipt, 'utf8')) : null;
+   assert(tests > 0); entry.recipes.push({ stage, exit: actual.status, evidence: output, keychainGuard, hostLoadAfter: os.loadavg() });
   }
   const auditFiles = fs.readdirSync(arm + '/audit'); assert(auditFiles.length > 0);
   entry.descriptorAudit = auditFiles.map(file => {
@@ -192,19 +194,15 @@ try {
    assert(rows.every(row => row.protectedDescriptor === false));
    assert(rows[0].started && rows.at(-1).finished); return { file, ...rows.at(-1) };
   });
-  const ended = Date.now(), pids = entry.descriptorAudit.map(row => row.pid);
-  const own = pids.map(pid => 'eventMessage CONTAINS ' + JSON.stringify('(' + pid + ')')).join(' OR ');
-  const protectedTerms = [...protectedPaths, ...services].map(value => 'eventMessage CONTAINS ' + JSON.stringify(value)).join(' OR ');
-  const predicate = 'eventMessage BEGINSWITH "Sandbox:" AND (' + own + ') AND (' + protectedTerms + ')';
-  const kernel = checked(['/usr/bin/log', 'show', '--start', stamp(started - 1000), '--end', stamp(ended + 1000), '--style', 'json', '--info', '--debug', '--predicate', predicate], name + '-kernel');
-  entry.kernel = { pids, startUnixMS: started - 1000, endUnixMS: ended + 1000, observedProtectedDenials: protectedDenials(JSON.parse(kernel), pids, protectedPaths, services), credentialEntryAttested: false };
+  // No kernel query here: it sees only denials a sandbox issues, and these hosts run unsandboxed
+  // (kernel-query-controls.json shows an unsandboxed stand-in touch leaves no line).
+  entry.durationMS = Date.now() - started;
   fs.writeFileSync(arm + '/outcomes.json', JSON.stringify(entry, null, 2)); arms.push(entry);
-  assert.equal(entry.kernel.observedProtectedDenials.length, 0, 'Protected-access denial is a production-suite finding; see ' + arm + '/outcomes.json');
  }
  if (process.argv.includes('--probe-base')) { result.status = 'DIAGNOSTIC_ONLY'; result.arms = arms; }
  else {
   const qualification = qualifyPreservation(arms, nesting);
-  result = { ...result, arms, comparison: { plain: qualification.plain, guarded: qualification.guarded, guardOnBase: qualification.guardOnBase }, denyOnlyRetained: qualification.denyOnlyRetained, denyOnlyCause: qualification.denyOnlyCause, kernelQueryObservesUnsandboxedTouch: false };
+  result = { ...result, arms, comparison: { plain: qualification.plain, guarded: qualification.guarded, guardOnBase: qualification.guardOnBase }, denyOnlyRetained: qualification.denyOnlyRetained, denyOnlyCause: qualification.denyOnlyCause, kernelQueryRequired: false, kernelQueryObservesUnsandboxedTouch: false };
   assert.equal(checked(['git', 'rev-parse', 'HEAD'], 'head-after').trim(), head);
   result.status = 'PASS_PRESERVATION';
  }

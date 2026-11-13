@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import { checkSeam, seamLines } from './production-seam.mjs';
+const reviewed = 'diff --git a/x b/x\n--- a/apps/macos/Sources/TodoModel.swift\n+++ b/apps/macos/Sources/TodoModel.swift\n@@ -1,3 +1,3 @@\n context\n-    private var vault: SessionVault { SessionVault() }\n+    private let vault: any SessionStorage\n';
+const shifted = reviewed.replace('@@ -1,3 +1,3 @@', '@@ -400,3 +410,3 @@').replace(' context', ' other context');
+assert.deepEqual(seamLines(reviewed), ['-    private var vault: SessionVault { SessionVault() }', '+    private let vault: any SessionStorage']);
+assert.deepEqual(checkSeam({ changedFiles: ['apps/macos/Sources/TodoModel.swift'], reviewedDiff: reviewed, currentDiff: shifted }), { files: ['apps/macos/Sources/TodoModel.swift'], changedLines: 2 });
+assert.throws(() => checkSeam({ changedFiles: ['apps/macos/Sources/TodoModel.swift'], reviewedDiff: reviewed, currentDiff: shifted + '+    func extra() {}\n' }), /line for line/, 'An extra product line beyond the seam must fail');
+assert.throws(() => checkSeam({ changedFiles: ['apps/macos/Sources/TodoModel.swift', 'apps/macos/Sources/SessionVault.swift'], reviewedDiff: reviewed, currentDiff: shifted }), /only by the Session storage seam/, 'Another changed product file must fail');
+assert.throws(() => checkSeam({ changedFiles: ['apps/macos/Sources/TodoModel.swift'], reviewedDiff: '', currentDiff: '' }), /reviewed seam diff is empty/);
+console.log('PASS: product differs from the installed base only by the reviewed seam, line for line');

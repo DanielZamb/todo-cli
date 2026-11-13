@@ -98,7 +98,8 @@ reusable input/control, not evidence of execution unless its receipt exists.
 | Production preservation | Totals match but a test disappeared or its outcome changed | Compare exact XML test identities and outcomes, require coverage of console-reported test counts, and fail the accept-differences mutation |
 | Production deny-only guard | The record says the guard protected a run it never wrapped | Not retained (ruling B): SwiftPM's nested manifest sandbox is refused; the live nesting receipt is required for false, guarded arms that ran for true; both conditions have removal mutants |
 | Production descriptor audit | A loaded library reports safety without checking the process's real descriptors | Sample self proc_pidfdinfo; held synthetic protected-file control exits 78, detector removal makes that matching test fail; startup/late-load controls and disclosed scheduling/sampling limits |
-| Production kernel query | A filter omits the host or a protected denial and reports an empty result | Whole-run own-PID query covering every audited host, literal path/service/PID fixtures and empty-result mutation; the stand-in control shows that it sees only sandbox-issued denials, so for unsandboxed hosts it is a record, not a protection |
+| Production kernel query | A filter omits the host or a protected denial and reports an empty result | Required only for a guarded arm (own-PID query covering every audited host, literal fixtures, removal mutant); dropped for unguarded arms because the stand-in control shows an unsandboxed touch logs nothing |
+| Production Keychain link | A test product links the real Session vault's Keychain calls | Candidate 8's mirrored package with the in-memory vault and nm -u link guard; every recipe's receipt required, products checked and nothing linked; missing-receipt and accept-linked mutants fail |
 | Networking analytics | CFNetwork attempts Security telemetry, or a denial silently forwards it to a service | A local false-return binding ignores arguments and never calls the original; inspect the compiled body before the pointer/result probe; binding removal and result inversion fail |
 | Pointer test | Removing a trap calls the real credential API | Compare expected unique handler before invocation; missing binding exits 1 without calling original |
 | Framework credentials | A framework bypasses direct Sec imports via a broker | Deny all unlisted Mach lookup, Keychain paths; safe policy queries include securityd.xpc, autofill, Passkeys, CloudKit and ubiquity |
@@ -173,7 +174,7 @@ boundary; the supported helper removes those settings before exec.
 
 The coordinator ruled that production preservation suites run outside the
 verification app's strict profile. No service boundary or broker is introduced.
-The original state/offscreen recipes alternate base 8b9be429 and the candidate;
+The original state/offscreen recipes run base 20d592d3 (installed candidate 8) and the candidate;
 every test identity and outcome is compared, with load and shared failures
 retained. The deny-only policy for real Todo/Keychain paths and Keychain Mach
 services is not retained: it cannot wrap SwiftPM, whose own manifest sandbox
@@ -182,9 +183,10 @@ refusal; protection rests on the suite's own isolation, as the report details.
 A linked descriptor-only library samples the process's own descriptors every
 nominal 10 ms, without replacing defaults or temporary storage. Scheduling can
 delay it and sampling cannot exclude a short-lived open. No outer guard
-supplies continuous denial. A whole-run filtered kernel query for the test
-hosts' own PIDs must find zero protected-path or Keychain-service denials.
-Any such denial is a finding. Missing audit completion also fails preservation.
+supplies continuous denial, so the own-PID kernel query is not run for the
+unguarded arms: it sees only sandbox-issued denials. Candidate 8's link guard
+refuses any test product that links a Keychain call; a missing or linked
+receipt, or missing audit completion, fails preservation.
 There is no production-test API-entry attestation or originalCredentialCalls
 claim. The verification app/server retains its trap/import boundary unchanged.
 The original resource command uses the existing hash-verified local copier.

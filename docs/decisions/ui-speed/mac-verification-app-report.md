@@ -59,38 +59,110 @@ helper's own swift-hold below 40 GiB; it was never triggered.
 
 The skill stays draft. The visible recipe and V02 remain held.
 
+## Merge of candidate 8 and the Keychain link guard (Claude Opus 5.5, 2026-11-13)
+
+The coordinator required this branch to be proven against the installed
+product. Installed candidate 8, 20d592d3, is merged as one merge commit,
+c0a05b26. The merge had no conflicts. Each file that both sides touched merged
+in disjoint hunks, and both sides are kept whole:
+
+- **apps/macos/Sources/TodoModel.swift.** Candidate 8's changes plus this
+  branch's Session storage seam. The seam's added and removed lines (13) are
+  the reviewed seam of 8b9be429..ab989410, line for line.
+  - `configuration` is a `let`, so a vault fixed at init behaves like
+    candidate 8's vault built on each access.
+  - SessionVault.swift is unchanged since candidate 6. Its reviewed SHA-256
+    still holds.
+- **docs/architecture.md.** Both sections kept.
+- **.agents/skills/verify-macos/SKILL.md.** Both sections kept.
+
+Against 20d592d3, product code differs only by that seam. The TypeScript
+packages, server, CLI and Electron app are byte-identical to candidate 8, and
+dependencies and lock files are unchanged. The rest of the difference is
+VerificationApp, the verification skills and docs, and swift-slot.sh calling
+`/usr/bin/id` by its absolute path.
+
+Two changes follow from the merge:
+
+- **Verification project regenerated (87fdf2b1).** The project is generated
+  from the production target's source list. add-target.rb, run through the
+  Swift slot with a scratch HOME, added the two production sources that
+  candidate 8 introduced: ClientObservedActivity.swift and SurfaceMessages.swift.
+  Its exclusions are unchanged (TodoApp, SessionVault, ServerLifecycle,
+  ServerSettingsView).
+- **Source preservation now compares against 20d592d3.**
+  production-source-preservation.mjs requires that the only changed product
+  file is TodoModel.swift and that its added and removed lines equal the
+  reviewed seam (production-seam.mjs). Its test fails an extra line and an
+  extra file. A development run against the merged tree passes with 13 seam
+  lines. The 26-symbol comparison stays the reviewed candidate 6 binary
+  comparison; it is not rebuilt against candidate 8
+  (`symbolComparisonAgainstProductBase: false`).
+
+The production comparison now runs base 20d592d3 against this head. Both
+recipe versions are candidate 8's: they build a mirrored package with the
+in-memory Session vault (apps/macos/scripts/state_package.py) and stop if the
+link guard finds any Keychain call in a built test product. The adapter knows
+the guard's tools by absolute path (/usr/bin/rsync, nm, otool). Every recipe's
+keychain-guard.json is attached to its arm. Qualification fails if a receipt
+is missing, checked no product, or says `keychainLinked: true`. The guard's own
+red control (exit 3 with the production vault, 0 with the in-memory vault) is
+candidate 8's receipt, docs/evidence/mac-perf/c8/keychain-guard on that line.
+It is not rerun here.
+
+Coverage pins audited on the merged tree (every live SHA-256 pin in
+`.agents/skills/verify-*/coverage.json`):
+
+| Mapping | Matching pins | Mismatches |
+| --- | --- | --- |
+| dag-formal | 16 of 16 | none |
+| occ-atomicity | 10 of 10 | none |
+| task-search-cache | 7 of 7 | none (paths relative to packages/domain/src) |
+| discovery-formal | 20 of 21 | apps/macos/Sources/TodoModel.swift |
+| task-search-formal | 15 of 16 | apps/macos/Sources/TodoModel.swift |
+
+Both TodoModel.swift pins equal candidate 8's file (92f17158…). They differ
+here only by the seam, inside mapped functions that call the vault (signOut,
+restore, expireSession). Renewing them is the mapping owners' review, which
+requires their Swift checks. They are not renewed on this branch.
+
 ## Ruling B: deny-only guard not retained (Claude Opus 5.5, 2026-11-13)
 
 The coordinator ruled that the deny-only guard is not retained. Its earlier
 ruling already said this: a deny-only guard is kept only if it changes no
 outcome, and a guard under which the package cannot build changes the outcome.
-Passing `--disable-sandbox` to SwiftPM was rejected. production-proofs now
-records the cause live on every run: `sandbox-exec -f deny-only.sb sandbox-exec
--p '(version 1)(allow default)' /usr/bin/true` must exit nonzero with
+Passing `--disable-sandbox` to SwiftPM was rejected. production-proofs records
+the cause live on every run: `sandbox-exec -f deny-only.sb sandbox-exec -p
+'(version 1)(allow default)' /usr/bin/true` must exit nonzero with
 `sandbox_apply: Operation not permitted` (exit 71 observed). The run writes
 deny-only-nesting.json with `denyOnlyRetained: false`. If nesting ever
 succeeds, the run stops for a ruling. Only the two unguarded arms run.
-qualifyPreservation in production-qualification.mjs then requires four things:
+
+qualifyPreservation in production-qualification.mjs requires:
 
 - both unguarded arms
-- a finished, clean descriptor audit for each test host
-- a kernel query whose PIDs equal the audited hosts and that observed zero
-  protected denials
+- a finished, clean descriptor audit for every test host
+- a Keychain guard receipt for every recipe, with products checked and nothing
+  linked
 - the same outcomes at base and head
 
-It returns `denyOnlyRetained: true` only when both guarded arms ran both
-recipes, and `false` only with the recorded refusal. Its Node test and five
-removal mutants are in node-reds.mjs. Each mutant fails its matching assertion
-at 1, and 15 of 15 controls pass. The mutants cover:
+For a guarded arm it would also require a kernel query covering every audited
+host with zero protected denials. It returns `denyOnlyRetained: true` only
+when both guarded arms ran both recipes, and `false` only with the recorded
+refusal.
+
+The removal mutants in node-reds.mjs each fail their matching assertion at 1;
+19 of 19 Node controls pass. They cover:
 
 - retained hardcoded to true
 - the guarded-arm-ran check removed
-- the kernel-query check removed
-- the descriptor-audit check removed
-- the recorded-cause check removed
-
-A development run of the production controls
-(ruling-b-controls-development) exited 0 and removed its scratch.
+- the guarded kernel query removed
+- the descriptor audit removed
+- the recorded cause removed
+- the Keychain receipt removed
+- a linked Keychain call accepted
+- the seam line check removed
+- the seam file check removed
 
 ### What protects the owner's real data during the production suite
 
@@ -108,42 +180,39 @@ the suite's own isolation:
   further execution.
 - **SwiftPM.** It runs with `--disable-keychain`, `--disable-netrc` and package
   resolution disabled.
-- **Keychain.** The only tests that save to a Keychain (NativeBehaviorTests)
-  are excluded from the package's test targets, so these recipes never run
-  them. The package tests build TodoModel with synthetic vault service names
-  ("never-keychain-…", "unused-…"). The tests that drive sign-in, sign-out and
-  restore use transports that fail before the model reaches its vault. This
-  holds by test design and is not checked at runtime. A scratch HOME does not
-  redirect the Keychain, so a test that did reach SessionVault would call
-  securityd. It would address its synthetic service name, not the owner's item.
+- **Keychain.** Every test product is built from candidate 8's mirrored package
+  with the in-memory Session vault. The link guard reads each built Mach-O with
+  `nm -u` and stops the recipe before any test runs if anything matches
+  `_SecItem*`, `_SecKeychain*`, `_SecAccess*`, `_SecTrustedApplication*`,
+  `_SecACL*` or `_SecIdentity*`. Qualification requires those receipts.
+  NativeBehaviorTests, the only tests that save to a Keychain, stay outside the
+  package targets.
 
-**Descriptor audit.** A library linked into each Swift test host with
-`-needed_library` (not DYLD) samples the host's own open descriptors at a
-nominal 10 ms, from startup to exit. It ends the host with exit 78 if any
-descriptor's path is under the real ~/.todo-cli or ~/Library/Keychains, their
-Data-volume aliases, or the system Keychain folders. The controls show a held
-scratch stand-in caught at 78, and the detector-removed mutant missing it at
-0. The audit sees only descriptors held when a sample is taken. It misses opens
-shorter than the interval and path operations that hold no descriptor (stat,
-access, rename). It also misses Keychain calls, which travel to securityd over
-XPC without opening a protected file in the host.
+**Kernel query dropped.** The kernel query was dropped from the unguarded arms
+because it reads only denials that a sandbox issues, and these test hosts run
+unsandboxed. In kernel-query-controls.json an unsandboxed open of a scratch
+stand-in for ~/.todo-cli leaves zero lines, while the same open under a
+denying profile logs `Sandbox: kernel-probe(pid) deny(1) file-read-data
+…/.todo-cli/sentinel`.
 
-**Kernel query.** It reads kernel `Sandbox: … deny` lines for the hosts' own
-PIDs. Without an outer sandbox the hosts are unsandboxed, so touching a
-protected path is allowed and logged nowhere. The new control shows this with
-a scratch stand-in for ~/.todo-cli:
+**Descriptor audit.** For files, the sampled descriptor audit is the runtime
+observer. A library linked into each Swift test host with `-needed_library`
+(not DYLD) samples the host's own open descriptors at a nominal 10 ms, from
+startup to exit. It ends the host with exit 78 if any descriptor's path is
+under the real ~/.todo-cli or ~/Library/Keychains, their Data-volume aliases,
+or the system Keychain folders. The controls show a held stand-in caught at
+78, and the detector-removed mutant missing it at 0.
 
-- The same probe, unsandboxed, opens the stand-in at exit 0 and the query finds
-  zero lines.
-- Under a profile denying the stand-in, it is refused at exit 1 and the query
-  finds `Sandbox: kernel-probe(pid) deny(1) file-read-data …/.todo-cli/sentinel`.
+The sampling can miss:
 
-In the unguarded arms, then, the kernel query cannot fail on a protected-path
-touch. It remains a required record, as ruled, but it is not counted as a
-protection.
+- an open and close shorter than the interval or delayed scheduling;
+- path operations that hold no descriptor, such as stat, access, rename,
+  unlink and directory listing;
+- descriptors in child processes the host starts, which do not load the
+  library;
+- anything a test does through another process over IPC.
 
-At runtime, the sampled descriptor audit is the only observer for files.
-Nothing observes Keychain calls from the production test hosts.
+The Keychain is covered by the link guard instead, not by the audit.
 
 Frozen f296590021a3530fe51f38b7923388c7aecafc59 passed the 102-case guard
 matrix, all 15 class controls, all 63 predicate controls including 18, all

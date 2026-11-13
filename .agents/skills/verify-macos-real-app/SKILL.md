@@ -10,8 +10,10 @@ Status: draft safety correction. Frozen 3b53bbcf (run r3) passed guards,
 red controls, 1,637 credential traps and removals, input, locks, parent death,
 the fresh app build, ad hoc identity, the audit and the unguarded production
 comparison (298 tests each side, same outcomes). It stopped at the deny-only
-arm, which SwiftPM's nested manifest sandbox cannot run under. Ruling B drops
-that arm and records the refusal instead. A new frozen full run is owed.
+arm, which SwiftPM's nested manifest sandbox cannot run under (ruling B: arm
+dropped, refusal recorded). The branch now merges installed candidate 8
+(20d592d3), the production base and its Keychain link guard. A new frozen full
+run is owed.
 No full or visible recipe is qualified for this correction.
 
 The earlier ab989410 visible recipe read both
@@ -175,8 +177,11 @@ before/after. Keep at least the 30 GiB soft floor.
 
 The strict profile governs the verification app and its server child. Production
 state/offscreen suites run outside it, using the original scratch-HOME recipes
-through swift-slot.sh. production-proofs runs base 8b9be429, then the frozen
-candidate, without a suite sandbox. The deny-only profile is not retained
+through swift-slot.sh. production-proofs runs base 20d592d3 (installed
+candidate 8, merged into this branch), then the frozen candidate, without a
+suite sandbox. Both use candidate 8's recipes: a mirrored package with the
+in-memory Session vault, and a link guard that stops the recipe if any built
+test product links a Keychain call. The deny-only profile is not retained
 (ruling B, 2026-11-13): SwiftPM applies its own manifest sandbox and macOS
 refuses sandbox_apply inside a sandbox, which every run re-records in
 deny-only-nesting.json. Every test must
@@ -188,19 +193,18 @@ Recipe output is physical under that recipe's checkout so relative artifact
 validation works; the primary evidence folder links to it. Record load and shared failures; a failure
 only on the candidate is a finding. production-qualification.mjs records
 denyOnlyRetained=false only with that refusal, true only with guarded arms that
-ran, and fails on a missing descriptor audit or kernel query. If nesting ever
+ran, and fails on a missing descriptor audit or a Keychain guard receipt that
+is missing, checked nothing or says linked. If nesting ever
 succeeds, stop for a ruling. No broker or app/server permission is added.
 
 The production library audits descriptors only, without Security imports or
 replacing defaults, temporary storage or production sources. It samples at a
 nominal 10 ms interval; scheduling can delay it and short-lived opens can be
-missed. Require a completed audit plus a filtered kernel query for the test
-hosts' own PIDs over the whole run. Zero protected-path or Keychain-service
-denials must be observed. A denial is a suite finding to report with the test;
-it is not an allowance to add. The kernel-query control shows the limit: an
-unsandboxed touch of a scratch stand-in logs nothing, a sandbox-denied touch
-logs a denial. Without the guard the query cannot catch a touch by the
-unsandboxed hosts, and nothing observes their Keychain calls; see the report.
+missed, as can descriptor-less path operations, child processes and IPC.
+Require a completed audit for every host. The kernel query is not run for
+unguarded arms: it sees only sandbox-issued denials, and the stand-in control
+(kernel-query-controls.json) shows an unsandboxed touch logs nothing. It stays
+required only for a guarded arm. The Keychain is covered by the link guard.
 Production hosts have no API-entry attestation. The withdrawn
 originalCredentialCalls field remains withdrawn. DYLD startup settings remain
 excluded. The verification app/server keeps its traps, import audit and strict

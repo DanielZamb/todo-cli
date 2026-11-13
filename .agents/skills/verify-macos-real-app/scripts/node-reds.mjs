@@ -20,8 +20,12 @@ try {
     ['production-denials.mjs', 'production-denials.test.mjs', 'return result;', 'return [];'],
     ['production-qualification.mjs', 'production-qualification.test.mjs', 'denyOnlyRetained: false, denyOnlyCause: {', 'denyOnlyRetained: true, denyOnlyCause: {', 'Without guarded arms that ran, the record must say false'],
     ['production-qualification.mjs', 'production-qualification.test.mjs', ' && ran(guardedBase) && ran(guardedCandidate)', '', 'true needs a guarded arm that ran'],
-    ['production-qualification.mjs', 'production-qualification.test.mjs', "assert(arm.kernel && Array.isArray(arm.kernel.pids) && arm.kernel.pids.length > 0 && Array.isArray(arm.kernel.observedProtectedDenials), 'Missing kernel query: ' + arm.name);", '', 'A missing kernel query fails qualification'],
+    ['production-qualification.mjs', 'production-qualification.test.mjs', "assert(arm.kernel && Array.isArray(arm.kernel.pids) && arm.kernel.pids.length > 0 && Array.isArray(arm.kernel.observedProtectedDenials), 'Missing kernel query: ' + arm.name);", '', 'A guarded arm needs its kernel query'],
     ['production-qualification.mjs', 'production-qualification.test.mjs', 'arm.descriptorAudit.length > 0', 'true', 'A missing descriptor audit fails qualification'],
+    ['production-qualification.mjs', 'production-qualification.test.mjs', "assert(receipt && Number.isInteger(receipt.products) && receipt.products > 0 && typeof receipt.keychainLinked === 'boolean', 'Missing Keychain guard receipt: ' + arm.name + '/' + recipe.stage);", '', 'A missing Keychain guard receipt fails qualification'],
+    ['production-qualification.mjs', 'production-qualification.test.mjs', 'assert.equal(receipt.keychainLinked, false, ', 'assert.equal(false, false, ', 'A linked Keychain call fails qualification'],
+    ['production-seam.mjs', 'production-seam.test.mjs', "assert.deepEqual(current, reviewed, 'The seam must match the reviewed seam line for line');", '', 'An extra product line beyond the seam must fail'],
+    ['production-seam.mjs', 'production-seam.test.mjs', "assert.deepEqual([...changedFiles].sort(), [SEAM_FILE], 'Product code may differ from the installed base only by the Session storage seam');", '', 'Another changed product file must fail'],
     ['production-qualification.mjs', 'production-qualification.test.mjs', "assert(nesting && nesting.exit !== 0 && typeof nesting.output === 'string' && nesting.output.includes(NESTED_SANDBOX_REFUSAL), 'Deny-only not retained needs its recorded nested-sandbox refusal');", '', 'A dropped guard needs its cause'],
   ]) {
     if (module === 'process-policy.mjs') fs.copyFileSync(path.resolve('.agents/skills/verify-macos-real-app/scripts/bun-policy.mjs'), directory + '/bun-policy.mjs');
