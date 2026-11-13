@@ -40,3 +40,13 @@ Admission history keeps eight individually timestamped samples per method,
 at most 56 overall. Each expires after 60000 ms; new replies never restamp old
 observations. The production rate tests and archived 61-second witnesses check
 expiry, method isolation and admission after a stale outlier is gone.
+
+A refusal leaves every file unchanged in every class, including a catalog or
+identifier change committed only in the WAL and a database swapped onto the
+path after the preflight: the committed catalog is read from descriptors, and
+the writable connection closes under a shared exclusion that stops any
+checkpoint. Empty main files beside empty sidecars carry no data and are
+initialized; a non-empty sidecar or an interrupted initialization's non-empty
+journal stays refused. Owner Diagnostics names each refusal's state, reason
+code and the files to remove with the server stopped. Recordings are
+diagnostic data and may be discarded.

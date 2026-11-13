@@ -17,6 +17,14 @@ import {
 } from "./diagnostic-recordings.ts";
 import { emptyRecordingAdmission } from "./recording-admission.ts";
 import {
+  presentRecordingFiles,
+  RecordingOpenRefusal,
+  type RecordingOpenRefusalReason,
+  recordingOpenRefusals,
+  recordingRefusalGuidance,
+  recordingStoreFiles,
+} from "./recording-database.ts";
+import {
   recordingMethods as methods,
   RecordingServiceRates,
 } from "./recording-rate.ts";
@@ -61,6 +69,7 @@ if (
     port = parentPort;
   if (!port) throw new Error("Missing recording port");
   let engine: RecordingDatabase | undefined;
+  let refusal: RecordingOpenRefusalReason | undefined;
   let currentId: number | undefined,
     stepStarted = performance.now();
   const progress = () => {
@@ -72,8 +81,11 @@ if (
   for (let attempt = 0; attempt < 50; attempt++) {
     try {
       engine = new RecordingDatabase(boot.directory, { ...boot, progress });
+      refusal = undefined;
       break;
     } catch (error) {
+      refusal =
+        error instanceof RecordingOpenRefusal ? error.reason : "open_failed";
       if (!(error instanceof Error && /locked|busy/iu.test(error.message)))
         break;
       await new Promise((r) => setTimeout(r, 10));
@@ -185,6 +197,9 @@ if (
     ready: true,
     available: !!engine,
     status: engine?.status() ?? blank(),
+    ...(engine || !refusal
+      ? {}
+      : { refusal, refusal_files: presentRecordingFiles(boot.directory) }),
   });
   await new Promise(() => {});
 }
@@ -197,6 +212,14 @@ const Response = Schema.Struct({
   status: RecordingStatus,
   available: Schema.optionalKey(Schema.Boolean),
   held: Schema.optionalKey(Schema.Boolean),
+  refusal: Schema.optionalKey(
+    Schema.Literals(
+      Object.keys(recordingOpenRefusals) as RecordingOpenRefusalReason[],
+    ),
+  ),
+  refusal_files: Schema.optionalKey(
+    Schema.Array(Schema.Literals(recordingStoreFiles)),
+  ),
 });
 const decodeWorkerMessage = Schema.decodeUnknownOption(
   Schema.Union([
@@ -236,6 +259,9 @@ export class DiagnosticRecordings {
   private droppedEvents = 0;
   private condition: "available" | "unavailable" | "held_reader" =
     "unavailable";
+  private refusal:
+    | { reason: RecordingOpenRefusalReason; files: readonly string[] }
+    | undefined;
   private pending = new Map<
     number,
     {
@@ -319,9 +345,14 @@ export class DiagnosticRecordings {
           this.connection.resolve();
           if (r.available === false) {
             this.failures++;
+            this.refusal = {
+              reason: r.refusal ?? "open_failed",
+              files: r.refusal_files ?? [],
+            };
             this.unavailable();
             return;
           }
+          this.refusal = undefined;
           this.connection = { kind: "ready", worker };
           this.condition = "available";
           this.cache = { ...r.status };
@@ -481,6 +512,15 @@ export class DiagnosticRecordings {
     return {
       condition: this.condition,
       failures: this.failures + this.cache.loss.storage_failures,
+      ...(this.refusal === undefined
+        ? {}
+        : {
+            refusal: recordingRefusalGuidance(
+              this.directory,
+              this.refusal.reason,
+              this.refusal.files,
+            ),
+          }),
     };
   }
   status() {

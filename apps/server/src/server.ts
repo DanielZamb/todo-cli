@@ -667,6 +667,16 @@ export const serverLayer = (options: {
                                   },
                                 ]
                               : []),
+                            ...(health.refusal
+                              ? [
+                                  {
+                                    id: Number.MAX_SAFE_INTEGER - 1,
+                                    time: body.generated_at,
+                                    code: `Recordings ${health.refusal.state}: ${health.refusal.reason}. ${health.refusal.explanation}`,
+                                    route: `Recording storage. ${health.refusal.recovery}`,
+                                  },
+                                ]
+                              : []),
                             ...body.errors,
                           ],
                         })

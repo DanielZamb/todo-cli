@@ -94,3 +94,53 @@ for (const follow of [false, true])
     expect(output.operations.total).toBe(3);
     expect(output.operations.committed).toBe(3);
   });
+
+const refusal = {
+  id: Number.MAX_SAFE_INTEGER - 1,
+  time: snapshot.generated_at,
+  code: "Recordings refused: interrupted_initialization. recordings.db is empty beside a non-empty -journal: initialization stopped before its first commit, and the store cannot prove the journal is its own.",
+  route:
+    "Recording storage. Recordings are diagnostic data and may be discarded; Task service is unaffected. Stop the server, remove /Users/owner/.todo-cli/diagnostic-recordings/recordings.db, /Users/owner/.todo-cli/diagnostic-recordings/recordings.db-journal, then start it again to create an empty store.",
+};
+
+it("wraps a recording refusal in Recent errors so its reason and files stay readable", () => {
+  const pane = topPanes({ ...snapshot, errors: [refusal] }, null).find(
+    (pane) => pane.title === "Recent errors",
+  );
+  const lines = pane?.lines ?? [];
+  expect(lines.every((line) => [...line].length <= 46)).toBe(true);
+  expect(lines.slice(1).join(" ")).toContain(
+    "interrupted_initialization. recordings.db is empty",
+  );
+  expect(lines.join("")).toContain(
+    "/Users/owner/.todo-cli/diagnostic-recordings/recordings.db-journal",
+  );
+  expect(lines.join(" ")).toContain("may be discarded");
+});
+
+it("keeps other errors on two unwrapped lines", () => {
+  const pane = topPanes(
+    {
+      ...snapshot,
+      errors: [
+        {
+          ...refusal,
+          code: "Recordings unavailable; failures: 1",
+          route: "Recording storage",
+        },
+      ],
+    },
+    null,
+  ).find((pane) => pane.title === "Recent errors");
+  expect(pane?.lines.length).toBe(2);
+  expect(pane?.lines[1]).toBe("Recording storage");
+});
+
+it("names a recording refusal in the Markdown report and nothing otherwise", () => {
+  expect(diagnosticsOutput({ ...snapshot, errors: [refusal] }, "md")).toContain(
+    `# Diagnostics\n\n## Recording storage\n\n${refusal.code}\n\n${refusal.route}\n\nGenerated `,
+  );
+  expect(
+    diagnosticsOutput(snapshot, "md").startsWith("# Diagnostics\n\nGenerated "),
+  ).toBe(true);
+});

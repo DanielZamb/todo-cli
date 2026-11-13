@@ -34,6 +34,7 @@ export class RecordingService {
         this.droppedBatches + (this.client?.status().loss.dropped_batches ?? 0),
       droppedEvents:
         this.droppedEvents + (this.client?.status().loss.dropped_events ?? 0),
+      ...(h?.refusal ? { refusal: h.refusal } : {}),
     };
   }
   private get() {

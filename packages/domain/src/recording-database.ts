@@ -10,11 +10,16 @@ import {
   openSync,
   readSync,
   statSync,
+  unlinkSync,
 } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { tryRecordingExclusion } from "./recording-exclusion.ts";
 import {
+  releaseRecordingExclusion,
+  tryRecordingExclusion,
+} from "./recording-exclusion.ts";
+import {
+  inspectRecordingCatalog,
   recognizeRecordingFormat,
   recordingApplicationId,
   recordingDDL,
@@ -25,9 +30,85 @@ export type RecordingOpenPoint =
   | "before_exclusion"
   | "excluded"
   | "initialized";
+export const recordingOpenRefusals = {
+  foreign_header:
+    "recordings.db is not a Todo recordings database (its header is not ours).",
+  foreign_catalog:
+    "recordings.db carries the recordings identifier, but its committed tables differ from this version's.",
+  foreign_sidecar:
+    "recordings.db is missing or empty, but a non-empty -wal, -shm or -journal file is beside it.",
+  interrupted_initialization:
+    "recordings.db is empty beside a non-empty -journal: initialization stopped before its first commit, and the store cannot prove the journal is its own.",
+  hot_journal:
+    "A non-empty recordings.db-journal is beside the store; the store never writes one after initialization.",
+  oversized: "A recordings file is larger than the recordings disk ceiling.",
+  not_private:
+    "The recordings directory or recordings.db is not a private regular file (a link, a directory or a shared file).",
+  replaced: "recordings.db was replaced while the store was opening it.",
+  integrity: "recordings.db failed SQLite's integrity check.",
+  initialization_busy:
+    "Another process held recordings.db while it was being created; the server retries in one minute.",
+  open_failed:
+    "The recordings directory could not be opened; the server retries in one minute.",
+} as const;
+export type RecordingOpenRefusalReason = keyof typeof recordingOpenRefusals;
+export const recordingStoreFiles = [
+  "recordings.db",
+  "recordings.db-wal",
+  "recordings.db-shm",
+  "recordings.db-journal",
+] as const;
+export function recordingRefusalGuidance(
+  directory: string,
+  reason: RecordingOpenRefusalReason,
+  present: readonly string[],
+) {
+  const retrying = reason === "initialization_busy" || reason === "open_failed";
+  const files = (
+    reason === "not_private" && present.length === 0
+      ? [directory]
+      : present.map((name) => join(directory, name))
+  ).slice(0, recordingStoreFiles.length);
+  return {
+    state: retrying ? ("retrying" as const) : ("refused" as const),
+    reason,
+    explanation: recordingOpenRefusals[reason],
+    files,
+    recovery: retrying
+      ? "Recording retries automatically every minute; Task service is unaffected."
+      : `Recordings are diagnostic data and may be discarded; Task service is unaffected. Stop the server, remove ${files.join(", ")}, then start it again to create an empty store.`,
+  };
+}
+export function presentRecordingFiles(directory: string) {
+  return recordingStoreFiles.filter((name) => {
+    try {
+      lstatSync(join(directory, name));
+      return true;
+    } catch {
+      return false;
+    }
+  });
+}
+export class RecordingOpenRefusal extends Error {
+  constructor(
+    readonly reason: RecordingOpenRefusalReason,
+    message = reason === "initialization_busy"
+      ? "Recording initialization busy"
+      : reason === "integrity"
+        ? "Recording integrity"
+        : reason === "open_failed"
+          ? "Recording directory unavailable"
+          : "Foreign database refused",
+  ) {
+    super(message);
+  }
+}
+const refuse = (reason: RecordingOpenRefusalReason): never => {
+  throw new RecordingOpenRefusal(reason);
+};
 function ownedHeader(fd: number, cap: number) {
   const stat = fstatSync(fd);
-  if (stat.size > cap) throw new Error("Foreign database refused");
+  if (stat.size > cap) refuse("oversized");
   const header = Buffer.alloc(100);
   const size = readSync(fd, header, 0, 100, 0);
   return (
@@ -37,30 +118,150 @@ function ownedHeader(fd: number, cap: number) {
     header.readUInt32BE(60) === recordingSchemaVersion
   );
 }
-function preflight(path: string) {
+const sizeOf = (path: string) => {
+  try {
+    return lstatSync(path).size;
+  } catch (error) {
+    if (
+      error !== null &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "ENOENT"
+    )
+      return undefined;
+    throw error;
+  }
+};
+const sameFile = (fd: number, path: string) => {
+  const current = fstatSync(fd);
+  try {
+    const named = lstatSync(path);
+    return current.ino === named.ino && current.dev === named.dev;
+  } catch {
+    return false;
+  }
+};
+function clearEmptySidecars(path: string, sides: readonly string[]) {
+  for (const side of sides) {
+    const file = path + side;
+    let fd: number;
+    try {
+      fd = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW);
+    } catch (error) {
+      if (
+        error !== null &&
+        typeof error === "object" &&
+        "code" in error &&
+        error.code === "ENOENT"
+      )
+        continue;
+      return refuse("foreign_sidecar");
+    }
+    try {
+      const stat = fstatSync(fd);
+      if (!stat.isFile() || stat.nlink !== 1 || stat.size !== 0)
+        refuse("foreign_sidecar");
+      if (!sameFile(fd, file)) refuse("replaced");
+      unlinkSync(file);
+    } finally {
+      closeSync(fd);
+    }
+  }
+}
+function inspect(fd: number, path: string) {
+  let wal: number | undefined;
+  try {
+    wal = openSync(path + "-wal", constants.O_RDONLY | constants.O_NOFOLLOW);
+  } catch (error) {
+    if (
+      !(
+        error !== null &&
+        typeof error === "object" &&
+        "code" in error &&
+        error.code === "ENOENT"
+      )
+    )
+      refuse("not_private");
+  }
+  try {
+    if (wal !== undefined) {
+      const stat = fstatSync(wal);
+      if (!stat.isFile() || stat.nlink !== 1) refuse("not_private");
+    }
+    const verdict = inspectRecordingCatalog(
+      {
+        size: fstatSync(fd).size,
+        read: (target, position) =>
+          readSync(fd, target, 0, target.length, position),
+      },
+      wal === undefined
+        ? undefined
+        : {
+            size: fstatSync(wal).size,
+            read: (target, position) =>
+              readSync(wal, target, 0, target.length, position),
+          },
+    );
+    if (verdict.kind !== "owned") refuse(verdict.kind);
+    return verdict.kind === "owned" ? verdict.committedFrames : 0;
+  } finally {
+    if (wal !== undefined) closeSync(wal);
+  }
+}
+function preflight(path: string, integrity: boolean) {
   const uri = pathToFileURL(path);
   uri.searchParams.set("immutable", "1");
   const existing = new Database(uri.href, { readonly: true, strict: true });
   try {
-    recognizeRecordingFormat(existing);
+    try {
+      recognizeRecordingFormat(existing);
+    } catch {
+      refuse("foreign_catalog");
+    }
+    if (integrity) checkIntegrity(existing);
   } finally {
     existing.close();
   }
 }
+function checkIntegrity(db: Database) {
+  let ok = false;
+  try {
+    ok =
+      db.query<{ quick_check: string }, []>("PRAGMA quick_check").get()
+        ?.quick_check === "ok" && !db.query("PRAGMA foreign_key_check").get();
+  } catch (error) {
+    if (busy(error)) throw error;
+  }
+  if (!ok) refuse("integrity");
+}
+const busy = (error: unknown) =>
+  error instanceof Error && /busy|locked/iu.test(error.message);
+const wait = () =>
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2);
 export function openRecordingDatabase(
   directory: string,
   totalBytes: number,
   boundary?: (point: RecordingOpenPoint) => void,
 ) {
   if (totalBytes < recordingMinimumBytes) throw new Error("Recording capacity");
-  mkdirSync(directory, { recursive: true, mode: 0o700 });
+  try {
+    mkdirSync(directory, { recursive: true, mode: 0o700 });
+  } catch {
+    refuse("open_failed");
+  }
   const dir = lstatSync(directory);
   if (!dir.isDirectory() || dir.isSymbolicLink())
-    throw new Error("Private directory required");
+    throw new RecordingOpenRefusal("not_private", "Private directory required");
   const path = join(directory, "recordings.db"),
     sides = ["-wal", "-shm", "-journal"];
-  if (!existsSync(path) && sides.some((s) => existsSync(path + s)))
-    throw new Error("Foreign database refused");
+  const mainSize = sizeOf(path);
+  if (mainSize === undefined || mainSize === 0) {
+    const journal = sizeOf(path + "-journal");
+    if (mainSize === 0 && journal !== undefined && journal > 0)
+      refuse("interrupted_initialization");
+    if (sides.some((s) => (sizeOf(path + s) ?? 0) > 0))
+      refuse("foreign_sidecar");
+  }
   let fd: number;
   try {
     fd = openSync(
@@ -80,13 +281,17 @@ export function openRecordingDatabase(
         error.code === "EEXIST"
       )
     )
-      throw error;
-    fd = openSync(path, constants.O_RDWR | constants.O_NOFOLLOW);
+      return refuse("not_private");
+    try {
+      fd = openSync(path, constants.O_RDWR | constants.O_NOFOLLOW);
+    } catch {
+      return refuse("not_private");
+    }
   }
+  let db: Database | undefined;
   try {
     const stat = fstatSync(fd);
-    if (!stat.isFile() || stat.nlink !== 1)
-      throw new Error("Private database required");
+    if (!stat.isFile() || stat.nlink !== 1) refuse("not_private");
     if (stat.size === 0) {
       boundary?.("before_exclusion");
       let excluded = false;
@@ -101,18 +306,19 @@ export function openRecordingDatabase(
         )
           break;
         if (fstatSync(fd).size > 0 && !ownedHeader(fd, totalBytes))
-          throw new Error("Foreign database refused");
-        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2);
+          refuse("foreign_header");
+        wait();
       } while (performance.now() < until);
       if (excluded) {
         boundary?.("excluded");
-        const current = fstatSync(fd),
-          named = lstatSync(path);
-        if (current.ino !== named.ino || current.dev !== named.dev)
-          throw new Error("Foreign database refused");
-        if (current.size === 0) {
+        if (!sameFile(fd, path)) refuse("replaced");
+        if (fstatSync(fd).size === 0) {
+          const journal = sizeOf(path + "-journal");
+          if (journal !== undefined && journal > 0)
+            refuse("interrupted_initialization");
+          clearEmptySidecars(path, sides);
           if (sides.some((s) => existsSync(path + s)))
-            throw new Error("Foreign database refused");
+            refuse("foreign_sidecar");
           const uri = pathToFileURL(path);
           uri.searchParams.set("vfs", "unix-none");
           const initial = new Database(uri.href, { strict: true });
@@ -130,35 +336,86 @@ export function openRecordingDatabase(
           } finally {
             initial.close();
           }
-        } else if (!ownedHeader(fd, totalBytes))
-          throw new Error("Foreign database refused");
+        } else if (!ownedHeader(fd, totalBytes)) refuse("foreign_header");
       } else if (!ownedHeader(fd, totalBytes))
-        throw new Error("Recording initialization busy");
+        throw new RecordingOpenRefusal("initialization_busy");
+      releaseRecordingExclusion(fd);
     }
-    if (!ownedHeader(fd, totalBytes))
-      throw new Error("Foreign database refused");
-    if (
-      sides.some(
-        (s) => existsSync(path + s) && lstatSync(path + s).size > totalBytes,
-      )
-    )
-      throw new Error("Foreign database refused");
-    preflight(path);
+    if (!ownedHeader(fd, totalBytes)) refuse("foreign_header");
+    for (const s of sides) {
+      const size = sizeOf(path + s);
+      if (size !== undefined && size > totalBytes) refuse("oversized");
+    }
+    const journal = sizeOf(path + "-journal");
+    if (journal !== undefined && journal > 0) refuse("hot_journal");
+    const committedFrames = inspect(fd, path);
+    preflight(path, committedFrames === 0);
+    for (let attempt = 0; ; attempt++) {
+      if (!sameFile(fd, path)) refuse("replaced");
+      if (!tryRecordingExclusion(fd, true)) {
+        if (attempt < 49) {
+          wait();
+          continue;
+        }
+        throw new RecordingOpenRefusal(
+          "initialization_busy",
+          "database is locked",
+        );
+      }
+      db = new Database(path, { strict: true });
+      try {
+        if (!sameFile(fd, path)) refuse("replaced");
+        db.exec("PRAGMA busy_timeout=1");
+        try {
+          recognizeRecordingFormat(db);
+        } catch (error) {
+          if (busy(error)) throw error;
+          refuse("foreign_catalog");
+        }
+        if (committedFrames > 0) checkIntegrity(db);
+      } catch (error) {
+        db.close();
+        db = undefined;
+        releaseRecordingExclusion(fd);
+        if (attempt < 49 && busy(error)) {
+          wait();
+          continue;
+        }
+        throw error;
+      }
+      releaseRecordingExclusion(fd);
+      break;
+    }
   } catch (error) {
-    if (error instanceof Error && /busy|locked/iu.test(error.message))
-      throw error;
-    throw new Error("Foreign database refused");
-  } finally {
+    if (db) db.close();
     closeSync(fd);
+    if (error instanceof RecordingOpenRefusal) throw error;
+    if (busy(error))
+      throw new RecordingOpenRefusal(
+        "initialization_busy",
+        "database is locked",
+      );
+    throw new RecordingOpenRefusal("foreign_catalog");
   }
+  if (!db) {
+    closeSync(fd);
+    throw new RecordingOpenRefusal("foreign_catalog");
+  }
+  const opened = db;
+  let held = true;
+  const handle = {
+    db: opened,
+    close: () => {
+      if (!held) return;
+      held = false;
+      closeSync(fd);
+    },
+  };
   for (let attempt = 0; ; attempt++) {
-    const db = new Database(path, { strict: true });
     try {
-      db.exec("PRAGMA busy_timeout=1");
-      recognizeRecordingFormat(db);
       chmodSync(directory, 0o700);
       chmodSync(path, 0o600);
-      db.exec(
+      opened.exec(
         `PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=1; PRAGMA wal_autocheckpoint=64; PRAGMA cache_size=-8192; PRAGMA cache_spill=OFF; PRAGMA journal_size_limit=1048576;`,
       );
       for (const name of [
@@ -171,32 +428,23 @@ export function openRecordingDatabase(
         "duplicate_batches",
         "uncertain_restarts",
       ])
-        db.query("INSERT OR IGNORE INTO counters VALUES(?,0)").run(name);
-      if (
-        db.query<{ quick_check: string }, []>("PRAGMA quick_check").get()
-          ?.quick_check !== "ok" ||
-        db.query("PRAGMA foreign_key_check").get()
-      )
-        throw new Error("Recording integrity");
+        opened.query("INSERT OR IGNORE INTO counters VALUES(?,0)").run(name);
       const cap = totalBytes;
-      db.exec(
+      opened.exec(
         `PRAGMA max_page_count=${Math.floor(Math.max(2097152, cap - 16777216) / 4096)}`,
       );
       for (const suffix of ["", "-wal", "-shm"])
         try {
           chmodSync(path + suffix, 0o600);
         } catch {}
-      return db;
+      return handle;
     } catch (error) {
-      db.close();
-      if (
-        attempt < 49 &&
-        error instanceof Error &&
-        /busy|locked/iu.test(error.message)
-      ) {
-        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2);
+      if (attempt < 49 && busy(error)) {
+        wait();
         continue;
       }
+      opened.close();
+      handle.close();
       throw error;
     }
   }

@@ -87,6 +87,7 @@ export type RecordingDatabaseOptions = {
 };
 export class RecordingDatabase {
   readonly db: Database;
+  private readonly release: () => void;
   private readonly recoveredThrough: number;
   private failures = zero();
   heldReader = false;
@@ -113,17 +114,24 @@ export class RecordingDatabase {
     directory: string,
     private readonly options: RecordingDatabaseOptions = {},
   ) {
-    this.db = openRecordingDatabase(
+    const opened = openRecordingDatabase(
       directory,
       options.totalBytes ?? recordingLimits.totalBytes,
       options.openBoundary,
     );
-    this.recoveredThrough =
-      this.db
-        .query<{ n: number }, []>(
-          "SELECT coalesce(max(ordinal),0) n FROM events",
-        )
-        .get()?.n ?? 0;
+    this.db = opened.db;
+    this.release = opened.close;
+    try {
+      this.recoveredThrough =
+        this.db
+          .query<{ n: number }, []>(
+            "SELECT coalesce(max(ordinal),0) n FROM events",
+          )
+          .get()?.n ?? 0;
+    } catch (error) {
+      this.close();
+      throw error;
+    }
   }
 
   private progress() {
@@ -749,6 +757,10 @@ export class RecordingDatabase {
   }
 
   close() {
-    this.db.close();
+    try {
+      this.db.close();
+    } finally {
+      this.release();
+    }
   }
 }

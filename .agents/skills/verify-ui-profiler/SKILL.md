@@ -181,3 +181,44 @@ for individually expired production rate histories, per-method isolation, the
 and stale-upload witnesses each use a real 61-second wait and remain unchanged.
 The old journal-pragma race schedule is impossible under exclusion; preserve its
 reds and map it to the before-exclusion and held-exclusion controls.
+
+## Refusals leave every file unchanged and say how to recover
+
+`pnpm --filter @todo/domain test recording-open-refusal.test.ts` holds the
+deterministic SQL10 and SQL11 controls. Each refusal class (foreign header,
+foreign catalog in the main file or only in committed WAL frames, non-empty
+sidecars beside a missing or empty main, an interrupted initialization, a
+non-empty journal beside the store, a hard or symbolic link, a path replaced
+after the preflight, and a damaged table page) asserts its reason code and an
+unchanged directory listing, file hashes and modes. The oversized cases stay in
+`recording-header.test.ts`. Both shapes that used to be permanent now open:
+an empty main whose initializer died before COMMIT with an empty journal, and
+empty `-wal`/`-shm` files left after only `recordings.db` was deleted.
+
+The store decides every foreign, catalog and sidecar refusal from descriptors
+alone: it reads the main file and the committed WAL frames itself and compares
+the catalog with this version's, so SQLite never opens a path it may refuse.
+The writable connection is validated while the store holds a shared exclusion
+on its own descriptor, so closing it after a refusal cannot checkpoint or
+reset the WAL. The descriptor stays open until the connection closes.
+
+After `bun apps/server/scripts/scratch-diagnostics.ts build`, run
+`bun .agents/skills/verify-ui-profiler/scripts/sqlite-refusal-visibility.ts <evidence>`.
+It leaves an empty `recordings.db` beside a 512-byte journal, starts the
+compiled server, and requires the literal owner Diagnostics entry over HTTP,
+`todo diagnostics --format json`, the Markdown section and the terminal
+Recent errors pane (wrapped to 46 columns): state `refused`, reason
+`interrupted_initialization`, the two absolute file paths and the statement
+that recordings are diagnostic data and may be discarded. Task reads continue.
+It then stops the server, removes exactly the named files, restarts, and
+requires an admitted batch and no refusal entry.
+
+Recovery for the owner, from the Diagnostics entry: stop the server, remove the
+listed files in the `diagnostic-recordings` directory beside the Task
+database, and start the server again. The Task database is never involved.
+The two apps' Diagnostics panels do not show this entry yet; that belongs to
+the app-side unit.
+
+The seat's review-4 witnesses (`wal-refusal2.ts`, `swap-task.ts`) are archived
+in the run store and run unchanged from `.scratch/recordings-sqlite4-s1/claude/`
+against an immutable capture of 6d653742 (red) and the current head (green).
