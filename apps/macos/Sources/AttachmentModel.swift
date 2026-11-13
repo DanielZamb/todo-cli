@@ -25,13 +25,14 @@ extension TodoModel {
       var attachmentDraft = draft
       attachmentDraft.base = attachmentTask ?? draft.base
       let result = try await operation(client, attachmentDraft)
+      // A committed write's secondary error is authorized first, before cancellation or a scope
+      // change can end the handling (S1-23: S1-20's rule on S1-19's path).
+      if case .committed(let readError) = result { authorize(readError, epoch: credentialEpoch, profile: draft.base.profile_id) }
       guard isCurrentCredential(credentialEpoch), profile == draft.base.profile_id else { return }
       // Once this editor has closed, an accepted Attachment change still reaches the list and nothing is shown.
-      if case .committed(let readError) = result {
-        // Its secondary read failed after the commit: authorization first, then the read-back,
-        // which also brings the open editor the committed Attachments (S1-19).
-        authorize(readError, epoch: credentialEpoch, profile: draft.base.profile_id)
-        guard isCurrentCredential(credentialEpoch), profile == draft.base.profile_id else { return }
+      if case .committed = result {
+        // Its secondary read failed after the commit: the read-back, which also brings the open
+        // editor the committed Attachments (S1-19).
         await refreshAfterWrite("Attachment updated", owner: .surface(.editor(draft.opening), .init(attachmentTicket)))
         guard isCurrentCredential(credentialEpoch), profile == draft.base.profile_id else { return }
         if editor?.opening == draft.opening, let fresh = tasks.first(where: { $0.id == draft.id && $0.profile_id == draft.base.profile_id }) {

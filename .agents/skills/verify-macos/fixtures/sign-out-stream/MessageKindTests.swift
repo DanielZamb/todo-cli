@@ -1700,4 +1700,25 @@ private actor ScriptGate: ClientTransport {
         #expect(notice.hasPrefix("Couldn't add 2 Dependencies:") && notice.contains(a.title) && notice.contains(b.title), "merged: \(notice)")
         await finish(model, gate, vault)
     }
+
+    // MARK: MAC-C1-S1-23: a committed Attachment write's secondary 401 is handled before cancellation
+
+    /// The seat's added boundary: a real committed attachMany, its secondary read held, the caller
+    /// cancelled, then a current 401. Red on 6d00929c: signedIn and the saved Session stayed.
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func aCommittedAttachmentsSecondary401EndsTheSessionEvenAfterCancellation() async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("s123-\(UUID().uuidString).txt")
+        try Data("committed".utf8).write(to: file); defer { try? FileManager.default.removeItem(at: file) }
+        model.beginEditing(task)
+        await gate.next("tasks.show", .holdThenFail(401, "SECONDARY read unauthorized"))
+        let write = Task { await model.attachPaths([file.path]) }
+        try await wait("secondary read held") { await gate.isHeld("tasks.show") }
+        write.cancel()
+        await gate.release("tasks.show"); await write.value
+        #expect(await gate.count("tasks.attachMany") == 1, "the write committed once")
+        #expect(!model.signedIn, "a current 401 after a real commit ends the Session, cancelled or not")
+        #expect((try? vault.load()) ?? nil == nil, "the saved Session is removed")
+        await finish(model, gate, vault)
+    }
 }
