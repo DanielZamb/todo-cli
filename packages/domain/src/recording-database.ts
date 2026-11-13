@@ -352,16 +352,21 @@ function consistentInspection(fd: number, path: string) {
       release();
       preflight(inspected.imaged && scratch ? join(scratch, "image.db") : path);
     } catch (error) {
-      if (!(error instanceof RecordingOpenRefusal))
-        return unavailable("inspection", error);
-      refusal = error;
+      refusal =
+        error instanceof RecordingOpenRefusal
+          ? error
+          : new RecordingOpenRefusal(
+              "check_unavailable",
+              undefined,
+              `inspection: ${errorCode(error)}`,
+            );
     } finally {
       release();
       if (scratch) rmSync(scratch, { recursive: true, force: true });
     }
     if (!refusal) return;
-    if (refusal.reason === "check_unavailable") throw refusal;
     const stable = before === fileStamp(fd, path);
+    if (stable && refusal.reason === "check_unavailable") throw refusal;
     if (stable && confirmed === refusal.reason) throw refusal;
     confirmed = stable ? refusal.reason : undefined;
     if (performance.now() > deadline)
