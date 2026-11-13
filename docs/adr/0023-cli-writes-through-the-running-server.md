@@ -58,6 +58,13 @@ ADR-0022 is reserved for another decision.
   apps/cli/src/server-connection.ts, named at the server-mode gate in
   apps/cli/src/main.ts `withStore`; the proof check also requires the proved
   protocol to equal the record's.
+- The first routing slice must, as recorded by the seat's R3 (review-2):
+  `routable()` today only chooses the refusal message (`main.ts` `withStore`);
+  `ProvenServer.run` has no protocol check, and `EndpointRecord.protocol` and
+  `ProofResponse.protocol` are `Literal(1)` in packages/domain/src/database-route.ts.
+  Safe today, because a protocol-2 record or proof is never proven. The first
+  routing slice must widen the record and proof protocol literal to 2, and gate
+  `ProvenServer.run` itself on `routable()`, not only the refusal message.
 - Preserve the merged strict read leases, early flag refusals, in-place Snapshot
   restore admission, preview isolation, configured Attachment root and durable
   cleanup. Shared add create and subsequent read remain separate checked phases.
