@@ -9,6 +9,7 @@ database and retains evidence after cleanup.
 | [Owner and Sessions](sessions.md) | Argon2id sign-in issues a fixed 7-day Session; sign-out and expiry deny access. |
 | [Access Tokens](tokens.md) | Issue, list and revoke named Tokens with hashed secrets and default or explicit expiry. |
 | [Profile and write scopes](scopes.md) | Authorized mutations work, denied writes and cross-Profile reads fail. |
+| [Transaction read scopes](read-scopes.md) | Checked callbacks materialize rows once; escaped authorities refuse, fresh scopes recheck, absent reads return literals. |
 | [Authenticated recurrence](recurrence.md) | Authorized Series start, completion and cancellation create one successor; denied credentials create none; failures roll back; replay preserves results. |
 | [Rejected auth History](history.md) | Every denied auth call records an ordered rejected operation without secrets. |
 | [Private database files](permissions.md) | Create and reopen enforce literal 0600 modes on database, WAL and SHM files. |

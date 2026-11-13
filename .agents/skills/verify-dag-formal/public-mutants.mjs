@@ -174,8 +174,8 @@ export default [
   {
     name: "tty-default-yes",
     file: "apps/cli/src/main.ts",
-    from: 'initial: false,\n                    placeholder: { defaultDeny: "[y/N]" }',
-    to: 'initial: true,\n                    placeholder: { defaultDeny: "[y/N]" }',
+    from: 'initial: false,\n                  placeholder: { defaultDeny: "[y/N]" }',
+    to: 'initial: true,\n                  placeholder: { defaultDeny: "[y/N]" }',
     mode: "tty",
     property: "public-tty-confirmation",
     binaries: "cli",

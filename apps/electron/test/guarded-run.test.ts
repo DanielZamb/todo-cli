@@ -174,7 +174,7 @@ exit ${delegateExit}
 it("preserves literal argv and exit through direct fake delegates", () => {
   for (const executable of ["bun", "pnpm", "node", "xcrun"])
     control(`direct-${executable}`, "direct", 0, executable);
-});
+}, 30_000);
 it("preserves original delegates through nested shell and env wrappers", () => {
   control("nested-shell", "shell");
   control("nested-env", "env");

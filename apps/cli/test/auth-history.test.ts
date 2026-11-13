@@ -190,6 +190,10 @@ it.each([
       let before: number;
       try {
         db.exec("PRAGMA busy_timeout=5000");
+        if (state === "expired" && surface === "http")
+          db.exec(`CREATE TRIGGER auth_history_expired_row_required
+            BEFORE DELETE ON credentials WHEN OLD.expires_at='2000-01-01T00:00:00Z'
+            BEGIN SELECT RAISE(IGNORE); END;`);
         before =
           db
             .query<{ seq: number }, []>(

@@ -2,6 +2,7 @@ import { Clock, Effect, Schema } from "effect";
 import { resolveAttachments } from "./attachment-input.ts";
 import { copyAttachments, removeWrittenImage } from "./attachment-store.ts";
 import type { AttachmentInput } from "./attachments.ts";
+import { readRequest } from "./auth/authorized-read.ts";
 import { type AccessRequest, AuthError } from "./auth/model.ts";
 import { isInboxTask } from "./client-reads.ts";
 import type { DependencyError, Edge, VersionChange } from "./dependencies.ts";
@@ -48,7 +49,7 @@ import {
   type MoveTask,
   RecurrenceEditInput,
   RecurrenceInput,
-  type RevertTask,
+  RevertTask,
   resolveTaskCreation,
   TaskPatch,
   type TransitionTask,
@@ -56,7 +57,7 @@ import {
 import {
   filterTaskRecords,
   filterTaskRecordsEffect,
-  type TaskFilters,
+  TaskFilters,
 } from "./task-filters.ts";
 import type { TaskLookupDetails } from "./task-lookup-error.ts";
 import type { TaskRead } from "./task-read.ts";
@@ -146,9 +147,41 @@ export const readTasks = Effect.fn(function* (
   request: AccessRequest,
   filters: TaskFilters = {},
 ) {
-  const read = store.searchWords.read(request.profile);
-  const data = yield* store.auth.read(request);
-  const graph = yield* store.graph(request.profile);
+  const selected = Object.freeze({
+    credential: request.credential,
+    profile: request.profile,
+  });
+  const fields = { filters: { ...filters } };
+  const search = store.searchWords.read(selected.profile);
+  const {
+    selection: authority,
+    data,
+    graph,
+  } = yield* store.auth.withState(
+    selected,
+    Schema.Struct({ filters: TaskFilters }),
+    fields,
+    (read, data) =>
+      Effect.gen(function* () {
+        const selection = yield* store.auth.checkRead(read, "read");
+        const graph = yield* store.graphRead(read);
+        return { selection, data, graph };
+      }),
+    (selection) =>
+      Effect.succeed({
+        selection,
+        data: {
+          profiles: [],
+          tasks: [],
+          series: [],
+          projects: [],
+          tags: [],
+          history: [],
+        },
+        graph: { tasks: [], edges: [] },
+      }),
+  );
+  const checkedFilters = authority.fields.filters;
   const ordered = graph.tasks
     .filter((t) => t.deleted_at === null)
     .sort(
@@ -170,20 +203,23 @@ export const readTasks = Effect.fn(function* (
         a.id.localeCompare(b.id),
     );
   const context =
-    graph.edges.length || filters.ready || filters.blocked || filters.order
+    graph.edges.length ||
+    checkedFilters.ready ||
+    checkedFilters.blocked ||
+    checkedFilters.order
       ? graph
       : undefined;
-  const tasks = yield* filters.text === undefined
+  const tasks = yield* checkedFilters.text === undefined
     ? Effect.sync(() =>
-        filterTaskRecords(ordered, filters, data, undefined, context),
+        filterTaskRecords(ordered, checkedFilters, data, undefined, context),
       )
     : filterTaskRecordsEffect(
         ordered,
-        filters,
+        checkedFilters,
         data,
         {
           ...taskSearchExecution(),
-          prepare: (text) => store.searchWords.words(read, text),
+          prepare: (text) => store.searchWords.words(search, text),
         },
         context,
       );
@@ -316,6 +352,10 @@ const now = Clock.currentTimeMillis.pipe(
   ),
 );
 
+const TaskListFields = Schema.Struct({
+  filters: TaskFilters,
+});
+
 export class TaskCommands {
   constructor(private readonly store: OperationStore) {}
 
@@ -328,10 +368,37 @@ export class TaskCommands {
   ): Effect.Effect<TaskRead[], AuthError | StoreError | SearchTooBroad>;
   list(request: AccessRequest, filters: TaskFilters = {}) {
     return Effect.suspend(() => {
-      const read = this.store.searchWords.read(request.profile);
+      const selected = Object.freeze({
+        credential: request.credential,
+        profile: request.profile,
+      });
+      const fields = {
+        filters: { ...filters },
+      };
+      const search = this.store.searchWords.read(selected.profile);
       return Effect.gen({ self: this }, function* () {
-        const view = yield* this.store.auth.read(request);
-        const graph = yield* this.store.graph(request.profile);
+        const {
+          selection: authority,
+          data: view,
+          graph,
+        } = yield* this.store.auth.withMetadata(
+          selected,
+          TaskListFields,
+          fields,
+          (read, data) =>
+            Effect.gen({ self: this }, function* () {
+              const selection = yield* this.store.auth.checkRead(read, "read");
+              const graph = yield* this.store.graphRead(read);
+              return { selection, data, graph };
+            }),
+          (selection) =>
+            Effect.succeed({
+              selection,
+              data: { projects: [], tags: [] },
+              graph: { tasks: [], edges: [] },
+            }),
+        );
+        const filters = authority.fields.filters;
         const tasks = graph.tasks.filter((task) => task.deleted_at === null);
         const context =
           graph.edges.length ||
@@ -340,7 +407,7 @@ export class TaskCommands {
           filters.order
             ? graph
             : undefined;
-        return yield* filters.text === undefined
+        const tasksRead = yield* filters.text === undefined
           ? Effect.sync(() =>
               filterTaskRecords(tasks, filters, view, undefined, context),
             )
@@ -350,25 +417,81 @@ export class TaskCommands {
               view,
               {
                 ...taskSearchExecution(),
-                prepare: (text) => this.store.searchWords.words(read, text),
+                prepare: (text) => this.store.searchWords.words(search, text),
               },
               context,
             );
+        return tasksRead;
       });
     });
   }
 
-  readonly get = (request: Target) =>
-    this.list(request).pipe(
-      Effect.map(
-        (tasks) =>
-          tasks.find(
-            (task) =>
-              task.profile_id === request.profile &&
-              task.id === request.task_id,
-          ) ?? null,
-      ),
+  readonly withOne = <
+    S extends Schema.ConstraintDecoder<{ readonly task_id: TaskId }>,
+    A,
+    B = never,
+  >(
+    request: AccessRequest,
+    schema: S,
+    fields: S["Type"],
+    operation: (
+      read: import("./auth/authorized-read.ts").AuthorizedRead<
+        Readonly<S["Type"]>
+      >,
+      task: TaskRead | null,
+    ) => Effect.Effect<A, StoreError | AuthError>,
+    absent?: (
+      selection: import("./auth/auth.ts").AbsentRead<S["Type"]>,
+    ) => Effect.Effect<B, StoreError | AuthError>,
+  ) =>
+    this.store.auth.withMetadata(
+      request,
+      schema,
+      fields,
+      (read, data) =>
+        Effect.gen({ self: this }, function* () {
+          const authority = yield* this.store.auth.checkRead(read, "read");
+          const graph = yield* this.store.graphRead(read);
+          const tasks = filterTaskRecords(
+            graph.tasks.filter((task) => task.deleted_at === null),
+            {},
+            data,
+            undefined,
+            graph.edges.length ? graph : undefined,
+          );
+          const task =
+            tasks.find(
+              (task) =>
+                task.profile_id === authority.profile &&
+                task.id === authority.fields.task_id,
+            ) ?? null;
+          return yield* operation(read, task);
+        }),
+      absent,
     );
+
+  readonly readOne = <
+    S extends Schema.ConstraintDecoder<{ readonly task_id: TaskId }>,
+  >(
+    request: AccessRequest,
+    schema: S,
+    fields: S["Type"],
+  ) =>
+    this.withOne(
+      request,
+      schema,
+      fields,
+      (read, task) =>
+        this.store.auth
+          .checkRead(read, "read")
+          .pipe(Effect.map((selection) => ({ selection, task }))),
+      (selection) => Effect.succeed({ selection, task: null }),
+    );
+
+  readonly get = (request: Target) =>
+    this.readOne(request, Schema.Struct({ task_id: TaskId }), {
+      task_id: request.task_id,
+    }).pipe(Effect.map((result) => result.task));
 
   private result(entry: AppendResult, task: Task | null): TaskCommandResult {
     if (entry.outcome === "rejected")
@@ -1147,8 +1270,17 @@ export const mutateTask = Effect.fn(function* (
   const data = yield* readTasks(store, request);
   if (!Number.isSafeInteger(expected) || expected < 1)
     return yield* Effect.gen(function* () {
-      const task = (yield* store.auth.read(request)).tasks.find(
-        (task) => task.profile_id === request.profile && task.id === id,
+      const { selection: authority, data: checked } =
+        yield* store.auth.readState(
+          request,
+          Schema.Struct({ id: Schema.String }),
+          { id },
+        );
+      const task = checked.tasks.find(
+        (task) =>
+          authority.kind === "read" &&
+          task.profile_id === authority.profile &&
+          task.id === authority.fields.id,
       );
       return yield* Effect.fail(
         new CommandError(
@@ -1394,12 +1526,21 @@ const rejectClientWrite = (
 
 const transferMetadata = Effect.fn(function* (
   store: OperationStore,
-  task: Task,
-  destination: ProfileId,
-  request: AccessRequest,
+  sourceTask: Task,
+  destinationProfile: ProfileId,
+  source: AccessRequest,
 ) {
-  const data = yield* store.auth.read(request);
-  const target = yield* store.auth.read({ ...request, profile: destination });
+  const { selection: authority, data } = yield* store.auth.readState(
+    source,
+    Schema.Struct({ task: Task, destination: ProfileId }),
+    { task: sourceTask, destination: destinationProfile },
+  );
+  const { task, destination } = authority.fields;
+  const { data: target, selection: targetRead } = yield* store.auth.readState(
+    { credential: authority.credential, profile: destination },
+    Schema.Struct({}),
+    {},
+  );
   const project = data.projects.find((p) => p.id === task.project_id);
   return metadata(
     {
@@ -1408,7 +1549,7 @@ const transferMetadata = Effect.fn(function* (
         data.tags.filter((tag) => tag.id === id).map((tag) => tag.name),
       ),
     },
-    { ...request, profile: destination },
+    readRequest(targetRead),
     target,
   );
 });
@@ -1678,11 +1819,21 @@ export const skipOccurrence = (
 
 export const revertTask = (
   store: OperationStore,
-  request: Target,
-  input: RevertTask,
+  source: Target,
+  options: RevertTask,
 ): Effect.Effect<TaskCommandResult, StoreError | AuthError> =>
   Effect.gen(function* () {
-    const data = yield* store.auth.read(request);
+    const { selection: authority, data } = yield* store.auth.readState(
+      source,
+      Schema.Struct({ task_id: TaskId, input: RevertTask }),
+      { task_id: source.task_id, input: options },
+    );
+    const request = Object.freeze({
+      credential: authority.credential,
+      profile: readRequest(authority).profile,
+      task_id: authority.fields.task_id,
+    });
+    const input = authority.fields.input;
     const entry = data.history.find((entry) => entry.seq === input.seq);
     if (
       entry?.event.kind === "TaskHistoryRedacted" &&

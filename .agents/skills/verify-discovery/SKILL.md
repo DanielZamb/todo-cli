@@ -88,8 +88,23 @@ actions.json,driver-provenance.json,cleanup.json} and compiled/{actions.json,aut
 server.log,binary-provenance.json,cleanup.json,result.json}. Actions pair input
 with actual process exits or HTTP statuses. Bearer credentials are omitted.
 Outputs remain ignored by Git; reusable scripts and expected values are tracked.
-`enrichment-history/{comparisons.json,result.json,cleanup.json}` retains the
-three compiled aggregate expiry cases and their boundary labels.
+`enrichment-history/{comparisons.json,result.json,cleanup.json}` retains six
+compiled expiry cases. Every aggregate rejects an already-expired credential
+with authenticate/expired, and CLI/HTTP History matches including the actor.
+The same scratch Token is used on both surfaces. Named instrumentation expires
+the credential after Attachment enrichment finishes and before the rejection
+write, or inside the checked write before its callback. It never uses a count
+of credentialUsed callbacks as a timing trigger. Each refusal has literal HTTP
+bytes, its expected action and exactly one rejected-authentication History row.
+Batch-edit has no write after enrichment; the guarded missing-id Import fixture
+never enters enrichment or a Task write, so those moments do not exist there.
+
+`build-enrichment-history.ts <binary> [immutable-product-SHA]` injects those two
+named hooks into a captured or current source build and records the source
+hashes. The corrected driver must pass on clock-fix base 6b167266 as well as the
+candidate. Set DISCOVERY_ENRICHMENT_MUTANT=attribution to require failure when
+an already-expired caller is wrongly attributed to mutate. Hooks and mutations
+exist only in the verification binary; product source stays unchanged.
 
 ## Cleanup
 

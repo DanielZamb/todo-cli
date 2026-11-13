@@ -1,5 +1,5 @@
 {
-  "sourceCommit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
+  "sourceCommit": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
   "status": "Reviewed integrated DAG clients and contract metadata, with current matcher controls and preserved full/query catalog debt. Complete bounded command and client drives follow.",
   "files": [
     {
@@ -163,7 +163,7 @@
         "readTasks",
         "TaskCommands.list"
       ],
-      "sha256": "69f21856b32d60483a9e22fa83144e950e4dbe47524a3680bb0744225f365617"
+      "sha256": "574f8654daff45e54db0b4c5f1fb642a60d2c7814826d3a0c2cfbcec247197b3"
     },
     {
       "path": "apps/electron/src/task-search-presentation.tsx",
@@ -199,8 +199,8 @@
   "recovery": "Transient errors offer Retry; search_too_broad hides Retry and retains text/snapshot. Current-Profile SSE op/reconnect remains available. Liveness requires a later affordable successful response and a fair available recovery source.",
   "clientRefinement": "Mapped full/query publication, catalog retention and bootstrap fallback with compiled regressions; no mechanical TypeScript/Swift refinement theorem.",
   "previousSourceCommit": "ecee73d77b2d58e185d098fa3d836c78825f8325",
-  "productCommit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
-  "integrationCommit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
+  "productCommit": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+  "integrationCommit": "eca430bf1f3b5b9aeeb69a82c0086e3dab364249",
   "securityBase": "9de893454cb6e3f5729407e9313c73e56bfd0481",
   "integrationComponents": {
     "refresh": "f1c5f22115c361ff0dda48c2e277b9547a2208a5",
@@ -262,5 +262,11 @@
     "limits": "Finite models and manual function mapping; native signing, storage, Keychain, Session persistence, real OS dispatch and VoiceOver remain held."
   },
   "previousProductCommit": "36f9c56e200048aa2ca16186aaf713bea8d5454e",
-  "previousIntegrationCommit": "81cdef8ec257a8ca7e1cbfb1ab2b3ff3afcbbf14"
+  "previousIntegrationCommit": "81cdef8ec257a8ca7e1cbfb1ab2b3ff3afcbbf14",
+  "integrationQualification": {
+    "product": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+    "atomicProduct": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
+    "review": "docs/decisions/ui-speed/server-integration.md",
+    "scope": "Merged immutable product; all covered-body reviews and actual-source controls precede renewal. Full fresh gates follow. No model, invariant or bound changes."
+  }
 }

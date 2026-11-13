@@ -82,7 +82,19 @@ Events store resolved facts, not raw commands. Replay does not read the clock
 or expand an RRULE. `rebuild()` can start from the newest row in the internal
 `snapshots` table and replay only the tail. Owner-facing
 Snapshots are separate copies of the whole database, described in
-[ADR-0012](adr/0012-owner-snapshots.md).
+[ADR-0012](adr/0012-owner-snapshots.md). Purge redaction deletes materialized
+Task references discovered through SQLite foreign keys before deleting the Task.
+It also repairs orphan references when the Task is already absent. Snapshot
+copies retain pending Attachment erasure jobs. Restore combines saved and live
+jobs, retaining only ids in the durable Purge union, so a restored Deleted Task
+keeps its bytes. The restore pass erases eligible copied bytes after commit, before returning.
+Failures retain jobs for retry without changing restore success.
+Preview stores share the Attachment root but never drain cleanup jobs, either
+during construction or after a simulated write. Their Purge state cannot
+authorize erasure under the persistent store's root. Unchanged copy redaction
+skips compaction, keeping its checksum stable. Content-free History and
+Version tombstones remain. The [reference inventory](../.agents/skills/verify-snapshots/features/task-references.md)
+records declared and JSON references and their verification.
 
 ## Data
 
@@ -195,6 +207,54 @@ a search retry timer. See [ADR-0015](adr/0015-search-text-retention-and-recovery
 
 ## Agent discovery contract
 
+HTTP Task reads load Profile-filtered projection rows. Task lists authenticate
+and materialize metadata, Tasks and Dependencies in one checked SQLite callback.
+Search CPU work and response encoding run afterward on owned rows and selectors.
+Planning views use a Profile catalog without History or Series.
+Project and Tag counts use grouped projection queries. Profile counts use one
+grouped query for the credential's authorized, active Profiles inside the existing
+immediate authorization transaction. Directory counts share its existing deferred
+read snapshot. Projection guards, generated Task columns, Version validation and
+atomic event/projection writes remain authoritative. Reads do not replay the log.
+
+Credential checks create read authorities inside the authentication module.
+Profile, scope, parsed fields and database identity live in ECMAScript private
+fields. Query ports validate the genuine instance, exact prototype, authority
+kind, database, live transaction lease, failed-scope ancestry, expiry and the
+credential check's write serial before SQL or image access. The outer checked
+callback's finally closes the lease before native COMMIT and transaction-exit
+cleanup. A final fallback handles failed admission. Rollback, interruption and
+failure also close it. Failed nested scopes invalidate their
+values without ending Discovery's outer snapshot. A later checked scope verifies
+credentials again and requires the original restore generation. Copies,
+subclasses, mutation and retained values cannot grant access; refusal uses the
+existing generic storage error. The authority, its payload and its
+class/prototype are frozen. Ordinary readers return data and plain selectors.
+
+One classifier runs in the credential-check snapshot after credential and scope
+validation. It distinguishes active, tombstoned and never-created identifiers.
+Only an active Profile receives a query authority. Never-created results contain
+no Profile id or authority and use literals for empty replies; Quick-add parses
+its supplied text without looking up Tags or Projects. Their credential lookup
+and classification are the only statements. CLI name resolution selects the
+active id after name reuse; a deleted HTTP id remains unavailable.
+
+Diagnostics materializes generation, Snapshot manifests, pending reminders and
+metrics inside a checked owner callback under the existing IMMEDIATE transaction.
+This holds the writer lock longer while total read time remains unchanged.
+Paired owner-shaped measurements give continuous hold medians of 3.59 ms before
+and 25.34 ms after; the retained-Snapshot fixture gives 3.67 ms and 31.39 ms.
+The coordinator accepted this cost for this unit. A separate writer waits until
+the read returns, then commits. A deferred owner read scope and cheaper metrics
+queries remain proposals for a later unit. Snapshot write helpers continue to
+use requireOwner under the write path's rules.
+
+Task History selects relevant event rows in SQL before decoding OpLogEntry.
+SSE catch-up selects only committed rows for its Profile and cursor. Full History
+reads remain available to commands that need them, Revert, replay and recovery.
+The ordinary HTTP authorization transaction remains immediate. No transaction
+mode changes accompany these projection queries.
+
 The approved [agent discovery contract](decisions/agent-discovery-phase-0.md)
 adds a Profile-to-Project directory and explicit read-only Task prefix lookup.
 `Discovery.directory` and `Discovery.lookup` call the existing authentication
@@ -235,6 +295,30 @@ wake each stream's next normal pass immediately. The CLI discovers only a privat
 record beside its selected canonical database, compares physical file identity and
 contract, and verifies a nonce HMAC before using the same connection. Discovery and
 nudge have separate 50 ms budgets. Failure leaves the direct command's result alone.
+Each poll checks and materializes in one transaction and retains plain
+subscription selectors between polls. A never-created identifier is classified
+again on every poll, so a later CLI creation starts normal ordered delivery.
+For a still-valid credential, a changed restore generation is announced with
+`reload` before the restored Profile's outcome. This includes a restored
+tombstone: reload advances the cursor to the DatabaseRestored boundary, then a
+fresh pass sends the existing not_found failure and closes. The reload result
+contains generation metadata and grants no read authority.
+An already connected, still-valid unscoped credential (a Session or Access Token)
+has a private one-shot terminal permission through the committed `ProfileDeleted`
+sequence, followed by the existing failure and close sequence. Revoked or expired
+credentials receive no terminal batch. A deletion-revoked scoped Token closes as
+revoked. The base's
+terminal batch for revoked or expired credentials is intentionally removed under
+the owner's ruling.
+The compiled frame comparison covers ordering, gaps, reconnect, restore,
+revocation, expiry and deletion. A valid Session or unscoped Token keeps the same
+final TaskCreated, two TaskDeleted and ProfileDeleted frames, then the same
+not_found failure and close. A deletion-revoked scoped Token, an already revoked
+Session or Token, and an expired Session or Token receive only ready followed by
+their unchanged Unauthorized revoked or expired failure
+and close. The base also sent the terminal operation batch to these credentials.
+The exact raw frames and sequence ids are recorded in the server-reads report.
+That is how a `todo edit` from the CLI process reaches an open desktop app.
 There is no file watcher. Reconnect with
 `Last-Event-ID: <seq>` to resume after that id, and save cursors per Profile.
 After a Snapshot restore the generation changes, and the stream sends `reload`
@@ -351,3 +435,12 @@ position. Query another Task for its sets.
 Reachability and Ready-set membership are computed outside node assembly, so
 the serialized report has O(n+m) content plus the requested root's sets.
 Shared ranking energy and unknown-energy tie behavior are unchanged.
+
+Read authorization owns and validates the request fields before the credential
+callback, then returns a frozen nominal read value containing its Profile,
+credential scope and parsed fields. Query continuations use that value. Task
+lists, Show, graph, History, planning views, Discovery, image reads, owner Snapshot
+reads and SSE keep their ids and filters through later callbacks and yields.
+Credential secrets are private fields rather than enumerable result properties.
+Profile counts consume the checked Profile rows and their ids once; they do not
+rediscover a visible set from the credential after checking it.

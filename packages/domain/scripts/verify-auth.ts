@@ -12,6 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import {
+  ActorId,
   AuthError,
   FinishTaskRequest,
   Instant,
@@ -22,7 +23,7 @@ import {
   Task,
 } from "@todo/domain";
 import { openStore, type StoreError } from "@todo/domain/store";
-import { Clock, Effect, Schema } from "effect";
+import { Cause, Clock, Effect, Exit, Schema } from "effect";
 import { RRuleTemporal } from "rrule-temporal";
 
 const directory = process.argv[2];
@@ -676,6 +677,95 @@ const program = Effect.acquireUseRelease(
             );
           }),
         (second) => Effect.orDie(second.close()),
+      );
+      yield* Effect.acquireUseRelease(
+        openStore({ path: join(directory, "read-scopes.db") }),
+        (scoped) =>
+          Effect.gen(function* () {
+            yield* scoped.putProfile(
+              Schema.decodeUnknownSync(Profile)({
+                id: "work",
+                name: "Work",
+                created_at: instant(new Date(time).toISOString()),
+                updated_at: instant(new Date(time).toISOString()),
+              }),
+            );
+            yield* scoped.auth.setupOwner("compiled scope passphrase");
+            const owner = yield* scoped.auth.signIn(
+              "compiled scope passphrase",
+            );
+            yield* scoped.append({
+              actor: Schema.decodeUnknownSync(ActorId)("scope-proof"),
+              profile,
+              event: created,
+            });
+            const request = { credential: owner.credential, profile };
+            const retained = yield* scoped.auth.withRead(
+              request,
+              Schema.Struct({}),
+              {},
+              (read) =>
+                scoped.graphRead(read).pipe(
+                  Effect.map((graph) => {
+                    assert.deepEqual(
+                      graph.tasks.map((value) => value.id),
+                      ["task-1"],
+                    );
+                    return read;
+                  }),
+                ),
+            );
+            const refused = yield* Effect.exit(scoped.graphRead(retained));
+            assert.ok(Exit.isFailure(refused));
+            assert.equal(
+              Reflect.get(Object(Cause.squash(refused.cause)), "_tag"),
+              "StoreError",
+            );
+            const renewed = yield* scoped.auth.recheckRead(retained, (read) =>
+              scoped.graphRead(read),
+            );
+            assert.deepEqual(
+              renewed.tasks.map((value) => value.id),
+              ["task-1"],
+            );
+            const token = yield* scoped.auth.issueToken({
+              credential: owner.credential,
+              token: { name: "scope-reader", profile, scope: "read-only" },
+            });
+            const revoked = yield* scoped.auth.authorizeRead(
+              { credential: token.credential, profile },
+              Schema.Struct({}),
+              {},
+            );
+            yield* scoped.auth.revokeToken({
+              credential: owner.credential,
+              name: "scope-reader",
+            });
+            const denied = yield* Effect.exit(scoped.graphRead(revoked));
+            assert.ok(Exit.isFailure(denied));
+            assert.equal(
+              Reflect.get(Object(Cause.squash(denied.cause)), "_tag"),
+              "StoreError",
+            );
+            assert.deepEqual(
+              yield* scoped.auth.projects({
+                credential: owner.credential,
+                profile: Schema.decodeUnknownSync(ProfileId)("never-created"),
+              }),
+              [],
+            );
+            mark(
+              "transaction read lease, fresh recheck, revocation and absent literal",
+              {
+                in_scope_ids: ["task-1"],
+                after_commit: "StoreError",
+                rechecked_ids: ["task-1"],
+                after_revocation: "StoreError",
+                absent_projects: [],
+              },
+            );
+          }),
+        (scoped) => Effect.orDie(scoped.close()),
       );
       writeFileSync(
         join(evidence, "result.json"),

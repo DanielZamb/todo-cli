@@ -3,13 +3,15 @@ import { createHash, randomBytes } from "node:crypto";
 import { Cause, Clock, Effect, Exit, Schema } from "effect";
 import type { Profile } from "../entities.ts";
 import { type AppendResult, type AuthAction, Event } from "../events.ts";
-import { ActorId, ProfileId, Sequence } from "../ids.ts";
+import { ActorId, ProfileId, Sequence, TaskId } from "../ids.ts";
 import type {
   DeleteProfile,
   ProfileDeletionResult,
 } from "../profile-commands.ts";
 import type { FinishTask, StartSeries } from "../recurrence.ts";
+import { ClientProjection } from "../store/client-projection.ts";
 import { StoreError } from "../store/error.ts";
+import { taskHistory } from "../store/history-reads.ts";
 import { changes, metadata } from "../store/projection.ts";
 import { Instant } from "../time.ts";
 
@@ -26,6 +28,314 @@ import {
   TokenOptions,
 } from "./model.ts";
 
+type AuthorityKind = "read" | "profiles" | "owner" | "terminal";
+type AuthorityValue<Kind extends AuthorityKind, P, Fields> = Readonly<{
+  kind: Kind;
+  profile: P;
+  scope: AccessScope;
+  credential: string;
+  fields: Readonly<Fields>;
+  profiles: readonly Profile[];
+  profileInfo: Readonly<Pick<Profile, "id" | "name">> | null;
+}>;
+const authorityCreation = Symbol("credential-checked read authority");
+type ReadLease = {
+  active: boolean;
+  checkedSerial: number | null;
+  frame: LeaseFrame;
+  readonly clock: Clock.Clock;
+  readonly credentials: Map<string, { value: CredentialInfo; changes: number }>;
+};
+export type AbsentRead<Fields = unknown> = Readonly<{
+  kind: "absent";
+  requested: string;
+  credential: string;
+  scope: AccessScope;
+  fields: Readonly<Fields>;
+  profileInfo: null;
+  snapshot: {
+    readonly generation: string;
+    readonly seq: number;
+    readonly restore_seq: number;
+  };
+}>;
+type ProfileClass =
+  | {
+      kind: "present";
+      profile: Readonly<Pick<Profile, "id" | "name">>;
+      snapshot: AbsentRead["snapshot"];
+    }
+  | { kind: "tombstoned"; snapshot: AbsentRead["snapshot"] }
+  | { kind: "absent"; snapshot: AbsentRead["snapshot"] };
+const emptyState = () => ({
+  profiles: [],
+  tasks: [],
+  series: [],
+  projects: [],
+  tags: [],
+  history: [],
+});
+type LeaseFrame = { failed: boolean; readonly parent: LeaseFrame | null };
+const leases = new WeakMap<Database, ReadLease>();
+const mutationSerial = (db: Database) =>
+  db.query<{ serial: number }, []>("SELECT total_changes() AS serial").get()
+    ?.serial ?? 0;
+const restoreGeneration = (db: Database) =>
+  db
+    .query<{ generation: string }, []>(
+      "SELECT json_extract(event,'$.generation') AS generation FROM op_log WHERE profile IS NULL AND actor='snapshot-restore' AND outcome='committed' AND json_extract(event,'$.kind')='DatabaseRestored' ORDER BY seq DESC LIMIT 1",
+    )
+    .get()?.generation ?? "initial";
+const withinLease = <A>(
+  db: Database,
+  clock: Clock.Clock,
+  transaction: <B>(run: () => B) => B,
+  run: () => A,
+): A => {
+  const outer = leases.get(db);
+  const nested = outer?.active && db.inTransaction ? outer : undefined;
+  const frame: LeaseFrame = { failed: false, parent: nested?.frame ?? null };
+  const lease: ReadLease = nested ?? {
+    active: true,
+    checkedSerial: null,
+    frame,
+    clock,
+    credentials: new Map(),
+  };
+  lease.frame = frame;
+  if (!nested) leases.set(db, lease);
+  try {
+    return transaction(() => {
+      try {
+        return run();
+      } finally {
+        if (!nested) {
+          lease.active = false;
+          lease.credentials.clear();
+          if (leases.get(db) === lease) leases.delete(db);
+        }
+      }
+    });
+  } catch (error) {
+    frame.failed = true;
+    throw error;
+  } finally {
+    if (nested && frame.parent) lease.frame = frame.parent;
+    else {
+      lease.active = false;
+      lease.credentials.clear();
+      if (leases.get(db) === lease) leases.delete(db);
+    }
+  }
+};
+const failedFrame = (frame: LeaseFrame): boolean =>
+  frame.failed || (frame.parent !== null && failedFrame(frame.parent));
+
+export const freezeRead = <A>(value: A): Readonly<A> => {
+  if (value !== null && typeof value === "object")
+    for (const child of Object.values(value)) freezeRead(child);
+  return Object.freeze(value);
+};
+
+class ReadAuthority<Kind extends AuthorityKind, P, Fields> {
+  readonly #origin: Database;
+  readonly #value: AuthorityValue<Kind, P, Fields>;
+  readonly #lease: ReadLease;
+  readonly #frame: LeaseFrame;
+  readonly #serial: number;
+  readonly #generation: string;
+  readonly #expires: number;
+  #terminalUsed = false;
+  constructor(
+    key: typeof authorityCreation,
+    origin: Database,
+    value: AuthorityValue<Kind, P, Fields>,
+    info: CredentialInfo,
+  ) {
+    if (key !== authorityCreation || new.target !== ReadAuthority)
+      throw new StoreError(new Error("Invalid read authority"));
+    this.#origin = origin;
+    this.#value = value;
+    const lease = leases.get(origin);
+    if (!lease?.active || !origin.inTransaction)
+      throw new StoreError(new Error("Invalid read authority"));
+    this.#lease = lease;
+    this.#frame = lease.frame;
+    if (lease.checkedSerial === null)
+      throw new StoreError(new Error("Invalid read authority"));
+    this.#serial = lease.checkedSerial;
+    this.#generation = restoreGeneration(origin);
+    this.#expires = Date.parse(info.expires_at);
+    if (lease.clock.currentTimeMillisUnsafe() >= this.#expires)
+      throw new AuthError("expired", info.id);
+    Object.freeze(this);
+  }
+  static inspect<K extends AuthorityKind, P, F>(
+    value: ReadAuthority<K, P, F>,
+    kind?: K,
+    origin?: object,
+    retained?: typeof authorityCreation,
+  ): AuthorityValue<K, P, F> {
+    if (
+      value === null ||
+      typeof value !== "object" ||
+      !(#value in value) ||
+      Object.getPrototypeOf(value) !== ReadAuthority.prototype ||
+      (kind !== undefined && value.#value.kind !== kind) ||
+      (origin !== undefined && value.#origin !== origin)
+    )
+      throw new StoreError(new Error("Invalid read authority"));
+    if (
+      retained !== authorityCreation &&
+      (!value.#lease.active ||
+        failedFrame(value.#frame) ||
+        leases.get(value.#origin) !== value.#lease ||
+        !value.#origin.inTransaction ||
+        value.#lease.clock.currentTimeMillisUnsafe() >= value.#expires ||
+        mutationSerial(value.#origin) !== value.#serial)
+    )
+      throw new StoreError(new Error("Invalid read authority"));
+    return value.#value;
+  }
+  static retained<K extends AuthorityKind, P, F>(
+    key: typeof authorityCreation,
+    value: ReadAuthority<K, P, F>,
+    origin: Database,
+  ) {
+    if (key !== authorityCreation)
+      throw new StoreError(new Error("Invalid read authority"));
+    const selected = ReadAuthority.inspect(value, undefined, origin, key);
+    if (value.#generation !== restoreGeneration(origin))
+      throw new StoreError(new Error("Invalid read authority"));
+    return selected;
+  }
+  static consumeTerminal(read: AuthorizedTerminalRead, origin: Database) {
+    const value = ReadAuthority.inspect(read, "terminal", origin);
+    if (read.#terminalUsed)
+      throw new StoreError(new Error("Invalid read authority"));
+    read.#terminalUsed = true;
+    return value;
+  }
+  get kind() {
+    return ReadAuthority.inspect(this).kind;
+  }
+  get profile() {
+    return ReadAuthority.inspect(this).profile;
+  }
+  get scope() {
+    return ReadAuthority.inspect(this).scope;
+  }
+  get fields() {
+    return ReadAuthority.inspect(this).fields;
+  }
+  get credential() {
+    return ReadAuthority.inspect(this).credential;
+  }
+}
+Object.freeze(ReadAuthority.prototype);
+Object.freeze(ReadAuthority);
+
+export type AuthorizedRead<Fields = unknown> = ReadAuthority<
+  "read",
+  ProfileId,
+  Fields
+>;
+export type AuthorizedProfiles<Fields = unknown> = ReadAuthority<
+  "profiles",
+  null,
+  Fields
+>;
+export type AuthorizedOwnerRead<Fields = unknown> = ReadAuthority<
+  "owner",
+  null,
+  Fields
+>;
+export type AuthorizedTerminalRead = ReadAuthority<
+  "terminal",
+  ProfileId,
+  {
+    readonly after: number;
+    readonly through: number;
+    readonly generation: string;
+  }
+>;
+export const consumeTerminalRead = (
+  read: AuthorizedTerminalRead,
+  db: Database,
+) => ReadAuthority.consumeTerminal(read, db);
+export const readAuthority = <K extends AuthorityKind, P, F>(
+  read: ReadAuthority<K, P, F>,
+  kind: K,
+  origin: Database,
+) => ReadAuthority.inspect(read, kind, origin);
+export const checkedRead = <K extends AuthorityKind, P, F>(
+  read: ReadAuthority<K, P, F>,
+  kind: K,
+  origin: Database,
+) =>
+  Effect.try({
+    try: () => readAuthority(read, kind, origin),
+    catch: (cause) =>
+      cause instanceof StoreError ? cause : new StoreError(cause),
+  });
+const createAuthority = <K extends AuthorityKind, P, F>(
+  kind: K,
+  origin: Database,
+  profile: P,
+  credential: string,
+  fields: F,
+  info: CredentialInfo,
+  profiles: readonly Profile[] = [],
+  profileInfo: Readonly<Pick<Profile, "id" | "name">> | null = null,
+): ReadAuthority<K, P, F> =>
+  new ReadAuthority(
+    authorityCreation,
+    origin,
+    Object.freeze({
+      kind,
+      profile,
+      credential,
+      fields: freezeRead(fields),
+      scope: info.scope,
+      profiles: freezeRead(profiles),
+      profileInfo,
+    }),
+    info,
+  );
+const bindRead = <F>(
+  db: Database,
+  profile: ProfileId,
+  credential: string,
+  fields: F,
+  info: CredentialInfo,
+  profileInfo: Readonly<Pick<Profile, "id" | "name">>,
+) =>
+  createAuthority(
+    "read",
+    db,
+    profile,
+    credential,
+    fields,
+    info,
+    [],
+    profileInfo,
+  );
+const bindProfiles = <F>(
+  db: Database,
+  credential: string,
+  fields: F,
+  info: CredentialInfo,
+  profiles: readonly Profile[],
+) => createAuthority("profiles", db, null, credential, fields, info, profiles);
+const bindOwnerRead = <F>(
+  db: Database,
+  credential: string,
+  fields: F,
+  info: CredentialInfo,
+) => createAuthority("owner", db, null, credential, fields, info);
+
+const EmptyRead = Schema.Struct({});
+const TaskReadFields = Schema.Struct({ task_id: TaskId });
 const credentialColumns =
   "id,kind,name,profile,scope,created_at,expires_at,revoked_at";
 const sha256 = (secret: string) =>
@@ -108,11 +418,14 @@ type ReadBoundary = {
 };
 
 export class Authentication<Read> {
+  private readonly projection: ClientProjection;
   constructor(
     private readonly db: Database,
     private readonly transaction: <A>(run: () => A) => A,
     private readonly ports: Ports<Read>,
-  ) {}
+  ) {
+    this.projection = new ClientProjection(db);
+  }
 
   private signInQueue: Promise<unknown> = Promise.resolve();
   private waitingSignIns = 0;
@@ -271,10 +584,16 @@ export class Authentication<Read> {
   ) {
     return Effect.gen({ self: this }, function* () {
       const time = yield* Clock.currentTimeMillis;
+      const clock = yield* Clock.Clock;
       return yield* Effect.try({
         try: () => {
           try {
-            return (boundary?.transaction ?? this.transaction)(() => run(time));
+            return withinLease(
+              this.db,
+              clock,
+              boundary?.transaction ?? this.transaction,
+              () => run(time),
+            );
           } catch (error) {
             if (
               !(error instanceof AuthError) ||
@@ -303,7 +622,9 @@ export class Authentication<Read> {
           }
         },
         catch: (cause) =>
-          cause instanceof AuthError ? cause : new StoreError(cause),
+          cause instanceof AuthError || cause instanceof StoreError
+            ? cause
+            : new StoreError(cause),
       });
     });
   }
@@ -330,7 +651,53 @@ export class Authentication<Read> {
       );
   }
 
-  private requireCredential(
+  private classifyProfile(profile: ProfileId): ProfileClass {
+    const row = this.db
+      .query<
+        {
+          id: string | null;
+          name: string | null;
+          deleted: string | null;
+          seq: number;
+          generation: string;
+          restore_seq: number;
+        },
+        [string]
+      >(
+        "WITH current AS (SELECT coalesce(max(seq),0) AS seq FROM op_log), restored AS (SELECT seq,json_extract(event,'$.generation') AS generation FROM op_log WHERE profile IS NULL AND actor='snapshot-restore' AND outcome='committed' AND json_extract(event,'$.kind')='DatabaseRestored' ORDER BY seq DESC LIMIT 1) SELECT p.id,p.name,d.profile AS deleted,current.seq,coalesce(restored.generation,'initial') AS generation,coalesce(restored.seq,current.seq) AS restore_seq FROM (SELECT ? AS requested) r CROSS JOIN current LEFT JOIN restored ON 1 LEFT JOIN profiles p ON p.id=r.requested LEFT JOIN profile_deletions d ON d.profile=p.id",
+      )
+      .get(profile);
+    if (!row) throw new StoreError(new Error("Missing Profile classification"));
+    const snapshot = freezeRead({
+      seq: row.seq,
+      generation: row.generation,
+      restore_seq: row.restore_seq,
+    });
+    const value: ProfileClass =
+      row.deleted !== null
+        ? { kind: "tombstoned", snapshot }
+        : row.id === null
+          ? { kind: "absent", snapshot }
+          : {
+              kind: "present",
+              profile: freezeRead(
+                Schema.decodeUnknownSync(
+                  Schema.Struct({ id: ProfileId, name: Schema.String }),
+                )({ id: row.id, name: row.name }),
+              ),
+              snapshot,
+            };
+    return value;
+  }
+
+  private presentProfile(profile: ProfileId) {
+    const value = this.classifyProfile(profile);
+    if (value.kind !== "present")
+      throw new StoreError(new Error("Invalid read authority"));
+    return value.profile;
+  }
+
+  private credentialCheck(
     input: { credential: string },
     time: number,
     access: "owner" | "read" | "write" | "profiles",
@@ -339,11 +706,27 @@ export class Authentication<Read> {
     const { credential } = parse(OwnerRequest, input);
     if (!/^(ses|tok)_[a-f0-9]{64}$/.test(credential))
       throw new AuthError("invalid_credential");
-    const row = this.db
-      .query(`SELECT ${credentialColumns} FROM credentials WHERE secret_hash=?`)
-      .get(sha256(credential));
-    if (row === null) throw new AuthError("invalid_credential");
-    const value = Schema.decodeUnknownSync(CredentialInfo)(row);
+    const lease = leases.get(this.db);
+    const cached = lease?.credentials.get(credential);
+    const serial = cached ? mutationSerial(this.db) : undefined;
+    const row =
+      cached !== undefined && cached.changes === serial
+        ? cached.value
+        : this.db
+            .query(
+              "SELECT " +
+                credentialColumns +
+                ",total_changes() AS checked_changes FROM credentials WHERE secret_hash=?",
+            )
+            .get(sha256(credential));
+    if (row === null || row === undefined)
+      throw new AuthError("invalid_credential");
+    const value = freezeRead(Schema.decodeUnknownSync(CredentialInfo)(row));
+    const changes = Reflect.get(row, "checked_changes");
+    lease?.credentials.set(credential, {
+      value,
+      changes: typeof changes === "number" ? changes : (serial ?? 0),
+    });
     if ((value.kind === "session") !== credential.startsWith("ses_"))
       throw new AuthError("invalid_credential");
     if (value.revoked_at !== null) throw new AuthError("revoked", value.id);
@@ -359,15 +742,27 @@ export class Authentication<Read> {
       throw new AuthError("profile_scope", value.id);
     if (access === "write" && value.scope !== "read-write")
       throw new AuthError("write_scope", value.id);
-    if (
-      profile !== null &&
-      this.db
-        .query("SELECT 1 FROM profile_deletions WHERE profile=?")
-        .get(profile)
-    )
+    const checkedSerial = typeof changes === "number" ? changes : (serial ?? 0);
+    if (lease) lease.checkedSerial = checkedSerial;
+    const classification =
+      profile === null ? undefined : this.classifyProfile(profile);
+    if (classification?.kind === "tombstoned")
       throw new AuthError("profile_deleted", value.id);
-    this.ports.credentialUsed?.(value.id, time);
-    return value;
+    try {
+      this.ports.credentialUsed?.(value.id, time);
+    } finally {
+      if (lease) lease.checkedSerial = checkedSerial;
+    }
+    return { info: value, classification };
+  }
+
+  private requireCredential(
+    input: { credential: string },
+    time: number,
+    access: "owner" | "read" | "write" | "profiles",
+    profile: ProfileId | null = null,
+  ) {
+    return this.credentialCheck(input, time, access, profile).info;
   }
 
   private issue(
@@ -534,24 +929,52 @@ export class Authentication<Read> {
     });
 
   readonly resolveProfile = (input: ResolveProfileRequest) =>
+    this.resolveProfileRead(input, EmptyRead, {}).pipe(
+      Effect.map((result) => result.profile),
+    );
+
+  readonly resolveProfileRead = <S extends Schema.ConstraintDecoder<unknown>>(
+    input: ResolveProfileRequest,
+    schema: S,
+    fields: S["Type"],
+  ) =>
     Effect.suspend(() => {
+      const parsed = freezeRead(parse(schema, structuredClone(fields)));
+      const { credential, profile, action } = input;
+      const request = Object.freeze({ credential, profile, action });
       let selected: ProfileId | null = null;
       const rejection = new ResolvedProfileRejection(() => selected);
-      return this.perform(input.action, rejection, (time) => {
-        selected = this.resolvedProfileForHistory(input.profile);
-        const credential = this.requireCredential(input, time, "profiles");
+      return this.perform(request.action, rejection, (time) => {
+        selected = this.resolvedProfileForHistory(request.profile);
+        const credential = this.requireCredential(request, time, "profiles");
         const profiles = this.authorizedProfiles(credential);
         const profile =
-          profiles.find((row) => row.id === input.profile) ??
-          profiles.find((row) => row.name === input.profile);
+          profiles.find((row) => row.id === request.profile) ??
+          profiles.find((row) => row.name === request.profile);
         if (profile) selected = profile.id;
-        this.requireCredential(
-          input,
+        const info = this.requireCredential(
+          request,
           time,
           "read",
-          selected ?? parse(ProfileId, input.profile),
+          selected ?? parse(ProfileId, request.profile),
         );
-        return profile ? { id: profile.id, name: profile.name } : null;
+        return profile
+          ? {
+              profile: freezeRead({ id: profile.id, name: profile.name }),
+              selection: readAuthority(
+                bindRead(
+                  this.db,
+                  profile.id,
+                  request.credential,
+                  parsed,
+                  info,
+                  { id: profile.id, name: profile.name },
+                ),
+                "read",
+                this.db,
+              ),
+            }
+          : null;
       }).pipe(
         Effect.catchTag("AuthError", (error) =>
           error.detail === "profile_scope" || error.detail === "profile_deleted"
@@ -716,7 +1139,14 @@ export class Authentication<Read> {
 
   readonly readSnapshot = <A>(
     operation: (
-      reads: Pick<Authentication<Read>, "profiles" | "read">,
+      reads: Pick<
+        Authentication<Read>,
+        | "profiles"
+        | "catalog"
+        | "profileSummaries"
+        | "metadata"
+        | "profilesRead"
+      >,
     ) => Effect.Effect<A, AuthError | StoreError>,
   ) =>
     Effect.contextWith<never, A, AuthError | StoreError, never>((context) =>
@@ -731,7 +1161,22 @@ export class Authentication<Read> {
           const result = Effect.runSyncExitWith(context)(
             operation({
               profiles: (input) => this.profilesWithin(input, boundary),
-              read: (input) => this.readWithin(input, boundary),
+              profilesRead: (input, schema, fields) =>
+                this.profilesReadWithin(input, schema, fields, boundary),
+              catalog: (input) =>
+                this.projectionWithin(
+                  input,
+                  (read) => this.projection.catalog(read),
+                  boundary,
+                ),
+              metadata: (input) =>
+                this.projectionWithin(
+                  input,
+                  (read) => this.projection.metadata(read),
+                  boundary,
+                ),
+              profileSummaries: (input) =>
+                this.profileSummariesWithin(input, boundary, false),
             }),
           );
           if (Exit.isFailure(result)) throw Cause.squash(result.cause);
@@ -746,6 +1191,41 @@ export class Authentication<Read> {
 
   readonly profiles = (input: { readonly credential: string }) =>
     this.profilesWithin(input);
+
+  readonly profilesRead = <S extends Schema.ConstraintDecoder<unknown>>(
+    input: { credential: string },
+    schema: S,
+    fields: S["Type"],
+  ) => this.profilesReadWithin(input, schema, fields);
+  private profilesReadWithin = <S extends Schema.ConstraintDecoder<unknown>>(
+    input: { credential: string },
+    schema: S,
+    fields: S["Type"],
+    boundary?: ReadBoundary,
+  ) =>
+    this.perform(
+      "read",
+      null,
+      (time) => {
+        const request = freezeRead(
+            parse(OwnerRequest, { credential: input.credential }),
+          ),
+          parsed = freezeRead(parse(schema, structuredClone(fields)));
+        const info = this.requireCredential(request, time, "profiles");
+        const profiles = freezeRead(this.authorizedProfiles(info));
+        return {
+          read: bindProfiles(
+            this.db,
+            request.credential,
+            parsed,
+            info,
+            profiles,
+          ),
+          profiles,
+        };
+      },
+      boundary,
+    );
 
   private profilesWithin = (
     input: { readonly credential: string },
@@ -763,16 +1243,515 @@ export class Authentication<Read> {
 
   readonly read = (input: AccessRequest) => this.readWithin(input);
 
-  private readWithin = (input: AccessRequest, boundary?: ReadBoundary) =>
-    this.perform(
+  readonly catalog = (input: AccessRequest) =>
+    this.projectionWithin(
+      input,
+      (read) => this.projection.catalog(read),
+      undefined,
+      () => ({ projects: [], tags: [], tasks: [] }),
+    );
+
+  readonly metadata = (input: AccessRequest) =>
+    this.projectionWithin(
+      input,
+      (read) => this.projection.metadata(read),
+      undefined,
+      () => ({ projects: [], tags: [] }),
+    );
+
+  readonly authorizeRead = <S extends Schema.ConstraintDecoder<unknown>>(
+    input: AccessRequest,
+    schema: S,
+    fields: S["Type"],
+  ) =>
+    this.queryWithin(input, schema, fields, (read) => {
+      readAuthority(read, "read", this.db);
+      return read;
+    });
+
+  readonly withRead = <
+    S extends Schema.ConstraintDecoder<unknown>,
+    A,
+    B = never,
+  >(
+    input: AccessRequest,
+    schema: S,
+    fields: S["Type"],
+    operation: (
+      read: AuthorizedRead<Readonly<S["Type"]>>,
+    ) => Effect.Effect<A, StoreError | AuthError>,
+    action: "read" | "authenticate" = "read",
+    absent?: (
+      selection: AbsentRead<S["Type"]>,
+    ) => Effect.Effect<B, StoreError | AuthError>,
+  ) =>
+    Effect.contextWith<never, A | B, StoreError | AuthError, never>(
+      (context) => {
+        const run = <C>(effect: Effect.Effect<C, StoreError | AuthError>) => {
+          const result = Effect.runSyncExitWith(context)(effect);
+          if (Exit.isFailure(result)) throw Cause.squash(result.cause);
+          return result.value;
+        };
+        return this.queryWithin(
+          input,
+          schema,
+          fields,
+          (read) => run(operation(read)),
+          undefined,
+          action,
+          absent === undefined
+            ? undefined
+            : (selection) => run(absent(selection)),
+        );
+      },
+    );
+
+  readonly withMetadata = <
+    S extends Schema.ConstraintDecoder<unknown>,
+    A,
+    B = never,
+  >(
+    input: AccessRequest,
+    schema: S,
+    fields: S["Type"],
+    operation: (
+      read: AuthorizedRead<Readonly<S["Type"]>>,
+      data: ReturnType<ClientProjection["metadata"]>,
+    ) => Effect.Effect<A, StoreError | AuthError>,
+    absent?: (
+      selection: AbsentRead<S["Type"]>,
+    ) => Effect.Effect<B, StoreError | AuthError>,
+  ) =>
+    this.withRead(
+      input,
+      schema,
+      fields,
+      (read) => operation(read, this.projection.metadata(read)),
       "read",
+      absent,
+    );
+
+  readonly withState = <
+    S extends Schema.ConstraintDecoder<unknown>,
+    A,
+    B = never,
+  >(
+    input: AccessRequest,
+    schema: S,
+    fields: S["Type"],
+    operation: (
+      read: AuthorizedRead<Readonly<S["Type"]>>,
+      data: Read,
+    ) => Effect.Effect<A, StoreError | AuthError>,
+    absent?: (
+      selection: AbsentRead<S["Type"]>,
+    ) => Effect.Effect<B, StoreError | AuthError>,
+  ) =>
+    this.withRead(
+      input,
+      schema,
+      fields,
+      (read) =>
+        operation(
+          read,
+          this.ports.read(readAuthority(read, "read", this.db).profile),
+        ),
+      "read",
+      absent,
+    );
+
+  readonly readMetadata = <S extends Schema.ConstraintDecoder<unknown>>(
+    input: AccessRequest,
+    schema: S,
+    fields: S["Type"],
+  ) =>
+    this.queryWithin(
+      input,
+      schema,
+      fields,
+      (read) => ({
+        selection: readAuthority(read, "read", this.db),
+        data: this.projection.metadata(read),
+      }),
+      undefined,
+      "read",
+      (selection) => ({ selection, data: { projects: [], tags: [] } }),
+    );
+
+  readonly readState = <S extends Schema.ConstraintDecoder<unknown>>(
+    input: AccessRequest,
+    schema: S,
+    fields: S["Type"],
+  ) =>
+    this.queryWithin(
+      input,
+      schema,
+      fields,
+      (read) => ({
+        selection: readAuthority(read, "read", this.db),
+        data: this.ports.read(readAuthority(read, "read", this.db).profile),
+      }),
+      undefined,
+      "read",
+      (selection) => ({ selection, data: emptyState() }),
+    );
+
+  readonly readCatalog = <S extends Schema.ConstraintDecoder<unknown>>(
+    input: AccessRequest,
+    schema: S,
+    fields: S["Type"],
+  ) =>
+    this.queryWithin(
+      input,
+      schema,
+      fields,
+      (read) => ({
+        selection: readAuthority(read, "read", this.db),
+        data: this.projection.catalog(read),
+      }),
+      undefined,
+      "read",
+      (selection) => ({
+        selection,
+        data: { projects: [], tags: [], tasks: [] },
+      }),
+    );
+
+  readonly subscribe = <S extends Schema.ConstraintDecoder<unknown>>(
+    input: AccessRequest,
+    schema: S,
+    fields: S["Type"],
+  ) =>
+    this.queryWithin(
+      input,
+      schema,
+      fields,
+      (read) => {
+        readAuthority(read, "read", this.db);
+        return read;
+      },
+      undefined,
+      "authenticate",
+    );
+
+  readonly checkRead = <K extends AuthorityKind, P, F>(
+    read: ReadAuthority<K, P, F>,
+    kind: K,
+  ) => checkedRead(read, kind, this.db);
+  readonly recheckRead = <F, A>(
+    read: AuthorizedRead<F>,
+    operation: (
+      read: AuthorizedRead<Readonly<F>>,
+    ) => Effect.Effect<A, StoreError | AuthError>,
+  ) =>
+    Effect.contextWith<never, A, StoreError | AuthError, never>((context) =>
+      this.perform("authenticate", null, (time) => {
+        const value = ReadAuthority.retained(authorityCreation, read, this.db);
+        const info = this.requireCredential(value, time, "read", value.profile);
+        const renewed = bindRead(
+          this.db,
+          value.profile,
+          value.credential,
+          value.fields,
+          info,
+          this.presentProfile(value.profile),
+        );
+        const result = Effect.runSyncExitWith(context)(operation(renewed));
+        if (Exit.isFailure(result)) throw Cause.squash(result.cause);
+        return result.value;
+      }),
+    );
+
+  readonly ownerRead = <S extends Schema.ConstraintDecoder<unknown>>(
+    input: { credential: string },
+    schema: S,
+    fields: S["Type"],
+  ) =>
+    this.perform("authenticate", null, (time) => {
+      const request = freezeRead(
+          parse(OwnerRequest, { credential: input.credential }),
+        ),
+        parsed = freezeRead(parse(schema, structuredClone(fields)));
+      const info = this.requireCredential(request, time, "owner");
+      return bindOwnerRead(this.db, request.credential, parsed, info);
+    });
+
+  readonly withOwnerRead = <S extends Schema.ConstraintDecoder<unknown>, A>(
+    input: { credential: string },
+    schema: S,
+    fields: S["Type"],
+    operation: (
+      read: AuthorizedOwnerRead<Readonly<S["Type"]>>,
+    ) => Effect.Effect<A, StoreError | AuthError>,
+  ) =>
+    Effect.contextWith<never, A, StoreError | AuthError, never>((context) =>
+      this.perform("authenticate", null, (time) => {
+        const request = freezeRead(
+          parse(OwnerRequest, { credential: input.credential }),
+        );
+        const parsed = freezeRead(parse(schema, structuredClone(fields)));
+        const info = this.requireCredential(request, time, "owner");
+        const result = Effect.runSyncExitWith(context)(
+          operation(bindOwnerRead(this.db, request.credential, parsed, info)),
+        );
+        if (Exit.isFailure(result)) throw Cause.squash(result.cause);
+        return result.value;
+      }),
+    );
+
+  readonly withStreamRead = <S extends Schema.ConstraintDecoder<unknown>, A>(
+    input: AccessRequest,
+    schema: S,
+    fields: S["Type"],
+    state: { readonly after: number; readonly generation: string },
+    operation: (
+      result:
+        | {
+            readonly kind: "active";
+            readonly read: AuthorizedRead<Readonly<S["Type"]>>;
+          }
+        | { readonly kind: "absent"; readonly selection: AbsentRead<S["Type"]> }
+        | { readonly kind: "reload"; readonly snapshot: AbsentRead["snapshot"] }
+        | { readonly kind: "terminal"; readonly read: AuthorizedTerminalRead },
+    ) => Effect.Effect<A, StoreError | AuthError>,
+  ) =>
+    Effect.contextWith<never, A, StoreError | AuthError, never>((context) =>
+      this.perform("authenticate", input.profile, (time) => {
+        const request = freezeRead(
+          parse(AccessRequest, {
+            credential: input.credential,
+            profile: input.profile,
+          }),
+        );
+        const parsed = freezeRead(parse(schema, structuredClone(fields)));
+        const cursor = freezeRead(
+          parse(
+            Schema.Struct({ after: Schema.Number, generation: Schema.String }),
+            { ...state },
+          ),
+        );
+        let result: Parameters<typeof operation>[0];
+        try {
+          const { info, classification } = this.credentialCheck(
+            request,
+            time,
+            "read",
+            request.profile,
+          );
+          if (!classification)
+            throw new StoreError(new Error("Missing Profile classification"));
+          result =
+            classification.kind === "absent"
+              ? {
+                  kind: "absent",
+                  selection: freezeRead({
+                    kind: "absent",
+                    requested: String(request.profile),
+                    credential: request.credential,
+                    scope: info.scope,
+                    fields: parsed,
+                    profileInfo: null,
+                    snapshot: classification.snapshot,
+                  }),
+                }
+              : {
+                  kind: "active",
+                  read: bindRead(
+                    this.db,
+                    request.profile,
+                    request.credential,
+                    parsed,
+                    info,
+                    classification.kind === "present"
+                      ? classification.profile
+                      : this.presentProfile(request.profile),
+                  ),
+                };
+        } catch (error) {
+          const info = leases
+            .get(this.db)
+            ?.credentials.get(request.credential)?.value;
+          if (
+            !(error instanceof AuthError) ||
+            error.detail !== "profile_deleted" ||
+            info === undefined ||
+            info.profile !== null
+          )
+            throw error;
+          const snapshot = this.classifyProfile(request.profile).snapshot;
+          if (cursor.generation !== snapshot.generation) {
+            result = { kind: "reload", snapshot };
+          } else {
+            const deletion = this.db
+              .query<{ seq: number }, [string]>(
+                "SELECT seq FROM op_log WHERE profile=? AND outcome='committed' AND json_extract(event,'$.kind')='ProfileDeleted' ORDER BY seq DESC LIMIT 1",
+              )
+              .get(request.profile);
+            if (!deletion || deletion.seq <= cursor.after) throw error;
+            result = {
+              kind: "terminal",
+              read: createAuthority(
+                "terminal",
+                this.db,
+                request.profile,
+                request.credential,
+                { ...cursor, through: deletion.seq },
+                info,
+              ),
+            };
+          }
+        }
+        const exit = Effect.runSyncExitWith(context)(operation(result));
+        if (Exit.isFailure(exit)) throw Cause.squash(exit.cause);
+        return exit.value;
+      }),
+    );
+
+  readonly taskHistory = (
+    input: AccessRequest & { readonly task_id: TaskId },
+  ) =>
+    this.queryWithin(
+      input,
+      TaskReadFields,
+      { task_id: input.task_id },
+      (read) => taskHistory(this.db, read),
+      undefined,
+      "read",
+      () => [],
+    );
+
+  readonly projects = (input: AccessRequest) =>
+    this.projectionWithin(
+      input,
+      (read) => this.projection.projects(read),
+      undefined,
+      () => [],
+    );
+
+  readonly tags = (input: AccessRequest) =>
+    this.projectionWithin(
+      input,
+      (read) => this.projection.tags(read),
+      undefined,
+      () => [],
+    );
+
+  readonly profileSummaries = (input: { readonly credential: string }) =>
+    this.profileSummariesWithin(input);
+
+  private profileSummariesWithin = (
+    input: { readonly credential: string },
+    boundary?: ReadBoundary,
+    checkProfiles = true,
+  ) =>
+    Effect.gen({ self: this }, function* () {
+      const clock = yield* Clock.Clock;
+      let selected: ProfileId | null = null;
+      return yield* this.perform(
+        "read",
+        new ResolvedProfileRejection(() => selected),
+        (time) => {
+          const request = freezeRead(
+            parse(OwnerRequest, { credential: input.credential }),
+          );
+          const credential = this.requireCredential(request, time, "profiles");
+          const profiles = freezeRead(this.authorizedProfiles(credential));
+          for (const profile of checkProfiles ? profiles : []) {
+            selected = profile.id;
+            this.requireCredential(
+              request,
+              clock.currentTimeMillisUnsafe(),
+              "read",
+              profile.id,
+            );
+          }
+          return this.projection.profiles(
+            bindProfiles(this.db, request.credential, {}, credential, profiles),
+          );
+        },
+        boundary,
+      );
+    });
+
+  private projectionWithin = <A, B = never>(
+    input: AccessRequest,
+    read: (read: AuthorizedRead) => A,
+    boundary?: ReadBoundary,
+    absent?: (selection: AbsentRead) => B,
+  ) => this.queryWithin(input, EmptyRead, {}, read, boundary, "read", absent);
+
+  private queryWithin = <
+    S extends Schema.ConstraintDecoder<unknown>,
+    A,
+    B = never,
+  >(
+    input: AccessRequest,
+    schema: S,
+    fields: S["Type"],
+    operation: (read: AuthorizedRead<Readonly<S["Type"]>>) => A,
+    boundary?: ReadBoundary,
+    action: "read" | "authenticate" = "read",
+    absent?: (selection: AbsentRead<S["Type"]>) => B,
+  ) =>
+    this.perform(
+      action,
       input.profile,
       (time) => {
-        const request = parse(AccessRequest, input);
-        this.requireCredential(request, time, "read", request.profile);
-        return this.ports.read(request.profile);
+        const request = freezeRead(
+          parse(AccessRequest, {
+            credential: input.credential,
+            profile: input.profile,
+          }),
+        );
+        const parsed = freezeRead(parse(schema, structuredClone(fields)));
+        const { info: credential, classification } = this.credentialCheck(
+          request,
+          time,
+          "read",
+          request.profile,
+        );
+        if (!classification)
+          throw new StoreError(new Error("Missing Profile classification"));
+        if (classification.kind === "absent") {
+          if (!absent)
+            throw new StoreError(new Error("Invalid read authority"));
+          return absent(
+            freezeRead({
+              kind: "absent",
+              requested: String(request.profile),
+              credential: request.credential,
+              scope: credential.scope,
+              fields: parsed,
+              profileInfo: null,
+              snapshot: classification.snapshot,
+            }),
+          );
+        }
+        return operation(
+          bindRead(
+            this.db,
+            request.profile,
+            request.credential,
+            parsed,
+            credential,
+            classification.kind === "present"
+              ? classification.profile
+              : this.presentProfile(request.profile),
+          ),
+        );
       },
       boundary,
+    );
+
+  private readWithin = (input: AccessRequest, boundary?: ReadBoundary) =>
+    this.queryWithin(
+      input,
+      EmptyRead,
+      {},
+      (read) => this.ports.read(readAuthority(read, "read", this.db).profile),
+      boundary,
+      "read",
+      emptyState,
     );
 
   readonly append = (input: AccessRequest & { readonly event: unknown }) =>

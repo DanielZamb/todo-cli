@@ -1,4 +1,9 @@
 export * from "./attachments.ts";
+export type {
+  AuthorizedOwnerRead,
+  AuthorizedProfiles,
+  AuthorizedRead,
+} from "./auth/authorized-read.ts";
 export * from "./auth/model.ts";
 export * from "./batch-edit.ts";
 export * from "./client-reads.ts";
