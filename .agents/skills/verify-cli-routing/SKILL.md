@@ -133,3 +133,14 @@ the base with no guard, record, proof or authorization and one withdrawal log; a
 link added after start-up withdraws that incarnation for good, and removing it
 does not bring the record back. CLI writes go direct with zero server requests.
 The typed refusal is exit 1, server_command_not_run, with no History warning.
+
+## Pin audit
+
+Before reporting a slice, run
+`node .agents/skills/verify-cli-routing/scripts/pin-audit.mjs <commit> <out.json>`
+(or `--worktree`). It enumerates every file under every `.agents/skills/verify-*`
+directory, with no list of known pin files. It compares each JSON row that pins
+a product path to the commit's bytes, and lists text lines that hold a product
+path and a hash. Exit 1 means a pinned mapping is stale: renew it by its own
+skill's procedure, never by hand. A fixed list of pin files missed eight DAG
+public rows from slice 1 to the c9 merge.

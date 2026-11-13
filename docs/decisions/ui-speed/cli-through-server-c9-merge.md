@@ -98,6 +98,33 @@ unchanged; two mappings stale.
   Its inputs are staged (hash-pinned jar, preserved e7170510 baseline CLI, a
   loopback `ps` proxy for the sandbox).
 
+## How the audits missed eight DAG public rows
+
+Slice 1 changed main.ts, help.ts, schema.ts, packages/api/src/index.ts,
+openapi.json, server.ts and the two contract identity files, all pinned by
+`.agents/skills/verify-dag-formal/public-coverage.json`. My audits in the
+correction rounds (heads 9e058e64 to 8d7a453c) hashed only the files the
+handover named: the ten verify-occ-atomicity pins and the Task search cache
+rows. They never opened the DAG formal, discovery-formal or task-search-formal
+coverage files. The audit in this merge round found the rows, but by a fixed
+name pattern (`*coverage*`, `*pin*`, `*mapping*` JSON files), which would miss a
+pin file named otherwise. It also could not resolve the cache's relative paths:
+it reported its seven `files` rows as MISSING, so drift there would have gone
+unseen.
+
+The audit left in the skill, `.agents/skills/verify-cli-routing/scripts/pin-audit.mjs`,
+uses no list. It enumerates every file under every `.agents/skills/verify-*`
+directory at a commit, with `--worktree` for uncommitted work. It parses every
+JSON file and compares every object that pairs a product path (apps/, packages/,
+scripts/) with a 64-hex hash against the commit's bytes. Relative paths resolve
+at the root, then under packages/domain/src, and an unresolved row fails. A text
+file line holding a product path and a 64-hex value is listed for review. Run at
+8d7a453c it exits 1 with exactly the eight DAG public rows and the cache's
+server.ts row. At be9f0638 it exits 0: 131 rows in 6 pin files, out of 412+
+files scanned. Its 45 listed text lines are all per-function hashes in
+verify-occ-atomicity/PURGE-RESTORE-MAPPING.md, inside store.ts and projection.ts,
+whose whole-file pins match.
+
 ## Isolation
 
 Earlier rounds used the profile with `(deny network*)` followed by an allow for
