@@ -65,6 +65,13 @@ ADR-0022 is reserved for another decision.
   Safe today, because a protocol-2 record or proof is never proven. The first
   routing slice must widen the record and proof protocol literal to 2, and gate
   `ProvenServer.run` itself on `routable()`, not only the refusal message.
+- The reviewed durable repeated-refusal fix is now present on this branch:
+  `fix/durable-denial` 366398fe, merged into `integ/c9-server` as 7b279032 and
+  into `feat/cli-through-server` with `integ/c9-server` 675aab82 in de9292be
+  (2026-11-13). The installation condition is met in the code. Nothing is
+  routed in this slice all the same: the protocol stays 1 and `routable()` is
+  unchanged. The first routing slice declares the fix through protocol 2 and
+  routes only to a server that proved it.
 - Preserve the merged strict read leases, early flag refusals, in-place Snapshot
   restore admission, preview isolation, configured Attachment root and durable
   cleanup. Shared add create and subsequent read remain separate checked phases.
