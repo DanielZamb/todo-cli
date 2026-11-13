@@ -1,6 +1,24 @@
 # Mac verification app V01 safety correction
 
-Current stop: production credential instrumentation is unproved in SwiftPM's
+Resumed under the coordinator's 6892b2a1 ruling: no startup loader setting and
+no production-test API-entry attestation. The production audit now links only
+the descriptor sampler. Its C startup, late-load and synthetic-descriptor
+controls pass; the deny-only policy baseline passes and both removals fail.
+The app/server trap and strict-profile boundary is unchanged. Production
+preservation requires matching base/head outcomes, a guard that changes no
+base outcome, zero observed protected-path/Keychain-service denials in the
+whole-run own-PID kernel query, and the nominal 10 ms descriptor audit.
+Any guard-induced change or protected denial stops with evidence; no widening
+or silent fallback is allowed. originalCredentialCalls remains withdrawn.
+
+A new result-parser regression first failed at exit 1: surplus Swift Testing
+cases concealed an omitted XCTest case under the old combined-count check.
+Coverage is now checked separately for both frameworks. Literal tests pass at
+0; the removal must fail at 1. The parser handles Swift Testing's companion XML
+and serial XCTest's complete per-test console records, preserving identities
+and outcomes. These remain development receipts until the next frozen run.
+
+Previous stop: production credential instrumentation was unproved in SwiftPM's
 late-loaded test hosts. No new frozen full recipe or visible launch is qualified.
 The app and its server profiles are unchanged. No broker was introduced.
 

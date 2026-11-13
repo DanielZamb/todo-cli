@@ -31,7 +31,7 @@ After the Swift-slot release, from a clean committed checkout, choose a fresh
 absolute evidence directory and run:
 
 ```sh
-node .agents/skills/verify-macos-real-app/scripts/verify.mjs "$PWD/docs/evidence/mac-verification-app/new" --fresh-build
+node .agents/skills/verify-macos-real-app/scripts/verify.mjs "$PWD/docs/evidence/mac-verification-app/new" --fresh-build --headless
 ```
 
 The visible phase is written but remains unqualified. Before a full run, prove
@@ -161,22 +161,20 @@ candidate, first without a suite sandbox and then with a deny-only profile for
 the real Todo/Keychain directories and Keychain Mach services. Every test must
 have the same identity and outcome. Record load and shared failures; a failure
 only on the candidate is a finding. Keep the deny-only profile only if it
-changes no base outcome; otherwise report its rejection and use the unguarded
-comparison. No broker and no app/server permission is added.
+changes no base outcome; otherwise stop and report the test and denial evidence.
+Do not widen it or fall back silently. No broker or app/server permission is added.
 
-The production audit library has credential traps and a 10 ms descriptor audit,
-without replacing defaults, temporary storage or production sources. The audit
-is sampled and cannot exclude a transient open between samples. The retained
-deny-only profile independently denies protected file access continuously.
-Each test process must verify its trap bindings and report a completed descriptor
-audit. An original credential call, missing audit or differing test list fails
-preservation. The corrected comparison still needs its frozen-head proof.
-The current late-load prerequisite refuses before a Swift suite: the standalone
-startup-linked audit checks all 1,638 bindings, but the dlopen control exits 79
-at AuthorizationCopyInfo. SwiftPM's test-bundle load similarly refused before
-any test. This does not qualify credential interposition in those test hosts.
-Startup loader settings have not been tried; their use needs the coordinator's
-ruling under the existing subprocess-environment constraint. Keep the refusal.
+The production library audits descriptors only, without Security imports or
+replacing defaults, temporary storage or production sources. It samples at a
+nominal 10 ms interval; scheduling can delay it and short-lived opens can be
+missed. Require a completed audit plus a filtered kernel query for the test
+hosts' own PIDs over the whole run. Zero protected-path or Keychain-service
+denials must be observed. A denial is a suite finding to report with the test;
+it is not an allowance to add. The deny-only policy supplies continuous denial.
+Production hosts have no API-entry attestation. The withdrawn
+originalCredentialCalls field remains withdrawn. DYLD startup settings remain
+excluded. The verification app/server keeps its traps, import audit and strict
+sandbox boundary. The corrected comparison still needs its frozen-head proof.
 The adapter substitutes the verified local resource copier for the recipe's
 resource command and records the expanded arguments, environment and exits.
 Historical receipts retain their original source-head attribution.

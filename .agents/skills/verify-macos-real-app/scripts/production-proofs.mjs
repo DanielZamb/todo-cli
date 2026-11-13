@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { command, environment, executable, run } from './process-policy.mjs';
 import { compareOutcomes } from './production-outcomes.mjs';
+import { protectedDenials } from './production-denials.mjs';
 process.umask(0o077);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
 const scripts = path.join(root, '.agents/skills/verify-macos-real-app/scripts');
@@ -30,7 +31,7 @@ function disk(label, reserveGiB = 2) {
  const receipt = { label, freeBytes, floorBytes: 30 * 1024 ** 3, reserveBytes: reserveGiB * 1024 ** 3 };
  fs.appendFileSync(evidence + '/disk.jsonl', JSON.stringify(receipt) + '\n'); assert(freeBytes - receipt.reserveBytes >= receipt.floorBytes, 'DISK STOP: ' + label);
 }
-let result = { status: 'FAIL', appLaunched: false, developerSigned: false, originalCredentialCalls: false, strictAppProfileUsedForProduction: false, baselineHead };
+let result = { status: 'FAIL', appLaunched: false, developerSigned: false, credentialEntryAttested: false, strictAppProfileUsedForProduction: false, baselineHead };
 try {
  disk('production comparison'); checked(['sh', 'scripts/disk-guard.sh'], 'disk');
  const head = checked(['git', 'rev-parse', 'HEAD'], 'head').trim();
@@ -56,15 +57,15 @@ try {
    } else if (!fs.existsSync(target + '/' + entry)) fs.symlinkSync(fs.realpathSync(installed + '/' + entry), target + '/' + entry);
   }
  }
- const sources = ['apps/macos/VerificationApp/CredentialTrap.c', 'apps/macos/VerificationApp/CredentialSymbols.inc', '.agents/skills/verify-macos-real-app/scripts/ProductionIsolation.m'];
- const flags = ['-dynamiclib', '-DTODO_CREDENTIAL_TRAPS_ONLY', '-Iapps/macos/VerificationApp', ...sources.filter(file => !file.endsWith('.inc')), '-framework', 'Security'];
+ const sources = ['.agents/skills/verify-macos-real-app/scripts/ProductionIsolation.m'];
+ const flags = ['-dynamiclib', ...sources];
  const libraryHash = createHash('sha256').update(JSON.stringify(flags)).update(checked(['xcrun', 'clang', '--version'], 'clang-version'));
  for (const file of sources) libraryHash.update(file).update(fs.readFileSync(file));
  const directory = root + '/.scratch/production-isolation/' + libraryHash.digest('hex'); fs.mkdirSync(directory, { recursive: true });
  const library = directory + '/libProductionAudit.dylib', provenance = directory + '/provenance.json';
  const old = fs.existsSync(provenance) ? JSON.parse(fs.readFileSync(provenance)) : null;
  if (!fs.existsSync(library) || (!result.development && old?.development)) {
-  checked(['xcrun', 'clang', ...flags, '-install_name', library, '-o', library], 'build-credential-audit');
+  checked(['xcrun', 'clang', ...flags, '-install_name', library, '-o', library], 'build-descriptor-audit');
   fs.writeFileSync(provenance, JSON.stringify({ builtFromHead: head, development: result.development, sourceSHA256: Object.fromEntries(sources.map(file => [file, digest(file)])), librarySHA256: digest(library) }, null, 2));
  }
  const libraryProvenance = JSON.parse(fs.readFileSync(provenance)); assert.equal(digest(library), libraryProvenance.librarySHA256);
@@ -75,12 +76,12 @@ try {
  assert(auditSource.includes('if (protected_path(value.pvip.vip_path))'));
  const mutantSource = proof + '/audit-mutant.m'; fs.writeFileSync(mutantSource, auditSource.replace('if (protected_path(value.pvip.vip_path))', 'if (0)'));
  const mutantLibrary = proof + '/libAuditMutant.dylib';
- checked(['xcrun', 'clang', '-dynamiclib', '-DTODO_CREDENTIAL_TRAPS_ONLY', '-Iapps/macos/VerificationApp', 'apps/macos/VerificationApp/CredentialTrap.c', mutantSource, '-framework', 'Security', '-install_name', mutantLibrary, '-o', mutantLibrary], 'build-audit-mutant');
+ checked(['xcrun', 'clang', '-dynamiclib', mutantSource, '-install_name', mutantLibrary, '-o', mutantLibrary], 'build-audit-mutant');
  const auditControls = [];
  for (const [label, linked, held, expected] of [['ordinary', library, false, 0], ['protected-synthetic', library, true, 78], ['audit-removed', mutantLibrary, true, 0]]) {
   const audit = evidence + '/audit-control-' + label; fs.mkdirSync(audit);
   const binary = proof + '/audit-probe-' + label;
-  checked(['xcrun', 'clang', scripts + '/ProductionAuditProbe.c', linked, '-o', binary], 'build-audit-probe-' + label);
+  checked(['xcrun', 'clang', scripts + '/ProductionAuditProbe.c', '-Xlinker', '-needed_library', '-Xlinker', linked, '-o', binary], 'build-audit-probe-' + label);
   const actual = execute([binary, ...(held ? [syntheticFile] : [])], 'audit-control-' + label, { ...env, TODO_PROOF_AUDIT: audit, TODO_PROOF_OWNER_HOME: syntheticOwner });
   assert.equal(actual.status, expected); auditControls.push({ label, exit: actual.status, matchingProtectedDescriptorTestExit: held ? actual.status === 78 ? 0 : 1 : null });
  }
@@ -89,8 +90,8 @@ try {
  const lateProbe = proof + '/late-probe', lateAudit = evidence + '/audit-control-late'; fs.mkdirSync(lateAudit);
  checked(['xcrun', 'clang', scripts + '/ProductionLateProbe.c', '-o', lateProbe], 'build-late-probe');
  const late = execute([lateProbe, library], 'audit-control-late', { ...env, TODO_PROOF_AUDIT: lateAudit, TODO_PROOF_OWNER_HOME: syntheticOwner });
- fs.writeFileSync(evidence + '/late-binding-control.json', JSON.stringify({ observedExit: late.status, expectedExit: 0, matchingTestExit: late.status === 0 ? 0 : 1, originalCalled: false }, null, 2));
- assert.equal(late.status, 0, 'Late-loaded test credential bindings are not established; do not run a production suite');
+ fs.writeFileSync(evidence + '/late-audit-control.json', JSON.stringify({ observedExit: late.status, expectedExit: 0, matchingTestExit: late.status === 0 ? 0 : 1, credentialEntryAttested: false }, null, 2));
+ assert.equal(late.status, 0, 'Late-loaded descriptor audit failed');
  const owner = os.userInfo().homedir;
  const protectedPaths = [owner + '/.todo-cli', owner + '/Library/Keychains', '/System/Volumes/Data' + owner + '/.todo-cli', '/System/Volumes/Data' + owner + '/Library/Keychains', '/Library/Keychains', '/System/Library/Keychains', '/private/var/Keychains', '/var/Keychains'];
  const services = ['com.apple.securityd', 'com.apple.securityd.xpc', 'com.apple.secd', 'com.apple.security.agent', 'com.apple.SecurityServer', 'com.apple.security.authhost', 'com.apple.security.authorizationhost'];
@@ -140,8 +141,9 @@ try {
   const arm = evidence + '/' + name; fs.mkdirSync(arm); fs.mkdirSync(arm + '/audit');
   const values = { ...env, TODO_SERVER_BINARY: binaryDirectory + '/todo-server', TODO_CLI_BINARY: binaryDirectory + '/todo', TODO_SEED_BINARY: binaryDirectory + '/seed', SEC_SEARCH_RECOVERY_SEED: binaryDirectory + '/search-recovery', TODO_SWIFT_BUILD_PATH: repository + '/apps/macos/DerivedData/V01Proof' };
   const entry = { name, sourceHead, guarded, hostLoad: os.loadavg(), recipes: [], outcomes: [] };
-  for (const [script, stage] of [['verify-write-state.py', 'state'], ['verify-design.py', 'offscreen']]) {
-   if (process.argv.includes('--probe-base') && stage === 'offscreen') break;
+  const started = Date.now();
+  for (const [script, stage] of [['verify-design.py', 'offscreen'], ['verify-write-state.py', 'state']]) {
+   if (process.argv.includes('--probe-base') && stage === 'offscreen') continue;
    const driver = arm + '/' + stage + '-driver'; fs.mkdirSync(driver);
    const configuration = proof + '/configuration.json';
    fs.writeFileSync(configuration, JSON.stringify({ root: repository, proof, evidence: driver, library, tools, environment: values, hold: evidence + '/swift-hold', parentHold: path.dirname(evidence) + '/swift-hold', audit: arm + '/audit', ownerHome: owner, denyProfile: guarded ? denyProfile : null, graphCopier: scripts + '/bundle-graph.mjs' }));
@@ -155,21 +157,29 @@ try {
     tests++;
    }
    assert(tests > 0); entry.recipes.push({ stage, exit: actual.status, hostLoadAfter: os.loadavg() });
-   assert(!fs.readFileSync(evidence + '/' + name + '-' + stage + '.log', 'utf8').includes('Security credential call trapped:'), 'A production test reached a credential binding');
   }
   const auditFiles = fs.readdirSync(arm + '/audit'); assert(auditFiles.length > 0);
   entry.descriptorAudit = auditFiles.map(file => {
    const rows = fs.readFileSync(arm + '/audit/' + file, 'utf8').trim().split('\n').map(line => JSON.parse(line));
-   assert(rows.every(row => row.protectedDescriptor === false && row.credentialBindingsChecked === 1638));
+   assert(rows.every(row => row.protectedDescriptor === false));
    assert(rows[0].started && rows.at(-1).finished); return { file, ...rows.at(-1) };
   });
+  const ended = Date.now(), pids = entry.descriptorAudit.map(row => row.pid);
+  const stamp = time => new Date(time).toISOString().slice(0, 19).replace('T', ' ') + '+0000';
+  const own = pids.map(pid => 'eventMessage CONTAINS ' + JSON.stringify('(' + pid + ')')).join(' OR ');
+  const protectedTerms = [...protectedPaths, ...services].map(value => 'eventMessage CONTAINS ' + JSON.stringify(value)).join(' OR ');
+  const predicate = 'eventMessage BEGINSWITH "Sandbox:" AND (' + own + ') AND (' + protectedTerms + ')';
+  const kernel = checked(['/usr/bin/log', 'show', '--start', stamp(started - 1000), '--end', stamp(ended + 1000), '--style', 'json', '--info', '--debug', '--predicate', predicate], name + '-kernel');
+  entry.kernel = { pids, startUnixMS: started - 1000, endUnixMS: ended + 1000, observedProtectedDenials: protectedDenials(JSON.parse(kernel), pids, protectedPaths, services), credentialEntryAttested: false };
   fs.writeFileSync(arm + '/outcomes.json', JSON.stringify(entry, null, 2)); arms.push(entry);
+  assert.equal(entry.kernel.observedProtectedDenials.length, 0, 'Protected-access denial is a production-suite finding; see ' + arm + '/outcomes.json');
  }
  if (process.argv.includes('--probe-base')) { result.status = 'DIAGNOSTIC_ONLY'; result.arms = arms; }
  else {
   const plain = compareOutcomes(arms[0].outcomes, arms[1].outcomes), guarded = compareOutcomes(arms[2].outcomes, arms[3].outcomes);
   const guardOnBase = compareOutcomes(arms[0].outcomes, arms[2].outcomes);
   result = { ...result, arms, comparison: { plain, guarded, guardOnBase }, denyOnlyRetained: guardOnBase.sameOutcomes };
+  assert(guardOnBase.sameOutcomes, 'Deny-only policy changed base outcomes; stop without widening or fallback');
   assert(plain.sameOutcomes, 'Base/candidate production outcomes differ');
   if (result.denyOnlyRetained) assert(guarded.sameOutcomes, 'Guarded base/candidate production outcomes differ');
   assert.equal(checked(['git', 'rev-parse', 'HEAD'], 'head-after').trim(), head);

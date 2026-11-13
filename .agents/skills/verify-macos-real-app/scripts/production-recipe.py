@@ -2,10 +2,13 @@ import json
 import os
 from pathlib import Path
 import runpy
-import re
+import importlib.util
 import subprocess
 import sys
-import xml.etree.ElementTree as ET
+
+spec = importlib.util.spec_from_file_location('production_results', Path(__file__).with_name('production-results.py'))
+results_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(results_module)
 
 recipe, evidence, configuration = sys.argv[1:]
 settings = json.loads(Path(configuration).read_text())
@@ -77,16 +80,8 @@ class ExplicitProcess(Original):
             if row['pid'] == self.pid:
                 row['exit'] = self.returncode
                 row['hostLoadAfter'] = os.getloadavg()
-                if self._test_xml and Path(self._test_xml).exists():
-                    cases = ET.parse(self._test_xml).getroot().iter('testcase')
-                    row['outcomes'] = [{'id': case.attrib.get('classname', '') + '/' + case.attrib['name'], 'outcome': 'failed' if case.find('failure') is not None or case.find('error') is not None else 'skipped' if case.find('skipped') is not None else 'passed'} for case in cases]
-                    if row['logFile']:
-                        log = Path(row['logFile']).read_text()
-                        xctest = re.findall(r'Executed (\d+) tests?', log)
-                        testing = re.findall(r'Test run with (\d+) tests?', log)
-                        row['minimumReportedTests'] = (int(xctest[-1]) if xctest else 0) + (int(testing[-1]) if testing else 0)
-                        if len(row['outcomes']) < row['minimumReportedTests']:
-                            raise RuntimeError('XML omitted reported tests: ' + self._test_xml)
+                if self._test_xml and row['logFile']:
+                    row.update(results_module.read_results(self._test_xml, row['logFile']))
         (Path(settings['evidence']) / 'expanded-commands.json').write_text(json.dumps(records, indent=2))
     def wait(self, *args, **kwargs):
         if self._swift_job and not self._queue_budget_added:

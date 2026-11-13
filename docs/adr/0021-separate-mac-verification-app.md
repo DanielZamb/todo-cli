@@ -97,9 +97,19 @@ test list and each outcome against base 8b9be429, alternating base and candidate
 Use the existing scratch-HOME, unsigned recipes through the shared Swift slot.
 A deny-only profile protecting the real Todo and Keychain directories and
 Keychain Mach services is retained only if it changes no base test outcome
-against the unguarded base. Otherwise discard it and report the difference;
-retain scratch stores, credential traps that do not change outcomes and an
-audit of the test process's descriptors. Record load with any shared failure;
+against the unguarded base. A changed outcome stops the run with the test and
+denial evidence; do not widen the policy or fall back silently. Retain scratch
+stores and an audit of the test process's descriptors. Record load with any shared failure;
 a candidate-only failure is a finding. No service broker is introduced. This
 clarifies the boundary approved on 2026-11-12 and grants the verification app
 or its server no additional access.
+
+Credential entry points in the verification app/server boundary retain their
+trap and import-audit attestation. Production test hosts have no API-entry
+attestation: their protection is the deny-only kernel policy, a filtered query
+for their own PIDs over the whole run with zero observed protected-path or
+Keychain-service denial attempts, and descriptor auditing at a nominal 10 ms
+interval. Any such denial is a suite finding, not an allowance to add. Scheduling
+can delay sampling and a transient descriptor can be missed. The earlier
+originalCredentialCalls field stays withdrawn for production suites. DYLD
+startup settings remain excluded; no broker is introduced.

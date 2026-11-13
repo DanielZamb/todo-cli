@@ -1,4 +1,3 @@
-#include <dlfcn.h>
 #include <fcntl.h>
 #include <libproc.h>
 #include <pthread.h>
@@ -8,16 +7,15 @@
 #include <string.h>
 #include <sys/proc_info.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <unistd.h>
 
-extern const void *todo_verification_handler(const char *);
 static pthread_t watcher;
 static atomic_int stopped;
 static int receipt = -1;
 static char home[4096];
-static unsigned samples, descriptors, bindings;
-
-void verification_child_cleanup(void) {}
+static unsigned samples, descriptors;
+static double now(void) { struct timeval value; gettimeofday(&value, NULL); return value.tv_sec + value.tv_usec / 1000000.0; }
 
 static int beneath(const char *path, const char *root) {
  size_t length = strlen(root);
@@ -67,17 +65,14 @@ __attribute__((constructor)) static void begin_audit(void) {
  char name[64]; snprintf(name, sizeof(name), "process-%d.jsonl", getpid());
  receipt = openat(directory, name, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600); close(directory);
  if (receipt < 0) _exit(78);
-#define TRAP(api) if (dlsym(RTLD_DEFAULT, #api) != todo_verification_handler(#api)) { dprintf(receipt, "{\"pid\":%d,\"missingCredentialBinding\":\"%s\",\"originalCalled\":false}\n", getpid(), #api); dprintf(2, "Production audit refused: credential binding absent: %s; no original call attempted.\n", #api); _exit(79); } else bindings++;
-#include "CredentialSymbols.inc"
-#undef TRAP
- if (dlsym(RTLD_DEFAULT, "SecTrustReportNetworkingAnalytics") != todo_verification_handler("SecTrustReportNetworkingAnalytics")) _exit(79);
- bindings++;
  inspect_descriptors();
- dprintf(receipt, "{\"pid\":%d,\"started\":true,\"credentialBindingsChecked\":%u,\"protectedDescriptor\":false,\"intervalMicroseconds\":10000}\n", getpid(), bindings);
+ double load[3] = {0}; getloadavg(load, 3);
+ dprintf(receipt, "{\"pid\":%d,\"program\":\"%s\",\"unixTime\":%.6f,\"hostLoad\":[%.6f,%.6f,%.6f],\"started\":true,\"protectedDescriptor\":false,\"intervalMicroseconds\":10000}\n", getpid(), getprogname(), now(), load[0], load[1], load[2]);
  if (pthread_create(&watcher, NULL, watch, NULL)) _exit(78);
 }
 __attribute__((destructor)) static void end_audit(void) {
  atomic_store(&stopped, 1); pthread_join(watcher, NULL); inspect_descriptors();
- dprintf(receipt, "{\"pid\":%d,\"finished\":true,\"samples\":%u,\"descriptorsInspected\":%u,\"protectedDescriptor\":false,\"credentialBindingsChecked\":%u}\n", getpid(), samples, descriptors, bindings);
+ double load[3] = {0}; getloadavg(load, 3);
+ dprintf(receipt, "{\"pid\":%d,\"unixTime\":%.6f,\"hostLoad\":[%.6f,%.6f,%.6f],\"finished\":true,\"samples\":%u,\"descriptorsInspected\":%u,\"protectedDescriptor\":false}\n", getpid(), now(), load[0], load[1], load[2], samples, descriptors);
  fsync(receipt); close(receipt);
 }

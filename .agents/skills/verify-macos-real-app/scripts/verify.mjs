@@ -55,7 +55,7 @@ function job(argv) {
 }
 const hash = file => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 function retireBuildTree(directory, label) {
- assert([root + '/.scratch/mac-verification/DerivedData', root + '/apps/macos/DerivedData/V01Proof'].includes(directory));
+ assert([root + '/.scratch/mac-verification/DerivedData', root + '/apps/macos/DerivedData/V01Proof', root + '/.scratch/production-base-8b9be429/apps/macos/DerivedData/V01Proof'].includes(directory));
  if (!fs.existsSync(directory)) return;
  const closed = execute(['/usr/sbin/lsof', '-Fpcn', '+D', directory], label + '-open-files');
  assert(closed.status === 1 && !closed.stdout.trim() && !closed.stderr.trim(), 'Cannot retire an unproven closed build tree: ' + directory);
@@ -243,6 +243,7 @@ try {
     diskStage('production-suites', 1.5);
     must(['node', '.agents/skills/verify-macos-real-app/scripts/production-proofs.mjs', evidence + '/production', evidence], 'production-suites'); stages.productionSuites = true;
     retireBuildTree(root + '/apps/macos/DerivedData/V01Proof', 'retire-production-build');
+    retireBuildTree(root + '/.scratch/production-base-8b9be429/apps/macos/DerivedData/V01Proof', 'retire-production-base-build');
     must(['sh', 'scripts/disk-guard.sh'], 'disk-before-root-check');
     diskStage('root-check', 0.5);
     must(['/usr/bin/lockf', '-k', '/tmp/todo-pnpm-check.lock', executable('pnpm'), 'check'], 'root-check'); stages.rootCheck = true;

@@ -91,8 +91,9 @@ reusable input/control, not evidence of execution unless its receipt exists.
 | Credential symbols | A handwritten list omits a linked entry point | SDK export/runtime census plus built-binary import enumeration; every present binding pointer-tested and individually removed |
 | Import enumeration | A platform-specific nm output format silently produces an empty import list | Request names-only output, reject unexpected columns and require every generated binding in the library's imports; literal Darwin-output test and empty-parser mutation |
 | Production preservation | Totals match but a test disappeared or its outcome changed | Compare exact XML test identities and outcomes, require coverage of console-reported test counts, and fail the accept-differences mutation |
-| Production deny-only guard | The guard changes framework behavior and hides a candidate regression | Alternating unguarded and guarded base/candidate recipes; retain the guard only if base outcomes match, otherwise report its rejection and use unguarded preservation |
-| Production descriptor audit | A loaded library reports safety without checking the process's real descriptors | Verify trap pointers and sample self proc_pidfdinfo; held synthetic protected-file control exits 78, detector removal makes that matching test fail; disclose sampling limits |
+| Production deny-only guard | The guard changes framework behavior and hides a candidate regression | Alternating unguarded and guarded base/candidate recipes; require matching base outcomes, otherwise stop with the test/denial evidence; no widening or fallback |
+| Production descriptor audit | A loaded library reports safety without checking the process's real descriptors | Sample self proc_pidfdinfo; held synthetic protected-file control exits 78, detector removal makes that matching test fail; startup/late-load controls and disclosed scheduling/sampling limits |
+| Production kernel query | A filter omits the host or a protected denial and reports an empty result | Whole-run own-PID query, literal path/service/PID fixtures and empty-result mutation; zero observed attempts is distinct from an API-entry claim |
 | Networking analytics | CFNetwork attempts Security telemetry, or a denial silently forwards it to a service | A local false-return binding ignores arguments and never calls the original; inspect the compiled body before the pointer/result probe; binding removal and result inversion fail |
 | Pointer test | Removing a trap calls the real credential API | Compare expected unique handler before invocation; missing binding exits 1 without calling original |
 | Framework credentials | A framework bypasses direct Sec imports via a broker | Deny all unlisted Mach lookup, Keychain paths; safe policy queries include securityd.xpc, autofill, Passkeys, CloudKit and ubiquity |
@@ -170,12 +171,16 @@ verification app's strict profile. No service boundary or broker is introduced.
 The original state/offscreen recipes alternate base 8b9be429 and the candidate;
 every test identity and outcome is compared, with load and shared failures
 retained. A deny-only policy protects real Todo/Keychain paths and Keychain Mach
-services, and is retained only if it changes no base outcome. Otherwise it is
-dropped and that rejection is explicit. A linked trap-only library verifies
-its bindings and samples the process's own descriptors every 10 ms, without
-replacing defaults or temporary storage. Sampling cannot exclude a short-lived
-open between samples; the retained deny-only guard supplies continuous denial.
-Original credential calls or missing audit completion fail preservation.
+services, and is retained only if it changes no base outcome. A change stops
+with the test and denial evidence; no widening or silent fallback is allowed.
+A linked descriptor-only library samples the process's own descriptors every
+nominal 10 ms, without replacing defaults or temporary storage. Scheduling can
+delay it and sampling cannot exclude a short-lived open. The deny-only guard
+supplies continuous denial. A whole-run filtered kernel query for the test
+hosts' own PIDs must find zero protected-path or Keychain-service denials.
+Any such denial is a finding. Missing audit completion also fails preservation.
+There is no production-test API-entry attestation or originalCredentialCalls
+claim. The verification app/server retains its trap/import boundary unchanged.
 The original resource command uses the existing hash-verified local copier.
 The previous strict-suite failure remains historical evidence; it does not
 justify weakening the app/server profiles or granting their denied brokers.

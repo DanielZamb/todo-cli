@@ -71,7 +71,10 @@ passing a broker handle; the app/server retain their stricter broker policy.
 Production state/offscreen preservation runs outside that strict profile,
 alternating the base and candidate and comparing every test outcome. A narrow
 deny-only guard for real Todo/Keychain access is kept only if it preserves the
-base outcomes; test processes retain credential traps and descriptor auditing.
+base outcomes. Test processes use descriptor auditing and a whole-run own-PID
+kernel query requiring zero observed protected-path/Keychain-service denials;
+they make no credential API-entry attestation. A guard-induced outcome change
+or protected denial stops the run. The app/server trap boundary is unchanged.
 The corrected implementation remains under qualification, with visible runs
 and V02 held. See [ADR-0021](adr/0021-separate-mac-verification-app.md)
 and [verify-macos-real-app](../.agents/skills/verify-macos-real-app/SKILL.md).
